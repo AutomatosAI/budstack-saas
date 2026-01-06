@@ -79,6 +79,10 @@ COPY --from=builder /app/node_modules ./app/node_modules
 
 USER nextjs
 
+# Copy and set up entrypoint script
+COPY entrypoint.sh ./
+RUN chmod +x ./entrypoint.sh
+
 EXPOSE 3000
 
 ENV PORT 3000
@@ -88,4 +92,4 @@ ENV HOSTNAME "0.0.0.0"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-CMD ["node", "app/server.js"]
+CMD ["./entrypoint.sh"]
