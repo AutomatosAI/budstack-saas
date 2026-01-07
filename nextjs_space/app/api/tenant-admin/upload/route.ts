@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         // But the EDITOR needs to show the image immediately.
         // So I will return a signed URL for preview.
 
-        const { bucketName, region } = getBucketConfig();
+        const { bucketName, region } = await getBucketConfig();
         // Construct a "permanent" url if public
         const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
 
