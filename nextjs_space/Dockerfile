@@ -40,6 +40,9 @@ RUN yarn build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+# Install dependencies needed for production (OpenSSL for Prisma)
+RUN apk add --no-cache libc6-compat openssl
+
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 

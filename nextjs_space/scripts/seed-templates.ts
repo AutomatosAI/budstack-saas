@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-async function seedTemplates() {
+export async function seedTemplates() {
   console.log('🌱 Seeding templates...');
 
   const templates = [
@@ -70,12 +70,14 @@ async function seedTemplates() {
   console.log('✅ Templates seeded successfully!\n');
 }
 
-seedTemplates()
-  .catch((error) => {
-    console.error('❌ Error seeding templates:', error);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
-
+// Auto-run if executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seedTemplates()
+    .catch((error) => {
+      console.error('❌ Error seeding templates:', error);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

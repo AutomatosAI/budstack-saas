@@ -3,31 +3,25 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('Seeding database...');
+export async function seedCore() {
+  console.log('Seeding database core data...');
 
   // Create templates
   console.log('Skipping template creation (use seed-templates.ts instead)...');
 
+  // Fetch HealingBuds template (assumes seed-templates.ts has run)
+  const healingBudsTemplate = await prisma.template.findUnique({
+    where: { slug: 'healingbuds' },
+  });
+
+  if (!healingBudsTemplate) {
+    console.warn('⚠️ Warning: HealingBuds template not found. Tenant will not be linked to a template.');
+  }
+
   // Create HealingBuds Tenant (first tenant)
   console.log('Creating HealingBuds tenant...');
 
-  // Ensure template exists
-  const healingBudsTemplate = await prisma.template.upsert({
-    where: { slug: 'healingbuds' },
-    update: {},
-    create: {
-      name: 'Healing Buds',
-      slug: 'healingbuds',
-      description: 'Modern medical cannabis template with sage-teal design system.',
-      category: 'medical',
-      version: '2.0.0',
-      author: 'BudStack Team',
-      layoutFilePath: 'templates/healingbuds/index.tsx',
-      isActive: true,
-      metadata: {},
-    },
-  });
+
 
   const healingBudsTenant = await prisma.tenant.upsert({
     where: { subdomain: 'healingbuds' },
@@ -51,6 +45,50 @@ async function main() {
   });
 
   console.log('HealingBuds tenant created:', healingBudsTenant.subdomain);
+
+  // --- Create Wellness & Nature Tenant ---
+  const wellnessTemplate = await prisma.template.findUnique({ where: { slug: 'wellness-nature' } });
+  if (wellnessTemplate) {
+    console.log('Creating Wellness & Nature tenant...');
+    await prisma.tenant.upsert({
+      where: { subdomain: 'wellness' },
+      update: { templateId: wellnessTemplate.id },
+      create: {
+        businessName: 'Wellness & Nature Co',
+        subdomain: 'wellness',
+        isActive: true,
+        templateId: wellnessTemplate.id,
+        settings: {
+          logoUrl: '/wellness-logo.png',
+          contactEmail: 'hello@wellnessnature.com',
+          primaryColor: '#5F8D4E',
+          secondaryColor: '#285430',
+        },
+      },
+    });
+  }
+
+  // --- Create GTA Cannabis Tenant ---
+  const gtaTemplate = await prisma.template.findUnique({ where: { slug: 'gta-cannabis' } });
+  if (gtaTemplate) {
+    console.log('Creating GTA Cannabis tenant...');
+    await prisma.tenant.upsert({
+      where: { subdomain: 'gta' },
+      update: { templateId: gtaTemplate.id },
+      create: {
+        businessName: 'GTA Cannabis Dispensary',
+        subdomain: 'gta',
+        isActive: true,
+        templateId: gtaTemplate.id,
+        settings: {
+          logoUrl: '/gta-logo.png',
+          contactEmail: 'sales@gtacannabis.ca',
+          primaryColor: '#000000',
+          secondaryColor: '#FFD700',
+        },
+      },
+    });
+  }
 
   // Create Super Admin
   console.log('Creating super admin...');
@@ -228,8 +266,15 @@ async function main() {
   ];
 
   for (const product of products) {
-    await prisma.product.create({
-      data: {
+    await prisma.product.upsert({
+      where: {
+        slug_tenantId: {
+          slug: product.slug,
+          tenantId: healingBudsTenant.id,
+        },
+      },
+      update: product,
+      create: {
         ...product,
         tenantId: healingBudsTenant.id,
       },
@@ -252,11 +297,14 @@ async function main() {
   console.log('========================\n');
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Auto-run if executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seedCore()
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

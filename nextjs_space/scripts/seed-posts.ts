@@ -3,7 +3,7 @@ import { newsArticles } from '../lib/data/newsArticles';
 
 const prisma = new PrismaClient();
 
-async function main() {
+export async function seedPosts() {
     console.log('Starting migration of legacy articles...');
 
     const subdomain = 'healingbuds';
@@ -61,11 +61,14 @@ async function main() {
     console.log('Migration complete.');
 }
 
-main()
-    .catch((e) => {
-        console.error(e);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+// Auto-run if executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+    seedPosts()
+        .catch((e) => {
+            console.error(e);
+            process.exit(1);
+        })
+        .finally(async () => {
+            await prisma.$disconnect();
+        });
+}
