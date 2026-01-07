@@ -80,7 +80,7 @@ COPY --from=builder /app/node_modules ./app/node_modules
 USER nextjs
 
 # Copy and set up entrypoint script
-COPY entrypoint.sh ./
+COPY --chown=nextjs:nodejs entrypoint.sh ./
 RUN chmod +x ./entrypoint.sh
 
 EXPOSE 3000
