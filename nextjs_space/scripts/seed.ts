@@ -15,7 +15,7 @@ export async function seedCore() {
   });
 
   if (!healingBudsTemplate) {
-    console.warn('⚠️ Warning: HealingBuds template not found. Tenant will not be linked to a template.');
+    throw new Error('❌ Error: HealingBuds template not found. Run seed-templates.ts first.');
   }
 
   // Create HealingBuds Tenant (first tenant)
