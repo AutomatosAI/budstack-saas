@@ -53,7 +53,7 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
   // Helper to get value from template designSystem OR legacy settings
   const getVal = (path: string[], fallback: any) => {
     if (activeTemplate?.designSystem) {
-      let current = activeTemplate.designSystem;
+      let current: any = activeTemplate.designSystem;
       for (const key of path) {
         if (current?.[key] === undefined) return fallback;
         current = current[key];
@@ -62,6 +62,9 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
     }
     return fallback;
   };
+
+  const templateContent = (activeTemplate?.pageContent as any) || {};
+  const settingsContent = (settings.pageContent as any) || {};
 
   const [formData, setFormData] = useState({
     // Business
@@ -93,23 +96,23 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
     heroType: settings.heroType || 'gradient',
 
     // Page Content - Home
-    homeHeroTitle: activeTemplate?.pageContent?.home?.heroTitle || settings.pageContent?.home?.heroTitle || 'Welcome to Your Medical Cannabis Journey',
-    homeHeroSubtitle: activeTemplate?.pageContent?.home?.heroSubtitle || settings.pageContent?.home?.heroSubtitle || 'Premium medical cannabis products delivered with care',
-    homeHeroCtaText: activeTemplate?.pageContent?.home?.heroCtaText || settings.pageContent?.home?.heroCtaText || 'Get Started',
+    homeHeroTitle: templateContent.home?.heroTitle || settingsContent.home?.heroTitle || 'Welcome to Your Medical Cannabis Journey',
+    homeHeroSubtitle: templateContent.home?.heroSubtitle || settingsContent.home?.heroSubtitle || 'Premium medical cannabis products delivered with care',
+    homeHeroCtaText: templateContent.home?.heroCtaText || settingsContent.home?.heroCtaText || 'Get Started',
 
     // Page Content - About
-    aboutTitle: activeTemplate?.pageContent?.about?.title || settings.pageContent?.about?.title || 'About Us',
-    aboutContent: activeTemplate?.pageContent?.about?.content || settings.pageContent?.about?.content || 'We are dedicated to providing high-quality medical cannabis products...',
+    aboutTitle: templateContent.about?.title || settingsContent.about?.title || 'About Us',
+    aboutContent: templateContent.about?.content || settingsContent.about?.content || 'We are dedicated to providing high-quality medical cannabis products...',
 
     // Page Content - Contact
-    contactTitle: activeTemplate?.pageContent?.contact?.title || (settings.pageContent as any)?.contact?.title || 'Get in Touch',
-    contactDescription: activeTemplate?.pageContent?.contact?.description || (settings.pageContent as any)?.contact?.description || 'Have questions? We are here to help.',
-    contactEmail: activeTemplate?.pageContent?.contact?.email || (settings.pageContent as any)?.contact?.email || '',
-    contactPhone: activeTemplate?.pageContent?.contact?.phone || (settings.pageContent as any)?.contact?.phone || '',
-    contactAddress: activeTemplate?.pageContent?.contact?.address || (settings.pageContent as any)?.contact?.address || '',
+    contactTitle: templateContent.contact?.title || settingsContent.contact?.title || 'Get in Touch',
+    contactDescription: templateContent.contact?.description || settingsContent.contact?.description || 'Have questions? We are here to help.',
+    contactEmail: templateContent.contact?.email || settingsContent.contact?.email || '',
+    contactPhone: templateContent.contact?.phone || settingsContent.contact?.phone || '',
+    contactAddress: templateContent.contact?.address || settingsContent.contact?.address || '',
 
     // Advanced
-    customCSS: activeTemplate?.customCSS || settings.customCSS || '',
+    customCSS: activeTemplate?.customCss || settings.customCSS || '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -245,8 +248,8 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
                     key={template.id}
                     onClick={() => setFormData({ ...formData, template: template.id as any })}
                     className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.template === template.id
-                        ? 'border-green-500 bg-green-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-200 hover:border-gray-300'
                       }`}
                   >
                     {formData.template === template.id && (

@@ -1,15 +1,13 @@
-
 import fs from 'fs';
 import path from 'path';
-import { uploadFile, s3Client } from '../lib/s3';
+import { uploadFile } from '../lib/s3';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { getBucketConfig } from '../lib/aws-config';
+import { getBucketConfig, createS3Client } from '../lib/aws-config';
 import dotenv from 'dotenv';
 
 // Load env vars
 dotenv.config();
 
-const { bucketName } = getBucketConfig();
 const TEMPLATES_DIR = path.join(process.cwd(), 'templates');
 
 async function walk(dir: string): Promise<string[]> {
@@ -40,6 +38,9 @@ async function uploadTemplate(templateName: string) {
     const files = await walk(templateDir);
     console.log(`Found ${files.length} files.`);
 
+    const { bucketName } = await getBucketConfig();
+    const client = await createS3Client();
+
     for (const file of files) {
         const relativePath = path.relative(templateDir, file);
         // S3 Key: templates/{templateName}/{relativePath}
@@ -50,7 +51,7 @@ async function uploadTemplate(templateName: string) {
         // We can't reuse lib/s3 uploadFile directly because it mandates a specific prefix logic (uploads/timestamp).
         // We need raw upload to specific key.
 
-        await s3Client.send(new PutObjectCommand({
+        await client.send(new PutObjectCommand({
             Bucket: bucketName,
             Key: key,
             Body: content,

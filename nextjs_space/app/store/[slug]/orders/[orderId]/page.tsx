@@ -1,39 +1,33 @@
-import { OrderItem } from '@prisma/client';
+import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/db';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CheckCircle, Clock, Package, Truck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Order, OrderItem } from '@prisma/client';
 
-// ... existing imports
+async function getOrder(orderId: string, slug: string) {
+    // This would call the API in a real scenario
+    // For now, get from database directly
+    const tenant = await prisma.tenant.findUnique({
+        where: { subdomain: slug },
+        select: { id: true },
+    });
 
-// ... inside the component
-{
-    order.items.map((item: OrderItem) => (
-        <div key={item.id} className="flex justify-between border-b pb-3">
-            <div>
-                <p className="font-semibold">{item.productName}</p>
-                <p className="text-sm text-gray-600">Quantity: {item.quantity}g</p>
-            </div>
-            <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
-        </div>
-    ))
-}
-// This would call the API in a real scenario
-// For now, get from database directly
-const tenant = await prisma.tenant.findUnique({
-    where: { subdomain: slug },
-    select: { id: true },
-});
+    if (!tenant) return null;
 
-if (!tenant) return null;
+    const order = await prisma.order.findFirst({
+        where: {
+            id: orderId,
+            tenantId: tenant.id,
+        },
+        include: {
+            items: true,
+        },
+    });
 
-const order = await prisma.order.findFirst({
-    where: {
-        id: orderId,
-        tenantId: tenant.id,
-    },
-    include: {
-        items: true,
-    },
-});
-
-return order;
+    return order;
 }
 
 export default async function OrderConfirmationPage({
@@ -127,7 +121,7 @@ export default async function OrderConfirmationPage({
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {order.items.map((item) => (
+                        {order.items.map((item: OrderItem) => (
                             <div key={item.id} className="flex justify-between border-b pb-3">
                                 <div>
                                     <p className="font-semibold">{item.productName}</p>
@@ -139,6 +133,7 @@ export default async function OrderConfirmationPage({
 
                         <div className="pt-4 space-y-2">
                             <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Subtotal</span>
                                 <span className="text-gray-600">Subtotal</span>
                                 <span>${order.subtotal.toFixed(2)}</span>
                             </div>

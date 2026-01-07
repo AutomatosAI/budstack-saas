@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { Post } from "@prisma/client";
 
 export const revalidate = 60; // Revalidate every minute
 
@@ -47,7 +48,7 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {posts.map((post) => (
+          {posts.map((post: Post & { author: { name: string | null } | null }) => (
             <Card key={post.id} className="flex flex-col overflow-hidden h-full hover:shadow-lg transition-shadow">
               {post.coverImage && (
                 <div className="aspect-video w-full overflow-hidden">

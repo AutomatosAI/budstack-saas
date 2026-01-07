@@ -22,8 +22,9 @@ export const TEMPLATE_NAVIGATION: Record<string, any> = {
     'wellness-nature': dynamic(() => import('@/templates/wellness-nature/components/Navigation')),
     'gta-cannabis': dynamic(() => import('@/templates/gta-cannabis/components/Navigation').then(m => {
         // GTA Cannabis uses a named export 'Navigation'
-        if (m.Navigation) return m.Navigation;
-        return m.default || m;
+        const mod = m as any;
+        if (mod.Navigation) return mod.Navigation;
+        return mod.default || mod;
     })),
 };
 

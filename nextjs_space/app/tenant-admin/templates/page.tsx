@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Check, Copy, Palette, Layout, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import TemplateCloneButton from './clone-button';
+import { TenantTemplate, Template } from '@prisma/client';
 
 export default async function TemplatesPage() {
     const session = await getServerSession(authOptions);
@@ -73,7 +74,7 @@ export default async function TemplatesPage() {
                             </div>
                         )}
 
-                        {myTemplates.map((item) => (
+                        {myTemplates.map((item: TenantTemplate) => (
                             <Card key={item.id} className={`overflow-hidden transition-all ${item.isActive ? 'ring-2 ring-primary border-primary' : ''}`}>
                                 <div className="aspect-video bg-slate-100 relative">
                                     {/* Placeholder for Screenshot */}
@@ -115,7 +116,7 @@ export default async function TemplatesPage() {
                 {/* MARKETPLACE TAB */}
                 <TabsContent value="marketplace">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {baseTemplates.map((template) => (
+                        {baseTemplates.map((template: Template) => (
                             <Card key={template.id} className="overflow-hidden hover:shadow-md transition-shadow">
                                 <div className="aspect-video bg-slate-900 relative group">
                                     {/* Placeholder for Thumbnail */}
@@ -138,13 +139,12 @@ export default async function TemplatesPage() {
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <CardTitle>{template.name}</CardTitle>
-                                            <Badge variant="outline" className="mt-2">{template.category}</Badge>
+                                            <CardDescription className="line-clamp-2 mt-2">
+                                                {template.description || "A professional template for your store."}
+                                            </CardDescription>
                                         </div>
                                         {template.isPremium && <Badge variant="secondary">Premium</Badge>}
                                     </div>
-                                    <CardDescription className="line-clamp-2 mt-2">
-                                        {template.description || "A professional template for your store."}
-                                    </CardDescription>
                                 </CardHeader>
                                 <CardFooter className="border-t bg-slate-50/50 p-4">
                                     <TemplateCloneButton templateId={template.id} templateName={template.name} />

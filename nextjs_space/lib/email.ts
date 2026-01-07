@@ -1,8 +1,6 @@
 
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export interface EmailOptions {
   to: string;
   subject: string;
@@ -12,13 +10,14 @@ export interface EmailOptions {
 
 export async function sendEmail({ to, subject, html, from }: EmailOptions) {
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
     const data = await resend.emails.send({
       from: from || process.env.EMAIL_FROM || 'noreply@budstack.to',
       to,
       subject,
       html,
     });
-    
+
     console.log('Email sent successfully:', data);
     return { success: true, data };
   } catch (error) {
