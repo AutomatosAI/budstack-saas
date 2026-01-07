@@ -1,21 +1,22 @@
 # ============================================
 # Stage 1: Dependencies
 # ============================================
-FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat openssl
+FROM node:20-slim AS deps
+RUN apt-get update -y && apt-get install -y openssl ca-certificates
+
 WORKDIR /app
 
 # Copy package files
 COPY package.json ./
 COPY prisma ./prisma/
 
-# Install dependencies (will generate yarn.lock if missing)
+# Install dependencies
 RUN yarn install --frozen-lockfile --network-timeout 600000 || yarn install --network-timeout 600000
 
 # ============================================
 # Stage 2: Builder
 # ============================================
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
 
 # Copy dependencies
@@ -37,11 +38,11 @@ RUN yarn build
 # ============================================
 # Stage 3: Runner
 # ============================================
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 WORKDIR /app
 
 # Install dependencies needed for production (OpenSSL for Prisma)
-RUN apk add --no-cache libc6-compat openssl
+RUN apt-get update -y && apt-get install -y openssl ca-certificates
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
