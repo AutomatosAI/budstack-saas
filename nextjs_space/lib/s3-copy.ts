@@ -1,18 +1,17 @@
-
 import {
     ListObjectsV2Command,
     CopyObjectCommand
 } from '@aws-sdk/client-s3';
-import { s3Client } from './s3';
-import { getBucketConfig } from './aws-config';
-
-const { bucketName } = getBucketConfig();
+import { createS3Client, getBucketConfig } from './aws-config';
 
 /**
  * Copies all objects from a source prefix to a destination prefix within the same bucket.
  * Used for cloning template assets.
  */
 export async function copyDirectory(sourcePrefix: string, destinationPrefix: string): Promise<number> {
+    const s3Client = await createS3Client();
+    const { bucketName } = await getBucketConfig();
+
     let continuationToken: string | undefined;
     let copyCount = 0;
 

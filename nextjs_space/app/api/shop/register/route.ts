@@ -3,11 +3,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createClient } from '@/lib/doctor-green-api';
 import { prisma } from '@/lib/db';
+import { getCurrentTenant } from '@/lib/tenant';
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -24,6 +25,22 @@ export async function POST(req: NextRequest) {
         { error: 'Missing required fields' },
         { status: 400 }
       );
+    }
+
+    // Get current tenant for Dr. Green API keys
+    const tenant = await getCurrentTenant();
+
+    // Resolve credentials (tenant-specific or platform env fallback)
+    const config = {
+      apiKey: tenant?.drGreenApiKey || process.env.DR_GREEN_API_KEY || '',
+      secretKey: tenant?.drGreenSecretKey || process.env.DR_GREEN_SECRET_KEY || '',
+    };
+
+    if (!config.apiKey || !config.secretKey) {
+      console.error('Missing Dr. Green API credentials for registration');
+      // Continue anyway? The createClient might fail or we should block.
+      // createClient throws 'MISSING_CREDENTIALS` if keys are missing.
+      // We'll let it proceed and fail inside if needed, or handle it here.
     }
 
     // Create client in Dr. Green system
@@ -46,7 +63,7 @@ export async function POST(req: NextRequest) {
         previousCannabisUse: medicalRecord.previousCannabisUse,
         doctorApproval: medicalRecord.doctorApproval,
       },
-    });
+    }, config);
 
     // Update user with additional info
     await prisma.user.update({
