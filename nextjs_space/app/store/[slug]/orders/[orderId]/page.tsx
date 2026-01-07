@@ -1,32 +1,39 @@
-import { Suspense } from 'react';
-import { notFound } from 'next/navigation';
-import { prisma } from '@/lib/db';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Clock, Package, Truck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import { OrderItem } from '@prisma/client';
 
-async function getOrder(orderId: string, slug: string) {
-    // This would call the API in a real scenario
-    // For now, get from database directly
-    const tenant = await prisma.tenant.findUnique({
-        where: { subdomain: slug },
-        select: { id: true },
-    });
+// ... existing imports
 
-    if (!tenant) return null;
+// ... inside the component
+{
+    order.items.map((item: OrderItem) => (
+        <div key={item.id} className="flex justify-between border-b pb-3">
+            <div>
+                <p className="font-semibold">{item.productName}</p>
+                <p className="text-sm text-gray-600">Quantity: {item.quantity}g</p>
+            </div>
+            <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+        </div>
+    ))
+}
+// This would call the API in a real scenario
+// For now, get from database directly
+const tenant = await prisma.tenant.findUnique({
+    where: { subdomain: slug },
+    select: { id: true },
+});
 
-    const order = await prisma.order.findFirst({
-        where: {
-            id: orderId,
-            tenantId: tenant.id,
-        },
-        include: {
-            items: true,
-        },
-    });
+if (!tenant) return null;
 
-    return order;
+const order = await prisma.order.findFirst({
+    where: {
+        id: orderId,
+        tenantId: tenant.id,
+    },
+    include: {
+        items: true,
+    },
+});
+
+return order;
 }
 
 export default async function OrderConfirmationPage({
