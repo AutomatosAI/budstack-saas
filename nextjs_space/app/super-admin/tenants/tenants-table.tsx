@@ -12,6 +12,7 @@ import {
   XCircle,
   Download,
   AlertTriangle,
+  FileCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -464,12 +465,19 @@ export function TenantsTable({
                 <TableBody>
                   {tenants.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="h-32">
+                      <TableCell colSpan={10} className="h-48">
                         <EmptyState
                           icon={Building2}
                           heading="No tenants yet"
-                          description="Tenants will appear here once they complete onboarding."
-                          size="sm"
+                          description="Review pending applications to onboard new tenants to the platform."
+                          size="default"
+                          theme="slate"
+                          showDecoration
+                          action={{
+                            label: 'Review Applications',
+                            href: '/super-admin/onboarding',
+                            icon: FileCheck,
+                          }}
                         />
                       </TableCell>
                     </TableRow>

@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Loader2,
   Download,
+  ShoppingCart,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -683,10 +684,12 @@ export function OrdersTable({
           />
         ) : orders.length === 0 && !hasFilters ? (
           <EmptyState
-            icon={Package}
+            icon={ShoppingCart}
             heading="No orders yet"
-            description="Your orders will appear here once customers start purchasing."
-            size="default"
+            description="Your orders will appear here once customers start purchasing from your store."
+            size="lg"
+            theme="purple"
+            showDecoration
             className="my-8"
           />
         ) : (

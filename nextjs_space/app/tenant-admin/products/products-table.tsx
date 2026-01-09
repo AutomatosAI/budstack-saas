@@ -12,6 +12,7 @@ import {
   Download,
   Trash2,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -465,8 +466,15 @@ export function ProductsTable({
           <EmptyState
             icon={Package}
             heading="No products yet"
-            description="Sync your products from Dr Green Admin to get started."
-            size="default"
+            description="Sync your products from Dr Green Admin to get started with your store catalog."
+            size="lg"
+            theme="emerald"
+            showDecoration
+            action={{
+              label: 'Sync from Dr Green Admin',
+              href: '/tenant-admin/settings',
+              icon: RefreshCw,
+            }}
             className="my-8"
           />
         ) : (

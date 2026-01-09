@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { Users, Search, Phone, ShoppingBag } from 'lucide-react';
+import { Users, Search, Phone, ShoppingBag, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -127,8 +127,17 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
           <EmptyState
             icon={Users}
             heading="No customers yet"
-            description="Share your store URL to get started"
-            size="default"
+            description="Share your store URL with potential customers to start building your customer base."
+            size="lg"
+            theme="cyan"
+            showDecoration
+            action={{
+              label: 'Copy Store URL',
+              onClick: () => {
+                navigator.clipboard.writeText(window.location.origin);
+              },
+              icon: Share2,
+            }}
             className="my-8"
           />
         ) : (
