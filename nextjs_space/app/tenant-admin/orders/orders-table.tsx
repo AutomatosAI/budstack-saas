@@ -31,7 +31,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { SearchInput, StatusFilter, EmptyState, Pagination } from '@/components/admin/shared';
+import { SearchInput, StatusFilter, EmptyState, Pagination, SortableTableHeader } from '@/components/admin/shared';
 import type { StatusFilterOption } from '@/components/admin/shared';
 import { useTableState } from '@/lib/admin/url-state';
 import { cn } from '@/lib/utils';
@@ -112,7 +112,7 @@ export function OrdersTable({
   statusCounts,
   onViewOrder,
 }: OrdersTableProps) {
-  const [{ search, filters, page, pageSize }, { setSearch, setFilter, setPage, setPageSize }] = useTableState<OrderFilters>({
+  const [{ search, filters, page, pageSize, sort }, { setSearch, setFilter, setPage, setPageSize, setSort }] = useTableState<OrderFilters>({
     defaultFilters: {
       status: 'all',
       dateRange: 'all',
@@ -497,12 +497,33 @@ export function OrdersTable({
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-semibold text-slate-700">Order ID</TableHead>
+                  <SortableTableHeader
+                    columnKey="orderNumber"
+                    label="Order ID"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
                   <TableHead className="font-semibold text-slate-700">Customer</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Status</TableHead>
+                  <SortableTableHeader
+                    columnKey="status"
+                    label="Status"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
                   <TableHead className="font-semibold text-slate-700 text-center">Items</TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-right">Total</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Date</TableHead>
+                  <SortableTableHeader
+                    columnKey="total"
+                    label="Total"
+                    sortState={sort}
+                    onSort={setSort}
+                    align="right"
+                  />
+                  <SortableTableHeader
+                    columnKey="createdAt"
+                    label="Date"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
                   <TableHead className="font-semibold text-slate-700 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>

@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { SearchInput, StatusFilter, EmptyState, Pagination } from '@/components/admin/shared';
+import { SearchInput, StatusFilter, EmptyState, Pagination, SortableTableHeader } from '@/components/admin/shared';
 import type { StatusFilterOption } from '@/components/admin/shared';
 import { useTableState } from '@/lib/admin/url-state';
 
@@ -73,7 +73,7 @@ export function ProductsTable({
   outOfStockCount,
   categoryCounts,
 }: ProductsTableProps) {
-  const [{ search, filters, page, pageSize }, { setSearch, setFilter, setPage, setPageSize }] = useTableState<ProductFilters>({
+  const [{ search, filters, page, pageSize, sort }, { setSearch, setFilter, setPage, setPageSize, setSort }] = useTableState<ProductFilters>({
     defaultFilters: { category: 'all', stock: 'all' },
     defaultPageSize: 20,
   });
@@ -245,13 +245,47 @@ export function ProductsTable({
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-semibold text-slate-700">Name</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Category</TableHead>
+                  <SortableTableHeader
+                    columnKey="name"
+                    label="Name"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
+                  <SortableTableHeader
+                    columnKey="category"
+                    label="Category"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
                   <TableHead className="font-semibold text-slate-700">Strain</TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-center">THC %</TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-center">CBD %</TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-right">Price</TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-center">Stock</TableHead>
+                  <SortableTableHeader
+                    columnKey="thcContent"
+                    label="THC %"
+                    sortState={sort}
+                    onSort={setSort}
+                    align="center"
+                  />
+                  <SortableTableHeader
+                    columnKey="cbdContent"
+                    label="CBD %"
+                    sortState={sort}
+                    onSort={setSort}
+                    align="center"
+                  />
+                  <SortableTableHeader
+                    columnKey="price"
+                    label="Price"
+                    sortState={sort}
+                    onSort={setSort}
+                    align="right"
+                  />
+                  <SortableTableHeader
+                    columnKey="stock"
+                    label="Stock"
+                    sortState={sort}
+                    onSort={setSort}
+                    align="center"
+                  />
                   <TableHead className="font-semibold text-slate-700">Status</TableHead>
                 </TableRow>
               </TableHeader>

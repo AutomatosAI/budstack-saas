@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { SearchInput, StatusFilter, EmptyState, Pagination } from '@/components/admin/shared';
+import { SearchInput, StatusFilter, EmptyState, Pagination, SortableTableHeader } from '@/components/admin/shared';
 import type { StatusFilterOption } from '@/components/admin/shared';
 import { useTableState } from '@/lib/admin/url-state';
 import { getTenantUrl } from '@/lib/tenant-utils';
@@ -69,7 +69,7 @@ interface TenantsTableProps {
  * - Empty state for no results
  */
 export function TenantsTable({ tenants, totalCount, activeCount, inactiveCount }: TenantsTableProps) {
-  const [{ search, filters, page, pageSize }, { setSearch, setFilter, setPage, setPageSize }] = useTableState<TenantFilters>({
+  const [{ search, filters, page, pageSize, sort }, { setSearch, setFilter, setPage, setPageSize, setSort }] = useTableState<TenantFilters>({
     defaultFilters: { status: 'all' },
     defaultPageSize: 20,
   });
@@ -177,14 +177,39 @@ export function TenantsTable({ tenants, totalCount, activeCount, inactiveCount }
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-semibold">Business Name</TableHead>
-                  <TableHead className="font-semibold">NFT Token ID</TableHead>
-                  <TableHead className="font-semibold">Store URL</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
+                  <SortableTableHeader
+                    columnKey="businessName"
+                    label="Business Name"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
+                  <SortableTableHeader
+                    columnKey="nftTokenId"
+                    label="NFT Token ID"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
+                  <SortableTableHeader
+                    columnKey="subdomain"
+                    label="Store URL"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
+                  <SortableTableHeader
+                    columnKey="isActive"
+                    label="Status"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
                   <TableHead className="font-semibold text-center">Users</TableHead>
                   <TableHead className="font-semibold text-center">Products</TableHead>
                   <TableHead className="font-semibold text-center">Orders</TableHead>
-                  <TableHead className="font-semibold">Created</TableHead>
+                  <SortableTableHeader
+                    columnKey="createdAt"
+                    label="Created"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
                   <TableHead className="font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>

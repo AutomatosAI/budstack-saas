@@ -11,6 +11,10 @@ import { CustomersTable } from './customers-table';
 const DEFAULT_PAGE_SIZE = 20;
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
 
+/** Valid sort columns for customers table */
+const VALID_SORT_COLUMNS = ['name', 'email', 'createdAt'] as const;
+type SortColumn = typeof VALID_SORT_COLUMNS[number];
+
 interface CustomersPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
@@ -42,6 +46,16 @@ export default async function CustomersListPage({ searchParams }: CustomersPageP
   // Parse search param from URL
   const search = typeof params.search === 'string' ? params.search.trim() : '';
 
+  // Parse sort params from URL
+  const sortByParam = typeof params.sortBy === 'string' ? params.sortBy : null;
+  const sortOrderParam = typeof params.sortOrder === 'string' ? params.sortOrder : null;
+
+  // Validate sort column
+  const sortBy = sortByParam && VALID_SORT_COLUMNS.includes(sortByParam as SortColumn)
+    ? (sortByParam as SortColumn)
+    : null;
+  const sortOrder = sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : 'asc';
+
   // Build Prisma where clause for server-side filtering
   const whereClause: Prisma.usersWhereInput = {
     role: 'PATIENT',
@@ -59,6 +73,11 @@ export default async function CustomersListPage({ searchParams }: CustomersPageP
 
   // Calculate skip for pagination
   const skip = (page - 1) * pageSize;
+
+  // Build orderBy clause - default to createdAt desc if no sort specified
+  const orderBy: Prisma.usersOrderByWithRelationInput = sortBy
+    ? { [sortBy]: sortOrder }
+    : { createdAt: 'desc' };
 
   // Get filtered count, paginated customers, and recent sign-ups in parallel
   const thirtyDaysAgo = new Date();
@@ -80,7 +99,7 @@ export default async function CustomersListPage({ searchParams }: CustomersPageP
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       skip,
       take: pageSize,
     }),

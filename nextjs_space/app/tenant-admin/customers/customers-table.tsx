@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { Users, Search, Mail, Phone, Calendar, ShoppingBag } from 'lucide-react';
+import { Users, Search, Phone, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { SearchInput, EmptyState, Pagination } from '@/components/admin/shared';
+import { SearchInput, EmptyState, Pagination, SortableTableHeader } from '@/components/admin/shared';
 import { useTableState } from '@/lib/admin/url-state';
 
 /**
@@ -50,7 +50,7 @@ interface CustomersTableProps {
  * - Empty state for no results with clear action
  */
 export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
-  const [{ search, page, pageSize }, { setSearch, setPage, setPageSize }] = useTableState({
+  const [{ search, page, pageSize, sort }, { setSearch, setPage, setPageSize, setSort }] = useTableState({
     defaultPageSize: 20,
   });
 
@@ -136,25 +136,30 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-semibold">Customer</TableHead>
-                  <TableHead className="font-semibold">
-                    <span className="flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5 text-slate-400" />
-                      Email
-                    </span>
-                  </TableHead>
+                  <SortableTableHeader
+                    columnKey="name"
+                    label="Customer"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
+                  <SortableTableHeader
+                    columnKey="email"
+                    label="Email"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
                   <TableHead className="font-semibold text-center">
                     <span className="flex items-center justify-center gap-1.5">
                       <ShoppingBag className="h-3.5 w-3.5 text-slate-400" />
                       Orders
                     </span>
                   </TableHead>
-                  <TableHead className="font-semibold">
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      Joined
-                    </span>
-                  </TableHead>
+                  <SortableTableHeader
+                    columnKey="createdAt"
+                    label="Joined"
+                    sortState={sort}
+                    onSort={setSort}
+                  />
                   <TableHead className="font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>

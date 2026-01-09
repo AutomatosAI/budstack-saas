@@ -108,10 +108,16 @@ export default function TenantOrdersPage() {
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
 
+    // Sort params
+    const sortBy = searchParams.get('sortBy');
+    const sortOrder = searchParams.get('sortOrder');
+
     if (search) params.set('search', search);
     if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
     if (dateFrom) params.set('dateFrom', dateFrom);
     if (dateTo) params.set('dateTo', dateTo);
+    if (sortBy) params.set('sortBy', sortBy);
+    if (sortOrder) params.set('sortOrder', sortOrder);
 
     return `/api/tenant-admin/orders?${params.toString()}`;
   }, [searchParams]);

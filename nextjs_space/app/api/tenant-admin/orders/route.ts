@@ -8,6 +8,10 @@ import { Prisma } from '@prisma/client';
 const DEFAULT_PAGE_SIZE = 20;
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
 
+/** Valid sort columns for orders table */
+const VALID_SORT_COLUMNS = ['orderNumber', 'status', 'total', 'createdAt'] as const;
+type SortColumn = typeof VALID_SORT_COLUMNS[number];
+
 // GET: Fetch orders for tenant with optional pagination, search, and filters
 export async function GET(req: NextRequest) {
   try {
@@ -46,6 +50,14 @@ export async function GET(req: NextRequest) {
     const dateFrom = searchParams.get('dateFrom') || '';
     const dateTo = searchParams.get('dateTo') || '';
 
+    // Parse sort params
+    const sortByParam = searchParams.get('sortBy');
+    const sortOrderParam = searchParams.get('sortOrder');
+    const sortBy = sortByParam && VALID_SORT_COLUMNS.includes(sortByParam as SortColumn)
+      ? (sortByParam as SortColumn)
+      : null;
+    const sortOrder = sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : 'asc';
+
     // Build Prisma where clause
     const whereClause: Prisma.ordersWhereInput = {
       tenantId,
@@ -83,6 +95,11 @@ export async function GET(req: NextRequest) {
     // Calculate skip for pagination
     const skip = (page - 1) * pageSize;
 
+    // Build orderBy clause - default to createdAt desc if no sort specified
+    const orderBy: Prisma.ordersOrderByWithRelationInput = sortBy
+      ? { [sortBy]: sortOrder }
+      : { createdAt: 'desc' };
+
     // Get filtered count and paginated orders in parallel
     // Also get counts for filter badges
     const [filteredCount, orders, pendingCount, processingCount, completedCount, cancelledCount] = await Promise.all([
@@ -98,9 +115,7 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy,
         skip,
         take: pageSize,
       }),

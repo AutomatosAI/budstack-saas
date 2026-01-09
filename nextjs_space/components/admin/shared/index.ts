@@ -19,3 +19,8 @@ export {
   type BulkAction,
 } from './BulkActionBar';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
+export {
+  SortableTableHeader,
+  type SortableTableHeaderProps,
+  type TableHeaderAlignment,
+} from './SortableTableHeader';

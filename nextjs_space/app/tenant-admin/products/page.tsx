@@ -10,6 +10,10 @@ import { ProductsTable } from './products-table';
 const DEFAULT_PAGE_SIZE = 20;
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
 
+/** Valid sort columns for products table */
+const VALID_SORT_COLUMNS = ['name', 'category', 'price', 'stock', 'thcContent', 'cbdContent', 'createdAt'] as const;
+type SortColumn = typeof VALID_SORT_COLUMNS[number];
+
 interface ProductsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
@@ -47,6 +51,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const categoryFilter = typeof params.category === 'string' ? params.category : 'all';
   const stockFilter = typeof params.stock === 'string' ? params.stock : 'all';
 
+  // Parse sort params from URL
+  const sortByParam = typeof params.sortBy === 'string' ? params.sortBy : null;
+  const sortOrderParam = typeof params.sortOrder === 'string' ? params.sortOrder : null;
+
+  // Validate sort column
+  const sortBy = sortByParam && VALID_SORT_COLUMNS.includes(sortByParam as SortColumn)
+    ? (sortByParam as SortColumn)
+    : null;
+  const sortOrder = sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : 'asc';
+
   // Build Prisma where clause for server-side filtering
   const whereClause: Prisma.productsWhereInput = {
     tenantId,
@@ -76,13 +90,18 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   // Calculate skip for pagination
   const skip = (page - 1) * pageSize;
 
+  // Build orderBy clause - default to createdAt desc if no sort specified
+  const orderBy: Prisma.productsOrderByWithRelationInput = sortBy
+    ? { [sortBy]: sortOrder }
+    : { createdAt: 'desc' };
+
   // Get filtered count and paginated products in parallel
   // Also get counts for filter badges
   const [filteredCount, products, inStockCount, outOfStockCount, categoryCounts] = await Promise.all([
     prisma.products.count({ where: whereClause }),
     prisma.products.findMany({
       where: whereClause,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       skip,
       take: pageSize,
     }),

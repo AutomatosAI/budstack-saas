@@ -11,6 +11,10 @@ import { TenantsTable } from './tenants-table';
 const DEFAULT_PAGE_SIZE = 20;
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
 
+/** Valid sort columns for tenants table */
+const VALID_SORT_COLUMNS = ['businessName', 'subdomain', 'nftTokenId', 'createdAt', 'isActive'] as const;
+type SortColumn = typeof VALID_SORT_COLUMNS[number];
+
 interface TenantsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
@@ -36,6 +40,16 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
   const search = typeof params.search === 'string' ? params.search.trim() : '';
   const statusFilter = typeof params.status === 'string' ? params.status : 'all';
 
+  // Parse sort params from URL
+  const sortByParam = typeof params.sortBy === 'string' ? params.sortBy : null;
+  const sortOrderParam = typeof params.sortOrder === 'string' ? params.sortOrder : null;
+
+  // Validate sort column
+  const sortBy = sortByParam && VALID_SORT_COLUMNS.includes(sortByParam as SortColumn)
+    ? (sortByParam as SortColumn)
+    : null;
+  const sortOrder = sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : 'asc';
+
   // Build Prisma where clause for server-side filtering
   const whereClause: Prisma.tenantsWhereInput = {};
 
@@ -59,6 +73,11 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
   // Calculate skip for pagination
   const skip = (page - 1) * pageSize;
 
+  // Build orderBy clause - default to createdAt desc if no sort specified
+  const orderBy: Prisma.tenantsOrderByWithRelationInput = sortBy
+    ? { [sortBy]: sortOrder }
+    : { createdAt: 'desc' };
+
   // Get filtered count and paginated tenants in parallel
   // Also get counts for filter badges (active/inactive)
   const [filteredCount, tenants, activeCount, inactiveCount] = await Promise.all([
@@ -74,9 +93,7 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy,
       skip,
       take: pageSize,
     }),
