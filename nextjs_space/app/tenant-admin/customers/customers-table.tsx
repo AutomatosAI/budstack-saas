@@ -15,8 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { SearchInput, EmptyState, Pagination, SortableTableHeader } from '@/components/admin/shared';
+import { SearchInput, EmptyState, Pagination, SortableTableHeader, ExportButton } from '@/components/admin/shared';
 import { useTableState } from '@/lib/admin/url-state';
+import { exportToCSV } from '@/lib/admin/csv-export';
+import { toast } from '@/components/ui/sonner';
+import { useCallback } from 'react';
 
 /**
  * Customer data shape from Prisma query
@@ -70,6 +73,40 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
     setSearch('');
   };
 
+  // Export handler
+  const handleExportAll = useCallback(async () => {
+    if (customers.length === 0) return;
+
+    const exportData = customers.map((c) => ({
+      name: c.name || 'N/A',
+      email: c.email,
+      phone: c.phone || 'N/A',
+      orders: c._count.orders,
+      createdAt: format(new Date(c.createdAt), 'yyyy-MM-dd'),
+    }));
+
+    const csvHeaders = [
+      { key: 'name' as const, label: 'Name' },
+      { key: 'email' as const, label: 'Email' },
+      { key: 'phone' as const, label: 'Phone' },
+      { key: 'orders' as const, label: 'Orders' },
+      { key: 'createdAt' as const, label: 'Joined' },
+    ];
+
+    await exportToCSV(
+      exportData,
+      csvHeaders,
+      'customers',
+      undefined,
+      (recordCount, fileSize) => {
+        toast.success(`Exported ${recordCount} customers to CSV (${fileSize})`);
+      },
+      (error) => {
+        toast.error(`Export failed: ${error.message}`);
+      }
+    );
+  }, [customers]);
+
   // Get initials for avatar
   const getInitials = (name: string | null): string => {
     if (!name) return '?';
@@ -95,14 +132,24 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
             </Badge>
           </CardTitle>
 
-          {/* Search Input */}
-          <div className="w-full sm:w-72">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Search customers..."
-              aria-label="Search customers"
-              debounceMs={300}
+          {/* Search and Export Controls */}
+          <div className="flex flex-col gap-3 w-full sm:w-auto sm:flex-row">
+            <div className="w-full sm:w-72">
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder="Search customers..."
+                aria-label="Search customers"
+                debounceMs={300}
+              />
+            </div>
+
+            {/* Export Button */}
+            <ExportButton
+              onExport={handleExportAll}
+              recordCount={customers.length}
+              theme="tenant-admin"
+              disabled={customers.length === 0}
             />
           </div>
         </div>

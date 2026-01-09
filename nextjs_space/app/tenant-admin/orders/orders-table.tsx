@@ -43,11 +43,12 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { SearchInput, StatusFilter, EmptyState, Pagination, SortableTableHeader, BulkActionBar } from '@/components/admin/shared';
+import { SearchInput, StatusFilter, EmptyState, Pagination, SortableTableHeader, BulkActionBar, ExportButton } from '@/components/admin/shared';
 import type { StatusFilterOption, BulkAction } from '@/components/admin/shared';
 import { useTableState } from '@/lib/admin/url-state';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
+import { exportToCSV } from '@/lib/admin/csv-export';
 
 /** Order status types */
 type OrderStatus = 'all' | 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
@@ -336,48 +337,82 @@ export function OrdersTable({
     setConfirmAction('mark-completed');
   }, []);
 
-  const handleExportCSV = useCallback(() => {
-    // Get selected orders data
+  // Export ALL filtered orders (the main export button)
+  const handleExportAll = useCallback(async () => {
+    if (orders.length === 0) return;
+
+    const exportData = orders.map((o) => ({
+      orderNumber: o.orderNumber,
+      customerName: o.user?.name || 'Guest',
+      customerEmail: o.user?.email || 'N/A',
+      status: o.status,
+      items: o.items.length,
+      total: `$${o.total.toFixed(2)}`,
+      createdAt: format(new Date(o.createdAt), 'yyyy-MM-dd'),
+    }));
+
+    const csvHeaders = [
+      { key: 'orderNumber' as const, label: 'Order Number' },
+      { key: 'customerName' as const, label: 'Customer Name' },
+      { key: 'customerEmail' as const, label: 'Customer Email' },
+      { key: 'status' as const, label: 'Status' },
+      { key: 'items' as const, label: 'Items' },
+      { key: 'total' as const, label: 'Total' },
+      { key: 'createdAt' as const, label: 'Date' },
+    ];
+
+    await exportToCSV(
+      exportData,
+      csvHeaders,
+      'orders',
+      undefined,
+      (recordCount, fileSize) => {
+        toast.success(`Exported ${recordCount} orders to CSV (${fileSize})`);
+      },
+      (error) => {
+        toast.error(`Export failed: ${error.message}`);
+      }
+    );
+  }, [orders]);
+
+  // Export SELECTED orders (for bulk action bar)
+  const handleExportCSV = useCallback(async () => {
     const selectedOrders = orders.filter((o) => selectedIds.has(o.id));
     if (selectedOrders.length === 0) return;
 
-    // Build CSV content
-    const headers = [
-      'Order Number',
-      'Customer Name',
-      'Customer Email',
-      'Status',
-      'Items',
-      'Total',
-      'Date',
+    const exportData = selectedOrders.map((o) => ({
+      orderNumber: o.orderNumber,
+      customerName: o.user?.name || 'Guest',
+      customerEmail: o.user?.email || 'N/A',
+      status: o.status,
+      items: o.items.length,
+      total: `$${o.total.toFixed(2)}`,
+      createdAt: format(new Date(o.createdAt), 'yyyy-MM-dd'),
+    }));
+
+    const csvHeaders = [
+      { key: 'orderNumber' as const, label: 'Order Number' },
+      { key: 'customerName' as const, label: 'Customer Name' },
+      { key: 'customerEmail' as const, label: 'Customer Email' },
+      { key: 'status' as const, label: 'Status' },
+      { key: 'items' as const, label: 'Items' },
+      { key: 'total' as const, label: 'Total' },
+      { key: 'createdAt' as const, label: 'Date' },
     ];
-    const rows = selectedOrders.map((o) => [
-      `"${o.orderNumber}"`,
-      `"${(o.user?.name || 'Guest').replace(/"/g, '""')}"`,
-      `"${(o.user?.email || 'N/A').replace(/"/g, '""')}"`,
-      o.status,
-      o.items.length.toString(),
-      o.total.toFixed(2),
-      format(new Date(o.createdAt), 'yyyy-MM-dd'),
-    ]);
 
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join(
-      '\n'
+    await exportToCSV(
+      exportData,
+      csvHeaders,
+      'orders',
+      undefined,
+      (recordCount, fileSize) => {
+        toast.success(`Exported ${recordCount} selected orders to CSV (${fileSize})`);
+        clearSelection();
+      },
+      (error) => {
+        toast.error(`Export failed: ${error.message}`);
+      }
     );
-
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `orders-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    toast.success(`Exported ${selectedOrders.length} orders to CSV`);
-    clearSelection();
   }, [orders, selectedIds, clearSelection]);
 
   const handleConfirmAction = useCallback(async () => {
@@ -594,6 +629,14 @@ export function OrdersTable({
                   </div>
                 </PopoverContent>
               </Popover>
+
+              {/* Export Button */}
+              <ExportButton
+                onExport={handleExportAll}
+                recordCount={orders.length}
+                theme="tenant-admin"
+                disabled={orders.length === 0}
+              />
             </div>
           </div>
 

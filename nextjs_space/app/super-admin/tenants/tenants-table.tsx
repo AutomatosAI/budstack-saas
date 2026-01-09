@@ -41,12 +41,14 @@ import {
   Pagination,
   SortableTableHeader,
   BulkActionBar,
+  ExportButton,
 } from '@/components/admin/shared';
 import type { StatusFilterOption, BulkAction } from '@/components/admin/shared';
 import { useTableState } from '@/lib/admin/url-state';
 import { getTenantUrl } from '@/lib/tenant-utils';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
+import { exportToCSV } from '@/lib/admin/csv-export';
 
 /** Filter type for tenant status */
 type TenantStatusFilter = 'all' | 'active' | 'inactive';
@@ -220,52 +222,103 @@ export function TenantsTable({
     setConfirmAction('deactivate');
   }, []);
 
-  const handleExportCSV = useCallback(() => {
-    // Get selected tenants data
+  // Export ALL filtered tenants (the main export button)
+  const handleExportAll = useCallback(async () => {
+    if (tenants.length === 0) return;
+
+    const headers = [
+      { key: 'businessName' as keyof Tenant, label: 'Business Name' },
+      { key: 'nftTokenId' as keyof Tenant, label: 'NFT Token ID' },
+      { key: 'subdomain' as keyof Tenant, label: 'Subdomain' },
+      { key: 'customDomain' as keyof Tenant, label: 'Custom Domain' },
+      { key: 'isActive' as keyof Tenant, label: 'Status' },
+      { key: '_count' as keyof Tenant, label: 'Users' },
+      { key: '_count' as keyof Tenant, label: 'Products' },
+      { key: '_count' as keyof Tenant, label: 'Orders' },
+      { key: 'createdAt' as keyof Tenant, label: 'Created' },
+    ];
+
+    // Transform data for CSV export
+    const exportData = tenants.map((t) => ({
+      businessName: t.businessName,
+      nftTokenId: t.nftTokenId || '',
+      subdomain: t.subdomain,
+      customDomain: t.customDomain || '',
+      isActive: t.isActive ? 'Active' : 'Inactive',
+      users: t._count.users,
+      products: t._count.products,
+      orders: t._count.orders,
+      createdAt: format(new Date(t.createdAt), 'yyyy-MM-dd'),
+    }));
+
+    const csvHeaders = [
+      { key: 'businessName' as const, label: 'Business Name' },
+      { key: 'nftTokenId' as const, label: 'NFT Token ID' },
+      { key: 'subdomain' as const, label: 'Subdomain' },
+      { key: 'customDomain' as const, label: 'Custom Domain' },
+      { key: 'isActive' as const, label: 'Status' },
+      { key: 'users' as const, label: 'Users' },
+      { key: 'products' as const, label: 'Products' },
+      { key: 'orders' as const, label: 'Orders' },
+      { key: 'createdAt' as const, label: 'Created' },
+    ];
+
+    await exportToCSV(
+      exportData,
+      csvHeaders,
+      'tenants',
+      undefined,
+      (recordCount, fileSize) => {
+        toast.success(`Exported ${recordCount} tenants to CSV (${fileSize})`);
+      },
+      (error) => {
+        toast.error(`Export failed: ${error.message}`);
+      }
+    );
+  }, [tenants]);
+
+  // Export SELECTED tenants (for bulk action bar)
+  const handleExportCSV = useCallback(async () => {
     const selectedTenants = tenants.filter((t) => selectedIds.has(t.id));
     if (selectedTenants.length === 0) return;
 
-    // Build CSV content
-    const headers = [
-      'Business Name',
-      'NFT Token ID',
-      'Subdomain',
-      'Custom Domain',
-      'Status',
-      'Users',
-      'Products',
-      'Orders',
-      'Created',
+    const exportData = selectedTenants.map((t) => ({
+      businessName: t.businessName,
+      nftTokenId: t.nftTokenId || '',
+      subdomain: t.subdomain,
+      customDomain: t.customDomain || '',
+      isActive: t.isActive ? 'Active' : 'Inactive',
+      users: t._count.users,
+      products: t._count.products,
+      orders: t._count.orders,
+      createdAt: format(new Date(t.createdAt), 'yyyy-MM-dd'),
+    }));
+
+    const csvHeaders = [
+      { key: 'businessName' as const, label: 'Business Name' },
+      { key: 'nftTokenId' as const, label: 'NFT Token ID' },
+      { key: 'subdomain' as const, label: 'Subdomain' },
+      { key: 'customDomain' as const, label: 'Custom Domain' },
+      { key: 'isActive' as const, label: 'Status' },
+      { key: 'users' as const, label: 'Users' },
+      { key: 'products' as const, label: 'Products' },
+      { key: 'orders' as const, label: 'Orders' },
+      { key: 'createdAt' as const, label: 'Created' },
     ];
-    const rows = selectedTenants.map((t) => [
-      `"${t.businessName.replace(/"/g, '""')}"`,
-      t.nftTokenId || '',
-      t.subdomain,
-      t.customDomain || '',
-      t.isActive ? 'Active' : 'Inactive',
-      t._count.users.toString(),
-      t._count.products.toString(),
-      t._count.orders.toString(),
-      format(new Date(t.createdAt), 'yyyy-MM-dd'),
-    ]);
 
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join(
-      '\n'
+    await exportToCSV(
+      exportData,
+      csvHeaders,
+      'tenants',
+      undefined,
+      (recordCount, fileSize) => {
+        toast.success(`Exported ${recordCount} selected tenants to CSV (${fileSize})`);
+        clearSelection();
+      },
+      (error) => {
+        toast.error(`Export failed: ${error.message}`);
+      }
     );
-
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `tenants-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    toast.success(`Exported ${selectedTenants.length} tenants to CSV`);
-    clearSelection();
   }, [tenants, selectedIds, clearSelection]);
 
   const handleConfirmAction = useCallback(async () => {
@@ -378,6 +431,14 @@ export function TenantsTable({
                 options={statusOptions}
                 aria-label="Filter by status"
                 placeholder="All Tenants"
+              />
+
+              {/* Export Button */}
+              <ExportButton
+                onExport={handleExportAll}
+                recordCount={tenants.length}
+                theme="super-admin"
+                disabled={tenants.length === 0}
               />
             </div>
           </div>

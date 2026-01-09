@@ -41,11 +41,13 @@ import {
   Pagination,
   SortableTableHeader,
   BulkActionBar,
+  ExportButton,
 } from '@/components/admin/shared';
 import type { StatusFilterOption, BulkAction } from '@/components/admin/shared';
 import { useTableState } from '@/lib/admin/url-state';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
+import { exportToCSV } from '@/lib/admin/csv-export';
 
 /** Filter types for product table */
 type CategoryFilter = 'all' | 'flower' | 'edibles' | 'concentrates' | 'pre-rolls' | 'topicals' | 'accessories';
@@ -234,50 +236,86 @@ export function ProductsTable({
     setConfirmAction('delete');
   }, []);
 
-  const handleExportCSV = useCallback(() => {
-    // Get selected products data
+  // Export ALL filtered products (the main export button)
+  const handleExportAll = useCallback(async () => {
+    if (products.length === 0) return;
+
+    const exportData = products.map((p) => ({
+      name: p.name,
+      category: p.category || '',
+      thcContent: p.thcContent != null ? `${p.thcContent}%` : '',
+      cbdContent: p.cbdContent != null ? `${p.cbdContent}%` : '',
+      price: `$${p.price.toFixed(2)}`,
+      stock: p.stock,
+      status: p.stock > 0 ? 'In Stock' : 'Out of Stock',
+      createdAt: format(new Date(p.createdAt), 'yyyy-MM-dd'),
+    }));
+
+    const csvHeaders = [
+      { key: 'name' as const, label: 'Name' },
+      { key: 'category' as const, label: 'Category' },
+      { key: 'thcContent' as const, label: 'THC %' },
+      { key: 'cbdContent' as const, label: 'CBD %' },
+      { key: 'price' as const, label: 'Price' },
+      { key: 'stock' as const, label: 'Stock' },
+      { key: 'status' as const, label: 'Status' },
+      { key: 'createdAt' as const, label: 'Created' },
+    ];
+
+    await exportToCSV(
+      exportData,
+      csvHeaders,
+      'products',
+      undefined,
+      (recordCount, fileSize) => {
+        toast.success(`Exported ${recordCount} products to CSV (${fileSize})`);
+      },
+      (error) => {
+        toast.error(`Export failed: ${error.message}`);
+      }
+    );
+  }, [products]);
+
+  // Export SELECTED products (for bulk action bar)
+  const handleExportCSV = useCallback(async () => {
     const selectedProducts = products.filter((p) => selectedIds.has(p.id));
     if (selectedProducts.length === 0) return;
 
-    // Build CSV content
-    const headers = [
-      'Name',
-      'Category',
-      'THC %',
-      'CBD %',
-      'Price',
-      'Stock',
-      'Status',
-      'Created',
+    const exportData = selectedProducts.map((p) => ({
+      name: p.name,
+      category: p.category || '',
+      thcContent: p.thcContent != null ? `${p.thcContent}%` : '',
+      cbdContent: p.cbdContent != null ? `${p.cbdContent}%` : '',
+      price: `$${p.price.toFixed(2)}`,
+      stock: p.stock,
+      status: p.stock > 0 ? 'In Stock' : 'Out of Stock',
+      createdAt: format(new Date(p.createdAt), 'yyyy-MM-dd'),
+    }));
+
+    const csvHeaders = [
+      { key: 'name' as const, label: 'Name' },
+      { key: 'category' as const, label: 'Category' },
+      { key: 'thcContent' as const, label: 'THC %' },
+      { key: 'cbdContent' as const, label: 'CBD %' },
+      { key: 'price' as const, label: 'Price' },
+      { key: 'stock' as const, label: 'Stock' },
+      { key: 'status' as const, label: 'Status' },
+      { key: 'createdAt' as const, label: 'Created' },
     ];
-    const rows = selectedProducts.map((p) => [
-      `"${p.name.replace(/"/g, '""')}"`,
-      p.category || '',
-      p.thcContent != null ? p.thcContent.toString() : '',
-      p.cbdContent != null ? p.cbdContent.toString() : '',
-      p.price.toString(),
-      p.stock.toString(),
-      p.stock > 0 ? 'In Stock' : 'Out of Stock',
-      format(new Date(p.createdAt), 'yyyy-MM-dd'),
-    ]);
 
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join(
-      '\n'
+    await exportToCSV(
+      exportData,
+      csvHeaders,
+      'products',
+      undefined,
+      (recordCount, fileSize) => {
+        toast.success(`Exported ${recordCount} selected products to CSV (${fileSize})`);
+        clearSelection();
+      },
+      (error) => {
+        toast.error(`Export failed: ${error.message}`);
+      }
     );
-
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `products-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    toast.success(`Exported ${selectedProducts.length} products to CSV`);
-    clearSelection();
   }, [products, selectedIds, clearSelection]);
 
   const handleConfirmAction = useCallback(async () => {
@@ -442,6 +480,14 @@ export function ProductsTable({
                 placeholder="All Stock"
                 showIcon={false}
                 className="w-[140px]"
+              />
+
+              {/* Export Button */}
+              <ExportButton
+                onExport={handleExportAll}
+                recordCount={products.length}
+                theme="tenant-admin"
+                disabled={products.length === 0}
               />
             </div>
           </div>

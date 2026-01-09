@@ -29,3 +29,4 @@ export {
   type BreadcrumbsProps,
   type BreadcrumbItem,
 } from './Breadcrumbs';
+export { ExportButton, type ExportButtonProps } from './ExportButton';
