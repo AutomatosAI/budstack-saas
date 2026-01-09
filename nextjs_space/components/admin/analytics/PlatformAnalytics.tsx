@@ -14,8 +14,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Dynamic import of Plotly for code splitting
-const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
+// Dynamic import of Plotly for code splitting (typed as any to avoid @types/react version conflicts)
+const Plot: React.ComponentType<any> = dynamic(
+  () => import('react-plotly.js').then((mod) => mod.default),
+  { ssr: false }
+);
 
 interface PlatformAnalyticsProps {
   className?: string;
