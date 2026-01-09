@@ -47,7 +47,7 @@ export function AccessibleAdminLayout({
         role="main"
         aria-label={`${pageTitle} - ${theme === 'super-admin' ? 'Super Admin' : 'Tenant Admin'} Panel`}
         tabIndex={-1}
-        className="focus:outline-none"
+        className="flex-1 flex flex-col min-h-full bg-gray-50 focus:outline-none"
       >
         {children}
       </main>

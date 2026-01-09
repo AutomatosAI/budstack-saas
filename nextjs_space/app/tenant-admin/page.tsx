@@ -9,7 +9,6 @@ import { ShoppingBag, Package, Palette, Settings, ExternalLink, BarChart3, Shiel
 import { prisma } from '@/lib/db';
 import { getTenantUrl } from '@/lib/tenant';
 import { QuickActionsWidget } from '@/components/admin/QuickActionsWidget';
-import StoreAnalytics from '@/components/admin/analytics/StoreAnalytics';
 
 export default async function TenantAdminDashboard() {
   const session = await getServerSession(authOptions);
@@ -21,7 +20,7 @@ export default async function TenantAdminDashboard() {
   const user = await prisma.users.findUnique({
     where: { id: session.user.id },
     include: {
-      tenant: {
+      tenants: {
         include: {
           _count: {
             select: {
@@ -35,7 +34,7 @@ export default async function TenantAdminDashboard() {
     },
   });
 
-  if (!user?.tenant) {
+  if (!user?.tenants) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -57,7 +56,7 @@ export default async function TenantAdminDashboard() {
     );
   }
 
-  const tenant = user.tenant;
+  const tenant = user.tenants;
 
   // If user is logged in with a different account or needs to access via store URL
   // Provide a helpful message with the correct URL
@@ -133,11 +132,6 @@ export default async function TenantAdminDashboard() {
       {/* Quick Actions Widget */}
       <div className="mb-8">
         <QuickActionsWidget />
-      </div>
-
-      {/* Store Analytics */}
-      <div className="mb-8">
-        <StoreAnalytics />
       </div>
 
       {/* Store Info */}

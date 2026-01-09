@@ -4,7 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { TenantAdminSidebar } from '@/components/admin/TenantAdminSidebar';
 import { AccessibleAdminLayout } from '@/components/admin/AccessibleAdminLayout';
-import { NotificationCenter, generateMockNotifications } from '@/components/admin/NotificationCenter';
+import { NotificationCenter } from '@/components/admin/NotificationCenter';
+import { generateMockNotifications } from '@/lib/mock-data';
 
 export default async function TenantAdminLayout({
   children,

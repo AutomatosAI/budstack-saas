@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { SuperAdminSidebar } from '@/components/admin/SuperAdminSidebar';
 import { AccessibleAdminLayout } from '@/components/admin/AccessibleAdminLayout';
-import { NotificationCenter, generateMockNotifications } from '@/components/admin/NotificationCenter';
+import { NotificationCenter } from '@/components/admin/NotificationCenter';
+import { generateMockNotifications } from '@/lib/mock-data';
 
 export default async function SuperAdminLayout({
     children,

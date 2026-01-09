@@ -19,12 +19,12 @@ export default async function SettingsPage() {
   });
 
   // Mask the secret key before passing to client
-  if (user?.tenant?.drGreenSecretKey) {
+  if (user?.tenants?.drGreenSecretKey) {
     // Only indicate it exists, don't send value
-    user.tenant.drGreenSecretKey = '********';
+    user.tenants.drGreenSecretKey = '********';
   }
 
-  if (!user?.tenant) {
+  if (!user?.tenants) {
     redirect('/tenant-admin');
   }
 
@@ -45,7 +45,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="max-w-4xl">
-        <SettingsForm tenant={user.tenant} />
+        <SettingsForm tenant={user.tenants} />
       </div>
     </div>
   );

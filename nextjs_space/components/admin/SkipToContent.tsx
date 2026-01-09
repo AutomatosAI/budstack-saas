@@ -54,8 +54,8 @@ export function SkipToContent({
       className={cn(
         // Positioning - fixed at top, initially off-screen
         'fixed top-4 left-4 z-[100]',
-        // Transform off-screen by default
-        '-translate-y-full',
+        // Transform off-screen by default (account for top-4 offset + extra margin)
+        '-translate-y-[calc(100%+2rem)]',
         // Slide down with dramatic animation on focus
         'focus:translate-y-0 focus:animate-skip-link-slide',
         // Styling

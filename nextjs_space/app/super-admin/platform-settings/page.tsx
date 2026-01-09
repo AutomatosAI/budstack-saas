@@ -21,13 +21,13 @@ export default async function PlatformSettingsPage() {
   }
 
   // Get or create platform settings
-  let settings = await prisma.platformSettings.findUnique({
+  let settings = await prisma.platform_settings.findUnique({
     where: { id: 'platform' },
   });
 
   if (!settings) {
-    settings = await prisma.platformSettings.create({
-      data: { id: 'platform' },
+    settings = await prisma.platform_settings.create({
+      data: { id: 'platform', updatedAt: new Date() },
     });
   }
 
