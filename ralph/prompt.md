@@ -20,7 +20,6 @@ You are an autonomous coding agent working on a software project.
 APPEND to progress.txt (never replace, always append):
 ```
 ## [Date/Time] - [Story ID]
-Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - What was implemented
 - Files changed
 - **Learnings for future iterations:**
@@ -29,8 +28,6 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
   - Useful context (e.g., "the evaluation panel is in component X")
 ---
 ```
-
-Include the thread URL so future iterations can use the `read_thread` tool to reference previous work if needed.
 
 The learnings section is critical - it helps future iterations avoid repeating mistakes and understand the codebase better.
 
@@ -79,6 +76,15 @@ Only update AGENTS.md if you have **genuinely reusable knowledge** that would he
 - Do NOT commit broken code
 - Keep changes focused and minimal
 - Follow existing code patterns
+
+## Frontend Design Skill (Required for UI Stories)
+
+For any story that involves UI/frontend work (identified by "Verify in browser" in acceptance criteria OR "UI STORY" in notes):
+
+1. **FIRST** invoke the `frontend-design` skill before writing any code
+2. The skill creates distinctive, production-grade interfaces
+3. Use: `/frontend-design [description of what to build]`
+4. After the skill generates code, verify it meets acceptance criteria
 
 ## Browser Testing (Required for Frontend Stories)
 

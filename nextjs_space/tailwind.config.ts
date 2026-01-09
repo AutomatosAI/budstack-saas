@@ -84,10 +84,41 @@ const config: Config = {
             height: '0',
           },
         },
+        'focus-ring': {
+          '0%': {
+            opacity: '0',
+            transform: 'scale(0.95)',
+          },
+          '100%': {
+            opacity: '1',
+            transform: 'scale(1)',
+          },
+        },
+        'focus-pulse': {
+          '0%, 100%': {
+            opacity: '1',
+          },
+          '50%': {
+            opacity: '0.8',
+          },
+        },
+        'skip-link-slide': {
+          from: {
+            transform: 'translateY(-100%)',
+            opacity: '0',
+          },
+          to: {
+            transform: 'translateY(0)',
+            opacity: '1',
+          },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'focus-ring': 'focus-ring 0.15s ease-out',
+        'focus-pulse': 'focus-pulse 2s ease-in-out infinite',
+        'skip-link-slide': 'skip-link-slide 0.2s ease-out',
       },
     },
   },

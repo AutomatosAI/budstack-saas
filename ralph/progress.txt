@@ -749,3 +749,47 @@ Started: Fri  9 Jan 2026 16:34:28 WET
   - Mock data generators with realistic variance make the dashboard feel alive during development
   - Layout: Revenue cards (3-col) → Charts (2-col grid) → Activity widgets (2-col) creates good visual hierarchy
 ---
+
+## 2026-01-09 - US-034
+
+- **What was implemented**: API Rate Limiting & Caching
+- **Files created**:
+  - `nextjs_space/lib/rate-limit.ts` - Rate limiting utility with sliding window algorithm
+  - `nextjs_space/components/query-provider.tsx` - React Query provider for client-side caching
+  - `nextjs_space/lib/hooks/useAnalytics.ts` - Custom hooks for analytics data with 5-minute cache
+  - `nextjs_space/lib/hooks/useAdminData.ts` - Custom hooks for list data (tenants, products, orders) with 1-minute cache
+- **Files modified**:
+  - `nextjs_space/app/layout.tsx` - Added QueryProvider to root layout
+  - `nextjs_space/app/api/super-admin/tenants/route.ts` - Added rate limiting to GET and POST endpoints
+  - `nextjs_space/app/api/super-admin/tenants/bulk/route.ts` - Added rate limiting to bulk actions
+  - `nextjs_space/app/api/tenant-admin/analytics/route.ts` - Added rate limiting to analytics endpoint
+  - `nextjs_space/app/api/tenant-admin/products/bulk/route.ts` - Added rate limiting to bulk product actions
+  - `nextjs_space/app/api/tenant-admin/orders/bulk/route.ts` - Added rate limiting to bulk order actions
+
+- **Features implemented**:
+  - **Rate Limiting**:
+    - Sliding window rate limiter: 20 requests per minute per user
+    - In-memory store with automatic cleanup every 5 minutes
+    - Returns 429 status with Retry-After header when limit exceeded
+    - Includes X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset headers
+    - Applied to all admin API routes (super-admin and tenant-admin)
+  - **React Query Caching**:
+    - Global QueryClient with default 1-minute stale time and 5-minute garbage collection
+    - Analytics hooks (useTenantAnalytics, useSuperAdminAnalytics) with 5-minute stale time
+    - List data hooks (useTenants, useProducts, useOrders) with 1-minute stale time
+    - Mutation hooks with automatic cache invalidation (useTenantBulkAction, useProductBulkAction, useOrderBulkAction)
+    - TypeScript generics for type-safe filter parameters
+    - Automatic refetch on mutation success to keep data fresh
+  - Typecheck passed with `npm run build`
+
+- **Learnings for future iterations**:
+  - Rate limiting implementation uses in-memory store - for production at scale, migrate to Redis for distributed rate limiting
+  - React Query's `staleTime` controls how long data is considered fresh (no refetch on mount), `gcTime` (formerly `cacheTime`) controls how long unused data stays in cache
+  - The `checkRateLimit()` function pattern makes it easy to add rate limiting to any API route with a single function call
+  - Mutation hooks should use `queryClient.invalidateQueries()` in `onSuccess` callback to automatically refetch related data
+  - QueryProvider must be placed inside SessionProvider but outside ThemeProvider in the provider hierarchy
+  - @tanstack/react-query version 5.x uses `gcTime` instead of `cacheTime` - old API deprecated
+  - Custom hooks pattern (useAnalytics, useAdminData) provides centralized caching configuration and DRY principle
+  - Rate limit headers (Retry-After, X-RateLimit-*) help clients implement intelligent retry logic
+---
+

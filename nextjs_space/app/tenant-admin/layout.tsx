@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { TenantAdminSidebar } from '@/components/admin/TenantAdminSidebar';
+import { AccessibleAdminLayout } from '@/components/admin/AccessibleAdminLayout';
 
 export default async function TenantAdminLayout({
   children,
@@ -40,9 +41,11 @@ export default async function TenantAdminLayout({
         userEmail={session.user.email || ''}
         tenantName={user.tenants.businessName}
       />
-      <main className="flex-1 overflow-auto pl-0 md:pl-0">
-        {children}
-      </main>
+      <AccessibleAdminLayout theme="tenant-admin">
+        <div className="flex-1 overflow-auto pl-0 md:pl-0">
+          {children}
+        </div>
+      </AccessibleAdminLayout>
     </div>
   );
 }
