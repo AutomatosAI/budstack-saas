@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
+import { KeyboardHint } from './KeyboardShortcutsProvider';
 
 /**
  * Menu item configuration for the sidebar navigation
@@ -24,6 +25,8 @@ export interface AdminMenuItem {
   icon: LucideIcon;
   /** Navigation href for the link */
   href: string;
+  /** Optional keyboard shortcut hint (e.g., ['G', 'D'] for "G then D") */
+  shortcut?: string[];
 }
 
 /**
@@ -252,14 +255,24 @@ export function AdminSidebar({
                   aria-hidden="true"
                 />
                 {!collapsed && (
-                  <span className={cn('font-medium', active ? 'text-white' : 'text-white/90')}>
-                    {item.label}
-                  </span>
+                  <>
+                    <span className={cn('font-medium flex-1', active ? 'text-white' : 'text-white/90')}>
+                      {item.label}
+                    </span>
+                    {item.shortcut && (
+                      <KeyboardHint keys={item.shortcut} theme={theme} />
+                    )}
+                  </>
                 )}
                 {/* Collapsed tooltip */}
                 {collapsed && (
                   <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                     {item.label}
+                    {item.shortcut && (
+                      <span className="ml-2 text-xs text-gray-400">
+                        {item.shortcut.join(' ')}
+                      </span>
+                    )}
                   </div>
                 )}
               </Link>

@@ -19,9 +19,9 @@ import { AdminSidebar, type AdminMenuItem } from './AdminSidebar';
  * Menu items for the tenant admin sidebar
  */
 const tenantAdminMenuItems: AdminMenuItem[] = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/tenant-admin' },
-  { id: 'products', label: 'Products', icon: Package, href: '/tenant-admin/products' },
-  { id: 'orders', label: 'Orders', icon: ShoppingBag, href: '/tenant-admin/orders' },
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/tenant-admin', shortcut: ['G', 'D'] },
+  { id: 'products', label: 'Products', icon: Package, href: '/tenant-admin/products', shortcut: ['G', 'P'] },
+  { id: 'orders', label: 'Orders', icon: ShoppingBag, href: '/tenant-admin/orders', shortcut: ['G', 'O'] },
   { id: 'customers', label: 'Customers', icon: Users, href: '/tenant-admin/customers' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/tenant-admin/analytics' },
   { id: 'branding', label: 'Branding', icon: Palette, href: '/tenant-admin/branding' },

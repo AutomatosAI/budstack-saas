@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { SkipToContent } from './SkipToContent';
+import { KeyboardShortcutsProvider } from './KeyboardShortcutsProvider';
 
 /**
  * AccessibleAdminLayout Component
@@ -10,6 +11,7 @@ import { SkipToContent } from './SkipToContent';
  * - Skip-to-content link
  * - Main content wrapper with proper ARIA attributes
  * - Theme-specific focus states
+ * - Global keyboard shortcuts
  *
  * @param children - Admin panel content
  * @param theme - 'super-admin' or 'tenant-admin'
@@ -35,7 +37,7 @@ export function AccessibleAdminLayout({
     .replace(/\b\w/g, (l) => l.toUpperCase()) || 'Dashboard';
 
   return (
-    <>
+    <KeyboardShortcutsProvider theme={theme}>
       {/* Skip to content link - hidden until focused */}
       <SkipToContent theme={theme} targetId="main-content" />
 
@@ -49,6 +51,6 @@ export function AccessibleAdminLayout({
       >
         {children}
       </main>
-    </>
+    </KeyboardShortcutsProvider>
   );
 }

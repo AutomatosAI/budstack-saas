@@ -28,8 +28,8 @@ export enum PanelType {
  * Menu items for the super admin sidebar
  */
 const superAdminMenuItems: AdminMenuItem[] = [
-  { id: PanelType.OVERVIEW, label: 'Overview', icon: LayoutDashboard, href: '/super-admin' },
-  { id: PanelType.TENANTS, label: 'Tenants', icon: Building2, href: '/super-admin/tenants' },
+  { id: PanelType.OVERVIEW, label: 'Overview', icon: LayoutDashboard, href: '/super-admin', shortcut: ['G', 'D'] },
+  { id: PanelType.TENANTS, label: 'Tenants', icon: Building2, href: '/super-admin/tenants', shortcut: ['G', 'T'] },
   { id: PanelType.ONBOARDING, label: 'Onboarding', icon: UserPlus, href: '/super-admin/onboarding' },
   { id: PanelType.ANALYTICS, label: 'Analytics', icon: BarChart3, href: '/super-admin/analytics' },
   { id: PanelType.BRANDING, label: 'Branding', icon: Palette, href: '/super-admin/platform-settings' },
