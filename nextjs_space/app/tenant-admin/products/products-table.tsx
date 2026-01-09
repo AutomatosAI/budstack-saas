@@ -1,9 +1,22 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Package, Search, Leaf } from 'lucide-react';
+import { useMemo, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
+import {
+  Package,
+  Search,
+  Leaf,
+  PackageCheck,
+  PackageMinus,
+  Download,
+  Trash2,
+  AlertTriangle,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -12,13 +25,33 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { SearchInput, StatusFilter, EmptyState, Pagination, SortableTableHeader } from '@/components/admin/shared';
-import type { StatusFilterOption } from '@/components/admin/shared';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  SearchInput,
+  StatusFilter,
+  EmptyState,
+  Pagination,
+  SortableTableHeader,
+  BulkActionBar,
+} from '@/components/admin/shared';
+import type { StatusFilterOption, BulkAction } from '@/components/admin/shared';
 import { useTableState } from '@/lib/admin/url-state';
+import { toast } from '@/components/ui/sonner';
+import { cn } from '@/lib/utils';
 
 /** Filter types for product table */
 type CategoryFilter = 'all' | 'flower' | 'edibles' | 'concentrates' | 'pre-rolls' | 'topicals' | 'accessories';
 type StockFilter = 'all' | 'in-stock' | 'out-of-stock';
+
+/** Type for bulk action confirmation dialog */
+type BulkActionType = 'set-in-stock' | 'set-out-of-stock' | 'delete' | null;
 
 /** Typed filters for product table - uses Record index signature for URL state compatibility */
 type ProductFilters = {
@@ -73,10 +106,18 @@ export function ProductsTable({
   outOfStockCount,
   categoryCounts,
 }: ProductsTableProps) {
+  const router = useRouter();
   const [{ search, filters, page, pageSize, sort }, { setSearch, setFilter, setPage, setPageSize, setSort }] = useTableState<ProductFilters>({
     defaultFilters: { category: 'all', stock: 'all' },
     defaultPageSize: 20,
   });
+
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Confirmation dialog state
+  const [confirmAction, setConfirmAction] = useState<BulkActionType>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const categoryFilter = filters.category || 'all';
   const stockFilter = filters.stock || 'all';
@@ -139,6 +180,193 @@ export function ProductsTable({
     setFilter('stock', 'all');
   };
 
+  // Selection handlers
+  const isAllSelected =
+    products.length > 0 && products.every((p) => selectedIds.has(p.id));
+  const isSomeSelected =
+    products.some((p) => selectedIds.has(p.id)) && !isAllSelected;
+
+  const handleSelectAll = useCallback(() => {
+    if (isAllSelected) {
+      // Deselect all on current page
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        products.forEach((p) => next.delete(p.id));
+        return next;
+      });
+    } else {
+      // Select all on current page
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        products.forEach((p) => next.add(p.id));
+        return next;
+      });
+    }
+  }, [isAllSelected, products]);
+
+  const handleSelectOne = useCallback((id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  // Bulk action handlers
+  const handleSetInStock = useCallback(() => {
+    setConfirmAction('set-in-stock');
+  }, []);
+
+  const handleSetOutOfStock = useCallback(() => {
+    setConfirmAction('set-out-of-stock');
+  }, []);
+
+  const handleDelete = useCallback(() => {
+    setConfirmAction('delete');
+  }, []);
+
+  const handleExportCSV = useCallback(() => {
+    // Get selected products data
+    const selectedProducts = products.filter((p) => selectedIds.has(p.id));
+    if (selectedProducts.length === 0) return;
+
+    // Build CSV content
+    const headers = [
+      'Name',
+      'Category',
+      'THC %',
+      'CBD %',
+      'Price',
+      'Stock',
+      'Status',
+      'Created',
+    ];
+    const rows = selectedProducts.map((p) => [
+      `"${p.name.replace(/"/g, '""')}"`,
+      p.category || '',
+      p.thcContent != null ? p.thcContent.toString() : '',
+      p.cbdContent != null ? p.cbdContent.toString() : '',
+      p.price.toString(),
+      p.stock.toString(),
+      p.stock > 0 ? 'In Stock' : 'Out of Stock',
+      format(new Date(p.createdAt), 'yyyy-MM-dd'),
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join(
+      '\n'
+    );
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `products-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`Exported ${selectedProducts.length} products to CSV`);
+    clearSelection();
+  }, [products, selectedIds, clearSelection]);
+
+  const handleConfirmAction = useCallback(async () => {
+    if (!confirmAction || selectedIds.size === 0) return;
+
+    setIsProcessing(true);
+
+    try {
+      const response = await fetch('/api/tenant-admin/products/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: confirmAction,
+          productIds: Array.from(selectedIds),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to perform action');
+      }
+
+      // Display appropriate success message
+      const actionMessages: Record<string, string> = {
+        'set-in-stock': 'set to In Stock',
+        'set-out-of-stock': 'set to Out of Stock',
+        'delete': 'deleted',
+      };
+
+      toast.success(
+        `${data.count} product${data.count === 1 ? '' : 's'} ${actionMessages[confirmAction]} successfully`
+      );
+
+      // Clear selection and refresh
+      clearSelection();
+      router.refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'An error occurred'
+      );
+    } finally {
+      setIsProcessing(false);
+      setConfirmAction(null);
+    }
+  }, [confirmAction, selectedIds, clearSelection, router]);
+
+  // Bulk actions configuration
+  const bulkActions: BulkAction[] = useMemo(
+    () => [
+      {
+        id: 'set-in-stock',
+        label: 'Set In Stock',
+        icon: PackageCheck,
+        onClick: handleSetInStock,
+        variant: 'default',
+      },
+      {
+        id: 'set-out-of-stock',
+        label: 'Set Out of Stock',
+        icon: PackageMinus,
+        onClick: handleSetOutOfStock,
+        variant: 'outline',
+      },
+      {
+        id: 'export',
+        label: 'Export CSV',
+        icon: Download,
+        onClick: handleExportCSV,
+        variant: 'outline',
+      },
+      {
+        id: 'delete',
+        label: 'Delete',
+        icon: Trash2,
+        onClick: handleDelete,
+        variant: 'destructive',
+      },
+    ],
+    [handleSetInStock, handleSetOutOfStock, handleExportCSV, handleDelete]
+  );
+
+  // Get selected product names for confirmation dialog
+  const selectedProductNames = useMemo(() => {
+    return products
+      .filter((p) => selectedIds.has(p.id))
+      .map((p) => p.name)
+      .slice(0, 5);
+  }, [products, selectedIds]);
+
   // Get strain badge color (using hash for demo since strain isn't in schema)
   const getStrainBadgeClasses = (productName: string) => {
     const nameHash = productName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -162,6 +390,7 @@ export function ProductsTable({
   };
 
   return (
+    <>
     <Card className="shadow-lg border-slate-200">
       <CardHeader className="border-b bg-gradient-to-r from-emerald-50 to-teal-50">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -245,6 +474,23 @@ export function ProductsTable({
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
+                  {/* Select All Checkbox */}
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={isAllSelected}
+                      onCheckedChange={handleSelectAll}
+                      aria-label={
+                        isAllSelected
+                          ? 'Deselect all products'
+                          : 'Select all products'
+                      }
+                      className={cn(
+                        'border-emerald-400 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600',
+                        isSomeSelected && 'data-[state=checked]:bg-emerald-400'
+                      )}
+                      {...(isSomeSelected && { 'data-state': 'checked' })}
+                    />
+                  </TableHead>
                   <SortableTableHeader
                     columnKey="name"
                     label="Name"
@@ -290,11 +536,27 @@ export function ProductsTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
+                {products.map((product) => {
+                  const isSelected = selectedIds.has(product.id);
+                  return (
                   <TableRow
                     key={product.id}
-                    className="hover:bg-slate-50 transition-colors"
+                    className={cn(
+                      'hover:bg-slate-50 transition-colors',
+                      isSelected && 'bg-emerald-50/70'
+                    )}
                   >
+                    {/* Row Checkbox */}
+                    <TableCell className="w-12">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) =>
+                          handleSelectOne(product.id, checked === true)
+                        }
+                        aria-label={`Select ${product.name}`}
+                        className="border-emerald-400 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                      />
+                    </TableCell>
                     <TableCell className="font-medium text-slate-900">
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
@@ -341,7 +603,8 @@ export function ProductsTable({
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -364,5 +627,142 @@ export function ProductsTable({
         )}
       </CardContent>
     </Card>
+
+    {/* Bulk Action Bar */}
+    <BulkActionBar
+      selectedCount={selectedIds.size}
+      itemLabel="products"
+      actions={bulkActions}
+      onClearSelection={clearSelection}
+    />
+
+    {/* Confirmation Dialog */}
+    <Dialog
+      open={confirmAction !== null}
+      onOpenChange={(open) => !open && setConfirmAction(null)}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {confirmAction === 'delete' ? (
+              <>
+                <Trash2 className="h-5 w-5 text-red-500" />
+                <span>Delete Products</span>
+              </>
+            ) : confirmAction === 'set-in-stock' ? (
+              <>
+                <PackageCheck className="h-5 w-5 text-emerald-500" />
+                <span>Set In Stock</span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                <span>Set Out of Stock</span>
+              </>
+            )}
+          </DialogTitle>
+          <DialogDescription className="pt-2">
+            {confirmAction === 'delete' ? (
+              <span className="text-red-600">
+                Are you sure you want to delete{' '}
+                <strong>{selectedIds.size}</strong> product
+                {selectedIds.size === 1 ? '' : 's'}? This cannot be undone.
+              </span>
+            ) : confirmAction === 'set-in-stock' ? (
+              <span>
+                Set <strong>{selectedIds.size}</strong> product
+                {selectedIds.size === 1 ? '' : 's'} to In Stock?
+              </span>
+            ) : (
+              <span>
+                Set <strong>{selectedIds.size}</strong> product
+                {selectedIds.size === 1 ? '' : 's'} to Out of Stock?
+              </span>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Show product names */}
+        {selectedProductNames.length > 0 && (
+          <div className="py-2">
+            <p className="text-xs text-muted-foreground mb-2">
+              Affected products:
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {selectedProductNames.map((name) => (
+                <Badge
+                  key={name}
+                  variant="secondary"
+                  className="text-xs font-normal"
+                >
+                  {name}
+                </Badge>
+              ))}
+              {selectedIds.size > 5 && (
+                <Badge variant="outline" className="text-xs font-normal">
+                  +{selectedIds.size - 5} more
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            variant="outline"
+            onClick={() => setConfirmAction(null)}
+            disabled={isProcessing}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant={confirmAction === 'delete' ? 'destructive' : 'default'}
+            onClick={handleConfirmAction}
+            disabled={isProcessing}
+            className={cn(
+              confirmAction === 'set-in-stock' &&
+                'bg-emerald-600 hover:bg-emerald-700',
+              confirmAction === 'set-out-of-stock' &&
+                'bg-amber-600 hover:bg-amber-700'
+            )}
+          >
+            {isProcessing ? (
+              <>
+                <span className="animate-spin mr-2">
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                </span>
+                Processing...
+              </>
+            ) : confirmAction === 'delete' ? (
+              'Delete'
+            ) : confirmAction === 'set-in-stock' ? (
+              'Set In Stock'
+            ) : (
+              'Set Out of Stock'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
