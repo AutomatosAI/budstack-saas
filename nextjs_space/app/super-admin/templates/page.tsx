@@ -1,13 +1,13 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UploadTemplateDialog } from './upload-dialog';
 import { TemplateActions } from './template-actions';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 export default async function TemplatesManagementPage() {
   const session = await getServerSession();
@@ -31,6 +31,15 @@ export default async function TemplatesManagementPage() {
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/super-admin' },
+          { label: 'Templates' },
+        ]}
+        className="mb-4"
+      />
+
       {/* Page Header */}
       <div className="mb-8 flex justify-between items-center">
         <div>

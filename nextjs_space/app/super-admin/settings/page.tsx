@@ -2,10 +2,8 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import SettingsForm from './settings-form';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 export default async function PlatformSettingsConfigPage() {
     const session = await getServerSession();
@@ -44,6 +42,15 @@ export default async function PlatformSettingsConfigPage() {
 
     return (
         <div className="p-8">
+            {/* Breadcrumbs */}
+            <Breadcrumbs
+                items={[
+                    { label: 'Dashboard', href: '/super-admin' },
+                    { label: 'Settings' },
+                ]}
+                className="mb-4"
+            />
+
             {/* Page Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Platform Settings</h1>

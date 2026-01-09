@@ -30,7 +30,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Use shadcn/ui as base, extend with custom styling."
     },
     {
@@ -49,7 +49,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Non-UI utility story. No frontend-design skill needed."
     },
     {
@@ -66,7 +66,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Refactor existing sidebars into unified component."
     },
     {
@@ -86,7 +86,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Apply dark slate/zinc theme to super admin sidebar."
     },
     {
@@ -106,7 +106,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Verify tenant admin retains cyan/blue theme."
     },
     {
@@ -126,7 +126,7 @@
         "Verify in browser at 375px, 768px, 1024px, 1440px widths"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Critical mobile responsiveness feature."
     },
     {
@@ -145,7 +145,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Configure sonner toast styles and positioning."
     },
     {
@@ -164,7 +164,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Use SearchInput from shared components."
     },
     {
@@ -181,7 +181,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Use StatusFilter from shared components."
     },
     {
@@ -201,7 +201,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Use shared SearchInput and StatusFilter components."
     },
     {
@@ -219,7 +219,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Add date range picker component."
     },
     {
@@ -237,7 +237,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Use shared SearchInput component."
     },
     {
@@ -257,7 +257,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 13,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Use shared Pagination component."
     },
     {
@@ -272,7 +272,7 @@
         "Verify in browser using dev-browser skill for each page"
       ],
       "priority": 14,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Reuse Pagination component from US-009."
     },
     {
@@ -292,7 +292,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 15,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Create SortableTableHeader component."
     },
     {
@@ -311,7 +311,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 16,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Use shared BulkActionBar component."
     },
     {
@@ -326,7 +326,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 17,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Reuse BulkActionBar from US-012."
     },
     {
@@ -341,7 +341,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 18,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Reuse BulkActionBar from US-012."
     },
     {
@@ -361,7 +361,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 19,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Create Breadcrumbs component."
     },
     {
@@ -380,7 +380,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 20,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Use shared EmptyState component."
     },
     {
@@ -397,7 +397,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 21,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Create QuickActionsWidget component."
     },
     {
@@ -417,7 +417,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 22,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Use Plotly.js for charts with dynamic import for code splitting."
     },
     {
@@ -437,7 +437,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 23,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Use Plotly.js for charts, shadcn Card for widgets."
     },
     {
@@ -453,7 +453,7 @@
         "Typecheck passes"
       ],
       "priority": 24,
-      "passes": false,
+      "passes": true,
       "notes": "Non-UI backend story. No frontend-design skill needed. Focus on API middleware and React Query setup."
     },
     {
@@ -471,7 +471,7 @@
         "Test keyboard navigation: Tab, Shift+Tab, Enter, Escape"
       ],
       "priority": 25,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Update Tailwind config and component styles."
     },
     {
@@ -491,7 +491,7 @@
         "Test with screen reader (VoiceOver on Mac or NVDA on Windows)"
       ],
       "priority": 26,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Add aria attributes to all interactive components."
     },
     {
@@ -509,7 +509,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 27,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Audit and fix color contrast issues."
     },
     {
@@ -528,7 +528,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 28,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Add export button and CSV generation utility."
     },
     {
@@ -548,7 +548,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 29,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Create KeyboardShortcuts provider and help modal."
     },
     {
@@ -565,7 +565,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 30,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Create ActivityTimeline component."
     },
     {
@@ -583,7 +583,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 31,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Create NotificationCenter dropdown component."
     },
     {
@@ -600,7 +600,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 32,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Create PackingSlip print-optimized component."
     },
     {
@@ -617,7 +617,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 33,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. May require Prisma migration for adminNotes field."
     },
     {
@@ -635,7 +635,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 34,
-      "passes": false,
+      "passes": true,
       "notes": "UI STORY: Invoke frontend-design skill first. Requires @dnd-kit library and Prisma migration for displayOrder."
     }
   ]

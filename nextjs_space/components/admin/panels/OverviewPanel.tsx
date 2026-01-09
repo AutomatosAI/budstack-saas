@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, TrendingUp, UserPlus, Users } from 'lucide-react';
+import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
+import { generateMockEvents } from '@/lib/mock-data';
 
 interface OverviewPanelProps {
     totalTenants: number;
@@ -106,6 +108,13 @@ export function OverviewPanel({
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Recent Activity Timeline */}
+                <ActivityTimeline
+                    events={generateMockEvents(5)}
+                    maxVisible={5}
+                    showViewAll={true}
+                />
             </div>
         </div>
     );

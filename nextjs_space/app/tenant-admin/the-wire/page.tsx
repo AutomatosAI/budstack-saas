@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import PostsList from './posts-list';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 export const metadata = {
     title: 'The Wire Management',
@@ -35,6 +36,15 @@ export default async function TheWirePage() {
 
     return (
         <div className="p-8">
+            {/* Breadcrumbs */}
+            <Breadcrumbs
+                items={[
+                    { label: 'Dashboard', href: '/tenant-admin' },
+                    { label: 'The Wire' },
+                ]}
+                className="mb-4"
+            />
+
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight">The Wire</h1>

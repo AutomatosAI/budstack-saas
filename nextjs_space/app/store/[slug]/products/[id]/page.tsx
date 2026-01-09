@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import Link from 'next/link';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { useCartStore } from '@/lib/cart-store';
 
 interface Product {

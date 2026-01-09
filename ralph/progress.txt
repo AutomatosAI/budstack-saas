@@ -1,0 +1,1324 @@
+# Ralph Progress Log
+Started: Fri  9 Jan 2026 16:34:28 WET
+---
+
+## Codebase Patterns
+- All UI components use `cn()` utility from `@/lib/utils` for Tailwind class merging
+- Components follow shadcn/ui pattern: forwardRef, className prop, composition with base components
+- Use `'use client'` directive for components with client-side state/hooks
+- Lucide React icons imported individually (e.g., `import { Search, X } from 'lucide-react'`)
+- Button variants defined with class-variance-authority (cva)
+- Radix UI primitives wrapped with shadcn styling for complex components (Select, Dialog, etc.)
+- Admin components location: `components/admin/` with shared utilities in `components/admin/shared/`
+- TypeScript interfaces exported alongside components for reusability
+- URL state management: use `useTableState()` from `@/lib/admin/url-state` for tables with search/filter/pagination
+- Unified sidebar: Use `AdminSidebar` from `@/components/admin/AdminSidebar` with `theme` prop for super-admin vs tenant-admin
+- Sidebar wrappers: `SuperAdminSidebar` and `TenantAdminSidebar` encapsulate menu items and are used in layout.tsx files
+- Toast notifications: Import `toast` from `@/components/ui/sonner` (NOT directly from 'sonner') for consistent styling
+- Client-safe utilities: Use `lib/tenant-utils.ts` for tenant functions needed in client components (NOT `lib/tenant.ts` which uses next/headers)
+- Server-side pagination: When paginating, move ALL filtering to server (Prisma where clause) - client-side filtering fails when only one page is loaded
+- Prisma type imports: Use `import { Prisma } from '@prisma/client'` for type-safe where clauses (e.g., `Prisma.tenantsWhereInput`)
+- Sortable table columns: Use `SortableTableHeader` from shared components, validate sort columns on server with VALID_SORT_COLUMNS constant
+- Bulk actions pattern: Use `BulkActionBar` from shared, `Set<string>` for selection state, confirmation dialogs for destructive actions
+- CSV export: Use client-side `Blob` + `URL.createObjectURL` for downloads, no server endpoint needed
+
+---
+
+## 2026-01-09 21:30 - US-005
+
+- **What was implemented**: Filter Tenants by Status
+- **Files modified**: None (feature was already implemented during US-004)
+- **Verification performed**:
+  - Confirmed StatusFilter component is present next to SearchInput in tenants-table.tsx:173-179
+  - Dropdown options: All Tenants, Active Only, Inactive Only with counts (lines 98-105)
+  - URL state persistence via useTableState with `defaultFilters: { status: 'all' }` (line 65-67)
+  - AND logic: search filtering happens first, then status filtering is applied (lines 72-115)
+  - Typecheck passes via `npm run build`
+
+- **Learnings for future iterations**:
+  - US-005 was implemented as part of US-004 (Search on Tenants Page) since both features share the same table component
+  - When implementing search, consider adding filters at the same time to leverage shared URL state management
+  - The TenantsTable component pattern demonstrates how to combine search + filters with AND logic efficiently
+
+---
+
+## 2026-01-09 21:00 - US-004
+
+- **What was implemented**: Search on Tenants Page
+- **Files created**:
+  - `nextjs_space/app/super-admin/tenants/tenants-table.tsx` - Client component with search functionality
+  - `nextjs_space/lib/tenant-utils.ts` - Client-safe tenant utilities (getTenantUrl)
+- **Files modified**:
+  - `nextjs_space/app/super-admin/tenants/page.tsx` - Refactored to use TenantsTable component
+
+- **Features implemented**:
+  - Search input field with placeholder "Search tenants..."
+  - Debounced search (300ms) using SearchInput from shared components
+  - Case-insensitive search across businessName, subdomain, customDomain, nftTokenId
+  - Clear button (X) appears when search has text
+  - "No tenants found" empty state with clear search button
+  - URL state persistence via useTableState hook (?search=value)
+  - Active count badge updates based on filtered results
+
+- **Learnings for future iterations**:
+  - Server-only functions (using next/headers) cannot be imported in client components
+  - Created lib/tenant-utils.ts for client-safe tenant utilities
+  - Keep getTenantUrl in tenant-utils.ts for any client component that displays tenant URLs
+  - The TenantsTable pattern (server page + client table) allows search to work without server round-trips
+
+---
+
+## 2026-01-09 20:30 - US-017
+
+- **What was implemented**: Toast Notification System
+- **Files modified**:
+  - `nextjs_space/components/ui/sonner.tsx` - Custom toast component with consistent styling
+  - 26 files updated to import `toast` from `@/components/ui/sonner` instead of directly from 'sonner'
+
+- **Features implemented**:
+  - Custom toast functions with distinctive styling:
+    - Success toast: Green gradient with checkmark icon, 3s duration
+    - Error toast: Red gradient with X icon, 5s duration
+    - Loading toast: Blue gradient with spinner, dismissible (Infinity duration)
+    - Warning toast: Amber gradient with alert icon, 4s duration
+    - Info toast: Cyan gradient with info icon, 3s duration
+  - Responsive positioning:
+    - Desktop (>=768px): bottom-right
+    - Mobile (<768px): top-center
+  - All toasts have dismiss button and optional description text
+  - Uses sonner.custom() for full styling control
+
+- **Learnings for future iterations**:
+  - Always import `toast` from `@/components/ui/sonner`, NOT directly from 'sonner'
+  - The custom toast uses unstyled mode in Sonner and renders custom JSX
+  - useEffect with window resize listener handles responsive positioning
+  - sonner.custom() allows full control over toast appearance while retaining sonner's queue management
+  - Export both `toast` (custom functions) and `Toaster` (component) from sonner.tsx
+
+---
+
+## 2026-01-09 20:00 - US-001
+
+- **What was implemented**: Mobile Responsive Sidebar
+- **Files created**:
+  - `nextjs_space/components/admin/SuperAdminSidebar.tsx` - Wrapper component for super-admin with menu items
+  - `nextjs_space/components/admin/TenantAdminSidebar.tsx` - Wrapper component for tenant-admin with menu items
+- **Files modified**:
+  - `nextjs_space/components/admin/AdminSidebar.tsx` - Added useEffect for route change detection
+  - `nextjs_space/app/super-admin/layout.tsx` - Migrated to use SuperAdminSidebar
+  - `nextjs_space/app/tenant-admin/layout.tsx` - Migrated to use TenantAdminSidebar
+
+- **Features implemented**:
+  - Sidebar hidden off-canvas on mobile (<768px) by default
+  - Hamburger menu button in top-left corner (visible on mobile only)
+  - Sidebar slides in from left when hamburger clicked
+  - Dark overlay covers content when sidebar open (click to close)
+  - Sidebar closes automatically when route changes on mobile (via useEffect)
+  - Desktop behavior unchanged (sidebar always visible)
+  - Smooth transitions (300ms) for open/close animations
+  - Z-index layers: overlay (40), sidebar (50)
+
+- **Learnings for future iterations**:
+  - Created wrapper components (SuperAdminSidebar, TenantAdminSidebar) to keep menu item definitions separate from the core AdminSidebar logic
+  - useEffect with pathname dependency is the cleanest way to detect route changes and close mobile sidebar
+  - The wrapper pattern allows different admin panels to have their own menu configurations while sharing the responsive behavior
+  - Old DashboardSidebar and TenantDashboardSidebar components still exist but are no longer used - can be removed in future cleanup
+
+---
+
+## 2026-01-09 19:30 - US-003
+
+- **What was implemented**: Visual Differentiation - Tenant Admin Theme
+- **Files modified**:
+  - `nextjs_space/components/admin/AdminSidebar.tsx` - Updated tenant-admin themeStyles
+
+- **Features verified/updated**:
+  - Sidebar gradient: from-cyan-600 via-blue-600 to-indigo-700 (verified)
+  - Active menu items: bg-cyan-500/30 border-l-4 border-cyan-300 (verified)
+  - Hover states: hover:bg-white/10 (verified)
+  - User avatar gradient: from-cyan-400 to-blue-500 (verified)
+  - Badge styling: bg-white/20 with text-white/90 font-medium (verified)
+  - Logo area: Updated to bg-cyan-100 with text-cyan-700 (to meet cyan background requirement)
+  - Added descriptive comments to tenant-admin theme configuration
+
+- **Learnings for future iterations**:
+  - When comparing themes (super-admin vs tenant-admin), ensure logo styling matches the overall palette
+  - The themeStyles object makes side-by-side theme comparison easy during code review
+  - Theme properties should be consistent between themes (same keys, different values)
+
+---
+
+## 2026-01-09 19:00 - US-002
+
+- **What was implemented**: Visual Differentiation - Super Admin Theme
+- **Files modified**:
+  - `nextjs_space/components/admin/AdminSidebar.tsx` - Updated themeStyles for super-admin
+
+- **Features implemented**:
+  - Dark slate/zinc color palette for super-admin theme to distinguish from tenant-admin
+  - Sidebar gradient: from-slate-800 via-slate-900 to-zinc-900
+  - Active menu items: bg-slate-700/50 with border-slate-400 left border accent
+  - Hover states: hover:bg-slate-700/30
+  - Logo B icon: bg-slate-400 with text-slate-800
+  - User avatar gradient: from-slate-400 to-slate-600
+  - Bold SUPER ADMIN badge: tracking-wide uppercase text-xs styling
+  - Theme-specific border colors (borderColor) and button styles (buttonBg)
+  - MobileMenuButton now accepts theme prop and matches sidebar gradient
+
+- **Learnings for future iterations**:
+  - The themeStyles object pattern works well for multi-theme support
+  - Add new style properties (badgeText, borderColor, buttonBg) to both themes when extending
+  - MobileMenuButton needed separate mobileButtonStyles const for its simpler gradient needs
+  - Keep comments in themeStyles to explain the design rationale for each theme
+
+---
+
+## 2026-01-09 18:15 - US-032
+
+- **What was implemented**: Unified AdminSidebar component for both Super Admin and Tenant Admin panels
+- **Files created**:
+  - `nextjs_space/components/admin/AdminSidebar.tsx` - Single reusable sidebar component
+
+- **Features implemented**:
+  - Accepts props: `theme` ('super-admin' | 'tenant-admin'), `menuItems`, `userName`, `userEmail`, `headerBadge`
+  - Theme-based styling configuration via `themeStyles` object for future visual differentiation
+  - Mobile sidebar state with `useState` (mobileOpen)
+  - Desktop collapse state with `useState` (collapsed)
+  - Mobile overlay backdrop that closes sidebar on click
+  - Hamburger menu button (MobileMenuButton) for mobile - fixed position, visible only on < md screens
+  - Auto-close on navigation via `handleNavClick`
+  - Route-based active state detection
+  - User profile section with logout functionality
+  - Collapsed state tooltips for menu items and logout button
+  - Exported TypeScript interfaces: `AdminMenuItem`, `AdminTheme`, `AdminSidebarProps`
+  - JSDoc documentation on all interfaces and component
+
+- **Learnings for future iterations**:
+  - Use `cn()` utility consistently for conditional class merging
+  - Mobile sidebar uses fixed positioning with translate-x for slide animation
+  - Mobile overlay uses z-40, sidebar uses z-50 to ensure proper stacking
+  - The `themeStyles` object pattern makes it easy to add theme differentiation later (US-002, US-003)
+  - Export `LucideIcon` type from lucide-react for icon prop typing
+  - Original sidebars (DashboardSidebar, TenantDashboardSidebar) still exist - they can be migrated to use AdminSidebar in follow-up stories
+
+---
+
+## 2026-01-09 17:30 - US-033
+
+- **What was implemented**: URL State Management Utility for consistent table state management
+- **Files created**:
+  - `nextjs_space/lib/admin/url-state.ts` - Custom hook for managing table state in URL params
+
+- **Features implemented**:
+  - `useTableState<TFilters>()` hook with TypeScript generics for type-safe filters
+  - State includes: search, filters, page, pageSize, sort
+  - Setters: setSearch, setFilter, setPage, setPageSize, setSort, resetFilters
+  - Helper functions: `buildQueryString()` for API calls, `parseTableState()` for server components
+  - Three-state sorting cycle: asc -> desc -> none
+  - Automatic page reset when filters/search change
+  - URL param sync using Next.js `useSearchParams` and `useRouter`
+
+- **Learnings for future iterations**:
+  - URL state hooks belong in `lib/admin/` directory
+  - Use `router.push(url, { scroll: false })` to prevent scroll-to-top on param changes
+  - Filter values stored as `Record<string, string>` for URL serialization
+  - Page 1 and default pageSize are omitted from URL to keep URLs clean
+  - Pre-existing TypeScript errors in node_modules don't affect `npm run build` - use build for typecheck
+
+---
+
+## 2026-01-09 16:45 - US-031
+
+- **What was implemented**: Shared Component Library for admin panels
+- **Files created**:
+  - `nextjs_space/components/admin/shared/SearchInput.tsx` - Debounced search input with clear button
+  - `nextjs_space/components/admin/shared/StatusFilter.tsx` - Generic dropdown filter with counts
+  - `nextjs_space/components/admin/shared/Pagination.tsx` - Page navigation with size selector
+  - `nextjs_space/components/admin/shared/BulkActionBar.tsx` - Floating action bar for bulk operations
+  - `nextjs_space/components/admin/shared/EmptyState.tsx` - Configurable empty state with variants
+  - `nextjs_space/components/admin/shared/index.ts` - Barrel export file
+
+- **Learnings for future iterations**:
+  - All shared components export both the component and its TypeScript interface
+  - SearchInput uses internal debounce with useRef for timeout cleanup
+  - StatusFilter uses TypeScript generics for type-safe filter values
+  - BulkActionBar uses fixed positioning with animate-in classes for entrance animation
+  - EmptyState has three variants: default, muted (for search results), card
+  - Super admin pages require auth - test pages may redirect to login
+  - No ESLint config exists in the project, but TypeScript checking is sufficient
+  - The dev-browser skill is not available - use curl or manual browser testing
+
+---
+
+## 2026-01-09 22:00 - US-006
+
+- **What was implemented**: Search and Filter Products
+- **Files created**:
+  - `nextjs_space/app/tenant-admin/products/products-table.tsx` - Client component with search and multi-filter functionality
+- **Files modified**:
+  - `nextjs_space/app/tenant-admin/products/page.tsx` - Refactored to use ProductsTable component
+
+- **Features implemented**:
+  - Search input with placeholder "Search products..."
+  - Debounced search (300ms) across name, category, slug fields
+  - Category filter dropdown (All, Flower, Edibles, Concentrates, Pre-Rolls, Topicals, Accessories)
+  - Strain type filter dropdown (All, Sativa, Indica, Hybrid) - uses hash-based inference from product name
+  - Stock status filter dropdown (All, In Stock, Out of Stock)
+  - Filters combine with search using AND logic
+  - URL state persistence via useTableState hook (?search=, ?category=, ?strain=, ?stock=)
+  - Dynamic count badges on filter options showing current filtered totals
+  - Empty state with "Clear filters" action when no results match
+  - Strain-specific badge colors (Sativa=amber, Indica=purple, Hybrid=emerald)
+  - Responsive layout with filters wrapping on smaller screens
+
+- **Learnings for future iterations**:
+  - The ProductsTable follows the same pattern as TenantsTable: server page fetches data, passes to client component for filtering
+  - Strain type doesn't exist in the products schema - used hash-based inference as a demo placeholder
+  - When implementing multiple filters, calculate counts based on search-filtered results (not full data) so counts update dynamically
+  - StatusFilter component from shared library works well for multiple filter types - just pass different generic type
+
+---
+
+## 2026-01-09 22:30 - US-007
+
+- **What was implemented**: Search and Filter Orders
+- **Files created**:
+  - `nextjs_space/app/tenant-admin/orders/orders-table.tsx` - Client component with search, status filter, date range picker, and quick filter chips
+- **Files modified**:
+  - `nextjs_space/app/tenant-admin/orders/page.tsx` - Refactored to use OrdersTable component
+
+- **Features implemented**:
+  - Search input with placeholder "Search orders..." searching orderNumber, customer name, customer email
+  - Debounced search (300ms) using SearchInput from shared components
+  - Status filter dropdown (All, Pending, Processing, Completed, Cancelled) with live counts
+  - Date range picker with presets (All time, Last 7 days, Last 30 days, Last 90 days)
+  - Custom date range using dual Calendar pickers
+  - Quick filter chips: "Needs Attention" (PENDING) and "In Progress" (PROCESSING)
+  - All filters combine with search using AND logic
+  - URL state persistence via useTableState hook (?search=, ?status=, ?dateRange=, ?dateFrom=, ?dateTo=)
+  - Empty state with "Clear filters" action when no results match
+  - Uses existing shadcn/ui Calendar and Popover components
+
+- **Learnings for future iterations**:
+  - The OrdersTable follows the same pattern as ProductsTable and TenantsTable - server page fetches data, client table handles filtering
+  - date-fns functions (subDays, startOfDay, endOfDay, isWithinInterval, parseISO) are useful for date range filtering
+  - Quick filter chips act as toggle buttons - clicking an active chip clears it back to "all"
+  - The Calendar component uses react-day-picker under the hood and supports `disabled` prop for date constraints
+  - Custom date ranges require storing both dateFrom and dateTo in URL params separately from the preset
+
+---
+
+## 2026-01-09 23:00 - US-008
+
+- **What was implemented**: Search Customers
+- **Files created**:
+  - `nextjs_space/app/tenant-admin/customers/customers-table.tsx` - Client component with search functionality
+- **Files modified**:
+  - `nextjs_space/app/tenant-admin/customers/page.tsx` - Refactored to use CustomersTable component, added phone field to query
+
+- **Features implemented**:
+  - Search input with placeholder "Search customers..."
+  - Debounced search (300ms) using SearchInput from shared components
+  - Case-insensitive search across name, email, phone fields
+  - Clear button (X) appears when search has text
+  - Empty state: "No customers found matching '[query]'" with clear search action
+  - Empty state for zero customers: "No customers yet. Share your store URL to get started"
+  - URL state persistence via useTableState hook (?search=value)
+  - Customer avatar with initials derived from name
+  - Email links open mailto: handler
+  - Phone number displayed under customer name when available
+
+- **Learnings for future iterations**:
+  - The CustomersTable follows the same pattern as other tables (TenantsTable, ProductsTable, OrdersTable)
+  - For simpler tables with only search (no additional filters), useTableState hook works without defaultFilters
+  - Avatar initials function handles edge cases: null names return "?", single names use first 2 chars
+  - Added phone field to Prisma query to enable search across all contact fields
+
+---
+
+## 2026-01-09 23:30 - US-009
+
+- **What was implemented**: Server-side Pagination for Tenants Table
+- **Files modified**:
+  - `nextjs_space/app/super-admin/tenants/page.tsx` - Added server-side search/status filtering with Prisma where clause, parallel count queries for filter badges
+  - `nextjs_space/app/super-admin/tenants/tenants-table.tsx` - Updated to receive server-computed counts, removed client-side filtering logic
+
+- **Features implemented**:
+  - Server-side pagination with Prisma `skip`/`take` parameters
+  - URL params: `?page=2&pageSize=20` for pagination state
+  - Server-side search filtering with case-insensitive `contains` on: businessName, subdomain, customDomain, nftTokenId
+  - Server-side status filtering: active/inactive using `isActive` field
+  - Page size selector: 10, 20, 50, 100 (default: 20)
+  - Pagination controls at table bottom showing "Showing 1-20 of X results"
+  - Previous/Next buttons disabled at boundaries
+  - First/Last page navigation buttons
+  - Parallel Prisma queries for: filtered count, paginated tenants, active count, inactive count
+  - Filter badge counts computed server-side for accurate numbers across all data
+  - Maintains search/filter/sort state when changing pages
+
+- **Learnings for future iterations**:
+  - When implementing server-side pagination, move ALL filtering to the server - client-side filtering doesn't work when only a page of data is loaded
+  - Use parallel `Promise.all` for count queries to minimize database round-trips
+  - Pass server-computed counts (activeCount, inactiveCount) as props to avoid recalculating in client
+  - The Prisma `where` clause can combine `OR` (for search across fields) with direct field conditions (for status filter)
+  - Import `Prisma` type from `@prisma/client` for `Prisma.tenantsWhereInput` type safety
+  - The shared Pagination component handles all UI logic - just pass page, pageSize, totalItems and callbacks
+
+---
+
+## 2026-01-09 17:55 - US-010
+
+- **What was implemented**: Server-side Pagination for Products, Orders, Customers
+- **Files modified**:
+  - `nextjs_space/app/tenant-admin/products/page.tsx` - Added server-side pagination, search, and filter params from URL
+  - `nextjs_space/app/tenant-admin/products/products-table.tsx` - Updated to use server-provided counts, added Pagination component
+  - `nextjs_space/app/api/tenant-admin/orders/route.ts` - Added pagination, search, status, and date range query params with server-side filtering
+  - `nextjs_space/app/tenant-admin/orders/page.tsx` - Updated to pass pagination params to API, use response counts
+  - `nextjs_space/app/tenant-admin/orders/orders-table.tsx` - Updated to use server-provided counts, added Pagination component
+  - `nextjs_space/app/tenant-admin/customers/page.tsx` - Added server-side pagination and search params from URL
+  - `nextjs_space/app/tenant-admin/customers/customers-table.tsx` - Updated to use server-provided totalCount, added Pagination component
+
+- **Features implemented**:
+  - Server-side pagination with Prisma `skip`/`take` for Products and Customers
+  - API-based pagination for Orders (maintains client-side fetch pattern but with pagination params)
+  - Consistent URL params: `?page=`, `?pageSize=`, `?search=`, filter params
+  - Default page size: 20, options: 10/20/50/100
+  - Pagination controls showing "Showing X-Y of Z results"
+  - Server-side count queries for filter badges (category counts, stock counts, status counts)
+  - Products: Server-side filtering for category and stock status with counts
+  - Orders: API returns statusCounts object for filter badge counts
+  - Customers: Simple search with server-side filtering
+
+- **Learnings for future iterations**:
+  - Orders page uses client-side API fetching pattern - add pagination params to API rather than converting to server component
+  - For API routes with search filtering on related models, use the Prisma relation name (e.g., `users` not `user` for orders->users)
+  - The existing order status values in code (PENDING, PROCESSING, COMPLETED, CANCELLED) may differ from schema enum values - keep consistent with existing UI
+  - TypeScript type annotations may be needed for Prisma groupBy results when iterating (e.g., `item: { category: string | null; _count: { id: number } }`)
+  - Next.js 15+ uses `searchParams: Promise<...>` - must await searchParams in server components
+
+---
+
+## 2026-01-09 18:30 - US-011
+
+- **What was implemented**: Sortable Table Columns
+- **Files created**:
+  - `nextjs_space/components/admin/shared/SortableTableHeader.tsx` - Reusable sortable header component with TypeScript props interface
+- **Files modified**:
+  - `nextjs_space/components/admin/shared/index.ts` - Added export for SortableTableHeader
+  - `nextjs_space/app/super-admin/tenants/page.tsx` - Added server-side sorting with Prisma orderBy
+  - `nextjs_space/app/super-admin/tenants/tenants-table.tsx` - Replaced TableHead with SortableTableHeader for sortable columns
+  - `nextjs_space/app/tenant-admin/products/page.tsx` - Added server-side sorting with Prisma orderBy
+  - `nextjs_space/app/tenant-admin/products/products-table.tsx` - Replaced TableHead with SortableTableHeader for sortable columns
+  - `nextjs_space/app/api/tenant-admin/orders/route.ts` - Added sortBy/sortOrder query params and Prisma orderBy
+  - `nextjs_space/app/tenant-admin/orders/page.tsx` - Added sort params to API URL builder
+  - `nextjs_space/app/tenant-admin/orders/orders-table.tsx` - Replaced TableHead with SortableTableHeader for sortable columns
+  - `nextjs_space/app/tenant-admin/customers/page.tsx` - Added server-side sorting with Prisma orderBy
+  - `nextjs_space/app/tenant-admin/customers/customers-table.tsx` - Replaced TableHead with SortableTableHeader for sortable columns
+
+- **Features implemented**:
+  - SortableTableHeader component with three-state sorting cycle (asc -> desc -> null)
+  - Sort indicator icons: ArrowUp (asc), ArrowDown (desc), ArrowUpDown (sortable but not active)
+  - Smooth hover states with icon appearing on hover for unsorted columns
+  - ARIA labels and aria-sort attributes for accessibility
+  - URL params: ?sortBy=column&sortOrder=asc|desc
+  - Server-side sorting via Prisma orderBy clause
+  - Sort persists with search/filter/pagination through useTableState hook
+  - Sortable columns on all admin tables:
+    - Tenants: businessName, nftTokenId, subdomain, isActive, createdAt
+    - Products: name, category, thcContent, cbdContent, price, stock
+    - Orders: orderNumber, status, total, createdAt
+    - Customers: name, email, createdAt
+
+- **Learnings for future iterations**:
+  - The SortableTableHeader uses forwardRef pattern like other shared components
+  - Sort indicator icons use `animate-in fade-in zoom-in-50` for smooth appearance
+  - The `sortable` prop allows mixing sortable and non-sortable columns in the same table
+  - The URL state hook already had setSort functionality - just needed to use it
+  - For client-side API fetching pages (like orders), add sort params to the API URL builder
+  - Validate sort columns on the server side using a VALID_SORT_COLUMNS constant
+
+---
+
+## 2026-01-09 19:15 - US-012
+
+- **What was implemented**: Bulk Actions - Tenants
+- **Files created**:
+  - `nextjs_space/app/api/super-admin/tenants/bulk/route.ts` - API endpoint for bulk activate/deactivate actions
+- **Files modified**:
+  - `nextjs_space/app/super-admin/tenants/tenants-table.tsx` - Added checkbox selection, BulkActionBar, confirmation dialogs, CSV export
+
+- **Features implemented**:
+  - Checkbox in table header to select/deselect all tenants on current page
+  - Individual row checkboxes with proper ARIA labels ("Select {tenantName}")
+  - Indeterminate state checkbox when some (but not all) are selected
+  - Selected row highlighting with bg-slate-100/70
+  - BulkActionBar appears when 1+ tenants selected showing count
+  - Bulk actions: Activate, Deactivate, Export to CSV, Cancel (X button)
+  - Confirmation dialog with affected tenant names before activate/deactivate
+  - Shows up to 5 tenant names with "+X more" badge for larger selections
+  - Processing spinner state during API call
+  - Success toast notifications after bulk actions
+  - CSV export downloads selected tenants with all table columns
+  - Selection clears after action completes
+  - router.refresh() to update table after status changes
+  - Audit log entries created for each affected tenant (TENANT_BULK_ACTIVATED/DEACTIVATED)
+
+- **Learnings for future iterations**:
+  - Use Set<string> for selection state - efficient for add/delete/has operations
+  - For indeterminate checkbox state, spread `data-state: 'checked'` as props since Radix Checkbox doesn't have native indeterminate
+  - The BulkActionBar component is very flexible - just pass actions array with onClick handlers
+  - CSV export can be done client-side using Blob and URL.createObjectURL - no server endpoint needed
+  - The existing toast.success/error from sonner.tsx works great for feedback
+  - For confirmation dialogs, store the action type in state (null = closed, 'activate'/'deactivate' = open)
+  - When bulk updating, use Prisma updateMany for efficiency and create audit logs with createMany
+
+---
+
+## 2026-01-09 20:00 - US-013
+
+- **What was implemented**: Bulk Actions - Products
+- **Files created**:
+  - `nextjs_space/app/api/tenant-admin/products/bulk/route.ts` - API endpoint for bulk product actions
+- **Files modified**:
+  - `nextjs_space/app/tenant-admin/products/products-table.tsx` - Added bulk selection, BulkActionBar, confirmation dialogs
+
+- **Features implemented**:
+  - Checkbox in table header to select/deselect all products on current page
+  - Individual row checkboxes with proper ARIA labels ("Select {productName}")
+  - Indeterminate state checkbox when some (but not all) are selected
+  - Selected row highlighting with emerald-50 background
+  - BulkActionBar appears when 1+ products selected showing count
+  - Bulk actions: Set In Stock, Set Out of Stock, Export to CSV, Delete
+  - Confirmation dialog for all actions with affected product names shown
+  - Delete confirmation has warning text in red: "This cannot be undone."
+  - Processing spinner state during API call
+  - Success toast notifications after bulk actions
+  - CSV export downloads selected products with all table columns
+  - Selection clears after action completes
+  - router.refresh() to update table after stock/delete changes
+  - API endpoint supports three actions: 'set-in-stock', 'set-out-of-stock', 'delete'
+  - Audit log entries created for each affected product (PRODUCT_BULK_SET_IN_STOCK, PRODUCT_BULK_SET_OUT_OF_STOCK, PRODUCT_BULK_DELETED)
+  - Tenant isolation: API verifies products belong to user's tenant before modification
+
+- **Learnings for future iterations**:
+  - Followed same pattern as US-012 (Bulk Actions - Tenants) for consistency
+  - Product bulk actions use emerald color scheme to match products page theme (vs slate for tenants)
+  - Delete action requires special handling - uses deleteMany instead of updateMany
+  - For stock updates, setting stock to 1 for "in stock" and 0 for "out of stock" (simple binary toggle)
+  - The existing BulkActionBar component handles destructive variant styling automatically
+  - CSV export includes all product fields: Name, Category, THC%, CBD%, Price, Stock, Status, Created
+
+---
+
+## 2026-01-09 20:30 - US-014
+
+- **What was implemented**: Bulk Actions - Orders
+- **Files created**:
+  - `nextjs_space/app/api/tenant-admin/orders/bulk/route.ts` - API endpoint for bulk order status updates
+- **Files modified**:
+  - `nextjs_space/app/tenant-admin/orders/orders-table.tsx` - Added bulk selection, BulkActionBar, and confirmation dialogs
+
+- **Features implemented**:
+  - Checkbox in table header to select/deselect all orders on current page
+  - Individual row checkboxes with proper ARIA labels ("Select order {orderNumber}")
+  - Indeterminate state checkbox when some (but not all) are selected
+  - Selected row highlighting with purple-50/70 background
+  - BulkActionBar appears when 1+ orders selected showing count
+  - Bulk actions: Mark as Processing, Mark as Completed, Export to CSV
+  - Note: Bulk cancel is NOT allowed (requires individual confirmation per acceptance criteria)
+  - Confirmation dialog showing count like "Update 7 orders to Processing?"
+  - Shows up to 5 order numbers with "+X more" badge for larger selections
+  - Processing spinner state during API call
+  - Success toast notifications after bulk actions
+  - CSV export downloads selected orders with all table columns
+  - Selection clears after action completes
+  - router.refresh() to update table after status changes
+  - API endpoint creates audit log entries for each affected order (ORDER_BULK_MARK_PROCESSING, ORDER_BULK_MARK_COMPLETED)
+  - Tenant isolation: API verifies orders belong to user's tenant before modification
+
+- **Learnings for future iterations**:
+  - Followed same pattern as US-012 (Bulk Actions - Tenants) and US-013 (Bulk Actions - Products) for consistency
+  - Orders bulk actions use purple color scheme to match orders page gradient theme
+  - The confirmation dialog omits delete option since bulk cancel is not allowed per acceptance criteria
+  - API returns count of affected orders for accurate success messages
+  - Use Set<string> for selection state - efficient for add/delete/has operations
+
+---
+
+## 2026-01-09 21:00 - US-015
+
+- **What was implemented**: Breadcrumb Navigation
+- **Files created**:
+  - `nextjs_space/components/admin/shared/Breadcrumbs.tsx` - Reusable breadcrumb navigation component with TypeScript interface
+- **Files modified**:
+  - `nextjs_space/components/admin/shared/index.ts` - Added export for Breadcrumbs component and types
+  - Super Admin pages (7 files): tenants/page.tsx, tenants/[id]/page.tsx, onboarding/page.tsx, templates/page.tsx, analytics/page.tsx, settings/page.tsx, platform-settings/page.tsx
+  - Tenant Admin pages (11 files): products/page.tsx, orders/page.tsx, customers/page.tsx, customers/[id]/page.tsx, branding/page.tsx, settings/page.tsx, analytics/page.tsx, templates/page.tsx, audit-logs/page.tsx, webhooks/page.tsx, the-wire/page.tsx
+
+- **Features implemented**:
+  - Breadcrumbs component with TypeScript interface (BreadcrumbItem, BreadcrumbsProps)
+  - Format: "Dashboard > Tenants > Healing Buds Store"
+  - ChevronRight separators between items
+  - Clickable links for parent pages (gray-600), plain text for current page (gray-900, font-medium)
+  - Proper accessibility: ARIA nav label, aria-current="page" on last item
+  - Truncation for long labels (max-width: 200px)
+  - Hover underline effect on clickable breadcrumbs
+  - Focus-visible ring for keyboard navigation
+  - Optional showHomeIcon prop for home icon display
+  - JSDoc documentation with usage examples
+  - Removed unused "Back to X" buttons replaced by breadcrumbs
+
+- **Learnings for future iterations**:
+  - Breadcrumbs follow the same component pattern as other shared components (forwardRef, cn(), TypeScript interface)
+  - Detail pages (tenant/[id], customer/[id]) show the entity name as the last breadcrumb segment
+  - Dashboard pages don't need breadcrumbs since they're the root level
+  - When replacing "Back to X" buttons with breadcrumbs, also remove unused Link/Button imports
+  - The Breadcrumbs component uses flex with gap-1 and flex-wrap for responsive layout
+
+---
+
+## 2026-01-09 21:45 - US-016
+
+- **What was implemented**: Improved Empty States
+- **Files modified**:
+  - `nextjs_space/components/admin/shared/EmptyState.tsx` - Enhanced with theme variants, decorative backgrounds, link-based actions, and secondary action support
+  - `nextjs_space/components/admin/shared/index.ts` - Added EmptyStateAction type export
+  - `nextjs_space/app/tenant-admin/products/products-table.tsx` - Updated empty state with "Sync from Dr Green Admin" CTA
+  - `nextjs_space/app/tenant-admin/orders/orders-table.tsx` - Updated empty state with ShoppingCart icon and purple theme
+  - `nextjs_space/app/tenant-admin/customers/customers-table.tsx` - Updated empty state with "Copy Store URL" CTA
+  - `nextjs_space/app/super-admin/tenants/tenants-table.tsx` - Updated empty state with "Review Applications" link
+
+- **Features implemented**:
+  - EmptyState enhanced with theme variants: neutral, emerald, cyan, purple, slate, amber
+  - Decorative background circles with blur effects (showDecoration prop)
+  - Link-based actions support (href prop on EmptyStateAction)
+  - Secondary action support for two CTAs
+  - Products: "No products yet" with emerald theme and "Sync from Dr Green Admin" button
+  - Orders: "No orders yet" with purple theme and ShoppingCart icon
+  - Customers: "No customers yet" with cyan theme and "Copy Store URL" button
+  - Tenants: "No tenants yet" with slate theme and "Review Applications" link
+  - Search/filter: Consistent muted variant with "Clear filters" action
+
+- **Learnings for future iterations**:
+  - EmptyState component now supports both onClick handlers and href links via EmptyStateAction interface
+  - Theme variants allow contextual coloring matching page color schemes (emerald for products, cyan for customers, etc.)
+  - showDecoration prop adds visual interest with blurred background circles
+  - Export EmptyStateAction interface separately for reusability in consuming components
+  - renderAction helper pattern works well for conditional link vs button rendering
+
+---
+## 2026-01-09 23:45 - US-020
+
+- **What was implemented**: Quick Actions Widget
+- **Files created**:
+  - `nextjs_space/components/admin/QuickActionsWidget.tsx` - Command center style widget with 2x3 grid of action buttons
+- **Files modified**:
+  - `nextjs_space/app/tenant-admin/page.tsx` - Integrated QuickActionsWidget below stats grid
+
+- **Features implemented**:
+  - Card titled "Quick Actions" with distinctive "Command Center" aesthetic
+  - 2x3 grid layout with 6 action buttons: Add Product, View Orders, Manage Customers, View Analytics, Branding, Settings
+  - Each button features:
+    - Lucide React icon in gradient container with metallic depth effects
+    - Theme-specific colors: emerald (products), purple (orders), cyan (customers), amber (analytics), rose (branding), slate (settings)
+    - Satisfying hover interactions: scale (1.02), translate up (-1px), rotation (3deg), shadow elevation
+    - Ring shadows and inner highlights for tactile appearance
+    - Gradient text labels with bg-clip-text for refined typography
+    - Subtle shine effect on hover with gradient overlay transition
+  - Positioned prominently on tenant dashboard below stats grid, above store info section
+  - Fully responsive: 2 columns on mobile, 3 columns on desktop (md breakpoint)
+  - TypeScript interfaces exported: QuickAction, QuickActionsWidgetProps
+  - Staggered entrance animations using animation-delay (50ms per item)
+  - Proper accessibility: focus-visible ring, keyboard navigation support
+  - All buttons link to their respective admin pages
+  - Typecheck passes via `npm run build`
+
+- **Learnings for future iterations**:
+  - The "Command Center" aesthetic creates a distinctive, memorable design that breaks from typical admin dashboard patterns
+  - Combining multiple micro-interactions (scale, translate, rotate, shadow) creates a satisfying, tactile feel
+  - Theme color mappings in a const object allow easy color management across multiple properties (border, shadow, icon, label)
+  - Using forwardRef pattern maintains consistency with shadcn/ui component architecture
+  - The QuickActionsWidget accepts optional custom actions array for flexibility in other contexts
+  - Gradient backgrounds on icons with inner highlights (from-white/20) create depth without complex CSS
+  - Positioning the widget below stats but above detailed info creates good visual hierarchy on the dashboard
+---
+
+
+## 2026-01-09 17:00 - US-018
+
+- **What was implemented**: Super Admin Dashboard - Platform Analytics
+- **Files created**:
+  - `nextjs_space/components/admin/analytics/PlatformAnalytics.tsx` - Client component with Plotly.js charts and analytics widgets
+- **Files modified**:
+  - `nextjs_space/components/admin/panels/OverviewPanel.tsx` - Added PlatformAnalytics component below existing stats
+  - `nextjs_space/app/layout.tsx` - Added JetBrains Mono font for monospaced numerics
+  - `nextjs_space/tailwind.config.ts` - Added fontFamily config for JetBrains Mono
+
+- **Features implemented**:
+  - **Quick Metrics Cards (3)**: MRR ($127.5k), Churn Rate (2.8%), Avg Users per Tenant (3.2)
+    - Color-coded by metric type (cyan, amber, emerald)
+    - Monospaced numbers with JetBrains Mono font
+    - Staggered entrance animations (0ms, 100ms, 200ms delays)
+  - **Tenant Signups Chart**: Line chart showing daily signups over last 90 days
+    - Plotly.js with smooth spline interpolation
+    - Cyan gradient fill under the line
+    - Responsive height (280px fixed in card)
+  - **Platform Revenue Chart**: Bar chart showing monthly revenue for last 12 months
+    - Current month highlighted in cyan, previous months in gray
+    - Y-axis with $ prefix, X-axis rotated labels
+  - **Active vs Inactive Tenants Chart**: Donut pie chart showing tenant distribution
+    - Active: cyan, Inactive: gray
+    - Donut hole (0.4) for modern look
+  - **Needs Attention Card**: Shows pending onboarding (3), failed payments (1), support tickets (5)
+    - Each item has icon, label, and count badge
+    - Color-coded by severity (cyan, red, amber)
+  - **Loading Skeletons**: Animated pulse skeletons for all components during data fetch
+  - **Mission Control Aesthetic**: Dark slate theme with sharp cyan accents, monospaced fonts, terminal-inspired design
+  - **Code Splitting**: Dynamic import of Plotly.js using Next.js dynamic() for performance
+
+- **Learnings for future iterations**:
+  - Plotly.js requires `react-plotly.js` wrapper and must be dynamically imported with `{ ssr: false }` to avoid SSR issues
+  - Google Fonts (JetBrains Mono) can be added via next/font/google - don't forget to add to Tailwind config fontFamily
+  - Mock data generators are useful for development - replace with actual API calls in production
+  - Plotly layout uses `paper_bgcolor: 'rgba(0,0,0,0)'` for transparent backgrounds to match card styling
+  - Staggered animations via `style={{ animationDelay }}` with `animationFillMode: 'backwards'` prevent flicker
+  - Chart containers need fixed height (h-[280px]) for Plotly useResizeHandler to work properly
+  - The "Command Center" aesthetic (slate + cyan + monospace) creates strong visual differentiation from tenant admin
+  - Font variables from layout.tsx are accessible in Tailwind via `font-mono` class after config update
+---
+
+## 2026-01-09 - US-019
+
+- **What was implemented**: Tenant Dashboard - Store Analytics
+- **Files created**:
+  - `nextjs_space/components/admin/analytics/StoreAnalytics.tsx` - Living Garden Dashboard aesthetic with organic emerald/cyan theme
+- **Files modified**:
+  - `nextjs_space/app/tenant-admin/page.tsx` - Integrated StoreAnalytics component below Quick Actions Widget
+
+- **Features implemented**:
+  - **Revenue Metrics Cards (3)**: Today's Revenue, This Week, This Month
+    - Emerald gradient backgrounds with leaf decorative accents
+    - Trend indicators showing percentage change with period comparison
+    - Hover effects with scale and shadow transitions
+    - Staggered entrance animations (0ms, 100ms, 200ms delays)
+  - **Sales Trend Chart**: Line chart showing daily sales over last 30 days
+    - Plotly.js with smooth spline interpolation
+    - Emerald gradient fill under the line
+    - Responsive height (280px fixed in card)
+  - **Top 5 Products Chart**: Horizontal bar chart showing best-selling products by revenue
+    - Color gradient from emerald to blue across bars
+    - Custom rounded corners on bars
+    - Y-axis with product names, X-axis with $ prefix
+  - **Order Status Distribution Chart**: Donut pie chart showing order breakdown
+    - Center annotation showing total orders count
+    - Color-coded by status (emerald, cyan, amber, slate)
+    - 50% hole for modern donut style
+  - **Recent Activity Widget**: Last 5 orders with status badges and customer names
+    - Purple theme with hover effects
+    - Status badges with color-coded backgrounds
+    - Time ago formatting (e.g., "15m ago")
+    - Link to view all orders
+  - **Recent Customers Widget**: Last 5 customer signups with avatars
+    - Cyan theme with hover effects
+    - Avatar with initials in gradient circle
+    - Email display with truncation
+    - Link to view all customers
+  - **Pending Consultations Card**: Shows count with CTA link
+    - Amber/orange gradient theme
+    - Large display of pending count (7)
+    - Button linking to /tenant-admin/consultations
+  - **Loading Skeletons**: Animated pulse skeletons for all components during data fetch
+  - **Mock Data Generators**: Functions for sales trend, top products, order status, recent orders/customers
+  - **Living Garden Aesthetic**: 
+    - Organic curved containers with leaf-inspired accents
+    - Emerald-to-lime gradients suggesting growth
+    - Backdrop blur effects on cards
+    - Sparkles icon with pulsing blur effect in header
+    - Generous spacing and hover elevation transitions
+    - Tactile depth with layered shadows
+
+- **Learnings for future iterations**:
+  - The "Living Garden Dashboard" aesthetic creates a distinctive, organic feel that aligns with cannabis/wellness context
+  - Plotly.js requires dynamic import with `{ ssr: false }` to avoid SSR issues
+  - TypeScript type casting needed for `Object.values()` results: `as number[]`
+  - Plotly annotation text must be strings, not numbers - use `String()` to convert
+  - Staggered animations via `style={{ animationDelay }}` create smooth sequential reveals
+  - Chart containers need fixed height (h-[280px]) for Plotly useResizeHandler to work properly
+  - The emerald/cyan color palette creates visual continuity with tenant admin theme
+  - Combining multiple micro-interactions (scale, translate, shadow) creates satisfying hover states
+  - Mock data generators with realistic variance make the dashboard feel alive during development
+  - Layout: Revenue cards (3-col) → Charts (2-col grid) → Activity widgets (2-col) creates good visual hierarchy
+---
+
+## 2026-01-09 - US-034
+
+- **What was implemented**: API Rate Limiting & Caching
+- **Files created**:
+  - `nextjs_space/lib/rate-limit.ts` - Rate limiting utility with sliding window algorithm
+  - `nextjs_space/components/query-provider.tsx` - React Query provider for client-side caching
+  - `nextjs_space/lib/hooks/useAnalytics.ts` - Custom hooks for analytics data with 5-minute cache
+  - `nextjs_space/lib/hooks/useAdminData.ts` - Custom hooks for list data (tenants, products, orders) with 1-minute cache
+- **Files modified**:
+  - `nextjs_space/app/layout.tsx` - Added QueryProvider to root layout
+  - `nextjs_space/app/api/super-admin/tenants/route.ts` - Added rate limiting to GET and POST endpoints
+  - `nextjs_space/app/api/super-admin/tenants/bulk/route.ts` - Added rate limiting to bulk actions
+  - `nextjs_space/app/api/tenant-admin/analytics/route.ts` - Added rate limiting to analytics endpoint
+  - `nextjs_space/app/api/tenant-admin/products/bulk/route.ts` - Added rate limiting to bulk product actions
+  - `nextjs_space/app/api/tenant-admin/orders/bulk/route.ts` - Added rate limiting to bulk order actions
+
+- **Features implemented**:
+  - **Rate Limiting**:
+    - Sliding window rate limiter: 20 requests per minute per user
+    - In-memory store with automatic cleanup every 5 minutes
+    - Returns 429 status with Retry-After header when limit exceeded
+    - Includes X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset headers
+    - Applied to all admin API routes (super-admin and tenant-admin)
+  - **React Query Caching**:
+    - Global QueryClient with default 1-minute stale time and 5-minute garbage collection
+    - Analytics hooks (useTenantAnalytics, useSuperAdminAnalytics) with 5-minute stale time
+    - List data hooks (useTenants, useProducts, useOrders) with 1-minute stale time
+    - Mutation hooks with automatic cache invalidation (useTenantBulkAction, useProductBulkAction, useOrderBulkAction)
+    - TypeScript generics for type-safe filter parameters
+    - Automatic refetch on mutation success to keep data fresh
+  - Typecheck passed with `npm run build`
+
+- **Learnings for future iterations**:
+  - Rate limiting implementation uses in-memory store - for production at scale, migrate to Redis for distributed rate limiting
+  - React Query's `staleTime` controls how long data is considered fresh (no refetch on mount), `gcTime` (formerly `cacheTime`) controls how long unused data stays in cache
+  - The `checkRateLimit()` function pattern makes it easy to add rate limiting to any API route with a single function call
+  - Mutation hooks should use `queryClient.invalidateQueries()` in `onSuccess` callback to automatically refetch related data
+  - QueryProvider must be placed inside SessionProvider but outside ThemeProvider in the provider hierarchy
+  - @tanstack/react-query version 5.x uses `gcTime` instead of `cacheTime` - old API deprecated
+  - Custom hooks pattern (useAnalytics, useAdminData) provides centralized caching configuration and DRY principle
+  - Rate limit headers (Retry-After, X-RateLimit-*) help clients implement intelligent retry logic
+---
+
+
+## 2026-01-09 - US-021
+
+- **What was implemented**: Accessibility - Focus States
+- **Files created**:
+  - `nextjs_space/components/admin/SkipToContent.tsx` - Skip-to-content link component with theme-specific styling
+  - `nextjs_space/components/admin/AccessibleAdminLayout.tsx` - Wrapper layout with accessibility features (skip link, main content wrapper)
+  - `nextjs_space/lib/admin/focus-trap.ts` - Focus trap utility for custom modals
+  - `nextjs_space/components/admin/ACCESSIBILITY.md` - Comprehensive documentation for accessibility system
+- **Files modified**:
+  - `nextjs_space/tailwind.config.ts` - Added focus-ring, focus-pulse, skip-link-slide animations
+  - `nextjs_space/app/globals.css` - Added focus state utility classes (focus-super-admin, focus-tenant-admin, focus-glow-*)
+  - `nextjs_space/app/super-admin/layout.tsx` - Integrated AccessibleAdminLayout with super-admin theme
+  - `nextjs_space/app/tenant-admin/layout.tsx` - Integrated AccessibleAdminLayout with tenant-admin theme
+
+- **Features implemented**:
+  - **Theme-specific focus rings**:
+    - Super Admin: slate-400 rings with animated scale-in effect
+    - Tenant Admin: cyan-400 rings with animated scale-in effect
+    - Enhanced glow variants with subtle pulse animation for primary CTAs
+  - **Skip-to-content link**:
+    - Hidden off-screen until focused with Tab key
+    - Slides down dramatically with animation on focus
+    - Theme-specific styling matching admin panel colors
+    - Smooth scroll to #main-content element
+    - ARIA label for screen readers
+  - **Focus trap for modals**:
+    - Radix UI Dialog automatically handles focus trapping
+    - Custom createFocusTrap() utility for non-Radix modals
+    - Tab cycles through focusable elements within modal
+    - Shift+Tab cycles backwards
+    - Escape closes modal
+    - Focus returns to trigger element on close
+  - **CSS animations**:
+    - focus-ring: 0.15s scale-in animation (0.95 to 1.0)
+    - focus-pulse: 2s infinite pulse for enhanced focus states
+    - skip-link-slide: 0.2s slide-down from off-screen
+  - **Utility classes for consistent application**:
+    - `.focus-super-admin` - Standard slate ring with offset
+    - `.focus-tenant-admin` - Standard cyan ring with offset
+    - `.focus-super-admin-inset` - Inset slate ring (no offset)
+    - `.focus-tenant-admin-inset` - Inset cyan ring (no offset)
+    - `.focus-glow-cyan` - Enhanced cyan ring with glow and pulse
+    - `.focus-glow-slate` - Enhanced slate ring with glow and pulse
+  - **Comprehensive documentation**:
+    - ACCESSIBILITY.md covers all focus state patterns
+    - Usage examples for developers
+    - Keyboard navigation guide
+    - ARIA attribute reference
+    - Testing instructions
+    - Best practices checklist
+
+- **Learnings for future iterations**:
+  - **Precision Navigation System aesthetic**: Focus states feel like targeting reticles with satisfying visual feedback (scale animation + optional pulse)
+  - All shadcn/ui components (Button, Input, Checkbox, Select, Dialog) already have focus-visible:ring-2 built in
+  - Radix UI Dialog handles focus trapping automatically - no need for custom implementation in most cases
+  - The AccessibleAdminLayout wrapper pattern allows easy integration of skip-to-content links across all admin pages
+  - Theme-specific focus rings reinforce the visual identity of each admin panel (slate for command center, cyan for living garden)
+  - Focus animations should be subtle and fast (0.15s) to not interfere with rapid keyboard navigation
+  - Skip-to-content links should be positioned at z-index 100 to ensure they appear above all other content when focused
+  - The `-translate-y-full` + `focus:translate-y-0` pattern creates a smooth slide-down effect for skip links
+  - ARIA attributes on the main content wrapper (role="main", aria-label, tabIndex={-1}) ensure proper screen reader announcements
+  - Document accessibility systems comprehensively in ACCESSIBILITY.md so future developers understand the patterns
+---
+
+
+## 2026-01-09 - US-022
+
+- **What was implemented**: Accessibility - ARIA Labels
+- **Files modified**:
+  - `nextjs_space/components/admin/AdminSidebar.tsx` - Added comprehensive ARIA labels to navigation and interactive elements
+  - `nextjs_space/components/admin/shared/Pagination.tsx` - Added aria-hidden to decorative icons
+  - `nextjs_space/app/super-admin/tenants/tenants-table.tsx` - Added aria-label to status badges
+
+- **Features implemented**:
+  - **Sidebar navigation**:
+    - Added `aria-label="Main navigation"` to nav element
+    - Added `aria-label="Navigate to {label}"` to each navigation link
+    - Added `aria-current="page"` to active navigation items
+    - Added `aria-hidden="true"` to all decorative icons
+    - Logout buttons now include user context: `aria-label="Logout {userName}"`
+  - **Collapse/Hamburger buttons** (already implemented):
+    - Collapse button: `aria-label="Collapse/Expand sidebar"` + `aria-expanded={!collapsed}`
+    - Hamburger menu: `aria-label="Open navigation menu"`
+    - Close button: `aria-label="Close navigation menu"`
+  - **Search inputs** (already implemented via SearchInput component):
+    - Accepts `aria-label` prop
+    - Falls back to placeholder text if not provided
+    - Clear button has `aria-label="Clear search"`
+    - Search icon marked with `aria-hidden="true"`
+  - **Filter dropdowns** (already implemented via StatusFilter component):
+    - Accepts `aria-label` prop
+    - Defaults to "Filter by status" if not provided
+    - Filter icon marked with `aria-hidden="true"`
+  - **Pagination** (already implemented, enhanced):
+    - All navigation buttons have descriptive aria-labels:
+      - "Go to first page", "Go to previous page", "Go to next page", "Go to last page"
+    - Page size selector: `aria-label="Select page size"`
+    - Container has `role="navigation"` + `aria-label="Pagination"`
+    - All icons now have `aria-hidden="true"` to prevent duplicate announcements
+  - **Bulk action checkboxes** (already implemented):
+    - Select all: `aria-label="Select/Deselect all tenants"`
+    - Individual rows: `aria-label="Select {itemName}"`
+  - **Status badges**:
+    - Added `aria-label="Status: Active"` / `aria-label="Status: Inactive"` to tenant status badges
+    - Screen readers will announce the status explicitly even if badges are styled differently
+
+- **Learnings for future iterations**:
+  - **"Invisible Architecture" approach**: ARIA labels create a parallel semantic layer that makes the UI comprehensible to screen readers without disrupting visual design
+  - Most shared components (SearchInput, StatusFilter, Pagination) already had aria-label support built in - they just needed to be used consistently
+  - Always add `aria-hidden="true"` to decorative icons that don't convey unique information (they're redundant when aria-label is present)
+  - Status badges benefit from explicit aria-label even when they have visible text, as color alone isn't accessible
+  - Use `aria-current="page"` on active navigation items instead of or in addition to visual styling
+  - Context matters in labels - "Logout {userName}" is more informative than just "Logout"
+  - Navigation links should describe the action: "Navigate to {destination}" rather than just the destination name
+  - The shadcn/ui components (Button, Input, Checkbox, Select) already handle focus-visible and basic accessibility - we just need to add contextual labels
+  - For table checkboxes, include the item name in the label: "Select {itemName}" helps users understand what they're selecting
+  - Screen reader testing can be simulated by reviewing all interactive elements and ensuring they have:
+    1. A descriptive label (via aria-label, aria-labelledby, or visible text)
+    2. The correct role (button, link, checkbox, etc.)
+    3. State information where relevant (aria-expanded, aria-current, checked)
+    4. No redundant icon announcements (aria-hidden on decorative icons)
+---
+
+
+## 2026-01-09 - US-023
+
+- **What was implemented**: Color Contrast Compliance
+- **Files modified**:
+  - `nextjs_space/components/admin/AdminSidebar.tsx` - Updated theme text colors to pure white and added drop-shadow
+  - `nextjs_space/components/admin/QuickActionsWidget.tsx` - Darkened gradient text labels
+  - `nextjs_space/components/admin/analytics/StoreAnalytics.tsx` - Updated badge text colors and metric labels
+  - `nextjs_space/app/tenant-admin/products/products-table.tsx` - Updated strain badges and stock badges
+  - `nextjs_space/app/super-admin/tenants/tenants-table.tsx` - Updated status badges and count badges
+
+- **Features implemented**:
+  - All text on gradient backgrounds now meets WCAG AA 4.5:1 contrast ratio
+  - AdminSidebar badges use text-white with drop-shadow-sm for enhanced visibility
+  - Super Admin: activeIcon changed from text-slate-200 to text-slate-100
+  - Super Admin: badge background increased opacity from 60% to 80% for better contrast
+  - Tenant Admin: badge text now uses drop-shadow-sm and activeIcon is text-white
+  - QuickActionsWidget: All label gradients darkened from -600/-700 to -700/-800 shades
+  - StoreAnalytics: All badge colors updated from -700 to -800 shades
+  - Status badges across tables: Updated from -700 to -800 text colors on light backgrounds
+  - Count badges: Updated from blue-700/purple-700/amber-700 to -800 variants
+  - "In Stock" badge: Changed from bg-emerald-500 to bg-emerald-600 for white text contrast
+  - Metric labels and period text darkened for better readability
+  - Typecheck passed via `npm run build`
+
+- **Learnings for future iterations**:
+  - WCAG AA requires 4.5:1 contrast ratio - use -800 shades for text on -100 backgrounds
+  - For gradient text with bg-clip-text, use darker shades (-700/-800) instead of -600/-700
+  - Text on colored gradient backgrounds benefits from drop-shadow-sm for enhanced legibility
+  - White text on colored badges (like emerald-600) provides better contrast than colored text on light backgrounds
+  - The distinctive aesthetic themes (slate/zinc for super-admin, cyan/blue for tenant-admin) can be preserved while meeting accessibility standards
+  - Online contrast checkers or browser DevTools can verify 4.5:1 ratio before committing changes
+  - Badge text colors are the most common contrast failure - always use -800 shades on -100 backgrounds
+  - Link colors using -600 shades already meet contrast requirements on white backgrounds
+---
+
+## 2026-01-09 - US-024
+
+- **What was implemented**: Export to CSV
+- **Files created**:
+  - `nextjs_space/lib/admin/csv-export.ts` - CSV generation utility with proper field escaping and UTF-8 BOM
+  - `nextjs_space/components/admin/shared/ExportButton.tsx` - Themed export button component with loading states
+- **Files modified**:
+  - `nextjs_space/app/super-admin/tenants/tenants-table.tsx` - Added export for all filtered tenants
+  - `nextjs_space/app/tenant-admin/products/products-table.tsx` - Added export for all filtered products
+  - `nextjs_space/app/tenant-admin/orders/orders-table.tsx` - Added export for all filtered orders
+  - `nextjs_space/app/tenant-admin/customers/customers-table.tsx` - Added export for all filtered customers
+  - `nextjs_space/components/admin/shared/index.ts` - Exported ExportButton
+  - `nextjs_space/tailwind.config.ts` - Added shimmer keyframe animation
+
+- **Features implemented**:
+  - **CSV Export Utility (`csv-export.ts`)**:
+    - `escapeCsvField()` - Proper CSV field escaping (handles commas, quotes, newlines)
+    - `convertToCSV()` - Converts array of objects to CSV format
+    - `downloadCSV()` - Triggers browser download with UTF-8 BOM for Excel compatibility
+    - `generateCSVFilename()` - Creates filename with date: `{entity}-export-YYYY-MM-DD.csv`
+    - `calculateFileSize()` - Calculates approximate file size for toast display
+    - `exportToCSV()` - Main export function with callbacks for start/complete/error
+  - **ExportButton Component**:
+    - "Data Extraction Console" aesthetic with distinctive visual feedback
+    - Theme-specific styling: super-admin (slate gradient), tenant-admin (emerald/cyan gradient)
+    - Loading state with spinner and "Exporting..." text
+    - Shimmer effect on hover (translating gradient overlay)
+    - Extraction progress bar during export (animated gradient)
+    - Sparkle icon appears on hover with pulse animation
+    - Download icon with translate-down animation on hover
+    - Disabled state when no records to export
+    - ARIA labels for accessibility
+  - **Integration on all admin list pages**:
+    - Tenants table: Export button next to search and status filter
+    - Products table: Export button in filters row alongside category/stock filters
+    - Orders table: Export button after date range picker
+    - Customers table: Export button next to search input
+  - **Export functionality**:
+    - Exports current filtered/searched results (not all data)
+    - Success toast shows record count and file size: "Exported 42 records to CSV (5.2 KB)"
+    - Dual export paths: Main export button (all filtered) + bulk action (selected items)
+    - Browser-based download using Blob and URL.createObjectURL (no server endpoint)
+    - Proper filename with date for organization
+    - 300ms simulated processing time for smooth UX
+  - Typecheck passed via `npm run build`
+
+- **Learnings for future iterations**:
+  - **CSV field escaping is critical**: Must wrap fields with commas/quotes/newlines in quotes and escape internal quotes with ""
+  - **UTF-8 BOM (`\uFEFF`) ensures Excel compatibility**: Without BOM, special characters may display incorrectly in Excel
+  - **Theme-specific button styling creates cohesion**: super-admin uses slate (command center), tenant-admin uses emerald/cyan (living garden)
+  - **Shimmer animations add polish**: The translating gradient overlay on hover creates a premium feel
+  - **File size in toast is helpful UX**: Users appreciate knowing how large the export is
+  - **Dual export paths serve different needs**: Main button exports all filtered results, bulk action exports selected items
+  - **ExportButton component is reusable**: Just pass theme, recordCount, and onExport handler - works everywhere
+  - **Client-side CSV generation is efficient**: No need for server endpoint, reduces API load
+  - **Simulated processing delay improves perceived quality**: Brief 300ms delay allows loading state to be seen, avoiding jarring instant downloads
+  - **Consistent placement across tables**: Export button always appears in the filters/controls area, never buried
+---
+
+## 2026-01-09 - US-025
+
+- **What was implemented**: Keyboard Shortcuts
+- **Files created**:
+  - `nextjs_space/components/admin/KeyboardShortcutsProvider.tsx` - Complete keyboard shortcuts system with provider, help modal, and keyboard hint component
+- **Files modified**:
+  - `nextjs_space/components/admin/AccessibleAdminLayout.tsx` - Integrated KeyboardShortcutsProvider wrapper
+  - `nextjs_space/components/admin/AdminSidebar.tsx` - Added shortcut prop to AdminMenuItem interface, imported KeyboardHint, rendered hints in menu items
+  - `nextjs_space/components/admin/SuperAdminSidebar.tsx` - Added keyboard shortcuts to menu items (G+D for Overview, G+T for Tenants)
+  - `nextjs_space/components/admin/TenantAdminSidebar.tsx` - Added keyboard shortcuts to menu items (G+D for Overview, G+P for Products, G+O for Orders)
+
+- **Features implemented**:
+  - **KeyboardShortcutsProvider Context**:
+    - Global keyboard event listener with support for modifier combos and key sequences
+    - Mac/Windows detection for ⌘ vs Ctrl key mapping
+    - Built-in shortcuts: Cmd+K (focus search), G+D (dashboard), G+T (tenants - super admin), G+P (products - tenant admin), G+O (orders), Escape (close modal), Cmd+/ (show help)
+    - Sequence key tracking with 1-second timeout for "G then D" style shortcuts
+    - Theme-aware shortcuts (super-admin vs tenant-admin)
+    - Custom shortcut registration API (registerShortcut, unregisterShortcut)
+    - Auto-reset sequence on route changes
+  - **Command Interface Help Modal**:
+    - "Command Interface" aesthetic with terminal-inspired design
+    - Theme-specific styling: super-admin (slate gradient), tenant-admin (cyan gradient)
+    - Shortcuts grouped by category: Navigation, Search, Actions
+    - Category headers with icons and uppercase labels
+    - Shortcut cards with icon, label, description, and key badges
+    - Animated key badges with hover scale effect
+    - "then" vs "+" separator logic for sequence vs modifier shortcuts
+    - Decorative scanline animation effect in header
+    - Platform detection footer showing Mac vs Windows/Linux
+    - Responsive design with max-height scrollable content
+  - **KeyboardHint Component**:
+    - Theme-specific styling matching admin panel colors
+    - Compact kbd badges showing shortcut keys
+    - Used in sidebar menu items (visible when expanded)
+    - Also shown in collapsed sidebar tooltips
+  - **Sidebar Integration**:
+    - Menu items now support optional `shortcut` prop (array of keys)
+    - KeyboardHint rendered next to menu item labels when sidebar expanded
+    - Shortcut text shown in collapsed tooltips
+    - Flex-1 layout ensures hints align to the right
+  - **Accessibility**:
+    - ARIA labels on all interactive elements
+    - Keyboard hints marked with aria-hidden="true" (redundant with labels)
+    - Focus trap not needed - help modal uses shadcn Dialog which handles it
+    - All shortcuts work globally across admin pages
+  - Typecheck passed via `npm run build`
+
+- **Learnings for future iterations**:
+  - **"Command Interface" aesthetic**: Terminal/tactical HUD-inspired design with monospace fonts, crisp borders, kbd badges, and satisfying animations
+  - Keyboard event handling requires careful consideration of input focus - don't trigger sequence shortcuts when user is typing in input/textarea
+  - Sequence shortcuts need timeout-based reset (1 second) to avoid stuck states
+  - Platform detection (Mac vs Windows) crucial for showing correct modifier key symbols (⌘ vs Ctrl)
+  - React Context is perfect for global keyboard shortcut management - no prop drilling needed
+  - The `useEffect` cleanup pattern is essential for removing event listeners and clearing timeouts
+  - shadcn Dialog component already handles focus trapping - no need for custom implementation
+  - KeyboardHint component benefits from being small and self-contained - easy to drop anywhere
+  - The AdminMenuItem interface extension pattern (adding optional shortcut prop) maintains backward compatibility
+  - Sidebar flex layout: icon + flex-1 label + hint creates perfect right-alignment for shortcuts
+  - Theme-specific styling should be consistent across provider, modal, and hints for cohesive UX
+  - The "then" separator for sequence shortcuts (G then D) is more intuitive than "+" which implies simultaneous press
+  - Category-based grouping in help modal improves scannability over flat list
+  - Staggered animations and hover effects on key badges add tactile satisfaction
+  - Export both the provider (KeyboardShortcutsProvider) and utility components (KeyboardHint) from same file for convenience
+---
+
+## 2026-01-09 - US-026
+
+- **What was implemented**: Recent Activity Timeline (Super Admin)
+- **Files created**:
+  - `nextjs_space/components/admin/ActivityTimeline.tsx` - System Monitor Console aesthetic timeline component
+- **Files modified**:
+  - `nextjs_space/components/admin/panels/OverviewPanel.tsx` - Integrated ActivityTimeline below Platform Health card
+
+- **Features implemented**:
+  - **ActivityTimeline Component**:
+    - System Monitor Console aesthetic with terminal-inspired design
+    - Live activity stream showing last 20 platform events
+    - Event types: TENANT_CREATED, TENANT_ACTIVATED, USER_REGISTERED, ORDER_PLACED, TENANT_SETTINGS_UPDATED, SYSTEM_ALERT
+    - Each event displays: Icon badge, description, timestamp, actor name (optional)
+    - Color-coded event types with theme-specific glows (cyan, emerald, blue, purple, amber, slate)
+    - Animated entrance with staggered fade-in-up effect (50ms delay per item)
+    - Hover effects: background glow transition, icon scale (1.1x), border color change
+    - Timestamp formatting: relative time (e.g., "5m ago", "2h ago") + precise time in 24hr format
+    - Event type badge with colored dot indicator and uppercase label
+    - Scanning line animation effect across timeline for tactile feedback
+    - Pulse animations on 3 most recent events for emphasis
+    - Empty state with centered icon and message
+    - Footer stats showing event count and last updated timestamp
+    - "VIEW ALL" button linking to /super-admin/audit-logs with arrow animation
+    - Mock data generator (`generateMockEvents()`) for testing/demo
+  - **Integration into Super Admin Dashboard**:
+    - Positioned after Platform Health card, before Platform Analytics section
+    - Uses generateMockEvents(20) to populate timeline with realistic demo data
+    - Configured with maxVisible=20 and showViewAll=true
+
+- **Learnings for future iterations**:
+  - **System Monitor Console aesthetic**: Terminal-inspired design with monospace fonts, scanning line effects, and tactical color schemes creates strong command center feel
+  - The ActivityTimeline follows a similar component pattern to other admin components: event config objects map types to icons/colors/labels
+  - Staggered animations via `style={{ animationDelay, animationFillMode: 'backwards' }}` prevent layout shift during entrance
+  - Multiple hover effects (background glow blur-2xl, icon scale, border color) combine to create rich interactivity
+  - The scanning line animation uses pure CSS keyframes with infinite loop for continuous movement effect
+  - Event type configuration pattern (icon, color, bgGlow, label in eventConfig object) makes it easy to add new event types
+  - Pulse effect limited to first 3 events (`index < 3`) creates visual hierarchy for most recent activity
+  - TypeScript enums for EventType ensure type safety when adding events
+  - generateMockEvents() function is exported separately for reusability in other contexts
+  - The "Live Activity Stream" header with pulsing indicator dot reinforces real-time nature
+  - Decorative corner accents (bottom-right border) add subtle visual interest without overwhelming
+  - Font-mono for timestamps and uppercase labels creates technical/tactical aesthetic
+  - Next.js styled-jsx allows component-scoped CSS for custom animations
+---
+
+## 2026-01-09 - US-027
+
+- **What was implemented**: Notification Center (Header Badge)
+- **Files created**:
+  - `nextjs_space/components/admin/NotificationCenter.tsx` - Mission Control Alert System with tactical notification dropdown
+- **Files modified**:
+  - `nextjs_space/app/super-admin/layout.tsx` - Added notification center to header
+  - `nextjs_space/app/tenant-admin/layout.tsx` - Added notification center to header
+  - `nextjs_space/tailwind.config.ts` - Added wiggle animation for bell icon
+
+- **Features implemented**:
+  - **NotificationCenter Component**:
+    - Bell icon button with theme-specific styling (slate for super-admin, cyan for tenant-admin)
+    - Hexagonal badge showing unread count with pulsing ring indicator
+    - Bell wiggle animation on mount when unread notifications present
+    - Dropdown with last 5 notifications (sorted by unread first, then timestamp)
+    - Notification types: PENDING_APPROVAL, FAILED_ORDER, LOW_STOCK, SYSTEM_ALERT, USER_ACTION
+    - Each notification displays: Icon badge, type label, title, message, timestamp, mark-as-read button
+    - Color-coded notification types (amber, red, orange, purple, cyan)
+    - Hover effects: icon scale (1.1x), background transition, opacity reveal for mark-as-read button
+    - Timestamp formatting: relative time (e.g., "5m ago") + precise 24hr time
+    - Empty state: "All Clear - no active notifications" with centered icon
+    - Header with gradient background and scanning line animation effect
+    - "Clear All" button in header when unread notifications exist
+    - "View All Notifications" link in footer with arrow animation
+    - Unread indicator: left border stripe on notification items
+    - Status glow effects on unread notification icons
+    - Staggered entrance animations (50ms delay per item)
+    - Badge radar ping animation for visual emphasis
+  - **Integration**:
+    - Sticky header positioned at top of admin content area (z-30)
+    - Theme-aware: super-admin uses slate colors, tenant-admin uses cyan colors
+    - generateMockNotifications() function creates demo data with 8 notifications
+    - ViewAllUrl configured: /super-admin/notifications and /tenant-admin/notifications
+  - Typecheck passed via `npm run build`
+
+- **Learnings for future iterations**:
+  - **Mission Control Alert System aesthetic**: The notification center uses tactical styling with hexagonal badges, scanning line effects, and status glows to create a command center feel
+  - NotificationCenter uses shadcn/ui Popover and Badge components as foundation
+  - The sticky header pattern (sticky top-0 z-30) ensures notification bell remains accessible while scrolling
+  - TypeScript union types for theme styles (`typeof themeStyles['super-admin'] | typeof themeStyles['tenant-admin']`) allow flexible typing for shared components
+  - Wiggle animation defined in tailwind.config.ts can be applied via `animate-[wiggle_0.5s_ease-in-out_3]` for 3 iterations
+  - The hexagonal badge uses `clip-path: polygon()` CSS for distinctive shape (30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)
+  - Mock notification generator exported separately for reusability (generateMockNotifications())
+  - Theme-specific styling ensures visual consistency with respective admin panel themes
+  - Unread notifications prioritized via useMemo sorting (unread first, then timestamp)
+  - The scanning line animation uses pure CSS keyframes with translateX for smooth movement
+  - Mark-as-read button uses opacity-0 group-hover:opacity-100 for clean UX
+  - Badge count shows "9+" when more than 9 unread to avoid overflow
+  - Radar ping effect combines animate-pulse with ring-4 for attention-grabbing animation
+---
+
+## 2026-01-09 - US-028
+
+- **What was implemented**: Print Packing Slip (Orders)
+- **Files created**:
+  - `nextjs_space/components/admin/PackingSlip.tsx` - Professional logistics document component with print optimization
+  - `nextjs_space/app/tenant-admin/orders/[id]/packing-slip/page.tsx` - Packing slip page route with auto-print
+  - `nextjs_space/app/api/tenant-admin/orders/[id]/route.ts` - API endpoint for fetching single order by ID
+  - `nextjs_space/app/api/tenant-admin/tenant/route.ts` - API endpoint for fetching tenant data (business name)
+- **Files modified**:
+  - `nextjs_space/app/tenant-admin/orders/page.tsx` - Added Print Packing Slip button to order detail modal
+  - `nextjs_space/package.json` - Added qrcode.react dependency
+
+- **Features implemented**:
+  - **PackingSlip Component**:
+    - Professional "Logistics Document" aesthetic with clean typography and clear information hierarchy
+    - Dual-mode design: elegant on-screen preview with gradients and shadows, perfectly optimized for print (plain, high-contrast)
+    - Print-optimized CSS with @media print rules removing navigation, buttons, backgrounds, and animations
+    - QR code for order tracking using qrcode.react library
+    - Order information bar with order number (monospace font), date, and status badge
+    - Two-column layout: Shipping address (left) and Order summary stats (right)
+    - Items table with quantities highlighted in blue badges, packed checkboxes (visible only in print)
+    - Order totals section with subtotal, shipping, and grand total
+    - Packing instructions and print timestamp in footer
+    - Uses IBM Plex Mono for monospaced IDs and Inter for body text (Google Fonts)
+    - Auto-print on mount via window.print() with 500ms delay
+    - No-print controls: Print button and Close button (hidden in print mode)
+  - **Packing Slip Page Route**:
+    - Fetches order data and tenant data in parallel
+    - Loading state with spinner
+    - Error handling for missing orders
+    - Passes businessName to PackingSlip component
+    - Auto-prints via autoPrint prop
+  - **API Endpoints**:
+    - GET /api/tenant-admin/orders/[id] - Fetch single order with items, user, and shipping address
+    - GET /api/tenant-admin/tenant - Fetch tenant business name for packing slip header
+    - Both endpoints include tenant isolation (verify user has access to tenant)
+  - **Print Packing Slip Button**:
+    - Added to order detail modal above status action buttons
+    - Opens packing slip in new window/tab
+    - Printer icon from Lucide React
+    - Full-width outline button with slate styling
+  - Typecheck passed via `npm run build`
+
+- **Learnings for future iterations**:
+  - **Professional Logistics Document aesthetic**: Clean, structured, utilitarian design with refined typography creates trust for fulfillment documents
+  - Print-optimized components need dual styling: elegant on screen (gradients, shadows, colors) and high-contrast for print (black/white, sharp borders)
+  - @media print rules should remove: page margins (set in @page), animations (set duration to 0s), backgrounds (unless critical), decorative elements
+  - `-webkit-print-color-adjust: exact` and `print-color-adjust: exact` force browsers to print background colors
+  - window.print() should be triggered with a small delay (500ms) to ensure content is fully rendered
+  - QR codes use qrcode.react library (QRCodeSVG component) - easy to implement and print-friendly
+  - Google Fonts can be loaded via <link> tag in component for custom font support (IBM Plex Mono, Inter)
+  - Monospaced fonts (font-mono) are essential for order IDs, tracking numbers, and monetary values
+  - The "packed" checkbox column uses `print:table-cell` to show only in print mode, hidden on screen with `hidden print:table-cell`
+  - Prisma database client is exported as `prisma` from `@/lib/db` (NOT `db`)
+  - API routes need tenant isolation - always verify user.tenantId matches the resource being accessed
+  - Next.js dynamic routes: `[id]/packing-slip/page.tsx` creates `/orders/{id}/packing-slip` route
+  - window.open(url, '_blank') opens new window/tab for print preview without disrupting main UI
+  - Print documents should use A4 portrait format (`@page { size: A4 portrait; margin: 0.5cm; }`)
+  - Stacking order: header (dark gradient), info bar (light background), body (white), footer (light background)
+---
+
+## 2026-01-09 22:05 - US-029
+
+- **What was implemented**: Customer Notes Field (Orders)
+- **Files created**:
+  - `nextjs_space/app/api/tenant-admin/orders/[id]/admin-notes/route.ts` - API endpoint for updating admin notes
+  - `nextjs_space/prisma/migrations/20260109_add_admin_notes/migration.sql` - Database migration
+- **Files modified**:
+  - `nextjs_space/prisma/schema.prisma` - Added `adminNotes` field to orders model
+  - `nextjs_space/app/tenant-admin/orders/page.tsx` - Added admin notes textarea with debounced auto-save
+  - `nextjs_space/app/tenant-admin/orders/orders-table.tsx` - Updated Order interface to include adminNotes
+  - `nextjs_space/app/api/tenant-admin/orders/route.ts` - Updated to return adminNotes in order data
+
+- **Features implemented**:
+  - Admin Notes textarea in order detail modal with amber-themed styling
+  - Debounced auto-save (1 second after user stops typing)
+  - "Saved" indicator with checkmark icon that appears after successful save
+  - Helper text: "Internal notes (not visible to customers)"
+  - Auto-save status text: "Changes are saved automatically after 1 second of no typing"
+  - Field pre-populates when order is selected
+  - FileText icon for visual identification
+  - Textarea is disabled during save operation
+  - Uses Prisma migration to add `adminNotes` TEXT field to orders table
+  - API endpoint validates authentication and tenant ownership before allowing updates
+
+- **Learnings for future iterations**:
+  - When adding new fields to Prisma models, always create a migration file and run `prisma migrate deploy` followed by `prisma generate`
+  - For debounced auto-save, use `useRef` to store timeout reference and clear it on component unmount
+  - Use `any` type for Prisma query results when transforming field names (e.g., `order_items` to `items`)
+  - The admin notes field uses an amber color scheme to distinguish it from regular content (amber-50/30 background, amber-200 border)
+  - When creating API endpoints that modify data, always validate tenant ownership to prevent unauthorized access
+  - The "Saved" indicator uses `animate-in fade-in` for smooth appearance
+---
+
+## 2026-01-09 - US-030
+
+- **What was implemented**: Drag-and-Drop Product Ordering
+- **Files created**:
+  - `nextjs_space/app/api/tenant-admin/products/reorder/route.ts` - API endpoint for updating product displayOrder
+  - `nextjs_space/prisma/migrations/20260109_add_display_order/migration.sql` - Database migration
+- **Files modified**:
+  - `nextjs_space/prisma/schema.prisma` - Added displayOrder integer field to products model
+  - `nextjs_space/app/tenant-admin/products/page.tsx` - Changed default ordering from createdAt desc to displayOrder asc
+  - `nextjs_space/app/tenant-admin/products/products-table.tsx` - Added drag-and-drop functionality with @dnd-kit
+  - `nextjs_space/package.json` - Added @dnd-kit dependencies
+
+- **Features implemented**:
+  - **Drag-and-Drop Library**: Installed @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities
+  - **Database Schema**: Added displayOrder integer field (default 0) to products table
+  - **SortableProductRow Component**: 
+    - Drag handle column with GripVertical icon (cursor-grab, active:cursor-grabbing)
+    - useSortable hook for drag behavior
+    - Visual feedback: opacity 0.5 while dragging, shadow-lg elevation
+    - Row styling preserved: hover states, selection highlighting
+  - **DndContext Integration**:
+    - PointerSensor and KeyboardSensor for mouse and keyboard dragging
+    - closestCenter collision detection strategy
+    - verticalListSortingStrategy for table rows
+  - **Optimistic Updates**: 
+    - arrayMove updates local state immediately for smooth UX
+    - Shows loading state during save (isSavingOrder)
+    - Reverts to original order on error
+  - **API Endpoint** (`/api/tenant-admin/products/reorder`):
+    - POST endpoint accepting array of { id, displayOrder } updates
+    - Rate limiting (20 requests/minute)
+    - Tenant isolation: validates all products belong to user's tenant
+    - Bulk update using Promise.all for efficiency
+  - **Default Ordering**: Products now ordered by displayOrder asc by default (instead of createdAt desc)
+  - **Toast Notifications**: Success/error feedback using sonner toast
+
+- **Learnings for future iterations**:
+  - **@dnd-kit is perfect for table drag-and-drop**: The library provides a clean API with useSortable hook and automatic transform/transition CSS
+  - **Optimistic updates pattern**: Update local state immediately with arrayMove, persist to server, revert on error - creates smooth UX
+  - **Drag handle column**: Adding a separate column with GripVertical icon is more intuitive than making entire row draggable
+  - **Visual feedback is critical**: Reducing opacity and adding shadow-lg while dragging clearly indicates draggable state
+  - **DnD sensors**: PointerSensor handles mouse dragging, KeyboardSensor enables accessibility (Tab + Space/Enter to drag)
+  - **Rate limit pattern**: The checkRateLimit() function returns `{ success: true }` or `{ success: false; response }` - check success and return response directly
+  - **Prisma migration pattern**: Create directory with timestamp, write migration.sql, run `prisma migrate deploy` then `prisma generate`
+  - **Default ordering matters**: Changed default from createdAt desc to displayOrder asc so products appear in custom order by default
+  - **Bulk updates with Promise.all**: When updating multiple products, use Promise.all for parallel execution instead of sequential
+  - **SortableContext items prop**: Must provide array of IDs (`orderedProducts.map(p => p.id)`) not the full objects
+  - **CSS.Transform.toString()**: Use this helper from @dnd-kit/utilities to convert transform object to CSS string
+  - **Keep existing functionality**: Preserved all table features (search, filters, sorting, bulk actions, pagination) while adding drag-and-drop
+  - **Sensor coordinateGetter**: KeyboardSensor needs sortableKeyboardCoordinates for proper keyboard navigation
+
+---

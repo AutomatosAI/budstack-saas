@@ -1,15 +1,25 @@
-
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
+import { ProductsTable } from './products-table';
+import { Breadcrumbs } from '@/components/admin/shared';
 
-export default async function ProductsPage() {
+/** Default pagination settings */
+const DEFAULT_PAGE_SIZE = 20;
+const VALID_PAGE_SIZES = [10, 20, 50, 100];
+
+/** Valid sort columns for products table */
+const VALID_SORT_COLUMNS = ['name', 'category', 'price', 'stock', 'thcContent', 'cbdContent', 'createdAt'] as const;
+type SortColumn = typeof VALID_SORT_COLUMNS[number];
+
+interface ProductsPageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const session = await getServerSession(authOptions);
 
   if (!session || (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
@@ -18,25 +28,147 @@ export default async function ProductsPage() {
 
   const user = await prisma.users.findUnique({
     where: { id: session.user.id },
-    include: {
-      tenant: {
-        include: {
-          products: {
-            orderBy: { createdAt: 'desc' },
-          },
-        },
-      },
-    },
+    select: { tenantId: true },
   });
 
-  if (!user?.tenant) {
+  if (!user?.tenantId) {
     redirect('/tenant-admin');
   }
 
-  const products = user.tenant.products;
+  const tenantId = user.tenantId;
+
+  // Await searchParams (Next.js 15+ async searchParams)
+  const params = await searchParams;
+
+  // Parse pagination params from URL
+  const pageParam = typeof params.page === 'string' ? parseInt(params.page, 10) : 1;
+  const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
+
+  const pageSizeParam = typeof params.pageSize === 'string' ? parseInt(params.pageSize, 10) : DEFAULT_PAGE_SIZE;
+  const pageSize = VALID_PAGE_SIZES.includes(pageSizeParam) ? pageSizeParam : DEFAULT_PAGE_SIZE;
+
+  // Parse search and filter params from URL
+  const search = typeof params.search === 'string' ? params.search.trim() : '';
+  const categoryFilter = typeof params.category === 'string' ? params.category : 'all';
+  const stockFilter = typeof params.stock === 'string' ? params.stock : 'all';
+
+  // Parse sort params from URL
+  const sortByParam = typeof params.sortBy === 'string' ? params.sortBy : null;
+  const sortOrderParam = typeof params.sortOrder === 'string' ? params.sortOrder : null;
+
+  // Validate sort column
+  const sortBy = sortByParam && VALID_SORT_COLUMNS.includes(sortByParam as SortColumn)
+    ? (sortByParam as SortColumn)
+    : null;
+  const sortOrder = sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : 'asc';
+
+  // Build Prisma where clause for server-side filtering
+  const whereClause: Prisma.productsWhereInput = {
+    tenantId,
+  };
+
+  // Apply search filter (case-insensitive across multiple fields)
+  if (search) {
+    whereClause.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { category: { contains: search, mode: 'insensitive' } },
+      { slug: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  // Apply category filter
+  if (categoryFilter !== 'all') {
+    whereClause.category = { equals: categoryFilter, mode: 'insensitive' };
+  }
+
+  // Apply stock filter
+  if (stockFilter === 'in-stock') {
+    whereClause.stock = { gt: 0 };
+  } else if (stockFilter === 'out-of-stock') {
+    whereClause.stock = { equals: 0 };
+  }
+
+  // Calculate skip for pagination
+  const skip = (page - 1) * pageSize;
+
+  // Build orderBy clause - default to displayOrder asc if no sort specified
+  const orderBy: Prisma.productsOrderByWithRelationInput = sortBy
+    ? { [sortBy]: sortOrder }
+    : { displayOrder: 'asc' };
+
+  // Get filtered count and paginated products in parallel
+  // Also get counts for filter badges
+  const [filteredCount, products, inStockCount, outOfStockCount, categoryCounts] = await Promise.all([
+    prisma.products.count({ where: whereClause }),
+    prisma.products.findMany({
+      where: whereClause,
+      orderBy,
+      skip,
+      take: pageSize,
+    }),
+    // Count in-stock products (with search applied if present)
+    prisma.products.count({
+      where: {
+        tenantId,
+        ...(search ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { category: { contains: search, mode: 'insensitive' } },
+            { slug: { contains: search, mode: 'insensitive' } },
+          ],
+        } : {}),
+        stock: { gt: 0 },
+      },
+    }),
+    // Count out-of-stock products (with search applied if present)
+    prisma.products.count({
+      where: {
+        tenantId,
+        ...(search ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { category: { contains: search, mode: 'insensitive' } },
+            { slug: { contains: search, mode: 'insensitive' } },
+          ],
+        } : {}),
+        stock: { equals: 0 },
+      },
+    }),
+    // Get category counts for filter badges
+    prisma.products.groupBy({
+      by: ['category'],
+      where: {
+        tenantId,
+        ...(search ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { category: { contains: search, mode: 'insensitive' } },
+            { slug: { contains: search, mode: 'insensitive' } },
+          ],
+        } : {}),
+      },
+      _count: { id: true },
+    }),
+  ]);
+
+  // Transform category counts into a map
+  const categoryCountsMap: Record<string, number> = {};
+  categoryCounts.forEach((item: { category: string | null; _count: { id: number } }) => {
+    const cat = item.category?.toLowerCase() || 'uncategorized';
+    categoryCountsMap[cat] = item._count.id;
+  });
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/tenant-admin' },
+          { label: 'Products' },
+        ]}
+        className="mb-4"
+      />
+
       <div className="mb-8">
         <div className="flex justify-between items-center">
           <div>
@@ -49,54 +181,13 @@ export default async function ProductsPage() {
         </div>
       </div>
 
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-emerald-50 to-teal-50">
-          <CardTitle className="text-2xl font-bold text-slate-900">All Products ({products.length})</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {products.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-slate-600 mb-4">No products found</p>
-              <Button className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all">
-                Sync Products from Dr Green Admin
-              </Button>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-200">
-                  <TableHead className="font-semibold text-slate-700">Name</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Category</TableHead>
-                  <TableHead className="font-semibold text-slate-700">THC %</TableHead>
-                  <TableHead className="font-semibold text-slate-700">CBD %</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Price</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Stock</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((product: any) => (
-                  <TableRow key={product.id} className="border-slate-200">
-                    <TableCell className="font-medium text-slate-900">{product.name}</TableCell>
-                    <TableCell className="text-slate-700">{product.category}</TableCell>
-                    <TableCell className="text-slate-700">{product.thcContent}%</TableCell>
-                    <TableCell className="text-slate-700">{product.cbdContent}%</TableCell>
-                    <TableCell className="text-slate-700">€{product.price}</TableCell>
-                    <TableCell className="text-slate-700">{product.stock > 0 ? product.stock : 'Out of stock'}</TableCell>
-                    <TableCell>
-                      {product.stock > 0 ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">In Stock</Badge>
-                      ) : (
-                        <Badge className="bg-amber-100 text-amber-700 border-amber-200">Out of Stock</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <ProductsTable
+        products={products}
+        totalCount={filteredCount}
+        inStockCount={inStockCount}
+        outOfStockCount={outOfStockCount}
+        categoryCounts={categoryCountsMap}
+      />
     </div>
   );
 }

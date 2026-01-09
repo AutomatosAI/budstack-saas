@@ -7,11 +7,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Check, Copy, Palette, Layout, ArrowLeft } from 'lucide-react';
+import { Palette, Layout } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import TemplateCloneButton from './clone-button';
 import ActivateButton from './activate-button';
 import { Prisma, templates } from '@prisma/client';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 // Define typed interface for the cloned template with the included base template relation
 type ClonedTemplate = any;
@@ -28,17 +29,17 @@ export default async function TemplatesPage() {
         include: { tenants: true },
     });
 
-    if (!user?.tenant) {
+    if (!user?.tenants) {
         redirect('/tenant-admin');
     }
 
-    const tenant = user.tenant;
+    const tenant = user.tenants;
 
     // 1. Fetch Tenant's Templates
     const myTemplates = await prisma.tenant_templates.findMany({
         where: { tenantId: tenant.id },
         include: {
-            baseTemplate: {
+            templates: {
                 select: {
                     thumbnailUrl: true,
                     previewUrl: true,
@@ -49,12 +50,21 @@ export default async function TemplatesPage() {
     });
 
     // 2. Fetch Available Base Templates (Marketplace)
-    const baseTemplates = await prisma.templates.findMany({
+    const templatess = await prisma.templates.findMany({
         where: { isActive: true, isPublic: true },
     });
 
     return (
         <div className="p-8">
+            {/* Breadcrumbs */}
+            <Breadcrumbs
+                items={[
+                    { label: 'Dashboard', href: '/tenant-admin' },
+                    { label: 'Templates' },
+                ]}
+                className="mb-4"
+            />
+
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Template Management</h1>
                 <p className="text-slate-600 mt-2">Manage your store's design and layout</p>
@@ -81,9 +91,9 @@ export default async function TemplatesPage() {
                         {myTemplates.map((item: ClonedTemplate) => (
                             <Card key={item.id} className={`overflow-hidden transition-all ${item.isActive ? 'ring-2 ring-primary border-primary' : ''}`}>
                                 <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-200 relative">
-                                    {item.baseTemplate?.thumbnailUrl ? (
+                                    {item.templates?.thumbnailUrl ? (
                                         <img
-                                            src={item.baseTemplate.thumbnailUrl}
+                                            src={item.templates.thumbnailUrl}
                                             alt={`${item.templateName} preview`}
                                             className="w-full h-full object-cover"
                                         />
@@ -104,7 +114,7 @@ export default async function TemplatesPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-sm text-slate-500">
-                                        Based on: {item.baseTemplateId}
+                                        Based on: {item.templatesId}
                                     </p>
                                 </CardContent>
                                 <CardFooter className="flex justify-between gap-2 border-t bg-slate-50/50 p-4">
@@ -128,7 +138,7 @@ export default async function TemplatesPage() {
                 {/* MARKETPLACE TAB */}
                 <TabsContent value="marketplace">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {baseTemplates.map((template: templates) => (
+                        {templatess.map((template: templates) => (
                             <Card key={template.id} className="overflow-hidden hover:shadow-lg transition-all border-slate-200">
                                 <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-200 relative group">
                                     {template.thumbnailUrl ? (
@@ -170,7 +180,7 @@ export default async function TemplatesPage() {
                             </Card>
                         ))}
 
-                        {baseTemplates.length === 0 && (
+                        {templatess.length === 0 && (
                             <div className="col-span-full text-center py-12">
                                 <p className="text-slate-500">No base templates available in the system.</p>
                             </div>

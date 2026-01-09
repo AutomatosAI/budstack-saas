@@ -1,15 +1,15 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
-import { Eye, Package, Truck, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Package, Truck, CheckCircle2, XCircle, Clock, Printer, FileText, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
+import { OrdersTable } from './orders-table';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 interface OrderItem {
   id: string;
@@ -41,10 +43,27 @@ interface Order {
   subtotal: number;
   shippingCost: number;
   createdAt: string;
+  adminNotes?: string | null;
   items: OrderItem[];
   user: {
     name: string | null;
     email: string;
+  };
+}
+
+interface OrdersResponse {
+  orders: Order[];
+  totalCount: number;
+  statusCounts: {
+    PENDING: number;
+    PROCESSING: number;
+    COMPLETED: number;
+    CANCELLED: number;
+  };
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalPages: number;
   };
 }
 
@@ -53,10 +72,23 @@ export default function TenantOrdersPage() {
   const session = sessionResult?.data;
   const status = sessionResult?.status;
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [orders, setOrders] = useState<Order[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [statusCounts, setStatusCounts] = useState({
+    PENDING: 0,
+    PROCESSING: 0,
+    COMPLETED: 0,
+    CANCELLED: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [showSavedIndicator, setShowSavedIndicator] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -67,18 +99,50 @@ export default function TenantOrdersPage() {
     }
   }, [status, session, router]);
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetchOrders();
-    }
-  }, [session]);
+  // Build API URL with query params
+  const buildApiUrl = useCallback(() => {
+    const params = new URLSearchParams();
 
-  const fetchOrders = async () => {
+    // Pagination params
+    const page = searchParams.get('page') || '1';
+    const pageSize = searchParams.get('pageSize') || '20';
+    params.set('page', page);
+    params.set('pageSize', pageSize);
+
+    // Search and filter params
+    const search = searchParams.get('search');
+    const statusFilter = searchParams.get('status');
+    const dateFrom = searchParams.get('dateFrom');
+    const dateTo = searchParams.get('dateTo');
+
+    // Sort params
+    const sortBy = searchParams.get('sortBy');
+    const sortOrder = searchParams.get('sortOrder');
+
+    if (search) params.set('search', search);
+    if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
+    if (sortBy) params.set('sortBy', sortBy);
+    if (sortOrder) params.set('sortOrder', sortOrder);
+
+    return `/api/tenant-admin/orders?${params.toString()}`;
+  }, [searchParams]);
+
+  const fetchOrders = useCallback(async () => {
     try {
-      const response = await fetch('/api/tenant-admin/orders');
+      setLoading(true);
+      const response = await fetch(buildApiUrl());
       if (response.ok) {
-        const data = await response.json();
+        const data: OrdersResponse = await response.json();
         setOrders(data.orders || []);
+        setTotalCount(data.totalCount || 0);
+        setStatusCounts(data.statusCounts || {
+          PENDING: 0,
+          PROCESSING: 0,
+          COMPLETED: 0,
+          CANCELLED: 0,
+        });
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -86,7 +150,13 @@ export default function TenantOrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildApiUrl]);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchOrders();
+    }
+  }, [session, fetchOrders]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(true);
@@ -145,6 +215,63 @@ export default function TenantOrdersPage() {
     }
   };
 
+  // Save admin notes with debouncing (1 second delay)
+  const saveAdminNotes = useCallback(async (orderId: string, notes: string) => {
+    setIsSavingNotes(true);
+    try {
+      const response = await fetch(`/api/tenant-admin/orders/${orderId}/admin-notes`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminNotes: notes }),
+      });
+
+      if (response.ok) {
+        setShowSavedIndicator(true);
+        // Hide saved indicator after 2 seconds
+        setTimeout(() => setShowSavedIndicator(false), 2000);
+      } else {
+        toast.error('Failed to save admin notes');
+      }
+    } catch (error) {
+      console.error('Error saving admin notes:', error);
+      toast.error('Failed to save admin notes');
+    } finally {
+      setIsSavingNotes(false);
+    }
+  }, []);
+
+  // Handle admin notes change with debouncing
+  const handleAdminNotesChange = useCallback((value: string, orderId: string) => {
+    setAdminNotes(value);
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set new timeout to save after 1 second of no typing
+    saveTimeoutRef.current = setTimeout(() => {
+      saveAdminNotes(orderId, value);
+    }, 1000);
+  }, [saveAdminNotes]);
+
+  // Initialize admin notes when order is selected
+  useEffect(() => {
+    if (selectedOrder) {
+      setAdminNotes(selectedOrder.adminNotes || '');
+      setShowSavedIndicator(false);
+    }
+  }, [selectedOrder]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -160,8 +287,20 @@ export default function TenantOrdersPage() {
     return null;
   }
 
+  // Calculate total orders for stats (sum of all status counts)
+  const totalOrders = statusCounts.PENDING + statusCounts.PROCESSING + statusCounts.COMPLETED + statusCounts.CANCELLED;
+
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/tenant-admin' },
+          { label: 'Orders' },
+        ]}
+        className="mb-4"
+      />
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Order Management</h1>
@@ -176,7 +315,7 @@ export default function TenantOrdersPage() {
             <CardTitle className="text-sm font-medium text-slate-50">Total Orders</CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
-            <div className="text-3xl font-bold">{orders.length}</div>
+            <div className="text-3xl font-bold">{totalOrders}</div>
           </CardContent>
         </Card>
         <Card className="border-none shadow-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
@@ -186,7 +325,7 @@ export default function TenantOrdersPage() {
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="text-3xl font-bold">
-              {orders.filter(o => o.status === 'PENDING').length}
+              {statusCounts.PENDING}
             </div>
           </CardContent>
         </Card>
@@ -197,7 +336,7 @@ export default function TenantOrdersPage() {
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="text-3xl font-bold">
-              {orders.filter(o => o.status === 'PROCESSING').length}
+              {statusCounts.PROCESSING}
             </div>
           </CardContent>
         </Card>
@@ -208,77 +347,19 @@ export default function TenantOrdersPage() {
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="text-3xl font-bold">
-              {orders.filter(o => o.status === 'COMPLETED').length}
+              {statusCounts.COMPLETED}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Orders Table */}
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
-          <CardTitle className="text-2xl font-bold text-slate-900">All Orders ({orders.length})</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {orders.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">No orders yet</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order ID</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">
-                        #{order.orderNumber.slice(-8).toUpperCase()}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{order.user?.name || 'Guest'}</p>
-                          <p className="text-sm text-gray-500">{order.user?.email || 'N/A'}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${getStatusColor(order.status)} text-white gap-1`}>
-                          {getStatusIcon(order.status)}
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{order.items.length}</TableCell>
-                      <TableCell>€{order.total.toFixed(2)}</TableCell>
-                      <TableCell>{format(new Date(order.createdAt), 'MMM d, yyyy')}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedOrder(order)}
-                          className="gap-2"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Orders Table with Search, Filters, and Pagination */}
+      <OrdersTable
+        orders={orders}
+        totalCount={totalCount}
+        statusCounts={statusCounts}
+        onViewOrder={setSelectedOrder}
+      />
 
       {/* Order Detail Modal */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
@@ -385,39 +466,84 @@ export default function TenantOrdersPage() {
                 </div>
               </div>
 
+              {/* Admin Notes Section */}
+              <div className="border rounded-lg p-4 bg-amber-50/30 border-amber-200">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-amber-600" />
+                    <h3 className="font-semibold text-lg text-slate-900">Admin Notes</h3>
+                  </div>
+                  {showSavedIndicator && (
+                    <div className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium animate-in fade-in duration-200">
+                      <Check className="w-4 h-4" />
+                      <span>Saved</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-slate-600 mb-3">
+                  Internal notes (not visible to customers)
+                </p>
+                <Textarea
+                  value={adminNotes}
+                  onChange={(e) => handleAdminNotesChange(e.target.value, selectedOrder.id)}
+                  placeholder="Add notes about special handling, gift messages, or other internal information..."
+                  className="min-h-[120px] resize-y bg-white border-amber-200 focus-visible:ring-amber-400 focus-visible:border-amber-400"
+                  disabled={isSavingNotes}
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  {isSavingNotes ? 'Saving...' : 'Changes are saved automatically after 1 second of no typing'}
+                </p>
+              </div>
+
               {/* Quick Actions */}
-              <div className="flex gap-3 pt-4 border-t">
-                {selectedOrder.status === 'PENDING' && (
-                  <Button
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
-                    onClick={() => updateOrderStatus(selectedOrder.id, 'PROCESSING')}
-                    disabled={updatingStatus}
-                  >
-                    <Truck className="w-4 h-4 mr-2" />
-                    Start Processing
-                  </Button>
-                )}
-                {selectedOrder.status === 'PROCESSING' && (
-                  <Button
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                    onClick={() => updateOrderStatus(selectedOrder.id, 'COMPLETED')}
-                    disabled={updatingStatus}
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Mark as Completed
-                  </Button>
-                )}
-                {selectedOrder.status !== 'CANCELLED' && selectedOrder.status !== 'COMPLETED' && (
-                  <Button
-                    variant="outline"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => updateOrderStatus(selectedOrder.id, 'CANCELLED')}
-                    disabled={updatingStatus}
-                  >
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Cancel Order
-                  </Button>
-                )}
+              <div className="space-y-3 pt-4 border-t">
+                {/* Print Packing Slip Button */}
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 font-medium"
+                  onClick={() => {
+                    const packingSlipUrl = `/tenant-admin/orders/${selectedOrder.id}/packing-slip`;
+                    window.open(packingSlipUrl, '_blank');
+                  }}
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Packing Slip
+                </Button>
+
+                {/* Status Action Buttons */}
+                <div className="flex gap-3">
+                  {selectedOrder.status === 'PENDING' && (
+                    <Button
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      onClick={() => updateOrderStatus(selectedOrder.id, 'PROCESSING')}
+                      disabled={updatingStatus}
+                    >
+                      <Truck className="w-4 h-4 mr-2" />
+                      Start Processing
+                    </Button>
+                  )}
+                  {selectedOrder.status === 'PROCESSING' && (
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => updateOrderStatus(selectedOrder.id, 'COMPLETED')}
+                      disabled={updatingStatus}
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Mark as Completed
+                    </Button>
+                  )}
+                  {selectedOrder.status !== 'CANCELLED' && selectedOrder.status !== 'COMPLETED' && (
+                    <Button
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => updateOrderStatus(selectedOrder.id, 'CANCELLED')}
+                      disabled={updatingStatus}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Cancel Order
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           )}

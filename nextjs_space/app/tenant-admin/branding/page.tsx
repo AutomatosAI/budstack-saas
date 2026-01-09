@@ -1,10 +1,8 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import BrandingForm from './branding-form';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 export default async function BrandingPage() {
   const session = await getServerSession();
@@ -43,6 +41,15 @@ export default async function BrandingPage() {
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/tenant-admin' },
+          { label: 'Branding' },
+        ]}
+        className="mb-4"
+      />
+
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Store Branding</h1>

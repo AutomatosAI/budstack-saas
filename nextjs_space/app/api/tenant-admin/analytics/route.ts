@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { subDays, startOfDay, format, eachDayOfInterval } from 'date-fns';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,6 +12,12 @@ export async function GET(req: NextRequest) {
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Rate limiting
+    const rateLimitResult = checkRateLimit(session.user.id);
+    if (!rateLimitResult.success) {
+      return rateLimitResult.response;
     }
 
     // Get user's tenant

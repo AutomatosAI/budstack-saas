@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { Upload, Check, Palette, Type, Layout, FileText, Settings, Image as ImageIcon } from 'lucide-react';
 import { TenantSettings } from '@/lib/types';
 import { tenant_templates } from '@prisma/client';

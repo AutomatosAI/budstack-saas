@@ -164,6 +164,7 @@ model orders {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime
   notes             String?
+  adminNotes        String?
   orderNumber       String        @unique
   shippingCost      Float         @default(5.00)
   shippingInfo      Json?
@@ -234,21 +235,22 @@ model posts {
 }
 
 model products {
-  id          String      @id
-  name        String
-  slug        String
-  description String?
-  category    String
-  strainType  StrainType?
-  thcContent  Float?
-  cbdContent  Float?
-  price       Float
-  stock       Int         @default(0)
-  images      String[]
-  tenantId    String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime
-  tenants     tenants     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id           String      @id
+  name         String
+  slug         String
+  description  String?
+  category     String
+  strainType   StrainType?
+  thcContent   Float?
+  cbdContent   Float?
+  price        Float
+  stock        Int         @default(0)
+  images       String[]
+  displayOrder Int         @default(0)
+  tenantId     String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime
+  tenants      tenants     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([slug, tenantId])
 }

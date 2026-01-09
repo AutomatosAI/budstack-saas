@@ -2,10 +2,8 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import PlatformBrandingForm from './platform-branding-form';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 export default async function PlatformSettingsPage() {
   const session = await getServerSession();
@@ -23,18 +21,27 @@ export default async function PlatformSettingsPage() {
   }
 
   // Get or create platform settings
-  let settings = await prisma.platformSettings.findUnique({
+  let settings = await prisma.platform_settings.findUnique({
     where: { id: 'platform' },
   });
 
   if (!settings) {
-    settings = await prisma.platformSettings.create({
-      data: { id: 'platform' },
+    settings = await prisma.platform_settings.create({
+      data: { id: 'platform', updatedAt: new Date() },
     });
   }
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/super-admin' },
+          { label: 'Platform Branding' },
+        ]}
+        className="mb-4"
+      />
+
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Platform Branding</h1>

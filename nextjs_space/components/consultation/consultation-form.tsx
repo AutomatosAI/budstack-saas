@@ -10,7 +10,7 @@ import { AddressStep } from './steps/address-step';
 import { MedicalConditionsStep } from './steps/medical-conditions-step';
 import { MedicalHistoryPart1Step } from './steps/medical-history-part1-step';
 import { MedicalHistoryPart2Step } from './steps/medical-history-part2-step';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { useRouter } from 'next/navigation';
 
 export interface ConsultationFormData {

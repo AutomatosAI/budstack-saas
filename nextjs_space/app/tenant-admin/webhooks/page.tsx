@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,9 +13,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
-import { Webhook, Plus, Trash2, Edit2, CheckCircle, XCircle, ExternalLink, ArrowLeft } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
+import { Webhook, Plus, Trash2, Edit2, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 import { WEBHOOK_EVENT_CATEGORIES } from '@/lib/webhook';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 interface WebhookData {
   id: string;
@@ -156,6 +156,15 @@ export default function WebhooksPage() {
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/tenant-admin' },
+          { label: 'Webhooks' },
+        ]}
+        className="mb-4"
+      />
+
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>

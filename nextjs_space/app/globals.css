@@ -336,6 +336,47 @@
 }
 
 @layer utilities {
+  /* ============================================
+     ACCESSIBILITY - FOCUS STATES SYSTEM
+     ============================================
+     Precision Navigation System: Focus states that feel like
+     targeting reticles with satisfying visual feedback.
+     ============================================ */
+
+  /* Super Admin Focus Ring - Slate theme */
+  .focus-super-admin {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+    animation: focus-ring 0.15s ease-out;
+  }
+
+  .focus-super-admin-inset {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400;
+    animation: focus-ring 0.15s ease-out;
+  }
+
+  /* Tenant Admin Focus Ring - Cyan theme */
+  .focus-tenant-admin {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+    animation: focus-ring 0.15s ease-out;
+  }
+
+  .focus-tenant-admin-inset {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-400;
+    animation: focus-ring 0.15s ease-out;
+  }
+
+  /* Enhanced Focus States with Glow Effect */
+  .focus-glow-cyan {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(34 211 238 / 0.4), 0 0 20px rgb(34 211 238 / 0.3);
+    animation: focus-ring 0.15s ease-out, focus-pulse 2s ease-in-out infinite;
+  }
+
+  .focus-glow-slate {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(148 163 184 / 0.4), 0 0 20px rgb(148 163 184 / 0.3);
+    animation: focus-ring 0.15s ease-out, focus-pulse 2s ease-in-out infinite;
+  }
 
   /* Tenant color utilities */
   .text-tenant-primary {

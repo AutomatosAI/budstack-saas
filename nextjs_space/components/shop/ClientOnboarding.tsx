@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 const personalDetailsSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
