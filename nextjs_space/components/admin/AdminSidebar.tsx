@@ -74,16 +74,20 @@ const themeStyles = {
     buttonBg: 'bg-slate-700/50 hover:bg-slate-600/50',
   },
   'tenant-admin': {
-    // Vibrant, energetic gradient
+    // Vibrant, energetic gradient - cyan/blue palette for store management
     gradient: 'from-cyan-600 via-blue-600 to-indigo-700',
+    // Cyan accent for active states
     activeItem: 'bg-cyan-500/30 border-l-4 border-cyan-300',
     activeIcon: 'text-cyan-100',
     hoverBg: 'hover:bg-white/10',
+    // Cyan-to-blue avatar gradient
     avatarGradient: 'from-cyan-400 to-blue-500',
+    // Tenant business name badge styling
     badgeBg: 'bg-white/20',
     badgeText: 'text-white/90 font-medium',
-    logoAccent: 'text-indigo-600',
-    logoBg: 'bg-white',
+    // Cyan-toned logo
+    logoAccent: 'text-cyan-700',
+    logoBg: 'bg-cyan-100',
     borderColor: 'border-white/10',
     buttonBg: 'bg-white/10 hover:bg-white/20',
   },
