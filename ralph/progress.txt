@@ -1123,3 +1123,55 @@ Started: Fri  9 Jan 2026 16:34:28 WET
   - Font-mono for timestamps and uppercase labels creates technical/tactical aesthetic
   - Next.js styled-jsx allows component-scoped CSS for custom animations
 ---
+
+## 2026-01-09 - US-027
+
+- **What was implemented**: Notification Center (Header Badge)
+- **Files created**:
+  - `nextjs_space/components/admin/NotificationCenter.tsx` - Mission Control Alert System with tactical notification dropdown
+- **Files modified**:
+  - `nextjs_space/app/super-admin/layout.tsx` - Added notification center to header
+  - `nextjs_space/app/tenant-admin/layout.tsx` - Added notification center to header
+  - `nextjs_space/tailwind.config.ts` - Added wiggle animation for bell icon
+
+- **Features implemented**:
+  - **NotificationCenter Component**:
+    - Bell icon button with theme-specific styling (slate for super-admin, cyan for tenant-admin)
+    - Hexagonal badge showing unread count with pulsing ring indicator
+    - Bell wiggle animation on mount when unread notifications present
+    - Dropdown with last 5 notifications (sorted by unread first, then timestamp)
+    - Notification types: PENDING_APPROVAL, FAILED_ORDER, LOW_STOCK, SYSTEM_ALERT, USER_ACTION
+    - Each notification displays: Icon badge, type label, title, message, timestamp, mark-as-read button
+    - Color-coded notification types (amber, red, orange, purple, cyan)
+    - Hover effects: icon scale (1.1x), background transition, opacity reveal for mark-as-read button
+    - Timestamp formatting: relative time (e.g., "5m ago") + precise 24hr time
+    - Empty state: "All Clear - no active notifications" with centered icon
+    - Header with gradient background and scanning line animation effect
+    - "Clear All" button in header when unread notifications exist
+    - "View All Notifications" link in footer with arrow animation
+    - Unread indicator: left border stripe on notification items
+    - Status glow effects on unread notification icons
+    - Staggered entrance animations (50ms delay per item)
+    - Badge radar ping animation for visual emphasis
+  - **Integration**:
+    - Sticky header positioned at top of admin content area (z-30)
+    - Theme-aware: super-admin uses slate colors, tenant-admin uses cyan colors
+    - generateMockNotifications() function creates demo data with 8 notifications
+    - ViewAllUrl configured: /super-admin/notifications and /tenant-admin/notifications
+  - Typecheck passed via `npm run build`
+
+- **Learnings for future iterations**:
+  - **Mission Control Alert System aesthetic**: The notification center uses tactical styling with hexagonal badges, scanning line effects, and status glows to create a command center feel
+  - NotificationCenter uses shadcn/ui Popover and Badge components as foundation
+  - The sticky header pattern (sticky top-0 z-30) ensures notification bell remains accessible while scrolling
+  - TypeScript union types for theme styles (`typeof themeStyles['super-admin'] | typeof themeStyles['tenant-admin']`) allow flexible typing for shared components
+  - Wiggle animation defined in tailwind.config.ts can be applied via `animate-[wiggle_0.5s_ease-in-out_3]` for 3 iterations
+  - The hexagonal badge uses `clip-path: polygon()` CSS for distinctive shape (30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)
+  - Mock notification generator exported separately for reusability (generateMockNotifications())
+  - Theme-specific styling ensures visual consistency with respective admin panel themes
+  - Unread notifications prioritized via useMemo sorting (unread first, then timestamp)
+  - The scanning line animation uses pure CSS keyframes with translateX for smooth movement
+  - Mark-as-read button uses opacity-0 group-hover:opacity-100 for clean UX
+  - Badge count shows "9+" when more than 9 unread to avoid overflow
+  - Radar ping effect combines animate-pulse with ring-4 for attention-grabbing animation
+---
