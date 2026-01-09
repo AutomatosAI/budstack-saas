@@ -369,18 +369,19 @@ export function ProductsTable({
   }, [products, selectedIds]);
 
   // Get strain badge color (using hash for demo since strain isn't in schema)
+  // Updated with darker text colors for WCAG AA compliance (4.5:1 contrast on light backgrounds)
   const getStrainBadgeClasses = (productName: string) => {
     const nameHash = productName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const strainIndex = nameHash % 3;
     switch (strainIndex) {
       case 0: // Sativa
-        return 'bg-amber-100 text-amber-700 border-amber-200';
+        return 'bg-amber-100 text-amber-800 border-amber-200';
       case 1: // Indica
-        return 'bg-purple-100 text-purple-700 border-purple-200';
+        return 'bg-purple-100 text-purple-800 border-purple-200';
       case 2: // Hybrid
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       default:
-        return 'bg-slate-100 text-slate-700 border-slate-200';
+        return 'bg-slate-100 text-slate-800 border-slate-200';
     }
   };
 
@@ -593,19 +594,19 @@ export function ProductsTable({
                     <TableCell className="text-center">
                       <span className={`inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-full text-sm font-medium ${
                         product.stock > 0
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-slate-100 text-slate-500'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-100 text-slate-700'
                       }`}>
                         {product.stock}
                       </span>
                     </TableCell>
                     <TableCell>
                       {product.stock > 0 ? (
-                        <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                        <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">
                           In Stock
                         </Badge>
                       ) : (
-                        <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+                        <Badge className="bg-amber-100 text-amber-800 border-amber-200">
                           Out of Stock
                         </Badge>
                       )}

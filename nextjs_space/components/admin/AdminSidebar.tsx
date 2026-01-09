@@ -58,13 +58,13 @@ const themeStyles = {
     gradient: 'from-slate-800 via-slate-900 to-zinc-900',
     // Subtle slate active states with left border accent
     activeItem: 'bg-slate-700/50 border-l-4 border-slate-400',
-    activeIcon: 'text-slate-200',
+    activeIcon: 'text-slate-100',
     hoverBg: 'hover:bg-slate-700/30',
     // Muted, professional avatar gradient
     avatarGradient: 'from-slate-400 to-slate-600',
-    // Bold badge styling for SUPER ADMIN distinction
-    badgeBg: 'bg-slate-700/60 border border-slate-500/50',
-    badgeText: 'text-slate-200 font-bold tracking-wide uppercase text-xs',
+    // Bold badge styling for SUPER ADMIN distinction - increased contrast
+    badgeBg: 'bg-slate-700/80 border border-slate-500/50',
+    badgeText: 'text-white font-bold tracking-wide uppercase text-xs',
     // Slate-toned logo
     logoAccent: 'text-slate-800',
     logoBg: 'bg-slate-400',
@@ -78,13 +78,13 @@ const themeStyles = {
     gradient: 'from-cyan-600 via-blue-600 to-indigo-700',
     // Cyan accent for active states
     activeItem: 'bg-cyan-500/30 border-l-4 border-cyan-300',
-    activeIcon: 'text-cyan-100',
+    activeIcon: 'text-white',
     hoverBg: 'hover:bg-white/10',
     // Cyan-to-blue avatar gradient
     avatarGradient: 'from-cyan-400 to-blue-500',
-    // Tenant business name badge styling
-    badgeBg: 'bg-white/20',
-    badgeText: 'text-white/90 font-medium',
+    // Tenant business name badge styling - improved contrast
+    badgeBg: 'bg-white/25 backdrop-blur-sm',
+    badgeText: 'text-white font-medium drop-shadow-sm',
     // Cyan-toned logo
     logoAccent: 'text-cyan-700',
     logoBg: 'bg-cyan-100',
@@ -214,7 +214,9 @@ export function AdminSidebar({
             <div className={cn(
               'rounded-lg px-3 py-1.5 backdrop-blur-sm',
               styles.badgeBg,
-              styles.badgeText
+              styles.badgeText,
+              // Enhanced contrast with text shadow for WCAG AA compliance
+              'drop-shadow-sm'
             )}>
               {headerBadge}
             </div>

@@ -121,11 +121,12 @@ const formatCurrency = (amount: number) => {
 }
 
 const getStatusColor = (status: string) => {
+  // Updated with darker text colors for WCAG AA compliance (4.5:1 contrast on light backgrounds)
   const colors = {
-    COMPLETED: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    PROCESSING: 'bg-cyan-100 text-cyan-700 border-cyan-200',
-    PENDING: 'bg-amber-100 text-amber-700 border-amber-200',
-    CANCELLED: 'bg-slate-100 text-slate-700 border-slate-200'
+    COMPLETED: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    PROCESSING: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+    PENDING: 'bg-amber-100 text-amber-800 border-amber-200',
+    CANCELLED: 'bg-slate-100 text-slate-800 border-slate-200'
   }
   return colors[status as keyof typeof colors] || colors.PENDING
 }
@@ -350,12 +351,12 @@ export default function StoreAnalytics({ className }: StoreAnalyticsProps) {
 
             <div className="relative p-6 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-emerald-800">{metric.label}</span>
-                <DollarSign className="h-4 w-4 text-emerald-600 opacity-60" />
+                <span className="text-sm font-medium text-emerald-900">{metric.label}</span>
+                <DollarSign className="h-4 w-4 text-emerald-700 opacity-70" />
               </div>
 
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold bg-gradient-to-br from-emerald-700 to-emerald-600 bg-clip-text text-transparent">
+                <span className="text-3xl font-bold bg-gradient-to-br from-emerald-800 to-emerald-700 bg-clip-text text-transparent">
                   {formatCurrency(metric.value)}
                 </span>
               </div>
@@ -363,12 +364,12 @@ export default function StoreAnalytics({ className }: StoreAnalyticsProps) {
               <div className="flex items-center gap-2 text-xs">
                 <div className={cn(
                   "flex items-center gap-1 px-2 py-0.5 rounded-full",
-                  metric.change > 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                  metric.change > 0 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
                 )}>
                   <TrendingUp className="h-3 w-3" />
                   <span className="font-semibold">{metric.change > 0 ? '+' : ''}{metric.change}%</span>
                 </div>
-                <span className="text-slate-500">{metric.period}</span>
+                <span className="text-slate-600">{metric.period}</span>
               </div>
             </div>
           </Card>
@@ -383,7 +384,7 @@ export default function StoreAnalytics({ className }: StoreAnalyticsProps) {
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="h-5 w-5 text-emerald-600" />
               <h3 className="text-lg font-semibold text-slate-800">Sales Trend</h3>
-              <Badge variant="outline" className="ml-auto text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+              <Badge variant="outline" className="ml-auto text-xs bg-emerald-50 text-emerald-800 border-emerald-200">
                 Last 30 days
               </Badge>
             </div>
@@ -405,7 +406,7 @@ export default function StoreAnalytics({ className }: StoreAnalyticsProps) {
             <div className="flex items-center gap-2 mb-4">
               <Package className="h-5 w-5 text-cyan-600" />
               <h3 className="text-lg font-semibold text-slate-800">Top Products</h3>
-              <Badge variant="outline" className="ml-auto text-xs bg-cyan-50 text-cyan-700 border-cyan-200">
+              <Badge variant="outline" className="ml-auto text-xs bg-cyan-50 text-cyan-800 border-cyan-200">
                 By Revenue
               </Badge>
             </div>

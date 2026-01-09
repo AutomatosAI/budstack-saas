@@ -82,6 +82,7 @@ const defaultActions: QuickAction[] = [
 
 /**
  * Theme color mappings for action buttons
+ * Updated with darker gradients for WCAG AA contrast compliance (4.5:1 on white backgrounds)
  */
 const themeColors = {
   emerald: {
@@ -90,7 +91,7 @@ const themeColors = {
     hoverShadow: 'hover:shadow-emerald-200',
     iconBg: 'bg-gradient-to-br from-emerald-400 to-emerald-600',
     iconRing: 'ring-emerald-100',
-    labelGradient: 'from-emerald-600 to-emerald-700',
+    labelGradient: 'from-emerald-700 to-emerald-800',
     hoverBorder: 'hover:border-emerald-300',
     activeBg: 'active:bg-emerald-50',
   },
@@ -100,7 +101,7 @@ const themeColors = {
     hoverShadow: 'hover:shadow-purple-200',
     iconBg: 'bg-gradient-to-br from-purple-400 to-purple-600',
     iconRing: 'ring-purple-100',
-    labelGradient: 'from-purple-600 to-purple-700',
+    labelGradient: 'from-purple-700 to-purple-800',
     hoverBorder: 'hover:border-purple-300',
     activeBg: 'active:bg-purple-50',
   },
@@ -110,7 +111,7 @@ const themeColors = {
     hoverShadow: 'hover:shadow-cyan-200',
     iconBg: 'bg-gradient-to-br from-cyan-400 to-cyan-600',
     iconRing: 'ring-cyan-100',
-    labelGradient: 'from-cyan-600 to-cyan-700',
+    labelGradient: 'from-cyan-700 to-cyan-800',
     hoverBorder: 'hover:border-cyan-300',
     activeBg: 'active:bg-cyan-50',
   },
@@ -120,7 +121,7 @@ const themeColors = {
     hoverShadow: 'hover:shadow-amber-200',
     iconBg: 'bg-gradient-to-br from-amber-400 to-amber-600',
     iconRing: 'ring-amber-100',
-    labelGradient: 'from-amber-600 to-amber-700',
+    labelGradient: 'from-amber-700 to-amber-800',
     hoverBorder: 'hover:border-amber-300',
     activeBg: 'active:bg-amber-50',
   },
@@ -130,7 +131,7 @@ const themeColors = {
     hoverShadow: 'hover:shadow-rose-200',
     iconBg: 'bg-gradient-to-br from-rose-400 to-rose-600',
     iconRing: 'ring-rose-100',
-    labelGradient: 'from-rose-600 to-rose-700',
+    labelGradient: 'from-rose-700 to-rose-800',
     hoverBorder: 'hover:border-rose-300',
     activeBg: 'active:bg-rose-50',
   },
@@ -140,7 +141,7 @@ const themeColors = {
     hoverShadow: 'hover:shadow-slate-200',
     iconBg: 'bg-gradient-to-br from-slate-400 to-slate-600',
     iconRing: 'ring-slate-100',
-    labelGradient: 'from-slate-600 to-slate-700',
+    labelGradient: 'from-slate-700 to-slate-800',
     hoverBorder: 'hover:border-slate-300',
     activeBg: 'active:bg-slate-50',
   },

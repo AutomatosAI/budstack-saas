@@ -528,7 +528,7 @@ export function TenantsTable({
                           <TableCell>
                             {tenant.isActive ? (
                               <Badge
-                                className="bg-emerald-500 hover:bg-emerald-600"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
                                 aria-label="Status: Active"
                               >
                                 Active
@@ -536,7 +536,7 @@ export function TenantsTable({
                             ) : (
                               <Badge
                                 variant="secondary"
-                                className="bg-slate-200"
+                                className="bg-slate-200 text-slate-800"
                                 aria-label="Status: Inactive"
                               >
                                 Inactive
@@ -544,17 +544,17 @@ export function TenantsTable({
                             )}
                           </TableCell>
                           <TableCell className="text-center">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-sm font-medium">
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 text-sm font-medium">
                               {tenant._count.users}
                             </span>
                           </TableCell>
                           <TableCell className="text-center">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-700 text-sm font-medium">
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-800 text-sm font-medium">
                               {tenant._count.products}
                             </span>
                           </TableCell>
                           <TableCell className="text-center">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-700 text-sm font-medium">
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-800 text-sm font-medium">
                               {tenant._count.orders}
                             </span>
                           </TableCell>
