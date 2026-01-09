@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     try {
         // Check authentication and authorization
         const session = await getServerSession(authOptions);
-        if (!session || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+        if (!session || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.user.role || '')) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }

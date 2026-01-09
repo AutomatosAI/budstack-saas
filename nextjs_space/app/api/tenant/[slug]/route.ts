@@ -22,7 +22,7 @@ export async function GET(
             },
             include: {
                 template: true,
-                branding: true
+                tenant_branding: true
             }
         });
 
@@ -40,7 +40,7 @@ export async function GET(
                 subdomain: tenant.subdomain,
                 settings: tenant.settings,
                 template: tenant.template,
-                branding: tenant.branding
+                branding: tenant.tenant_branding
             }
         });
     } catch (error) {

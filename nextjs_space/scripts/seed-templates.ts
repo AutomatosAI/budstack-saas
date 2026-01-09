@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -62,7 +63,7 @@ export async function seedTemplates() {
     } else {
       console.log(`  + Creating template "${template.name}"...`);
       await prisma.templates.create({
-        data: template,
+        data: { ...template, id: crypto.randomUUID(), updatedAt: new Date() },
       });
     }
   }

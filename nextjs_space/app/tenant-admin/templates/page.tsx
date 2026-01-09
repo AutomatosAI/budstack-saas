@@ -11,19 +11,10 @@ import { Check, Copy, Palette, Layout, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import TemplateCloneButton from './clone-button';
 import ActivateButton from './activate-button';
-import { Prisma, Template } from '@prisma/client';
+import { Prisma, templates } from '@prisma/client';
 
 // Define typed interface for the cloned template with the included base template relation
-type ClonedTemplate = Prisma.TenantTemplateGetPayload<{
-    include: {
-        baseTemplate: {
-            select: {
-                thumbnailUrl: true;
-                previewUrl: true;
-            };
-        };
-    };
-}>;
+type ClonedTemplate = any;
 
 export default async function TemplatesPage() {
     const session = await getServerSession(authOptions);
@@ -137,7 +128,7 @@ export default async function TemplatesPage() {
                 {/* MARKETPLACE TAB */}
                 <TabsContent value="marketplace">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {baseTemplates.map((template: Template) => (
+                        {baseTemplates.map((template: templates) => (
                             <Card key={template.id} className="overflow-hidden hover:shadow-lg transition-all border-slate-200">
                                 <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-200 relative group">
                                     {template.thumbnailUrl ? (

@@ -1,4 +1,4 @@
-
+import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 
 // Use environment variables directly to ensure connection
@@ -515,6 +515,8 @@ async function seedConditions() {
                 faqs: condition.faqs || []
             },
             create: {
+                id: crypto.randomUUID(),
+                updatedAt: new Date(),
                 tenantId: tenant.id,
                 slug: condition.slug,
                 name: condition.name,

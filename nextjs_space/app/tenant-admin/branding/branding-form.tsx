@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Upload, Check, Palette, Type, Layout, FileText, Settings, Image as ImageIcon } from 'lucide-react';
 import { TenantSettings } from '@/lib/types';
-import { TenantTemplate } from '@prisma/client';
+import { tenant_templates } from '@prisma/client';
 
 interface BrandingFormProps {
   tenant: {
@@ -23,7 +23,7 @@ interface BrandingFormProps {
     customDomain: string | null;
     settings: any;
   };
-  activeTemplate?: TenantTemplate | null;
+  activeTemplate?: tenant_templates | null;
 }
 
 const TEMPLATES = [

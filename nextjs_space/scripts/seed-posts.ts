@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import crypto from 'crypto';
 import { newsArticles } from '../lib/data/newsArticles';
 
 const prisma = new PrismaClient();
@@ -45,6 +46,8 @@ export async function seedPosts() {
                 published: true,
             },
             create: {
+                id: crypto.randomUUID(),
+                updatedAt: new Date(),
                 title: article.title,
                 slug: article.id,
                 excerpt: article.description,

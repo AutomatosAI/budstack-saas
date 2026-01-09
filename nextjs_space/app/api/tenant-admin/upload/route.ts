@@ -7,7 +7,7 @@ import { getBucketConfig } from '@/lib/aws-config';
 export async function POST(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
+        if (!session || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.user.role || '')) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

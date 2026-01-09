@@ -15,7 +15,7 @@ export async function GET(
     try {
         // Check authentication and authorization
         const session = await getServerSession(authOptions);
-        if (!session || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+        if (!session || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.user.role || '')) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
@@ -119,7 +119,7 @@ export async function PATCH(
     try {
         // Check authentication and authorization
         const session = await getServerSession(authOptions);
-        if (!session || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+        if (!session || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.user.role || '')) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
@@ -214,7 +214,7 @@ export async function DELETE(
     try {
         // Check authentication and authorization
         const session = await getServerSession(authOptions);
-        if (!session || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+        if (!session || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.user.role || '')) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }

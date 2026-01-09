@@ -1,5 +1,5 @@
 
-import { emailQueue, emailQueueName } from './queue';
+import { getEmailQueue } from './queue';
 import { prisma as db } from './db';
 
 interface SendEmailOptions {
@@ -23,7 +23,7 @@ export class MailerService {
         // For now, we'll let the worker handle the heavy lifting, but we could create a "QUEUED" log here.
 
         // Add to BullMQ
-        await emailQueue.add('send-email', {
+        await getEmailQueue().add('send-email', {
             tenantId,
             to,
             subject,

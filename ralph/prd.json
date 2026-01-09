@@ -2,6 +2,17 @@
   "project": "BudStack SaaS",
   "branchName": "ralph/admin-panel-improvements",
   "description": "Admin Panel UI/UX Improvements - Comprehensive overhaul to improve usability, mobile responsiveness, visual hierarchy, and feature completeness for Super Admin and Tenant Admin panels",
+  "instructions": [
+    "IMPORTANT: For ALL user stories that involve UI/frontend work, invoke the frontend-design skill FIRST before writing any code.",
+    "The frontend-design skill creates distinctive, production-grade interfaces with high design quality.",
+    "To invoke: Use the Skill tool with skill='frontend-design' at the start of each UI story.",
+    "UI stories are identified by having 'Verify in browser using dev-browser skill' in acceptance criteria.",
+    "After frontend-design generates the code, verify it meets all acceptance criteria.",
+    "Existing shadcn/ui components should be used: Button, Card, Table, Badge, Dialog, Select, Input, Checkbox.",
+    "Use Lucide React for all icons.",
+    "Use sonner for toast notifications.",
+    "Use Plotly.js for charts and graphs."
+  ],
   "userStories": [
     {
       "id": "US-031",
@@ -15,11 +26,12 @@
         "Create BulkActionBar component with TypeScript props interface and JSDoc",
         "Create EmptyState component with TypeScript props interface and JSDoc",
         "Components are generic and reusable (not tied to specific domain)",
-        "Typecheck passes"
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 1,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Use shadcn/ui as base, extend with custom styling."
     },
     {
       "id": "US-033",
@@ -38,7 +50,7 @@
       ],
       "priority": 2,
       "passes": false,
-      "notes": ""
+      "notes": "Non-UI utility story. No frontend-design skill needed."
     },
     {
       "id": "US-032",
@@ -50,11 +62,12 @@
         "Handle mobile state internally with useState",
         "Apply responsive CSS classes based on theme prop",
         "Export single component: AdminSidebar from components/admin/AdminSidebar.tsx",
-        "Typecheck passes"
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Refactor existing sidebars into unified component."
     },
     {
       "id": "US-002",
@@ -74,7 +87,7 @@
       ],
       "priority": 4,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Apply dark slate/zinc theme to super admin sidebar."
     },
     {
       "id": "US-003",
@@ -94,7 +107,7 @@
       ],
       "priority": 5,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Verify tenant admin retains cyan/blue theme."
     },
     {
       "id": "US-001",
@@ -114,7 +127,7 @@
       ],
       "priority": 6,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Critical mobile responsiveness feature."
     },
     {
       "id": "US-017",
@@ -133,7 +146,7 @@
       ],
       "priority": 7,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Configure sonner toast styles and positioning."
     },
     {
       "id": "US-004",
@@ -152,7 +165,7 @@
       ],
       "priority": 8,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Use SearchInput from shared components."
     },
     {
       "id": "US-005",
@@ -169,7 +182,7 @@
       ],
       "priority": 9,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Use StatusFilter from shared components."
     },
     {
       "id": "US-006",
@@ -189,7 +202,7 @@
       ],
       "priority": 10,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Use shared SearchInput and StatusFilter components."
     },
     {
       "id": "US-007",
@@ -207,7 +220,7 @@
       ],
       "priority": 11,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Add date range picker component."
     },
     {
       "id": "US-008",
@@ -225,7 +238,7 @@
       ],
       "priority": 12,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Use shared SearchInput component."
     },
     {
       "id": "US-009",
@@ -245,7 +258,7 @@
       ],
       "priority": 13,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Use shared Pagination component."
     },
     {
       "id": "US-010",
@@ -260,7 +273,7 @@
       ],
       "priority": 14,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Reuse Pagination component from US-009."
     },
     {
       "id": "US-011",
@@ -270,7 +283,7 @@
         "Click column header to sort ascending",
         "Click again to sort descending",
         "Click third time to clear sort (default order)",
-        "Sort indicator icon: ↑ (asc), ↓ (desc), ↕ (sortable but not active)",
+        "Sort indicator icon: up arrow (asc), down arrow (desc), up-down arrow (sortable but not active)",
         "Sortable columns: All text/number/date columns",
         "URL param: ?sortBy=businessName&sortOrder=asc",
         "Server-side sorting (not client-side)",
@@ -280,7 +293,7 @@
       ],
       "priority": 15,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Create SortableTableHeader component."
     },
     {
       "id": "US-012",
@@ -289,7 +302,7 @@
       "acceptanceCriteria": [
         "Checkbox in table header (select all on page)",
         "Checkbox on each row (individual select)",
-        "Action bar appears when ≥1 selected: 3 tenants selected",
+        "Action bar appears when 1 or more selected: 3 tenants selected",
         "Actions: Activate, Deactivate, Export to CSV, Cancel",
         "Confirmation dialog before bulk activation/deactivation",
         "Success toast: 3 tenants activated successfully",
@@ -299,7 +312,7 @@
       ],
       "priority": 16,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Use shared BulkActionBar component."
     },
     {
       "id": "US-013",
@@ -314,7 +327,7 @@
       ],
       "priority": 17,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Reuse BulkActionBar from US-012."
     },
     {
       "id": "US-014",
@@ -329,7 +342,7 @@
       ],
       "priority": 18,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Reuse BulkActionBar from US-012."
     },
     {
       "id": "US-015",
@@ -349,7 +362,7 @@
       ],
       "priority": 19,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Create Breadcrumbs component."
     },
     {
       "id": "US-016",
@@ -368,7 +381,7 @@
       ],
       "priority": 20,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Use shared EmptyState component."
     },
     {
       "id": "US-020",
@@ -385,7 +398,7 @@
       ],
       "priority": 21,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Create QuickActionsWidget component."
     },
     {
       "id": "US-018",
@@ -405,7 +418,7 @@
       ],
       "priority": 22,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Use Plotly.js for charts with dynamic import for code splitting."
     },
     {
       "id": "US-019",
@@ -425,7 +438,7 @@
       ],
       "priority": 23,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Use Plotly.js for charts, shadcn Card for widgets."
     },
     {
       "id": "US-034",
@@ -441,7 +454,7 @@
       ],
       "priority": 24,
       "passes": false,
-      "notes": ""
+      "notes": "Non-UI backend story. No frontend-design skill needed. Focus on API middleware and React Query setup."
     },
     {
       "id": "US-021",
@@ -459,7 +472,7 @@
       ],
       "priority": 25,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Update Tailwind config and component styles."
     },
     {
       "id": "US-022",
@@ -479,7 +492,7 @@
       ],
       "priority": 26,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Add aria attributes to all interactive components."
     },
     {
       "id": "US-023",
@@ -497,7 +510,7 @@
       ],
       "priority": 27,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Audit and fix color contrast issues."
     },
     {
       "id": "US-024",
@@ -516,7 +529,7 @@
       ],
       "priority": 28,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Add export button and CSV generation utility."
     },
     {
       "id": "US-025",
@@ -536,7 +549,7 @@
       ],
       "priority": 29,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Create KeyboardShortcuts provider and help modal."
     },
     {
       "id": "US-026",
@@ -553,7 +566,7 @@
       ],
       "priority": 30,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Create ActivityTimeline component."
     },
     {
       "id": "US-027",
@@ -571,7 +584,7 @@
       ],
       "priority": 31,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Create NotificationCenter dropdown component."
     },
     {
       "id": "US-028",
@@ -588,7 +601,7 @@
       ],
       "priority": 32,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Create PackingSlip print-optimized component."
     },
     {
       "id": "US-029",
@@ -605,7 +618,7 @@
       ],
       "priority": 33,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. May require Prisma migration for adminNotes field."
     },
     {
       "id": "US-030",
@@ -623,7 +636,7 @@
       ],
       "priority": 34,
       "passes": false,
-      "notes": ""
+      "notes": "UI STORY: Invoke frontend-design skill first. Requires @dnd-kit library and Prisma migration for displayOrder."
     }
   ]
 }

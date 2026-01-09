@@ -32,7 +32,8 @@ async function main() {
                     id: 'healingbuds',
                     slug: 'healingbuds',
                     name: 'Healing Buds',
-                    category: 'medical'
+                    category: 'medical',
+                    updatedAt: new Date()
                 }
             });
             console.log('✅ Created "healingbuds" template record.');

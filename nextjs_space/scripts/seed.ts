@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -29,6 +30,8 @@ export async function seedCore() {
       templateId: healingBudsTemplate.id,
     },
     create: {
+      id: crypto.randomUUID(),
+      updatedAt: new Date(),
       businessName: 'HealingBuds Portugal',
       subdomain: 'healingbuds',
       isActive: true,
@@ -54,6 +57,8 @@ export async function seedCore() {
       where: { subdomain: 'cooleysbuds' },
       update: { templateId: wellnessTemplate.id },
       create: {
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
         businessName: 'CooleysBuds',
         subdomain: 'cooleysbuds',
         isActive: true,
@@ -74,6 +79,8 @@ export async function seedCore() {
       where: { subdomain: 'portugalbuds' },
       update: { templateId: gtaTemplate.id },
       create: {
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
         businessName: 'PortugalBuds',
         subdomain: 'portugalbuds',
         isActive: true,
@@ -95,6 +102,8 @@ export async function seedCore() {
     where: { email: 'admin@budstack.to' },
     update: {},
     create: {
+      id: crypto.randomUUID(),
+      updatedAt: new Date(),
       email: 'admin@budstack.to',
       password: superAdminPassword,
       name: 'Super Admin',
@@ -111,6 +120,8 @@ export async function seedCore() {
     where: { email: 'admin@budstack.io' },
     update: {},
     create: {
+      id: crypto.randomUUID(),
+      updatedAt: new Date(),
       email: 'admin@budstack.io',
       password: superAdminPassword,
       name: 'BudStack Super Admin',
@@ -131,6 +142,8 @@ export async function seedCore() {
     where: { email: 'admin@healingbuds.pt' },
     update: {},
     create: {
+      id: crypto.randomUUID(),
+      updatedAt: new Date(),
       email: 'admin@healingbuds.pt',
       password: tenantAdminPassword,
       name: 'HealingBuds Admin',
@@ -153,6 +166,8 @@ export async function seedCore() {
     where: { email: 'test@healingbuds.pt' },
     update: {},
     create: {
+      id: crypto.randomUUID(),
+      updatedAt: new Date(),
       email: 'test@healingbuds.pt',
       password: testUserPassword,
       name: 'Test Patient',
@@ -303,6 +318,8 @@ export async function seedCore() {
       update: product,
       create: {
         ...product,
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
         tenantId: healingBudsTenant.id,
       },
     });

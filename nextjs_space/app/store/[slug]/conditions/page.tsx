@@ -38,14 +38,14 @@ export default async function ConditionsPage({ params }: { params: { slug: strin
   // Process master tenant conditions first (so they can be overwritten)
   if (masterTenant) {
     allConditions
-      .filter(c => c.tenantId === masterTenant.id)
-      .forEach(c => conditionMap.set(c.slug, c));
+      .filter((c: any) => c.tenantId === masterTenant.id)
+      .forEach((c: any) => conditionMap.set(c.slug, c));
   }
 
   // Process current tenant conditions (overwriting master)
   allConditions
-    .filter(c => c.tenantId === tenant.id)
-    .forEach(c => conditionMap.set(c.slug, c));
+    .filter((c: any) => c.tenantId === tenant.id)
+    .forEach((c: any) => conditionMap.set(c.slug, c));
 
   const uniqueConditions = Array.from(conditionMap.values()).sort((a: any, b: any) => a.name.localeCompare(b.name));
 

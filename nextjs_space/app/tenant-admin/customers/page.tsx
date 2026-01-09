@@ -93,7 +93,7 @@ export default async function CustomersListPage() {
                     </CardHeader>
                     <CardContent className="relative z-10">
                         <div className="text-3xl font-bold">
-                            {customers.filter(c => {
+                            {customers.filter((c: any) => {
                                 const thirtyDaysAgo = new Date();
                                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
                                 return new Date(c.createdAt) > thirtyDaysAgo;
@@ -123,7 +123,7 @@ export default async function CustomersListPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {customers.map((customer) => (
+                                {customers.map((customer: any) => (
                                     <tr key={customer.id} className="border-b border-slate-200 hover:bg-slate-50">
                                         <td className="py-3 px-4 text-slate-900">{customer.name || 'N/A'}</td>
                                         <td className="py-3 px-4 text-slate-700">{customer.email}</td>

@@ -6,13 +6,13 @@ import { prisma } from '@/lib/db';
 
 export default async function PopcornMediaPlatformPage() {
   // Fetch platform settings
-  let settingsData = await prisma.platformSettings.findUnique({
+  let settingsData = await prisma.platform_settings.findUnique({
     where: { id: 'platform' },
   });
 
   // Create default settings if not exists
   if (!settingsData) {
-    settingsData = await prisma.platformSettings.create({
+    settingsData = await prisma.platform_settings.create({
       data: { id: 'platform' },
     });
   }
@@ -69,7 +69,7 @@ export default async function PopcornMediaPlatformPage() {
               <Sparkles className="w-5 h-5 text-amber-400" />
               <span className="text-sm font-bold text-amber-300">Franchise & Infrastructure Provider – Partnering with Dr. Green</span>
             </div>
-            
+
             <h1 className="text-6xl md:text-7xl font-black mb-6 leading-tight drop-shadow-2xl">
               <span className="bg-gradient-to-r from-white via-amber-200 to-yellow-300 bg-clip-text text-transparent">
                 Medical Dispensary Franchise
@@ -79,14 +79,14 @@ export default async function PopcornMediaPlatformPage() {
                 Management Platform
               </span>
             </h1>
-            
+
             <p className="text-xl md:text-2xl text-slate-200 mb-12 max-w-3xl mx-auto leading-relaxed">
-              Popcorn Media provides <span className="text-amber-400 font-bold">proprietary infrastructure exclusively for franchisees</span> — 
+              Popcorn Media provides <span className="text-amber-400 font-bold">proprietary infrastructure exclusively for franchisees</span> —
               professional storefronts, admin dashboards, and multi-tenant operations management.
               <br />
               <span className="text-amber-500/80 text-lg mt-2 inline-block font-medium">A closed franchise ecosystem. Not a public marketplace.</span>
             </p>
-            
+
             <div className="flex gap-6 justify-center flex-wrap">
               <Link href="/onboarding">
                 <Button size="lg" className="text-lg px-10 py-7 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-400 hover:via-orange-400 hover:to-red-400 text-white border-0 shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 transition-all">
@@ -100,7 +100,7 @@ export default async function PopcornMediaPlatformPage() {
                 </Button>
               </Link>
             </div>
-            
+
             <div className="mt-12 flex items-center justify-center gap-8 text-sm text-slate-400 flex-wrap">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-amber-500" />
@@ -135,8 +135,8 @@ export default async function PopcornMediaPlatformPage() {
               <span className="text-white">For Franchise Operations</span>
             </h2>
             <p className="text-xl text-slate-400">
-              Dr. Green manages product catalog and supply chain. 
-              <span className="text-amber-400 font-semibold"> Popcorn Media provides the complete franchise infrastructure</span> — 
+              Dr. Green manages product catalog and supply chain.
+              <span className="text-amber-400 font-semibold"> Popcorn Media provides the complete franchise infrastructure</span> —
               technology, operations management, and compliance frameworks exclusively for franchisees.
             </p>
           </div>
@@ -441,7 +441,7 @@ export default async function PopcornMediaPlatformPage() {
           <div className="mt-16 max-w-3xl mx-auto text-center">
             <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
               <p className="text-slate-300 text-lg">
-                <span className="text-amber-400 font-semibold">All models</span> include access to Popcorn Media.s proprietary infrastructure 
+                <span className="text-amber-400 font-semibold">All models</span> include access to Popcorn Media.s proprietary infrastructure
                 and Dr. Green partnership benefits. Choose based on your desired level of involvement.
               </p>
             </div>
@@ -488,7 +488,7 @@ export default async function PopcornMediaPlatformPage() {
                 {step.step !== "03" && (
                   <div className="hidden md:block absolute top-12 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-amber-500/50 to-transparent" />
                 )}
-                
+
                 <div className="relative bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl p-8 hover:border-amber-500/30 transition-all">
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-amber-500/20">
@@ -607,7 +607,7 @@ export default async function PopcornMediaPlatformPage() {
               </ul>
             </div>
           </div>
-          
+
           {/* Regulatory Disclaimer */}
           <div className="border-t border-slate-800 pt-8 pb-6">
             <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-6 max-w-4xl mx-auto">
@@ -620,7 +620,7 @@ export default async function PopcornMediaPlatformPage() {
                   NFTs are used only to represent franchise ownership rights. All financial activity is tied to real-world entities and contracts.
                 </p>
                 <p>
-                  <strong className="text-amber-300">Closed franchise system:</strong> No public marketplace. NFTs are not marketed as investments. 
+                  <strong className="text-amber-300">Closed franchise system:</strong> No public marketplace. NFTs are not marketed as investments.
                   No token speculation. Compliance responsibility remains local.
                 </p>
                 <p className="text-slate-500 text-[10px] mt-3">
@@ -629,7 +629,7 @@ export default async function PopcornMediaPlatformPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="border-t border-slate-800 pt-8 text-center text-sm text-slate-400">
             <p>© 2025 {platformName}. All rights reserved. Franchise & Infrastructure Provider.</p>
           </div>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Clock, Package, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Order, OrderItem } from '@prisma/client';
+import { orders } from '@prisma/client';
 
 async function getOrder(orderId: string, slug: string) {
     // This would call the API in a real scenario
@@ -121,7 +121,7 @@ export default async function OrderConfirmationPage({
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {order.items.map((item: OrderItem) => (
+                        {order.items.map((item: any) => (
                             <div key={item.id} className="flex justify-between border-b pb-3">
                                 <div>
                                     <p className="font-semibold">{item.productName}</p>

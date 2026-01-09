@@ -57,7 +57,7 @@ export default async function TenantsPage() {
           <CardTitle className="flex items-center justify-between">
             <span>All Tenants ({tenants.length})</span>
             <Badge variant="outline" className="text-sm font-normal">
-              {tenants.filter(t => t.isActive).length} Active
+              {tenants.filter((t: any) => t.isActive).length} Active
             </Badge>
           </CardTitle>
         </CardHeader>
