@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { Webhook, Plus, Trash2, Edit2, CheckCircle, XCircle, ExternalLink, ArrowLeft } from 'lucide-react';
 import { WEBHOOK_EVENT_CATEGORIES } from '@/lib/webhook';
 

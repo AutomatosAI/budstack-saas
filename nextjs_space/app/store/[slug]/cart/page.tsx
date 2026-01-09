@@ -20,7 +20,7 @@ import { useCartStore } from '@/lib/cart-store';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 export default function CartPage() {
     const params = useParams();

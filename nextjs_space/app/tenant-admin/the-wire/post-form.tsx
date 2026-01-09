@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
 import Tiptap from '@/components/editor/tiptap';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import Link from 'next/link';
 import { ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
 
