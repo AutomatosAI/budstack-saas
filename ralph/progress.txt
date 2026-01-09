@@ -952,3 +952,62 @@ Started: Fri  9 Jan 2026 16:34:28 WET
   - Badge text colors are the most common contrast failure - always use -800 shades on -100 backgrounds
   - Link colors using -600 shades already meet contrast requirements on white backgrounds
 ---
+
+## 2026-01-09 - US-024
+
+- **What was implemented**: Export to CSV
+- **Files created**:
+  - `nextjs_space/lib/admin/csv-export.ts` - CSV generation utility with proper field escaping and UTF-8 BOM
+  - `nextjs_space/components/admin/shared/ExportButton.tsx` - Themed export button component with loading states
+- **Files modified**:
+  - `nextjs_space/app/super-admin/tenants/tenants-table.tsx` - Added export for all filtered tenants
+  - `nextjs_space/app/tenant-admin/products/products-table.tsx` - Added export for all filtered products
+  - `nextjs_space/app/tenant-admin/orders/orders-table.tsx` - Added export for all filtered orders
+  - `nextjs_space/app/tenant-admin/customers/customers-table.tsx` - Added export for all filtered customers
+  - `nextjs_space/components/admin/shared/index.ts` - Exported ExportButton
+  - `nextjs_space/tailwind.config.ts` - Added shimmer keyframe animation
+
+- **Features implemented**:
+  - **CSV Export Utility (`csv-export.ts`)**:
+    - `escapeCsvField()` - Proper CSV field escaping (handles commas, quotes, newlines)
+    - `convertToCSV()` - Converts array of objects to CSV format
+    - `downloadCSV()` - Triggers browser download with UTF-8 BOM for Excel compatibility
+    - `generateCSVFilename()` - Creates filename with date: `{entity}-export-YYYY-MM-DD.csv`
+    - `calculateFileSize()` - Calculates approximate file size for toast display
+    - `exportToCSV()` - Main export function with callbacks for start/complete/error
+  - **ExportButton Component**:
+    - "Data Extraction Console" aesthetic with distinctive visual feedback
+    - Theme-specific styling: super-admin (slate gradient), tenant-admin (emerald/cyan gradient)
+    - Loading state with spinner and "Exporting..." text
+    - Shimmer effect on hover (translating gradient overlay)
+    - Extraction progress bar during export (animated gradient)
+    - Sparkle icon appears on hover with pulse animation
+    - Download icon with translate-down animation on hover
+    - Disabled state when no records to export
+    - ARIA labels for accessibility
+  - **Integration on all admin list pages**:
+    - Tenants table: Export button next to search and status filter
+    - Products table: Export button in filters row alongside category/stock filters
+    - Orders table: Export button after date range picker
+    - Customers table: Export button next to search input
+  - **Export functionality**:
+    - Exports current filtered/searched results (not all data)
+    - Success toast shows record count and file size: "Exported 42 records to CSV (5.2 KB)"
+    - Dual export paths: Main export button (all filtered) + bulk action (selected items)
+    - Browser-based download using Blob and URL.createObjectURL (no server endpoint)
+    - Proper filename with date for organization
+    - 300ms simulated processing time for smooth UX
+  - Typecheck passed via `npm run build`
+
+- **Learnings for future iterations**:
+  - **CSV field escaping is critical**: Must wrap fields with commas/quotes/newlines in quotes and escape internal quotes with ""
+  - **UTF-8 BOM (`\uFEFF`) ensures Excel compatibility**: Without BOM, special characters may display incorrectly in Excel
+  - **Theme-specific button styling creates cohesion**: super-admin uses slate (command center), tenant-admin uses emerald/cyan (living garden)
+  - **Shimmer animations add polish**: The translating gradient overlay on hover creates a premium feel
+  - **File size in toast is helpful UX**: Users appreciate knowing how large the export is
+  - **Dual export paths serve different needs**: Main button exports all filtered results, bulk action exports selected items
+  - **ExportButton component is reusable**: Just pass theme, recordCount, and onExport handler - works everywhere
+  - **Client-side CSV generation is efficient**: No need for server endpoint, reduces API load
+  - **Simulated processing delay improves perceived quality**: Brief 300ms delay allows loading state to be seen, avoiding jarring instant downloads
+  - **Consistent placement across tables**: Export button always appears in the filters/controls area, never buried
+---
