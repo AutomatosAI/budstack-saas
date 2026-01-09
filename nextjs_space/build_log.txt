@@ -1,0 +1,198 @@
+  ▲ Next.js 14.2.35
+  - Environments: .env
+  - Experiments (use with caution):
+    · outputFileTracingRoot
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/69) ...
+Doctor Green API Error: Dynamic server usage: Route /api/doctor-green/products couldn't be rendered statically because it used `request.url`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+Error fetching consultation status: n [Error]: Dynamic server usage: Route /api/consultation/status couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at l (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/9276.js:1:37220)
+    at c (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1941.js:1:11020)
+    at s (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1790.js:25:20511)
+    at p (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/api/consultation/status/route.js:1:1303)
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:38417
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/server/lib/trace/tracer.js:140:36
+    at NoopContextManager.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NoopTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093)
+    at ProxyTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18854) {
+  description: "Route /api/consultation/status couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+Error fetching customer orders: n [Error]: Dynamic server usage: Route /api/orders/customer couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at l (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/9276.js:1:37220)
+    at c (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1941.js:1:11020)
+    at s (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1790.js:25:20511)
+    at p (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/api/orders/customer/route.js:1:1305)
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:38417
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/server/lib/trace/tracer.js:140:36
+    at NoopContextManager.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NoopTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093)
+    at ProxyTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18854) {
+  description: "Route /api/orders/customer couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+[API] Error fetching super admin audit logs: n [Error]: Dynamic server usage: Route /api/super-admin/audit-logs couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at l (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/9276.js:1:37220)
+    at d (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1790.js:25:30012)
+    at s (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1790.js:25:20511)
+    at p (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/api/super-admin/audit-logs/route.js:1:1305)
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:38417
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/server/lib/trace/tracer.js:140:36
+    at NoopContextManager.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NoopTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093)
+    at ProxyTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18854) {
+  description: "Route /api/super-admin/audit-logs couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+Error fetching analytics: n [Error]: Dynamic server usage: Route /api/super-admin/analytics couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at l (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/9276.js:1:37220)
+    at d (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/api/signup/route.js:1:6422)
+    at s (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1790.js:25:20511)
+    at g (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/api/super-admin/analytics/route.js:1:1349)
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:38417
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/server/lib/trace/tracer.js:140:36
+    at NoopContextManager.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NoopTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093)
+    at ProxyTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18854) {
+  description: "Route /api/super-admin/analytics couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+   Generating static pages (17/69) 
+[GET /api/tenant-admin/customers] Error: n [Error]: Dynamic server usage: Route /api/tenant-admin/customers couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at l (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/9276.js:1:37220)
+    at c (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1941.js:1:11020)
+    at s (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1790.js:25:20511)
+    at c (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/api/tenant-admin/customers/route.js:1:1305)
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:38417
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/server/lib/trace/tracer.js:140:36
+    at NoopContextManager.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NoopTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093)
+    at ProxyTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18854) {
+  description: "Route /api/tenant-admin/customers couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+Error fetching analytics: n [Error]: Dynamic server usage: Route /api/tenant-admin/analytics couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at l (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/9276.js:1:37220)
+    at d (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1790.js:25:30012)
+    at s (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1790.js:25:20511)
+    at y (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/api/tenant-admin/analytics/route.js:1:1349)
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:38417
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/server/lib/trace/tracer.js:140:36
+    at NoopContextManager.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NoopTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093)
+    at ProxyTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18854) {
+  description: "Route /api/tenant-admin/analytics couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+[API] Error fetching tenant audit logs: n [Error]: Dynamic server usage: Route /api/tenant-admin/audit-logs couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at l (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/9276.js:1:37220)
+    at c (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1941.js:1:11020)
+    at s (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1790.js:25:20511)
+    at p (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/api/tenant-admin/audit-logs/route.js:1:1305)
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:38417
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/server/lib/trace/tracer.js:140:36
+    at NoopContextManager.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NoopTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093)
+    at ProxyTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18854) {
+  description: "Route /api/tenant-admin/audit-logs couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+Error fetching tenant: n [Error]: Dynamic server usage: Route /api/tenant/current couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at l (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/9276.js:1:37220)
+    at c (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/1941.js:1:11020)
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/chunks/6440.js:1:104133
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:186044
+    at u (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/api/tenant/current/route.js:1:888)
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:38417
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/server/lib/trace/tracer.js:140:36
+    at NoopContextManager.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NoopTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093) {
+  description: "Route /api/tenant/current couldn't be rendered statically because it used `headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+Error fetching conditions: B [Error]: Dynamic server usage: Route /api/tenant/conditions couldn't be rendered statically because it used `request.url`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at V (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:21778)
+    at Object.get (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:29465)
+    at c (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/api/tenant/conditions/route.js:1:912)
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:38417
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/server/lib/trace/tracer.js:140:36
+    at NoopContextManager.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NoopTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093)
+    at ProxyTracer.startActiveSpan (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18854)
+    at /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/server/lib/trace/tracer.js:122:103 {
+  description: "Route /api/tenant/conditions couldn't be rendered statically because it used `request.url`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+   Generating static pages (34/69) 
+TypeError: Cannot read properties of undefined (reading 'findUnique')
+    at C (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/page.js:1:6371)
+    at em (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:134808)
+    at e (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:137693)
+    at e_ (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:138168)
+    at Array.toJSON (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:135777)
+    at stringify (<anonymous>)
+    at eE (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:142242)
+    at eT (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:142721)
+    at AsyncLocalStorage.run (node:async_hooks:338:14)
+    at Timeout._onTimeout (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:150805) {
+  digest: '2783048304'
+}
+TypeError: Cannot read properties of undefined (reading 'findUnique')
+    at C (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/page.js:1:6371)
+    at em (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:134808)
+    at e (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:137693)
+    at e_ (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:138168)
+    at Array.toJSON (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:135777)
+    at stringify (<anonymous>)
+    at eE (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:142242)
+    at eT (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:142721)
+    at Timeout._onTimeout (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:135497)
+    at listOnTimeout (node:internal/timers:569:17) {
+  digest: '634015021'
+}
+TypeError: Cannot read properties of undefined (reading 'findUnique')
+    at C (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/page.js:1:6371)
+    at em (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:134808)
+    at e (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:137693)
+    at e_ (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:138168)
+    at Array.toJSON (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:135777)
+    at stringify (<anonymous>)
+    at eE (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:142242)
+    at eT (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:142721)
+    at Timeout._onTimeout (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:135497)
+    at listOnTimeout (node:internal/timers:569:17) {
+  digest: '634015021'
+}
+
+Error occurred prerendering page "/". Read more: https://nextjs.org/docs/messages/prerender-error
+
+TypeError: Cannot read properties of undefined (reading 'findUnique')
+    at C (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/.next/server/app/page.js:1:6371)
+    at em (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:134808)
+    at e (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:137693)
+    at e_ (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:138168)
+    at Array.toJSON (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:135777)
+    at stringify (<anonymous>)
+    at eE (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:142242)
+    at eT (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:142721)
+    at AsyncLocalStorage.run (node:async_hooks:338:14)
+    at Timeout._onTimeout (/Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:150805)
+   Generating static pages (51/69) 
+ ✓ Generating static pages (69/69)
+
+> Export encountered errors on following paths:
+	/page: /
