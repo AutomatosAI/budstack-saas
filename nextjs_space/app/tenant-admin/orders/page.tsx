@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Package, Truck, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Package, Truck, CheckCircle2, XCircle, Clock, Printer } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -404,38 +404,54 @@ export default function TenantOrdersPage() {
               </div>
 
               {/* Quick Actions */}
-              <div className="flex gap-3 pt-4 border-t">
-                {selectedOrder.status === 'PENDING' && (
-                  <Button
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
-                    onClick={() => updateOrderStatus(selectedOrder.id, 'PROCESSING')}
-                    disabled={updatingStatus}
-                  >
-                    <Truck className="w-4 h-4 mr-2" />
-                    Start Processing
-                  </Button>
-                )}
-                {selectedOrder.status === 'PROCESSING' && (
-                  <Button
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                    onClick={() => updateOrderStatus(selectedOrder.id, 'COMPLETED')}
-                    disabled={updatingStatus}
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Mark as Completed
-                  </Button>
-                )}
-                {selectedOrder.status !== 'CANCELLED' && selectedOrder.status !== 'COMPLETED' && (
-                  <Button
-                    variant="outline"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => updateOrderStatus(selectedOrder.id, 'CANCELLED')}
-                    disabled={updatingStatus}
-                  >
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Cancel Order
-                  </Button>
-                )}
+              <div className="space-y-3 pt-4 border-t">
+                {/* Print Packing Slip Button */}
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 font-medium"
+                  onClick={() => {
+                    const packingSlipUrl = `/tenant-admin/orders/${selectedOrder.id}/packing-slip`;
+                    window.open(packingSlipUrl, '_blank');
+                  }}
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Packing Slip
+                </Button>
+
+                {/* Status Action Buttons */}
+                <div className="flex gap-3">
+                  {selectedOrder.status === 'PENDING' && (
+                    <Button
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      onClick={() => updateOrderStatus(selectedOrder.id, 'PROCESSING')}
+                      disabled={updatingStatus}
+                    >
+                      <Truck className="w-4 h-4 mr-2" />
+                      Start Processing
+                    </Button>
+                  )}
+                  {selectedOrder.status === 'PROCESSING' && (
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => updateOrderStatus(selectedOrder.id, 'COMPLETED')}
+                      disabled={updatingStatus}
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Mark as Completed
+                    </Button>
+                  )}
+                  {selectedOrder.status !== 'CANCELLED' && selectedOrder.status !== 'COMPLETED' && (
+                    <Button
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => updateOrderStatus(selectedOrder.id, 'CANCELLED')}
+                      disabled={updatingStatus}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Cancel Order
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           )}
