@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ShoppingBag, Package, Palette, Settings, ExternalLink, BarChart3, Shield, Webhook, Newspaper, Users } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getTenantUrl } from '@/lib/tenant';
+import { QuickActionsWidget } from '@/components/admin/QuickActionsWidget';
 
 export default async function TenantAdminDashboard() {
   const session = await getServerSession(authOptions);
@@ -126,6 +127,11 @@ export default async function TenantAdminDashboard() {
             <p className="text-xs text-slate-600 font-medium tracking-wide mt-1">Active users</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Quick Actions Widget */}
+      <div className="mb-8">
+        <QuickActionsWidget />
       </div>
 
       {/* Store Info */}
