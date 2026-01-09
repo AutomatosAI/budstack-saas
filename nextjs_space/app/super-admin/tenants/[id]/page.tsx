@@ -2,14 +2,13 @@
 import { getServerSession } from 'next-auth';
 import { redirect, notFound } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { prisma } from '@/lib/db';
 import { format } from 'date-fns';
 import TenantEditForm from './tenant-edit-form';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 export default async function TenantDetailPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -45,13 +44,18 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/super-admin' },
+          { label: 'Tenants', href: '/super-admin/tenants' },
+          { label: tenant.businessName || 'Tenant Details' },
+        ]}
+        className="mb-4"
+      />
+
       {/* Header */}
       <div className="mb-8">
-        <Link href="/super-admin/tenants">
-          <Button variant="ghost" className="mb-4 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-            ← Back to Tenants
-          </Button>
-        </Link>
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{tenant.businessName}</h1>

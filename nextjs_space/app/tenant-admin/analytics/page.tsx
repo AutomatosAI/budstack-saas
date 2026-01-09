@@ -4,10 +4,10 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, DollarSign, ShoppingCart, Users, Package } from 'lucide-react';
+import { Breadcrumbs } from '@/components/admin/shared';
 import {
   LineChart,
   Line,
@@ -97,6 +97,15 @@ export default function TenantAnalyticsPage() {
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/tenant-admin' },
+          { label: 'Analytics' },
+        ]}
+        className="mb-4"
+      />
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">

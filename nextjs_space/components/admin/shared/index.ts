@@ -24,3 +24,8 @@ export {
   type SortableTableHeaderProps,
   type TableHeaderAlignment,
 } from './SortableTableHeader';
+export {
+  Breadcrumbs,
+  type BreadcrumbsProps,
+  type BreadcrumbItem,
+} from './Breadcrumbs';

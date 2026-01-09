@@ -2,14 +2,13 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { prisma } from '@/lib/db';
 import { format } from 'date-fns';
 import OnboardingActions from './onboarding-actions';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 export default async function OnboardingPage() {
   const session = await getServerSession(authOptions);
@@ -26,6 +25,15 @@ export default async function OnboardingPage() {
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/super-admin' },
+          { label: 'Onboarding' },
+        ]}
+        className="mb-4"
+      />
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Onboarding Requests</h1>

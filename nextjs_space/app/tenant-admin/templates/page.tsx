@@ -7,11 +7,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Check, Copy, Palette, Layout, ArrowLeft } from 'lucide-react';
+import { Palette, Layout } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import TemplateCloneButton from './clone-button';
 import ActivateButton from './activate-button';
 import { Prisma, templates } from '@prisma/client';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 // Define typed interface for the cloned template with the included base template relation
 type ClonedTemplate = any;
@@ -55,6 +56,15 @@ export default async function TemplatesPage() {
 
     return (
         <div className="p-8">
+            {/* Breadcrumbs */}
+            <Breadcrumbs
+                items={[
+                    { label: 'Dashboard', href: '/tenant-admin' },
+                    { label: 'Templates' },
+                ]}
+                className="mb-4"
+            />
+
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Template Management</h1>
                 <p className="text-slate-600 mt-2">Manage your store's design and layout</p>

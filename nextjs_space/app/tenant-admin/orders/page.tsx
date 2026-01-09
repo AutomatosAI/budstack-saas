@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from '@/components/ui/sonner';
 import { OrdersTable } from './orders-table';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 interface OrderItem {
   id: string;
@@ -228,6 +229,15 @@ export default function TenantOrdersPage() {
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/tenant-admin' },
+          { label: 'Orders' },
+        ]}
+        className="mb-4"
+      />
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Order Management</h1>

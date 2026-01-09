@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { ProductsTable } from './products-table';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 /** Default pagination settings */
 const DEFAULT_PAGE_SIZE = 20;
@@ -159,6 +160,15 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/tenant-admin' },
+          { label: 'Products' },
+        ]}
+        className="mb-4"
+      />
+
       <div className="mb-8">
         <div className="flex justify-between items-center">
           <div>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { TenantsTable } from './tenants-table';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 /** Default pagination settings */
 const DEFAULT_PAGE_SIZE = 20;
@@ -129,6 +130,15 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/super-admin' },
+          { label: 'Tenants' },
+        ]}
+        className="mb-4"
+      />
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex justify-between items-center">

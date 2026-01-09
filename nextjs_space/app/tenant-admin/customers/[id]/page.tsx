@@ -3,11 +3,10 @@ import { getServerSession } from 'next-auth';
 import { redirect, notFound } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CustomerEditForm from './customer-edit-form';
 import CustomerActions from './customer-actions';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
     const session = await getServerSession(authOptions);
@@ -48,9 +47,15 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
         <div className="min-h-screen bg-gray-50 theme-force-light">
             <div className="bg-white shadow">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <Link href="/tenant-admin/customers">
-                        <Button variant="ghost" className="mb-2">← Back to Customers</Button>
-                    </Link>
+                    {/* Breadcrumbs */}
+                    <Breadcrumbs
+                        items={[
+                            { label: 'Dashboard', href: '/tenant-admin' },
+                            { label: 'Customers', href: '/tenant-admin/customers' },
+                            { label: customer.name || customer.email || 'Customer Details' },
+                        ]}
+                        className="mb-4"
+                    />
                     <div className="flex justify-between items-center">
                         <h1 className="text-3xl font-bold text-gray-900">{customer.name || customer.email}</h1>
                     </div>

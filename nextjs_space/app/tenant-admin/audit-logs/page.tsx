@@ -3,14 +3,14 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
-import { Shield, ChevronLeft, ChevronRight, Filter, ArrowLeft } from 'lucide-react';
+import { Shield, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 interface AuditLog {
   id: string;
@@ -82,6 +82,15 @@ export default function TenantAuditLogsPage() {
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/tenant-admin' },
+          { label: 'Audit Logs' },
+        ]}
+        className="mb-4"
+      />
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Audit Logs</h1>
         <p className="text-slate-600 mt-2">Track all actions and changes in your dispensary</p>

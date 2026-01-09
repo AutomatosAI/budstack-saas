@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users } from 'lucide-react';
 import { CustomersTable } from './customers-table';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 /** Default pagination settings */
 const DEFAULT_PAGE_SIZE = 20;
@@ -122,6 +123,15 @@ export default async function CustomersListPage({ searchParams }: CustomersPageP
 
   return (
     <div className="p-8">
+      {/* Breadcrumbs */}
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/tenant-admin' },
+          { label: 'Customers' },
+        ]}
+        className="mb-4"
+      />
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Customer Management</h1>
