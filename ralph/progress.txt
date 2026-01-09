@@ -1,0 +1,246 @@
+# Ralph Progress Log
+Started: Fri  9 Jan 2026 16:34:28 WET
+---
+
+## Codebase Patterns
+- All UI components use `cn()` utility from `@/lib/utils` for Tailwind class merging
+- Components follow shadcn/ui pattern: forwardRef, className prop, composition with base components
+- Use `'use client'` directive for components with client-side state/hooks
+- Lucide React icons imported individually (e.g., `import { Search, X } from 'lucide-react'`)
+- Button variants defined with class-variance-authority (cva)
+- Radix UI primitives wrapped with shadcn styling for complex components (Select, Dialog, etc.)
+- Admin components location: `components/admin/` with shared utilities in `components/admin/shared/`
+- TypeScript interfaces exported alongside components for reusability
+- URL state management: use `useTableState()` from `@/lib/admin/url-state` for tables with search/filter/pagination
+- Unified sidebar: Use `AdminSidebar` from `@/components/admin/AdminSidebar` with `theme` prop for super-admin vs tenant-admin
+- Sidebar wrappers: `SuperAdminSidebar` and `TenantAdminSidebar` encapsulate menu items and are used in layout.tsx files
+- Toast notifications: Import `toast` from `@/components/ui/sonner` (NOT directly from 'sonner') for consistent styling
+- Client-safe utilities: Use `lib/tenant-utils.ts` for tenant functions needed in client components (NOT `lib/tenant.ts` which uses next/headers)
+
+---
+
+## 2026-01-09 21:30 - US-005
+
+- **What was implemented**: Filter Tenants by Status
+- **Files modified**: None (feature was already implemented during US-004)
+- **Verification performed**:
+  - Confirmed StatusFilter component is present next to SearchInput in tenants-table.tsx:173-179
+  - Dropdown options: All Tenants, Active Only, Inactive Only with counts (lines 98-105)
+  - URL state persistence via useTableState with `defaultFilters: { status: 'all' }` (line 65-67)
+  - AND logic: search filtering happens first, then status filtering is applied (lines 72-115)
+  - Typecheck passes via `npm run build`
+
+- **Learnings for future iterations**:
+  - US-005 was implemented as part of US-004 (Search on Tenants Page) since both features share the same table component
+  - When implementing search, consider adding filters at the same time to leverage shared URL state management
+  - The TenantsTable component pattern demonstrates how to combine search + filters with AND logic efficiently
+
+---
+
+## 2026-01-09 21:00 - US-004
+
+- **What was implemented**: Search on Tenants Page
+- **Files created**:
+  - `nextjs_space/app/super-admin/tenants/tenants-table.tsx` - Client component with search functionality
+  - `nextjs_space/lib/tenant-utils.ts` - Client-safe tenant utilities (getTenantUrl)
+- **Files modified**:
+  - `nextjs_space/app/super-admin/tenants/page.tsx` - Refactored to use TenantsTable component
+
+- **Features implemented**:
+  - Search input field with placeholder "Search tenants..."
+  - Debounced search (300ms) using SearchInput from shared components
+  - Case-insensitive search across businessName, subdomain, customDomain, nftTokenId
+  - Clear button (X) appears when search has text
+  - "No tenants found" empty state with clear search button
+  - URL state persistence via useTableState hook (?search=value)
+  - Active count badge updates based on filtered results
+
+- **Learnings for future iterations**:
+  - Server-only functions (using next/headers) cannot be imported in client components
+  - Created lib/tenant-utils.ts for client-safe tenant utilities
+  - Keep getTenantUrl in tenant-utils.ts for any client component that displays tenant URLs
+  - The TenantsTable pattern (server page + client table) allows search to work without server round-trips
+
+---
+
+## 2026-01-09 20:30 - US-017
+
+- **What was implemented**: Toast Notification System
+- **Files modified**:
+  - `nextjs_space/components/ui/sonner.tsx` - Custom toast component with consistent styling
+  - 26 files updated to import `toast` from `@/components/ui/sonner` instead of directly from 'sonner'
+
+- **Features implemented**:
+  - Custom toast functions with distinctive styling:
+    - Success toast: Green gradient with checkmark icon, 3s duration
+    - Error toast: Red gradient with X icon, 5s duration
+    - Loading toast: Blue gradient with spinner, dismissible (Infinity duration)
+    - Warning toast: Amber gradient with alert icon, 4s duration
+    - Info toast: Cyan gradient with info icon, 3s duration
+  - Responsive positioning:
+    - Desktop (>=768px): bottom-right
+    - Mobile (<768px): top-center
+  - All toasts have dismiss button and optional description text
+  - Uses sonner.custom() for full styling control
+
+- **Learnings for future iterations**:
+  - Always import `toast` from `@/components/ui/sonner`, NOT directly from 'sonner'
+  - The custom toast uses unstyled mode in Sonner and renders custom JSX
+  - useEffect with window resize listener handles responsive positioning
+  - sonner.custom() allows full control over toast appearance while retaining sonner's queue management
+  - Export both `toast` (custom functions) and `Toaster` (component) from sonner.tsx
+
+---
+
+## 2026-01-09 20:00 - US-001
+
+- **What was implemented**: Mobile Responsive Sidebar
+- **Files created**:
+  - `nextjs_space/components/admin/SuperAdminSidebar.tsx` - Wrapper component for super-admin with menu items
+  - `nextjs_space/components/admin/TenantAdminSidebar.tsx` - Wrapper component for tenant-admin with menu items
+- **Files modified**:
+  - `nextjs_space/components/admin/AdminSidebar.tsx` - Added useEffect for route change detection
+  - `nextjs_space/app/super-admin/layout.tsx` - Migrated to use SuperAdminSidebar
+  - `nextjs_space/app/tenant-admin/layout.tsx` - Migrated to use TenantAdminSidebar
+
+- **Features implemented**:
+  - Sidebar hidden off-canvas on mobile (<768px) by default
+  - Hamburger menu button in top-left corner (visible on mobile only)
+  - Sidebar slides in from left when hamburger clicked
+  - Dark overlay covers content when sidebar open (click to close)
+  - Sidebar closes automatically when route changes on mobile (via useEffect)
+  - Desktop behavior unchanged (sidebar always visible)
+  - Smooth transitions (300ms) for open/close animations
+  - Z-index layers: overlay (40), sidebar (50)
+
+- **Learnings for future iterations**:
+  - Created wrapper components (SuperAdminSidebar, TenantAdminSidebar) to keep menu item definitions separate from the core AdminSidebar logic
+  - useEffect with pathname dependency is the cleanest way to detect route changes and close mobile sidebar
+  - The wrapper pattern allows different admin panels to have their own menu configurations while sharing the responsive behavior
+  - Old DashboardSidebar and TenantDashboardSidebar components still exist but are no longer used - can be removed in future cleanup
+
+---
+
+## 2026-01-09 19:30 - US-003
+
+- **What was implemented**: Visual Differentiation - Tenant Admin Theme
+- **Files modified**:
+  - `nextjs_space/components/admin/AdminSidebar.tsx` - Updated tenant-admin themeStyles
+
+- **Features verified/updated**:
+  - Sidebar gradient: from-cyan-600 via-blue-600 to-indigo-700 (verified)
+  - Active menu items: bg-cyan-500/30 border-l-4 border-cyan-300 (verified)
+  - Hover states: hover:bg-white/10 (verified)
+  - User avatar gradient: from-cyan-400 to-blue-500 (verified)
+  - Badge styling: bg-white/20 with text-white/90 font-medium (verified)
+  - Logo area: Updated to bg-cyan-100 with text-cyan-700 (to meet cyan background requirement)
+  - Added descriptive comments to tenant-admin theme configuration
+
+- **Learnings for future iterations**:
+  - When comparing themes (super-admin vs tenant-admin), ensure logo styling matches the overall palette
+  - The themeStyles object makes side-by-side theme comparison easy during code review
+  - Theme properties should be consistent between themes (same keys, different values)
+
+---
+
+## 2026-01-09 19:00 - US-002
+
+- **What was implemented**: Visual Differentiation - Super Admin Theme
+- **Files modified**:
+  - `nextjs_space/components/admin/AdminSidebar.tsx` - Updated themeStyles for super-admin
+
+- **Features implemented**:
+  - Dark slate/zinc color palette for super-admin theme to distinguish from tenant-admin
+  - Sidebar gradient: from-slate-800 via-slate-900 to-zinc-900
+  - Active menu items: bg-slate-700/50 with border-slate-400 left border accent
+  - Hover states: hover:bg-slate-700/30
+  - Logo B icon: bg-slate-400 with text-slate-800
+  - User avatar gradient: from-slate-400 to-slate-600
+  - Bold SUPER ADMIN badge: tracking-wide uppercase text-xs styling
+  - Theme-specific border colors (borderColor) and button styles (buttonBg)
+  - MobileMenuButton now accepts theme prop and matches sidebar gradient
+
+- **Learnings for future iterations**:
+  - The themeStyles object pattern works well for multi-theme support
+  - Add new style properties (badgeText, borderColor, buttonBg) to both themes when extending
+  - MobileMenuButton needed separate mobileButtonStyles const for its simpler gradient needs
+  - Keep comments in themeStyles to explain the design rationale for each theme
+
+---
+
+## 2026-01-09 18:15 - US-032
+
+- **What was implemented**: Unified AdminSidebar component for both Super Admin and Tenant Admin panels
+- **Files created**:
+  - `nextjs_space/components/admin/AdminSidebar.tsx` - Single reusable sidebar component
+
+- **Features implemented**:
+  - Accepts props: `theme` ('super-admin' | 'tenant-admin'), `menuItems`, `userName`, `userEmail`, `headerBadge`
+  - Theme-based styling configuration via `themeStyles` object for future visual differentiation
+  - Mobile sidebar state with `useState` (mobileOpen)
+  - Desktop collapse state with `useState` (collapsed)
+  - Mobile overlay backdrop that closes sidebar on click
+  - Hamburger menu button (MobileMenuButton) for mobile - fixed position, visible only on < md screens
+  - Auto-close on navigation via `handleNavClick`
+  - Route-based active state detection
+  - User profile section with logout functionality
+  - Collapsed state tooltips for menu items and logout button
+  - Exported TypeScript interfaces: `AdminMenuItem`, `AdminTheme`, `AdminSidebarProps`
+  - JSDoc documentation on all interfaces and component
+
+- **Learnings for future iterations**:
+  - Use `cn()` utility consistently for conditional class merging
+  - Mobile sidebar uses fixed positioning with translate-x for slide animation
+  - Mobile overlay uses z-40, sidebar uses z-50 to ensure proper stacking
+  - The `themeStyles` object pattern makes it easy to add theme differentiation later (US-002, US-003)
+  - Export `LucideIcon` type from lucide-react for icon prop typing
+  - Original sidebars (DashboardSidebar, TenantDashboardSidebar) still exist - they can be migrated to use AdminSidebar in follow-up stories
+
+---
+
+## 2026-01-09 17:30 - US-033
+
+- **What was implemented**: URL State Management Utility for consistent table state management
+- **Files created**:
+  - `nextjs_space/lib/admin/url-state.ts` - Custom hook for managing table state in URL params
+
+- **Features implemented**:
+  - `useTableState<TFilters>()` hook with TypeScript generics for type-safe filters
+  - State includes: search, filters, page, pageSize, sort
+  - Setters: setSearch, setFilter, setPage, setPageSize, setSort, resetFilters
+  - Helper functions: `buildQueryString()` for API calls, `parseTableState()` for server components
+  - Three-state sorting cycle: asc -> desc -> none
+  - Automatic page reset when filters/search change
+  - URL param sync using Next.js `useSearchParams` and `useRouter`
+
+- **Learnings for future iterations**:
+  - URL state hooks belong in `lib/admin/` directory
+  - Use `router.push(url, { scroll: false })` to prevent scroll-to-top on param changes
+  - Filter values stored as `Record<string, string>` for URL serialization
+  - Page 1 and default pageSize are omitted from URL to keep URLs clean
+  - Pre-existing TypeScript errors in node_modules don't affect `npm run build` - use build for typecheck
+
+---
+
+## 2026-01-09 16:45 - US-031
+
+- **What was implemented**: Shared Component Library for admin panels
+- **Files created**:
+  - `nextjs_space/components/admin/shared/SearchInput.tsx` - Debounced search input with clear button
+  - `nextjs_space/components/admin/shared/StatusFilter.tsx` - Generic dropdown filter with counts
+  - `nextjs_space/components/admin/shared/Pagination.tsx` - Page navigation with size selector
+  - `nextjs_space/components/admin/shared/BulkActionBar.tsx` - Floating action bar for bulk operations
+  - `nextjs_space/components/admin/shared/EmptyState.tsx` - Configurable empty state with variants
+  - `nextjs_space/components/admin/shared/index.ts` - Barrel export file
+
+- **Learnings for future iterations**:
+  - All shared components export both the component and its TypeScript interface
+  - SearchInput uses internal debounce with useRef for timeout cleanup
+  - StatusFilter uses TypeScript generics for type-safe filter values
+  - BulkActionBar uses fixed positioning with animate-in classes for entrance animation
+  - EmptyState has three variants: default, muted (for search results), card
+  - Super admin pages require auth - test pages may redirect to login
+  - No ESLint config exists in the project, but TypeScript checking is sufficient
+  - The dev-browser skill is not available - use curl or manual browser testing
+
+---
