@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -121,6 +121,11 @@ export function AdminSidebar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const styles = themeStyles[theme];
+
+  // Automatically close mobile sidebar on route changes
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     if (confirm('Are you sure you want to logout?')) {

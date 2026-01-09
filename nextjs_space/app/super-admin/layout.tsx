@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
-import { DashboardSidebar } from '@/components/admin/DashboardSidebar';
+import { SuperAdminSidebar } from '@/components/admin/SuperAdminSidebar';
 
 export default async function SuperAdminLayout({
     children,
@@ -16,11 +16,11 @@ export default async function SuperAdminLayout({
 
     return (
         <div className="flex h-screen bg-gray-50 theme-force-light">
-            <DashboardSidebar
+            <SuperAdminSidebar
                 userName={session.user.name || 'Super Admin'}
                 userEmail={session.user.email || 'admin@budstack.io'}
             />
-            <main className="flex-1 overflow-auto">
+            <main className="flex-1 overflow-auto pl-0 md:pl-0">
                 {children}
             </main>
         </div>

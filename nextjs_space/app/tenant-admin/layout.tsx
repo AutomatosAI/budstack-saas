@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { TenantDashboardSidebar } from '@/components/admin/TenantDashboardSidebar';
+import { TenantAdminSidebar } from '@/components/admin/TenantAdminSidebar';
 
 export default async function TenantAdminLayout({
   children,
@@ -35,12 +35,12 @@ export default async function TenantAdminLayout({
 
   return (
     <div className="flex h-screen bg-gray-50 theme-force-light">
-      <TenantDashboardSidebar
+      <TenantAdminSidebar
         userName={session.user.name || 'Tenant Admin'}
         userEmail={session.user.email || ''}
         tenantName={user.tenants.businessName}
       />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pl-0 md:pl-0">
         {children}
       </main>
     </div>
