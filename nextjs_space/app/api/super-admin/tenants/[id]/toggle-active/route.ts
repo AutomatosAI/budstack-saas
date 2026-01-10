@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import crypto from 'crypto';
 
 /**
  * PATCH /api/super-admin/tenants/[id]/toggle-active
@@ -46,6 +47,7 @@ export async function PATCH(
         // Create audit log
         await prisma.audit_logs.create({
             data: {
+                id: crypto.randomUUID(),
                 action: tenant.isActive ? 'TENANT_DEACTIVATED' : 'TENANT_ACTIVATED',
                 entityType: 'Tenant',
                 entityId: params.id,

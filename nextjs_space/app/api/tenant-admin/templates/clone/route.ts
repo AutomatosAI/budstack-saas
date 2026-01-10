@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { copyDirectory } from '@/lib/s3-copy';
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/audit-log';
+import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
     try {
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
             include: { tenants: true },
         });
 
-        if (!user?.tenant) {
+        if (!user?.tenants) {
             return NextResponse.json({ error: 'No tenant found' }, { status: 400 });
         }
 
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
         // 4. Define S3 paths
         const sourceS3Prefix = `templates/${baseTemplate.slug || baseTemplateId}/`;
         const timestamp = Date.now();
-        const destS3Prefix = `tenants/${user.tenant.id}/templates/${timestamp}/`;
+        const destS3Prefix = `tenants/${user.tenants.id}/templates/${timestamp}/`;
 
         console.log(`Cloning template from ${sourceS3Prefix} to ${destS3Prefix}`);
 
@@ -54,12 +55,14 @@ export async function POST(request: NextRequest) {
         // 6. Create TenantTemplate Record with correct schema fields
         const tenantTemplate = await prisma.tenant_templates.create({
             data: {
-                tenantId: user.tenant.id,
+                id: crypto.randomUUID(),
+                tenantId: user.tenants.id,
                 baseTemplateId: baseTemplateId,
                 templateName: `${baseTemplate.name}`,
                 s3Path: destS3Prefix,
                 isActive: false, // Not active by default - user needs to activate
                 isDraft: true,
+                updatedAt: new Date(),
             },
         });
 
@@ -72,7 +75,7 @@ export async function POST(request: NextRequest) {
             entityId: tenantTemplate.id,
             userId: session.user.id,
             userEmail: session.user.email,
-            tenantId: user.tenant.id,
+            tenantId: user.tenants.id,
             metadata: {
                 baseTemplateId,
                 baseTemplateName: baseTemplate.name,

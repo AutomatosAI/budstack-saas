@@ -40,7 +40,7 @@ export async function PATCH(
       include: { tenants: true },
     });
 
-    if (!user?.tenant) {
+    if (!user?.tenants) {
       return NextResponse.json({ error: 'No tenant found' }, { status: 404 });
     }
 
@@ -48,7 +48,7 @@ export async function PATCH(
     const order = await prisma.orders.findFirst({
       where: {
         id: orderId,
-        tenantId: user.tenant.id,
+        tenantId: user.tenants.id,
       },
     });
 

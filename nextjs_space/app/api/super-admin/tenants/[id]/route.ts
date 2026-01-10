@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getNamecheapClient } from '@/lib/namecheap-api';
+import crypto from 'crypto';
 
 export async function GET(
   req: NextRequest,
@@ -168,6 +169,7 @@ export async function PATCH(
     // Create audit log
     await prisma.audit_logs.create({
       data: {
+        id: crypto.randomUUID(),
         action: 'TENANT_UPDATED',
         entityType: 'Tenant',
         entityId: params.id,

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rate-limit';
+import crypto from 'crypto';
 
 /**
  * POST /api/tenant-admin/products/bulk
@@ -110,6 +111,7 @@ export async function POST(request: NextRequest) {
 
     // Create audit logs for each product
     const auditLogs = productsToUpdate.map((product: { id: string; name: string; stock: number; category: string | null }) => ({
+      id: crypto.randomUUID(),
       action: auditAction,
       entityType: 'Product',
       entityId: product.id,

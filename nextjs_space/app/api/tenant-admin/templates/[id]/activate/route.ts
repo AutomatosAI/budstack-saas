@@ -21,7 +21,7 @@ export async function PATCH(
             include: { tenants: true },
         });
 
-        if (!user?.tenant) {
+        if (!user?.tenants) {
             return NextResponse.json({ error: 'No tenant found' }, { status: 400 });
         }
 
@@ -31,7 +31,7 @@ export async function PATCH(
         const template = await prisma.tenant_templates.findFirst({
             where: {
                 id: templateId,
-                tenantId: user.tenant.id,
+                tenantId: user.tenants.id,
             },
         });
 
@@ -42,7 +42,7 @@ export async function PATCH(
         // 4. Deactivate all other templates for this tenant
         await prisma.tenant_templates.updateMany({
             where: {
-                tenantId: user.tenant.id,
+                tenantId: user.tenants.id,
                 id: { not: templateId },
             },
             data: { isActive: false },
@@ -56,7 +56,7 @@ export async function PATCH(
 
         // 6. Update tenant's activeTenantTemplateId
         await prisma.tenants.update({
-            where: { id: user.tenant.id },
+            where: { id: user.tenants.id },
             data: { activeTenantTemplateId: templateId },
         });
 
@@ -67,14 +67,14 @@ export async function PATCH(
             entityId: templateId,
             userId: session.user.id,
             userEmail: session.user.email,
-            tenantId: user.tenant.id,
+            tenantId: user.tenants.id,
             metadata: {
                 action: 'activated',
                 templateName: template.templateName,
             }
         });
 
-        console.log(`✅ Activated template ${templateId} for tenant ${user.tenant.id}`);
+        console.log(`✅ Activated template ${templateId} for tenant ${user.tenants.id}`);
 
         return NextResponse.json({
             success: true,

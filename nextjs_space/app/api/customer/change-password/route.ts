@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 /**
  * POST /api/customer/change-password
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
         // Create audit log (optional - might be too sensitive)
         await prisma.audit_logs.create({
             data: {
+                id: crypto.randomUUID(),
                 action: 'PASSWORD_CHANGED',
                 entityType: 'User',
                 entityId: session.user.id,

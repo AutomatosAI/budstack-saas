@@ -31,11 +31,11 @@ export async function GET(req: NextRequest) {
       include: { tenants: true },
     });
 
-    if (!user?.tenant) {
+    if (!user?.tenants) {
       return NextResponse.json({ error: 'No tenant found' }, { status: 404 });
     }
 
-    const tenantId = user.tenant.id;
+    const tenantId = user.tenants.id;
 
     // Parse query params
     const { searchParams } = new URL(req.url);
@@ -284,7 +284,7 @@ export async function PATCH(req: NextRequest) {
       include: { tenants: true },
     });
 
-    if (!user?.tenant) {
+    if (!user?.tenants) {
       return NextResponse.json({ error: 'No tenant found' }, { status: 404 });
     }
 
@@ -292,7 +292,7 @@ export async function PATCH(req: NextRequest) {
     const order = await prisma.orders.findFirst({
       where: {
         id: orderId,
-        tenantId: user.tenant.id,
+        tenantId: user.tenants.id,
       },
     });
 

@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
             include: { tenants: true },
         });
 
-        if (!user?.tenant) {
+        if (!user?.tenants) {
             return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
         }
 
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         let uniqueSlug = slug;
         let counter = 1;
         while (await prisma.posts.findUnique({
-            where: { slug_tenantId: { slug: uniqueSlug, tenantId: user.tenant.id } }
+            where: { slug_tenantId: { slug: uniqueSlug, tenantId: user.tenants.id } }
         })) {
             uniqueSlug = `${slug}-${counter}`;
             counter++;
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
                 excerpt: validatedData.excerpt,
                 coverImage: validatedData.coverImage,
                 published: validatedData.published,
-                tenantId: user.tenant.id,
+                tenantId: user.tenants.id,
                 authorId: user.id,
             },
         });
@@ -90,12 +90,12 @@ export async function GET(req: NextRequest) {
             include: { tenants: true },
         });
 
-        if (!user?.tenant) {
+        if (!user?.tenants) {
             return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
         }
 
         const posts = await prisma.posts.findMany({
-            where: { tenantId: user.tenant.id },
+            where: { tenantId: user.tenants.id },
             orderBy: { createdAt: 'desc' },
             include: { author: { select: { name: true, email: true } } }
         });

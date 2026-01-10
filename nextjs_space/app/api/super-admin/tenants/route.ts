@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rate-limit';
+import crypto from 'crypto';
 
 /**
  * GET /api/super-admin/tenants
@@ -212,6 +213,7 @@ export async function POST(request: NextRequest) {
         // Create audit log
         await prisma.audit_logs.create({
             data: {
+                id: crypto.randomUUID(),
                 action: 'TENANT_CREATED',
                 entityType: 'Tenant',
                 entityId: tenant.id,

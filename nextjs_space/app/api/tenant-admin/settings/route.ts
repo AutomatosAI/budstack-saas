@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       include: { tenants: true },
     });
 
-    if (!user?.tenant) {
+    if (!user?.tenants) {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
     }
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     // Update tenant
     await prisma.tenants.update({
-      where: { id: user.tenant.id },
+      where: { id: user.tenants.id },
       data: dataToUpdate,
     });
 

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rate-limit';
+import crypto from 'crypto';
 
 /**
  * POST /api/super-admin/tenants/bulk
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
 
     // Create audit logs for each tenant
     const auditLogs = tenantsToUpdate.map((tenant: { id: string; businessName: string; subdomain: string; isActive: boolean }) => ({
+      id: crypto.randomUUID(),
       action: action === 'activate' ? 'TENANT_BULK_ACTIVATED' : 'TENANT_BULK_DEACTIVATED',
       entityType: 'Tenant',
       entityId: tenant.id,

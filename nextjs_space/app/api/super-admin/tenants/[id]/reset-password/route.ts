@@ -70,6 +70,7 @@ export async function POST(
         // Create audit log
         await prisma.audit_logs.create({
             data: {
+                id: crypto.randomUUID(),
                 action: 'PASSWORD_RESET_REQUESTED',
                 entityType: 'User',
                 entityId: adminUser.id,

@@ -35,25 +35,8 @@ export default async function TenantAdminDashboard() {
   });
 
   if (!user?.tenants) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">No Tenant Associated</h1>
-          <p className="text-gray-600 mb-4">Your account is not associated with any tenant.</p>
-          <p className="text-sm text-gray-500 mb-4">
-            If you're a tenant admin, please contact support to link your account to a tenant.
-          </p>
-          <div className="space-x-4">
-            <Link href="/">
-              <Button>Go Home</Button>
-            </Link>
-            <Link href="/auth/login">
-              <Button variant="outline">Login Again</Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
+    // Redirect to login if user has no tenant associated
+    redirect('/auth/login');
   }
 
   const tenant = user.tenants;

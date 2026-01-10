@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import crypto from 'crypto';
 
 /**
  * GET /api/tenant-admin/customers/[id]
@@ -176,6 +177,7 @@ export async function PATCH(
         // Create audit log
         await prisma.audit_logs.create({
             data: {
+                id: crypto.randomUUID(),
                 action: 'CUSTOMER_UPDATED',
                 entityType: 'User',
                 entityId: params.id,
@@ -263,6 +265,7 @@ export async function DELETE(
         // Create audit log
         await prisma.audit_logs.create({
             data: {
+                id: crypto.randomUUID(),
                 action: 'CUSTOMER_DELETED_GDPR',
                 entityType: 'User',
                 entityId: params.id,
