@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import CookieConsentBanner from 'react-cookie-consent';
 import { Cookie, Settings, Shield } from 'lucide-react';
 import {
     getConsentModel,
@@ -26,6 +25,7 @@ interface CookieConsentProps {
 
 export function CookieConsent({ tenant }: CookieConsentProps) {
     const [showCustomize, setShowCustomize] = useState(false);
+    const [showBanner, setShowBanner] = useState(false);
     const [categories, setCategories] = useState<ConsentCategories | null>(null);
     const [mounted, setMounted] = useState(false);
 
@@ -39,10 +39,17 @@ export function CookieConsent({ tenant }: CookieConsentProps) {
 
     useEffect(() => {
         setMounted(true);
-        // Initialize categories from cookie or defaults
+        // Check if consent has already been given
+        const existingConsent = getCookieValue(CONSENT_COOKIE_NAME);
         const existingCategories = getCookieValue(CONSENT_CATEGORIES_COOKIE_NAME);
         const parsed = parseConsentCategories(existingCategories);
+
         setCategories(parsed || getDefaultCategories(consentModel));
+
+        // Only show banner if consent hasn't been given yet
+        if (!existingConsent || existingConsent !== 'true') {
+            setShowBanner(true);
+        }
     }, [consentModel]);
 
     if (!mounted || !isEnabled) return null;
@@ -56,8 +63,10 @@ export function CookieConsent({ tenant }: CookieConsentProps) {
             preferences: true,
         };
         saveCategories(allAccepted);
+        saveConsent();
         setCategories(allAccepted);
         setShowCustomize(false);
+        setShowBanner(false);
     };
 
     const handleDecline = () => {
@@ -69,19 +78,27 @@ export function CookieConsent({ tenant }: CookieConsentProps) {
             preferences: false,
         };
         saveCategories(essentialOnly);
+        saveConsent();
         setCategories(essentialOnly);
         setShowCustomize(false);
+        setShowBanner(false);
     };
 
     const handleSavePreferences = () => {
         if (categories) {
             saveCategories(categories);
+            saveConsent();
         }
         setShowCustomize(false);
+        setShowBanner(false);
     };
 
     const saveCategories = (cats: ConsentCategories) => {
         document.cookie = `${CONSENT_CATEGORIES_COOKIE_NAME}=${stringifyConsentCategories(cats)}; path=/; max-age=31536000; SameSite=Lax`;
+    };
+
+    const saveConsent = () => {
+        document.cookie = `${CONSENT_COOKIE_NAME}=true; path=/; max-age=31536000; SameSite=Lax`;
     };
 
     if (showCustomize) {
@@ -169,48 +186,19 @@ export function CookieConsent({ tenant }: CookieConsentProps) {
         );
     }
 
+    if (!showBanner) return null;
+
     return (
-        <CookieConsentBanner
-            location="bottom"
-            buttonText={bannerText.acceptLabel}
-            declineButtonText={bannerText.declineLabel}
-            cookieName={CONSENT_COOKIE_NAME}
-            enableDeclineButton={consentModel === 'opt-in'}
-            onAccept={handleAccept}
-            onDecline={handleDecline}
-            expires={365}
+        <div
+            className="fixed bottom-0 left-0 right-0 z-[9999] flex items-center justify-between gap-4 p-4 sm:px-6"
             style={{
                 background: 'linear-gradient(to right, #065f46, #047857)',
-                padding: '16px 24px',
-                alignItems: 'center',
-                fontSize: '14px',
                 boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.15)',
             }}
-            buttonStyle={{
-                background: 'white',
-                color: '#065f46',
-                fontWeight: '600',
-                padding: '10px 24px',
-                borderRadius: '8px',
-                fontSize: '14px',
-            }}
-            declineButtonStyle={{
-                background: 'transparent',
-                border: '1px solid rgba(255, 255, 255, 0.5)',
-                color: 'white',
-                fontWeight: '500',
-                padding: '10px 20px',
-                borderRadius: '8px',
-                fontSize: '14px',
-                marginRight: '8px',
-            }}
-            contentStyle={{
-                flex: '1 0 300px',
-            }}
         >
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 flex-1">
                 <Cookie className="w-5 h-5 text-emerald-200 flex-shrink-0 mt-0.5" />
-                <div>
+                <div className="text-sm">
                     <span className="text-white">
                         {customMessage || bannerText.message}
                     </span>
@@ -225,7 +213,24 @@ export function CookieConsent({ tenant }: CookieConsentProps) {
                     </button>
                 </div>
             </div>
-        </CookieConsentBanner>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+                {consentModel === 'opt-in' && (
+                    <button
+                        onClick={handleDecline}
+                        className="px-5 py-2.5 text-sm font-medium text-white bg-transparent border border-white/50 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                        {bannerText.declineLabel}
+                    </button>
+                )}
+                <button
+                    onClick={handleAccept}
+                    className="px-6 py-2.5 text-sm font-semibold text-emerald-800 bg-white rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                    {bannerText.acceptLabel}
+                </button>
+            </div>
+        </div>
     );
 }
 
