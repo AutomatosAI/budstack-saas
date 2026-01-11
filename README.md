@@ -271,6 +271,7 @@ function Hero({ tenant }: { tenant: Tenant }) {
    - Select ZIP file
    - Click **Upload Template**
 
+adding a change so its picked up
 ---
 
 ## ✅ Quality Checklist
@@ -329,7 +330,9 @@ See `/examples/ecommerce-template/`
 - Community: https://community.budstack.io
 - Issues: https://github.com/budstack/templates/issues
 
----
+----
 
 **Last Updated:** November 24, 2025  
 **Version:** 2.0.0
+
+---
