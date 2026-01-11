@@ -94,7 +94,7 @@ export const EmailEventMapper = () => {
     const templateList = Array.isArray(templates) ? templates : [];
 
     return (
-        <Card>
+        <Card className="shadow-sm border-slate-200 overflow-hidden">
             <CardHeader>
                 <CardTitle>System Event Mappings</CardTitle>
                 <CardDescription>
@@ -102,46 +102,70 @@ export const EmailEventMapper = () => {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[300px]">Event Name</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead className="w-[300px]">Active Template</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {SYSTEM_EVENTS.map((event) => (
-                            <TableRow key={event.id}>
-                                <TableCell className="font-medium">{event.label}</TableCell>
-                                <TableCell className="text-muted-foreground">{event.description}</TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-2">
-                                        <Select
-                                            value={getActiveTemplateId(event.id) || "default"}
-                                            onValueChange={(val) => {
-                                                if (val !== "default") handleSaveMapping(event.id, val);
-                                            }}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select a template" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="default" disabled>
-                                                    <em>Select a template...</em>
-                                                </SelectItem>
-                                                {templateList.map(t => (
-                                                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {saving === event.id && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                                    </div>
-                                </TableCell>
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Event</TableHead>
+                                <TableHead>Template</TableHead>
+                                <TableHead className="hidden md:table-cell">Status</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {SYSTEM_EVENTS.map((event) => {
+                                const currentTemplateId = getActiveTemplateId(event.id);
+                                const isSaving = saving === event.id;
+                                return (
+                                    <TableRow key={event.id}>
+                                        <TableCell>
+                                            <div className="font-medium">{event.label}</div>
+                                            <div className="text-xs text-muted-foreground hidden md:block">{event.description}</div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <Select
+                                                    value={currentTemplateId || 'default'}
+                                                    onValueChange={(val) => {
+                                                        if (val !== "default") handleSaveMapping(event.id, val);
+                                                    }}
+                                                    disabled={isSaving}
+                                                >
+                                                    <SelectTrigger className="w-[180px] md:w-[250px]">
+                                                        <SelectValue placeholder="Select a template" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="default" disabled>
+                                                            <em>Select a template...</em>
+                                                        </SelectItem>
+                                                        {templateList.map(t => (
+                                                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {isSaving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            {currentTemplateId ? "Active" : "Not Set"}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleSaveMapping(event.id, currentTemplateId || "default")}
+                                                disabled={isSaving || !currentTemplateId}
+                                            >
+                                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                                <span className="sr-only">Save</span>
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                </div>
             </CardContent>
         </Card>
     );

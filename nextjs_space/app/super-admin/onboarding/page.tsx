@@ -24,7 +24,7 @@ export default async function OnboardingPage() {
   });
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
@@ -35,9 +35,9 @@ export default async function OnboardingPage() {
       />
 
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Onboarding Requests</h1>
-        <p className="text-slate-600 mt-2">Review and approve new tenant applications</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Onboarding Requests</h1>
+        <p className="text-sm sm:text-base text-slate-600 mt-1 sm:mt-2">Review and approve new tenant applications</p>
       </div>
 
       {/* Pending Approvals Table */}
@@ -68,9 +68,9 @@ export default async function OnboardingPage() {
                 <TableHeader>
                   <TableRow className="bg-slate-50/50">
                     <TableHead className="font-semibold">Business Name</TableHead>
-                    <TableHead className="font-semibold">NFT Token ID</TableHead>
-                    <TableHead className="font-semibold">Subdomain</TableHead>
-                    <TableHead className="font-semibold">Requested</TableHead>
+                    <TableHead className="font-semibold hidden md:table-cell">NFT Token ID</TableHead>
+                    <TableHead className="font-semibold hidden md:table-cell">Subdomain</TableHead>
+                    <TableHead className="font-semibold hidden sm:table-cell">Requested</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
                     <TableHead className="font-semibold">Actions</TableHead>
                   </TableRow>
@@ -78,15 +78,21 @@ export default async function OnboardingPage() {
                 <TableBody>
                   {pendingRequests.map((request: any) => (
                     <TableRow key={request.id} className="hover:bg-slate-50 transition-colors">
-                      <TableCell className="font-medium text-slate-900">{request.businessName}</TableCell>
-                      <TableCell className="font-mono text-sm text-slate-600">
+                      <TableCell className="font-medium text-slate-900">
+                        <div className="min-w-0">
+                          <span className="block truncate">{request.businessName}</span>
+                          {/* Show subdomain on mobile where it's hidden from column */}
+                          <span className="block text-xs text-cyan-600 mt-0.5 md:hidden">{request.subdomain}.budstack.io</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm text-slate-600 hidden md:table-cell">
                         {request.nftTokenId || <span className="text-slate-400">Not provided</span>}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <span className="text-cyan-600 font-medium">{request.subdomain}</span>
                         <span className="text-slate-400">.budstack.io</span>
                       </TableCell>
-                      <TableCell className="text-slate-600 text-sm">
+                      <TableCell className="text-slate-600 text-sm hidden sm:table-cell">
                         {format(new Date(request.createdAt), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell>

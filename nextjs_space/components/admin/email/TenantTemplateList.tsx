@@ -108,80 +108,82 @@ export function TenantTemplateList() {
     }
 
     return (
-        <div className="border rounded-md">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Template Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Last Updated</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {templates.map((template) => (
-                        <TableRow key={template.id}>
-                            <TableCell className="font-medium">
-                                {template.name}
-                                {template.description && (
-                                    <div className="text-xs text-muted-foreground truncate max-w-[300px]">
-                                        {template.description}
-                                    </div>
-                                )}
-                            </TableCell>
-                            <TableCell>
-                                <Badge variant={template.isSystem ? 'secondary' : 'default'} className={!template.isSystem ? "bg-slate-900 override:bg-slate-700" : ""}>
-                                    {template.isSystem ? 'System' : 'Custom'}
-                                </Badge>
-                            </TableCell>
-                            <TableCell>
-                                {format(new Date(template.updatedAt), 'MMM d, yyyy')}
-                            </TableCell>
-                            <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                    {template.isSystem ? (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleClone(template.id)}
-                                            title="Clone/Customize this template"
-                                        >
-                                            <Copy className="h-4 w-4" />
-                                        </Button>
-                                    ) : (
-                                        <>
-                                            <Link href={`/tenant-admin/emails/${template.id}`} passHref>
-                                                <Button variant="ghost" size="icon" title="Edit Template">
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                            </Link>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleTogglePublish(template.id, template.isActive)}
-                                                title={template.isActive ? 'Disable Template' : 'Enable Template'}
-                                                className={template.isActive ? 'text-amber-600 hover:text-amber-700' : 'text-green-600 hover:text-green-700'}
-                                            >
-                                                {template.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleDelete(template.id)}
-                                                disabled={isDeleting === template.id}
-                                                className="text-destructive hover:text-destructive/90"
-                                                title="Delete Template"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </>
-                                    )}
-                                </div>
-                            </TableCell>
+        <div className="border rounded-md overflow-hidden">
+            <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Template Name</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="hidden md:table-cell">Last Updated</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                        {templates.map((template) => (
+                            <TableRow key={template.id}>
+                                <TableCell className="font-medium">
+                                    {template.name}
+                                    {template.description && (
+                                        <div className="text-xs text-muted-foreground truncate max-w-[300px]">
+                                            {template.description}
+                                        </div>
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant={template.isSystem ? 'secondary' : 'default'} className={!template.isSystem ? "bg-slate-900 override:bg-slate-700" : ""}>
+                                        {template.isSystem ? 'System' : 'Custom'}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="hidden md:table-cell">
+                                    {format(new Date(template.updatedAt), 'MMM d, yyyy')}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-1">
+                                        {template.isSystem ? (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleClone(template.id)}
+                                                title="Clone/Customize this template"
+                                            >
+                                                <Copy className="h-4 w-4" />
+                                            </Button>
+                                        ) : (
+                                            <>
+                                                <Link href={`/tenant-admin/emails/${template.id}`} passHref>
+                                                    <Button variant="ghost" size="icon" title="Edit Template">
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                </Link>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleTogglePublish(template.id, template.isActive)}
+                                                    title={template.isActive ? 'Disable Template' : 'Enable Template'}
+                                                    className={template.isActive ? 'text-amber-600 hover:text-amber-700' : 'text-green-600 hover:text-green-700'}
+                                                >
+                                                    {template.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDelete(template.id)}
+                                                    disabled={isDeleting === template.id}
+                                                    className="text-destructive hover:text-destructive/90"
+                                                    title="Delete Template"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
     );
 }
