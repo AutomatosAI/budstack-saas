@@ -30,6 +30,7 @@ CREATE TABLE "tenants" (
     "drGreenApiUrl" TEXT,
     "drGreenApiKey" TEXT,
     "drGreenSecretKey" TEXT,
+    "pageSeo" JSONB,
 
     CONSTRAINT "tenants_pkey" PRIMARY KEY ("id")
 );
@@ -86,6 +87,7 @@ CREATE TABLE "products" (
     "stock" INTEGER NOT NULL DEFAULT 0,
     "images" TEXT[],
     "tenantId" TEXT NOT NULL,
+    "seo" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -126,6 +128,7 @@ CREATE TABLE "posts" (
     "published" BOOLEAN NOT NULL DEFAULT false,
     "tenantId" TEXT NOT NULL,
     "authorId" TEXT NOT NULL,
+    "seo" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -228,6 +231,8 @@ CREATE TABLE "platform_settings" (
     "fontFamily" TEXT NOT NULL DEFAULT 'inter',
     "headingFontFamily" TEXT NOT NULL DEFAULT 'inter',
     "template" TEXT NOT NULL DEFAULT 'modern',
+    "seo" JSONB,
+    "pageSeo" JSONB,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "platform_settings_pkey" PRIMARY KEY ("id")

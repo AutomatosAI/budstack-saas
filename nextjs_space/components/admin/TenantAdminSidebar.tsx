@@ -14,6 +14,7 @@ import {
   Newspaper,
   Cookie,
   Mail,
+  Search,
 } from 'lucide-react';
 import { AdminSidebar, type AdminMenuItem } from './AdminSidebar';
 
@@ -27,6 +28,7 @@ const tenantAdminMenuItems: AdminMenuItem[] = [
   { id: 'customers', label: 'Customers', icon: Users, href: '/tenant-admin/customers' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/tenant-admin/analytics' },
   { id: 'branding', label: 'Branding', icon: Palette, href: '/tenant-admin/branding' },
+  { id: 'seo', label: 'SEO Manager', icon: Search, href: '/tenant-admin/seo' },
   { id: 'templates', label: 'Store Templates', icon: Layout, href: '/tenant-admin/templates' },
   { id: 'emails', label: 'Email Templates', icon: Mail, href: '/tenant-admin/emails' },
   { id: 'the-wire', label: 'The Wire', icon: Newspaper, href: '/tenant-admin/the-wire' },

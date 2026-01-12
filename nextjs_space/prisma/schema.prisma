@@ -105,6 +105,7 @@ model conditions {
   faqs            Json?
   published       Boolean  @default(true)
   tenantId        String
+  seo             Json?    // { title?: string, description?: string, ogImage?: string }
   createdAt       DateTime @default(now())
   updatedAt       DateTime
   tenants         tenants  @relation(fields: [tenantId], references: [id])
@@ -276,6 +277,8 @@ model platform_settings {
   fontFamily        String   @default("inter")
   headingFontFamily String   @default("inter")
   template          String   @default("modern")
+  seo               Json?    // { title?: string, description?: string, ogImage?: string }
+  pageSeo           Json?    // { home: {}, about: {}, pricing: {}, contact: {} }
   updatedAt         DateTime
 }
 
@@ -289,6 +292,7 @@ model posts {
   published  Boolean  @default(false)
   tenantId   String
   authorId   String
+  seo        Json?    // { title?: string, description?: string, ogImage?: string }
   createdAt  DateTime @default(now())
   updatedAt  DateTime
   users      users    @relation(fields: [authorId], references: [id])
@@ -311,6 +315,7 @@ model products {
   images       String[]
   displayOrder Int         @default(0)
   tenantId     String
+  seo          Json?       // { title?: string, description?: string, ogImage?: string }
   createdAt    DateTime    @default(now())
   updatedAt    DateTime
   tenants      tenants     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -408,6 +413,7 @@ model tenants {
   drGreenApiUrl                                                     String?
   drGreenApiKey                                                     String?
   drGreenSecretKey                                                  String?
+  pageSeo                                                           Json?    // { home: {}, about: {}, contact: {}, faq: {} }
   conditions                                                        conditions[]
   consultations                                                     consultations[]
   drgreen_carts                                                     drgreen_carts[]

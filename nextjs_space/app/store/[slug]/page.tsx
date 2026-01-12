@@ -231,8 +231,48 @@ export async function generateMetadata() {
     };
   }
 
+  // Fetch tenant's pageSeo for custom metadata
+  const tenantWithSeo = await prisma.tenants.findUnique({
+    where: { id: tenant.id },
+    select: {
+      businessName: true,
+      subdomain: true,
+      customDomain: true,
+      pageSeo: true,
+    },
+  });
+
+  // Get SEO config with cascade: custom → default
+  const pageSeo = tenantWithSeo?.pageSeo as { home?: { title?: string; description?: string; ogImage?: string } } | null;
+  const homeSeo = pageSeo?.home;
+
+  const title = homeSeo?.title || `${tenant.businessName} - Medical Cannabis Solutions`;
+  const description = homeSeo?.description || `Premium medical cannabis products and consultations from ${tenant.businessName}`;
+
+  // Build base URL for OG images
+  const baseUrl = tenantWithSeo?.customDomain
+    ? `https://${tenantWithSeo.customDomain}`
+    : `https://${tenantWithSeo?.subdomain || tenant.subdomain}.budstack.to`;
+
   return {
-    title: `${tenant.businessName} - Medical Cannabis Solutions`,
-    description: `Premium medical cannabis products and consultations from ${tenant.businessName}`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: baseUrl,
+      siteName: tenant.businessName,
+      type: 'website',
+      ...(homeSeo?.ogImage && { images: [{ url: homeSeo.ogImage, width: 1200, height: 630 }] }),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      ...(homeSeo?.ogImage && { images: [homeSeo.ogImage] }),
+    },
+    alternates: {
+      canonical: baseUrl,
+    },
   };
 }
