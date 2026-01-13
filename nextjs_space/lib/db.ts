@@ -128,9 +128,6 @@ if ('$use' in prisma) {
         if (params.args?.create) {
           params.args.create.tenantId = params.args.create.tenantId ?? tenantId;
         }
-        if (params.args?.update) {
-          params.args.update.tenantId = params.args.update.tenantId ?? tenantId;
-        }
       }
       return next(params);
     }
