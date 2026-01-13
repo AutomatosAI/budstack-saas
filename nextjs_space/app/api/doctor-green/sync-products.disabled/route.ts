@@ -1,7 +1,6 @@
-
-import { NextRequest, NextResponse } from 'next/server';
-import { fetchProducts } from '@/lib/doctor-green-api';
-import { prisma } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { fetchProducts } from "@/lib/doctor-green-api";
+import { prisma } from "@/lib/db";
 
 /**
  * POST /api/doctor-green/sync-products
@@ -14,17 +13,17 @@ export async function POST(request: NextRequest) {
 
     if (!tenantId) {
       return NextResponse.json(
-        { success: false, error: 'Tenant ID required' },
-        { status: 400 }
+        { success: false, error: "Tenant ID required" },
+        { status: 400 },
       );
     }
 
     // Fetch tenant-specific Dr Green Config
-    const { getTenantDrGreenConfig } = await import('@/lib/tenant-config');
+    const { getTenantDrGreenConfig } = await import("@/lib/tenant-config");
     const doctorGreenConfig = await getTenantDrGreenConfig(tenantId);
 
     // Fetch products from Doctor Green
-    const dgProducts = await fetchProducts('SA', doctorGreenConfig); // Default to SA if country not in sync payload
+    const dgProducts = await fetchProducts("SA", doctorGreenConfig); // Default to SA if country not in sync payload
 
     // Sync products to database
     const syncedProducts = [];
@@ -36,9 +35,12 @@ export async function POST(request: NextRequest) {
         doctorGreenId: dgProduct.id,
         doctorGreenData: dgProduct as any,
         name: dgProduct.name,
-        slug: dgProduct.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, ''),
-        description: dgProduct.description || '',
-        strainType: dgProduct.strain_type || 'HYBRID',
+        slug: dgProduct.name
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^\w-]/g, ""),
+        description: dgProduct.description || "",
+        strainType: dgProduct.strain_type || "HYBRID",
         thcContent: dgProduct.thc_content || 0,
         cbdContent: dgProduct.cbd_content || 0,
         price: dgProduct.price || 0,
@@ -60,15 +62,15 @@ export async function POST(request: NextRequest) {
       // Upsert product
       const product = existingProduct
         ? await prisma.products.update({
-          where: { id: existingProduct.id },
-          data: {
-            ...productData,
-            updatedAt: new Date(),
-          },
-        })
+            where: { id: existingProduct.id },
+            data: {
+              ...productData,
+              updatedAt: new Date(),
+            },
+          })
         : await prisma.products.create({
-          data: productData,
-        });
+            data: productData,
+          });
 
       syncedProducts.push(product);
     }
@@ -85,14 +87,15 @@ export async function POST(request: NextRequest) {
       data: syncedProducts,
     });
   } catch (error) {
-    console.error('Error syncing Doctor Green products:', error);
+    console.error("Error syncing Doctor Green products:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to sync products',
+        error:
+          error instanceof Error ? error.message : "Failed to sync products",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,49 +1,47 @@
-
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { prisma } from '@/lib/db';
-import { authOptions } from '@/lib/auth';
-import { getTenantFromRequest } from '@/lib/tenant';
-import { sendEmail, emailTemplates } from '@/lib/email';
-import { createOrder as createDrGreenOrder, getCurrencyByCountry } from '@/lib/doctor-green-api';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { prisma } from "@/lib/db";
+import { authOptions } from "@/lib/auth";
+import { getTenantFromRequest } from "@/lib/tenant";
+import { sendEmail, emailTemplates } from "@/lib/email";
+import {
+  createOrder as createDrGreenOrder,
+  getCurrencyByCountry,
+} from "@/lib/doctor-green-api";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const tenant = await getTenantFromRequest(req);
 
     if (!tenant) {
-      return NextResponse.json(
-        { error: 'Tenant not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
     const body = await req.json();
     const { items, shippingInfo, total, clientId } = body;
 
     if (!items || items.length === 0) {
-      return NextResponse.json(
-        { error: 'Cart is empty' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
     // Calculate subtotal and shipping
-    const subtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-    const shippingCost = 5.00;
+    const subtotal = items.reduce(
+      (sum: number, item: any) => sum + item.price * item.quantity,
+      0,
+    );
+    const shippingCost = 5.0;
     const calculatedTotal = subtotal + shippingCost;
 
     // Determine currency from shipping country (default to ZAR - South Africa, the only live site)
-    const currency = shippingInfo?.country ? getCurrencyByCountry(shippingInfo.country) : 'ZAR';
+    const currency = shippingInfo?.country
+      ? getCurrencyByCountry(shippingInfo.country)
+      : "ZAR";
 
     // Create order in BudStack database first
     const order = await prisma.orders.create({
@@ -53,9 +51,9 @@ export async function POST(req: NextRequest) {
         subtotal,
         shippingCost,
         total: calculatedTotal,
-        status: 'PENDING',
+        status: "PENDING",
         shippingInfo,
-        notes: shippingInfo?.notes || '',
+        notes: shippingInfo?.notes || "",
         items: {
           create: items.map((item: any) => ({
             productId: item.productId,
@@ -84,35 +82,43 @@ export async function POST(req: NextRequest) {
         total_amount: calculatedTotal,
         currency: currency,
         shipping_address: shippingInfo,
-        notes: shippingInfo?.notes || '',
+        notes: shippingInfo?.notes || "",
         platform_order_number: order.orderNumber, // Reference to BudStack order
       };
 
       // Fetch tenant-specific Dr Green Config
-      const { getTenantDrGreenConfig } = await import('@/lib/tenant-config');
+      const { getTenantDrGreenConfig } = await import("@/lib/tenant-config");
       const doctorGreenConfig = await getTenantDrGreenConfig(tenant.id);
 
-      const drGreenOrder = await createDrGreenOrder(drGreenOrderData, doctorGreenConfig);
+      const drGreenOrder = await createDrGreenOrder(
+        drGreenOrderData,
+        doctorGreenConfig,
+      );
       drGreenOrderId = drGreenOrder.id;
 
       // Update local order with Dr. Green order ID
       await prisma.orders.update({
         where: { id: order.id },
         data: {
-          notes: `${shippingInfo?.notes || ''}\nDr. Green Order ID: ${drGreenOrderId}`,
+          notes: `${shippingInfo?.notes || ""}\nDr. Green Order ID: ${drGreenOrderId}`,
         },
       });
 
-      console.log(`✅ Order submitted to Dr. Green API. Order ID: ${drGreenOrderId}`);
+      console.log(
+        `✅ Order submitted to Dr. Green API. Order ID: ${drGreenOrderId}`,
+      );
     } catch (drGreenError: any) {
-      console.error('❌ Failed to submit order to Dr. Green API:', drGreenError);
+      console.error(
+        "❌ Failed to submit order to Dr. Green API:",
+        drGreenError,
+      );
 
       // Update order status to indicate Dr. Green submission failed
       await prisma.orders.update({
         where: { id: order.id },
         data: {
-          status: 'PENDING',
-          notes: `${shippingInfo?.notes || ''}\nDr. Green API Error: ${drGreenError.message || 'Unknown error'}`,
+          status: "PENDING",
+          notes: `${shippingInfo?.notes || ""}\nDr. Green API Error: ${drGreenError.message || "Unknown error"}`,
         },
       });
 
@@ -122,7 +128,7 @@ export async function POST(req: NextRequest) {
 
     // Send order confirmation email
     const html = await emailTemplates.orderConfirmation(
-      session.user.name || 'Customer',
+      session.user.name || "Customer",
       order.orderNumber,
       calculatedTotal.toFixed(2),
       items.map((item: any) => ({
@@ -130,18 +136,18 @@ export async function POST(req: NextRequest) {
         quantity: item.quantity,
         price: item.price.toFixed(2),
       })),
-      tenant.businessName
+      tenant.businessName,
     );
 
     sendEmail({
-      to: session.user.email || '',
+      to: session.user.email || "",
       subject: `Order Confirmation - #${order.orderNumber}`,
       html,
       tenantId: tenant.id,
-      templateName: 'orderConfirmation',
-      metadata: { orderId: order.id, orderNumber: order.orderNumber }
+      templateName: "orderConfirmation",
+      metadata: { orderId: order.id, orderNumber: order.orderNumber },
     }).catch((error) => {
-      console.error('Failed to send order confirmation email:', error);
+      console.error("Failed to send order confirmation email:", error);
     });
 
     return NextResponse.json({
@@ -156,10 +162,10 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Order creation error:', error);
+    console.error("Order creation error:", error);
     return NextResponse.json(
-      { error: 'Failed to create order' },
-      { status: 500 }
+      { error: "Failed to create order" },
+      { status: 500 },
     );
   }
 }
@@ -169,19 +175,13 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const tenant = await getTenantFromRequest(req);
 
     if (!tenant) {
-      return NextResponse.json(
-        { error: 'Tenant not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
     // Get orders for the current user
@@ -194,16 +194,16 @@ export async function GET(req: NextRequest) {
         items: true,
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
 
     return NextResponse.json({ orders });
   } catch (error) {
-    console.error('Orders fetch error:', error);
+    console.error("Orders fetch error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch orders' },
-      { status: 500 }
+      { error: "Failed to fetch orders" },
+      { status: 500 },
     );
   }
 }
