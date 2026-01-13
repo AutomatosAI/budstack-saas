@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import fs from 'fs/promises';
-import path from 'path';
-import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from '@/lib/audit-log';
-import fetch from 'node-fetch';
-import AdmZip from 'adm-zip';
-import { convertLovableTemplate } from '@/lib/lovable-converter';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import fs from "fs/promises";
+import path from "path";
+import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import fetch from "node-fetch";
+import AdmZip from "adm-zip";
+import { convertLovableTemplate } from "@/lib/lovable-converter";
 
 interface TemplateConfig {
   id: string;
@@ -39,34 +39,38 @@ export async function POST(req: NextRequest) {
   try {
     // Check authentication
     const session = await getServerSession(authOptions);
-    if (!session || !['SUPER_ADMIN'].includes(session.user.role || '')) {
+    if (!session || !["SUPER_ADMIN"].includes(session.user.role || "")) {
       return NextResponse.json(
-        { error: 'Unauthorized - Super Admin access required' },
-        { status: 401 }
+        { error: "Unauthorized - Super Admin access required" },
+        { status: 401 },
       );
     }
 
     const body = await req.json();
-    const { templateName, githubUrl, structureType = 'default' } = body;
+    const { templateName, githubUrl, structureType = "default" } = body;
 
-    if (!templateName || typeof templateName !== 'string' || !templateName.trim()) {
+    if (
+      !templateName ||
+      typeof templateName !== "string" ||
+      !templateName.trim()
+    ) {
       return NextResponse.json(
-        { error: 'Template name is required' },
-        { status: 400 }
+        { error: "Template name is required" },
+        { status: 400 },
       );
     }
 
-    if (!githubUrl || typeof githubUrl !== 'string') {
+    if (!githubUrl || typeof githubUrl !== "string") {
       return NextResponse.json(
-        { error: 'GitHub URL is required' },
-        { status: 400 }
+        { error: "GitHub URL is required" },
+        { status: 400 },
       );
     }
 
-    if (structureType !== 'default' && structureType !== 'lovable') {
+    if (structureType !== "default" && structureType !== "lovable") {
       return NextResponse.json(
         { error: 'Invalid structure type. Must be "default" or "lovable"' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -74,12 +78,15 @@ export async function POST(req: NextRequest) {
 
     // Validate GitHub URL format
     const githubPattern = /^https:\/\/github\.com\/([\w-]+)\/([\w-]+)(\.git)?$/;
-    const match = githubUrl.replace(/\.git$/, '').match(githubPattern);
+    const match = githubUrl.replace(/\.git$/, "").match(githubPattern);
 
     if (!match) {
       return NextResponse.json(
-        { error: 'Invalid GitHub URL format. Expected: https://github.com/username/repo' },
-        { status: 400 }
+        {
+          error:
+            "Invalid GitHub URL format. Expected: https://github.com/username/repo",
+        },
+        { status: 400 },
       );
     }
 
@@ -87,13 +94,13 @@ export async function POST(req: NextRequest) {
     console.log(`[Template Upload] Downloading from GitHub: ${owner}/${repo}`);
 
     // Create temporary directory for download
-    const tempDir = path.join('/tmp', `template-${Date.now()}`);
-    const zipPath = path.join(tempDir, 'repo.zip');
+    const tempDir = path.join("/tmp", `template-${Date.now()}`);
+    const zipPath = path.join(tempDir, "repo.zip");
     await fs.mkdir(tempDir, { recursive: true });
 
     try {
       // Download repository as ZIP
-      console.log('[Template Upload] Downloading ZIP archive...');
+      console.log("[Template Upload] Downloading ZIP archive...");
       const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/main.zip`;
 
       const response = await fetch(zipUrl);
@@ -102,7 +109,9 @@ export async function POST(req: NextRequest) {
         const masterUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/master.zip`;
         const masterResponse = await fetch(masterUrl);
         if (!masterResponse.ok) {
-          throw new Error(`Failed to download repository. Status: ${response.status}`);
+          throw new Error(
+            `Failed to download repository. Status: ${response.status}`,
+          );
         }
         const buffer = await masterResponse.buffer();
         await fs.writeFile(zipPath, buffer);
@@ -111,51 +120,57 @@ export async function POST(req: NextRequest) {
         await fs.writeFile(zipPath, buffer);
       }
 
-      console.log('[Template Upload] ZIP downloaded successfully');
+      console.log("[Template Upload] ZIP downloaded successfully");
 
       // Extract ZIP
-      console.log('[Template Upload] Extracting ZIP...');
+      console.log("[Template Upload] Extracting ZIP...");
       const zip = new AdmZip(zipPath);
       zip.extractAllTo(tempDir, true);
 
       // Find the extracted folder (GitHub adds repo-name-branch format)
       const extractedDirs = await fs.readdir(tempDir);
-      const repoDir = extractedDirs.find(dir => dir.startsWith(`${repo}-`));
+      const repoDir = extractedDirs.find((dir) => dir.startsWith(`${repo}-`));
 
       if (!repoDir) {
-        throw new Error('Could not find extracted repository directory');
+        throw new Error("Could not find extracted repository directory");
       }
 
       const extractPath = path.join(tempDir, repoDir);
       console.log(`[Template Upload] Extracted to: ${extractPath}`);
 
       // Convert Lovable template if needed
-      if (structureType === 'lovable') {
-        console.log('[Template Upload] Converting Lovable template to BudStack format...');
+      if (structureType === "lovable") {
+        console.log(
+          "[Template Upload] Converting Lovable template to BudStack format...",
+        );
         const conversionResult = await convertLovableTemplate(extractPath);
 
         if (!conversionResult.success) {
-          throw new Error(`Lovable conversion failed: ${conversionResult.error}`);
+          throw new Error(
+            `Lovable conversion failed: ${conversionResult.error}`,
+          );
         }
 
-        console.log(`[Template Upload] Conversion successful: ${conversionResult.message}`);
+        console.log(
+          `[Template Upload] Conversion successful: ${conversionResult.message}`,
+        );
       }
 
       // Read and validate template.config.json
-      const configPath = path.join(extractPath, 'template.config.json');
+      const configPath = path.join(extractPath, "template.config.json");
       let configExists = false;
       try {
         await fs.access(configPath);
         configExists = true;
       } catch {
-        console.log('[Template Upload] template.config.json not found');
+        console.log("[Template Upload] template.config.json not found");
       }
 
       if (!configExists) {
-        throw new Error('template.config.json not found in repository root');
+        throw new Error("template.config.json not found in repository root");
       }
 
-      const configContent = await fs.readFile(configPath, 'utf-8');
+      const configContent = await fs.readFile(configPath, "utf-8");
       const config: TemplateConfig = JSON.parse(configContent);
 
       // Generate slug from user-provided template name
@@ -163,10 +178,10 @@ export async function POST(req: NextRequest) {
         return name
           .toLowerCase()
           .trim()
-          .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-          .replace(/\s+/g, '-') // Replace spaces with hyphens
-          .replace(/-+/g, '-') // Remove consecutive hyphens
-          .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+          .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+          .replace(/\s+/g, "-") // Replace spaces with hyphens
+          .replace(/-+/g, "-") // Remove consecutive hyphens
+          .replace(/^-|-$/g, ""); // Remove leading/trailing hyphens
       };
 
       const userProvidedSlug = generateSlug(templateName.trim());
@@ -177,7 +192,9 @@ export async function POST(req: NextRequest) {
 
       // Validate generated slug
       if (!config.id) {
-        throw new Error('Generated slug is empty. Please provide a valid template name.');
+        throw new Error(
+          "Generated slug is empty. Please provide a valid template name.",
+        );
       }
 
       console.log(`[Template Upload] Template: ${config.name} (${config.id})`);
@@ -188,11 +205,13 @@ export async function POST(req: NextRequest) {
       });
 
       if (existingTemplate) {
-        throw new Error(`Template with slug '${config.id}' already exists. Please delete it first or use a different slug.`);
+        throw new Error(
+          `Template with slug '${config.id}' already exists. Please delete it first or use a different slug.`,
+        );
       }
 
       // Copy template files to project
-      const templatesDir = path.join(process.cwd(), 'templates');
+      const templatesDir = path.join(process.cwd(), "templates");
       const targetDir = path.join(templatesDir, config.id);
 
       // Check if target directory exists
@@ -205,7 +224,9 @@ export async function POST(req: NextRequest) {
       }
 
       if (targetExists) {
-        console.log(`[Template Upload] Removing existing directory: ${targetDir}`);
+        console.log(
+          `[Template Upload] Removing existing directory: ${targetDir}`,
+        );
         await fs.rm(targetDir, { recursive: true, force: true });
       }
 
@@ -218,10 +239,10 @@ export async function POST(req: NextRequest) {
           slug: config.id,
           name: config.name,
           description: config.description,
-          category: config.category || 'general',
+          category: config.category || "general",
           tags: config.tags || [],
-          version: config.version || '1.0.0',
-          author: config.author || 'Unknown',
+          version: config.version || "1.0.0",
+          author: config.author || "Unknown",
           isActive: true,
           isPremium: false,
           price: 0,
@@ -229,8 +250,8 @@ export async function POST(req: NextRequest) {
           componentsPath: `/templates/${config.id}/components`,
           stylesPath: `/templates/${config.id}/styles.css`,
           packagePath: `/templates/${config.id}/package.json`,
-          previewUrl: config.preview_image || '',
-          thumbnailUrl: config.preview_image || '',
+          previewUrl: config.preview_image || "",
+          thumbnailUrl: config.preview_image || "",
           metadata: {
             features: config.features || [],
             performance: config.performance || {},
@@ -241,13 +262,15 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      console.log(`[Template Upload] Template created in database: ID ${template.id}`);
+      console.log(
+        `[Template Upload] Template created in database: ID ${template.id}`,
+      );
 
       // Create audit log
       const clientInfo = getClientInfo(req.headers);
       await createAuditLog({
         action: AUDIT_ACTIONS.TEMPLATE.CREATED,
-        entityType: 'template',
+        entityType: "template",
         entityId: template.id,
         userId: session.user.id,
         userEmail: session.user.email!,
@@ -256,28 +279,27 @@ export async function POST(req: NextRequest) {
           templateName: config.name,
           githubUrl,
           structureType,
-          converted: structureType === 'lovable',
+          converted: structureType === "lovable",
         },
         ipAddress: clientInfo.ipAddress,
         userAgent: clientInfo.userAgent,
       });
 
       // Clean up temp directory
-      console.log('[Template Upload] Cleaning up temporary files...');
+      console.log("[Template Upload] Cleaning up temporary files...");
       await fs.rm(tempDir, { recursive: true, force: true });
 
       return NextResponse.json({
         success: true,
-        message: 'Template uploaded successfully',
+        message: "Template uploaded successfully",
         template: {
           id: template.id,
           slug: template.slug,
           name: template.name,
         },
       });
-
     } catch (uploadError: any) {
-      console.error('[Template Upload] Upload error:', uploadError.message);
+      console.error("[Template Upload] Upload error:", uploadError.message);
 
       // Clean up on error
       try {
@@ -288,15 +310,14 @@ export async function POST(req: NextRequest) {
 
       throw uploadError;
     }
-
   } catch (error: any) {
-    console.error('[Template Upload] Error:', error);
+    console.error("[Template Upload] Error:", error);
     return NextResponse.json(
       {
-        error: 'Failed to upload template',
-        details: error.message || 'Unknown error'
+        error: "Failed to upload template",
+        details: error.message || "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

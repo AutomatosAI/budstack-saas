@@ -1,18 +1,18 @@
-import { Queue, QueueEvents } from 'bullmq';
-import Redis from 'ioredis';
+import { Queue, QueueEvents } from "bullmq";
+import Redis from "ioredis";
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
-export const emailQueueName = 'email-sending';
+export const emailQueueName = "email-sending";
 
 let emailQueueInstance: Queue | undefined;
 let emailQueueEventsInstance: QueueEvents | undefined;
 
 const getRedisConnection = () => {
-    return new Redis(REDIS_URL, {
-        maxRetriesPerRequest: null,
-        lazyConnect: true,
-    });
+  return new Redis(REDIS_URL, {
+    maxRetriesPerRequest: null,
+    lazyConnect: true,
+  });
 };
 
 export const getEmailQueue = () => {
@@ -40,9 +40,11 @@ export const getEmailQueue = () => {
 };
 
 export const getEmailQueueEvents = () => {
-    if (!emailQueueEventsInstance) {
-        const connection = getRedisConnection();
-        emailQueueEventsInstance = new QueueEvents(emailQueueName, { connection: connection as any });
-    }
-    return emailQueueEventsInstance;
+  if (!emailQueueEventsInstance) {
+    const connection = getRedisConnection();
+    emailQueueEventsInstance = new QueueEvents(emailQueueName, {
+      connection: connection as any,
+    });
+  }
+  return emailQueueEventsInstance;
 };

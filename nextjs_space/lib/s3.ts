@@ -1,13 +1,15 @@
-
 import {
   PutObjectCommand,
   GetObjectCommand,
-  DeleteObjectCommand
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { createS3Client, getBucketConfig } from './aws-config';
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createS3Client, getBucketConfig } from "./aws-config";
 
-export async function uploadFile(buffer: Buffer, fileName: string): Promise<string> {
+export async function uploadFile(
+  buffer: Buffer,
+  fileName: string,
+): Promise<string> {
   const s3Client = await createS3Client();
   const { bucketName, folderPrefix } = await getBucketConfig();
   const key = `${folderPrefix}uploads/${Date.now()}-${fileName}`;
@@ -17,7 +19,7 @@ export async function uploadFile(buffer: Buffer, fileName: string): Promise<stri
       Bucket: bucketName,
       Key: key,
       Body: buffer,
-    })
+    }),
   );
 
   return key; // Return the cloud_storage_path
@@ -26,7 +28,7 @@ export async function uploadFile(buffer: Buffer, fileName: string): Promise<stri
 export async function getFileUrl(key: string): Promise<string> {
   const s3Client = await createS3Client();
   const { bucketName } = await getBucketConfig();
-  console.log('[DEBUG] getFileUrl for key:', key, 'Bucket:', bucketName);
+  console.log("[DEBUG] getFileUrl for key:", key, "Bucket:", bucketName);
 
   const command = new GetObjectCommand({
     Bucket: bucketName,
@@ -44,6 +46,6 @@ export async function deleteFile(key: string): Promise<void> {
     new DeleteObjectCommand({
       Bucket: bucketName,
       Key: key,
-    })
+    }),
   );
 }
