@@ -1,45 +1,53 @@
+"use client";
 
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
-    ResizablePanelGroup,
-    ResizablePanel,
-    ResizableHandle,
-} from '@/components/ui/resizable';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Save, Eye, Code } from 'lucide-react';
-import { toast } from 'sonner';
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { Loader2, Save, Eye, Code } from "lucide-react";
+import { toast } from "sonner";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
-import { HelpCircle } from 'lucide-react';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { HelpCircle } from "lucide-react";
 
 export interface EmailTemplateData {
-    name: string;
-    subject: string;
-    category: string;
-    description?: string;
-    contentHtml: string;
+  name: string;
+  subject: string;
+  category: string;
+  description?: string;
+  contentHtml: string;
 }
 
 interface EmailEditorProps {
-    initialData?: Partial<EmailTemplateData>;
-    onSave: (data: EmailTemplateData) => Promise<void>;
-    isSaving?: boolean;
+  initialData?: Partial<EmailTemplateData>;
+  onSave: (data: EmailTemplateData) => Promise<void>;
+  isSaving?: boolean;
 }
 
 const COMMON_VARIABLES = [
-    { category: 'Global', vars: ['businessName', 'subdomain', 'loginUrl', 'logoUrl', 'primaryColor'] },
-    { category: 'User', vars: ['userName', 'email', 'resetLink'] },
-    { category: 'Order', vars: ['orderNumber', 'total', 'shippingAddress', 'items'] },
-    { category: 'Helpers', vars: ['#each items', '/each', 'toFixed price', 'multiply price quantity'] },
+  {
+    category: "Global",
+    vars: ["businessName", "subdomain", "loginUrl", "logoUrl", "primaryColor"],
+  },
+  { category: "User", vars: ["userName", "email", "resetLink"] },
+  {
+    category: "Order",
+    vars: ["orderNumber", "total", "shippingAddress", "items"],
+  },
+  {
+    category: "Helpers",
+    vars: ["#each items", "/each", "toFixed price", "multiply price quantity"],
+  },
 ];
 
 const DEFAULT_HTML = `<!DOCTYPE html>
@@ -177,39 +185,46 @@ export const EmailEditor = ({ initialData, onSave, isSaving = false }: EmailEdit
                                     </PopoverContent>
                                 </Popover>
                             </div>
-                            <Textarea
-                                className="flex-1 resize-none rounded-none border-0 font-mono text-sm focus-visible:ring-0 p-4 leading-relaxed"
-                                value={formData.contentHtml}
-                                onChange={(e) => handleChange('contentHtml', e.target.value)}
-                                placeholder="<html>...</html>"
-                            />
-                        </div>
-                    </ResizablePanel>
-
-                    <ResizableHandle withHandle />
-
-                    {/* Right Panel: Live Preview */}
-                    <ResizablePanel defaultSize={50} minSize={30}>
-                        <div className="flex flex-col h-full bg-slate-100">
-                            <div className="bg-white border-b p-2 flex items-center justify-between">
-                                <span className="text-xs font-semibold flex items-center text-muted-foreground">
-                                    <Eye className="h-3 w-3 mr-1" /> Live Preview
-                                </span>
-                            </div>
-                            <div className="flex-1 p-4 flex items-center justify-center overflow-auto">
-                                <div className="bg-white shadow-sm w-full h-full max-w-[800px] mx-auto rounded overflow-hidden">
-                                    <iframe
-                                        srcDoc={formData.contentHtml}
-                                        className="w-full h-full border-0"
-                                        title="Email Preview"
-                                        sandbox="allow-same-origin"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </ResizablePanel>
-                </ResizablePanelGroup>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Textarea
+                className="flex-1 resize-none rounded-none border-0 font-mono text-sm focus-visible:ring-0 p-4 leading-relaxed"
+                value={formData.contentHtml}
+                onChange={(e) => handleChange("contentHtml", e.target.value)}
+                placeholder="<html>...</html>"
+              />
             </div>
-        </div>
-    );
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          {/* Right Panel: Live Preview */}
+          <ResizablePanel defaultSize={50} minSize={30}>
+            <div className="flex flex-col h-full bg-slate-100">
+              <div className="bg-white border-b p-2 flex items-center justify-between">
+                <span className="text-xs font-semibold flex items-center text-muted-foreground">
+                  <Eye className="h-3 w-3 mr-1" /> Live Preview
+                </span>
+              </div>
+              <div className="flex-1 p-4 flex items-center justify-center overflow-auto">
+                <div className="bg-white shadow-sm w-full h-full max-w-[800px] mx-auto rounded overflow-hidden">
+                  <iframe
+                    srcDoc={formData.contentHtml}
+                    className="w-full h-full border-0"
+                    title="Email Preview"
+                    sandbox="allow-same-origin"
+                  />
+                </div>
+              </div>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+    </div>
+  );
 };

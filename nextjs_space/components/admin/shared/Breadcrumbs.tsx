@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import Link from 'next/link';
-import { ChevronRight, Home } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import * as React from "react";
+import Link from "next/link";
+import { ChevronRight, Home } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /**
  * A single breadcrumb item representing a navigation segment.
@@ -28,7 +28,7 @@ export interface BreadcrumbsProps {
   /** Additional CSS classes */
   className?: string;
   /** Accessible label for the nav element */
-  'aria-label'?: string;
+  "aria-label"?: string;
 }
 
 /**
@@ -67,7 +67,7 @@ export function Breadcrumbs({
   items,
   showHomeIcon = false,
   className,
-  'aria-label': ariaLabel = 'Breadcrumb navigation',
+  "aria-label": ariaLabel = "Breadcrumb navigation",
 }: BreadcrumbsProps) {
   if (!items || items.length === 0) {
     return null;
@@ -76,10 +76,7 @@ export function Breadcrumbs({
   return (
     <nav
       aria-label={ariaLabel}
-      className={cn(
-        'flex items-center text-sm',
-        className
-      )}
+      className={cn("flex items-center text-sm", className)}
     >
       <ol className="flex items-center flex-wrap gap-1">
         {items.map((item, index) => {
@@ -101,8 +98,8 @@ export function Breadcrumbs({
                 // Current page (last item) - plain text
                 <span
                   className={cn(
-                    'font-medium text-gray-900 truncate max-w-[200px]',
-                    'transition-colors duration-150'
+                    "font-medium text-gray-900 truncate max-w-[200px]",
+                    "transition-colors duration-150",
                   )}
                   aria-current="page"
                   title={item.label}
@@ -114,18 +111,21 @@ export function Breadcrumbs({
                 <Link
                   href={item.href}
                   className={cn(
-                    'text-gray-600 hover:text-gray-900',
-                    'truncate max-w-[200px]',
-                    'transition-colors duration-150',
-                    'hover:underline underline-offset-2',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:rounded-sm',
-                    'flex items-center gap-1.5'
+                    "text-gray-600 hover:text-gray-900",
+                    "truncate max-w-[200px]",
+                    "transition-colors duration-150",
+                    "hover:underline underline-offset-2",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:rounded-sm",
+                    "flex items-center gap-1.5",
                   )}
                   title={item.label}
                 >
                   {/* Optional home icon for first item */}
                   {isFirst && showHomeIcon && (
-                    <Home className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+                    <Home
+                      className="h-3.5 w-3.5 flex-shrink-0"
+                      aria-hidden="true"
+                    />
                   )}
                   <span className="truncate">{item.label}</span>
                 </Link>
@@ -138,4 +138,4 @@ export function Breadcrumbs({
   );
 }
 
-Breadcrumbs.displayName = 'Breadcrumbs';
+Breadcrumbs.displayName = "Breadcrumbs";

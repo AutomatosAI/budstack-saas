@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { format } from 'date-fns';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import useSWR from 'swr';
+import { useState } from "react";
+import { format } from "date-fns";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import useSWR from "swr";
 import {
     Table,
     TableBody,
@@ -36,18 +36,23 @@ const fetcher = async (url: string) => {
 };
 
 interface Template {
-    id: string;
-    name: string;
-    description: string | null;
-    updatedAt: string;
-    isSystem: boolean;
-    isActive: boolean;
+  id: string;
+  name: string;
+  description: string | null;
+  updatedAt: string;
+  isSystem: boolean;
+  isActive: boolean;
 }
 
 export function TenantTemplateList() {
-    const router = useRouter();
-    const { data: templates, error, isLoading, mutate } = useSWR<Template[]>('/api/tenant-admin/email-templates', fetcher);
-    const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const router = useRouter();
+  const {
+    data: templates,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<Template[]>("/api/tenant-admin/email-templates", fetcher);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure? If this template is active, the event will revert to System Default.')) return;
@@ -92,42 +97,45 @@ export function TenantTemplateList() {
         }
     };
 
-    const handleTogglePublish = async (id: string, currentStatus: boolean) => {
-        try {
-            const res = await fetch(`/api/tenant-admin/email-templates/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isActive: !currentStatus }),
-            });
-            if (!res.ok) throw new Error('Failed to update');
-
-            toast.success(currentStatus ? 'Template disabled' : 'Template enabled');
-            mutate();
-        } catch (error) {
-            toast.error('Failed to update status');
-        }
-    };
-
-    if (isLoading) {
-        return <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+      toast.dismiss();
+      toast.success("Template cloned");
+      router.refresh();
+      router.push(`/tenant-admin/emails/${data.id}`);
+    } catch (err) {
+      toast.dismiss();
+      toast.error("Failed to clone template");
     }
+  };
 
-    if (error) {
-        return <div className="p-8 text-red-500">Failed to load templates.</div>;
+  const handleTogglePublish = async (id: string, currentStatus: boolean) => {
+    try {
+      const res = await fetch(`/api/tenant-admin/email-templates/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !currentStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+
+      toast.success(currentStatus ? "Template disabled" : "Template enabled");
+      mutate();
+    } catch (error) {
+      toast.error("Failed to update status");
     }
+  };
 
-    if (!templates || templates.length === 0) {
-        return (
-            <div className="text-center py-12 border rounded-lg bg-muted/10">
-                <h3 className="text-lg font-semibold">No Custom Templates</h3>
-                <p className="text-muted-foreground mb-4">You are using System Defaults for all emails.</p>
-                <div className="flex justify-center gap-2">
-                    <p className="text-sm">Go to <strong>Event Triggers</strong> tab to customize an event.</p>
-                </div>
-            </div>
-        );
-    }
+  if (isLoading) {
+    return (
+      <div className="p-8 flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
+  if (error) {
+    return <div className="p-8 text-red-500">Failed to load templates.</div>;
+  }
+
+  if (!templates || templates.length === 0) {
     return (
         <div className="border rounded-md overflow-hidden">
             <div className="overflow-x-auto">
@@ -206,5 +214,117 @@ export function TenantTemplateList() {
                 </Table>
             </div>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="border rounded-md overflow-hidden">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Template Name</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="hidden md:table-cell">
+                Last Updated
+              </TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {templates.map((template) => (
+              <TableRow key={template.id}>
+                <TableCell className="font-medium">
+                  {template.name}
+                  {template.description && (
+                    <div className="text-xs text-muted-foreground truncate max-w-[300px]">
+                      {template.description}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={template.isSystem ? "secondary" : "default"}
+                    className={
+                      !template.isSystem
+                        ? "bg-slate-900 override:bg-slate-700"
+                        : ""
+                    }
+                  >
+                    {template.isSystem ? "System" : "Custom"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {format(new Date(template.updatedAt), "MMM d, yyyy")}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    {template.isSystem ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleClone(template.id)}
+                        title="Clone/Customize this template"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <>
+                        <Link
+                          href={`/tenant-admin/emails/${template.id}`}
+                          passHref
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Edit Template"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            handleTogglePublish(template.id, template.isActive)
+                          }
+                          title={
+                            template.isActive
+                              ? "Disable Template"
+                              : "Enable Template"
+                          }
+                          className={
+                            template.isActive
+                              ? "text-amber-600 hover:text-amber-700"
+                              : "text-green-600 hover:text-green-700"
+                          }
+                        >
+                          {template.isActive ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(template.id)}
+                          disabled={isDeleting === template.id}
+                          className="text-destructive hover:text-destructive/90"
+                          title="Delete Template"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
 }

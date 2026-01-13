@@ -11,10 +11,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
@@ -23,8 +20,8 @@ export async function POST(req: NextRequest) {
     // Validate required fields
     if (!personal || !address || !medicalRecord) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
+        { error: "Missing required fields" },
+        { status: 400 },
       );
     }
 
@@ -50,33 +47,36 @@ export async function POST(req: NextRequest) {
     }
 
     if (!config.apiKey || !config.secretKey) {
-      console.error('Missing Dr. Green API credentials for registration');
+      console.error("Missing Dr. Green API credentials for registration");
       // Continue anyway? The createClient might fail or we should block.
       // createClient throws 'MISSING_CREDENTIALS` if keys are missing.
       // We'll let it proceed and fail inside if needed, or handle it here.
     }
 
     // Create client in Dr. Green system
-    const result = await createClient({
-      firstName: personal.firstName,
-      lastName: personal.lastName,
-      email: personal.email,
-      phone: personal.phone,
-      dateOfBirth: personal.dateOfBirth,
-      address: {
-        street: address.street,
-        city: address.city,
-        postalCode: address.postalCode,
-        country: address.country,
+    const result = await createClient(
+      {
+        firstName: personal.firstName,
+        lastName: personal.lastName,
+        email: personal.email,
+        phone: personal.phone,
+        dateOfBirth: personal.dateOfBirth,
+        address: {
+          street: address.street,
+          city: address.city,
+          postalCode: address.postalCode,
+          country: address.country,
+        },
+        medicalRecord: {
+          conditions: medicalRecord.conditions,
+          currentMedications: medicalRecord.currentMedications,
+          allergies: medicalRecord.allergies,
+          previousCannabisUse: medicalRecord.previousCannabisUse,
+          doctorApproval: medicalRecord.doctorApproval,
+        },
       },
-      medicalRecord: {
-        conditions: medicalRecord.conditions,
-        currentMedications: medicalRecord.currentMedications,
-        allergies: medicalRecord.allergies,
-        previousCannabisUse: medicalRecord.previousCannabisUse,
-        doctorApproval: medicalRecord.doctorApproval,
-      },
-    }, config);
+      config,
+    );
 
     // Update user with additional info
     await prisma.users.update({
@@ -92,10 +92,10 @@ export async function POST(req: NextRequest) {
       kycLink: result.kycLink,
     });
   } catch (error: any) {
-    console.error('Patient registration error:', error);
+    console.error("Patient registration error:", error);
     return NextResponse.json(
-      { error: error.message || 'Failed to register patient' },
-      { status: 500 }
+      { error: error.message || "Failed to register patient" },
+      { status: 500 },
     );
   }
 }

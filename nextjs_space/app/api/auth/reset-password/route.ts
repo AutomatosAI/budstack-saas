@@ -10,10 +10,7 @@ export async function POST(request: NextRequest) {
     const { email } = await request.json();
 
     if (!email) {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
     const tenant = await getCurrentTenant();
@@ -26,12 +23,13 @@ export async function POST(request: NextRequest) {
     // Always return success to prevent email enumeration
     if (!user) {
       return NextResponse.json({
-        message: 'If an account exists with this email, you will receive password reset instructions.',
+        message:
+          "If an account exists with this email, you will receive password reset instructions.",
       });
     }
 
     // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString("hex");
     const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
 
     // Save token to database
@@ -44,29 +42,34 @@ export async function POST(request: NextRequest) {
     });
 
     // Create reset link
-    const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/reset-password/${resetToken}`;
+    const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/reset-password/${resetToken}`;
 
     // Send password reset email
     // Send password reset email
-    const html = await emailTemplates.passwordReset(user.name || 'User', resetLink, 'BudStack');
+    const html = await emailTemplates.passwordReset(
+      user.name || "User",
+      resetLink,
+      "BudStack",
+    );
     await sendEmail({
       to: email,
-      subject: 'Password Reset Request',
+      subject: "Password Reset Request",
       html,
-      tenantId: user.tenantId || 'SYSTEM',
-      templateName: 'passwordReset',
+      tenantId: user.tenantId || "SYSTEM",
+      templateName: "passwordReset",
     }).catch((error) => {
-      console.error('Failed to send password reset email:', error);
+      console.error("Failed to send password reset email:", error);
     });
 
     return NextResponse.json({
-      message: 'If an account exists with this email, you will receive password reset instructions.',
+      message:
+        "If an account exists with this email, you will receive password reset instructions.",
     });
   } catch (error) {
-    console.error('Password reset error:', error);
+    console.error("Password reset error:", error);
     return NextResponse.json(
-      { error: 'Failed to process password reset request' },
-      { status: 500 }
+      { error: "Failed to process password reset request" },
+      { status: 500 },
     );
   }
 }

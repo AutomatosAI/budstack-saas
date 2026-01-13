@@ -1,90 +1,107 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { decrypt } from '@/lib/encryption';
-import nodemailer from 'nodemailer';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { decrypt } from "@/lib/encryption";
+import nodemailer from "nodemailer";
 
 export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || session.user.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { testEmail } = body;
+
+    if (!testEmail) {
+      return NextResponse.json(
+        { error: "Test email address is required" },
+        { status: 400 },
+      );
+    }
+
+    // Fetch platform config to get SMTP settings
+    const config = await prisma.platform_config.findUnique({
+      where: { id: "config" },
+    });
+
+    if (!config?.emailServer) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "No SMTP configuration found. Please save your SMTP settings first.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Decrypt the email server URL
+    let smtpUrl: string;
     try {
-        const session = await getServerSession(authOptions);
+      smtpUrl = decrypt(config.emailServer);
+      if (!smtpUrl) {
+        throw new Error("Decryption failed");
+      }
+    } catch (err) {
+      console.error("SMTP decryption error:", err);
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Failed to decrypt SMTP configuration. Please re-enter your SMTP settings.",
+        },
+        { status: 400 },
+      );
+    }
 
-        if (!session || session.user.role !== 'SUPER_ADMIN') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+    // Create nodemailer transporter
+    let transporter;
+    try {
+      transporter = nodemailer.createTransport(smtpUrl);
+    } catch (err: any) {
+      console.error("SMTP transporter creation error:", err);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Invalid SMTP URL format: ${err.message}`,
+        },
+        { status: 400 },
+      );
+    }
 
-        const body = await req.json();
-        const { testEmail } = body;
+    // Verify SMTP connection
+    try {
+      console.log("[SMTP Test] Verifying connection...");
+      await transporter.verify();
+      console.log("[SMTP Test] Connection verified!");
+    } catch (err: any) {
+      console.error("[SMTP Test] Connection verification failed:", err);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `SMTP connection failed: ${err.message}`,
+          details: {
+            code: err.code,
+            command: err.command,
+          },
+        },
+        { status: 400 },
+      );
+    }
 
-        if (!testEmail) {
-            return NextResponse.json({ error: 'Test email address is required' }, { status: 400 });
-        }
-
-        // Fetch platform config to get SMTP settings
-        const config = await prisma.platform_config.findUnique({
-            where: { id: 'config' },
-        });
-
-        if (!config?.emailServer) {
-            return NextResponse.json({
-                success: false,
-                error: 'No SMTP configuration found. Please save your SMTP settings first.'
-            }, { status: 400 });
-        }
-
-        // Decrypt the email server URL
-        let smtpUrl: string;
-        try {
-            smtpUrl = decrypt(config.emailServer);
-            if (!smtpUrl) {
-                throw new Error('Decryption failed');
-            }
-        } catch (err) {
-            console.error('SMTP decryption error:', err);
-            return NextResponse.json({
-                success: false,
-                error: 'Failed to decrypt SMTP configuration. Please re-enter your SMTP settings.'
-            }, { status: 400 });
-        }
-
-        // Create nodemailer transporter
-        let transporter;
-        try {
-            transporter = nodemailer.createTransport(smtpUrl);
-        } catch (err: any) {
-            console.error('SMTP transporter creation error:', err);
-            return NextResponse.json({
-                success: false,
-                error: `Invalid SMTP URL format: ${err.message}`
-            }, { status: 400 });
-        }
-
-        // Verify SMTP connection
-        try {
-            console.log('[SMTP Test] Verifying connection...');
-            await transporter.verify();
-            console.log('[SMTP Test] Connection verified!');
-        } catch (err: any) {
-            console.error('[SMTP Test] Connection verification failed:', err);
-            return NextResponse.json({
-                success: false,
-                error: `SMTP connection failed: ${err.message}`,
-                details: {
-                    code: err.code,
-                    command: err.command,
-                }
-            }, { status: 400 });
-        }
-
-        // Send test email
-        const fromAddress = config.emailFrom || 'noreply@budstack.to';
-        try {
-            console.log(`[SMTP Test] Sending test email to ${testEmail}...`);
-            const info = await transporter.sendMail({
-                from: fromAddress,
-                to: testEmail,
-                subject: '🧪 BudStack SMTP Test - Connection Successful!',
-                html: `
+    // Send test email
+    const fromAddress = config.emailFrom || "noreply@budstack.to";
+    try {
+      console.log(`[SMTP Test] Sending test email to ${testEmail}...`);
+      const info = await transporter.sendMail({
+        from: fromAddress,
+        to: testEmail,
+        subject: "🧪 BudStack SMTP Test - Connection Successful!",
+        html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                         <div style="background: linear-gradient(135deg, #059669, #047857); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
                             <h1 style="color: white; margin: 0;">✅ SMTP Test Successful!</h1>
@@ -104,33 +121,38 @@ export async function POST(req: NextRequest) {
                         </div>
                     </div>
                 `,
-            });
+      });
 
-            console.log(`[SMTP Test] Email sent successfully: ${info.messageId}`);
+      console.log(`[SMTP Test] Email sent successfully: ${info.messageId}`);
 
-            return NextResponse.json({
-                success: true,
-                message: `Test email sent successfully to ${testEmail}`,
-                messageId: info.messageId,
-            });
-        } catch (err: any) {
-            console.error('[SMTP Test] Send email failed:', err);
-            return NextResponse.json({
-                success: false,
-                error: `Failed to send test email: ${err.message}`,
-                details: {
-                    code: err.code,
-                    command: err.command,
-                    response: err.response,
-                }
-            }, { status: 400 });
-        }
-
-    } catch (error: any) {
-        console.error('Error testing SMTP:', error);
-        return NextResponse.json(
-            { success: false, error: error.message || 'Failed to test SMTP connection' },
-            { status: 500 }
-        );
+      return NextResponse.json({
+        success: true,
+        message: `Test email sent successfully to ${testEmail}`,
+        messageId: info.messageId,
+      });
+    } catch (err: any) {
+      console.error("[SMTP Test] Send email failed:", err);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Failed to send test email: ${err.message}`,
+          details: {
+            code: err.code,
+            command: err.command,
+            response: err.response,
+          },
+        },
+        { status: 400 },
+      );
     }
+  } catch (error: any) {
+    console.error("Error testing SMTP:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || "Failed to test SMTP connection",
+      },
+      { status: 500 },
+    );
+  }
 }

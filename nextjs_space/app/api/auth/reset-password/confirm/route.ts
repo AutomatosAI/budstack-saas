@@ -1,7 +1,6 @@
-
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import bcrypt from 'bcryptjs';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,15 +8,15 @@ export async function POST(request: NextRequest) {
 
     if (!token || !password) {
       return NextResponse.json(
-        { error: 'Token and password are required' },
-        { status: 400 }
+        { error: "Token and password are required" },
+        { status: 400 },
       );
     }
 
     if (password.length < 8) {
       return NextResponse.json(
-        { error: 'Password must be at least 8 characters' },
-        { status: 400 }
+        { error: "Password must be at least 8 characters" },
+        { status: 400 },
       );
     }
 
@@ -28,16 +27,16 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid or expired reset token' },
-        { status: 400 }
+        { error: "Invalid or expired reset token" },
+        { status: 400 },
       );
     }
 
     // Check if token is expired
     if (!user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
       return NextResponse.json(
-        { error: 'Reset token has expired' },
-        { status: 400 }
+        { error: "Reset token has expired" },
+        { status: 400 },
       );
     }
 
@@ -55,13 +54,13 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      message: 'Password reset successfully',
+      message: "Password reset successfully",
     });
   } catch (error) {
-    console.error('Password reset confirmation error:', error);
+    console.error("Password reset confirmation error:", error);
     return NextResponse.json(
-      { error: 'Failed to reset password' },
-      { status: 500 }
+      { error: "Failed to reset password" },
+      { status: 500 },
     );
   }
 }

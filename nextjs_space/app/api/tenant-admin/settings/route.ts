@@ -9,8 +9,11 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.user.role || '')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (
+      !session ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.users.findUnique({
@@ -19,7 +22,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user?.tenants) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
     const body = await req.json();
@@ -34,7 +37,7 @@ export async function POST(req: NextRequest) {
       smtpUser,
       smtpPassword,
       smtpFromEmail,
-      smtpFromName
+      smtpFromName,
     } = body;
 
     const dataToUpdate: any = {
@@ -47,32 +50,41 @@ export async function POST(req: NextRequest) {
     const smtpSettings = {
       ...currentSettings.smtp, // keep existing (e.g. if partial update)
       host: smtpHost,
-      port: parseInt(smtpPort || '587'),
+      port: parseInt(smtpPort || "587"),
       user: smtpUser,
       fromEmail: smtpFromEmail,
       fromName: smtpFromName,
     };
 
     // Handle Password Encryption
-    if (smtpPassword && smtpPassword.trim() !== '') {
+    if (smtpPassword && smtpPassword.trim() !== "") {
       try {
         smtpSettings.password = encrypt(smtpPassword);
       } catch (e) {
-        console.error('SMTP Password Encryption failed:', e);
+        console.error("SMTP Password Encryption failed:", e);
       }
     }
 
     // Merge into settings
     dataToUpdate.settings = {
       ...currentSettings,
-      smtp: smtpSettings
+      smtp: smtpSettings,
     };
 
     // Only update secret key if a new one is provided (non-empty)
-    if (drGreenSecretKey && drGreenSecretKey.trim() !== '') {
-      console.log('Encrypting new secret key...');
+    if (drGreenSecretKey && drGreenSecretKey.trim() !== "") {
+      console.log("Encrypting new secret key...");
       try {
         dataToUpdate.drGreenSecretKey = encrypt(drGreenSecretKey);
+      } catch (e) {
+        console.error("Encryption failed:", e);
+        throw e;
+      }
+    }
+
+    if (drGreenApiKey && drGreenApiKey.trim() !== '') {
+      try {
+        dataToUpdate.drGreenApiKey = encrypt(drGreenApiKey);
       } catch (e) {
         console.error('Encryption failed:', e);
         throw e;
@@ -119,10 +131,10 @@ export async function POST(req: NextRequest) {
     console.log('Settings updated successfully');
     return NextResponse.json({ success: true, message: 'Settings updated successfully' });
   } catch (error) {
-    console.error('Error updating settings detailed:', error);
+    console.error("Error updating settings detailed:", error);
     return NextResponse.json(
-      { error: 'Failed to update settings' },
-      { status: 500 }
+      { error: "Failed to update settings" },
+      { status: 500 },
     );
   }
 }

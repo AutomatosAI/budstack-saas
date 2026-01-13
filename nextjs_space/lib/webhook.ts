@@ -1,13 +1,12 @@
-
 /**
  * Webhook System
- * 
+ *
  * Sends real-time event notifications to external systems.
  * Includes signature verification (HMAC SHA256), retry logic, and delivery tracking.
  */
 
-import { prisma } from '@/lib/db';
-import crypto from 'crypto';
+import { prisma } from "@/lib/db";
+import crypto from "crypto";
 
 export interface WebhookEvent {
   event: string;
@@ -18,7 +17,7 @@ export interface WebhookEvent {
 
 /**
  * Trigger webhooks for a specific event
- * 
+ *
  * @example
  * ```ts
  * await triggerWebhook({
@@ -65,10 +64,10 @@ export async function triggerWebhook(params: {
 
     // Trigger all webhooks in parallel
     await Promise.allSettled(
-      webhooks.map((webhook: any) => deliverWebhook(webhook.id, payload))
+      webhooks.map((webhook: any) => deliverWebhook(webhook.id, payload)),
     );
   } catch (error) {
-    console.error('[Webhook] Failed to trigger webhooks:', error);
+    console.error("[Webhook] Failed to trigger webhooks:", error);
   }
 }
 
@@ -78,7 +77,7 @@ export async function triggerWebhook(params: {
 async function deliverWebhook(
   webhookId: string,
   payload: WebhookEvent,
-  attemptCount: number = 1
+  attemptCount: number = 1,
 ): Promise<void> {
   try {
     const webhook = await prisma.webhooks.findUnique({
@@ -94,17 +93,17 @@ async function deliverWebhook(
 
     // Send webhook
     const response = await fetch(webhook.url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'X-Webhook-Signature': signature,
-        'X-Webhook-Event': payload.event,
-        'User-Agent': 'BudStack-Webhooks/1.0',
+        "Content-Type": "application/json",
+        "X-Webhook-Signature": signature,
+        "X-Webhook-Event": payload.event,
+        "User-Agent": "BudStack-Webhooks/1.0",
       },
       body: JSON.stringify(payload),
     });
 
-    const responseText = await response.text().catch(() => '');
+    const responseText = await response.text().catch(() => "");
     const success = response.status >= 200 && response.status < 300;
 
     // Log delivery
@@ -123,7 +122,10 @@ async function deliverWebhook(
     // Retry logic for failed deliveries
     if (!success && attemptCount < 3) {
       const retryDelay = Math.pow(2, attemptCount) * 1000; // Exponential backoff
-      setTimeout(() => deliverWebhook(webhookId, payload, attemptCount + 1), retryDelay);
+      setTimeout(
+        () => deliverWebhook(webhookId, payload, attemptCount + 1),
+        retryDelay,
+      );
     }
   } catch (error) {
     console.error(`[Webhook] Delivery failed for webhook ${webhookId}:`, error);
@@ -136,33 +138,39 @@ async function deliverWebhook(
         payload: payload as any,
         success: false,
         attemptCount,
-        response: error instanceof Error ? error.message : 'Unknown error',
+        response: error instanceof Error ? error.message : "Unknown error",
       },
     });
 
     // Retry logic
     if (attemptCount < 3) {
       const retryDelay = Math.pow(2, attemptCount) * 1000;
-      setTimeout(() => deliverWebhook(webhookId, payload, attemptCount + 1), retryDelay);
+      setTimeout(
+        () => deliverWebhook(webhookId, payload, attemptCount + 1),
+        retryDelay,
+      );
     }
   }
 }
 
 /**
  * Generate HMAC SHA256 signature for webhook payload
- * 
+ *
  * Recipients can verify the webhook came from BudStack by computing
  * the same signature and comparing with the X-Webhook-Signature header.
  */
-function generateWebhookSignature(payload: WebhookEvent, secret: string): string {
-  const hmac = crypto.createHmac('sha256', secret);
+function generateWebhookSignature(
+  payload: WebhookEvent,
+  secret: string,
+): string {
+  const hmac = crypto.createHmac("sha256", secret);
   hmac.update(JSON.stringify(payload));
-  return hmac.digest('hex');
+  return hmac.digest("hex");
 }
 
 /**
  * Verify webhook signature (for webhook consumers)
- * 
+ *
  * @example
  * ```ts
  * const isValid = verifyWebhookSignature(
@@ -175,7 +183,7 @@ function generateWebhookSignature(payload: WebhookEvent, secret: string): string
 export function verifyWebhookSignature(
   payload: WebhookEvent,
   signature: string,
-  secret: string
+  secret: string,
 ): boolean {
   const expectedSignature = generateWebhookSignature(payload, secret);
   const signatureBuffer = Buffer.from(signature);
@@ -193,35 +201,35 @@ export function verifyWebhookSignature(
  */
 export const WEBHOOK_EVENTS = {
   // Tenant Events
-  TENANT_CREATED: 'tenant.created',
-  TENANT_UPDATED: 'tenant.updated',
-  TENANT_ACTIVATED: 'tenant.activated',
-  TENANT_DEACTIVATED: 'tenant.deactivated',
+  TENANT_CREATED: "tenant.created",
+  TENANT_UPDATED: "tenant.updated",
+  TENANT_ACTIVATED: "tenant.activated",
+  TENANT_DEACTIVATED: "tenant.deactivated",
 
   // Product Events
-  PRODUCT_CREATED: 'product.created',
-  PRODUCT_UPDATED: 'product.updated',
-  PRODUCT_DELETED: 'product.deleted',
-  PRODUCT_LOW_STOCK: 'product.low_stock',
-  PRODUCT_OUT_OF_STOCK: 'product.out_of_stock',
+  PRODUCT_CREATED: "product.created",
+  PRODUCT_UPDATED: "product.updated",
+  PRODUCT_DELETED: "product.deleted",
+  PRODUCT_LOW_STOCK: "product.low_stock",
+  PRODUCT_OUT_OF_STOCK: "product.out_of_stock",
 
   // Order Events
-  ORDER_CREATED: 'order.created',
-  ORDER_CONFIRMED: 'order.confirmed',
-  ORDER_SHIPPED: 'order.shipped',
-  ORDER_DELIVERED: 'order.delivered',
-  ORDER_CANCELLED: 'order.cancelled',
+  ORDER_CREATED: "order.created",
+  ORDER_CONFIRMED: "order.confirmed",
+  ORDER_SHIPPED: "order.shipped",
+  ORDER_DELIVERED: "order.delivered",
+  ORDER_CANCELLED: "order.cancelled",
 
   // Consultation Events
-  CONSULTATION_SUBMITTED: 'consultation.submitted',
-  CONSULTATION_APPROVED: 'consultation.approved',
-  CONSULTATION_REJECTED: 'consultation.rejected',
+  CONSULTATION_SUBMITTED: "consultation.submitted",
+  CONSULTATION_APPROVED: "consultation.approved",
+  CONSULTATION_REJECTED: "consultation.rejected",
 
   // Dr. Green Payment Events
-  DRGREEN_PAYMENT_RECEIVED: 'drgreen.payment_received',
-  DRGREEN_PAYMENT_FAILED: 'drgreen.payment_failed',
-  DRGREEN_ORDER_CREATED: 'drgreen.order_created',
-  DRGREEN_ORDER_APPROVED: 'drgreen.order_approved',
+  DRGREEN_PAYMENT_RECEIVED: "drgreen.payment_received",
+  DRGREEN_PAYMENT_FAILED: "drgreen.payment_failed",
+  DRGREEN_ORDER_CREATED: "drgreen.order_created",
+  DRGREEN_ORDER_APPROVED: "drgreen.order_approved",
 } as const;
 
 /**
@@ -229,40 +237,52 @@ export const WEBHOOK_EVENTS = {
  */
 export const WEBHOOK_EVENT_CATEGORIES = [
   {
-    name: 'Tenant Events',
+    name: "Tenant Events",
     events: [
-      { value: WEBHOOK_EVENTS.TENANT_CREATED, label: 'Tenant Created' },
-      { value: WEBHOOK_EVENTS.TENANT_UPDATED, label: 'Tenant Updated' },
-      { value: WEBHOOK_EVENTS.TENANT_ACTIVATED, label: 'Tenant Activated' },
-      { value: WEBHOOK_EVENTS.TENANT_DEACTIVATED, label: 'Tenant Deactivated' },
+      { value: WEBHOOK_EVENTS.TENANT_CREATED, label: "Tenant Created" },
+      { value: WEBHOOK_EVENTS.TENANT_UPDATED, label: "Tenant Updated" },
+      { value: WEBHOOK_EVENTS.TENANT_ACTIVATED, label: "Tenant Activated" },
+      { value: WEBHOOK_EVENTS.TENANT_DEACTIVATED, label: "Tenant Deactivated" },
     ],
   },
   {
-    name: 'Product Events',
+    name: "Product Events",
     events: [
-      { value: WEBHOOK_EVENTS.PRODUCT_CREATED, label: 'Product Created' },
-      { value: WEBHOOK_EVENTS.PRODUCT_UPDATED, label: 'Product Updated' },
-      { value: WEBHOOK_EVENTS.PRODUCT_DELETED, label: 'Product Deleted' },
-      { value: WEBHOOK_EVENTS.PRODUCT_LOW_STOCK, label: 'Product Low Stock' },
-      { value: WEBHOOK_EVENTS.PRODUCT_OUT_OF_STOCK, label: 'Product Out of Stock' },
+      { value: WEBHOOK_EVENTS.PRODUCT_CREATED, label: "Product Created" },
+      { value: WEBHOOK_EVENTS.PRODUCT_UPDATED, label: "Product Updated" },
+      { value: WEBHOOK_EVENTS.PRODUCT_DELETED, label: "Product Deleted" },
+      { value: WEBHOOK_EVENTS.PRODUCT_LOW_STOCK, label: "Product Low Stock" },
+      {
+        value: WEBHOOK_EVENTS.PRODUCT_OUT_OF_STOCK,
+        label: "Product Out of Stock",
+      },
     ],
   },
   {
-    name: 'Order Events',
+    name: "Order Events",
     events: [
-      { value: WEBHOOK_EVENTS.ORDER_CREATED, label: 'Order Created' },
-      { value: WEBHOOK_EVENTS.ORDER_CONFIRMED, label: 'Order Confirmed' },
-      { value: WEBHOOK_EVENTS.ORDER_SHIPPED, label: 'Order Shipped' },
-      { value: WEBHOOK_EVENTS.ORDER_DELIVERED, label: 'Order Delivered' },
-      { value: WEBHOOK_EVENTS.ORDER_CANCELLED, label: 'Order Cancelled' },
+      { value: WEBHOOK_EVENTS.ORDER_CREATED, label: "Order Created" },
+      { value: WEBHOOK_EVENTS.ORDER_CONFIRMED, label: "Order Confirmed" },
+      { value: WEBHOOK_EVENTS.ORDER_SHIPPED, label: "Order Shipped" },
+      { value: WEBHOOK_EVENTS.ORDER_DELIVERED, label: "Order Delivered" },
+      { value: WEBHOOK_EVENTS.ORDER_CANCELLED, label: "Order Cancelled" },
     ],
   },
   {
-    name: 'Consultation Events',
+    name: "Consultation Events",
     events: [
-      { value: WEBHOOK_EVENTS.CONSULTATION_SUBMITTED, label: 'Consultation Submitted' },
-      { value: WEBHOOK_EVENTS.CONSULTATION_APPROVED, label: 'Consultation Approved' },
-      { value: WEBHOOK_EVENTS.CONSULTATION_REJECTED, label: 'Consultation Rejected' },
+      {
+        value: WEBHOOK_EVENTS.CONSULTATION_SUBMITTED,
+        label: "Consultation Submitted",
+      },
+      {
+        value: WEBHOOK_EVENTS.CONSULTATION_APPROVED,
+        label: "Consultation Approved",
+      },
+      {
+        value: WEBHOOK_EVENTS.CONSULTATION_REJECTED,
+        label: "Consultation Rejected",
+      },
     ],
   },
 ];

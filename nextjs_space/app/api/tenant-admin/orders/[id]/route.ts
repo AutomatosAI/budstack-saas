@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
 /**
  * GET /api/tenant-admin/orders/[id]
@@ -11,16 +11,13 @@ import { prisma } from '@/lib/db';
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Fetch user's tenant
@@ -31,8 +28,8 @@ export async function GET(
 
     if (!user?.tenantId) {
       return NextResponse.json(
-        { error: 'No tenant associated with user' },
-        { status: 403 }
+        { error: "No tenant associated with user" },
+        { status: 403 },
       );
     }
 
@@ -74,10 +71,7 @@ export async function GET(
     });
 
     if (!order) {
-      return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
     // Transform data to match expected format
@@ -92,24 +86,24 @@ export async function GET(
       items: order.items,
       user: {
         name: order.users?.name || null,
-        email: order.users?.email || 'N/A',
+        email: order.users?.email || "N/A",
       },
       shippingAddress: {
-        street: order.shippingAddress || 'Not provided',
-        city: order.shippingCity || 'N/A',
-        state: order.shippingState || 'N/A',
-        postalCode: order.shippingPostalCode || 'N/A',
-        country: order.shippingCountry || 'N/A',
+        street: order.shippingAddress || "Not provided",
+        city: order.shippingCity || "N/A",
+        state: order.shippingState || "N/A",
+        postalCode: order.shippingPostalCode || "N/A",
+        country: order.shippingCountry || "N/A",
         phone: order.phone || undefined,
       },
     };
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching order:', error);
+    console.error("Error fetching order:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch order' },
-      { status: 500 }
+      { error: "Failed to fetch order" },
+      { status: 500 },
     );
   }
 }

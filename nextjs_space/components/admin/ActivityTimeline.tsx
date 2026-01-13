@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import React from 'react'
-import Link from 'next/link'
+import React from "react";
+import Link from "next/link";
 import {
   Building2,
   CheckCircle2,
@@ -17,115 +17,122 @@ import { generateMockEvents } from '@/lib/mock-data'
 
 // Event type definitions
 export type EventType =
-  | 'TENANT_CREATED'
-  | 'TENANT_ACTIVATED'
-  | 'USER_REGISTERED'
-  | 'ORDER_PLACED'
-  | 'TENANT_SETTINGS_UPDATED'
-  | 'SYSTEM_ALERT'
+  | "TENANT_CREATED"
+  | "TENANT_ACTIVATED"
+  | "USER_REGISTERED"
+  | "ORDER_PLACED"
+  | "TENANT_SETTINGS_UPDATED"
+  | "SYSTEM_ALERT";
 
 export interface TimelineEvent {
-  id: string
-  type: EventType
-  description: string
-  timestamp: Date
-  actor?: string // Name of the user who performed the action
-  metadata?: Record<string, any> // Additional context
+  id: string;
+  type: EventType;
+  description: string;
+  timestamp: Date;
+  actor?: string; // Name of the user who performed the action
+  metadata?: Record<string, any>; // Additional context
 }
 
 export interface ActivityTimelineProps {
-  events: TimelineEvent[]
-  className?: string
-  maxVisible?: number
-  showViewAll?: boolean
+  events: TimelineEvent[];
+  className?: string;
+  maxVisible?: number;
+  showViewAll?: boolean;
 }
 
 // Event type configuration with icons and colors
-const eventConfig: Record<EventType, {
-  icon: React.ComponentType<{ className?: string }>,
-  color: string,
-  bgGlow: string,
-  label: string
-}> = {
+const eventConfig: Record<
+  EventType,
+  {
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+    bgGlow: string;
+    label: string;
+  }
+> = {
   TENANT_CREATED: {
     icon: Building2,
-    color: 'text-cyan-400',
-    bgGlow: 'bg-cyan-500/10',
-    label: 'Tenant Created'
+    color: "text-cyan-400",
+    bgGlow: "bg-cyan-500/10",
+    label: "Tenant Created",
   },
   TENANT_ACTIVATED: {
     icon: CheckCircle2,
-    color: 'text-emerald-400',
-    bgGlow: 'bg-emerald-500/10',
-    label: 'Tenant Activated'
+    color: "text-emerald-400",
+    bgGlow: "bg-emerald-500/10",
+    label: "Tenant Activated",
   },
   USER_REGISTERED: {
     icon: UserPlus,
-    color: 'text-blue-400',
-    bgGlow: 'bg-blue-500/10',
-    label: 'User Registered'
+    color: "text-blue-400",
+    bgGlow: "bg-blue-500/10",
+    label: "User Registered",
   },
   ORDER_PLACED: {
     icon: ShoppingBag,
-    color: 'text-purple-400',
-    bgGlow: 'bg-purple-500/10',
-    label: 'Order Placed'
+    color: "text-purple-400",
+    bgGlow: "bg-purple-500/10",
+    label: "Order Placed",
   },
   TENANT_SETTINGS_UPDATED: {
     icon: Settings,
-    color: 'text-slate-400',
-    bgGlow: 'bg-slate-500/10',
-    label: 'Settings Updated'
+    color: "text-slate-400",
+    bgGlow: "bg-slate-500/10",
+    label: "Settings Updated",
   },
   SYSTEM_ALERT: {
     icon: AlertTriangle,
-    color: 'text-amber-400',
-    bgGlow: 'bg-amber-500/10',
-    label: 'System Alert'
-  }
-}
+    color: "text-amber-400",
+    bgGlow: "bg-amber-500/10",
+    label: "System Alert",
+  },
+};
 
 // Format timestamp with tactical precision
-function formatTimestamp(date: Date): { time: string; date: string; relative: string } {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
+function formatTimestamp(date: Date): {
+  time: string;
+  date: string;
+  relative: string;
+} {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
 
-  let relative = ''
-  if (diffMins < 1) relative = 'Just now'
-  else if (diffMins < 60) relative = `${diffMins}m ago`
-  else if (diffHours < 24) relative = `${diffHours}h ago`
-  else if (diffDays < 7) relative = `${diffDays}d ago`
-  else relative = date.toLocaleDateString()
+  let relative = "";
+  if (diffMins < 1) relative = "Just now";
+  else if (diffMins < 60) relative = `${diffMins}m ago`;
+  else if (diffHours < 24) relative = `${diffHours}h ago`;
+  else if (diffDays < 7) relative = `${diffDays}d ago`;
+  else relative = date.toLocaleDateString();
 
-  const time = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  })
+  const time = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
 
-  const dateStr = date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  })
+  const dateStr = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
-  return { time, date: dateStr, relative }
+  return { time, date: dateStr, relative };
 }
 
 export function ActivityTimeline({
   events,
   className,
   maxVisible = 20,
-  showViewAll = true
+  showViewAll = true,
 }: ActivityTimelineProps) {
-  const displayEvents = events.slice(0, maxVisible)
+  const displayEvents = events.slice(0, maxVisible);
 
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn("relative", className)}>
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -167,16 +174,18 @@ export function ActivityTimeline({
         {displayEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-700 bg-slate-900/30 py-12">
             <Activity className="mb-3 h-12 w-12 text-slate-600" />
-            <p className="font-mono text-sm text-slate-500">No recent activity</p>
+            <p className="font-mono text-sm text-slate-500">
+              No recent activity
+            </p>
             <p className="font-mono text-xs text-slate-600">
               Events will appear here in real-time
             </p>
           </div>
         ) : (
           displayEvents.map((event, index) => {
-            const config = eventConfig[event.type]
-            const Icon = config.icon
-            const timestamp = formatTimestamp(event.timestamp)
+            const config = eventConfig[event.type];
+            const Icon = config.icon;
+            const timestamp = formatTimestamp(event.timestamp);
 
             return (
               <div
@@ -184,15 +193,15 @@ export function ActivityTimeline({
                 className="group animate-fade-in-up"
                 style={{
                   animationDelay: `${index * 50}ms`,
-                  animationFillMode: 'backwards'
+                  animationFillMode: "backwards",
                 }}
               >
                 <div className="relative overflow-hidden rounded-lg border border-slate-700/50 bg-gradient-to-br from-slate-900 to-slate-950 p-4 transition-all hover:border-slate-600 hover:shadow-lg hover:shadow-slate-900/50">
                   {/* Background glow effect */}
                   <div
                     className={cn(
-                      'absolute right-0 top-0 h-full w-32 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100',
-                      config.bgGlow
+                      "absolute right-0 top-0 h-full w-32 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100",
+                      config.bgGlow,
                     )}
                   />
 
@@ -202,28 +211,34 @@ export function ActivityTimeline({
                     <div className="relative shrink-0">
                       {/* Hex border effect */}
                       <div className="absolute inset-0 rotate-90">
-                        <div className={cn(
-                          'h-full w-full opacity-20 transition-opacity group-hover:opacity-40',
-                          'border-2 border-l-0 border-r-0',
-                          config.color.replace('text-', 'border-')
-                        )} />
+                        <div
+                          className={cn(
+                            "h-full w-full opacity-20 transition-opacity group-hover:opacity-40",
+                            "border-2 border-l-0 border-r-0",
+                            config.color.replace("text-", "border-"),
+                          )}
+                        />
                       </div>
 
                       {/* Icon container */}
-                      <div className={cn(
-                        'relative flex h-10 w-10 items-center justify-center rounded-lg ring-1 transition-all',
-                        config.bgGlow,
-                        config.color.replace('text-', 'ring-'),
-                        'group-hover:scale-110'
-                      )}>
-                        <Icon className={cn('h-5 w-5', config.color)} />
+                      <div
+                        className={cn(
+                          "relative flex h-10 w-10 items-center justify-center rounded-lg ring-1 transition-all",
+                          config.bgGlow,
+                          config.color.replace("text-", "ring-"),
+                          "group-hover:scale-110",
+                        )}
+                      >
+                        <Icon className={cn("h-5 w-5", config.color)} />
 
                         {/* Pulse effect for recent events */}
                         {index < 3 && (
-                          <div className={cn(
-                            'absolute inset-0 animate-ping rounded-lg opacity-20',
-                            config.bgGlow
-                          )} />
+                          <div
+                            className={cn(
+                              "absolute inset-0 animate-ping rounded-lg opacity-20",
+                              config.bgGlow,
+                            )}
+                          />
                         )}
                       </div>
                     </div>
@@ -237,7 +252,10 @@ export function ActivityTimeline({
                           </p>
                           {event.actor && (
                             <p className="mt-0.5 font-mono text-xs text-slate-500">
-                              by <span className="text-slate-400">{event.actor}</span>
+                              by{" "}
+                              <span className="text-slate-400">
+                                {event.actor}
+                              </span>
                             </p>
                           )}
                         </div>
@@ -255,10 +273,12 @@ export function ActivityTimeline({
 
                       {/* Event type badge */}
                       <div className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-slate-800/50 px-2 py-0.5 ring-1 ring-slate-700/50">
-                        <div className={cn(
-                          'h-1.5 w-1.5 rounded-full',
-                          config.color.replace('text-', 'bg-')
-                        )} />
+                        <div
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            config.color.replace("text-", "bg-"),
+                          )}
+                        />
                         <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-slate-400">
                           {config.label}
                         </span>
@@ -268,14 +288,16 @@ export function ActivityTimeline({
 
                   {/* Decorative corner accent */}
                   <div className="absolute bottom-0 right-0 h-8 w-8 opacity-10">
-                    <div className={cn(
-                      'h-full w-full border-b-2 border-r-2',
-                      config.color.replace('text-', 'border-')
-                    )} />
+                    <div
+                      className={cn(
+                        "h-full w-full border-b-2 border-r-2",
+                        config.color.replace("text-", "border-"),
+                      )}
+                    />
                   </div>
                 </div>
               </div>
-            )
+            );
           })
         )}
       </div>
@@ -286,11 +308,14 @@ export function ActivityTimeline({
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
             <span className="font-mono text-xs text-slate-500">
-              Monitoring <span className="font-bold text-slate-400">{events.length}</span> events
+              Monitoring{" "}
+              <span className="font-bold text-slate-400">{events.length}</span>{" "}
+              events
             </span>
           </div>
           <span className="font-mono text-xs text-slate-600">
-            Last updated: {new Date().toLocaleTimeString('en-US', { hour12: false })}
+            Last updated:{" "}
+            {new Date().toLocaleTimeString("en-US", { hour12: false })}
           </span>
         </div>
       )}
@@ -325,7 +350,7 @@ export function ActivityTimeline({
         }
       `}</style>
     </div>
-  )
+  );
 }
 
 export { generateMockEvents }

@@ -1,13 +1,18 @@
+"use client";
 
-'use client';
-
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { toast } from '@/components/ui/sonner';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/sonner";
 
 interface SettingsFormProps {
   tenant: {
@@ -33,34 +38,34 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
     drGreenApiKey: '',
     drGreenSecretKey: '', // Always start empty for security
     // SMTP (from settings json)
-    smtpHost: tenant.settings?.smtp?.host || '',
-    smtpPort: tenant.settings?.smtp?.port || '587',
-    smtpUser: tenant.settings?.smtp?.user || '',
-    smtpPassword: '',
-    smtpFromEmail: tenant.settings?.smtp?.fromEmail || '',
-    smtpFromName: tenant.settings?.smtp?.fromName || '',
+    smtpHost: tenant.settings?.smtp?.host || "",
+    smtpPort: tenant.settings?.smtp?.port || "587",
+    smtpUser: tenant.settings?.smtp?.user || "",
+    smtpPassword: "",
+    smtpFromEmail: tenant.settings?.smtp?.fromEmail || "",
+    smtpFromName: tenant.settings?.smtp?.fromName || "",
   });
 
-  const [testEmail, setTestEmail] = useState('');
+  const [testEmail, setTestEmail] = useState("");
   const [testLoading, setTestLoading] = useState(false);
 
   const smtpConfigured = !!tenant.settings?.smtp?.password;
 
   const handleTestSmtp = async () => {
     if (!testEmail) {
-      toast.error('Please enter a test email address');
+      toast.error("Please enter a test email address");
       return;
     }
     setTestLoading(true);
     try {
-      const res = await fetch('/api/tenant-admin/settings/test-smtp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/tenant-admin/settings/test-smtp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ testEmail }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Test failed');
-      toast.success('Connection Successful! Test email sent.');
+      if (!res.ok) throw new Error(data.error || "Test failed");
+      toast.success("Connection Successful! Test email sent.");
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -74,17 +79,17 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
 
     try {
       const res = await fetch(`/api/tenant-admin/settings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
-      if (!res.ok) throw new Error('Failed to update settings');
+      if (!res.ok) throw new Error("Failed to update settings");
 
-      toast.success('Settings updated successfully');
+      toast.success("Settings updated successfully");
       router.refresh();
     } catch (error) {
-      toast.error('Failed to update settings');
+      toast.error("Failed to update settings");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -106,14 +111,18 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
               <Input value={tenant.subdomain} disabled className="flex-1" />
               <span className="ml-2 text-gray-500">.budstack.to</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">This is your permanent subdomain</p>
+            <p className="text-xs text-gray-500 mt-1">
+              This is your permanent subdomain
+            </p>
           </div>
           <div>
             <Label htmlFor="customDomain">Custom Domain (Optional)</Label>
             <Input
               id="customDomain"
               value={formData.customDomain}
-              onChange={(e) => setFormData({ ...formData, customDomain: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, customDomain: e.target.value })
+              }
               placeholder="yourdispensary.com"
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -132,7 +141,11 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
         <CardContent>
           <div>
             <Label>NFT Token ID</Label>
-            <Input value={tenant.nftTokenId || 'Not set'} disabled className="mt-2" />
+            <Input
+              value={tenant.nftTokenId || "Not set"}
+              disabled
+              className="mt-2"
+            />
             <p className="text-xs text-gray-500 mt-1">
               This NFT verifies your license to operate on BudStack.io
             </p>
@@ -144,7 +157,9 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>Dr. Green Integration</CardTitle>
-          <CardDescription>Configure your connection to the Dr. Green API</CardDescription>
+          <CardDescription>
+            Configure your connection to the Dr. Green API
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -165,11 +180,19 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
               id="drGreenSecretKey"
               type="password"
               value={formData.drGreenSecretKey}
-              onChange={(e) => setFormData({ ...formData, drGreenSecretKey: e.target.value })}
-              placeholder={tenant.drGreenSecretKey ? "******** (Verified)" : "Paste your Private Key here"}
+              onChange={(e) =>
+                setFormData({ ...formData, drGreenSecretKey: e.target.value })
+              }
+              placeholder={
+                tenant.drGreenSecretKey
+                  ? "******** (Verified)"
+                  : "Paste your Private Key here"
+              }
             />
             <p className="text-xs text-gray-500 mt-1">
-              {tenant.drGreenSecretKey ? "Leave empty to keep existing secret." : "Required for submitting consultations."}
+              {tenant.drGreenSecretKey
+                ? "Leave empty to keep existing secret."
+                : "Required for submitting consultations."}
             </p>
           </div>
         </CardContent>
@@ -179,37 +202,84 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>Email Configuration (SMTP)</CardTitle>
-          <CardDescription>Configure your custom email server for branding.</CardDescription>
+          <CardDescription>
+            Configure your custom email server for branding.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="smtpHost">SMTP Host</Label>
-              <Input id="smtpHost" value={formData.smtpHost} onChange={e => setFormData({ ...formData, smtpHost: e.target.value })} placeholder="smtp.mailgun.org" />
+              <Input
+                id="smtpHost"
+                value={formData.smtpHost}
+                onChange={(e) =>
+                  setFormData({ ...formData, smtpHost: e.target.value })
+                }
+                placeholder="smtp.mailgun.org"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="smtpPort">Port</Label>
-              <Input id="smtpPort" value={formData.smtpPort} onChange={e => setFormData({ ...formData, smtpPort: e.target.value })} placeholder="587" />
+              <Input
+                id="smtpPort"
+                value={formData.smtpPort}
+                onChange={(e) =>
+                  setFormData({ ...formData, smtpPort: e.target.value })
+                }
+                placeholder="587"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="smtpUser">Username</Label>
-              <Input id="smtpUser" value={formData.smtpUser} onChange={e => setFormData({ ...formData, smtpUser: e.target.value })} placeholder="postmaster@domain.com" />
+              <Input
+                id="smtpUser"
+                value={formData.smtpUser}
+                onChange={(e) =>
+                  setFormData({ ...formData, smtpUser: e.target.value })
+                }
+                placeholder="postmaster@domain.com"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="smtpPassword">Password</Label>
-              <Input type="password" id="smtpPassword" value={formData.smtpPassword} onChange={e => setFormData({ ...formData, smtpPassword: e.target.value })} placeholder={smtpConfigured ? "******** (Verified)" : "Enter password"} />
+              <Input
+                type="password"
+                id="smtpPassword"
+                value={formData.smtpPassword}
+                onChange={(e) =>
+                  setFormData({ ...formData, smtpPassword: e.target.value })
+                }
+                placeholder={
+                  smtpConfigured ? "******** (Verified)" : "Enter password"
+                }
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="smtpFromName">Sender Name</Label>
-              <Input id="smtpFromName" value={formData.smtpFromName} onChange={e => setFormData({ ...formData, smtpFromName: e.target.value })} placeholder={tenant.businessName} />
+              <Input
+                id="smtpFromName"
+                value={formData.smtpFromName}
+                onChange={(e) =>
+                  setFormData({ ...formData, smtpFromName: e.target.value })
+                }
+                placeholder={tenant.businessName}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="smtpFromEmail">Sender Email</Label>
-              <Input id="smtpFromEmail" value={formData.smtpFromEmail} onChange={e => setFormData({ ...formData, smtpFromEmail: e.target.value })} placeholder="orders@yourdomain.com" />
+              <Input
+                id="smtpFromEmail"
+                value={formData.smtpFromEmail}
+                onChange={(e) =>
+                  setFormData({ ...formData, smtpFromEmail: e.target.value })
+                }
+                placeholder="orders@yourdomain.com"
+              />
             </div>
           </div>
 
@@ -227,9 +297,11 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
               onClick={handleTestSmtp}
               disabled={testLoading || !smtpConfigured}
             >
-              {testLoading ? 'Verifying...' : 'Test Connection'}
+              {testLoading ? "Verifying..." : "Test Connection"}
             </Button>
-            <p className="text-xs text-muted-foreground">Save settings before testing.</p>
+            <p className="text-xs text-muted-foreground">
+              Save settings before testing.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -237,7 +309,7 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
       {/* Submit */}
       <div className="flex justify-end">
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Saving...' : 'Save Changes'}
+          {isLoading ? "Saving..." : "Save Changes"}
         </Button>
       </div>
     </form>
