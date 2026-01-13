@@ -58,6 +58,31 @@ function isMigrationAllowed(options?: DecryptOptions): boolean {
     return Date.now() < deadlineDate.getTime();
 }
 
+type DecryptOptions = {
+    allowUnencryptedMigration?: boolean;
+    migrationDeadline?: string;
+};
+
+const DEFAULT_MIGRATION_DEADLINE = process.env.ENCRYPTION_MIGRATION_DEADLINE;
+
+function isMigrationAllowed(options?: DecryptOptions): boolean {
+    if (!options?.allowUnencryptedMigration) {
+        return false;
+    }
+
+    const deadline = options.migrationDeadline ?? DEFAULT_MIGRATION_DEADLINE;
+    if (!deadline) {
+        return false;
+    }
+
+    const deadlineDate = new Date(deadline);
+    if (Number.isNaN(deadlineDate.getTime())) {
+        return false;
+    }
+
+    return Date.now() < deadlineDate.getTime();
+}
+
 /**
  * Decrypts a string (iv:authTag:ciphertext)
  */

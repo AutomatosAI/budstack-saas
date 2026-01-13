@@ -35,6 +35,7 @@ export function TenantThemeProvider({
   const designSystem =
     tenantTemplate?.designSystem || (settings as any).designSystem;
   const customCss = tenantTemplate?.customCss || settings.customCSS;
+  const sanitizedCustomCss = useMemo(() => sanitizeCustomCss(customCss), [customCss]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -270,4 +271,13 @@ function getTenantThemeClasses(settings: TenantSettings): string {
   }
 
   return classes.join(" ");
+}
+
+function sanitizeCustomCss(css?: string | null): string {
+  if (!css) return '';
+
+  return css
+    .replace(/@import[^;]+;/gi, '')
+    .replace(/url\(([^)]+)\)/gi, '')
+    .replace(/expression\(([^)]+)\)/gi, '');
 }
