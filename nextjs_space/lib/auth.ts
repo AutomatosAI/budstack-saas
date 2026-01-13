@@ -1,7 +1,8 @@
-import { AuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { prisma } from "@/lib/db";
-import bcrypt from "bcryptjs";
+import { AuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { prisma } from '@/lib/db';
+import { getCurrentTenant } from '@/lib/tenant';
+import bcrypt from 'bcryptjs';
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -16,9 +17,13 @@ export const authOptions: AuthOptions = {
           return null;
         }
 
-        const user = await prisma.users.findUnique({
-          where: { email: credentials.email },
+        const tenant = await getCurrentTenant();
+        const user = await prisma.users.findFirst({
+          where: tenant?.id
+            ? { email: credentials.email, tenantId: tenant.id }
+            : { email: credentials.email },
           include: { tenants: true },
+          orderBy: { createdAt: 'asc' },
         });
 
         if (!user || !user.password) {

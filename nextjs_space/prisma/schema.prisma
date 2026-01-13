@@ -229,7 +229,7 @@ model orders {
   updatedAt         DateTime
   notes             String?
   adminNotes        String?
-  orderNumber       String        @unique
+  orderNumber       String
   shippingCost      Float         @default(5.00)
   shippingInfo      Json?
   subtotal          Float
@@ -245,6 +245,7 @@ model orders {
 
   @@index([drGreenOrderId])
   @@index([nonce])
+  @@unique([tenantId, orderNumber])
 }
 
 model platform_config {
@@ -433,7 +434,7 @@ model tenants {
 
 model users {
   id               String          @id
-  email            String          @unique
+  email            String
   password         String
   name             String?
   role             Role            @default(PATIENT)
@@ -453,6 +454,8 @@ model users {
   orders           orders[]
   posts            posts[]
   tenants          tenants?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
 }
 
 model webhook_deliveries {

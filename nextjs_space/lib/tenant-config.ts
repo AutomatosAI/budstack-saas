@@ -27,16 +27,15 @@ export async function getTenantDrGreenConfig(
     );
   }
 
-  const decryptedSecret = decrypt(tenant.drGreenSecretKey);
+    const decryptedApiKey = decrypt(tenant.drGreenApiKey);
+    const decryptedSecret = decrypt(tenant.drGreenSecretKey);
 
-  if (!decryptedSecret) {
-    throw new Error(
-      "Failed to decrypt Dr Green Secret Key. Please update your settings.",
-    );
-  }
+    if (!decryptedApiKey || !decryptedSecret) {
+        throw new Error("Failed to decrypt Dr Green credentials. Please update your settings.");
+    }
 
-  return {
-    apiKey: tenant.drGreenApiKey,
-    secretKey: decryptedSecret,
-  };
+    return {
+        apiKey: decryptedApiKey,
+        secretKey: decryptedSecret,
+    };
 }

@@ -1,8 +1,9 @@
 import crypto from "crypto";
 
-const ALGORITHM = "aes-256-gcm";
-const KEY =
-  process.env.ENCRYPTION_KEY || process.env.NEXT_PUBLIC_ENCRYPTION_KEY;
+import crypto from 'crypto';
+
+const ALGORITHM = 'aes-256-gcm';
+const KEY = process.env.ENCRYPTION_KEY;
 
 // Ensure key is 32 bytes (256 bits)
 function getKey(): Buffer {
