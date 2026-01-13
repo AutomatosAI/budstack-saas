@@ -61,10 +61,12 @@ export async function checkRateLimit(
     const results = await redis
       .multi()
       .incr(key)
-      .pexpire(key, windowMs)
       .exec();
 
     const count = Number(results?.[0]?.[1] ?? 1);
+    if (count === 1) {
+      await redis.pexpire(key, windowMs);
+    }
 
     const ttlMs = await redis.pttl(key);
     const retryAfter = Math.max(0, Math.ceil(ttlMs / 1000));
