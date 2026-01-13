@@ -1,11 +1,17 @@
-'use client';
+"use client";
 
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   TrendingUp,
   DollarSign,
@@ -15,9 +21,9 @@ import {
   PieChart as PieChartIcon,
   AlertCircle,
   Percent,
-  UserPlus
-} from 'lucide-react';
-import { Breadcrumbs } from '@/components/admin/shared';
+  UserPlus,
+} from "lucide-react";
+import { Breadcrumbs } from "@/components/admin/shared";
 import {
   LineChart,
   Line,
@@ -31,12 +37,14 @@ import {
   PieChart,
   Pie,
   Cell,
-} from 'recharts';
-import { cn } from '@/lib/utils';
+} from "recharts";
+import { cn } from "@/lib/utils";
 
 // Dynamic import of Plotly for code splitting
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const Plot = dynamic(() => import('react-plotly.js') as any, { ssr: false }) as any;
+const Plot = dynamic(() => import("react-plotly.js") as any, {
+  ssr: false,
+}) as any;
 
 interface AnalyticsData {
   totalTenants: number;
@@ -80,15 +88,16 @@ export default function ComprehensiveAnalyticsPage() {
 
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetrics | null>(null);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [platformMetrics, setPlatformMetrics] =
+    useState<PlatformMetrics | null>(null);
+  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("30d");
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
+    if (status === "unauthenticated") {
+      router.push("/auth/login");
     }
-    if (status === 'authenticated' && session?.user?.role !== 'SUPER_ADMIN') {
-      router.push('/auth/login');
+    if (status === "authenticated" && session?.user?.role !== "SUPER_ADMIN") {
+      router.push("/auth/login");
     }
   }, [status, session, router]);
 
@@ -101,14 +110,16 @@ export default function ComprehensiveAnalyticsPage() {
   const fetchAllData = async () => {
     try {
       // Fetch business analytics from API
-      const analyticsResponse = await fetch(`/api/super-admin/analytics?timeRange=${timeRange}`);
+      const analyticsResponse = await fetch(
+        `/api/super-admin/analytics?timeRange=${timeRange}`,
+      );
       if (analyticsResponse.ok) {
         const data = await analyticsResponse.json();
         setAnalytics(data);
       }
 
       // Generate platform metrics (mock data - replace with real API in production)
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 800));
       const platformData: PlatformMetrics = {
         tenantSignups: generateMockSignupData(),
         platformRevenue: generateMockRevenueData(),
@@ -126,20 +137,29 @@ export default function ComprehensiveAnalyticsPage() {
       };
       setPlatformMetrics(platformData);
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      console.error("Error fetching analytics:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+  const COLORS = [
+    "#10b981",
+    "#3b82f6",
+    "#f59e0b",
+    "#ef4444",
+    "#8b5cf6",
+    "#ec4899",
+  ];
 
-  if (status === 'loading' || loading) {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center theme-force-light">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-cyan-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading comprehensive analytics...</p>
+          <p className="text-gray-600 font-medium">
+            Loading comprehensive analytics...
+          </p>
         </div>
       </div>
     );
@@ -154,8 +174,8 @@ export default function ComprehensiveAnalyticsPage() {
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', href: '/super-admin' },
-          { label: 'Analytics' },
+          { label: "Dashboard", href: "/super-admin" },
+          { label: "Analytics" },
         ]}
         className="mb-4"
       />
@@ -163,31 +183,47 @@ export default function ComprehensiveAnalyticsPage() {
       {/* Header with Time Range Selector */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Platform Analytics</h1>
-          <p className="text-slate-600 mt-2 text-lg">Comprehensive insights across all dimensions</p>
+          <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
+            Platform Analytics
+          </h1>
+          <p className="text-slate-600 mt-2 text-lg">
+            Comprehensive insights across all dimensions
+          </p>
         </div>
         <div className="flex gap-2">
           <Button
-            variant={timeRange === '7d' ? 'default' : 'outline'}
+            variant={timeRange === "7d" ? "default" : "outline"}
             size="sm"
-            onClick={() => setTimeRange('7d')}
-            className={timeRange === '7d' ? 'bg-gradient-to-r from-cyan-600 to-blue-600' : ''}
+            onClick={() => setTimeRange("7d")}
+            className={
+              timeRange === "7d"
+                ? "bg-gradient-to-r from-cyan-600 to-blue-600"
+                : ""
+            }
           >
             7 Days
           </Button>
           <Button
-            variant={timeRange === '30d' ? 'default' : 'outline'}
+            variant={timeRange === "30d" ? "default" : "outline"}
             size="sm"
-            onClick={() => setTimeRange('30d')}
-            className={timeRange === '30d' ? 'bg-gradient-to-r from-cyan-600 to-blue-600' : ''}
+            onClick={() => setTimeRange("30d")}
+            className={
+              timeRange === "30d"
+                ? "bg-gradient-to-r from-cyan-600 to-blue-600"
+                : ""
+            }
           >
             30 Days
           </Button>
           <Button
-            variant={timeRange === '90d' ? 'default' : 'outline'}
+            variant={timeRange === "90d" ? "default" : "outline"}
             size="sm"
-            onClick={() => setTimeRange('90d')}
-            className={timeRange === '90d' ? 'bg-gradient-to-r from-cyan-600 to-blue-600' : ''}
+            onClick={() => setTimeRange("90d")}
+            className={
+              timeRange === "90d"
+                ? "bg-gradient-to-r from-cyan-600 to-blue-600"
+                : ""
+            }
           >
             90 Days
           </Button>
@@ -196,17 +232,23 @@ export default function ComprehensiveAnalyticsPage() {
 
       {/* ========== SECTION 1: Key Business Metrics ========== */}
       <section>
-        <h2 className="text-2xl font-bold mb-6 text-slate-900">Key Business Metrics</h2>
+        <h2 className="text-2xl font-bold mb-6 text-slate-900">
+          Key Business Metrics
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Total Revenue */}
           <Card className="border-none shadow-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-emerald-50">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium text-emerald-50">
+                Total Revenue
+              </CardTitle>
               <DollarSign className="h-5 w-5 text-emerald-100" />
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="text-3xl font-bold">€{analytics.totalRevenue.toFixed(2)}</div>
+              <div className="text-3xl font-bold">
+                €{analytics.totalRevenue.toFixed(2)}
+              </div>
               <div className="flex items-center gap-1 text-xs mt-2">
                 <TrendingUp className="w-3 h-3" />
                 <span>+€{analytics.recentRevenue.toFixed(2)} this period</span>
@@ -218,12 +260,16 @@ export default function ComprehensiveAnalyticsPage() {
           <Card className="border-none shadow-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-amber-50">Total Orders</CardTitle>
+              <CardTitle className="text-sm font-medium text-amber-50">
+                Total Orders
+              </CardTitle>
               <ShoppingCart className="h-5 w-5 text-amber-100" />
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-3xl font-bold">{analytics.totalOrders}</div>
-              <p className="text-xs mt-2">+{analytics.recentOrders} this period</p>
+              <p className="text-xs mt-2">
+                +{analytics.recentOrders} this period
+              </p>
             </CardContent>
           </Card>
 
@@ -231,12 +277,16 @@ export default function ComprehensiveAnalyticsPage() {
           <Card className="border-none shadow-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-purple-50">Total Customers</CardTitle>
+              <CardTitle className="text-sm font-medium text-purple-50">
+                Total Customers
+              </CardTitle>
               <Users className="h-5 w-5 text-purple-100" />
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-3xl font-bold">{analytics.totalUsers}</div>
-              <p className="text-xs mt-2">+{analytics.recentUsers} this period</p>
+              <p className="text-xs mt-2">
+                +{analytics.recentUsers} this period
+              </p>
             </CardContent>
           </Card>
 
@@ -244,11 +294,15 @@ export default function ComprehensiveAnalyticsPage() {
           <Card className="border-none shadow-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-cyan-50">Active Stores</CardTitle>
+              <CardTitle className="text-sm font-medium text-cyan-50">
+                Active Stores
+              </CardTitle>
               <Store className="h-5 w-5 text-cyan-100" />
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="text-3xl font-bold">{analytics.activeTenants}</div>
+              <div className="text-3xl font-bold">
+                {analytics.activeTenants}
+              </div>
               <p className="text-xs mt-2">of {analytics.totalTenants} total</p>
             </CardContent>
           </Card>
@@ -257,7 +311,9 @@ export default function ComprehensiveAnalyticsPage() {
 
       {/* ========== SECTION 2: Platform Health Metrics (Mission Control) ========== */}
       <section>
-        <h2 className="text-2xl font-bold mb-6 text-slate-900">Platform Health Metrics</h2>
+        <h2 className="text-2xl font-bold mb-6 text-slate-900">
+          Platform Health Metrics
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <MetricCard
             icon={DollarSign}
@@ -288,14 +344,18 @@ export default function ComprehensiveAnalyticsPage() {
 
       {/* ========== SECTION 3: Business Intelligence (Recharts) ========== */}
       <section>
-        <h2 className="text-2xl font-bold mb-6 text-slate-900">Business Intelligence</h2>
+        <h2 className="text-2xl font-bold mb-6 text-slate-900">
+          Business Intelligence
+        </h2>
 
         {/* Revenue & Orders Trends */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <Card>
             <CardHeader>
               <CardTitle>Revenue Trend</CardTitle>
-              <CardDescription>Daily revenue over the selected period</CardDescription>
+              <CardDescription>
+                Daily revenue over the selected period
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -312,7 +372,7 @@ export default function ComprehensiveAnalyticsPage() {
                     dataKey="revenue"
                     stroke="#10b981"
                     strokeWidth={2}
-                    dot={{ fill: '#10b981' }}
+                    dot={{ fill: "#10b981" }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -322,7 +382,9 @@ export default function ComprehensiveAnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Order Volume</CardTitle>
-              <CardDescription>Daily orders over the selected period</CardDescription>
+              <CardDescription>
+                Daily orders over the selected period
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -343,7 +405,9 @@ export default function ComprehensiveAnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Revenue by Store</CardTitle>
-              <CardDescription>Distribution of revenue across stores</CardDescription>
+              <CardDescription>
+                Distribution of revenue across stores
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -353,13 +417,18 @@ export default function ComprehensiveAnalyticsPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry) => `${entry.name}: €${entry.value.toFixed(0)}`}
+                    label={(entry) =>
+                      `${entry.name}: €${entry.value.toFixed(0)}`
+                    }
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
                   >
                     {analytics.revenueByTenant.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
                     ))}
                   </Pie>
                   <Tooltip formatter={(value: any) => `€${value.toFixed(2)}`} />
@@ -371,7 +440,9 @@ export default function ComprehensiveAnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Customer Growth</CardTitle>
-              <CardDescription>New customer registrations over time</CardDescription>
+              <CardDescription>
+                New customer registrations over time
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -385,7 +456,7 @@ export default function ComprehensiveAnalyticsPage() {
                     dataKey="customers"
                     stroke="#8b5cf6"
                     strokeWidth={2}
-                    dot={{ fill: '#8b5cf6' }}
+                    dot={{ fill: "#8b5cf6" }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -396,7 +467,9 @@ export default function ComprehensiveAnalyticsPage() {
 
       {/* ========== SECTION 4: Platform Trends (Plotly - Mission Control) ========== */}
       <section>
-        <h2 className="text-2xl font-bold mb-6 text-slate-900">Platform Trends</h2>
+        <h2 className="text-2xl font-bold mb-6 text-slate-900">
+          Platform Trends
+        </h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Tenant Signups Chart */}
@@ -409,51 +482,59 @@ export default function ComprehensiveAnalyticsPage() {
             <Plot
               data={[
                 {
-                  x: platformMetrics.tenantSignups.map(d => d.date),
-                  y: platformMetrics.tenantSignups.map(d => d.count),
-                  type: 'scatter',
-                  mode: 'lines+markers',
+                  x: platformMetrics.tenantSignups.map((d) => d.date),
+                  y: platformMetrics.tenantSignups.map((d) => d.count),
+                  type: "scatter",
+                  mode: "lines+markers",
                   line: {
-                    color: '#06b6d4',
+                    color: "#06b6d4",
                     width: 3,
-                    shape: 'spline',
+                    shape: "spline",
                   },
                   marker: {
-                    color: '#06b6d4',
+                    color: "#06b6d4",
                     size: 6,
                     line: {
-                      color: '#0e7490',
+                      color: "#0e7490",
                       width: 2,
                     },
                   },
-                  fill: 'tozeroy',
-                  fillcolor: 'rgba(6, 182, 212, 0.1)',
+                  fill: "tozeroy",
+                  fillcolor: "rgba(6, 182, 212, 0.1)",
                 },
               ]}
               layout={{
                 autosize: true,
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: "rgba(0,0,0,0)",
+                plot_bgcolor: "rgba(0,0,0,0)",
                 margin: { l: 40, r: 20, t: 20, b: 40 },
                 xaxis: {
-                  gridcolor: '#e2e8f0',
+                  gridcolor: "#e2e8f0",
                   showgrid: true,
                   zeroline: false,
-                  tickfont: { family: 'JetBrains Mono, monospace', size: 10, color: '#64748b' },
+                  tickfont: {
+                    family: "JetBrains Mono, monospace",
+                    size: 10,
+                    color: "#64748b",
+                  },
                 },
                 yaxis: {
-                  gridcolor: '#e2e8f0',
+                  gridcolor: "#e2e8f0",
                   showgrid: true,
                   zeroline: false,
-                  tickfont: { family: 'JetBrains Mono, monospace', size: 10, color: '#64748b' },
+                  tickfont: {
+                    family: "JetBrains Mono, monospace",
+                    size: 10,
+                    color: "#64748b",
+                  },
                 },
-                hovermode: 'closest',
+                hovermode: "closest",
               }}
               config={{
                 displayModeBar: false,
                 responsive: true,
               }}
-              style={{ width: '100%', height: '100%' }}
+              style={{ width: "100%", height: "100%" }}
               useResizeHandler
             />
           </ChartCard>
@@ -468,16 +549,20 @@ export default function ComprehensiveAnalyticsPage() {
             <Plot
               data={[
                 {
-                  x: platformMetrics.platformRevenue.map(d => d.month),
-                  y: platformMetrics.platformRevenue.map(d => d.revenue),
-                  type: 'bar',
+                  x: platformMetrics.platformRevenue.map((d) => d.month),
+                  y: platformMetrics.platformRevenue.map((d) => d.revenue),
+                  type: "bar",
                   marker: {
                     color: platformMetrics.platformRevenue.map((_, i) =>
-                      i === platformMetrics.platformRevenue.length - 1 ? '#06b6d4' : '#cbd5e1'
+                      i === platformMetrics.platformRevenue.length - 1
+                        ? "#06b6d4"
+                        : "#cbd5e1",
                     ),
                     line: {
                       color: platformMetrics.platformRevenue.map((_, i) =>
-                        i === platformMetrics.platformRevenue.length - 1 ? '#0e7490' : '#94a3b8'
+                        i === platformMetrics.platformRevenue.length - 1
+                          ? "#0e7490"
+                          : "#94a3b8",
                       ),
                       width: 2,
                     },
@@ -486,30 +571,38 @@ export default function ComprehensiveAnalyticsPage() {
               ]}
               layout={{
                 autosize: true,
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: "rgba(0,0,0,0)",
+                plot_bgcolor: "rgba(0,0,0,0)",
                 margin: { l: 50, r: 20, t: 20, b: 60 },
                 xaxis: {
-                  gridcolor: '#e2e8f0',
+                  gridcolor: "#e2e8f0",
                   showgrid: false,
                   zeroline: false,
-                  tickfont: { family: 'JetBrains Mono, monospace', size: 10, color: '#64748b' },
+                  tickfont: {
+                    family: "JetBrains Mono, monospace",
+                    size: 10,
+                    color: "#64748b",
+                  },
                   tickangle: -45,
                 },
                 yaxis: {
-                  gridcolor: '#e2e8f0',
+                  gridcolor: "#e2e8f0",
                   showgrid: true,
                   zeroline: false,
-                  tickfont: { family: 'JetBrains Mono, monospace', size: 10, color: '#64748b' },
-                  tickprefix: '$',
+                  tickfont: {
+                    family: "JetBrains Mono, monospace",
+                    size: 10,
+                    color: "#64748b",
+                  },
+                  tickprefix: "$",
                 },
-                hovermode: 'closest',
+                hovermode: "closest",
               }}
               config={{
                 displayModeBar: false,
                 responsive: true,
               }}
-              style={{ width: '100%', height: '100%' }}
+              style={{ width: "100%", height: "100%" }}
               useResizeHandler
             />
           </ChartCard>
@@ -527,33 +620,40 @@ export default function ComprehensiveAnalyticsPage() {
             <Plot
               data={[
                 {
-                  values: [platformMetrics.tenantDistribution.active, platformMetrics.tenantDistribution.inactive],
-                  labels: ['Active', 'Inactive'],
-                  type: 'pie',
+                  values: [
+                    platformMetrics.tenantDistribution.active,
+                    platformMetrics.tenantDistribution.inactive,
+                  ],
+                  labels: ["Active", "Inactive"],
+                  type: "pie",
                   marker: {
-                    colors: ['#06b6d4', '#cbd5e1'],
+                    colors: ["#06b6d4", "#cbd5e1"],
                     line: {
-                      color: '#fff',
+                      color: "#fff",
                       width: 3,
                     },
                   },
                   textfont: {
-                    family: 'JetBrains Mono, monospace',
+                    family: "JetBrains Mono, monospace",
                     size: 14,
-                    color: '#fff',
+                    color: "#fff",
                   },
                   hole: 0.4,
                 },
               ]}
               layout={{
                 autosize: true,
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: "rgba(0,0,0,0)",
+                plot_bgcolor: "rgba(0,0,0,0)",
                 margin: { l: 20, r: 20, t: 20, b: 20 },
                 showlegend: true,
                 legend: {
-                  font: { family: 'JetBrains Mono, monospace', size: 12, color: '#64748b' },
-                  orientation: 'h',
+                  font: {
+                    family: "JetBrains Mono, monospace",
+                    size: 12,
+                    color: "#64748b",
+                  },
+                  orientation: "h",
                   y: -0.2,
                 },
               }}
@@ -561,7 +661,7 @@ export default function ComprehensiveAnalyticsPage() {
                 displayModeBar: false,
                 responsive: true,
               }}
-              style={{ width: '100%', height: '100%' }}
+              style={{ width: "100%", height: "100%" }}
               useResizeHandler
             />
           </ChartCard>
@@ -569,7 +669,7 @@ export default function ComprehensiveAnalyticsPage() {
           {/* Needs Attention Card */}
           <Card
             className="border-2 border-slate-200 shadow-lg bg-white overflow-hidden animate-in fade-in slide-in-from-bottom-4"
-            style={{ animationDelay: '600ms', animationFillMode: 'backwards' }}
+            style={{ animationDelay: "600ms", animationFillMode: "backwards" }}
           >
             <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
               <div className="flex items-center gap-2">
@@ -577,8 +677,12 @@ export default function ComprehensiveAnalyticsPage() {
                   <AlertCircle className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg font-bold text-slate-900">Needs Attention</CardTitle>
-                  <p className="text-xs text-slate-600 mt-0.5">Action items requiring review</p>
+                  <CardTitle className="text-lg font-bold text-slate-900">
+                    Needs Attention
+                  </CardTitle>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Action items requiring review
+                  </p>
                 </div>
               </div>
             </CardHeader>
@@ -613,31 +717,44 @@ export default function ComprehensiveAnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Top Performing Stores</CardTitle>
-            <CardDescription>Stores ranked by order volume and revenue</CardDescription>
+            <CardDescription>
+              Stores ranked by order volume and revenue
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {analytics.topTenants.map((tenant: any, index: number) => (
-                <div key={tenant.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <div
+                  key={tenant.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center font-bold text-white text-lg">
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-semibold text-lg">{tenant.businessName}</p>
-                      <p className="text-sm text-gray-500">{tenant.subdomain}.budstack.to</p>
+                      <p className="font-semibold text-lg">
+                        {tenant.businessName}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {tenant.subdomain}.budstack.to
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-green-600">
-                      €{tenant._sum?.total?.toFixed(2) || '0.00'}
+                      €{tenant._sum?.total?.toFixed(2) || "0.00"}
                     </p>
-                    <p className="text-sm text-gray-500">{tenant._count?.orders || 0} orders</p>
+                    <p className="text-sm text-gray-500">
+                      {tenant._count?.orders || 0} orders
+                    </p>
                   </div>
                 </div>
               ))}
               {analytics.topTenants.length === 0 && (
-                <p className="text-center text-gray-500 py-8">No data available yet</p>
+                <p className="text-center text-gray-500 py-8">
+                  No data available yet
+                </p>
               )}
             </div>
           </CardContent>
@@ -657,31 +774,38 @@ interface MetricCardProps {
   value: string;
   subValue: string;
   delay: string;
-  accentColor: 'cyan' | 'amber' | 'emerald';
+  accentColor: "cyan" | "amber" | "emerald";
 }
 
-function MetricCard({ icon: Icon, label, value, subValue, delay, accentColor }: MetricCardProps) {
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  subValue,
+  delay,
+  accentColor,
+}: MetricCardProps) {
   const colorMap = {
     cyan: {
-      border: 'border-cyan-200',
-      iconBg: 'bg-cyan-500/10',
-      iconBorder: 'border-cyan-500/20',
-      iconColor: 'text-cyan-600',
-      valueColor: 'text-cyan-600',
+      border: "border-cyan-200",
+      iconBg: "bg-cyan-500/10",
+      iconBorder: "border-cyan-500/20",
+      iconColor: "text-cyan-600",
+      valueColor: "text-cyan-600",
     },
     amber: {
-      border: 'border-amber-200',
-      iconBg: 'bg-amber-500/10',
-      iconBorder: 'border-amber-500/20',
-      iconColor: 'text-amber-600',
-      valueColor: 'text-amber-600',
+      border: "border-amber-200",
+      iconBg: "bg-amber-500/10",
+      iconBorder: "border-amber-500/20",
+      iconColor: "text-amber-600",
+      valueColor: "text-amber-600",
     },
     emerald: {
-      border: 'border-emerald-200',
-      iconBg: 'bg-emerald-500/10',
-      iconBorder: 'border-emerald-500/20',
-      iconColor: 'text-emerald-600',
-      valueColor: 'text-emerald-600',
+      border: "border-emerald-200",
+      iconBg: "bg-emerald-500/10",
+      iconBorder: "border-emerald-500/20",
+      iconColor: "text-emerald-600",
+      valueColor: "text-emerald-600",
     },
   };
 
@@ -690,25 +814,37 @@ function MetricCard({ icon: Icon, label, value, subValue, delay, accentColor }: 
   return (
     <Card
       className={cn(
-        'border-2 shadow-lg bg-white overflow-hidden hover:shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4',
-        colors.border
+        "border-2 shadow-lg bg-white overflow-hidden hover:shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
+        colors.border,
       )}
-      style={{ animationDelay: delay, animationFillMode: 'backwards' }}
+      style={{ animationDelay: delay, animationFillMode: "backwards" }}
     >
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div className="space-y-3">
-            <div className={cn('p-2.5 rounded-lg border inline-block', colors.iconBg, colors.iconBorder)}>
-              <Icon className={cn('h-5 w-5', colors.iconColor)} />
+            <div
+              className={cn(
+                "p-2.5 rounded-lg border inline-block",
+                colors.iconBg,
+                colors.iconBorder,
+              )}
+            >
+              <Icon className={cn("h-5 w-5", colors.iconColor)} />
             </div>
             <div>
               <p className="text-xs font-medium text-slate-600 uppercase tracking-wider">
                 {label}
               </p>
-              <p className={cn('text-4xl font-bold mt-2', colors.valueColor)} style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+              <p
+                className={cn("text-4xl font-bold mt-2", colors.valueColor)}
+                style={{ fontFamily: "JetBrains Mono, monospace" }}
+              >
                 {value}
               </p>
-              <p className="text-xs text-slate-500 mt-1" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+              <p
+                className="text-xs text-slate-500 mt-1"
+                style={{ fontFamily: "JetBrains Mono, monospace" }}
+              >
                 {subValue}
               </p>
             </div>
@@ -727,11 +863,17 @@ interface ChartCardProps {
   children: React.ReactNode;
 }
 
-function ChartCard({ title, subtitle, icon: Icon, delay, children }: ChartCardProps) {
+function ChartCard({
+  title,
+  subtitle,
+  icon: Icon,
+  delay,
+  children,
+}: ChartCardProps) {
   return (
     <Card
       className="border-2 border-slate-200 shadow-lg bg-white overflow-hidden animate-in fade-in slide-in-from-bottom-4"
-      style={{ animationDelay: delay, animationFillMode: 'backwards' }}
+      style={{ animationDelay: delay, animationFillMode: "backwards" }}
     >
       <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
         <div className="flex items-center gap-2">
@@ -739,15 +881,15 @@ function ChartCard({ title, subtitle, icon: Icon, delay, children }: ChartCardPr
             <Icon className="h-5 w-5 text-cyan-600" />
           </div>
           <div>
-            <CardTitle className="text-lg font-bold text-slate-900">{title}</CardTitle>
+            <CardTitle className="text-lg font-bold text-slate-900">
+              {title}
+            </CardTitle>
             <p className="text-xs text-slate-600 mt-0.5">{subtitle}</p>
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="h-[280px] relative">
-          {children}
-        </div>
+        <div className="h-[280px] relative">{children}</div>
       </CardContent>
     </Card>
   );
@@ -757,28 +899,33 @@ interface AttentionItemProps {
   icon: React.ElementType;
   label: string;
   count: number;
-  color: 'cyan' | 'red' | 'amber';
+  color: "cyan" | "red" | "amber";
 }
 
-function AttentionItem({ icon: Icon, label, count, color }: AttentionItemProps) {
+function AttentionItem({
+  icon: Icon,
+  label,
+  count,
+  color,
+}: AttentionItemProps) {
   const colorMap = {
     cyan: {
-      bg: 'bg-cyan-500/10',
-      border: 'border-cyan-500/20',
-      icon: 'text-cyan-600',
-      badge: 'bg-cyan-500 text-white',
+      bg: "bg-cyan-500/10",
+      border: "border-cyan-500/20",
+      icon: "text-cyan-600",
+      badge: "bg-cyan-500 text-white",
     },
     red: {
-      bg: 'bg-red-500/10',
-      border: 'border-red-500/20',
-      icon: 'text-red-600',
-      badge: 'bg-red-500 text-white',
+      bg: "bg-red-500/10",
+      border: "border-red-500/20",
+      icon: "text-red-600",
+      badge: "bg-red-500 text-white",
     },
     amber: {
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-500/20',
-      icon: 'text-amber-600',
-      badge: 'bg-amber-500 text-white',
+      bg: "bg-amber-500/10",
+      border: "border-amber-500/20",
+      icon: "text-amber-600",
+      badge: "bg-amber-500 text-white",
     },
   };
 
@@ -787,12 +934,15 @@ function AttentionItem({ icon: Icon, label, count, color }: AttentionItemProps) 
   return (
     <div className="flex items-center justify-between p-4 rounded-lg border-2 border-slate-200 hover:border-slate-300 transition-colors">
       <div className="flex items-center gap-3">
-        <div className={cn('p-2 rounded-lg border', colors.bg, colors.border)}>
-          <Icon className={cn('h-4 w-4', colors.icon)} />
+        <div className={cn("p-2 rounded-lg border", colors.bg, colors.border)}>
+          <Icon className={cn("h-4 w-4", colors.icon)} />
         </div>
         <span className="text-sm font-medium text-slate-700">{label}</span>
       </div>
-      <div className={cn('px-3 py-1 rounded-full text-sm font-bold', colors.badge)} style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+      <div
+        className={cn("px-3 py-1 rounded-full text-sm font-bold", colors.badge)}
+        style={{ fontFamily: "JetBrains Mono, monospace" }}
+      >
         {count}
       </div>
     </div>
@@ -813,7 +963,7 @@ function generateMockSignupData() {
     const count = Math.floor(Math.random() * 5) + 1;
 
     data.push({
-      date: date.toISOString().split('T')[0],
+      date: date.toISOString().split("T")[0],
       count,
     });
   }
@@ -822,7 +972,20 @@ function generateMockSignupData() {
 }
 
 function generateMockRevenueData() {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const data = [];
 
   for (let i = 11; i >= 0; i--) {

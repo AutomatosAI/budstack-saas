@@ -1,3 +1,2 @@
-
-import CookiesPage from '@/app/cookies/page';
+import CookiesPage from "@/app/cookies/page";
 export default CookiesPage;

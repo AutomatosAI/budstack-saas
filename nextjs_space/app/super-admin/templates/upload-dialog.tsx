@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,104 +10,119 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Plus, Github, Loader2 } from 'lucide-react';
-import { toast } from '@/components/ui/sonner';
-import { useRouter } from 'next/navigation';
+} from "@/components/ui/select";
+import { Plus, Github, Loader2 } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
+import { useRouter } from "next/navigation";
 
 export function UploadTemplateDialog() {
   const [open, setOpen] = useState(false);
-  const [templateName, setTemplateName] = useState('');
-  const [githubUrl, setGithubUrl] = useState('');
-  const [structureType, setStructureType] = useState<'default' | 'lovable'>('default');
+  const [templateName, setTemplateName] = useState("");
+  const [githubUrl, setGithubUrl] = useState("");
+  const [structureType, setStructureType] = useState<"default" | "lovable">(
+    "default",
+  );
   const [isUploading, setIsUploading] = useState(false);
   const router = useRouter();
 
   const handleUpload = async () => {
     if (!templateName.trim()) {
-      toast.error('Please enter a template name');
+      toast.error("Please enter a template name");
       return;
     }
 
     if (!githubUrl.trim()) {
-      toast.error('Please enter a GitHub URL');
+      toast.error("Please enter a GitHub URL");
       return;
     }
 
     setIsUploading(true);
 
-    console.log('[Template Upload] Starting upload...');
-    console.log('[Template Upload] GitHub URL:', githubUrl.trim());
-    console.log('[Template Upload] Structure Type:', structureType);
+    console.log("[Template Upload] Starting upload...");
+    console.log("[Template Upload] GitHub URL:", githubUrl.trim());
+    console.log("[Template Upload] Structure Type:", structureType);
 
     try {
-      console.log('[Template Upload] Sending POST request...');
+      console.log("[Template Upload] Sending POST request...");
 
-      const response = await fetch('/api/super-admin/templates/upload', {
-        method: 'POST',
+      const response = await fetch("/api/super-admin/templates/upload", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           templateName: templateName.trim(),
           githubUrl: githubUrl.trim(),
-          structureType
+          structureType,
         }),
       });
 
-      console.log('[Template Upload] Response status:', response.status, response.statusText);
-      console.log('[Template Upload] Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log(
+        "[Template Upload] Response status:",
+        response.status,
+        response.statusText,
+      );
+      console.log(
+        "[Template Upload] Response headers:",
+        Object.fromEntries(response.headers.entries()),
+      );
 
       let data;
-      const contentType = response.headers.get('content-type');
+      const contentType = response.headers.get("content-type");
 
-      if (contentType && contentType.includes('application/json')) {
+      if (contentType && contentType.includes("application/json")) {
         data = await response.json();
-        console.log('[Template Upload] Response data:', data);
+        console.log("[Template Upload] Response data:", data);
       } else {
         const text = await response.text();
-        console.error('[Template Upload] Non-JSON response:', text.substring(0, 500));
-        throw new Error(`Server returned non-JSON response (${response.status}): ${text.substring(0, 100)}`);
+        console.error(
+          "[Template Upload] Non-JSON response:",
+          text.substring(0, 500),
+        );
+        throw new Error(
+          `Server returned non-JSON response (${response.status}): ${text.substring(0, 100)}`,
+        );
       }
 
       if (!response.ok) {
-        const errorMsg = data.error || data.message || 'Failed to upload template';
-        console.error('[Template Upload] Upload failed:', errorMsg);
+        const errorMsg =
+          data.error || data.message || "Failed to upload template";
+        console.error("[Template Upload] Upload failed:", errorMsg);
         if (data.details) {
-          console.error('[Template Upload] Error details:', data.details);
+          console.error("[Template Upload] Error details:", data.details);
         }
         throw new Error(errorMsg);
       }
 
-      console.log('[Template Upload] Upload successful!');
-      toast.success(data.message || 'Template uploaded successfully!');
+      console.log("[Template Upload] Upload successful!");
+      toast.success(data.message || "Template uploaded successfully!");
       setOpen(false);
-      setTemplateName('');
-      setGithubUrl('');
-      setStructureType('default');
+      setTemplateName("");
+      setGithubUrl("");
+      setStructureType("default");
       router.refresh();
     } catch (error: any) {
-      console.error('[Template Upload] ERROR:', error);
-      console.error('[Template Upload] Error stack:', error.stack);
+      console.error("[Template Upload] ERROR:", error);
+      console.error("[Template Upload] Error stack:", error.stack);
 
       // Show detailed error to user
-      const errorMessage = error.message || 'Failed to upload template';
+      const errorMessage = error.message || "Failed to upload template";
       toast.error(errorMessage);
 
       // Also log for debugging
-      console.error('[Template Upload] Full error object:', error);
+      console.error("[Template Upload] Full error object:", error);
     } finally {
       setIsUploading(false);
-      console.log('[Template Upload] Upload process completed');
+      console.log("[Template Upload] Upload process completed");
     }
   };
 
@@ -123,8 +138,9 @@ export function UploadTemplateDialog() {
         <DialogHeader>
           <DialogTitle>Upload Template from GitHub</DialogTitle>
           <DialogDescription>
-            Select the template structure type and enter the GitHub repository URL.
-            {structureType === 'default' && (
+            Select the template structure type and enter the GitHub repository
+            URL.
+            {structureType === "default" && (
               <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
                 <li>template.config.json</li>
                 <li>index.tsx</li>
@@ -133,7 +149,7 @@ export function UploadTemplateDialog() {
                 <li>styles.css (optional)</li>
               </ul>
             )}
-            {structureType === 'lovable' && (
+            {structureType === "lovable" && (
               <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
                 <li>Will be automatically converted to BudStack format</li>
                 <li>Supports full Lovable.dev project structure</li>
@@ -146,7 +162,12 @@ export function UploadTemplateDialog() {
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="structure-type">Template Structure</Label>
-            <Select value={structureType} onValueChange={(value: 'default' | 'lovable') => setStructureType(value)}>
+            <Select
+              value={structureType}
+              onValueChange={(value: "default" | "lovable") =>
+                setStructureType(value)
+              }
+            >
               <SelectTrigger id="structure-type">
                 <SelectValue placeholder="Select template structure" />
               </SelectTrigger>
@@ -154,13 +175,17 @@ export function UploadTemplateDialog() {
                 <SelectItem value="default">
                   <div className="flex flex-col items-start">
                     <span className="font-medium">Default (BudStack)</span>
-                    <span className="text-xs text-gray-500">Already follows BudStack structure</span>
+                    <span className="text-xs text-gray-500">
+                      Already follows BudStack structure
+                    </span>
                   </div>
                 </SelectItem>
                 <SelectItem value="lovable">
                   <div className="flex flex-col items-start">
                     <span className="font-medium">Lovable.dev Template</span>
-                    <span className="text-xs text-gray-500">Will be automatically converted</span>
+                    <span className="text-xs text-gray-500">
+                      Will be automatically converted
+                    </span>
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -168,9 +193,7 @@ export function UploadTemplateDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="template-name">
-              Template Name
-            </Label>
+            <Label htmlFor="template-name">Template Name</Label>
             <Input
               id="template-name"
               placeholder="e.g., Portugal Wellness, Miami Vice Theme, etc."
@@ -179,7 +202,8 @@ export function UploadTemplateDialog() {
               disabled={isUploading}
             />
             <p className="text-xs text-gray-500">
-              Give your template a unique, descriptive name (e.g., "Portugal Wellness", "GTA Vice City").
+              Give your template a unique, descriptive name (e.g., "Portugal
+              Wellness", "GTA Vice City").
             </p>
           </div>
 
@@ -196,7 +220,8 @@ export function UploadTemplateDialog() {
               disabled={isUploading}
             />
             <p className="text-xs text-gray-500">
-              Example: https://github.com/Gerard161-Site/healingbuds-template.git
+              Example:
+              https://github.com/Gerard161-Site/healingbuds-template.git
             </p>
           </div>
         </div>
@@ -215,7 +240,7 @@ export function UploadTemplateDialog() {
                 Uploading...
               </>
             ) : (
-              'Upload Template'
+              "Upload Template"
             )}
           </Button>
         </DialogFooter>

@@ -1,10 +1,9 @@
+"use client";
 
-'use client';
-
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/sonner';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/sonner";
 
 export default function OnboardingActions({ tenantId }: { tenantId: string }) {
   const router = useRouter();
@@ -14,17 +13,17 @@ export default function OnboardingActions({ tenantId }: { tenantId: string }) {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/super-admin/tenants/${tenantId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: true }),
       });
 
-      if (!res.ok) throw new Error('Failed to approve tenant');
+      if (!res.ok) throw new Error("Failed to approve tenant");
 
-      toast.success('Tenant approved successfully');
+      toast.success("Tenant approved successfully");
       router.refresh();
     } catch (error) {
-      toast.error('Failed to approve tenant');
+      toast.error("Failed to approve tenant");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -32,22 +31,26 @@ export default function OnboardingActions({ tenantId }: { tenantId: string }) {
   };
 
   const rejectTenant = async () => {
-    if (!confirm('Are you sure you want to reject this tenant? This action cannot be undone.')) {
+    if (
+      !confirm(
+        "Are you sure you want to reject this tenant? This action cannot be undone.",
+      )
+    ) {
       return;
     }
 
     setIsLoading(true);
     try {
       const res = await fetch(`/api/super-admin/tenants/${tenantId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
-      if (!res.ok) throw new Error('Failed to reject tenant');
+      if (!res.ok) throw new Error("Failed to reject tenant");
 
-      toast.success('Tenant rejected');
+      toast.success("Tenant rejected");
       router.refresh();
     } catch (error) {
-      toast.error('Failed to reject tenant');
+      toast.error("Failed to reject tenant");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -56,11 +59,7 @@ export default function OnboardingActions({ tenantId }: { tenantId: string }) {
 
   return (
     <div className="flex gap-2">
-      <Button
-        size="sm"
-        onClick={approveTenant}
-        disabled={isLoading}
-      >
+      <Button size="sm" onClick={approveTenant} disabled={isLoading}>
         Approve
       </Button>
       <Button

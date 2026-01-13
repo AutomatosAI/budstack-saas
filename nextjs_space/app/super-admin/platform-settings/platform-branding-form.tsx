@@ -1,17 +1,29 @@
+"use client";
 
-'use client';
-
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from '@/components/ui/sonner';
-import { Upload, Check, Palette, Type, Layout, Image as ImageIcon } from 'lucide-react';
-import Image from 'next/image';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/components/ui/sonner";
+import {
+  Upload,
+  Check,
+  Palette,
+  Type,
+  Layout,
+  Image as ImageIcon,
+} from "lucide-react";
+import Image from "next/image";
 
 interface PlatformBrandingFormProps {
   settings: {
@@ -33,21 +45,23 @@ interface PlatformBrandingFormProps {
 }
 
 const TEMPLATES = [
-  { id: 'modern', name: 'Modern', description: 'Clean and professional' },
-  { id: 'minimalist', name: 'Minimalist', description: 'Simple and elegant' },
-  { id: 'bold', name: 'Bold', description: 'Vibrant and eye-catching' },
+  { id: "modern", name: "Modern", description: "Clean and professional" },
+  { id: "minimalist", name: "Minimalist", description: "Simple and elegant" },
+  { id: "bold", name: "Bold", description: "Vibrant and eye-catching" },
 ];
 
 const FONTS = [
-  { id: 'inter', name: 'Inter', description: 'Modern sans-serif' },
-  { id: 'roboto', name: 'Roboto', description: 'Classic sans-serif' },
-  { id: 'lato', name: 'Lato', description: 'Friendly sans-serif' },
-  { id: 'montserrat', name: 'Montserrat', description: 'Geometric sans-serif' },
-  { id: 'poppins', name: 'Poppins', description: 'Rounded sans-serif' },
-  { id: 'playfair', name: 'Playfair Display', description: 'Elegant serif' },
+  { id: "inter", name: "Inter", description: "Modern sans-serif" },
+  { id: "roboto", name: "Roboto", description: "Classic sans-serif" },
+  { id: "lato", name: "Lato", description: "Friendly sans-serif" },
+  { id: "montserrat", name: "Montserrat", description: "Geometric sans-serif" },
+  { id: "poppins", name: "Poppins", description: "Rounded sans-serif" },
+  { id: "playfair", name: "Playfair Display", description: "Elegant serif" },
 ];
 
-export default function PlatformBrandingForm({ settings }: PlatformBrandingFormProps) {
+export default function PlatformBrandingForm({
+  settings,
+}: PlatformBrandingFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [logo, setLogo] = useState<File | null>(null);
@@ -55,7 +69,7 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
 
   const [formData, setFormData] = useState({
     businessName: settings.businessName,
-    tagline: settings.tagline || '',
+    tagline: settings.tagline || "",
 
     // Colors
     primaryColor: settings.primaryColor,
@@ -86,20 +100,20 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
       });
 
       // Append files
-      if (logo) formDataToSend.append('logo', logo);
-      if (favicon) formDataToSend.append('favicon', favicon);
+      if (logo) formDataToSend.append("logo", logo);
+      if (favicon) formDataToSend.append("favicon", favicon);
 
       const res = await fetch(`/api/super-admin/platform-settings`, {
-        method: 'POST',
+        method: "POST",
         body: formDataToSend,
       });
 
-      if (!res.ok) throw new Error('Failed to update platform settings');
+      if (!res.ok) throw new Error("Failed to update platform settings");
 
-      toast.success('✅ Platform branding updated successfully!');
+      toast.success("✅ Platform branding updated successfully!");
       router.refresh();
     } catch (error) {
-      toast.error('Failed to update platform branding');
+      toast.error("Failed to update platform branding");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -129,7 +143,9 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
           <Card className="shadow-lg border-slate-200">
             <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-cyan-50">
               <CardTitle>Platform Information</CardTitle>
-              <CardDescription>Basic information about BudStack</CardDescription>
+              <CardDescription>
+                Basic information about BudStack
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-6">
               <div>
@@ -137,7 +153,9 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
                 <Input
                   id="businessName"
                   value={formData.businessName}
-                  onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, businessName: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -146,7 +164,9 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
                 <Textarea
                   id="tagline"
                   value={formData.tagline}
-                  onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tagline: e.target.value })
+                  }
                   placeholder="White-Label Medical Cannabis E-Commerce Platform"
                   rows={2}
                 />
@@ -157,24 +177,33 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
           <Card className="shadow-lg border-slate-200">
             <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
               <CardTitle>Template Style</CardTitle>
-              <CardDescription>Choose the overall design aesthetic</CardDescription>
+              <CardDescription>
+                Choose the overall design aesthetic
+              </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="grid grid-cols-3 gap-4">
                 {TEMPLATES.map((template) => (
                   <div
                     key={template.id}
-                    onClick={() => setFormData({ ...formData, template: template.id })}
-                    className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.template === template.id
-                      ? 'border-emerald-500 bg-emerald-50 shadow-md'
-                      : 'border-slate-200 hover:border-slate-300 hover:shadow'
-                      }`}
+                    onClick={() =>
+                      setFormData({ ...formData, template: template.id })
+                    }
+                    className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      formData.template === template.id
+                        ? "border-emerald-500 bg-emerald-50 shadow-md"
+                        : "border-slate-200 hover:border-slate-300 hover:shadow"
+                    }`}
                   >
                     {formData.template === template.id && (
                       <Check className="absolute top-2 right-2 w-5 h-5 text-emerald-600" />
                     )}
-                    <h3 className="font-semibold text-slate-900">{template.name}</h3>
-                    <p className="text-sm text-slate-600">{template.description}</p>
+                    <h3 className="font-semibold text-slate-900">
+                      {template.name}
+                    </h3>
+                    <p className="text-sm text-slate-600">
+                      {template.description}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -190,7 +219,9 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
               {/* Logo Upload */}
               <div className="space-y-2">
                 <Label>Platform Logo</Label>
-                <p className="text-sm text-slate-500">Recommended: PNG/SVG, transparent background</p>
+                <p className="text-sm text-slate-500">
+                  Recommended: PNG/SVG, transparent background
+                </p>
 
                 {settings.logoUrl && !logo && (
                   <div className="relative w-48 h-24 border rounded-lg overflow-hidden bg-slate-50 shadow-sm">
@@ -222,7 +253,9 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
               {/* Favicon Upload */}
               <div className="space-y-2">
                 <Label>Favicon</Label>
-                <p className="text-sm text-slate-500">Recommended: 32x32px or 64x64px, PNG/ICO</p>
+                <p className="text-sm text-slate-500">
+                  Recommended: 32x32px or 64x64px, PNG/ICO
+                </p>
 
                 {settings.faviconUrl && !favicon && (
                   <div className="relative w-16 h-16 border rounded-lg overflow-hidden bg-slate-50 shadow-sm">
@@ -270,13 +303,23 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
                       type="color"
                       id="primaryColor"
                       value={formData.primaryColor}
-                      onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          primaryColor: e.target.value,
+                        })
+                      }
                       className="w-20 h-10"
                     />
                     <Input
                       type="text"
                       value={formData.primaryColor}
-                      onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          primaryColor: e.target.value,
+                        })
+                      }
                       placeholder="#059669"
                     />
                   </div>
@@ -289,13 +332,23 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
                       type="color"
                       id="secondaryColor"
                       value={formData.secondaryColor}
-                      onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          secondaryColor: e.target.value,
+                        })
+                      }
                       className="w-20 h-10"
                     />
                     <Input
                       type="text"
                       value={formData.secondaryColor}
-                      onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          secondaryColor: e.target.value,
+                        })
+                      }
                       placeholder="#34d399"
                     />
                   </div>
@@ -308,13 +361,23 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
                       type="color"
                       id="accentColor"
                       value={formData.accentColor}
-                      onChange={(e) => setFormData({ ...formData, accentColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          accentColor: e.target.value,
+                        })
+                      }
                       className="w-20 h-10"
                     />
                     <Input
                       type="text"
                       value={formData.accentColor}
-                      onChange={(e) => setFormData({ ...formData, accentColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          accentColor: e.target.value,
+                        })
+                      }
                       placeholder="#10b981"
                     />
                   </div>
@@ -327,13 +390,23 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
                       type="color"
                       id="backgroundColor"
                       value={formData.backgroundColor}
-                      onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          backgroundColor: e.target.value,
+                        })
+                      }
                       className="w-20 h-10"
                     />
                     <Input
                       type="text"
                       value={formData.backgroundColor}
-                      onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          backgroundColor: e.target.value,
+                        })
+                      }
                       placeholder="#ffffff"
                     />
                   </div>
@@ -346,13 +419,17 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
                       type="color"
                       id="textColor"
                       value={formData.textColor}
-                      onChange={(e) => setFormData({ ...formData, textColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, textColor: e.target.value })
+                      }
                       className="w-20 h-10"
                     />
                     <Input
                       type="text"
                       value={formData.textColor}
-                      onChange={(e) => setFormData({ ...formData, textColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, textColor: e.target.value })
+                      }
                       placeholder="#1f2937"
                     />
                   </div>
@@ -365,13 +442,23 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
                       type="color"
                       id="headingColor"
                       value={formData.headingColor}
-                      onChange={(e) => setFormData({ ...formData, headingColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          headingColor: e.target.value,
+                        })
+                      }
                       className="w-20 h-10"
                     />
                     <Input
                       type="text"
                       value={formData.headingColor}
-                      onChange={(e) => setFormData({ ...formData, headingColor: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          headingColor: e.target.value,
+                        })
+                      }
                       placeholder="#111827"
                     />
                   </div>
@@ -379,32 +466,57 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
               </div>
 
               {/* Color Preview */}
-              <div className="mt-6 p-6 rounded-lg border" style={{ backgroundColor: formData.backgroundColor }}>
-                <h3 className="text-2xl font-bold mb-2" style={{ color: formData.headingColor, fontFamily: formData.headingFontFamily }}>
+              <div
+                className="mt-6 p-6 rounded-lg border"
+                style={{ backgroundColor: formData.backgroundColor }}
+              >
+                <h3
+                  className="text-2xl font-bold mb-2"
+                  style={{
+                    color: formData.headingColor,
+                    fontFamily: formData.headingFontFamily,
+                  }}
+                >
                   Preview Heading
                 </h3>
-                <p className="mb-4" style={{ color: formData.textColor, fontFamily: formData.fontFamily }}>
-                  This is how your text will look with the selected colors and fonts.
+                <p
+                  className="mb-4"
+                  style={{
+                    color: formData.textColor,
+                    fontFamily: formData.fontFamily,
+                  }}
+                >
+                  This is how your text will look with the selected colors and
+                  fonts.
                 </p>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     className="px-4 py-2 rounded"
-                    style={{ backgroundColor: formData.primaryColor, color: '#ffffff' }}
+                    style={{
+                      backgroundColor: formData.primaryColor,
+                      color: "#ffffff",
+                    }}
                   >
                     Primary Button
                   </button>
                   <button
                     type="button"
                     className="px-4 py-2 rounded"
-                    style={{ backgroundColor: formData.secondaryColor, color: '#ffffff' }}
+                    style={{
+                      backgroundColor: formData.secondaryColor,
+                      color: "#ffffff",
+                    }}
                   >
                     Secondary Button
                   </button>
                   <button
                     type="button"
                     className="px-4 py-2 rounded"
-                    style={{ backgroundColor: formData.accentColor, color: '#ffffff' }}
+                    style={{
+                      backgroundColor: formData.accentColor,
+                      color: "#ffffff",
+                    }}
                   >
                     Accent Button
                   </button>
@@ -428,16 +540,26 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
                   {FONTS.map((font) => (
                     <div
                       key={font.id}
-                      onClick={() => setFormData({ ...formData, fontFamily: font.id })}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.fontFamily === font.id
-                        ? 'border-emerald-500 bg-emerald-50 shadow-md'
-                        : 'border-slate-200 hover:border-slate-300 hover:shadow'
-                        }`}
+                      onClick={() =>
+                        setFormData({ ...formData, fontFamily: font.id })
+                      }
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        formData.fontFamily === font.id
+                          ? "border-emerald-500 bg-emerald-50 shadow-md"
+                          : "border-slate-200 hover:border-slate-300 hover:shadow"
+                      }`}
                     >
                       <div className="flex items-start justify-between">
                         <div>
-                          <h4 className="font-semibold" style={{ fontFamily: font.id }}>{font.name}</h4>
-                          <p className="text-sm text-gray-600">{font.description}</p>
+                          <h4
+                            className="font-semibold"
+                            style={{ fontFamily: font.id }}
+                          >
+                            {font.name}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {font.description}
+                          </p>
                         </div>
                         {formData.fontFamily === font.id && (
                           <Check className="w-5 h-5 text-emerald-600 flex-shrink-0" />
@@ -454,16 +576,26 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
                   {FONTS.map((font) => (
                     <div
                       key={font.id}
-                      onClick={() => setFormData({ ...formData, headingFontFamily: font.id })}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.headingFontFamily === font.id
-                        ? 'border-emerald-500 bg-emerald-50 shadow-md'
-                        : 'border-slate-200 hover:border-slate-300 hover:shadow'
-                        }`}
+                      onClick={() =>
+                        setFormData({ ...formData, headingFontFamily: font.id })
+                      }
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        formData.headingFontFamily === font.id
+                          ? "border-emerald-500 bg-emerald-50 shadow-md"
+                          : "border-slate-200 hover:border-slate-300 hover:shadow"
+                      }`}
                     >
                       <div className="flex items-start justify-between">
                         <div>
-                          <h4 className="font-semibold" style={{ fontFamily: font.id }}>{font.name}</h4>
-                          <p className="text-sm text-gray-600">{font.description}</p>
+                          <h4
+                            className="font-semibold"
+                            style={{ fontFamily: font.id }}
+                          >
+                            {font.name}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {font.description}
+                          </p>
                         </div>
                         {formData.headingFontFamily === font.id && (
                           <Check className="w-5 h-5 text-emerald-600 flex-shrink-0" />
@@ -486,7 +618,7 @@ export default function PlatformBrandingForm({ settings }: PlatformBrandingFormP
           disabled={isLoading}
           className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all"
         >
-          {isLoading ? 'Saving...' : 'Save Platform Branding'}
+          {isLoading ? "Saving..." : "Save Platform Branding"}
         </Button>
       </div>
     </form>

@@ -1,3 +1,2 @@
-
-import TermsPage from '@/app/terms/page';
+import TermsPage from "@/app/terms/page";
 export default TermsPage;

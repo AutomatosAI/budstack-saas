@@ -1,3 +1,2 @@
-
-import RegulatoryPage from '@/app/regulatory/page';
+import RegulatoryPage from "@/app/regulatory/page";
 export default RegulatoryPage;
