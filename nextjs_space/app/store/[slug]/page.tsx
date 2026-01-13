@@ -1,29 +1,32 @@
-import { notFound } from 'next/navigation';
-import { getCurrentTenant } from '@/lib/tenant';
-import { prisma } from '@/lib/db';
-import { getFileUrl } from '@/lib/s3';
+import { notFound } from "next/navigation";
+import { getCurrentTenant } from "@/lib/tenant";
+import { prisma } from "@/lib/db";
+import { getFileUrl } from "@/lib/s3";
 
 // Import template registry
-import { TEMPLATE_COMPONENTS } from '@/lib/template-registry';
+import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
 
 // Import theme provider
-import { TenantThemeProvider } from '@/components/tenant-theme-provider';
+import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 
 // Import existing homepage components (fallback)
-import { HeroSection } from '@/components/home/hero-section';
-import { TrustBadges } from '@/components/home/trust-badges';
-import { FeaturedConditions } from '@/components/home/featured-conditions';
-import { ProcessSteps } from '@/components/home/process-steps';
-import { EducationalContent } from '@/components/home/educational-content';
-import { TestimonialsSlider } from '@/components/home/testimonials-slider';
-import { CallToAction } from '@/components/home/call-to-action';
+import { HeroSection } from "@/components/home/hero-section";
+import { TrustBadges } from "@/components/home/trust-badges";
+import { FeaturedConditions } from "@/components/home/featured-conditions";
+import { ProcessSteps } from "@/components/home/process-steps";
+import { EducationalContent } from "@/components/home/educational-content";
+import { TestimonialsSlider } from "@/components/home/testimonials-slider";
+import { CallToAction } from "@/components/home/call-to-action";
 
 export default async function TenantStorePage() {
   const tenant = await getCurrentTenant();
-  console.log('[DEBUG] TenantStorePage: Resolved tenant:', tenant ? tenant.subdomain : 'null');
+  console.log(
+    "[DEBUG] TenantStorePage: Resolved tenant:",
+    tenant ? tenant.subdomain : "null",
+  );
 
   if (!tenant) {
-    console.error('[DEBUG] TenantStorePage: Tenant not found, returning 404');
+    console.error("[DEBUG] TenantStorePage: Tenant not found, returning 404");
     notFound();
   }
 
@@ -41,10 +44,18 @@ export default async function TenantStorePage() {
   });
 
   if (!tenantWithTemplate) {
-    console.error('[DEBUG] TenantStorePage: tenantWithTemplate not found for id:', tenant.id);
+    console.error(
+      "[DEBUG] TenantStorePage: tenantWithTemplate not found for id:",
+      tenant.id,
+    );
     notFound();
   } else {
-    console.log('[DEBUG] TenantStorePage: Found tenantWithTemplate. activeTenantTemplate:', !!tenantWithTemplate.activeTenantTemplate, 'Legacy template:', !!tenantWithTemplate.template);
+    console.log(
+      "[DEBUG] TenantStorePage: Found tenantWithTemplate. activeTenantTemplate:",
+      !!tenantWithTemplate.activeTenantTemplate,
+      "Legacy template:",
+      !!tenantWithTemplate.template,
+    );
   }
 
   // URLs for template props
@@ -62,11 +73,11 @@ export default async function TenantStorePage() {
     const latestPosts = await prisma.posts.findMany({
       where: {
         tenantId: tenant.id,
-        published: true
+        published: true,
       },
       take: 3,
-      orderBy: { createdAt: 'desc' },
-      include: { users: true }
+      orderBy: { createdAt: "desc" },
+      include: { users: true },
     });
 
     // Get the template component
@@ -74,28 +85,38 @@ export default async function TenantStorePage() {
 
     // Process hero image URL (sign if S3 path)
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
-    if (heroImageUrl && !heroImageUrl.startsWith('/') && !heroImageUrl.startsWith('http')) {
+    if (
+      heroImageUrl &&
+      !heroImageUrl.startsWith("/") &&
+      !heroImageUrl.startsWith("http")
+    ) {
       try {
-        console.log('[DEBUG] StorePage: Signing heroImageUrl:', heroImageUrl);
+        console.log("[DEBUG] StorePage: Signing heroImageUrl:", heroImageUrl);
         const signedUrl = await getFileUrl(heroImageUrl);
-        console.log('[DEBUG] StorePage: Signed hero URL result:', signedUrl ? signedUrl.substring(0, 50) + '...' : 'null');
+        console.log(
+          "[DEBUG] StorePage: Signed hero URL result:",
+          signedUrl ? signedUrl.substring(0, 50) + "..." : "null",
+        );
         heroImageUrl = signedUrl;
       } catch (error) {
-        console.error('Error fetching hero image from S3:', error);
+        console.error("Error fetching hero image from S3:", error);
         // Fallback to original, though likely broken if private S3
       }
     }
 
     // Process logo URL (sign if S3 path)
     let logoUrl = tenantTemplate.logoUrl || null;
-    if (logoUrl && !logoUrl.startsWith('/') && !logoUrl.startsWith('http')) {
+    if (logoUrl && !logoUrl.startsWith("/") && !logoUrl.startsWith("http")) {
       try {
-        console.log('[DEBUG] StorePage: Signing logoUrl:', logoUrl);
+        console.log("[DEBUG] StorePage: Signing logoUrl:", logoUrl);
         const signedUrl = await getFileUrl(logoUrl);
-        console.log('[DEBUG] StorePage: Signed logo URL result:', signedUrl ? signedUrl.substring(0, 50) + '...' : 'null');
+        console.log(
+          "[DEBUG] StorePage: Signed logo URL result:",
+          signedUrl ? signedUrl.substring(0, 50) + "..." : "null",
+        );
         logoUrl = signedUrl;
       } catch (error) {
-        console.error('Error fetching logo from S3:', error);
+        console.error("Error fetching logo from S3:", error);
       }
     }
 
@@ -124,7 +145,7 @@ export default async function TenantStorePage() {
       const signedTenantTemplate = {
         ...tenantTemplate,
         heroImageUrl, // This is the SIGNED url
-        logoUrl,      // This is the SIGNED url
+        logoUrl, // This is the SIGNED url
       };
 
       return (
@@ -144,30 +165,30 @@ export default async function TenantStorePage() {
   if (settings.heroImagePath) {
     try {
       if (
-        settings.heroImagePath.startsWith('/templates/') ||
-        settings.heroImagePath.startsWith('/public/')
+        settings.heroImagePath.startsWith("/templates/") ||
+        settings.heroImagePath.startsWith("/public/")
       ) {
         heroImageUrl = settings.heroImagePath;
       } else {
         heroImageUrl = await getFileUrl(settings.heroImagePath);
       }
     } catch (error) {
-      console.error('Error fetching hero image:', error);
+      console.error("Error fetching hero image:", error);
     }
   }
 
   if (settings.logoPath) {
     try {
       if (
-        settings.logoPath.startsWith('/templates/') ||
-        settings.logoPath.startsWith('/public/')
+        settings.logoPath.startsWith("/templates/") ||
+        settings.logoPath.startsWith("/public/")
       ) {
         logoUrl = settings.logoPath;
       } else {
         logoUrl = await getFileUrl(settings.logoPath);
       }
     } catch (error) {
-      console.error('Error fetching logo:', error);
+      console.error("Error fetching logo:", error);
     }
   }
 
@@ -216,7 +237,10 @@ export default async function TenantStorePage() {
       <TestimonialsSlider />
 
       {/* Call to Action */}
-      <CallToAction tenant={tenantWithTemplate} consultationUrl={consultationUrl} />
+      <CallToAction
+        tenant={tenantWithTemplate}
+        consultationUrl={consultationUrl}
+      />
     </div>
   );
 }
@@ -227,7 +251,7 @@ export async function generateMetadata() {
 
   if (!tenant) {
     return {
-      title: 'Store Not Found',
+      title: "Store Not Found",
     };
   }
 
@@ -243,11 +267,16 @@ export async function generateMetadata() {
   });
 
   // Get SEO config with cascade: custom → default
-  const pageSeo = tenantWithSeo?.pageSeo as { home?: { title?: string; description?: string; ogImage?: string } } | null;
+  const pageSeo = tenantWithSeo?.pageSeo as {
+    home?: { title?: string; description?: string; ogImage?: string };
+  } | null;
   const homeSeo = pageSeo?.home;
 
-  const title = homeSeo?.title || `${tenant.businessName} - Medical Cannabis Solutions`;
-  const description = homeSeo?.description || `Premium medical cannabis products and consultations from ${tenant.businessName}`;
+  const title =
+    homeSeo?.title || `${tenant.businessName} - Medical Cannabis Solutions`;
+  const description =
+    homeSeo?.description ||
+    `Premium medical cannabis products and consultations from ${tenant.businessName}`;
 
   // Build base URL for OG images
   const baseUrl = tenantWithSeo?.customDomain
@@ -262,11 +291,13 @@ export async function generateMetadata() {
       description,
       url: baseUrl,
       siteName: tenant.businessName,
-      type: 'website',
-      ...(homeSeo?.ogImage && { images: [{ url: homeSeo.ogImage, width: 1200, height: 630 }] }),
+      type: "website",
+      ...(homeSeo?.ogImage && {
+        images: [{ url: homeSeo.ogImage, width: 1200, height: 630 }],
+      }),
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title,
       description,
       ...(homeSeo?.ogImage && { images: [homeSeo.ogImage] }),

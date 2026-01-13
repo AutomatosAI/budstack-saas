@@ -1,20 +1,26 @@
-import { getServerSession } from 'next-auth';
-import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
-import { TenantsTable } from './tenants-table';
-import { Breadcrumbs } from '@/components/admin/shared';
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
+import { TenantsTable } from "./tenants-table";
+import { Breadcrumbs } from "@/components/admin/shared";
 
 /** Default pagination settings */
 const DEFAULT_PAGE_SIZE = 20;
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
 
 /** Valid sort columns for tenants table */
-const VALID_SORT_COLUMNS = ['businessName', 'subdomain', 'nftTokenId', 'createdAt', 'isActive'] as const;
-type SortColumn = typeof VALID_SORT_COLUMNS[number];
+const VALID_SORT_COLUMNS = [
+  "businessName",
+  "subdomain",
+  "nftTokenId",
+  "createdAt",
+  "isActive",
+] as const;
+type SortColumn = (typeof VALID_SORT_COLUMNS)[number];
 
 interface TenantsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -23,33 +29,45 @@ interface TenantsPageProps {
 export default async function TenantsPage({ searchParams }: TenantsPageProps) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== 'SUPER_ADMIN') {
-    redirect('/auth/login');
+  if (!session || session.user.role !== "SUPER_ADMIN") {
+    redirect("/auth/login");
   }
 
   // Await searchParams (Next.js 15+ async searchParams)
   const params = await searchParams;
 
   // Parse pagination params from URL
-  const pageParam = typeof params.page === 'string' ? parseInt(params.page, 10) : 1;
+  const pageParam =
+    typeof params.page === "string" ? parseInt(params.page, 10) : 1;
   const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
 
-  const pageSizeParam = typeof params.pageSize === 'string' ? parseInt(params.pageSize, 10) : DEFAULT_PAGE_SIZE;
-  const pageSize = VALID_PAGE_SIZES.includes(pageSizeParam) ? pageSizeParam : DEFAULT_PAGE_SIZE;
+  const pageSizeParam =
+    typeof params.pageSize === "string"
+      ? parseInt(params.pageSize, 10)
+      : DEFAULT_PAGE_SIZE;
+  const pageSize = VALID_PAGE_SIZES.includes(pageSizeParam)
+    ? pageSizeParam
+    : DEFAULT_PAGE_SIZE;
 
   // Parse search and filter params from URL
-  const search = typeof params.search === 'string' ? params.search.trim() : '';
-  const statusFilter = typeof params.status === 'string' ? params.status : 'all';
+  const search = typeof params.search === "string" ? params.search.trim() : "";
+  const statusFilter =
+    typeof params.status === "string" ? params.status : "all";
 
   // Parse sort params from URL
-  const sortByParam = typeof params.sortBy === 'string' ? params.sortBy : null;
-  const sortOrderParam = typeof params.sortOrder === 'string' ? params.sortOrder : null;
+  const sortByParam = typeof params.sortBy === "string" ? params.sortBy : null;
+  const sortOrderParam =
+    typeof params.sortOrder === "string" ? params.sortOrder : null;
 
   // Validate sort column
-  const sortBy = sortByParam && VALID_SORT_COLUMNS.includes(sortByParam as SortColumn)
-    ? (sortByParam as SortColumn)
-    : null;
-  const sortOrder = sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : 'asc';
+  const sortBy =
+    sortByParam && VALID_SORT_COLUMNS.includes(sortByParam as SortColumn)
+      ? (sortByParam as SortColumn)
+      : null;
+  const sortOrder =
+    sortOrderParam === "asc" || sortOrderParam === "desc"
+      ? sortOrderParam
+      : "asc";
 
   // Build Prisma where clause for server-side filtering
   const whereClause: Prisma.tenantsWhereInput = {};
@@ -57,17 +75,17 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
   // Apply search filter (case-insensitive across multiple fields)
   if (search) {
     whereClause.OR = [
-      { businessName: { contains: search, mode: 'insensitive' } },
-      { subdomain: { contains: search, mode: 'insensitive' } },
-      { customDomain: { contains: search, mode: 'insensitive' } },
-      { nftTokenId: { contains: search, mode: 'insensitive' } },
+      { businessName: { contains: search, mode: "insensitive" } },
+      { subdomain: { contains: search, mode: "insensitive" } },
+      { customDomain: { contains: search, mode: "insensitive" } },
+      { nftTokenId: { contains: search, mode: "insensitive" } },
     ];
   }
 
   // Apply status filter
-  if (statusFilter === 'active') {
+  if (statusFilter === "active") {
     whereClause.isActive = true;
-  } else if (statusFilter === 'inactive') {
+  } else if (statusFilter === "inactive") {
     whereClause.isActive = false;
   }
 
@@ -77,64 +95,69 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
   // Build orderBy clause - default to createdAt desc if no sort specified
   const orderBy: Prisma.tenantsOrderByWithRelationInput = sortBy
     ? { [sortBy]: sortOrder }
-    : { createdAt: 'desc' };
+    : { createdAt: "desc" };
 
   // Get filtered count and paginated tenants in parallel
   // Also get counts for filter badges (active/inactive)
-  const [filteredCount, tenants, activeCount, inactiveCount] = await Promise.all([
-    prisma.tenants.count({ where: whereClause }),
-    prisma.tenants.findMany({
-      where: whereClause,
-      include: {
-        _count: {
-          select: {
-            users: true,
-            products: true,
-            orders: true,
+  const [filteredCount, tenants, activeCount, inactiveCount] =
+    await Promise.all([
+      prisma.tenants.count({ where: whereClause }),
+      prisma.tenants.findMany({
+        where: whereClause,
+        include: {
+          _count: {
+            select: {
+              users: true,
+              products: true,
+              orders: true,
+            },
           },
         },
-      },
-      orderBy,
-      skip,
-      take: pageSize,
-    }),
-    // Count active tenants (with search applied if present)
-    prisma.tenants.count({
-      where: {
-        ...(search ? {
-          OR: [
-            { businessName: { contains: search, mode: 'insensitive' } },
-            { subdomain: { contains: search, mode: 'insensitive' } },
-            { customDomain: { contains: search, mode: 'insensitive' } },
-            { nftTokenId: { contains: search, mode: 'insensitive' } },
-          ],
-        } : {}),
-        isActive: true,
-      },
-    }),
-    // Count inactive tenants (with search applied if present)
-    prisma.tenants.count({
-      where: {
-        ...(search ? {
-          OR: [
-            { businessName: { contains: search, mode: 'insensitive' } },
-            { subdomain: { contains: search, mode: 'insensitive' } },
-            { customDomain: { contains: search, mode: 'insensitive' } },
-            { nftTokenId: { contains: search, mode: 'insensitive' } },
-          ],
-        } : {}),
-        isActive: false,
-      },
-    }),
-  ]);
+        orderBy,
+        skip,
+        take: pageSize,
+      }),
+      // Count active tenants (with search applied if present)
+      prisma.tenants.count({
+        where: {
+          ...(search
+            ? {
+                OR: [
+                  { businessName: { contains: search, mode: "insensitive" } },
+                  { subdomain: { contains: search, mode: "insensitive" } },
+                  { customDomain: { contains: search, mode: "insensitive" } },
+                  { nftTokenId: { contains: search, mode: "insensitive" } },
+                ],
+              }
+            : {}),
+          isActive: true,
+        },
+      }),
+      // Count inactive tenants (with search applied if present)
+      prisma.tenants.count({
+        where: {
+          ...(search
+            ? {
+                OR: [
+                  { businessName: { contains: search, mode: "insensitive" } },
+                  { subdomain: { contains: search, mode: "insensitive" } },
+                  { customDomain: { contains: search, mode: "insensitive" } },
+                  { nftTokenId: { contains: search, mode: "insensitive" } },
+                ],
+              }
+            : {}),
+          isActive: false,
+        },
+      }),
+    ]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', href: '/super-admin' },
-          { label: 'Tenants' },
+          { label: "Dashboard", href: "/super-admin" },
+          { label: "Tenants" },
         ]}
         className="mb-4"
       />
@@ -143,8 +166,12 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Tenant Management</h1>
-            <p className="text-sm sm:text-base text-slate-600 mt-1 sm:mt-2">Manage all tenant accounts and NFT holders</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              Tenant Management
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 mt-1 sm:mt-2">
+              Manage all tenant accounts and NFT holders
+            </p>
           </div>
           <Link href="/super-admin/onboarding" className="w-full sm:w-auto">
             <Button className="w-full sm:w-auto bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all">

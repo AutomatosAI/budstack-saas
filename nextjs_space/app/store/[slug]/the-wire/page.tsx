@@ -29,7 +29,7 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
   const posts = await prisma.posts.findMany({
     where: {
       tenantId: tenant.id,
-      published: true
+      published: true,
     },
     orderBy: { createdAt: "desc" },
     include: { users: true },
@@ -48,51 +48,61 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {posts.map((post: posts & { author: { name: string | null } | null }) => (
-            <Card key={post.id} className="flex flex-col overflow-hidden h-full hover:shadow-lg transition-shadow">
-              {post.coverImage && (
-                <div className="aspect-video w-full overflow-hidden">
-                  <img
-                    src={post.coverImage}
-                    alt={post.title}
-                    className="w-full h-full object-cover transition-transform hover:scale-105"
-                  />
-                </div>
-              )}
-              <CardContent className="flex-1 p-6 flex flex-col">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                  <span>
-                    {format(new Date(post.createdAt), 'MMM d, yyyy')}
-                  </span>
-                  <span>•</span>
-                  <span>{post.author?.name || 'Admin'}</span>
-                </div>
-
-                <h2 className="text-xl font-bold mb-2 line-clamp-2">
-                  <Link href={`/store/${slug}/the-wire/${post.slug}`} className="hover:underline">
-                    {post.title}
-                  </Link>
-                </h2>
-
-                {post.excerpt && (
-                  <p className="text-muted-foreground mb-4 line-clamp-3 flex-1">
-                    {post.excerpt}
-                  </p>
+          {posts.map(
+            (post: posts & { author: { name: string | null } | null }) => (
+              <Card
+                key={post.id}
+                className="flex flex-col overflow-hidden h-full hover:shadow-lg transition-shadow"
+              >
+                {post.coverImage && (
+                  <div className="aspect-video w-full overflow-hidden">
+                    <img
+                      src={post.coverImage}
+                      alt={post.title}
+                      className="w-full h-full object-cover transition-transform hover:scale-105"
+                    />
+                  </div>
                 )}
+                <CardContent className="flex-1 p-6 flex flex-col">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                    <span>
+                      {format(new Date(post.createdAt), "MMM d, yyyy")}
+                    </span>
+                    <span>•</span>
+                    <span>{post.author?.name || "Admin"}</span>
+                  </div>
 
-                <div className="mt-auto pt-4">
-                  <Button asChild variant="link" className="px-0">
-                    <Link href={`/store/${slug}/the-wire/${post.slug}`}>
-                      Read Article <ArrowRight className="ml-2 h-4 w-4" />
+                  <h2 className="text-xl font-bold mb-2 line-clamp-2">
+                    <Link
+                      href={`/store/${slug}/the-wire/${post.slug}`}
+                      className="hover:underline"
+                    >
+                      {post.title}
                     </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </h2>
+
+                  {post.excerpt && (
+                    <p className="text-muted-foreground mb-4 line-clamp-3 flex-1">
+                      {post.excerpt}
+                    </p>
+                  )}
+
+                  <div className="mt-auto pt-4">
+                    <Button asChild variant="link" className="px-0">
+                      <Link href={`/store/${slug}/the-wire/${post.slug}`}>
+                        Read Article <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ),
+          )}
           {posts.length === 0 && (
             <div className="col-span-full text-center py-12">
-              <p className="text-muted-foreground">No articles published yet.</p>
+              <p className="text-muted-foreground">
+                No articles published yet.
+              </p>
             </div>
           )}
         </div>
