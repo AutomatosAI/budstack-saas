@@ -61,22 +61,17 @@ const tenantScopedModelsWithNullAccess = new Set([
   'email_event_mappings',
 ]);
 
-const tenantScopedReadActions = new Set([
+const tenantScopedActions = new Set([
   'findMany',
   'findFirst',
   'findUnique',
   'count',
   'aggregate',
   'groupBy',
-  'deleteMany',
-]);
-
-const tenantScopedWriteManyActions = new Set([
+  'update',
   'updateMany',
+  'delete',
   'deleteMany',
-]);
-
-const tenantScopedCreateActions = new Set([
   'create',
   'createMany',
   'upsert',
@@ -103,7 +98,7 @@ const applyTenantScope = (where: Record<string, any>, tenantId: string, allowNul
 if ('$use' in prisma) {
   prisma.$use(async (params, next) => {
     const tenantId = getTenantContext();
-    if (!tenantId || !params.model || !tenantScopedModels.has(params.model)) {
+    if (!tenantId || !params.model || !tenantScopedModels.has(params.model) || !tenantScopedActions.has(params.action)) {
       return next(params);
     }
 
@@ -113,7 +108,7 @@ if ('$use' in prisma) {
       params.action = 'findFirst';
     }
 
-    if (tenantScopedCreateActions.has(params.action)) {
+    if (params.action === 'create' || params.action === 'createMany') {
       if (params.args?.data) {
         if (Array.isArray(params.args.data)) {
           params.args.data = params.args.data.map((item: Record<string, any>) => ({
@@ -124,23 +119,25 @@ if ('$use' in prisma) {
           params.args.data.tenantId = params.args.data.tenantId ?? tenantId;
         }
       }
-      if (params.action === 'upsert') {
-        if (params.args?.create) {
-          params.args.create.tenantId = params.args.create.tenantId ?? tenantId;
-        }
-      }
       return next(params);
     }
 
-    if (tenantScopedReadActions.has(params.action) || tenantScopedWriteManyActions.has(params.action)) {
-      if (params.args?.where) {
-        params.args.where = applyTenantScope(params.args.where, tenantId, allowNull);
-      } else {
-        params.args = {
-          ...params.args,
-          where: applyTenantScope({}, tenantId, allowNull),
-        };
+    if (params.action === 'upsert') {
+      if (params.args?.create) {
+        params.args.create.tenantId = params.args.create.tenantId ?? tenantId;
       }
+      if (params.args?.update) {
+        params.args.update.tenantId = params.args.update.tenantId ?? tenantId;
+      }
+    }
+
+    if (params.args?.where) {
+      params.args.where = applyTenantScope(params.args.where, tenantId, allowNull);
+    } else if (params.action !== 'createMany') {
+      params.args = {
+        ...params.args,
+        where: applyTenantScope({}, tenantId, allowNull),
+      };
     }
 
     return next(params);
