@@ -8,15 +8,15 @@ import { NotificationCenter } from '@/components/admin/NotificationCenter';
 import type { Notification, NotificationType } from '@/components/admin/NotificationCenter';
 
 export default async function SuperAdminLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-    const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
 
-    if (!session || session.user.role !== 'SUPER_ADMIN') {
-        redirect('/auth/login');
-    }
+  if (!session || session.user.role !== "SUPER_ADMIN") {
+    redirect("/auth/login");
+  }
 
     const mapActionToType = (action: string): NotificationType => {
         if (action.includes('FAILED')) return 'FAILED_ORDER';
@@ -66,5 +66,8 @@ export default async function SuperAdminLayout({
                 </div>
             </AccessibleAdminLayout>
         </div>
-    );
+        <div className="flex-1 overflow-auto pl-0 md:pl-0">{children}</div>
+      </AccessibleAdminLayout>
+    </div>
+  );
 }

@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Loader2 } from 'lucide-react';
-import { toast } from '@/components/ui/sonner';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2, Loader2 } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
+import { useRouter } from "next/navigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,7 +14,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 interface TemplateActionsProps {
   templateId: string;
@@ -22,7 +22,11 @@ interface TemplateActionsProps {
   usageCount: number;
 }
 
-export function TemplateActions({ templateId, templateName, usageCount }: TemplateActionsProps) {
+export function TemplateActions({
+  templateId,
+  templateName,
+  usageCount,
+}: TemplateActionsProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const router = useRouter();
@@ -32,21 +36,21 @@ export function TemplateActions({ templateId, templateName, usageCount }: Templa
 
     try {
       const response = await fetch(`/api/super-admin/templates/${templateId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete template');
+        throw new Error(data.error || "Failed to delete template");
       }
 
-      toast.success(data.message || 'Template deleted successfully');
+      toast.success(data.message || "Template deleted successfully");
       setShowDeleteDialog(false);
       router.refresh();
     } catch (error: any) {
-      console.error('Delete error:', error);
-      toast.error(error.message || 'Failed to delete template');
+      console.error("Delete error:", error);
+      toast.error(error.message || "Failed to delete template");
     } finally {
       setIsDeleting(false);
     }
@@ -83,18 +87,19 @@ export function TemplateActions({ templateId, templateName, usageCount }: Templa
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Template</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the template <strong>"{templateName}"</strong>?
-              
+              Are you sure you want to delete the template{" "}
+              <strong>"{templateName}"</strong>?
               {usageCount > 0 && (
                 <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-900">
-                  ⚠️ This template is currently used by <strong>{usageCount}</strong> tenant(s). 
-                  You must reassign those tenants to a different template before deletion.
+                  ⚠️ This template is currently used by{" "}
+                  <strong>{usageCount}</strong> tenant(s). You must reassign
+                  those tenants to a different template before deletion.
                 </div>
               )}
-              
               {usageCount === 0 && (
                 <div className="mt-2">
-                  This action cannot be undone. The template files will be permanently removed from the system.
+                  This action cannot be undone. The template files will be
+                  permanently removed from the system.
                 </div>
               )}
             </AlertDialogDescription>
@@ -115,7 +120,7 @@ export function TemplateActions({ templateId, templateName, usageCount }: Templa
                   Deleting...
                 </>
               ) : (
-                'Delete Template'
+                "Delete Template"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

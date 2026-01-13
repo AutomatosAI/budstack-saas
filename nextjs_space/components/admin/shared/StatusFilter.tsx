@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { Filter } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import * as React from "react";
+import { Filter } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 /**
  * Option for the StatusFilter dropdown.
@@ -41,7 +41,7 @@ export interface StatusFilterProps<T extends string = string> {
   /** Additional CSS classes */
   className?: string;
   /** Accessible label for screen readers */
-  'aria-label'?: string;
+  "aria-label"?: string;
   /** Whether to show the filter icon */
   showIcon?: boolean;
   /** Whether the filter is disabled */
@@ -78,9 +78,9 @@ export function StatusFilter<T extends string = string>({
   value,
   onChange,
   options,
-  placeholder = 'Filter...',
+  placeholder = "Filter...",
   className,
-  'aria-label': ariaLabel,
+  "aria-label": ariaLabel,
   showIcon = true,
   disabled = false,
 }: StatusFilterProps<T>) {
@@ -92,14 +92,14 @@ export function StatusFilter<T extends string = string>({
     >
       <SelectTrigger
         className={cn(
-          'w-[180px]',
-          'bg-background/50 backdrop-blur-sm',
-          'border-border/60 hover:border-border',
-          'focus:ring-primary/20 focus:border-primary',
-          'transition-all duration-200',
-          className
+          "w-[180px]",
+          "bg-background/50 backdrop-blur-sm",
+          "border-border/60 hover:border-border",
+          "focus:ring-primary/20 focus:border-primary",
+          "transition-all duration-200",
+          className,
         )}
-        aria-label={ariaLabel || 'Filter by status'}
+        aria-label={ariaLabel || "Filter by status"}
       >
         <div className="flex items-center gap-2">
           {showIcon && (
@@ -113,9 +113,9 @@ export function StatusFilter<T extends string = string>({
       </SelectTrigger>
       <SelectContent
         className={cn(
-          'bg-popover/95 backdrop-blur-md',
-          'border-border/60',
-          'shadow-lg shadow-black/5'
+          "bg-popover/95 backdrop-blur-md",
+          "border-border/60",
+          "shadow-lg shadow-black/5",
         )}
       >
         {options.map((option) => (
@@ -123,20 +123,20 @@ export function StatusFilter<T extends string = string>({
             key={option.value}
             value={option.value}
             className={cn(
-              'cursor-pointer',
-              'focus:bg-accent/80',
-              'transition-colors duration-150'
+              "cursor-pointer",
+              "focus:bg-accent/80",
+              "transition-colors duration-150",
             )}
           >
             <div className="flex items-center justify-between w-full gap-3">
               <span>{option.label}</span>
-              {typeof option.count === 'number' && (
+              {typeof option.count === "number" && (
                 <Badge
                   variant="secondary"
                   className={cn(
-                    'ml-auto',
-                    'h-5 px-1.5 text-[10px] font-medium',
-                    'bg-muted/80 text-muted-foreground'
+                    "ml-auto",
+                    "h-5 px-1.5 text-[10px] font-medium",
+                    "bg-muted/80 text-muted-foreground",
                   )}
                 >
                   {option.count}
@@ -150,4 +150,4 @@ export function StatusFilter<T extends string = string>({
   );
 }
 
-StatusFilter.displayName = 'StatusFilter';
+StatusFilter.displayName = "StatusFilter";

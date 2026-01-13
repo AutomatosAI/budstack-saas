@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useMemo, useState, useCallback } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { useMemo, useState, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import {
   ExternalLink,
   Building2,
@@ -13,11 +13,11 @@ import {
   Download,
   AlertTriangle,
   FileCheck,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -25,7 +25,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +33,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   SearchInput,
   StatusFilter,
@@ -42,16 +42,16 @@ import {
   SortableTableHeader,
   BulkActionBar,
   ExportButton,
-} from '@/components/admin/shared';
-import type { StatusFilterOption, BulkAction } from '@/components/admin/shared';
-import { useTableState } from '@/lib/admin/url-state';
-import { getTenantUrl } from '@/lib/tenant-utils';
-import { toast } from '@/components/ui/sonner';
-import { cn } from '@/lib/utils';
-import { exportToCSV } from '@/lib/admin/csv-export';
+} from "@/components/admin/shared";
+import type { StatusFilterOption, BulkAction } from "@/components/admin/shared";
+import { useTableState } from "@/lib/admin/url-state";
+import { getTenantUrl } from "@/lib/tenant-utils";
+import { toast } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
+import { exportToCSV } from "@/lib/admin/csv-export";
 
 /** Filter type for tenant status */
-type TenantStatusFilter = 'all' | 'active' | 'inactive';
+type TenantStatusFilter = "all" | "active" | "inactive";
 
 /** Typed filters for tenant table - uses Record index signature for URL state compatibility */
 type TenantFilters = {
@@ -88,7 +88,7 @@ interface TenantsTableProps {
 }
 
 /** Type for confirmation dialog action */
-type BulkActionType = 'activate' | 'deactivate' | null;
+type BulkActionType = "activate" | "deactivate" | null;
 
 /**
  * TenantsTable - Client component for displaying tenants with search, filter, pagination, and bulk actions.
@@ -115,7 +115,7 @@ export function TenantsTable({
     { search, filters, page, pageSize, sort },
     { setSearch, setFilter, setPage, setPageSize, setSort },
   ] = useTableState<TenantFilters>({
-    defaultFilters: { status: 'all' },
+    defaultFilters: { status: "all" },
     defaultPageSize: 20,
   });
 
@@ -126,42 +126,42 @@ export function TenantsTable({
   const [confirmAction, setConfirmAction] = useState<BulkActionType>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const statusFilter = filters.status || 'all';
+  const statusFilter = filters.status || "all";
 
   // Status filter options with server-provided counts
   const statusOptions: StatusFilterOption<TenantStatusFilter>[] = useMemo(
     () => [
       {
-        value: 'all',
-        label: 'All Tenants',
+        value: "all",
+        label: "All Tenants",
         count: activeCount + inactiveCount,
       },
-      { value: 'active', label: 'Active Only', count: activeCount },
-      { value: 'inactive', label: 'Inactive Only', count: inactiveCount },
+      { value: "active", label: "Active Only", count: activeCount },
+      { value: "inactive", label: "Inactive Only", count: inactiveCount },
     ],
-    [activeCount, inactiveCount]
+    [activeCount, inactiveCount],
   );
 
   // Server-side filtering is now applied - tenants array is already filtered
   const hasSearchQuery = search.trim().length > 0;
-  const hasStatusFilter = statusFilter !== 'all';
+  const hasStatusFilter = statusFilter !== "all";
   const hasFilters = hasSearchQuery || hasStatusFilter;
   const noResults = totalCount === 0 && hasFilters;
 
   // Build description for empty state
   const emptyDescription = useMemo(() => {
     if (hasSearchQuery && hasStatusFilter) {
-      const statusLabel = statusFilter === 'active' ? 'active' : 'inactive';
+      const statusLabel = statusFilter === "active" ? "active" : "inactive";
       return `No ${statusLabel} tenants match "${search}". Try adjusting your filters.`;
     }
     if (hasSearchQuery) {
       return `No tenants match "${search}". Try a different search term.`;
     }
     if (hasStatusFilter) {
-      const statusLabel = statusFilter === 'active' ? 'active' : 'inactive';
+      const statusLabel = statusFilter === "active" ? "active" : "inactive";
       return `No ${statusLabel} tenants found.`;
     }
-    return 'No tenants found.';
+    return "No tenants found.";
   }, [hasSearchQuery, hasStatusFilter, search, statusFilter]);
 
   // Total count for display (all tenants matching search, regardless of status filter)
@@ -169,8 +169,8 @@ export function TenantsTable({
 
   // Clear filters handler
   const handleClearFilters = () => {
-    setSearch('');
-    setFilter('status', 'all');
+    setSearch("");
+    setFilter("status", "all");
   };
 
   // Selection handlers
@@ -215,11 +215,11 @@ export function TenantsTable({
 
   // Bulk action handlers
   const handleBulkActivate = useCallback(() => {
-    setConfirmAction('activate');
+    setConfirmAction("activate");
   }, []);
 
   const handleBulkDeactivate = useCallback(() => {
-    setConfirmAction('deactivate');
+    setConfirmAction("deactivate");
   }, []);
 
   // Export ALL filtered tenants (the main export button)
@@ -227,53 +227,53 @@ export function TenantsTable({
     if (tenants.length === 0) return;
 
     const headers = [
-      { key: 'businessName' as keyof Tenant, label: 'Business Name' },
-      { key: 'nftTokenId' as keyof Tenant, label: 'NFT Token ID' },
-      { key: 'subdomain' as keyof Tenant, label: 'Subdomain' },
-      { key: 'customDomain' as keyof Tenant, label: 'Custom Domain' },
-      { key: 'isActive' as keyof Tenant, label: 'Status' },
-      { key: '_count' as keyof Tenant, label: 'Users' },
-      { key: '_count' as keyof Tenant, label: 'Products' },
-      { key: '_count' as keyof Tenant, label: 'Orders' },
-      { key: 'createdAt' as keyof Tenant, label: 'Created' },
+      { key: "businessName" as keyof Tenant, label: "Business Name" },
+      { key: "nftTokenId" as keyof Tenant, label: "NFT Token ID" },
+      { key: "subdomain" as keyof Tenant, label: "Subdomain" },
+      { key: "customDomain" as keyof Tenant, label: "Custom Domain" },
+      { key: "isActive" as keyof Tenant, label: "Status" },
+      { key: "_count" as keyof Tenant, label: "Users" },
+      { key: "_count" as keyof Tenant, label: "Products" },
+      { key: "_count" as keyof Tenant, label: "Orders" },
+      { key: "createdAt" as keyof Tenant, label: "Created" },
     ];
 
     // Transform data for CSV export
     const exportData = tenants.map((t) => ({
       businessName: t.businessName,
-      nftTokenId: t.nftTokenId || '',
+      nftTokenId: t.nftTokenId || "",
       subdomain: t.subdomain,
-      customDomain: t.customDomain || '',
-      isActive: t.isActive ? 'Active' : 'Inactive',
+      customDomain: t.customDomain || "",
+      isActive: t.isActive ? "Active" : "Inactive",
       users: t._count.users,
       products: t._count.products,
       orders: t._count.orders,
-      createdAt: format(new Date(t.createdAt), 'yyyy-MM-dd'),
+      createdAt: format(new Date(t.createdAt), "yyyy-MM-dd"),
     }));
 
     const csvHeaders = [
-      { key: 'businessName' as const, label: 'Business Name' },
-      { key: 'nftTokenId' as const, label: 'NFT Token ID' },
-      { key: 'subdomain' as const, label: 'Subdomain' },
-      { key: 'customDomain' as const, label: 'Custom Domain' },
-      { key: 'isActive' as const, label: 'Status' },
-      { key: 'users' as const, label: 'Users' },
-      { key: 'products' as const, label: 'Products' },
-      { key: 'orders' as const, label: 'Orders' },
-      { key: 'createdAt' as const, label: 'Created' },
+      { key: "businessName" as const, label: "Business Name" },
+      { key: "nftTokenId" as const, label: "NFT Token ID" },
+      { key: "subdomain" as const, label: "Subdomain" },
+      { key: "customDomain" as const, label: "Custom Domain" },
+      { key: "isActive" as const, label: "Status" },
+      { key: "users" as const, label: "Users" },
+      { key: "products" as const, label: "Products" },
+      { key: "orders" as const, label: "Orders" },
+      { key: "createdAt" as const, label: "Created" },
     ];
 
     await exportToCSV(
       exportData,
       csvHeaders,
-      'tenants',
+      "tenants",
       undefined,
       (recordCount, fileSize) => {
         toast.success(`Exported ${recordCount} tenants to CSV (${fileSize})`);
       },
       (error) => {
         toast.error(`Export failed: ${error.message}`);
-      }
+      },
     );
   }, [tenants]);
 
@@ -284,40 +284,42 @@ export function TenantsTable({
 
     const exportData = selectedTenants.map((t) => ({
       businessName: t.businessName,
-      nftTokenId: t.nftTokenId || '',
+      nftTokenId: t.nftTokenId || "",
       subdomain: t.subdomain,
-      customDomain: t.customDomain || '',
-      isActive: t.isActive ? 'Active' : 'Inactive',
+      customDomain: t.customDomain || "",
+      isActive: t.isActive ? "Active" : "Inactive",
       users: t._count.users,
       products: t._count.products,
       orders: t._count.orders,
-      createdAt: format(new Date(t.createdAt), 'yyyy-MM-dd'),
+      createdAt: format(new Date(t.createdAt), "yyyy-MM-dd"),
     }));
 
     const csvHeaders = [
-      { key: 'businessName' as const, label: 'Business Name' },
-      { key: 'nftTokenId' as const, label: 'NFT Token ID' },
-      { key: 'subdomain' as const, label: 'Subdomain' },
-      { key: 'customDomain' as const, label: 'Custom Domain' },
-      { key: 'isActive' as const, label: 'Status' },
-      { key: 'users' as const, label: 'Users' },
-      { key: 'products' as const, label: 'Products' },
-      { key: 'orders' as const, label: 'Orders' },
-      { key: 'createdAt' as const, label: 'Created' },
+      { key: "businessName" as const, label: "Business Name" },
+      { key: "nftTokenId" as const, label: "NFT Token ID" },
+      { key: "subdomain" as const, label: "Subdomain" },
+      { key: "customDomain" as const, label: "Custom Domain" },
+      { key: "isActive" as const, label: "Status" },
+      { key: "users" as const, label: "Users" },
+      { key: "products" as const, label: "Products" },
+      { key: "orders" as const, label: "Orders" },
+      { key: "createdAt" as const, label: "Created" },
     ];
 
     await exportToCSV(
       exportData,
       csvHeaders,
-      'tenants',
+      "tenants",
       undefined,
       (recordCount, fileSize) => {
-        toast.success(`Exported ${recordCount} selected tenants to CSV (${fileSize})`);
+        toast.success(
+          `Exported ${recordCount} selected tenants to CSV (${fileSize})`,
+        );
         clearSelection();
       },
       (error) => {
         toast.error(`Export failed: ${error.message}`);
-      }
+      },
     );
   }, [tenants, selectedIds, clearSelection]);
 
@@ -327,9 +329,9 @@ export function TenantsTable({
     setIsProcessing(true);
 
     try {
-      const response = await fetch('/api/super-admin/tenants/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/super-admin/tenants/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: confirmAction,
           tenantIds: Array.from(selectedIds),
@@ -339,20 +341,18 @@ export function TenantsTable({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to perform action');
+        throw new Error(data.error || "Failed to perform action");
       }
 
       toast.success(
-        `${data.count} tenant${data.count === 1 ? '' : 's'} ${confirmAction}d successfully`
+        `${data.count} tenant${data.count === 1 ? "" : "s"} ${confirmAction}d successfully`,
       );
 
       // Clear selection and refresh
       clearSelection();
       router.refresh();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'An error occurred'
-      );
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setIsProcessing(false);
       setConfirmAction(null);
@@ -363,28 +363,28 @@ export function TenantsTable({
   const bulkActions: BulkAction[] = useMemo(
     () => [
       {
-        id: 'activate',
-        label: 'Activate',
+        id: "activate",
+        label: "Activate",
         icon: CheckCircle2,
         onClick: handleBulkActivate,
-        variant: 'default',
+        variant: "default",
       },
       {
-        id: 'deactivate',
-        label: 'Deactivate',
+        id: "deactivate",
+        label: "Deactivate",
         icon: XCircle,
         onClick: handleBulkDeactivate,
-        variant: 'outline',
+        variant: "outline",
       },
       {
-        id: 'export',
-        label: 'Export CSV',
+        id: "export",
+        label: "Export CSV",
         icon: Download,
         onClick: handleExportCSV,
-        variant: 'outline',
+        variant: "outline",
       },
     ],
-    [handleBulkActivate, handleBulkDeactivate, handleExportCSV]
+    [handleBulkActivate, handleBulkDeactivate, handleExportCSV],
   );
 
   // Get selected tenant names for confirmation dialog
@@ -427,7 +427,7 @@ export function TenantsTable({
               {/* Status Filter */}
               <StatusFilter<TenantStatusFilter>
                 value={statusFilter}
-                onChange={(value) => setFilter('status', value)}
+                onChange={(value) => setFilter("status", value)}
                 options={statusOptions}
                 aria-label="Filter by status"
                 placeholder="All Tenants"
@@ -453,9 +453,9 @@ export function TenantsTable({
               variant="muted"
               size="default"
               action={{
-                label: 'Clear filters',
+                label: "Clear filters",
                 onClick: handleClearFilters,
-                variant: 'outline',
+                variant: "outline",
               }}
               className="my-8"
             />
@@ -471,14 +471,14 @@ export function TenantsTable({
                         onCheckedChange={handleSelectAll}
                         aria-label={
                           isAllSelected
-                            ? 'Deselect all tenants'
-                            : 'Select all tenants'
+                            ? "Deselect all tenants"
+                            : "Select all tenants"
                         }
                         className={cn(
-                          'border-slate-400 data-[state=checked]:bg-slate-700 data-[state=checked]:border-slate-700',
-                          isSomeSelected && 'data-[state=checked]:bg-slate-500'
+                          "border-slate-400 data-[state=checked]:bg-slate-700 data-[state=checked]:border-slate-700",
+                          isSomeSelected && "data-[state=checked]:bg-slate-500",
                         )}
-                        {...(isSomeSelected && { 'data-state': 'checked' })}
+                        {...(isSomeSelected && { "data-state": "checked" })}
                       />
                     </TableHead>
                     <SortableTableHeader
@@ -538,8 +538,8 @@ export function TenantsTable({
                           theme="slate"
                           showDecoration
                           action={{
-                            label: 'Review Applications',
-                            href: '/super-admin/onboarding',
+                            label: "Review Applications",
+                            href: "/super-admin/onboarding",
                             icon: FileCheck,
                           }}
                         />
@@ -553,8 +553,8 @@ export function TenantsTable({
                         <TableRow
                           key={tenant.id}
                           className={cn(
-                            'hover:bg-slate-50 transition-colors',
-                            isSelected && 'bg-slate-100/70'
+                            "hover:bg-slate-50 transition-colors",
+                            isSelected && "bg-slate-100/70",
                           )}
                         >
                           {/* Row Checkbox */}
@@ -570,7 +570,9 @@ export function TenantsTable({
                           </TableCell>
                           <TableCell className="font-medium text-slate-900">
                             <div className="min-w-0">
-                              <span className="block truncate">{tenant.businessName}</span>
+                              <span className="block truncate">
+                                {tenant.businessName}
+                              </span>
                               {/* Show subdomain on mobile where Store URL column is hidden */}
                               <a
                                 href={tenantUrl}
@@ -634,7 +636,7 @@ export function TenantsTable({
                             </span>
                           </TableCell>
                           <TableCell className="text-slate-600 text-sm hidden sm:table-cell">
-                            {format(new Date(tenant.createdAt), 'MMM d, yyyy')}
+                            {format(new Date(tenant.createdAt), "MMM d, yyyy")}
                           </TableCell>
                           <TableCell>
                             <Link href={`/super-admin/tenants/${tenant.id}`}>
@@ -690,7 +692,7 @@ export function TenantsTable({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {confirmAction === 'activate' ? (
+              {confirmAction === "activate" ? (
                 <>
                   <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                   <span>Activate Tenants</span>
@@ -703,18 +705,18 @@ export function TenantsTable({
               )}
             </DialogTitle>
             <DialogDescription className="pt-2">
-              {confirmAction === 'activate' ? (
+              {confirmAction === "activate" ? (
                 <span>
-                  Are you sure you want to activate{' '}
+                  Are you sure you want to activate{" "}
                   <strong>{selectedIds.size}</strong> tenant
-                  {selectedIds.size === 1 ? '' : 's'}? They will be able to
+                  {selectedIds.size === 1 ? "" : "s"}? They will be able to
                   access their stores.
                 </span>
               ) : (
                 <span>
-                  Are you sure you want to deactivate{' '}
+                  Are you sure you want to deactivate{" "}
                   <strong>{selectedIds.size}</strong> tenant
-                  {selectedIds.size === 1 ? '' : 's'}? Their stores will become
+                  {selectedIds.size === 1 ? "" : "s"}? Their stores will become
                   inaccessible.
                 </span>
               )}
@@ -755,12 +757,12 @@ export function TenantsTable({
               Cancel
             </Button>
             <Button
-              variant={confirmAction === 'activate' ? 'default' : 'destructive'}
+              variant={confirmAction === "activate" ? "default" : "destructive"}
               onClick={handleConfirmAction}
               disabled={isProcessing}
               className={cn(
-                confirmAction === 'activate' &&
-                'bg-emerald-600 hover:bg-emerald-700'
+                confirmAction === "activate" &&
+                  "bg-emerald-600 hover:bg-emerald-700",
               )}
             >
               {isProcessing ? (
@@ -789,10 +791,10 @@ export function TenantsTable({
                   </span>
                   Processing...
                 </>
-              ) : confirmAction === 'activate' ? (
-                'Activate'
+              ) : confirmAction === "activate" ? (
+                "Activate"
               ) : (
-                'Deactivate'
+                "Deactivate"
               )}
             </Button>
           </DialogFooter>

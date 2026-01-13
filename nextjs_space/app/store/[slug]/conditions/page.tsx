@@ -1,9 +1,13 @@
-import { notFound } from 'next/navigation';
-import { getTenantBySlug } from '@/lib/tenant';
-import { prisma } from '@/lib/db';
-import ConditionsClient from './conditions-client';
+import { notFound } from "next/navigation";
+import { getTenantBySlug } from "@/lib/tenant";
+import { prisma } from "@/lib/db";
+import ConditionsClient from "./conditions-client";
 
-export default async function ConditionsPage({ params }: { params: { slug: string } }) {
+export default async function ConditionsPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
   const tenant = await getTenantBySlug(params.slug);
 
   if (!tenant) {
@@ -12,8 +16,8 @@ export default async function ConditionsPage({ params }: { params: { slug: strin
 
   // 1. Get the master tenant (healingbuds) to fetch shared conditions
   const masterTenant = await prisma.tenants.findUnique({
-    where: { subdomain: 'healingbuds' },
-    select: { id: true }
+    where: { subdomain: "healingbuds" },
+    select: { id: true },
   });
 
   const tenantIdsToFetch = [tenant.id];
@@ -25,11 +29,11 @@ export default async function ConditionsPage({ params }: { params: { slug: strin
   const allConditions = await prisma.conditions.findMany({
     where: {
       tenantId: { in: tenantIdsToFetch },
-      published: true
+      published: true,
     },
     orderBy: {
-      name: 'asc'
-    }
+      name: "asc",
+    },
   });
 
   // Deduplicate: if slug exists for both, keep the one from current tenant (tenant.id)
@@ -47,7 +51,9 @@ export default async function ConditionsPage({ params }: { params: { slug: strin
     .filter((c: any) => c.tenantId === tenant.id)
     .forEach((c: any) => conditionMap.set(c.slug, c));
 
-  const uniqueConditions = Array.from(conditionMap.values()).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  const uniqueConditions = Array.from(conditionMap.values()).sort(
+    (a: any, b: any) => a.name.localeCompare(b.name),
+  );
 
   return <ConditionsClient tenant={tenant} conditions={uniqueConditions} />;
 }

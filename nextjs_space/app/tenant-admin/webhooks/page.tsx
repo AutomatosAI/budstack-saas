@@ -1,22 +1,43 @@
+"use client";
 
-'use client';
-
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from '@/components/ui/sonner';
-import { Webhook, Plus, Trash2, Edit2, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
-import { WEBHOOK_EVENT_CATEGORIES } from '@/lib/webhook';
-import { Breadcrumbs } from '@/components/admin/shared';
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "@/components/ui/sonner";
+import {
+  Webhook,
+  Plus,
+  Trash2,
+  Edit2,
+  CheckCircle,
+  XCircle,
+  ExternalLink,
+} from "lucide-react";
+import { WEBHOOK_EVENT_CATEGORIES } from "@/lib/webhook";
+import { Breadcrumbs } from "@/components/admin/shared";
 
 interface WebhookData {
   id: string;
@@ -40,9 +61,9 @@ export default function WebhooksPage() {
 
   // Form state
   const [formData, setFormData] = useState({
-    url: '',
+    url: "",
     events: [] as string[],
-    description: '',
+    description: "",
   });
 
   useEffect(() => {
@@ -52,15 +73,15 @@ export default function WebhooksPage() {
   const fetchWebhooks = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/tenant-admin/webhooks');
+      const response = await fetch("/api/tenant-admin/webhooks");
       const data = await response.json();
 
       if (response.ok) {
         setWebhooks(data.webhooks);
       }
     } catch (error) {
-      console.error('Failed to fetch webhooks:', error);
-      toast.error('Failed to load webhooks');
+      console.error("Failed to fetch webhooks:", error);
+      toast.error("Failed to load webhooks");
     } finally {
       setLoading(false);
     }
@@ -68,37 +89,40 @@ export default function WebhooksPage() {
 
   const handleCreate = async () => {
     if (!formData.url || formData.events.length === 0) {
-      toast.error('Please fill in all required fields');
+      toast.error("Please fill in all required fields");
       return;
     }
 
     try {
-      const response = await fetch('/api/tenant-admin/webhooks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/tenant-admin/webhooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        toast.success('Webhook created successfully');
+        toast.success("Webhook created successfully");
         setIsCreateDialogOpen(false);
-        setFormData({ url: '', events: [], description: '' });
+        setFormData({ url: "", events: [], description: "" });
         fetchWebhooks();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to create webhook');
+        toast.error(error.error || "Failed to create webhook");
       }
     } catch (error) {
-      console.error('Error creating webhook:', error);
-      toast.error('Failed to create webhook');
+      console.error("Error creating webhook:", error);
+      toast.error("Failed to create webhook");
     }
   };
 
-  const handleUpdate = async (webhookId: string, updates: Partial<WebhookData>) => {
+  const handleUpdate = async (
+    webhookId: string,
+    updates: Partial<WebhookData>,
+  ) => {
     try {
       const response = await fetch(`/api/tenant-admin/webhooks/${webhookId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
       });
 
@@ -107,34 +131,34 @@ export default function WebhooksPage() {
         fetchWebhooks();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to update webhook');
+        toast.error(error.error || "Failed to update webhook");
       }
     } catch (error) {
-      console.error('Error updating webhook:', error);
-      toast.error('Failed to update webhook');
+      console.error("Error updating webhook:", error);
+      toast.error("Failed to update webhook");
     }
   };
 
   const handleDelete = async (webhookId: string) => {
-    if (!confirm('Are you sure you want to delete this webhook?')) {
+    if (!confirm("Are you sure you want to delete this webhook?")) {
       return;
     }
 
     try {
       const response = await fetch(`/api/tenant-admin/webhooks/${webhookId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.ok) {
-        toast.success('Webhook deleted successfully');
+        toast.success("Webhook deleted successfully");
         fetchWebhooks();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to delete webhook');
+        toast.error(error.error || "Failed to delete webhook");
       }
     } catch (error) {
-      console.error('Error deleting webhook:', error);
-      toast.error('Failed to delete webhook');
+      console.error("Error deleting webhook:", error);
+      toast.error("Failed to delete webhook");
     }
   };
 
@@ -175,8 +199,8 @@ export default function WebhooksPage() {
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', href: '/tenant-admin' },
-          { label: 'Webhooks' },
+          { label: "Dashboard", href: "/tenant-admin" },
+          { label: "Webhooks" },
         ]}
         className="mb-4"
       />
@@ -184,10 +208,17 @@ export default function WebhooksPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Webhooks</h1>
-            <p className="text-slate-600 mt-2">Send real-time event notifications to external systems</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+              Webhooks
+            </h1>
+            <p className="text-slate-600 mt-2">
+              Send real-time event notifications to external systems
+            </p>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+          >
             <DialogTrigger asChild>
               <Button className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all">
                 <Plus className="h-4 w-4 mr-2" />
@@ -198,7 +229,8 @@ export default function WebhooksPage() {
               <DialogHeader>
                 <DialogTitle>Create New Webhook</DialogTitle>
                 <DialogDescription>
-                  Add a webhook endpoint to receive real-time event notifications
+                  Add a webhook endpoint to receive real-time event
+                  notifications
                 </DialogDescription>
               </DialogHeader>
 
@@ -209,7 +241,9 @@ export default function WebhooksPage() {
                     id="url"
                     placeholder="https://example.com/webhook"
                     value={formData.url}
-                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, url: e.target.value })
+                    }
                   />
                 </div>
 
@@ -219,7 +253,9 @@ export default function WebhooksPage() {
                     id="description"
                     placeholder="e.g., Notify inventory system of stock changes"
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                   />
                 </div>
 
@@ -231,11 +267,16 @@ export default function WebhooksPage() {
                         <h4 className="font-medium mb-2">{category.name}</h4>
                         <div className="space-y-2 ml-4">
                           {category.events.map((event) => (
-                            <div key={event.value} className="flex items-center space-x-2">
+                            <div
+                              key={event.value}
+                              className="flex items-center space-x-2"
+                            >
                               <Checkbox
                                 id={event.value}
                                 checked={formData.events.includes(event.value)}
-                                onCheckedChange={() => handleEventToggle(event.value)}
+                                onCheckedChange={() =>
+                                  handleEventToggle(event.value)
+                                }
                               />
                               <label
                                 htmlFor={event.value}
@@ -253,13 +294,17 @@ export default function WebhooksPage() {
 
                 <Alert>
                   <AlertDescription>
-                    A unique secret will be generated for this webhook. Use it to verify webhook signatures.
+                    A unique secret will be generated for this webhook. Use it
+                    to verify webhook signatures.
                   </AlertDescription>
                 </Alert>
               </div>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button onClick={handleCreate}>Create Webhook</Button>
@@ -279,7 +324,9 @@ export default function WebhooksPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Webhook className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">No webhooks configured</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              No webhooks configured
+            </h3>
             <p className="text-muted-foreground mb-4">
               Create your first webhook to start receiving event notifications
             </p>
@@ -310,7 +357,9 @@ export default function WebhooksPage() {
                         </Badge>
                       )}
                     </div>
-                    <CardDescription>{webhook.description || 'No description'}</CardDescription>
+                    <CardDescription>
+                      {webhook.description || "No description"}
+                    </CardDescription>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -318,7 +367,7 @@ export default function WebhooksPage() {
                       size="sm"
                       onClick={() => toggleWebhookActive(webhook)}
                     >
-                      {webhook.isActive ? 'Disable' : 'Enable'}
+                      {webhook.isActive ? "Disable" : "Enable"}
                     </Button>
                     <Button
                       variant="outline"
@@ -333,10 +382,16 @@ export default function WebhooksPage() {
               <CardContent>
                 <div className="space-y-3">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Subscribed Events</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Subscribed Events
+                    </Label>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {webhook.events.map((event) => (
-                        <Badge key={event} variant="outline" className="text-xs">
+                        <Badge
+                          key={event}
+                          variant="outline"
+                          className="text-xs"
+                        >
                           {event}
                         </Badge>
                       ))}
@@ -362,12 +417,19 @@ export default function WebhooksPage() {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span>{webhook._count.deliveries} deliveries</span>
                     <span>•</span>
-                    <span>Created {new Date(webhook.createdAt).toLocaleDateString()}</span>
+                    <span>
+                      Created {new Date(webhook.createdAt).toLocaleDateString()}
+                    </span>
                     <Button
                       variant="link"
                       size="sm"
                       className="h-auto p-0 text-xs"
-                      onClick={() => window.open(`/tenant-admin/webhooks/${webhook.id}/deliveries`, '_blank')}
+                      onClick={() =>
+                        window.open(
+                          `/tenant-admin/webhooks/${webhook.id}/deliveries`,
+                          "_blank",
+                        )
+                      }
                     >
                       View delivery logs
                       <ExternalLink className="h-3 w-3 ml-1" />
@@ -387,8 +449,10 @@ export default function WebhooksPage() {
         </CardHeader>
         <CardContent className="prose prose-sm max-w-none">
           <p>
-            Webhooks send HTTP POST requests to your specified URL when events occur in your dispensary.
-            Each request includes a signature header (<code>X-Webhook-Signature</code>) that you can use to verify authenticity.
+            Webhooks send HTTP POST requests to your specified URL when events
+            occur in your dispensary. Each request includes a signature header (
+            <code>X-Webhook-Signature</code>) that you can use to verify
+            authenticity.
           </p>
           <h4>Example Payload:</h4>
           <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
@@ -405,7 +469,8 @@ export default function WebhooksPage() {
           </pre>
           <h4>Verifying Signatures:</h4>
           <p>
-            Use the webhook secret to verify the <code>X-Webhook-Signature</code> header using HMAC SHA256.
+            Use the webhook secret to verify the{" "}
+            <code>X-Webhook-Signature</code> header using HMAC SHA256.
           </p>
         </CardContent>
       </Card>

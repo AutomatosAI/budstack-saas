@@ -1,12 +1,19 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter, useParams } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { CheckCircle2, ExternalLink, Clock, UserCheck, AlertCircle, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter, useParams } from "next/navigation";
+import { motion } from "framer-motion";
+import {
+  CheckCircle2,
+  ExternalLink,
+  Clock,
+  UserCheck,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ConsultationSuccessPage() {
   const searchParams = useSearchParams();
@@ -23,10 +30,10 @@ export default function ConsultationSuccessPage() {
 
   useEffect(() => {
     // Get data from URL params
-    const questionnaireId = searchParams.get('id');
-    const drGreenClientId = searchParams.get('clientId');
-    const kycLink = searchParams.get('kycLink');
-    const adminApproval = searchParams.get('approval') || 'PENDING';
+    const questionnaireId = searchParams.get("id");
+    const drGreenClientId = searchParams.get("clientId");
+    const kycLink = searchParams.get("kycLink");
+    const adminApproval = searchParams.get("approval") || "PENDING";
 
     setConsultationData({
       questionnaireId: questionnaireId || undefined,
@@ -41,9 +48,12 @@ export default function ConsultationSuccessPage() {
     return (
       <div
         className="min-h-screen flex items-center justify-center pb-24 lg:pb-0"
-        style={{ backgroundColor: 'var(--tenant-color-background)' }}
+        style={{ backgroundColor: "var(--tenant-color-background)" }}
       >
-        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--tenant-color-primary)' }} />
+        <Loader2
+          className="h-8 w-8 animate-spin"
+          style={{ color: "var(--tenant-color-primary)" }}
+        />
       </div>
     );
   }
@@ -51,7 +61,7 @@ export default function ConsultationSuccessPage() {
   return (
     <div
       className="min-h-screen pb-24 lg:pb-0 pt-28 md:pt-32"
-      style={{ backgroundColor: 'var(--tenant-color-background)' }}
+      style={{ backgroundColor: "var(--tenant-color-background)" }}
     >
       <div className="max-w-2xl mx-auto px-4 py-8">
         <motion.div
@@ -63,34 +73,44 @@ export default function ConsultationSuccessPage() {
           <Card
             className="border text-center mb-6"
             style={{
-              backgroundColor: 'var(--tenant-color-surface, var(--tenant-color-background))',
-              borderColor: 'var(--tenant-color-border, rgba(0,0,0,0.2))'
+              backgroundColor:
+                "var(--tenant-color-surface, var(--tenant-color-background))",
+              borderColor: "var(--tenant-color-border, rgba(0,0,0,0.2))",
             }}
           >
             <CardContent className="pt-8 pb-8">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                transition={{ type: 'spring', delay: 0.2 }}
+                transition={{ type: "spring", delay: 0.2 }}
                 className="h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6"
-                style={{ backgroundColor: 'rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.2)' }}
+                style={{
+                  backgroundColor:
+                    "rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.2)",
+                }}
               >
                 <CheckCircle2
                   className="h-10 w-10"
-                  style={{ color: 'var(--tenant-color-primary)' }}
+                  style={{ color: "var(--tenant-color-primary)" }}
                 />
               </motion.div>
 
               <h1
                 className="text-3xl font-bold mb-3"
-                style={{ color: 'var(--tenant-color-heading)', fontFamily: 'var(--tenant-font-heading)' }}
+                style={{
+                  color: "var(--tenant-color-heading)",
+                  fontFamily: "var(--tenant-font-heading)",
+                }}
               >
                 Consultation Submitted!
               </h1>
 
               <p
                 className="text-lg mb-2"
-                style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
+                style={{
+                  color: "var(--tenant-color-text)",
+                  fontFamily: "var(--tenant-font-base)",
+                }}
               >
                 Thank you for completing your medical consultation.
               </p>
@@ -98,9 +118,16 @@ export default function ConsultationSuccessPage() {
               {consultationData.drGreenClientId && (
                 <p
                   className="text-sm"
-                  style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)', opacity: 0.7 }}
+                  style={{
+                    color: "var(--tenant-color-text)",
+                    fontFamily: "var(--tenant-font-base)",
+                    opacity: 0.7,
+                  }}
                 >
-                  Client ID: <span className="font-mono">{consultationData.drGreenClientId}</span>
+                  Client ID:{" "}
+                  <span className="font-mono">
+                    {consultationData.drGreenClientId}
+                  </span>
                 </p>
               )}
             </CardContent>
@@ -110,13 +137,17 @@ export default function ConsultationSuccessPage() {
           <Card
             className="border mb-6"
             style={{
-              backgroundColor: 'var(--tenant-color-surface, var(--tenant-color-background))',
-              borderColor: 'var(--tenant-color-border, rgba(0,0,0,0.2))'
+              backgroundColor:
+                "var(--tenant-color-surface, var(--tenant-color-background))",
+              borderColor: "var(--tenant-color-border, rgba(0,0,0,0.2))",
             }}
           >
             <CardHeader>
               <CardTitle
-                style={{ color: 'var(--tenant-color-heading)', fontFamily: 'var(--tenant-font-heading)' }}
+                style={{
+                  color: "var(--tenant-color-heading)",
+                  fontFamily: "var(--tenant-font-heading)",
+                }}
               >
                 Next Steps
               </CardTitle>
@@ -126,34 +157,56 @@ export default function ConsultationSuccessPage() {
               <div className="flex items-start gap-4">
                 <div
                   className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: consultationData.kycLink ? 'rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.2)' : 'rgba(100,100,100,0.2)' }}
+                  style={{
+                    backgroundColor: consultationData.kycLink
+                      ? "rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.2)"
+                      : "rgba(100,100,100,0.2)",
+                  }}
                 >
                   {consultationData.kycLink ? (
-                    <UserCheck className="h-5 w-5" style={{ color: 'var(--tenant-color-primary)' }} />
+                    <UserCheck
+                      className="h-5 w-5"
+                      style={{ color: "var(--tenant-color-primary)" }}
+                    />
                   ) : (
-                    <Clock className="h-5 w-5" style={{ color: 'var(--tenant-color-text)', opacity: 0.5 }} />
+                    <Clock
+                      className="h-5 w-5"
+                      style={{
+                        color: "var(--tenant-color-text)",
+                        opacity: 0.5,
+                      }}
+                    />
                   )}
                 </div>
                 <div className="flex-1">
                   <h3
                     className="font-semibold mb-1"
-                    style={{ color: 'var(--tenant-color-heading)', fontFamily: 'var(--tenant-font-heading)' }}
+                    style={{
+                      color: "var(--tenant-color-heading)",
+                      fontFamily: "var(--tenant-font-heading)",
+                    }}
                   >
                     1. Complete KYC Verification
                   </h3>
                   <p
                     className="text-sm mb-2"
-                    style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
+                    style={{
+                      color: "var(--tenant-color-text)",
+                      fontFamily: "var(--tenant-font-base)",
+                    }}
                   >
-                    Verify your identity to comply with medical cannabis regulations.
+                    Verify your identity to comply with medical cannabis
+                    regulations.
                   </p>
                   {consultationData.kycLink ? (
                     <Button
-                      onClick={() => window.open(consultationData.kycLink, '_blank')}
+                      onClick={() =>
+                        window.open(consultationData.kycLink, "_blank")
+                      }
                       style={{
-                        backgroundColor: 'var(--tenant-color-primary)',
-                        color: 'white',
-                        fontFamily: 'var(--tenant-font-base)'
+                        backgroundColor: "var(--tenant-color-primary)",
+                        color: "white",
+                        fontFamily: "var(--tenant-font-base)",
                       }}
                     >
                       Complete KYC Verification
@@ -174,27 +227,45 @@ export default function ConsultationSuccessPage() {
               <div className="flex items-start gap-4">
                 <div
                   className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: 'rgba(100,100,100,0.2)' }}
+                  style={{ backgroundColor: "rgba(100,100,100,0.2)" }}
                 >
-                  <Clock className="h-5 w-5" style={{ color: 'var(--tenant-color-text)', opacity: 0.5 }} />
+                  <Clock
+                    className="h-5 w-5"
+                    style={{ color: "var(--tenant-color-text)", opacity: 0.5 }}
+                  />
                 </div>
                 <div className="flex-1">
                   <h3
                     className="font-semibold mb-1"
-                    style={{ color: 'var(--tenant-color-heading)', fontFamily: 'var(--tenant-font-heading)' }}
+                    style={{
+                      color: "var(--tenant-color-heading)",
+                      fontFamily: "var(--tenant-font-heading)",
+                    }}
                   >
                     2. Medical Review
                   </h3>
                   <p
                     className="text-sm"
-                    style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
+                    style={{
+                      color: "var(--tenant-color-text)",
+                      fontFamily: "var(--tenant-font-base)",
+                    }}
                   >
-                    Our medical team will review your consultation. You'll receive an email once approved.
+                    Our medical team will review your consultation. You'll
+                    receive an email once approved.
                   </p>
-                  <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm" style={{ backgroundColor: 'rgba(255,180,0,0.2)' }}>
-                    <Clock className="h-3 w-3" style={{ color: '#FFA500' }} />
-                    <span style={{ color: '#FFA500', fontFamily: 'var(--tenant-font-base)' }}>
-                      Status: {consultationData.adminApproval || 'PENDING'}
+                  <div
+                    className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm"
+                    style={{ backgroundColor: "rgba(255,180,0,0.2)" }}
+                  >
+                    <Clock className="h-3 w-3" style={{ color: "#FFA500" }} />
+                    <span
+                      style={{
+                        color: "#FFA500",
+                        fontFamily: "var(--tenant-font-base)",
+                      }}
+                    >
+                      Status: {consultationData.adminApproval || "PENDING"}
                     </span>
                   </div>
                 </div>
@@ -204,22 +275,32 @@ export default function ConsultationSuccessPage() {
               <div className="flex items-start gap-4">
                 <div
                   className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: 'rgba(100,100,100,0.2)' }}
+                  style={{ backgroundColor: "rgba(100,100,100,0.2)" }}
                 >
-                  <Clock className="h-5 w-5" style={{ color: 'var(--tenant-color-text)', opacity: 0.5 }} />
+                  <Clock
+                    className="h-5 w-5"
+                    style={{ color: "var(--tenant-color-text)", opacity: 0.5 }}
+                  />
                 </div>
                 <div className="flex-1">
                   <h3
                     className="font-semibold mb-1"
-                    style={{ color: 'var(--tenant-color-heading)', fontFamily: 'var(--tenant-font-heading)' }}
+                    style={{
+                      color: "var(--tenant-color-heading)",
+                      fontFamily: "var(--tenant-font-heading)",
+                    }}
                   >
                     3. Start Shopping
                   </h3>
                   <p
                     className="text-sm"
-                    style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
+                    style={{
+                      color: "var(--tenant-color-text)",
+                      fontFamily: "var(--tenant-font-base)",
+                    }}
                   >
-                    Once verified and approved, you can browse and purchase medical cannabis products.
+                    Once verified and approved, you can browse and purchase
+                    medical cannabis products.
                   </p>
                 </div>
               </div>
@@ -229,8 +310,9 @@ export default function ConsultationSuccessPage() {
           {/* Information Alert */}
           <Alert className="mb-6">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription style={{ fontFamily: 'var(--tenant-font-base)' }}>
-              <strong>Verification typically takes 1-2 business days.</strong> You'll receive email notifications at each step of the process.
+            <AlertDescription style={{ fontFamily: "var(--tenant-font-base)" }}>
+              <strong>Verification typically takes 1-2 business days.</strong>{" "}
+              You'll receive email notifications at each step of the process.
             </AlertDescription>
           </Alert>
 
@@ -244,12 +326,12 @@ export default function ConsultationSuccessPage() {
               View Products
             </Button>
             <Button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push("/dashboard")}
               className="flex-1"
               style={{
-                backgroundColor: 'var(--tenant-color-primary)',
-                color: 'white',
-                fontFamily: 'var(--tenant-font-base)'
+                backgroundColor: "var(--tenant-color-primary)",
+                color: "white",
+                fontFamily: "var(--tenant-font-base)",
               }}
             >
               Go to Dashboard

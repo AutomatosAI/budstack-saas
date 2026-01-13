@@ -6,44 +6,48 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, User } from "lucide-react";
 
 interface ArticlePageProps {
-    params: {
-        slug: string;     // store slug
-        postSlug: string; // post slug (was articleId)
-    };
+  params: {
+    slug: string; // store slug
+    postSlug: string; // post slug (was articleId)
+  };
 }
 
 export async function generateMetadata({ params }: ArticlePageProps) {
-    const { slug, postSlug } = params;
-    const tenant = await prisma.tenants.findUnique({ where: { subdomain: slug } });
-    if (!tenant) return { title: 'Not Found' };
+  const { slug, postSlug } = params;
+  const tenant = await prisma.tenants.findUnique({
+    where: { subdomain: slug },
+  });
+  if (!tenant) return { title: "Not Found" };
 
-    const post = await prisma.posts.findUnique({
-        where: { slug_tenantId: { slug: postSlug, tenantId: tenant.id } },
-    });
+  const post = await prisma.posts.findUnique({
+    where: { slug_tenantId: { slug: postSlug, tenantId: tenant.id } },
+  });
 
-    if (!post) return { title: 'Not Found' };
+  if (!post) return { title: "Not Found" };
 
-    return {
-        title: `${post.title} | ${tenant.businessName}`,
-        description: post.excerpt,
-        openGraph: {
-            images: post.coverImage ? [post.coverImage] : [],
-        }
-    };
+  return {
+    title: `${post.title} | ${tenant.businessName}`,
+    description: post.excerpt,
+    openGraph: {
+      images: post.coverImage ? [post.coverImage] : [],
+    },
+  };
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
-    const { slug, postSlug } = params;
+  const { slug, postSlug } = params;
 
-    const tenant = await prisma.tenants.findUnique({ where: { subdomain: slug } });
-    if (!tenant) notFound();
+  const tenant = await prisma.tenants.findUnique({
+    where: { subdomain: slug },
+  });
+  if (!tenant) notFound();
 
-    const post = await prisma.posts.findUnique({
-        where: { slug_tenantId: { slug: postSlug, tenantId: tenant.id } },
-        include: { users: true }
-    });
+  const post = await prisma.posts.findUnique({
+    where: { slug_tenantId: { slug: postSlug, tenantId: tenant.id } },
+    include: { users: true },
+  });
 
-    if (!post || !post.published) notFound();
+  if (!post || !post.published) notFound();
 
     const cleanContent = createDOMPurify.sanitize(post.content || '');
 
@@ -58,10 +62,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     Back to The Wire
                 </Link>
 
-                <article className="prose prose-lg mx-auto dark:prose-invert">
-                    <h1 className="mb-4 text-4xl font-extrabold tracking-tight md:text-5xl">
-                        {post.title}
-                    </h1>
+        <article className="prose prose-lg mx-auto dark:prose-invert">
+          <h1 className="mb-4 text-4xl font-extrabold tracking-tight md:text-5xl">
+            {post.title}
+          </h1>
 
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mb-8 not-prose">
                         <div className="flex items-center gap-1">
@@ -88,6 +92,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     <div dangerouslySetInnerHTML={{ __html: cleanContent }} />
                 </article>
             </div>
-        </div>
-    );
+          )}
+
+          {/* Render HTML Content */}
+          <div dangerouslySetInnerHTML={{ __html: post.content }} />
+        </article>
+      </div>
+    </div>
+  );
 }

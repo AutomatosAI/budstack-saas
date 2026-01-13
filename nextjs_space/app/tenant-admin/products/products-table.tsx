@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useMemo, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { useMemo, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import {
   Package,
   Search,
@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   RefreshCw,
   GripVertical,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -23,19 +23,19 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -43,7 +43,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -51,7 +51,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   SearchInput,
   StatusFilter,
@@ -60,19 +60,26 @@ import {
   SortableTableHeader,
   BulkActionBar,
   ExportButton,
-} from '@/components/admin/shared';
-import type { StatusFilterOption, BulkAction } from '@/components/admin/shared';
-import { useTableState } from '@/lib/admin/url-state';
-import { toast } from '@/components/ui/sonner';
-import { cn } from '@/lib/utils';
-import { exportToCSV } from '@/lib/admin/csv-export';
+} from "@/components/admin/shared";
+import type { StatusFilterOption, BulkAction } from "@/components/admin/shared";
+import { useTableState } from "@/lib/admin/url-state";
+import { toast } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
+import { exportToCSV } from "@/lib/admin/csv-export";
 
 /** Filter types for product table */
-type CategoryFilter = 'all' | 'flower' | 'edibles' | 'concentrates' | 'pre-rolls' | 'topicals' | 'accessories';
-type StockFilter = 'all' | 'in-stock' | 'out-of-stock';
+type CategoryFilter =
+  | "all"
+  | "flower"
+  | "edibles"
+  | "concentrates"
+  | "pre-rolls"
+  | "topicals"
+  | "accessories";
+type StockFilter = "all" | "in-stock" | "out-of-stock";
 
 /** Type for bulk action confirmation dialog */
-type BulkActionType = 'set-in-stock' | 'set-out-of-stock' | 'delete' | null;
+type BulkActionType = "set-in-stock" | "set-out-of-stock" | "delete" | null;
 
 /** Typed filters for product table - uses Record index signature for URL state compatibility */
 type ProductFilters = {
@@ -147,13 +154,17 @@ function SortableProductRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'hover:bg-slate-50 transition-colors',
-        isSelected && 'bg-emerald-50/70',
-        isDragging && 'relative z-50 shadow-lg'
+        "hover:bg-slate-50 transition-colors",
+        isSelected && "bg-emerald-50/70",
+        isDragging && "relative z-50 shadow-lg",
       )}
     >
       {/* Drag Handle - hidden on mobile */}
-      <TableCell className="w-12 cursor-grab active:cursor-grabbing hidden md:table-cell" {...attributes} {...listeners}>
+      <TableCell
+        className="w-12 cursor-grab active:cursor-grabbing hidden md:table-cell"
+        {...attributes}
+        {...listeners}
+      >
         <GripVertical className="h-5 w-5 text-slate-400 hover:text-slate-600 transition-colors" />
       </TableCell>
 
@@ -161,7 +172,9 @@ function SortableProductRow({
       <TableCell className="w-12 hidden sm:table-cell">
         <Checkbox
           checked={isSelected}
-          onCheckedChange={(checked) => onSelectOne(product.id, checked === true)}
+          onCheckedChange={(checked) =>
+            onSelectOne(product.id, checked === true)
+          }
           aria-label={`Select ${product.name}`}
           className="border-emerald-400 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
         />
@@ -173,10 +186,15 @@ function SortableProductRow({
             <Leaf className="h-4 w-4 text-emerald-600" />
           </div>
           <div className="min-w-0">
-            <span className="block truncate max-w-[150px] sm:max-w-[200px]">{product.name}</span>
+            <span className="block truncate max-w-[150px] sm:max-w-[200px]">
+              {product.name}
+            </span>
             {/* Show category and price on mobile */}
             <span className="block text-xs text-slate-500 md:hidden">
-              {product.category || 'Uncategorized'} • €{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}
+              {product.category || "Uncategorized"} • €
+              {typeof product.price === "number"
+                ? product.price.toFixed(2)
+                : product.price}
             </span>
           </div>
         </div>
@@ -193,22 +211,28 @@ function SortableProductRow({
       </TableCell>
 
       <TableCell className="text-center text-slate-700 font-mono text-sm hidden lg:table-cell">
-        {product.thcContent != null ? `${product.thcContent}%` : '—'}
+        {product.thcContent != null ? `${product.thcContent}%` : "—"}
       </TableCell>
 
       <TableCell className="text-center text-slate-700 font-mono text-sm hidden lg:table-cell">
-        {product.cbdContent != null ? `${product.cbdContent}%` : '—'}
+        {product.cbdContent != null ? `${product.cbdContent}%` : "—"}
       </TableCell>
 
       <TableCell className="text-right text-slate-700 font-medium hidden sm:table-cell">
-        €{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}
+        €
+        {typeof product.price === "number"
+          ? product.price.toFixed(2)
+          : product.price}
       </TableCell>
 
       <TableCell className="text-center hidden sm:table-cell">
-        <span className={`inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-full text-sm font-medium ${product.stock > 0
-          ? 'bg-emerald-100 text-emerald-800'
-          : 'bg-slate-100 text-slate-700'
-          }`}>
+        <span
+          className={`inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-full text-sm font-medium ${
+            product.stock > 0
+              ? "bg-emerald-100 text-emerald-800"
+              : "bg-slate-100 text-slate-700"
+          }`}
+        >
           {product.stock}
         </span>
       </TableCell>
@@ -216,14 +240,14 @@ function SortableProductRow({
       <TableCell>
         <Badge
           className={cn(
-            'font-medium',
+            "font-medium",
             product.stock > 0
-              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-              : 'bg-slate-200 text-slate-800 hover:bg-slate-300'
+              ? "bg-emerald-600 text-white hover:bg-emerald-700"
+              : "bg-slate-200 text-slate-800 hover:bg-slate-300",
           )}
-          aria-label={`Status: ${product.stock > 0 ? 'In Stock' : 'Out of Stock'}`}
+          aria-label={`Status: ${product.stock > 0 ? "In Stock" : "Out of Stock"}`}
         >
-          {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+          {product.stock > 0 ? "In Stock" : "Out of Stock"}
         </Badge>
       </TableCell>
     </TableRow>
@@ -250,8 +274,11 @@ export function ProductsTable({
   categoryCounts,
 }: ProductsTableProps) {
   const router = useRouter();
-  const [{ search, filters, page, pageSize, sort }, { setSearch, setFilter, setPage, setPageSize, setSort }] = useTableState<ProductFilters>({
-    defaultFilters: { category: 'all', stock: 'all' },
+  const [
+    { search, filters, page, pageSize, sort },
+    { setSearch, setFilter, setPage, setPageSize, setSort },
+  ] = useTableState<ProductFilters>({
+    defaultFilters: { category: "all", stock: "all" },
     defaultPageSize: 20,
   });
 
@@ -276,11 +303,11 @@ export function ProductsTable({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
-  const categoryFilter = filters.category || 'all';
-  const stockFilter = filters.stock || 'all';
+  const categoryFilter = filters.category || "all";
+  const stockFilter = filters.stock || "all";
 
   // Total products matching search (regardless of category/stock filter)
   const totalSearchCount = inStockCount + outOfStockCount;
@@ -288,30 +315,50 @@ export function ProductsTable({
   // Category filter options with server-provided counts
   const categoryOptions: StatusFilterOption<CategoryFilter>[] = useMemo(
     () => [
-      { value: 'all', label: 'All Categories', count: totalSearchCount },
-      { value: 'flower', label: 'Flower', count: categoryCounts.flower || 0 },
-      { value: 'edibles', label: 'Edibles', count: categoryCounts.edibles || 0 },
-      { value: 'concentrates', label: 'Concentrates', count: categoryCounts.concentrates || 0 },
-      { value: 'pre-rolls', label: 'Pre-Rolls', count: categoryCounts['pre-rolls'] || 0 },
-      { value: 'topicals', label: 'Topicals', count: categoryCounts.topicals || 0 },
-      { value: 'accessories', label: 'Accessories', count: categoryCounts.accessories || 0 },
+      { value: "all", label: "All Categories", count: totalSearchCount },
+      { value: "flower", label: "Flower", count: categoryCounts.flower || 0 },
+      {
+        value: "edibles",
+        label: "Edibles",
+        count: categoryCounts.edibles || 0,
+      },
+      {
+        value: "concentrates",
+        label: "Concentrates",
+        count: categoryCounts.concentrates || 0,
+      },
+      {
+        value: "pre-rolls",
+        label: "Pre-Rolls",
+        count: categoryCounts["pre-rolls"] || 0,
+      },
+      {
+        value: "topicals",
+        label: "Topicals",
+        count: categoryCounts.topicals || 0,
+      },
+      {
+        value: "accessories",
+        label: "Accessories",
+        count: categoryCounts.accessories || 0,
+      },
     ],
-    [totalSearchCount, categoryCounts]
+    [totalSearchCount, categoryCounts],
   );
 
   // Stock filter options with server-provided counts
   const stockOptions: StatusFilterOption<StockFilter>[] = useMemo(
     () => [
-      { value: 'all', label: 'All Stock', count: totalSearchCount },
-      { value: 'in-stock', label: 'In Stock', count: inStockCount },
-      { value: 'out-of-stock', label: 'Out of Stock', count: outOfStockCount },
+      { value: "all", label: "All Stock", count: totalSearchCount },
+      { value: "in-stock", label: "In Stock", count: inStockCount },
+      { value: "out-of-stock", label: "Out of Stock", count: outOfStockCount },
     ],
-    [totalSearchCount, inStockCount, outOfStockCount]
+    [totalSearchCount, inStockCount, outOfStockCount],
   );
 
   const hasSearchQuery = search.trim().length > 0;
-  const hasCategoryFilter = categoryFilter !== 'all';
-  const hasStockFilter = stockFilter !== 'all';
+  const hasCategoryFilter = categoryFilter !== "all";
+  const hasStockFilter = stockFilter !== "all";
   const hasFilters = hasSearchQuery || hasCategoryFilter || hasStockFilter;
   const noResults = totalCount === 0 && hasFilters;
 
@@ -319,7 +366,10 @@ export function ProductsTable({
   const emptyDescription = useMemo(() => {
     const activeFilters: string[] = [];
     if (hasCategoryFilter) activeFilters.push(categoryFilter);
-    if (hasStockFilter) activeFilters.push(stockFilter === 'in-stock' ? 'in stock' : 'out of stock');
+    if (hasStockFilter)
+      activeFilters.push(
+        stockFilter === "in-stock" ? "in stock" : "out of stock",
+      );
 
     if (hasSearchQuery && activeFilters.length > 0) {
       return `No products match "${search}" with the selected filters. Try adjusting your filters.`;
@@ -330,14 +380,21 @@ export function ProductsTable({
     if (activeFilters.length > 0) {
       return `No products found with the selected filters.`;
     }
-    return 'No products found.';
-  }, [hasSearchQuery, hasCategoryFilter, hasStockFilter, search, categoryFilter, stockFilter]);
+    return "No products found.";
+  }, [
+    hasSearchQuery,
+    hasCategoryFilter,
+    hasStockFilter,
+    search,
+    categoryFilter,
+    stockFilter,
+  ]);
 
   // Clear filters handler
   const handleClearFilters = () => {
-    setSearch('');
-    setFilter('category', 'all');
-    setFilter('stock', 'all');
+    setSearch("");
+    setFilter("category", "all");
+    setFilter("stock", "all");
   };
 
   // Selection handlers
@@ -382,65 +439,68 @@ export function ProductsTable({
 
   // Bulk action handlers
   const handleSetInStock = useCallback(() => {
-    setConfirmAction('set-in-stock');
+    setConfirmAction("set-in-stock");
   }, []);
 
   const handleSetOutOfStock = useCallback(() => {
-    setConfirmAction('set-out-of-stock');
+    setConfirmAction("set-out-of-stock");
   }, []);
 
   const handleDelete = useCallback(() => {
-    setConfirmAction('delete');
+    setConfirmAction("delete");
   }, []);
 
   // Drag end handler
-  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-    const { active, over } = event;
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
 
-    if (!over || active.id === over.id) {
-      return;
-    }
-
-    const oldIndex = orderedProducts.findIndex((p) => p.id === active.id);
-    const newIndex = orderedProducts.findIndex((p) => p.id === over.id);
-
-    if (oldIndex === -1 || newIndex === -1) {
-      return;
-    }
-
-    // Update local state immediately for smooth UX
-    const newOrder = arrayMove(orderedProducts, oldIndex, newIndex);
-    setOrderedProducts(newOrder);
-
-    // Persist to server
-    setIsSavingOrder(true);
-    try {
-      const orderUpdates = newOrder.map((product, index) => ({
-        id: product.id,
-        displayOrder: index,
-      }));
-
-      const response = await fetch('/api/tenant-admin/products/reorder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ products: orderUpdates }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update product order');
+      if (!over || active.id === over.id) {
+        return;
       }
 
-      toast.success('Product order updated successfully');
-      router.refresh();
-    } catch (error) {
-      console.error('Error updating product order:', error);
-      toast.error('Failed to update product order');
-      // Revert to original order on error
-      setOrderedProducts(products);
-    } finally {
-      setIsSavingOrder(false);
-    }
-  }, [orderedProducts, products, router]);
+      const oldIndex = orderedProducts.findIndex((p) => p.id === active.id);
+      const newIndex = orderedProducts.findIndex((p) => p.id === over.id);
+
+      if (oldIndex === -1 || newIndex === -1) {
+        return;
+      }
+
+      // Update local state immediately for smooth UX
+      const newOrder = arrayMove(orderedProducts, oldIndex, newIndex);
+      setOrderedProducts(newOrder);
+
+      // Persist to server
+      setIsSavingOrder(true);
+      try {
+        const orderUpdates = newOrder.map((product, index) => ({
+          id: product.id,
+          displayOrder: index,
+        }));
+
+        const response = await fetch("/api/tenant-admin/products/reorder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ products: orderUpdates }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to update product order");
+        }
+
+        toast.success("Product order updated successfully");
+        router.refresh();
+      } catch (error) {
+        console.error("Error updating product order:", error);
+        toast.error("Failed to update product order");
+        // Revert to original order on error
+        setOrderedProducts(products);
+      } finally {
+        setIsSavingOrder(false);
+      }
+    },
+    [orderedProducts, products, router],
+  );
 
   // Export ALL filtered products (the main export button)
   const handleExportAll = useCallback(async () => {
@@ -448,37 +508,37 @@ export function ProductsTable({
 
     const exportData = products.map((p) => ({
       name: p.name,
-      category: p.category || '',
-      thcContent: p.thcContent != null ? `${p.thcContent}%` : '',
-      cbdContent: p.cbdContent != null ? `${p.cbdContent}%` : '',
+      category: p.category || "",
+      thcContent: p.thcContent != null ? `${p.thcContent}%` : "",
+      cbdContent: p.cbdContent != null ? `${p.cbdContent}%` : "",
       price: `$${p.price.toFixed(2)}`,
       stock: p.stock,
-      status: p.stock > 0 ? 'In Stock' : 'Out of Stock',
-      createdAt: format(new Date(p.createdAt), 'yyyy-MM-dd'),
+      status: p.stock > 0 ? "In Stock" : "Out of Stock",
+      createdAt: format(new Date(p.createdAt), "yyyy-MM-dd"),
     }));
 
     const csvHeaders = [
-      { key: 'name' as const, label: 'Name' },
-      { key: 'category' as const, label: 'Category' },
-      { key: 'thcContent' as const, label: 'THC %' },
-      { key: 'cbdContent' as const, label: 'CBD %' },
-      { key: 'price' as const, label: 'Price' },
-      { key: 'stock' as const, label: 'Stock' },
-      { key: 'status' as const, label: 'Status' },
-      { key: 'createdAt' as const, label: 'Created' },
+      { key: "name" as const, label: "Name" },
+      { key: "category" as const, label: "Category" },
+      { key: "thcContent" as const, label: "THC %" },
+      { key: "cbdContent" as const, label: "CBD %" },
+      { key: "price" as const, label: "Price" },
+      { key: "stock" as const, label: "Stock" },
+      { key: "status" as const, label: "Status" },
+      { key: "createdAt" as const, label: "Created" },
     ];
 
     await exportToCSV(
       exportData,
       csvHeaders,
-      'products',
+      "products",
       undefined,
       (recordCount, fileSize) => {
         toast.success(`Exported ${recordCount} products to CSV (${fileSize})`);
       },
       (error) => {
         toast.error(`Export failed: ${error.message}`);
-      }
+      },
     );
   }, [products]);
 
@@ -489,38 +549,40 @@ export function ProductsTable({
 
     const exportData = selectedProducts.map((p) => ({
       name: p.name,
-      category: p.category || '',
-      thcContent: p.thcContent != null ? `${p.thcContent}%` : '',
-      cbdContent: p.cbdContent != null ? `${p.cbdContent}%` : '',
+      category: p.category || "",
+      thcContent: p.thcContent != null ? `${p.thcContent}%` : "",
+      cbdContent: p.cbdContent != null ? `${p.cbdContent}%` : "",
       price: `$${p.price.toFixed(2)}`,
       stock: p.stock,
-      status: p.stock > 0 ? 'In Stock' : 'Out of Stock',
-      createdAt: format(new Date(p.createdAt), 'yyyy-MM-dd'),
+      status: p.stock > 0 ? "In Stock" : "Out of Stock",
+      createdAt: format(new Date(p.createdAt), "yyyy-MM-dd"),
     }));
 
     const csvHeaders = [
-      { key: 'name' as const, label: 'Name' },
-      { key: 'category' as const, label: 'Category' },
-      { key: 'thcContent' as const, label: 'THC %' },
-      { key: 'cbdContent' as const, label: 'CBD %' },
-      { key: 'price' as const, label: 'Price' },
-      { key: 'stock' as const, label: 'Stock' },
-      { key: 'status' as const, label: 'Status' },
-      { key: 'createdAt' as const, label: 'Created' },
+      { key: "name" as const, label: "Name" },
+      { key: "category" as const, label: "Category" },
+      { key: "thcContent" as const, label: "THC %" },
+      { key: "cbdContent" as const, label: "CBD %" },
+      { key: "price" as const, label: "Price" },
+      { key: "stock" as const, label: "Stock" },
+      { key: "status" as const, label: "Status" },
+      { key: "createdAt" as const, label: "Created" },
     ];
 
     await exportToCSV(
       exportData,
       csvHeaders,
-      'products',
+      "products",
       undefined,
       (recordCount, fileSize) => {
-        toast.success(`Exported ${recordCount} selected products to CSV (${fileSize})`);
+        toast.success(
+          `Exported ${recordCount} selected products to CSV (${fileSize})`,
+        );
         clearSelection();
       },
       (error) => {
         toast.error(`Export failed: ${error.message}`);
-      }
+      },
     );
   }, [products, selectedIds, clearSelection]);
 
@@ -530,9 +592,9 @@ export function ProductsTable({
     setIsProcessing(true);
 
     try {
-      const response = await fetch('/api/tenant-admin/products/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/tenant-admin/products/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: confirmAction,
           productIds: Array.from(selectedIds),
@@ -542,27 +604,25 @@ export function ProductsTable({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to perform action');
+        throw new Error(data.error || "Failed to perform action");
       }
 
       // Display appropriate success message
       const actionMessages: Record<string, string> = {
-        'set-in-stock': 'set to In Stock',
-        'set-out-of-stock': 'set to Out of Stock',
-        'delete': 'deleted',
+        "set-in-stock": "set to In Stock",
+        "set-out-of-stock": "set to Out of Stock",
+        delete: "deleted",
       };
 
       toast.success(
-        `${data.count} product${data.count === 1 ? '' : 's'} ${actionMessages[confirmAction]} successfully`
+        `${data.count} product${data.count === 1 ? "" : "s"} ${actionMessages[confirmAction]} successfully`,
       );
 
       // Clear selection and refresh
       clearSelection();
       router.refresh();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'An error occurred'
-      );
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setIsProcessing(false);
       setConfirmAction(null);
@@ -573,35 +633,35 @@ export function ProductsTable({
   const bulkActions: BulkAction[] = useMemo(
     () => [
       {
-        id: 'set-in-stock',
-        label: 'Set In Stock',
+        id: "set-in-stock",
+        label: "Set In Stock",
         icon: PackageCheck,
         onClick: handleSetInStock,
-        variant: 'default',
+        variant: "default",
       },
       {
-        id: 'set-out-of-stock',
-        label: 'Set Out of Stock',
+        id: "set-out-of-stock",
+        label: "Set Out of Stock",
         icon: PackageMinus,
         onClick: handleSetOutOfStock,
-        variant: 'outline',
+        variant: "outline",
       },
       {
-        id: 'export',
-        label: 'Export CSV',
+        id: "export",
+        label: "Export CSV",
         icon: Download,
         onClick: handleExportCSV,
-        variant: 'outline',
+        variant: "outline",
       },
       {
-        id: 'delete',
-        label: 'Delete',
+        id: "delete",
+        label: "Delete",
         icon: Trash2,
         onClick: handleDelete,
-        variant: 'destructive',
+        variant: "destructive",
       },
     ],
-    [handleSetInStock, handleSetOutOfStock, handleExportCSV, handleDelete]
+    [handleSetInStock, handleSetOutOfStock, handleExportCSV, handleDelete],
   );
 
   // Get selected product names for confirmation dialog
@@ -615,23 +675,27 @@ export function ProductsTable({
   // Get strain badge color (using hash for demo since strain isn't in schema)
   // Updated with darker text colors for WCAG AA compliance (4.5:1 contrast on light backgrounds)
   const getStrainBadgeClasses = (productName: string) => {
-    const nameHash = productName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const nameHash = productName
+      .split("")
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const strainIndex = nameHash % 3;
     switch (strainIndex) {
       case 0: // Sativa
-        return 'bg-amber-100 text-amber-800 border-amber-200';
+        return "bg-amber-100 text-amber-800 border-amber-200";
       case 1: // Indica
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+        return "bg-purple-100 text-purple-800 border-purple-200";
       case 2: // Hybrid
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        return "bg-emerald-100 text-emerald-800 border-emerald-200";
       default:
-        return 'bg-slate-100 text-slate-800 border-slate-200';
+        return "bg-slate-100 text-slate-800 border-slate-200";
     }
   };
 
   const getStrainLabel = (productName: string) => {
-    const nameHash = productName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const strainTypes = ['Sativa', 'Indica', 'Hybrid'];
+    const nameHash = productName
+      .split("")
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const strainTypes = ["Sativa", "Indica", "Hybrid"];
     return strainTypes[nameHash % 3];
   };
 
@@ -669,7 +733,7 @@ export function ProductsTable({
                 {/* Category Filter */}
                 <StatusFilter<CategoryFilter>
                   value={categoryFilter}
-                  onChange={(value) => setFilter('category', value)}
+                  onChange={(value) => setFilter("category", value)}
                   options={categoryOptions}
                   aria-label="Filter by category"
                   placeholder="All Categories"
@@ -680,7 +744,7 @@ export function ProductsTable({
                 {/* Stock Filter */}
                 <StatusFilter<StockFilter>
                   value={stockFilter}
-                  onChange={(value) => setFilter('stock', value)}
+                  onChange={(value) => setFilter("stock", value)}
                   options={stockOptions}
                   aria-label="Filter by stock status"
                   placeholder="All Stock"
@@ -709,9 +773,9 @@ export function ProductsTable({
               variant="muted"
               size="default"
               action={{
-                label: 'Clear filters',
+                label: "Clear filters",
                 onClick: handleClearFilters,
-                variant: 'outline',
+                variant: "outline",
               }}
               className="my-8"
             />
@@ -724,8 +788,8 @@ export function ProductsTable({
               theme="emerald"
               showDecoration
               action={{
-                label: 'Sync from Dr Green Admin',
-                href: '/tenant-admin/settings',
+                label: "Sync from Dr Green Admin",
+                href: "/tenant-admin/settings",
                 icon: RefreshCw,
               }}
               className="my-8"
@@ -749,14 +813,15 @@ export function ProductsTable({
                           onCheckedChange={handleSelectAll}
                           aria-label={
                             isAllSelected
-                              ? 'Deselect all products'
-                              : 'Select all products'
+                              ? "Deselect all products"
+                              : "Select all products"
                           }
                           className={cn(
-                            'border-emerald-400 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600',
-                            isSomeSelected && 'data-[state=checked]:bg-emerald-400'
+                            "border-emerald-400 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600",
+                            isSomeSelected &&
+                              "data-[state=checked]:bg-emerald-400",
                           )}
-                          {...(isSomeSelected && { 'data-state': 'checked' })}
+                          {...(isSomeSelected && { "data-state": "checked" })}
                         />
                       </TableHead>
                       <SortableTableHeader
@@ -772,7 +837,9 @@ export function ProductsTable({
                         onSort={setSort}
                         className="hidden md:table-cell"
                       />
-                      <TableHead className="font-semibold text-slate-700 hidden lg:table-cell">Strain</TableHead>
+                      <TableHead className="font-semibold text-slate-700 hidden lg:table-cell">
+                        Strain
+                      </TableHead>
                       <SortableTableHeader
                         columnKey="thcContent"
                         label="THC %"
@@ -804,7 +871,9 @@ export function ProductsTable({
                         align="center"
                         className="hidden sm:table-cell"
                       />
-                      <TableHead className="font-semibold text-slate-700">Status</TableHead>
+                      <TableHead className="font-semibold text-slate-700">
+                        Status
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <SortableContext
@@ -863,12 +932,12 @@ export function ProductsTable({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {confirmAction === 'delete' ? (
+              {confirmAction === "delete" ? (
                 <>
                   <Trash2 className="h-5 w-5 text-red-500" />
                   <span>Delete Products</span>
                 </>
-              ) : confirmAction === 'set-in-stock' ? (
+              ) : confirmAction === "set-in-stock" ? (
                 <>
                   <PackageCheck className="h-5 w-5 text-emerald-500" />
                   <span>Set In Stock</span>
@@ -881,21 +950,21 @@ export function ProductsTable({
               )}
             </DialogTitle>
             <DialogDescription className="pt-2">
-              {confirmAction === 'delete' ? (
+              {confirmAction === "delete" ? (
                 <span className="text-red-600">
-                  Are you sure you want to delete{' '}
+                  Are you sure you want to delete{" "}
                   <strong>{selectedIds.size}</strong> product
-                  {selectedIds.size === 1 ? '' : 's'}? This cannot be undone.
+                  {selectedIds.size === 1 ? "" : "s"}? This cannot be undone.
                 </span>
-              ) : confirmAction === 'set-in-stock' ? (
+              ) : confirmAction === "set-in-stock" ? (
                 <span>
                   Set <strong>{selectedIds.size}</strong> product
-                  {selectedIds.size === 1 ? '' : 's'} to In Stock?
+                  {selectedIds.size === 1 ? "" : "s"} to In Stock?
                 </span>
               ) : (
                 <span>
                   Set <strong>{selectedIds.size}</strong> product
-                  {selectedIds.size === 1 ? '' : 's'} to Out of Stock?
+                  {selectedIds.size === 1 ? "" : "s"} to Out of Stock?
                 </span>
               )}
             </DialogDescription>
@@ -935,14 +1004,14 @@ export function ProductsTable({
               Cancel
             </Button>
             <Button
-              variant={confirmAction === 'delete' ? 'destructive' : 'default'}
+              variant={confirmAction === "delete" ? "destructive" : "default"}
               onClick={handleConfirmAction}
               disabled={isProcessing}
               className={cn(
-                confirmAction === 'set-in-stock' &&
-                'bg-emerald-600 hover:bg-emerald-700',
-                confirmAction === 'set-out-of-stock' &&
-                'bg-amber-600 hover:bg-amber-700'
+                confirmAction === "set-in-stock" &&
+                  "bg-emerald-600 hover:bg-emerald-700",
+                confirmAction === "set-out-of-stock" &&
+                  "bg-amber-600 hover:bg-amber-700",
               )}
             >
               {isProcessing ? (
@@ -971,12 +1040,12 @@ export function ProductsTable({
                   </span>
                   Processing...
                 </>
-              ) : confirmAction === 'delete' ? (
-                'Delete'
-              ) : confirmAction === 'set-in-stock' ? (
-                'Set In Stock'
+              ) : confirmAction === "delete" ? (
+                "Delete"
+              ) : confirmAction === "set-in-stock" ? (
+                "Set In Stock"
               ) : (
-                'Set Out of Stock'
+                "Set Out of Stock"
               )}
             </Button>
           </DialogFooter>

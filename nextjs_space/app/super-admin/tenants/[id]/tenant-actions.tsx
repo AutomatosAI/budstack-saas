@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/sonner';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +13,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 interface TenantActionsProps {
   tenant: {
@@ -31,16 +31,21 @@ export default function TenantActions({ tenant }: TenantActionsProps) {
   const toggleTenantStatus = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/super-admin/tenants/${tenant.id}/toggle-active`, {
-        method: 'PATCH',
-      });
+      const res = await fetch(
+        `/api/super-admin/tenants/${tenant.id}/toggle-active`,
+        {
+          method: "PATCH",
+        },
+      );
 
-      if (!res.ok) throw new Error('Failed to update tenant');
+      if (!res.ok) throw new Error("Failed to update tenant");
 
-      toast.success(`Tenant ${tenant.isActive ? 'deactivated' : 'activated'} successfully`);
+      toast.success(
+        `Tenant ${tenant.isActive ? "deactivated" : "activated"} successfully`,
+      );
       router.refresh();
     } catch (error) {
-      toast.error('Failed to update tenant status');
+      toast.error("Failed to update tenant status");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -51,15 +56,15 @@ export default function TenantActions({ tenant }: TenantActionsProps) {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/super-admin/tenants/${tenant.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
-      if (!res.ok) throw new Error('Failed to delete tenant');
+      if (!res.ok) throw new Error("Failed to delete tenant");
 
-      toast.success('Tenant deleted successfully');
-      router.push('/super-admin/tenants');
+      toast.success("Tenant deleted successfully");
+      router.push("/super-admin/tenants");
     } catch (error) {
-      toast.error('Failed to delete tenant');
+      toast.error("Failed to delete tenant");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -70,12 +75,12 @@ export default function TenantActions({ tenant }: TenantActionsProps) {
     <>
       <div className="space-y-2">
         <Button
-          variant={tenant.isActive ? 'destructive' : 'default'}
+          variant={tenant.isActive ? "destructive" : "default"}
           className="w-full"
           onClick={toggleTenantStatus}
           disabled={isLoading}
         >
-          {tenant.isActive ? 'Deactivate Tenant' : 'Activate Tenant'}
+          {tenant.isActive ? "Deactivate Tenant" : "Activate Tenant"}
         </Button>
 
         <Button
@@ -93,8 +98,10 @@ export default function TenantActions({ tenant }: TenantActionsProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the tenant <strong>{tenant.businessName}</strong> and
-              all associated data including users, products, and orders. This action cannot be undone.
+              This will permanently delete the tenant{" "}
+              <strong>{tenant.businessName}</strong> and all associated data
+              including users, products, and orders. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -104,7 +111,7 @@ export default function TenantActions({ tenant }: TenantActionsProps) {
               disabled={isLoading}
               className="bg-red-600 hover:bg-red-700"
             >
-              {isLoading ? 'Deleting...' : 'Delete Tenant'}
+              {isLoading ? "Deleting..." : "Delete Tenant"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

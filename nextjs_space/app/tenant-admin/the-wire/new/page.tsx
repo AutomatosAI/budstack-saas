@@ -1,9 +1,9 @@
-import PostForm from '../post-form';
+import PostForm from "../post-form";
 
 export const metadata = {
-    title: 'New Article | The Wire',
+  title: "New Article | The Wire",
 };
 
 export default function NewPostPage() {
-    return <PostForm />;
+  return <PostForm />;
 }

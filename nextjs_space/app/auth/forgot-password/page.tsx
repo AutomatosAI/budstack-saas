@@ -1,14 +1,20 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -17,9 +23,9 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
@@ -28,11 +34,11 @@ export default function ForgotPasswordPage() {
       if (response.ok) {
         setSubmitted(true);
       } else {
-        alert(data.error || 'Failed to send reset email');
+        alert(data.error || "Failed to send reset email");
       }
     } catch (error) {
-      console.error('Password reset error:', error);
-      alert('Failed to send reset email');
+      console.error("Password reset error:", error);
+      alert("Failed to send reset email");
     } finally {
       setLoading(false);
     }
@@ -45,7 +51,8 @@ export default function ForgotPasswordPage() {
           <CardHeader>
             <CardTitle>Check Your Email</CardTitle>
             <CardDescription>
-              If an account exists with {email}, you will receive password reset instructions shortly.
+              If an account exists with {email}, you will receive password reset
+              instructions shortly.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -66,7 +73,8 @@ export default function ForgotPasswordPage() {
         <CardHeader>
           <CardTitle>Forgot Password</CardTitle>
           <CardDescription>
-            Enter your email address and we'll send you instructions to reset your password.
+            Enter your email address and we'll send you instructions to reset
+            your password.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -88,7 +96,7 @@ export default function ForgotPasswordPage() {
               className="w-full bg-green-600 hover:bg-green-700"
               disabled={loading}
             >
-              {loading ? 'Sending...' : 'Send Reset Instructions'}
+              {loading ? "Sending..." : "Send Reset Instructions"}
             </Button>
 
             <div className="text-center">

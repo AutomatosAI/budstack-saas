@@ -1,15 +1,13 @@
-
-import { Navigation } from '@/components/navigation';
-import { Footer } from '@/components/footer';
-import { TenantThemeProvider } from '@/components/tenant-theme-provider';
-import { CookieConsent } from '@/components/cookie-consent';
-import { getCurrentTenant } from '@/lib/tenant';
-import { getFileUrl } from '@/lib/s3';
-import { notFound } from 'next/navigation';
-import { prisma } from '@/lib/db';
+import { Navigation } from "@/components/navigation";
+import { Footer } from "@/components/footer";
+import { TenantThemeProvider } from "@/components/tenant-theme-provider";
+import { CookieConsent } from "@/components/cookie-consent";
+import { getCurrentTenant } from "@/lib/tenant";
+import { getFileUrl } from "@/lib/s3";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/db";
 // Import template registry
-import { TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from '@/lib/template-registry';
-
+import { TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/template-registry";
 
 export default async function TenantStoreLayout({
   children,
@@ -33,16 +31,16 @@ export default async function TenantStoreLayout({
       activeTenantTemplate: {
         include: {
           templates: true,
-        }
+        },
       },
-    }
+    },
   });
 
   if (!tenantWithTemplate) {
     notFound();
   }
 
-  // Get active template customizations  
+  // Get active template customizations
   const activeTemplate = tenantWithTemplate.activeTenantTemplate;
   const designSystem = (activeTemplate?.designSystem as any) || {};
   const pageContent = (activeTemplate?.pageContent as any) || {};
@@ -54,11 +52,14 @@ export default async function TenantStoreLayout({
   // 1. Try active template first
   if (activeTemplate?.logoUrl) {
     // Check if it's an S3 path (doesn't start with / or http)
-    if (!activeTemplate.logoUrl.startsWith('/') && !activeTemplate.logoUrl.startsWith('http')) {
+    if (
+      !activeTemplate.logoUrl.startsWith("/") &&
+      !activeTemplate.logoUrl.startsWith("http")
+    ) {
       try {
         logoUrl = await getFileUrl(activeTemplate.logoUrl);
       } catch (error) {
-        console.error('Error fetching template logo from S3:', error);
+        console.error("Error fetching template logo from S3:", error);
         // Fallback to raw string if signing fails, though it likely won't work
         logoUrl = activeTemplate.logoUrl;
       }
@@ -69,14 +70,14 @@ export default async function TenantStoreLayout({
   // 2. Fallback to legacy settings
   else if (settings.logoPath) {
     // If logoPath starts with '/', it's a public folder path - use directly
-    if (settings.logoPath.startsWith('/')) {
+    if (settings.logoPath.startsWith("/")) {
       logoUrl = settings.logoPath;
     } else {
       // Otherwise it's an S3 path - fetch the signed URL
       try {
         logoUrl = await getFileUrl(settings.logoPath);
       } catch (error) {
-        console.error('Error fetching logo from S3:', error);
+        console.error("Error fetching logo from S3:", error);
       }
     }
   }
@@ -84,7 +85,8 @@ export default async function TenantStoreLayout({
   // Determine which footer to render based on template
   // Prioritize active custom template's base template, falling back to tenant's assigned template
   const activeBaseTemplate = tenantWithTemplate.activeTenantTemplate?.templates;
-  const templateSlug = activeBaseTemplate?.slug || tenantWithTemplate.template?.slug;
+  const templateSlug =
+    activeBaseTemplate?.slug || tenantWithTemplate.template?.slug;
   const subdomain = tenantWithTemplate.subdomain;
 
   // Prepare URLs for template footers
@@ -94,14 +96,16 @@ export default async function TenantStoreLayout({
   const aboutUrl = `/store/${subdomain}/about`;
 
   // Extract contact info from settings
-  const contactEmail = settings.contactEmail || 'info@example.com';
-  const contactPhone = settings.contactPhone || '+1 234 567 890';
-  const address = settings.address || 'Your Business Address';
+  const contactEmail = settings.contactEmail || "info@example.com";
+  const contactPhone = settings.contactPhone || "+1 234 567 890";
+  const address = settings.address || "Your Business Address";
   const socialLinks = settings.socialMedia || {};
 
   // Render template-specific navigation function
   const renderNavigation = () => {
-    const SpecificNavigation = templateSlug ? TEMPLATE_NAVIGATION[templateSlug] : null;
+    const SpecificNavigation = templateSlug
+      ? TEMPLATE_NAVIGATION[templateSlug]
+      : null;
 
     if (SpecificNavigation) {
       return (
@@ -142,24 +146,28 @@ export default async function TenantStoreLayout({
   // Determine template class for CSS variable inheritance
   const getTemplateClass = () => {
     switch (templateSlug) {
-      case 'wellness-nature':
-        return 'wellness-template';
-      case 'gta-cannabis':
-        return 'gta-template';
-      case 'healingbuds':
-        return 'template-healingbuds';
+      case "wellness-nature":
+        return "wellness-template";
+      case "gta-cannabis":
+        return "gta-template";
+      case "healingbuds":
+        return "template-healingbuds";
       default:
-        return '';
+        return "";
     }
   };
 
   return (
     <TenantThemeProvider
       tenant={tenantWithTemplate}
-      tenantTemplate={activeTemplate ? {
-        designSystem: activeTemplate.designSystem,
-        customCss: activeTemplate.customCss,
-      } : undefined}
+      tenantTemplate={
+        activeTemplate
+          ? {
+              designSystem: activeTemplate.designSystem,
+              customCss: activeTemplate.customCss,
+            }
+          : undefined
+      }
     >
       <div className={`min-h-screen ${getTemplateClass()}`}>
         {renderNavigation()}

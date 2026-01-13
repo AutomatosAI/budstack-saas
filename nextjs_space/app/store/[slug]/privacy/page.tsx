@@ -1,3 +1,2 @@
-
-import PrivacyPage from '@/app/privacy/page';
+import PrivacyPage from "@/app/privacy/page";
 export default PrivacyPage;

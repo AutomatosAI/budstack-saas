@@ -24,20 +24,20 @@ export default async function BrandingPage() {
   });
 
   if (!user?.tenants) {
-    redirect('/dashboard');
+    redirect("/dashboard");
   }
 
   // Fetch all available templates
   const templates = await prisma.templates.findMany({
     where: { isActive: true },
-    orderBy: { name: 'asc' },
+    orderBy: { name: "asc" },
   });
 
   // Fetch active tenant template
   const activeTemplate = user.tenants.activeTenantTemplateId
     ? await prisma.tenant_templates.findUnique({
-      where: { id: user.tenants.activeTenantTemplateId }
-    })
+        where: { id: user.tenants.activeTenantTemplateId },
+      })
     : null;
 
   return (
@@ -45,16 +45,20 @@ export default async function BrandingPage() {
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', href: '/tenant-admin' },
-          { label: 'Branding' },
+          { label: "Dashboard", href: "/tenant-admin" },
+          { label: "Branding" },
         ]}
         className="mb-4"
       />
 
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Store Branding</h1>
-        <p className="text-slate-600 mt-2">Customize the look and feel of your storefront</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          Store Branding
+        </h1>
+        <p className="text-slate-600 mt-2">
+          Customize the look and feel of your storefront
+        </p>
       </div>
 
       {/* Branding Form */}

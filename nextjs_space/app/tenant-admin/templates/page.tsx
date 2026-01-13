@@ -1,50 +1,58 @@
-
-import { getServerSession } from 'next-auth';
-import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Palette, Layout } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import TemplateCloneButton from './clone-button';
-import ActivateButton from './activate-button';
-import { Prisma, templates } from '@prisma/client';
-import { Breadcrumbs } from '@/components/admin/shared';
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Palette, Layout } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import TemplateCloneButton from "./clone-button";
+import ActivateButton from "./activate-button";
+import { Prisma, templates } from "@prisma/client";
+import { Breadcrumbs } from "@/components/admin/shared";
 
 // Define typed interface for the cloned template with the included base template relation
 type ClonedTemplate = any;
 
 export default async function TemplatesPage() {
-    const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
 
-    if (!session || (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
-        redirect('/auth/login');
-    }
+  if (
+    !session ||
+    (session.user.role !== "TENANT_ADMIN" &&
+      session.user.role !== "SUPER_ADMIN")
+  ) {
+    redirect("/auth/login");
+  }
 
-    const user = await prisma.users.findUnique({
-        where: { id: session.user.id },
-        include: { tenants: true },
-    });
+  const user = await prisma.users.findUnique({
+    where: { id: session.user.id },
+    include: { tenants: true },
+  });
 
-    if (!user?.tenants) {
-        redirect('/tenant-admin');
-    }
+  if (!user?.tenants) {
+    redirect("/tenant-admin");
+  }
 
-    const tenant = user.tenants;
+  const tenant = user.tenants;
 
-    // 1. Fetch Tenant's Templates
-    const myTemplates = await prisma.tenant_templates.findMany({
-        where: { tenantId: tenant.id },
-        include: {
-            templates: {
-                select: {
-                    thumbnailUrl: true,
-                    previewUrl: true,
-                },
-            },
+  // 1. Fetch Tenant's Templates
+  const myTemplates = await prisma.tenant_templates.findMany({
+    where: { tenantId: tenant.id },
+    include: {
+      templates: {
+        select: {
+          thumbnailUrl: true,
+          previewUrl: true,
         },
         orderBy: { createdAt: 'desc' },
     });
@@ -186,8 +194,30 @@ export default async function TemplatesPage() {
                             </div>
                         )}
                     </div>
-                </TabsContent>
-            </Tabs>
-        </div>
-    );
+                    {template.isPremium && (
+                      <Badge variant="secondary">Premium</Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardFooter className="border-t bg-slate-50/50 p-4">
+                  <TemplateCloneButton
+                    templateId={template.id}
+                    templateName={template.name}
+                  />
+                </CardFooter>
+              </Card>
+            ))}
+
+            {templatess.length === 0 && (
+              <div className="col-span-full text-center py-12">
+                <p className="text-slate-500">
+                  No base templates available in the system.
+                </p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
 }

@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useRef } from 'react';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { Target, Heart, Globe, Shield } from 'lucide-react';
+import { useEffect, useState, useRef } from "react";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { Target, Heart, Globe, Shield } from "lucide-react";
 
 type Tenant = {
   id: string;
@@ -22,7 +22,7 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
   // Parallax effect for hero image
   const { scrollYProgress } = useScroll({
     target: heroRef,
-    offset: ["start end", "end start"]
+    offset: ["start end", "end start"],
   });
 
   const imageY = useTransform(scrollYProgress, [0, 1], ["0%", "15%"]);
@@ -33,12 +33,12 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
     if (!params.slug) return;
 
     fetch(`/api/tenant/${params.slug}`)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         setTenant(data.tenant || data); // Handle both wrapped and unwrapped just in case
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(err);
         setLoading(false);
       });
@@ -46,8 +46,13 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--tenant-color-background)' }}>
-        <p className="text-lg" style={{ color: 'var(--tenant-color-text)' }}>Loading...</p>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "var(--tenant-color-background)" }}
+      >
+        <p className="text-lg" style={{ color: "var(--tenant-color-text)" }}>
+          Loading...
+        </p>
       </div>
     );
   }
@@ -62,16 +67,16 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.8 }
-    }
+      transition: { duration: 0.8 },
+    },
   };
 
   const staggerContainer = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.15, delayChildren: 0.2 }
-    }
+      transition: { staggerChildren: 0.15, delayChildren: 0.2 },
+    },
   };
 
   const valueCardVariants = {
@@ -80,15 +85,21 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
       opacity: 1,
       y: 0,
       scale: 1,
-      transition: { duration: 0.6 }
-    }
+      transition: { duration: 0.6 },
+    },
   };
 
   return (
-    <div className="min-h-screen pb-24 lg:pb-0" style={{ backgroundColor: 'var(--tenant-color-background)' }}>
+    <div
+      className="min-h-screen pb-24 lg:pb-0"
+      style={{ backgroundColor: "var(--tenant-color-background)" }}
+    >
       <main className="pt-28 md:pt-32 relative z-0">
         {/* Hero Section with animated text */}
-        <section style={{ backgroundColor: 'var(--tenant-color-background)' }} className="py-16 md:py-20 relative z-10">
+        <section
+          style={{ backgroundColor: "var(--tenant-color-background)" }}
+          className="py-16 md:py-20 relative z-10"
+        >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
               className="max-w-5xl"
@@ -98,14 +109,20 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
             >
               <motion.h1
                 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight leading-[1.1]"
-                style={{ color: 'var(--tenant-color-heading)', fontFamily: 'var(--tenant-font-heading)' }}
+                style={{
+                  color: "var(--tenant-color-heading)",
+                  fontFamily: "var(--tenant-font-heading)",
+                }}
                 variants={fadeInUp}
               >
                 About {tenant.businessName}
               </motion.h1>
               <motion.p
                 className="text-xl md:text-2xl max-w-3xl font-light"
-                style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
+                style={{
+                  color: "var(--tenant-color-text)",
+                  fontFamily: "var(--tenant-font-base)",
+                }}
                 variants={fadeInUp}
               >
                 Setting new standards in medical cannabis excellence
@@ -159,7 +176,10 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
             {/* Scroll-based overlay */}
             <motion.div
               className="absolute inset-0"
-              style={{ opacity: overlayOpacity, backgroundColor: 'var(--tenant-color-primary, rgba(0,0,0,0.2))' }}
+              style={{
+                opacity: overlayOpacity,
+                backgroundColor: "var(--tenant-color-primary, rgba(0,0,0,0.2))",
+              }}
             />
 
             {/* Glassmorphism ethos card */}
@@ -167,11 +187,16 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
               className="absolute bottom-6 left-6 right-6 md:bottom-8 md:left-8 md:right-auto md:max-w-md"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              transition={{
+                duration: 0.8,
+                delay: 0.8,
+                ease: [0.22, 1, 0.36, 1],
+              }}
             >
               <div className="backdrop-blur-xl bg-white/10 dark:bg-black/20 rounded-xl p-4 md:p-5 border border-white/20 dark:border-white/10 shadow-lg">
                 <p className="text-white text-sm md:text-base font-medium tracking-wide">
-                  Excellence in cultivation • Patient-centered care • Global standards
+                  Excellence in cultivation • Patient-centered care • Global
+                  standards
                 </p>
               </div>
             </motion.div>
@@ -185,7 +210,10 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
             >
               <div
                 className="w-full h-full rounded-full backdrop-blur-sm border border-white/20 flex items-center justify-center"
-                style={{ background: 'linear-gradient(to bottom right, rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.3), rgba(var(--tenant-color-secondary-rgb, 44, 125, 122), 0.3))' }}
+                style={{
+                  background:
+                    "linear-gradient(to bottom right, rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.3), rgba(var(--tenant-color-secondary-rgb, 44, 125, 122), 0.3))",
+                }}
               >
                 <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />
               </div>
@@ -194,7 +222,10 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
         </section>
 
         {/* Our Story with reveal animation */}
-        <section className="py-20 md:py-32 overflow-hidden" style={{ backgroundColor: 'var(--tenant-color-background)' }}>
+        <section
+          className="py-20 md:py-32 overflow-hidden"
+          style={{ backgroundColor: "var(--tenant-color-background)" }}
+        >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
               className="max-w-4xl mx-auto"
@@ -205,38 +236,64 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
             >
               <motion.h2
                 className="text-3xl md:text-4xl lg:text-5xl font-semibold mb-8 tracking-tight"
-                style={{ color: 'var(--tenant-color-heading)', fontFamily: 'var(--tenant-font-heading)' }}
+                style={{
+                  color: "var(--tenant-color-heading)",
+                  fontFamily: "var(--tenant-font-heading)",
+                }}
                 variants={fadeInUp}
               >
                 Our Story
               </motion.h2>
               <motion.p
                 className="text-base md:text-lg leading-relaxed mb-6"
-                style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
+                style={{
+                  color: "var(--tenant-color-text)",
+                  fontFamily: "var(--tenant-font-base)",
+                }}
                 variants={fadeInUp}
               >
-                Founded with a vision to revolutionize medical cannabis access, we have grown from a small operation into a leading international distributor. Our journey began with a simple belief: patients deserve the highest quality medical cannabis products, backed by rigorous research and unwavering standards.
+                Founded with a vision to revolutionize medical cannabis access,
+                we have grown from a small operation into a leading
+                international distributor. Our journey began with a simple
+                belief: patients deserve the highest quality medical cannabis
+                products, backed by rigorous research and unwavering standards.
               </motion.p>
               <motion.p
                 className="text-base md:text-lg leading-relaxed mb-6"
-                style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
+                style={{
+                  color: "var(--tenant-color-text)",
+                  fontFamily: "var(--tenant-font-base)",
+                }}
                 variants={fadeInUp}
               >
-                Today, we operate state-of-the-art facilities across multiple continents, serving thousands of patients and partnering with leading healthcare professionals. Our EU GMP-certified products meet the most stringent international standards, ensuring safety, consistency, and efficacy.
+                Today, we operate state-of-the-art facilities across multiple
+                continents, serving thousands of patients and partnering with
+                leading healthcare professionals. Our EU GMP-certified products
+                meet the most stringent international standards, ensuring
+                safety, consistency, and efficacy.
               </motion.p>
               <motion.p
                 className="text-base md:text-lg leading-relaxed"
-                style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
+                style={{
+                  color: "var(--tenant-color-text)",
+                  fontFamily: "var(--tenant-font-base)",
+                }}
                 variants={fadeInUp}
               >
-                Through continuous innovation and dedication to excellence, we are proud to be at the forefront of the medical cannabis industry, helping to shape a future where safe, effective cannabis medicine is accessible to all who need it.
+                Through continuous innovation and dedication to excellence, we
+                are proud to be at the forefront of the medical cannabis
+                industry, helping to shape a future where safe, effective
+                cannabis medicine is accessible to all who need it.
               </motion.p>
             </motion.div>
           </div>
         </section>
 
         {/* Statistics Section */}
-        <section className="py-20 md:py-32" style={{ backgroundColor: 'var(--tenant-color-surface, #f9fafb)' }}>
+        <section
+          className="py-20 md:py-32"
+          style={{ backgroundColor: "var(--tenant-color-surface, #f9fafb)" }}
+        >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
               className="grid md:grid-cols-4 gap-8 max-w-6xl mx-auto"
@@ -249,7 +306,7 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
                 { value: "18,000+", label: "Square Metres" },
                 { value: "60", label: "Tonnes Annually" },
                 { value: "4", label: "Global Markets" },
-                { value: "100%", label: "EU GMP Certified" }
+                { value: "100%", label: "EU GMP Certified" },
               ].map((stat, index) => (
                 <motion.div
                   key={index}
@@ -258,13 +315,19 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
                 >
                   <h3
                     className="text-4xl md:text-5xl font-bold mb-2"
-                    style={{ color: 'var(--tenant-color-primary)', fontFamily: 'var(--tenant-font-heading)' }}
+                    style={{
+                      color: "var(--tenant-color-primary)",
+                      fontFamily: "var(--tenant-font-heading)",
+                    }}
                   >
                     {stat.value}
                   </h3>
                   <p
                     className="text-sm md:text-base"
-                    style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
+                    style={{
+                      color: "var(--tenant-color-text)",
+                      fontFamily: "var(--tenant-font-base)",
+                    }}
                   >
                     {stat.label}
                   </p>
@@ -275,11 +338,17 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
         </section>
 
         {/* Our Values with staggered cards */}
-        <section className="py-20 md:py-32 overflow-hidden" style={{ backgroundColor: 'var(--tenant-color-background)' }}>
+        <section
+          className="py-20 md:py-32 overflow-hidden"
+          style={{ backgroundColor: "var(--tenant-color-background)" }}
+        >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.h2
               className="text-3xl md:text-4xl lg:text-5xl font-semibold text-center mb-16 md:mb-20 tracking-tight"
-              style={{ color: 'var(--tenant-color-heading)', fontFamily: 'var(--tenant-font-heading)' }}
+              style={{
+                color: "var(--tenant-color-heading)",
+                fontFamily: "var(--tenant-font-heading)",
+              }}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -295,10 +364,26 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
               variants={staggerContainer}
             >
               {[
-                { icon: Target, title: "Excellence", desc: "Uncompromising quality in every product and process" },
-                { icon: Heart, title: "Patient-Focused", desc: "Putting patient needs and wellbeing at the heart of everything we do" },
-                { icon: Globe, title: "Global Reach", desc: "Serving patients across continents with consistent standards" },
-                { icon: Shield, title: "Integrity", desc: "Operating with transparency, compliance, and ethical responsibility" }
+                {
+                  icon: Target,
+                  title: "Excellence",
+                  desc: "Uncompromising quality in every product and process",
+                },
+                {
+                  icon: Heart,
+                  title: "Patient-Focused",
+                  desc: "Putting patient needs and wellbeing at the heart of everything we do",
+                },
+                {
+                  icon: Globe,
+                  title: "Global Reach",
+                  desc: "Serving patients across continents with consistent standards",
+                },
+                {
+                  icon: Shield,
+                  title: "Integrity",
+                  desc: "Operating with transparency, compliance, and ethical responsibility",
+                },
               ].map((item, index) => (
                 <motion.div
                   key={index}
@@ -309,7 +394,8 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
                   <motion.div
                     className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
                     style={{
-                      background: 'linear-gradient(to bottom right, var(--tenant-color-primary), var(--tenant-color-secondary))'
+                      background:
+                        "linear-gradient(to bottom right, var(--tenant-color-primary), var(--tenant-color-secondary))",
                     }}
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -318,13 +404,19 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
                   </motion.div>
                   <h3
                     className="text-lg font-semibold mb-3 tracking-tight"
-                    style={{ color: 'var(--tenant-color-heading)', fontFamily: 'var(--tenant-font-heading)' }}
+                    style={{
+                      color: "var(--tenant-color-heading)",
+                      fontFamily: "var(--tenant-font-heading)",
+                    }}
                   >
                     {item.title}
                   </h3>
                   <p
                     className="text-sm leading-relaxed"
-                    style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
+                    style={{
+                      color: "var(--tenant-color-text)",
+                      fontFamily: "var(--tenant-font-base)",
+                    }}
                   >
                     {item.desc}
                   </p>
@@ -335,7 +427,10 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
         </section>
 
         {/* Our Facilities with hover effects */}
-        <section className="py-20 md:py-32 relative overflow-hidden" style={{ backgroundColor: 'var(--tenant-color-primary)' }}>
+        <section
+          className="py-20 md:py-32 relative overflow-hidden"
+          style={{ backgroundColor: "var(--tenant-color-primary)" }}
+        >
           {/* Subtle animated background pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2)_0%,transparent_50%)]" />
@@ -360,17 +455,31 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
                 className="text-base md:text-lg text-white/80 leading-relaxed mb-16"
                 variants={fadeInUp}
               >
-                Operating world-class cultivation and processing facilities across four continents, meeting the highest international standards.
+                Operating world-class cultivation and processing facilities
+                across four continents, meeting the highest international
+                standards.
               </motion.p>
               <motion.div
                 className="grid md:grid-cols-2 gap-6 text-left"
                 variants={staggerContainer}
               >
                 {[
-                  { title: "South Africa", desc: "Primary cultivation and processing facility with 15,000+ square metres of GMP-certified production space" },
-                  { title: "United Kingdom", desc: "European distribution hub serving the UK market with direct access to licensed prescribers and pharmacies" },
-                  { title: "Thailand", desc: "Asia-Pacific operations center supporting regional market expansion and research initiatives" },
-                  { title: "Portugal", desc: "European cultivation facility with advanced indoor growing systems and quality control laboratories" }
+                  {
+                    title: "South Africa",
+                    desc: "Primary cultivation and processing facility with 15,000+ square metres of GMP-certified production space",
+                  },
+                  {
+                    title: "United Kingdom",
+                    desc: "European distribution hub serving the UK market with direct access to licensed prescribers and pharmacies",
+                  },
+                  {
+                    title: "Thailand",
+                    desc: "Asia-Pacific operations center supporting regional market expansion and research initiatives",
+                  },
+                  {
+                    title: "Portugal",
+                    desc: "European cultivation facility with advanced indoor growing systems and quality control laboratories",
+                  },
                 ].map((facility, index) => (
                   <motion.div
                     key={index}
@@ -392,7 +501,10 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
         </section>
 
         {/* CTA with animated button */}
-        <section className="py-20 md:py-32" style={{ backgroundColor: 'var(--tenant-color-background)' }}>
+        <section
+          className="py-20 md:py-32"
+          style={{ backgroundColor: "var(--tenant-color-background)" }}
+        >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.div
               initial="hidden"
@@ -402,26 +514,33 @@ export default function AboutPage({ params }: { params: { slug: string } }) {
             >
               <motion.h2
                 className="text-3xl md:text-4xl lg:text-5xl font-semibold mb-6 tracking-tight"
-                style={{ color: 'var(--tenant-color-heading)', fontFamily: 'var(--tenant-font-heading)' }}
+                style={{
+                  color: "var(--tenant-color-heading)",
+                  fontFamily: "var(--tenant-font-heading)",
+                }}
                 variants={fadeInUp}
               >
                 Ready to Learn More?
               </motion.h2>
               <motion.p
                 className="text-base md:text-lg max-w-3xl mx-auto mb-10"
-                style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
+                style={{
+                  color: "var(--tenant-color-text)",
+                  fontFamily: "var(--tenant-font-base)",
+                }}
                 variants={fadeInUp}
               >
-                Get in touch with our team to discuss how we can support your medical cannabis needs.
+                Get in touch with our team to discuss how we can support your
+                medical cannabis needs.
               </motion.p>
               <motion.div variants={fadeInUp}>
                 <Link href="contact">
                   <motion.button
                     className="px-7 py-3 rounded-full font-semibold relative overflow-hidden group"
                     style={{
-                      backgroundColor: 'var(--tenant-color-primary)',
-                      color: 'white',
-                      fontFamily: 'var(--tenant-font-base)'
+                      backgroundColor: "var(--tenant-color-primary)",
+                      color: "white",
+                      fontFamily: "var(--tenant-font-base)",
                     }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.98 }}

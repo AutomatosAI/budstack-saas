@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 /**
  * Registration Redirect
- * 
+ *
  * All customer signups must go through the consultation form for KYC compliance.
  * This page redirects to the consultation page.
  */
