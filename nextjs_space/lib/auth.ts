@@ -23,6 +23,7 @@ export const authOptions: AuthOptions = {
             ? { email: credentials.email, tenantId: tenant.id }
             : { email: credentials.email },
           include: { tenants: true },
+          orderBy: { createdAt: 'asc' },
         });
 
         if (!user || !user.password) {
