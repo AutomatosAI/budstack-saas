@@ -433,6 +433,10 @@ async function refactorComponentFile(filePath: string): Promise<void> {
 
   // Replace React Router imports with Next.js
   content = content.replace(
+    /import \{\s*Link\s*,\s*useLocation\s*\} from ["']react-router-dom["'];?/g,
+    "import Link from 'next/link';\nimport { usePathname } from 'next/navigation';"
+  );
+  content = content.replace(
     /import \{([^}]+)\} from ["']react-router-dom["'];?/g,
     (match, imports) => {
       if (imports.includes("Link")) {
@@ -475,6 +479,10 @@ async function refactorHeaderComponent(filePath: string): Promise<void> {
   content = content.replace(
     /import \{ Link, useLocation \} from ["']react-router-dom["'];?/g,
     "import Link from 'next/link';\nimport { usePathname } from 'next/navigation';",
+  );
+  content = content.replace(
+    /import \{[^}]*\} from ["']react-router-dom["'];?/g,
+    ''
   );
 
   // Replace useLocation with usePathname

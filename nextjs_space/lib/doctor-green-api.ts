@@ -61,7 +61,7 @@ export interface DoctorGreenConfig {
 }
 
 interface DoctorGreenAPIOptions {
-  method?: string;
+  method?: 'GET' | 'POST' | 'DELETE' | 'PATCH';
   body?: any;
   headers?: Record<string, string>;
   config?: DoctorGreenConfig;
