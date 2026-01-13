@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if admin email already exists
-        const existingUser = await prisma.users.findUnique({
+        const existingUser = await prisma.users.findFirst({
             where: { email: adminEmail },
         });
 

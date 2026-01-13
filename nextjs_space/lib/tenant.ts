@@ -164,6 +164,7 @@ export async function getTenantFromRequest(req: Request): Promise<Tenant | null>
     }
   } catch (error) {
     console.error('Error fetching tenant from request:', error);
+    setTenantContext(null);
     return null;
   }
 

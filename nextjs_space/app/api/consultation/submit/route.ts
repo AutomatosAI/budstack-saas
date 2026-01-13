@@ -75,8 +75,11 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(body.password, 10);
 
     // Check if user already exists
-    const existingUser = await prisma.users.findUnique({
-      where: { email: body.email },
+    const existingUser = await prisma.users.findFirst({
+      where: {
+        email: body.email.toLowerCase(),
+        ...(body.tenantId ? { tenantId: body.tenantId } : {}),
+      },
     });
 
     let userId: string | undefined;

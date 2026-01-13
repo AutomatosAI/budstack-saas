@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     // Update user with additional info
     await prisma.users.update({
-      where: { email: session.user.email },
+      where: { id: session.user.id },
       data: {
         name: `${personal.firstName} ${personal.lastName}`,
       },
