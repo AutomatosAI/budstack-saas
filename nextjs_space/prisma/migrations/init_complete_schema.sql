@@ -405,6 +405,7 @@ CREATE UNIQUE INDEX "tenant_branding_tenantId_key" ON "tenant_branding"("tenantI
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_tenantId_email_key" ON "users"("tenantId", "email");
+CREATE UNIQUE INDEX "users_email_global_key" ON "users"("email") WHERE "tenantId" IS NULL;
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_resetToken_key" ON "users"("resetToken");

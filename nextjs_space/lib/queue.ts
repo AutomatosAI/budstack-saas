@@ -16,29 +16,27 @@ const getRedisConnection = () => {
 };
 
 export const getEmailQueue = () => {
-  console.log("DEBUG: getEmailQueue called");
-  console.trace("DEBUG: Trace for getEmailQueue");
-  if (!emailQueueInstance) {
-    const connection = getRedisConnection();
-    emailQueueInstance = new Queue(emailQueueName, {
-      connection: connection as any,
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-          type: "exponential",
-          delay: 1000,
-        },
-        removeOnComplete: {
-          age: 7 * 24 * 3600, // Keep for 7 days
-          count: 1000,
-        },
-        removeOnFail: {
-          age: 7 * 24 * 3600, // Keep for 7 days
-        },
-      },
-    });
-  }
-  return emailQueueInstance;
+    if (!emailQueueInstance) {
+        const connection = getRedisConnection();
+        emailQueueInstance = new Queue(emailQueueName, {
+            connection: connection as any,
+            defaultJobOptions: {
+                attempts: 3,
+                backoff: {
+                    type: 'exponential',
+                    delay: 1000,
+                },
+                removeOnComplete: {
+                    age: 7 * 24 * 3600, // Keep for 7 days
+                    count: 1000,
+                },
+                removeOnFail: {
+                    age: 7 * 24 * 3600, // Keep for 7 days
+                },
+            },
+        });
+    }
+    return emailQueueInstance;
 };
 
 export const getEmailQueueEvents = () => {

@@ -183,8 +183,8 @@ export async function POST(request: NextRequest) {
 
         shipping: {
           address1: body.addressLine1,
-          address2: body.address2 || "",
-          landmark: "",
+          address2: body.addressLine2 || '',
+          landmark: '',
           city: body.city,
           state: body.state,
           postalCode: body.postalCode,

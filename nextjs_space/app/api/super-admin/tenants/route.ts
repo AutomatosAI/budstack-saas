@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
-import { checkRateLimit } from "@/lib/rate-limit";
-import crypto from "crypto";
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
+import { checkRateLimit } from '@/lib/rate-limit';
+import crypto from 'crypto';
 
 /**
  * GET /api/super-admin/tenants
@@ -258,9 +259,9 @@ export async function POST(request: NextRequest) {
         const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
         // Create tenant and admin user in transaction
-        const tenant = await prisma.$transaction(async (tx: any) => {
+        const tenant = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             // Create tenant
-            const newTenant = await tx.tenant.create({
+            const newTenant = await tx.tenants.create({
                 data: {
                     businessName,
                     subdomain,
@@ -270,7 +271,7 @@ export async function POST(request: NextRequest) {
             });
 
             // Create admin user
-            await tx.user.create({
+            await tx.users.create({
                 data: {
                     email: adminEmail,
                     password: hashedPassword,
@@ -284,7 +285,7 @@ export async function POST(request: NextRequest) {
             });
 
             // Create default branding
-            await tx.tenantBranding.create({
+            await tx.tenant_branding.create({
                 data: {
                     tenantId: newTenant.id,
                 },

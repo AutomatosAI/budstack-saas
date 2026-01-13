@@ -1,10 +1,9 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "./card";
-import { Badge } from "./badge";
-import { Checkbox } from "./checkbox";
-import { Button } from "./button";
-import { Pencil, Trash2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from './card'
+import { Badge } from './badge'
+import { Checkbox } from './checkbox'
+import { Button } from './button'
+import { Pencil, Trash2 } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 interface TaskCardProps {
   id: string;
@@ -64,5 +63,5 @@ export function TaskCard({
         </CardContent>
       </Card>
     </motion.div>
-  );
+  )
 }

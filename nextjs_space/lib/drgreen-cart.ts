@@ -5,8 +5,8 @@
  * Handles cart synchronization between BudStack database and Dr. Green backend.
  */
 
-import { prisma } from "@/lib/db";
-import crypto from "crypto";
+import { prisma } from '@/lib/db';
+import { callDrGreenAPI } from '@/lib/drgreen-api-client';
 
 export interface CartItem {
   strainId: string;
@@ -27,58 +27,6 @@ export interface DrGreenCartResponse {
   drGreenCartId?: string;
 }
 
-/**
- * Generate RSA-SHA256 signature for Dr. Green API authentication
- */
-function generateDrGreenSignature(payload: string, secretKey: string): string {
-  // Decode base64 secret key to get PEM format
-  const privateKeyPEM = Buffer.from(secretKey, "base64").toString("utf-8");
-
-  // Sign with RSA-SHA256
-  const sign = crypto.createSign("RSA-SHA256");
-  sign.update(payload);
-  const signature = sign.sign(privateKeyPEM, "base64");
-
-  return signature;
-}
-
-/**
- * Make authenticated request to Dr. Green API
- */
-async function callDrGreenAPI(
-  endpoint: string,
-  method: "GET" | "POST" | "DELETE",
-  apiKey: string,
-  secretKey: string,
-  body?: any,
-): Promise<any> {
-  const apiUrl =
-    process.env.DRGREEN_API_URL || "https://api.drgreennft.com/api/v1";
-  const url = `${apiUrl}${endpoint}`;
-
-  const payload = body ? JSON.stringify(body) : "";
-  const signature = generateDrGreenSignature(payload || endpoint, secretKey);
-
-  const response = await fetch(url, {
-    method,
-    headers: {
-      "x-auth-apikey": apiKey,
-      "x-auth-signature": signature,
-      "Content-Type": "application/json",
-    },
-    body: body ? payload : undefined,
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || data.success !== "true") {
-    throw new Error(
-      data.message || `Dr. Green API error: ${response.statusText}`,
-    );
-  }
-
-  return data;
-}
 
 /**
  * Get or create Dr. Green client ID for a user
@@ -118,77 +66,87 @@ export async function addToCart(params: {
   apiKey: string;
   secretKey: string;
 }): Promise<DrGreenCartResponse> {
-  const { userId, tenantId, strainId, quantity, size, apiKey, secretKey } =
-    params;
+    const { userId, tenantId, strainId, quantity, size, apiKey, secretKey } = params;
 
-  // Get/ensure client ID
-  const clientId = await ensureClientId(userId, tenantId, apiKey, secretKey);
+    // Get/ensure client ID
+    const clientId = await ensureClientId(userId, tenantId, apiKey, secretKey);
 
-  // Get user's cart
-  let cart = await prisma.drGreenCart.findUnique({
-    where: {
-      userId_tenantId: {
-        userId,
-        tenantId,
-      },
-    },
-  });
+    // Get user's cart
+    let cart = await prisma.drGreenCart.findUnique({
+        where: {
+            userId_tenantId: {
+                userId,
+                tenantId,
+            },
+        },
+    });
 
-  // Calculate actual quantity (quantity * size in grams)
-  const actualQuantity = quantity * size;
+    // Calculate actual quantity (quantity * size in grams)
+    const actualQuantity = quantity * size;
 
-  // Call Dr. Green API to add to cart
-  const response = await callDrGreenAPI(
-    "/dapp/carts",
-    "POST",
-    apiKey,
-    secretKey,
-    {
-      items: [
+    // Call Dr. Green API to add to cart
+    const response = await callDrGreenAPI(
+        '/dapp/carts',
         {
-          quantity: actualQuantity,
-          strainId,
-        },
-      ],
-      clientCartId: cart?.drGreenCartId || undefined,
-    },
-  );
+            method: 'POST',
+            apiKey,
+            secretKey,
+            validateSuccessFlag: true,
+            body: {
+            items: [
+                {
+                    quantity: actualQuantity,
+                    strainId,
+                },
+            ],
+            clientCartId: cart?.drGreenCartId || undefined,
+            },
+        }
+    );
 
-  // Update local cart
-  const cartData = response.data?.clients?.[0]?.clientCart?.[0];
-  if (cartData) {
-    const items = cartData.cartItems.map((item: any) => ({
-      strainId: item.strain.id,
-      quantity: item.quantity,
-      size: 1, // Dr. Green stores total quantity, so size is 1
-      strain: {
-        id: item.strain.id,
-        name: item.strain.name,
-        retailPrice: item.strain.retailPrice,
-        imageUrl: item.strain.imageUrl,
-      },
-    }));
+    // Update local cart
+    const cartData = response.data?.clients?.[0]?.clientCart?.[0];
+    if (cartData) {
+        const items = cartData.cartItems.map((item: any) => ({
+            strainId: item.strain.id,
+            quantity: item.quantity,
+            size: 1, // Dr. Green stores total quantity, so size is 1
+            strain: {
+                id: item.strain.id,
+                name: item.strain.name,
+                retailPrice: item.strain.retailPrice,
+                imageUrl: item.strain.imageUrl,
+            },
+        }));
 
-    if (cart) {
-      // Update existing cart
-      cart = await prisma.drGreenCart.update({
-        where: { id: cart.id },
-        data: {
-          drGreenCartId: cartData.id,
-          items: items,
-          updatedAt: new Date(),
-        },
-      });
-    } else {
-      // Create new cart
-      cart = await prisma.drGreenCart.create({
-        data: {
-          userId,
-          tenantId,
-          drGreenCartId: cartData.id,
-          items: items,
-        },
-      });
+        if (cart) {
+            // Update existing cart
+            cart = await prisma.drGreenCart.update({
+                where: { id: cart.id },
+                data: {
+                    drGreenCartId: cartData.id,
+                    items: items,
+                    updatedAt: new Date(),
+                },
+            });
+        } else {
+            // Create new cart
+            cart = await prisma.drGreenCart.create({
+                data: {
+                    userId,
+                    tenantId,
+                    drGreenCartId: cartData.id,
+                    items: items,
+                },
+            });
+        }
+
+        return {
+            items,
+            totalQuantity: cartData.totalQuatity || 0,
+            totalAmount: cartData.totalAmount || 0,
+            drGreenCartId: cartData.id,
+        };
     }
 
     return {
@@ -211,7 +169,97 @@ export async function getCart(params: {
   apiKey: string;
   secretKey: string;
 }): Promise<DrGreenCartResponse> {
-  const { userId, tenantId, apiKey, secretKey } = params;
+    const { userId, tenantId, apiKey, secretKey } = params;
+
+    try {
+        // Get client ID
+        const clientId = await ensureClientId(userId, tenantId, apiKey, secretKey);
+
+        // Refresh from Dr. Green API
+        const response = await callDrGreenAPI(
+            `/dapp/carts?clientId=${clientId}`,
+            {
+                method: 'GET',
+                apiKey,
+                secretKey,
+                validateSuccessFlag: true,
+            }
+        );
+
+        const cartData = response.data?.clients?.[0]?.clientCart?.[0];
+
+        if (cartData) {
+            const items = cartData.cartItems.map((item: any) => ({
+                strainId: item.strain.id,
+                quantity: item.quantity,
+                size: 1,
+                strain: {
+                    id: item.strain.id,
+                    name: item.strain.name,
+                    retailPrice: item.strain.retailPrice,
+                    imageUrl: item.strain.imageUrl,
+                },
+            }));
+
+            // Update local cart
+            await prisma.drGreenCart.upsert({
+                where: {
+                    userId_tenantId: {
+                        userId,
+                        tenantId,
+                    },
+                },
+                create: {
+                    userId,
+                    tenantId,
+                    drGreenCartId: cartData.id,
+                    items,
+                },
+                update: {
+                    drGreenCartId: cartData.id,
+                    items,
+                    updatedAt: new Date(),
+                },
+            });
+
+            return {
+                items,
+                totalQuantity: cartData.totalQuatity || 0,
+                totalAmount: cartData.totalAmount || 0,
+                drGreenCartId: cartData.id,
+            };
+        }
+
+        // No cart exists
+        return {
+            items: [],
+            totalQuantity: 0,
+            totalAmount: 0,
+        };
+    } catch (error) {
+        // If user doesn't have client ID yet, return empty cart
+        if (error instanceof Error && error.message.includes('consultation')) {
+            return {
+                items: [],
+                totalQuantity: 0,
+                totalAmount: 0,
+            };
+        }
+        throw error;
+    }
+}
+
+/**
+ * Remove item from cart
+ */
+export async function removeFromCart(params: {
+    userId: string;
+    tenantId: string;
+    strainId: string;
+    apiKey: string;
+    secretKey: string;
+}): Promise<DrGreenCartResponse> {
+    const { userId, tenantId, strainId, apiKey, secretKey } = params;
 
   try {
     // Get client ID
@@ -269,24 +317,17 @@ export async function getCart(params: {
       };
     }
 
-    // No cart exists
-    return {
-      items: [],
-      totalQuantity: 0,
-      totalAmount: 0,
-    };
-  } catch (error) {
-    // If user doesn't have client ID yet, return empty cart
-    if (error instanceof Error && error.message.includes("consultation")) {
-      return {
-        items: [],
-        totalQuantity: 0,
-        totalAmount: 0,
-      };
-    }
-    throw error;
-  }
-}
+    // Call Dr. Green API to remove item
+    await callDrGreenAPI(
+        `/dapp/carts/${cart.drGreenCartId}?strainId=${strainId}`,
+        {
+            method: 'DELETE',
+            apiKey,
+            secretKey,
+            validateSuccessFlag: true,
+            body: { cartId: cart.drGreenCartId },
+        }
+    );
 
 /**
  * Remove item from cart
@@ -339,33 +380,36 @@ export async function clearCart(params: {
   apiKey: string;
   secretKey: string;
 }): Promise<void> {
-  const { userId, tenantId, apiKey, secretKey } = params;
+    const { userId, tenantId, apiKey, secretKey } = params;
 
-  const cart = await prisma.drGreenCart.findUnique({
-    where: {
-      userId_tenantId: {
-        userId,
-        tenantId,
-      },
-    },
-  });
+    const cart = await prisma.drGreenCart.findUnique({
+        where: {
+            userId_tenantId: {
+                userId,
+                tenantId,
+            },
+        },
+    });
 
-  if (cart?.drGreenCartId) {
-    // Call Dr. Green API to clear cart
-    await callDrGreenAPI(
-      `/dapp/carts/${cart.drGreenCartId}`,
-      "DELETE",
-      apiKey,
-      secretKey,
-      { cartId: cart.drGreenCartId },
-    );
-  }
+    if (cart?.drGreenCartId) {
+        // Call Dr. Green API to clear cart
+        await callDrGreenAPI(
+            `/dapp/carts/${cart.drGreenCartId}`,
+            {
+                method: 'DELETE',
+                apiKey,
+                secretKey,
+                validateSuccessFlag: true,
+                body: { cartId: cart.drGreenCartId },
+            }
+        );
+    }
 
-  // Delete local cart record
-  await prisma.drGreenCart.deleteMany({
-    where: {
-      userId,
-      tenantId,
-    },
-  });
+    // Delete local cart record
+    await prisma.drGreenCart.deleteMany({
+        where: {
+            userId,
+            tenantId,
+        },
+    });
 }
