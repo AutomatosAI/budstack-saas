@@ -1,28 +1,23 @@
 /**
  * Rate limiting utility for API routes
- * Implements a sliding window rate limiter with 20 requests per minute per user
+ * Implements a fixed window rate limiter backed by Redis.
  */
 
 import { NextResponse } from 'next/server';
+import Redis from 'ioredis';
 
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+let redisClient: Redis | null = null;
 
-// In-memory store for rate limiting
-// In production, use Redis or a distributed cache
-const rateLimitStore = new Map<string, RateLimitEntry>();
-
-// Cleanup old entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now > entry.resetAt) {
-      rateLimitStore.delete(key);
-    }
+const getRedisClient = () => {
+  if (!redisClient) {
+    redisClient = new Redis(REDIS_URL, {
+      maxRetriesPerRequest: null,
+      lazyConnect: true,
+    });
   }
-}, 5 * 60 * 1000);
+  return redisClient;
+};
 
 export interface RateLimitConfig {
   /**
@@ -46,59 +41,57 @@ export interface RateLimitConfig {
  *
  * @example
  * ```ts
- * const rateLimitResult = checkRateLimit(session.user.id);
+ * const rateLimitResult = await checkRateLimit(session.user.id);
  * if (!rateLimitResult.success) {
  *   return rateLimitResult.response;
  * }
  * ```
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig = {}
-): { success: true } | { success: false; response: NextResponse } {
+): Promise<{ success: true } | { success: false; response: NextResponse }> {
   const { maxRequests = 20, windowMs = 60000 } = config;
   const now = Date.now();
-  const key = `rate-limit:${identifier}`;
+  const window = Math.floor(now / windowMs);
+  const key = `rate-limit:${identifier}:${window}`;
 
-  // Get or create entry
-  let entry = rateLimitStore.get(key);
+  try {
+    const redis = getRedisClient();
+    const results = await redis
+      .multi()
+      .incr(key)
+      .pexpire(key, windowMs)
+      .exec();
 
-  if (!entry || now > entry.resetAt) {
-    // Create new window
-    entry = {
-      count: 1,
-      resetAt: now + windowMs,
-    };
-    rateLimitStore.set(key, entry);
-    return { success: true };
-  }
+    const count = Number(results?.[0]?.[1] ?? 1);
 
-  // Check if limit exceeded
-  if (entry.count >= maxRequests) {
-    const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
-    return {
-      success: false,
-      response: NextResponse.json(
-        {
-          error: 'Too many requests',
-          message: `Rate limit exceeded. Please try again in ${retryAfter} seconds.`,
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': retryAfter.toString(),
-            'X-RateLimit-Limit': maxRequests.toString(),
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': new Date(entry.resetAt).toISOString(),
+    const ttlMs = await redis.pttl(key);
+    const retryAfter = Math.max(0, Math.ceil(ttlMs / 1000));
+
+    if (count > maxRequests) {
+      return {
+        success: false,
+        response: NextResponse.json(
+          {
+            error: 'Too many requests',
+            message: `Rate limit exceeded. Please try again in ${retryAfter} seconds.`,
           },
-        }
-      ),
-    };
+          {
+            status: 429,
+            headers: {
+              'Retry-After': retryAfter.toString(),
+              'X-RateLimit-Limit': maxRequests.toString(),
+              'X-RateLimit-Remaining': '0',
+              'X-RateLimit-Reset': new Date(now + ttlMs).toISOString(),
+            },
+          }
+        ),
+      };
+    }
+  } catch (error) {
+    console.warn('[RateLimit] Redis error, allowing request:', error);
   }
-
-  // Increment counter
-  entry.count++;
-  rateLimitStore.set(key, entry);
 
   return { success: true };
 }
@@ -110,31 +103,39 @@ export function checkRateLimit(
  * @param config - Rate limit configuration
  * @returns Rate limit status information
  */
-export function getRateLimitStatus(
+export async function getRateLimitStatus(
   identifier: string,
   config: RateLimitConfig = {}
-): {
+): Promise<{
   remaining: number;
   limit: number;
   reset: Date;
-} {
+}> {
   const { maxRequests = 20, windowMs = 60000 } = config;
   const now = Date.now();
-  const key = `rate-limit:${identifier}`;
+  const window = Math.floor(now / windowMs);
+  const key = `rate-limit:${identifier}:${window}`;
 
-  const entry = rateLimitStore.get(key);
+  try {
+    const redis = getRedisClient();
+    const [countValue, ttlMs] = await Promise.all([
+      redis.get(key),
+      redis.pttl(key),
+    ]);
 
-  if (!entry || now > entry.resetAt) {
+    const count = Number(countValue || 0);
+
+    return {
+      remaining: Math.max(0, maxRequests - count),
+      limit: maxRequests,
+      reset: new Date(now + (ttlMs > 0 ? ttlMs : windowMs)),
+    };
+  } catch (error) {
+    console.warn('[RateLimit] Redis error, returning default window:', error);
     return {
       remaining: maxRequests,
       limit: maxRequests,
       reset: new Date(now + windowMs),
     };
   }
-
-  return {
-    remaining: Math.max(0, maxRequests - entry.count),
-    limit: maxRequests,
-    reset: new Date(entry.resetAt),
-  };
 }
