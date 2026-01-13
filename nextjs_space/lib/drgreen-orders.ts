@@ -1,6 +1,6 @@
 /**
  * Dr. Green Order Management
- * 
+ *
  * Functions for submitting orders to Dr. Green API
  */
 
@@ -8,34 +8,34 @@ import { prisma } from '@/lib/db';
 import { callDrGreenAPI } from '@/lib/drgreen-api-client';
 
 export interface OrderSubmissionData {
-    shippingInfo: {
-        address1: string;
-        address2?: string;
-        city: string;
-        state: string;
-        postalCode: string;
-        country: string;
-    };
+  shippingInfo: {
+    address1: string;
+    address2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
 }
 
 export interface DrGreenOrderResponse {
-    orderId: string;
-    drGreenOrderId: string;
-    orderNumber: string;
-    status: string;
-    total: number;
-    message: string;
+  orderId: string;
+  drGreenOrderId: string;
+  orderNumber: string;
+  status: string;
+  total: number;
+  message: string;
 }
 
 /**
  * Submit order to Dr. Green
  */
 export async function submitOrder(params: {
-    userId: string;
-    tenantId: string;
-    shippingInfo: OrderSubmissionData['shippingInfo'];
-    apiKey: string;
-    secretKey: string;
+  userId: string;
+  tenantId: string;
+  shippingInfo: OrderSubmissionData["shippingInfo"];
+  apiKey: string;
+  secretKey: string;
 }): Promise<DrGreenOrderResponse> {
     const { userId, tenantId, shippingInfo, apiKey, secretKey } = params;
 
@@ -156,22 +156,54 @@ export async function submitOrder(params: {
  * Get order by ID (with Dr. Green sync)
  */
 export async function getOrder(params: {
-    orderId: string;
-    userId: string;
-    tenantId: string;
-    apiKey: string;
-    secretKey: string;
+  orderId: string;
+  userId: string;
+  tenantId: string;
+  apiKey: string;
+  secretKey: string;
 }): Promise<any> {
-    const { orderId, userId, tenantId, apiKey, secretKey } = params;
+  const { orderId, userId, tenantId, apiKey, secretKey } = params;
 
-    // Get local order
-    const order = await prisma.orders.findFirst({
-        where: {
-            id: orderId,
-            userId,
-            tenantId,
-        },
-        include: {
+  // Get local order
+  const order = await prisma.orders.findFirst({
+    where: {
+      id: orderId,
+      userId,
+      tenantId,
+    },
+    include: {
+      items: true,
+    },
+  });
+
+  if (!order) {
+    throw new Error("Order not found");
+  }
+
+  // If order has Dr. Green ID, sync latest status
+  if (order.drGreenOrderId) {
+    try {
+      const drGreenOrder = await callDrGreenAPI(
+        `/dapp/orders/${order.drGreenOrderId}`,
+        "GET",
+        apiKey,
+        secretKey,
+      );
+
+      const orderDetails = drGreenOrder.data?.orderDetails;
+
+      if (orderDetails) {
+        // Update local order with latest Dr. Green status
+        const updated = await prisma.orders.update({
+          where: { id: order.id },
+          data: {
+            // Map Dr. Green payment status to local
+            paymentStatus:
+              orderDetails.paymentStatus === "PAID"
+                ? "PAID"
+                : order.paymentStatus,
+          },
+          include: {
             items: true,
         },
     });
@@ -215,6 +247,7 @@ export async function getOrder(params: {
             // Return local order if sync fails
         }
     }
+  }
 
-    return order;
+  return order;
 }

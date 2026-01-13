@@ -1,33 +1,29 @@
-
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
 /**
  * GET /api/tenant-admin/webhooks/[id]/deliveries
- * 
+ *
  * Get delivery logs for a specific webhook
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || (session.user as any)?.role !== 'TENANT_ADMIN') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!session || (session.user as any)?.role !== "TENANT_ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const tenantId = (session.user as any)?.tenantId;
     if (!tenantId) {
       return NextResponse.json(
-        { error: 'No tenant associated with user' },
-        { status: 400 }
+        { error: "No tenant associated with user" },
+        { status: 400 },
       );
     }
 
@@ -39,21 +35,18 @@ export async function GET(
     });
 
     if (!webhook) {
-      return NextResponse.json(
-        { error: 'Webhook not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
     }
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
     const skip = (page - 1) * limit;
 
     const [deliveries, total] = await Promise.all([
       prisma.webhookDelivery.findMany({
         where: { webhookId: id },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: limit,
         skip,
       }),
@@ -70,10 +63,10 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('[API] Error fetching webhook deliveries:', error);
+    console.error("[API] Error fetching webhook deliveries:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch webhook deliveries' },
-      { status: 500 }
+      { error: "Failed to fetch webhook deliveries" },
+      { status: 500 },
     );
   }
 }

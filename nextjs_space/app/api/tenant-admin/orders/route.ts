@@ -1,16 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 /** Default pagination settings */
 const DEFAULT_PAGE_SIZE = 20;
 const VALID_PAGE_SIZES = [10, 20, 50, 100];
 
 /** Valid sort columns for orders table */
-const VALID_SORT_COLUMNS = ['orderNumber', 'status', 'total', 'createdAt'] as const;
-type SortColumn = typeof VALID_SORT_COLUMNS[number];
+const VALID_SORT_COLUMNS = [
+  "orderNumber",
+  "status",
+  "total",
+  "createdAt",
+] as const;
+type SortColumn = (typeof VALID_SORT_COLUMNS)[number];
 
 // GET: Fetch orders for tenant with optional pagination, search, and filters
 export async function GET(req: NextRequest) {
@@ -18,11 +23,14 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (
+      session.user.role !== "TENANT_ADMIN" &&
+      session.user.role !== "SUPER_ADMIN"
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Get user's tenant
@@ -32,31 +40,40 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user?.tenants) {
-      return NextResponse.json({ error: 'No tenant found' }, { status: 404 });
+      return NextResponse.json({ error: "No tenant found" }, { status: 404 });
     }
 
     const tenantId = user.tenants.id;
 
     // Parse query params
     const { searchParams } = new URL(req.url);
-    const pageParam = parseInt(searchParams.get('page') || '1', 10);
+    const pageParam = parseInt(searchParams.get("page") || "1", 10);
     const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
 
-    const pageSizeParam = parseInt(searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE), 10);
-    const pageSize = VALID_PAGE_SIZES.includes(pageSizeParam) ? pageSizeParam : DEFAULT_PAGE_SIZE;
+    const pageSizeParam = parseInt(
+      searchParams.get("pageSize") || String(DEFAULT_PAGE_SIZE),
+      10,
+    );
+    const pageSize = VALID_PAGE_SIZES.includes(pageSizeParam)
+      ? pageSizeParam
+      : DEFAULT_PAGE_SIZE;
 
-    const search = searchParams.get('search')?.trim() || '';
-    const statusFilter = searchParams.get('status') || 'all';
-    const dateFrom = searchParams.get('dateFrom') || '';
-    const dateTo = searchParams.get('dateTo') || '';
+    const search = searchParams.get("search")?.trim() || "";
+    const statusFilter = searchParams.get("status") || "all";
+    const dateFrom = searchParams.get("dateFrom") || "";
+    const dateTo = searchParams.get("dateTo") || "";
 
     // Parse sort params
-    const sortByParam = searchParams.get('sortBy');
-    const sortOrderParam = searchParams.get('sortOrder');
-    const sortBy = sortByParam && VALID_SORT_COLUMNS.includes(sortByParam as SortColumn)
-      ? (sortByParam as SortColumn)
-      : null;
-    const sortOrder = sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : 'asc';
+    const sortByParam = searchParams.get("sortBy");
+    const sortOrderParam = searchParams.get("sortOrder");
+    const sortBy =
+      sortByParam && VALID_SORT_COLUMNS.includes(sortByParam as SortColumn)
+        ? (sortByParam as SortColumn)
+        : null;
+    const sortOrder =
+      sortOrderParam === "asc" || sortOrderParam === "desc"
+        ? sortOrderParam
+        : "asc";
 
     // Build Prisma where clause
     const whereClause: Prisma.ordersWhereInput = {
@@ -66,16 +83,17 @@ export async function GET(req: NextRequest) {
     // Apply search filter (across orderNumber, customer name, customer email)
     if (search) {
       whereClause.OR = [
-        { orderNumber: { contains: search, mode: 'insensitive' } },
-        { users: { name: { contains: search, mode: 'insensitive' } } },
-        { users: { email: { contains: search, mode: 'insensitive' } } },
+        { orderNumber: { contains: search, mode: "insensitive" } },
+        { users: { name: { contains: search, mode: "insensitive" } } },
+        { users: { email: { contains: search, mode: "insensitive" } } },
       ];
     }
 
     // Apply status filter
-    const validStatuses = ['PENDING', 'PROCESSING', 'COMPLETED', 'CANCELLED'];
-    if (statusFilter !== 'all' && validStatuses.includes(statusFilter)) {
-      whereClause.status = statusFilter as Prisma.EnumOrderStatusFilter<'orders'>;
+    const validStatuses = ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"];
+    if (statusFilter !== "all" && validStatuses.includes(statusFilter)) {
+      whereClause.status =
+        statusFilter as Prisma.EnumOrderStatusFilter<"orders">;
     }
 
     // Apply date range filter
@@ -98,11 +116,18 @@ export async function GET(req: NextRequest) {
     // Build orderBy clause - default to createdAt desc if no sort specified
     const orderBy: Prisma.ordersOrderByWithRelationInput = sortBy
       ? { [sortBy]: sortOrder }
-      : { createdAt: 'desc' };
+      : { createdAt: "desc" };
 
     // Get filtered count and paginated orders in parallel
     // Also get counts for filter badges
-    const [filteredCount, orders, pendingCount, processingCount, completedCount, cancelledCount] = await Promise.all([
+    const [
+      filteredCount,
+      orders,
+      pendingCount,
+      processingCount,
+      completedCount,
+      cancelledCount,
+    ] = await Promise.all([
       prisma.orders.count({ where: whereClause }),
       prisma.orders.findMany({
         where: whereClause,
@@ -138,77 +163,141 @@ export async function GET(req: NextRequest) {
       prisma.orders.count({
         where: {
           tenantId,
-          ...(search ? {
-            OR: [
-              { orderNumber: { contains: search, mode: 'insensitive' } },
-              { users: { name: { contains: search, mode: 'insensitive' } } },
-              { users: { email: { contains: search, mode: 'insensitive' } } },
-            ],
-          } : {}),
-          ...(dateFrom || dateTo ? {
-            createdAt: {
-              ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-              ...(dateTo ? { lte: new Date(new Date(dateTo).setDate(new Date(dateTo).getDate() + 1)) } : {}),
-            },
-          } : {}),
-          status: 'PENDING',
+          ...(search
+            ? {
+                OR: [
+                  { orderNumber: { contains: search, mode: "insensitive" } },
+                  {
+                    users: { name: { contains: search, mode: "insensitive" } },
+                  },
+                  {
+                    users: { email: { contains: search, mode: "insensitive" } },
+                  },
+                ],
+              }
+            : {}),
+          ...(dateFrom || dateTo
+            ? {
+                createdAt: {
+                  ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+                  ...(dateTo
+                    ? {
+                        lte: new Date(
+                          new Date(dateTo).setDate(
+                            new Date(dateTo).getDate() + 1,
+                          ),
+                        ),
+                      }
+                    : {}),
+                },
+              }
+            : {}),
+          status: "PENDING",
         },
       }),
       prisma.orders.count({
         where: {
           tenantId,
-          ...(search ? {
-            OR: [
-              { orderNumber: { contains: search, mode: 'insensitive' } },
-              { users: { name: { contains: search, mode: 'insensitive' } } },
-              { users: { email: { contains: search, mode: 'insensitive' } } },
-            ],
-          } : {}),
-          ...(dateFrom || dateTo ? {
-            createdAt: {
-              ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-              ...(dateTo ? { lte: new Date(new Date(dateTo).setDate(new Date(dateTo).getDate() + 1)) } : {}),
-            },
-          } : {}),
-          status: 'PROCESSING',
+          ...(search
+            ? {
+                OR: [
+                  { orderNumber: { contains: search, mode: "insensitive" } },
+                  {
+                    users: { name: { contains: search, mode: "insensitive" } },
+                  },
+                  {
+                    users: { email: { contains: search, mode: "insensitive" } },
+                  },
+                ],
+              }
+            : {}),
+          ...(dateFrom || dateTo
+            ? {
+                createdAt: {
+                  ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+                  ...(dateTo
+                    ? {
+                        lte: new Date(
+                          new Date(dateTo).setDate(
+                            new Date(dateTo).getDate() + 1,
+                          ),
+                        ),
+                      }
+                    : {}),
+                },
+              }
+            : {}),
+          status: "PROCESSING",
         },
       }),
       prisma.orders.count({
         where: {
           tenantId,
-          ...(search ? {
-            OR: [
-              { orderNumber: { contains: search, mode: 'insensitive' } },
-              { users: { name: { contains: search, mode: 'insensitive' } } },
-              { users: { email: { contains: search, mode: 'insensitive' } } },
-            ],
-          } : {}),
-          ...(dateFrom || dateTo ? {
-            createdAt: {
-              ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-              ...(dateTo ? { lte: new Date(new Date(dateTo).setDate(new Date(dateTo).getDate() + 1)) } : {}),
-            },
-          } : {}),
-          status: 'COMPLETED',
+          ...(search
+            ? {
+                OR: [
+                  { orderNumber: { contains: search, mode: "insensitive" } },
+                  {
+                    users: { name: { contains: search, mode: "insensitive" } },
+                  },
+                  {
+                    users: { email: { contains: search, mode: "insensitive" } },
+                  },
+                ],
+              }
+            : {}),
+          ...(dateFrom || dateTo
+            ? {
+                createdAt: {
+                  ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+                  ...(dateTo
+                    ? {
+                        lte: new Date(
+                          new Date(dateTo).setDate(
+                            new Date(dateTo).getDate() + 1,
+                          ),
+                        ),
+                      }
+                    : {}),
+                },
+              }
+            : {}),
+          status: "COMPLETED",
         },
       }),
       prisma.orders.count({
         where: {
           tenantId,
-          ...(search ? {
-            OR: [
-              { orderNumber: { contains: search, mode: 'insensitive' } },
-              { users: { name: { contains: search, mode: 'insensitive' } } },
-              { users: { email: { contains: search, mode: 'insensitive' } } },
-            ],
-          } : {}),
-          ...(dateFrom || dateTo ? {
-            createdAt: {
-              ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-              ...(dateTo ? { lte: new Date(new Date(dateTo).setDate(new Date(dateTo).getDate() + 1)) } : {}),
-            },
-          } : {}),
-          status: 'CANCELLED',
+          ...(search
+            ? {
+                OR: [
+                  { orderNumber: { contains: search, mode: "insensitive" } },
+                  {
+                    users: { name: { contains: search, mode: "insensitive" } },
+                  },
+                  {
+                    users: { email: { contains: search, mode: "insensitive" } },
+                  },
+                ],
+              }
+            : {}),
+          ...(dateFrom || dateTo
+            ? {
+                createdAt: {
+                  ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+                  ...(dateTo
+                    ? {
+                        lte: new Date(
+                          new Date(dateTo).setDate(
+                            new Date(dateTo).getDate() + 1,
+                          ),
+                        ),
+                      }
+                    : {}),
+                },
+              }
+            : {}),
+          status: "CANCELLED",
         },
       }),
     ]);
@@ -238,10 +327,10 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching tenant orders:', error);
+    console.error("Error fetching tenant orders:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch orders' },
-      { status: 500 }
+      { error: "Failed to fetch orders" },
+      { status: 500 },
     );
   }
 }
@@ -252,11 +341,14 @@ export async function PATCH(req: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (
+      session.user.role !== "TENANT_ADMIN" &&
+      session.user.role !== "SUPER_ADMIN"
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await req.json();
@@ -264,18 +356,15 @@ export async function PATCH(req: NextRequest) {
 
     if (!orderId || !status) {
       return NextResponse.json(
-        { error: 'Order ID and status are required' },
-        { status: 400 }
+        { error: "Order ID and status are required" },
+        { status: 400 },
       );
     }
 
     // Validate status
-    const validStatuses = ['PENDING', 'PROCESSING', 'COMPLETED', 'CANCELLED'];
+    const validStatuses = ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"];
     if (!validStatuses.includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid status' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
     // Get user's tenant
@@ -285,7 +374,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     if (!user?.tenants) {
-      return NextResponse.json({ error: 'No tenant found' }, { status: 404 });
+      return NextResponse.json({ error: "No tenant found" }, { status: 404 });
     }
 
     // Verify the order belongs to this tenant
@@ -298,8 +387,8 @@ export async function PATCH(req: NextRequest) {
 
     if (!order) {
       return NextResponse.json(
-        { error: 'Order not found or access denied' },
-        { status: 404 }
+        { error: "Order not found or access denied" },
+        { status: 404 },
       );
     }
 
@@ -320,10 +409,10 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ order: updatedOrder });
   } catch (error) {
-    console.error('Error updating order status:', error);
+    console.error("Error updating order status:", error);
     return NextResponse.json(
-      { error: 'Failed to update order status' },
-      { status: 500 }
+      { error: "Failed to update order status" },
+      { status: 500 },
     );
   }
 }

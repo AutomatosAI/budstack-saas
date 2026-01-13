@@ -1,17 +1,20 @@
-
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { uploadFile } from '@/lib/s3';
-import { TenantSettings } from '@/lib/types';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { uploadFile } from "@/lib/s3";
+import { TenantSettings } from "@/lib/types";
 
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (
+      !session ||
+      (session.user.role !== "TENANT_ADMIN" &&
+        session.user.role !== "SUPER_ADMIN")
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.users.findUnique({
@@ -20,37 +23,40 @@ export async function PUT(req: NextRequest) {
     });
 
     if (!user?.tenants) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
     const formData = await req.formData();
 
     // Extract business name and settings JSON
-    const businessName = formData.get('businessName') as string;
-    const settingsJSON = formData.get('settings') as string;
+    const businessName = formData.get("businessName") as string;
+    const settingsJSON = formData.get("settings") as string;
 
     if (!settingsJSON) {
-      return NextResponse.json({ error: 'Settings data is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Settings data is required" },
+        { status: 400 },
+      );
     }
 
     const settings: TenantSettings = JSON.parse(settingsJSON);
 
     // Handle file uploads
-    const logo = formData.get('logo') as File;
+    const logo = formData.get("logo") as File;
     if (logo && logo.size > 0) {
       const buffer = Buffer.from(await logo.arrayBuffer());
       const fileName = `logo-${Date.now()}-${logo.name}`;
       settings.logoPath = await uploadFile(buffer, fileName);
     }
 
-    const heroImage = formData.get('heroImage') as File;
+    const heroImage = formData.get("heroImage") as File;
     if (heroImage && heroImage.size > 0) {
       const buffer = Buffer.from(await heroImage.arrayBuffer());
       const fileName = `hero-${Date.now()}-${heroImage.name}`;
       settings.heroImagePath = await uploadFile(buffer, fileName);
     }
 
-    const favicon = formData.get('favicon') as File;
+    const favicon = formData.get("favicon") as File;
     if (favicon && favicon.size > 0) {
       const buffer = Buffer.from(await favicon.arrayBuffer());
       const fileName = `favicon-${Date.now()}-${favicon.name}`;
@@ -63,7 +69,7 @@ export async function PUT(req: NextRequest) {
     if (activeTemplateId) {
       // Fetch current template to get existing designSystem
       const currentTemplate = await prisma.tenant_templates.findUnique({
-        where: { id: activeTemplateId }
+        where: { id: activeTemplateId },
       });
 
       const currentDS = currentTemplate?.designSystem || {};
@@ -90,7 +96,7 @@ export async function PUT(req: NextRequest) {
           fontSize: {
             ...currentDS.typography?.fontSize,
             base: settings.fontSize,
-          }
+          },
         },
         borderRadius: {
           ...currentDS.borderRadius,
@@ -104,7 +110,7 @@ export async function PUT(req: NextRequest) {
         shadows: {
           ...currentDS.shadows,
           card: settings.shadowStyle,
-        }
+        },
       };
 
       // Handle file uploads for template
@@ -116,13 +122,14 @@ export async function PUT(req: NextRequest) {
 
       // Handle file mapping
       if (settings.logoPath) updateData.logoUrl = settings.logoPath;
-      if (settings.heroImagePath) updateData.heroImageUrl = settings.heroImagePath;
+      if (settings.heroImagePath)
+        updateData.heroImageUrl = settings.heroImagePath;
       if (settings.faviconPath) updateData.faviconUrl = settings.faviconPath;
 
       // Update TenantTemplate
       await prisma.tenant_templates.update({
         where: { id: activeTemplateId },
-        data: updateData
+        data: updateData,
       });
 
       // ALSO update Tenant settings for fallback/consistency
@@ -133,7 +140,6 @@ export async function PUT(req: NextRequest) {
           settings: settings as any,
         },
       });
-
     } else {
       // Legacy behavior: Update only Tenant settings
       await prisma.tenants.update({
@@ -145,12 +151,18 @@ export async function PUT(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ success: true, message: 'Branding updated successfully' });
+    return NextResponse.json({
+      success: true,
+      message: "Branding updated successfully",
+    });
   } catch (error) {
-    console.error('Error updating branding:', error);
+    console.error("Error updating branding:", error);
     return NextResponse.json(
-      { error: 'Failed to update branding', message: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: "Failed to update branding",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
     );
   }
 }
