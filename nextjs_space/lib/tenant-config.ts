@@ -24,14 +24,15 @@ export async function getTenantDrGreenConfig(tenantId: string): Promise<DoctorGr
         throw new Error("Dr Green API credentials are not configured for this store.");
     }
 
+    const decryptedApiKey = decrypt(tenant.drGreenApiKey);
     const decryptedSecret = decrypt(tenant.drGreenSecretKey);
 
-    if (!decryptedSecret) {
-        throw new Error("Failed to decrypt Dr Green Secret Key. Please update your settings.");
+    if (!decryptedApiKey || !decryptedSecret) {
+        throw new Error("Failed to decrypt Dr Green credentials. Please update your settings.");
     }
 
     return {
-        apiKey: tenant.drGreenApiKey,
+        apiKey: decryptedApiKey,
         secretKey: decryptedSecret,
     };
 }

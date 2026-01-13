@@ -14,7 +14,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  images: { unoptimized: true },
+  images: { unoptimized: process.env.NEXT_IMAGE_UNOPTIMIZED === 'true' },
   // Skip pre-rendering for all API routes to avoid Prisma initialization during build
   async rewrites() {
     return [];

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Cookie, Settings, Shield } from 'lucide-react';
 import {
     getConsentModel,
@@ -28,6 +28,8 @@ export function CookieConsent({ tenant }: CookieConsentProps) {
     const [showBanner, setShowBanner] = useState(false);
     const [categories, setCategories] = useState<ConsentCategories | null>(null);
     const [mounted, setMounted] = useState(false);
+    const modalRef = useRef<HTMLDivElement>(null);
+    const firstCheckboxRef = useRef<HTMLInputElement>(null);
 
     const consentModel = getConsentModel(tenant.countryCode);
     const bannerText = getRegionBannerText(tenant.countryCode);
@@ -39,18 +41,25 @@ export function CookieConsent({ tenant }: CookieConsentProps) {
 
     useEffect(() => {
         setMounted(true);
+        const model = getConsentModel(tenant.countryCode);
         // Check if consent has already been given
         const existingConsent = getCookieValue(CONSENT_COOKIE_NAME);
         const existingCategories = getCookieValue(CONSENT_CATEGORIES_COOKIE_NAME);
         const parsed = parseConsentCategories(existingCategories);
 
-        setCategories(parsed || getDefaultCategories(consentModel));
+        setCategories(parsed || getDefaultCategories(model));
 
         // Only show banner if consent hasn't been given yet
         if (!existingConsent || existingConsent !== 'true') {
             setShowBanner(true);
         }
-    }, [consentModel]);
+    }, []);
+
+    useEffect(() => {
+        if (showCustomize) {
+            firstCheckboxRef.current?.focus();
+        }
+    }, [showCustomize]);
 
     if (!mounted || !isEnabled) return null;
 
@@ -94,20 +103,59 @@ export function CookieConsent({ tenant }: CookieConsentProps) {
     };
 
     const saveCategories = (cats: ConsentCategories) => {
-        document.cookie = `${CONSENT_CATEGORIES_COOKIE_NAME}=${stringifyConsentCategories(cats)}; path=/; max-age=31536000; SameSite=Lax`;
+        const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = `${CONSENT_CATEGORIES_COOKIE_NAME}=${stringifyConsentCategories(cats)}; path=/; max-age=31536000; SameSite=Lax${secureFlag}`;
     };
 
     const saveConsent = () => {
-        document.cookie = `${CONSENT_COOKIE_NAME}=true; path=/; max-age=31536000; SameSite=Lax`;
+        const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = `${CONSENT_COOKIE_NAME}=true; path=/; max-age=31536000; SameSite=Lax${secureFlag}`;
+    };
+
+    const handleModalKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Escape') {
+            setShowCustomize(false);
+            return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+
+        if (!focusable || focusable.length === 0) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
     };
 
     if (showCustomize) {
         return (
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-                <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <div
+                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cookie-modal-title"
+                onKeyDown={handleModalKeyDown}
+                onClick={(event) => {
+                    if (event.target === event.currentTarget) {
+                        setShowCustomize(false);
+                    }
+                }}
+            >
+                <div ref={modalRef} className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
                     <div className="flex items-center gap-3 mb-4">
                         <Settings className="w-6 h-6 text-emerald-600" />
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Cookie Preferences</h3>
+                        <h3 id="cookie-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">Cookie Preferences</h3>
                     </div>
 
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
@@ -135,6 +183,7 @@ export function CookieConsent({ tenant }: CookieConsentProps) {
                                 checked={categories?.analytics ?? false}
                                 onChange={(e) => setCategories(prev => prev ? { ...prev, analytics: e.target.checked } : null)}
                                 className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
+                                ref={firstCheckboxRef}
                             />
                         </label>
 

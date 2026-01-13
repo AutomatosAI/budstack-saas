@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if user exists
-        const user = await prisma.users.findUnique({
+        const user = await prisma.users.findFirst({
             where: { email: email.toLowerCase() },
         });
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         // Update password
         const hashedPassword = await bcrypt.hash(password, 10);
         await prisma.users.update({
-            where: { email: email.toLowerCase() },
+            where: { id: user.id },
             data: { password: hashedPassword },
         });
 

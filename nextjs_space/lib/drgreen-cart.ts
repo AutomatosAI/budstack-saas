@@ -6,7 +6,7 @@
  */
 
 import { prisma } from '@/lib/db';
-import crypto from 'crypto';
+import { callDrGreenAPI } from '@/lib/drgreen-api-client';
 
 export interface CartItem {
     strainId: string;
@@ -27,55 +27,6 @@ export interface DrGreenCartResponse {
     drGreenCartId?: string;
 }
 
-/**
- * Generate RSA-SHA256 signature for Dr. Green API authentication
- */
-function generateDrGreenSignature(payload: string, secretKey: string): string {
-    // Decode base64 secret key to get PEM format
-    const privateKeyPEM = Buffer.from(secretKey, 'base64').toString('utf-8');
-
-    // Sign with RSA-SHA256
-    const sign = crypto.createSign('RSA-SHA256');
-    sign.update(payload);
-    const signature = sign.sign(privateKeyPEM, 'base64');
-
-    return signature;
-}
-
-/**
- * Make authenticated request to Dr. Green API
- */
-async function callDrGreenAPI(
-    endpoint: string,
-    method: 'GET' | 'POST' | 'DELETE',
-    apiKey: string,
-    secretKey: string,
-    body?: any
-): Promise<any> {
-    const apiUrl = process.env.DRGREEN_API_URL || 'https://api.drgreennft.com/api/v1';
-    const url = `${apiUrl}${endpoint}`;
-
-    const payload = body ? JSON.stringify(body) : '';
-    const signature = generateDrGreenSignature(payload || endpoint, secretKey);
-
-    const response = await fetch(url, {
-        method,
-        headers: {
-            'x-auth-apikey': apiKey,
-            'x-auth-signature': signature,
-            'Content-Type': 'application/json',
-        },
-        body: body ? payload : undefined,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data.success !== 'true') {
-        throw new Error(data.message || `Dr. Green API error: ${response.statusText}`);
-    }
-
-    return data;
-}
 
 /**
  * Get or create Dr. Green client ID for a user
@@ -134,10 +85,12 @@ export async function addToCart(params: {
     // Call Dr. Green API to add to cart
     const response = await callDrGreenAPI(
         '/dapp/carts',
-        'POST',
-        apiKey,
-        secretKey,
         {
+            method: 'POST',
+            apiKey,
+            secretKey,
+            validateSuccessFlag: true,
+            body: {
             items: [
                 {
                     quantity: actualQuantity,
@@ -145,6 +98,7 @@ export async function addToCart(params: {
                 },
             ],
             clientCartId: cart?.drGreenCartId || undefined,
+            },
         }
     );
 
@@ -214,9 +168,12 @@ export async function getCart(params: {
         // Refresh from Dr. Green API
         const response = await callDrGreenAPI(
             `/dapp/carts?clientId=${clientId}`,
-            'GET',
-            apiKey,
-            secretKey
+            {
+                method: 'GET',
+                apiKey,
+                secretKey,
+                validateSuccessFlag: true,
+            }
         );
 
         const cartData = response.data?.clients?.[0]?.clientCart?.[0];
@@ -314,10 +271,13 @@ export async function removeFromCart(params: {
     // Call Dr. Green API to remove item
     await callDrGreenAPI(
         `/dapp/carts/${cart.drGreenCartId}?strainId=${strainId}`,
-        'DELETE',
-        apiKey,
-        secretKey,
-        { cartId: cart.drGreenCartId }
+        {
+            method: 'DELETE',
+            apiKey,
+            secretKey,
+            validateSuccessFlag: true,
+            body: { cartId: cart.drGreenCartId },
+        }
     );
 
     // Refresh cart
@@ -348,10 +308,13 @@ export async function clearCart(params: {
         // Call Dr. Green API to clear cart
         await callDrGreenAPI(
             `/dapp/carts/${cart.drGreenCartId}`,
-            'DELETE',
-            apiKey,
-            secretKey,
-            { cartId: cart.drGreenCartId }
+            {
+                method: 'DELETE',
+                apiKey,
+                secretKey,
+                validateSuccessFlag: true,
+                body: { cartId: cart.drGreenCartId },
+            }
         );
     }
 
