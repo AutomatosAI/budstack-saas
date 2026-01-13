@@ -1,32 +1,48 @@
-'use client';
+"use client";
 
-import { useSession } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { format } from 'date-fns';
-import { Package, Truck, CheckCircle2, XCircle, Clock, Printer, FileText, Check } from 'lucide-react';
+import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { format } from "date-fns";
+import {
+  Package,
+  Truck,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Printer,
+  FileText,
+  Check,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { toast } from '@/components/ui/sonner';
-import { OrdersTable } from './orders-table';
-import { Breadcrumbs } from '@/components/admin/shared';
+} from "@/components/ui/select";
+import { toast } from "@/components/ui/sonner";
+import { OrdersTable } from "./orders-table";
+import { Breadcrumbs } from "@/components/admin/shared";
 
 interface OrderItem {
   id: string;
@@ -85,17 +101,21 @@ export default function TenantOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [adminNotes, setAdminNotes] = useState('');
+  const [adminNotes, setAdminNotes] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
+    if (status === "unauthenticated") {
+      router.push("/auth/login");
     }
-    if (status === 'authenticated' && session?.user?.role !== 'TENANT_ADMIN' && session?.user?.role !== 'SUPER_ADMIN') {
-      router.push('/auth/login');
+    if (
+      status === "authenticated" &&
+      session?.user?.role !== "TENANT_ADMIN" &&
+      session?.user?.role !== "SUPER_ADMIN"
+    ) {
+      router.push("/auth/login");
     }
   }, [status, session, router]);
 
@@ -104,27 +124,28 @@ export default function TenantOrdersPage() {
     const params = new URLSearchParams();
 
     // Pagination params
-    const page = searchParams.get('page') || '1';
-    const pageSize = searchParams.get('pageSize') || '20';
-    params.set('page', page);
-    params.set('pageSize', pageSize);
+    const page = searchParams.get("page") || "1";
+    const pageSize = searchParams.get("pageSize") || "20";
+    params.set("page", page);
+    params.set("pageSize", pageSize);
 
     // Search and filter params
-    const search = searchParams.get('search');
-    const statusFilter = searchParams.get('status');
-    const dateFrom = searchParams.get('dateFrom');
-    const dateTo = searchParams.get('dateTo');
+    const search = searchParams.get("search");
+    const statusFilter = searchParams.get("status");
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
 
     // Sort params
-    const sortBy = searchParams.get('sortBy');
-    const sortOrder = searchParams.get('sortOrder');
+    const sortBy = searchParams.get("sortBy");
+    const sortOrder = searchParams.get("sortOrder");
 
-    if (search) params.set('search', search);
-    if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
-    if (dateFrom) params.set('dateFrom', dateFrom);
-    if (dateTo) params.set('dateTo', dateTo);
-    if (sortBy) params.set('sortBy', sortBy);
-    if (sortOrder) params.set('sortOrder', sortOrder);
+    if (search) params.set("search", search);
+    if (statusFilter && statusFilter !== "all")
+      params.set("status", statusFilter);
+    if (dateFrom) params.set("dateFrom", dateFrom);
+    if (dateTo) params.set("dateTo", dateTo);
+    if (sortBy) params.set("sortBy", sortBy);
+    if (sortOrder) params.set("sortOrder", sortOrder);
 
     return `/api/tenant-admin/orders?${params.toString()}`;
   }, [searchParams]);
@@ -137,16 +158,18 @@ export default function TenantOrdersPage() {
         const data: OrdersResponse = await response.json();
         setOrders(data.orders || []);
         setTotalCount(data.totalCount || 0);
-        setStatusCounts(data.statusCounts || {
-          PENDING: 0,
-          PROCESSING: 0,
-          COMPLETED: 0,
-          CANCELLED: 0,
-        });
+        setStatusCounts(
+          data.statusCounts || {
+            PENDING: 0,
+            PROCESSING: 0,
+            COMPLETED: 0,
+            CANCELLED: 0,
+          },
+        );
       }
     } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast.error('Failed to load orders');
+      console.error("Error fetching orders:", error);
+      toast.error("Failed to load orders");
     } finally {
       setLoading(false);
     }
@@ -161,25 +184,25 @@ export default function TenantOrdersPage() {
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(true);
     try {
-      const response = await fetch('/api/tenant-admin/orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/tenant-admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId, status: newStatus }),
       });
 
       if (response.ok) {
-        toast.success('Order status updated successfully');
+        toast.success("Order status updated successfully");
         await fetchOrders();
         // Update selected order if it's the one being updated
         if (selectedOrder?.id === orderId) {
           setSelectedOrder({ ...selectedOrder, status: newStatus });
         }
       } else {
-        toast.error('Failed to update order status');
+        toast.error("Failed to update order status");
       }
     } catch (error) {
-      console.error('Error updating order status:', error);
-      toast.error('Failed to update order status');
+      console.error("Error updating order status:", error);
+      toast.error("Failed to update order status");
     } finally {
       setUpdatingStatus(false);
     }
@@ -187,28 +210,28 @@ export default function TenantOrdersPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'COMPLETED':
-        return 'bg-green-600 hover:bg-green-700';
-      case 'PROCESSING':
-        return 'bg-blue-600 hover:bg-blue-700';
-      case 'PENDING':
-        return 'bg-yellow-600 hover:bg-yellow-700';
-      case 'CANCELLED':
-        return 'bg-red-600 hover:bg-red-700';
+      case "COMPLETED":
+        return "bg-green-600 hover:bg-green-700";
+      case "PROCESSING":
+        return "bg-blue-600 hover:bg-blue-700";
+      case "PENDING":
+        return "bg-yellow-600 hover:bg-yellow-700";
+      case "CANCELLED":
+        return "bg-red-600 hover:bg-red-700";
       default:
-        return 'bg-gray-600 hover:bg-gray-700';
+        return "bg-gray-600 hover:bg-gray-700";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'COMPLETED':
+      case "COMPLETED":
         return <CheckCircle2 className="w-4 h-4" />;
-      case 'PROCESSING':
+      case "PROCESSING":
         return <Truck className="w-4 h-4" />;
-      case 'PENDING':
+      case "PENDING":
         return <Clock className="w-4 h-4" />;
-      case 'CANCELLED':
+      case "CANCELLED":
         return <XCircle className="w-4 h-4" />;
       default:
         return <Package className="w-4 h-4" />;
@@ -219,46 +242,52 @@ export default function TenantOrdersPage() {
   const saveAdminNotes = useCallback(async (orderId: string, notes: string) => {
     setIsSavingNotes(true);
     try {
-      const response = await fetch(`/api/tenant-admin/orders/${orderId}/admin-notes`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminNotes: notes }),
-      });
+      const response = await fetch(
+        `/api/tenant-admin/orders/${orderId}/admin-notes`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ adminNotes: notes }),
+        },
+      );
 
       if (response.ok) {
         setShowSavedIndicator(true);
         // Hide saved indicator after 2 seconds
         setTimeout(() => setShowSavedIndicator(false), 2000);
       } else {
-        toast.error('Failed to save admin notes');
+        toast.error("Failed to save admin notes");
       }
     } catch (error) {
-      console.error('Error saving admin notes:', error);
-      toast.error('Failed to save admin notes');
+      console.error("Error saving admin notes:", error);
+      toast.error("Failed to save admin notes");
     } finally {
       setIsSavingNotes(false);
     }
   }, []);
 
   // Handle admin notes change with debouncing
-  const handleAdminNotesChange = useCallback((value: string, orderId: string) => {
-    setAdminNotes(value);
+  const handleAdminNotesChange = useCallback(
+    (value: string, orderId: string) => {
+      setAdminNotes(value);
 
-    // Clear existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
+      // Clear existing timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
 
-    // Set new timeout to save after 1 second of no typing
-    saveTimeoutRef.current = setTimeout(() => {
-      saveAdminNotes(orderId, value);
-    }, 1000);
-  }, [saveAdminNotes]);
+      // Set new timeout to save after 1 second of no typing
+      saveTimeoutRef.current = setTimeout(() => {
+        saveAdminNotes(orderId, value);
+      }, 1000);
+    },
+    [saveAdminNotes],
+  );
 
   // Initialize admin notes when order is selected
   useEffect(() => {
     if (selectedOrder) {
-      setAdminNotes(selectedOrder.adminNotes || '');
+      setAdminNotes(selectedOrder.adminNotes || "");
       setShowSavedIndicator(false);
     }
   }, [selectedOrder]);
@@ -272,7 +301,7 @@ export default function TenantOrdersPage() {
     };
   }, []);
 
-  if (status === 'loading' || loading) {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -288,23 +317,31 @@ export default function TenantOrdersPage() {
   }
 
   // Calculate total orders for stats (sum of all status counts)
-  const totalOrders = statusCounts.PENDING + statusCounts.PROCESSING + statusCounts.COMPLETED + statusCounts.CANCELLED;
+  const totalOrders =
+    statusCounts.PENDING +
+    statusCounts.PROCESSING +
+    statusCounts.COMPLETED +
+    statusCounts.CANCELLED;
 
   return (
     <div className="p-8">
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', href: '/tenant-admin' },
-          { label: 'Orders' },
+          { label: "Dashboard", href: "/tenant-admin" },
+          { label: "Orders" },
         ]}
         className="mb-4"
       />
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Order Management</h1>
-        <p className="text-slate-600 mt-2">Manage and fulfill customer orders</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          Order Management
+        </h1>
+        <p className="text-slate-600 mt-2">
+          Manage and fulfill customer orders
+        </p>
       </div>
 
       {/* Order Stats */}
@@ -312,7 +349,9 @@ export default function TenantOrdersPage() {
         <Card className="border-none shadow-lg bg-gradient-to-br from-slate-500 to-gray-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
           <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-sm font-medium text-slate-50">Total Orders</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-50">
+              Total Orders
+            </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="text-3xl font-bold">{totalOrders}</div>
@@ -321,34 +360,34 @@ export default function TenantOrdersPage() {
         <Card className="border-none shadow-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
           <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-sm font-medium text-amber-50">Pending</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-50">
+              Pending
+            </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
-            <div className="text-3xl font-bold">
-              {statusCounts.PENDING}
-            </div>
+            <div className="text-3xl font-bold">{statusCounts.PENDING}</div>
           </CardContent>
         </Card>
         <Card className="border-none shadow-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
           <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-sm font-medium text-cyan-50">Processing</CardTitle>
+            <CardTitle className="text-sm font-medium text-cyan-50">
+              Processing
+            </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
-            <div className="text-3xl font-bold">
-              {statusCounts.PROCESSING}
-            </div>
+            <div className="text-3xl font-bold">{statusCounts.PROCESSING}</div>
           </CardContent>
         </Card>
         <Card className="border-none shadow-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
           <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-sm font-medium text-emerald-50">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium text-emerald-50">
+              Completed
+            </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
-            <div className="text-3xl font-bold">
-              {statusCounts.COMPLETED}
-            </div>
+            <div className="text-3xl font-bold">{statusCounts.COMPLETED}</div>
           </CardContent>
         </Card>
       </div>
@@ -362,7 +401,10 @@ export default function TenantOrdersPage() {
       />
 
       {/* Order Detail Modal */}
-      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+      <Dialog
+        open={!!selectedOrder}
+        onOpenChange={() => setSelectedOrder(null)}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl">Order Details</DialogTitle>
@@ -377,13 +419,20 @@ export default function TenantOrdersPage() {
               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Customer</p>
-                  <p className="font-semibold">{selectedOrder.user?.name || 'Guest'}</p>
-                  <p className="text-sm text-gray-600">{selectedOrder.user?.email}</p>
+                  <p className="font-semibold">
+                    {selectedOrder.user?.name || "Guest"}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {selectedOrder.user?.email}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600 mb-1">Order Date</p>
                   <p className="font-semibold">
-                    {format(new Date(selectedOrder.createdAt), 'MMM d, yyyy • h:mm a')}
+                    {format(
+                      new Date(selectedOrder.createdAt),
+                      "MMM d, yyyy • h:mm a",
+                    )}
                   </p>
                 </div>
               </div>
@@ -395,7 +444,9 @@ export default function TenantOrdersPage() {
                   <div className="flex-1">
                     <Select
                       value={selectedOrder.status}
-                      onValueChange={(value) => updateOrderStatus(selectedOrder.id, value)}
+                      onValueChange={(value) =>
+                        updateOrderStatus(selectedOrder.id, value)
+                      }
                       disabled={updatingStatus}
                     >
                       <SelectTrigger className="w-full">
@@ -409,7 +460,9 @@ export default function TenantOrdersPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Badge className={`${getStatusColor(selectedOrder.status)} text-white gap-1`}>
+                  <Badge
+                    className={`${getStatusColor(selectedOrder.status)} text-white gap-1`}
+                  >
                     {getStatusIcon(selectedOrder.status)}
                     {selectedOrder.status}
                   </Badge>
@@ -435,9 +488,15 @@ export default function TenantOrdersPage() {
                     <TableBody>
                       {selectedOrder.items.map((item) => (
                         <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.productName}</TableCell>
-                          <TableCell className="text-center">{item.quantity}</TableCell>
-                          <TableCell className="text-right">€{item.price.toFixed(2)}</TableCell>
+                          <TableCell className="font-medium">
+                            {item.productName}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            €{item.price.toFixed(2)}
+                          </TableCell>
                           <TableCell className="text-right">
                             €{(item.quantity * item.price).toFixed(2)}
                           </TableCell>
@@ -471,7 +530,9 @@ export default function TenantOrdersPage() {
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <FileText className="w-5 h-5 text-amber-600" />
-                    <h3 className="font-semibold text-lg text-slate-900">Admin Notes</h3>
+                    <h3 className="font-semibold text-lg text-slate-900">
+                      Admin Notes
+                    </h3>
                   </div>
                   {showSavedIndicator && (
                     <div className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium animate-in fade-in duration-200">
@@ -485,13 +546,17 @@ export default function TenantOrdersPage() {
                 </p>
                 <Textarea
                   value={adminNotes}
-                  onChange={(e) => handleAdminNotesChange(e.target.value, selectedOrder.id)}
+                  onChange={(e) =>
+                    handleAdminNotesChange(e.target.value, selectedOrder.id)
+                  }
                   placeholder="Add notes about special handling, gift messages, or other internal information..."
                   className="min-h-[120px] resize-y bg-white border-amber-200 focus-visible:ring-amber-400 focus-visible:border-amber-400"
                   disabled={isSavingNotes}
                 />
                 <p className="text-xs text-slate-500 mt-2">
-                  {isSavingNotes ? 'Saving...' : 'Changes are saved automatically after 1 second of no typing'}
+                  {isSavingNotes
+                    ? "Saving..."
+                    : "Changes are saved automatically after 1 second of no typing"}
                 </p>
               </div>
 
@@ -503,7 +568,7 @@ export default function TenantOrdersPage() {
                   className="w-full gap-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 font-medium"
                   onClick={() => {
                     const packingSlipUrl = `/tenant-admin/orders/${selectedOrder.id}/packing-slip`;
-                    window.open(packingSlipUrl, '_blank');
+                    window.open(packingSlipUrl, "_blank");
                   }}
                 >
                   <Printer className="w-4 h-4" />
@@ -512,43 +577,50 @@ export default function TenantOrdersPage() {
 
                 {/* Status Action Buttons */}
                 <div className="flex gap-3">
-                  {selectedOrder.status === 'PENDING' && (
+                  {selectedOrder.status === "PENDING" && (
                     <Button
                       className="flex-1 bg-blue-600 hover:bg-blue-700"
-                      onClick={() => updateOrderStatus(selectedOrder.id, 'PROCESSING')}
+                      onClick={() =>
+                        updateOrderStatus(selectedOrder.id, "PROCESSING")
+                      }
                       disabled={updatingStatus}
                     >
                       <Truck className="w-4 h-4 mr-2" />
                       Start Processing
                     </Button>
                   )}
-                  {selectedOrder.status === 'PROCESSING' && (
+                  {selectedOrder.status === "PROCESSING" && (
                     <Button
                       className="flex-1 bg-green-600 hover:bg-green-700"
-                      onClick={() => updateOrderStatus(selectedOrder.id, 'COMPLETED')}
+                      onClick={() =>
+                        updateOrderStatus(selectedOrder.id, "COMPLETED")
+                      }
                       disabled={updatingStatus}
                     >
                       <CheckCircle2 className="w-4 h-4 mr-2" />
                       Mark as Completed
                     </Button>
                   )}
-                  {selectedOrder.status !== 'CANCELLED' && selectedOrder.status !== 'COMPLETED' && (
-                    <Button
-                      variant="outline"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => updateOrderStatus(selectedOrder.id, 'CANCELLED')}
-                      disabled={updatingStatus}
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Cancel Order
-                    </Button>
-                  )}
+                  {selectedOrder.status !== "CANCELLED" &&
+                    selectedOrder.status !== "COMPLETED" && (
+                      <Button
+                        variant="outline"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() =>
+                          updateOrderStatus(selectedOrder.id, "CANCELLED")
+                        }
+                        disabled={updatingStatus}
+                      >
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Cancel Order
+                      </Button>
+                    )}
                 </div>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-    </div >
+    </div>
   );
 }

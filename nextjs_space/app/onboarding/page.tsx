@@ -1,8 +1,8 @@
-import { prisma } from '@/lib/db';
-import OnboardingForm from './onboarding-form';
+import { prisma } from "@/lib/db";
+import OnboardingForm from "./onboarding-form";
 
 // Force dynamic rendering to ensure fresh template data
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
   // Fetch active, public templates from the database
@@ -19,7 +19,7 @@ export default async function OnboardingPage() {
       previewUrl: true,
     },
     orderBy: {
-      name: 'asc',
+      name: "asc",
     },
   });
 

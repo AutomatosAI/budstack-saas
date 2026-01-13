@@ -1,12 +1,11 @@
+"use client";
 
-'use client';
-
-import { useState, Suspense, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn, getSession } from 'next-auth/react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { useState, Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn, getSession } from "next-auth/react";
+import Link from "next/link";
+import Image from "next/image";
+import { motion } from "framer-motion";
 import {
   LogIn,
   Mail,
@@ -18,13 +17,13 @@ import {
   AlertCircle,
   Chrome,
   ArrowRight,
-  Store
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from '@/components/ui/sonner';
+  Store,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "@/components/ui/sonner";
 
 interface TenantSettings {
   businessName: string;
@@ -35,48 +34,48 @@ interface TenantSettings {
 
 function LoginForm() {
   const [tenantSettings, setTenantSettings] = useState<TenantSettings>({
-    businessName: 'BudStack',
-    primaryColor: '#16a34a'
+    businessName: "BudStack",
+    primaryColor: "#16a34a",
   });
 
   useEffect(() => {
     // Get tenant from hostname/subdomain
     const hostname = window.location.hostname;
-    const parts = hostname.split('.');
+    const parts = hostname.split(".");
     const subdomain = parts.length >= 2 ? parts[0] : null;
 
     // Fetch tenant settings based on subdomain
-    if (subdomain && subdomain !== 'localhost' && subdomain !== 'www') {
+    if (subdomain && subdomain !== "localhost" && subdomain !== "www") {
       fetch(`/api/tenant/${subdomain}`)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (data && data.tenant) {
             setTenantSettings({
-              businessName: data.tenant.businessName || 'BudStack',
-              primaryColor: data.tenant.branding?.primaryColor || '#16a34a',
+              businessName: data.tenant.businessName || "BudStack",
+              primaryColor: data.tenant.branding?.primaryColor || "#16a34a",
               logoUrl: data.tenant.branding?.logoUrl,
-              subdomain: data.tenant.subdomain
+              subdomain: data.tenant.subdomain,
             });
           }
         })
-        .catch(err => {
-          console.error('Failed to fetch tenant settings:', err);
+        .catch((err) => {
+          console.error("Failed to fetch tenant settings:", err);
         });
     } else {
       // Fallback to platform settings for non-tenant domains
-      fetch('/api/super-admin/platform-settings')
-        .then(res => res.json())
-        .then(data => {
+      fetch("/api/super-admin/platform-settings")
+        .then((res) => res.json())
+        .then((data) => {
           if (data) {
             setTenantSettings({
-              businessName: data.businessName || 'BudStack',
-              primaryColor: data.primaryColor || '#16a34a',
-              logoUrl: data.logoUrl
+              businessName: data.businessName || "BudStack",
+              primaryColor: data.primaryColor || "#16a34a",
+              logoUrl: data.logoUrl,
             });
           }
         })
-        .catch(err => {
-          console.error('Failed to fetch platform settings:', err);
+        .catch((err) => {
+          console.error("Failed to fetch platform settings:", err);
         });
     }
   }, []);
@@ -86,31 +85,32 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Check for messages from signup or other redirects
-  const message = searchParams?.get('message');
-  const error = searchParams?.get('error');
+  const message = searchParams?.get("message");
+  const error = searchParams?.get("error");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
 
     // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email format';
-    if (!formData.password) newErrors.password = 'Password is required';
+    if (!formData.email.trim()) newErrors.email = "Email is required";
+    if (!/\S+@\S+\.\S+/.test(formData.email))
+      newErrors.email = "Invalid email format";
+    if (!formData.password) newErrors.password = "Password is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -120,25 +120,25 @@ function LoginForm() {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error('Please fix the errors in the form');
+      toast.error("Please fix the errors in the form");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
         redirect: false,
       });
 
       if (result?.error) {
-        throw new Error('Invalid email or password');
+        throw new Error("Invalid email or password");
       }
 
       if (result?.ok) {
-        toast.success('Signed in successfully!');
+        toast.success("Signed in successfully!");
 
         // Get fresh session and redirect based on role
         const session = await getSession();
@@ -146,18 +146,17 @@ function LoginForm() {
           const userRole = (session.user as any).role;
 
           // Redirect based on user role
-          if (userRole === 'SUPER_ADMIN') {
-            router.replace('/super-admin');
-          } else if (userRole === 'TENANT_ADMIN') {
-            router.replace('/tenant-admin');
+          if (userRole === "SUPER_ADMIN") {
+            router.replace("/super-admin");
+          } else if (userRole === "TENANT_ADMIN") {
+            router.replace("/tenant-admin");
           } else {
-            router.replace('/dashboard');
+            router.replace("/dashboard");
           }
         }
       }
-
     } catch (error: any) {
-      toast.error(error.message || 'An error occurred during sign in');
+      toast.error(error.message || "An error occurred during sign in");
     } finally {
       setIsLoading(false);
     }
@@ -165,9 +164,9 @@ function LoginForm() {
 
   const handleGoogleSignIn = async () => {
     try {
-      await signIn('google', { callbackUrl: '/dashboard' });
+      await signIn("google", { callbackUrl: "/dashboard" });
     } catch (error) {
-      toast.error('Google sign in failed');
+      toast.error("Google sign in failed");
     }
   };
 
@@ -209,7 +208,9 @@ function LoginForm() {
                 </span>
               </div>
             </Link>
-            <h2 className="text-3xl font-bold text-gray-900 font-serif">Welcome Back</h2>
+            <h2 className="text-3xl font-bold text-gray-900 font-serif">
+              Welcome Back
+            </h2>
             <p className="mt-2 text-sm text-gray-600">
               Sign in to access your account
             </p>
@@ -238,9 +239,9 @@ function LoginForm() {
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 text-red-600" />
                 <p className="text-sm text-red-800">
-                  {error === 'CredentialsSignin'
-                    ? 'Invalid email or password'
-                    : 'An error occurred during sign in'}
+                  {error === "CredentialsSignin"
+                    ? "Invalid email or password"
+                    : "An error occurred during sign in"}
                 </p>
               </div>
             </motion.div>
@@ -262,7 +263,9 @@ function LoginForm() {
               <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or sign in with email</span>
+              <span className="px-2 bg-white text-gray-500">
+                Or sign in with email
+              </span>
             </div>
           </div>
 
@@ -280,7 +283,7 @@ function LoginForm() {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
+                  className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
                   placeholder="joao@example.com"
                 />
               </div>
@@ -300,11 +303,11 @@ function LoginForm() {
                 <Input
                   id="password"
                   name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
+                  className={`pl-10 pr-10 ${errors.password ? "border-red-500" : ""}`}
                   placeholder="••••••••"
                 />
                 <button
@@ -312,7 +315,11 @@ function LoginForm() {
                   className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
               {errors.password && (
@@ -329,7 +336,9 @@ function LoginForm() {
                 <Checkbox
                   id="rememberMe"
                   checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setRememberMe(checked as boolean)
+                  }
                 />
                 <Label htmlFor="rememberMe" className="text-sm text-gray-700">
                   Remember me
@@ -368,7 +377,7 @@ function LoginForm() {
           {/* Sign up link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
+              Don't have an account?{" "}
               <Link
                 href="/auth/signup"
                 className="font-medium hover:opacity-80 transition-opacity"
@@ -404,7 +413,11 @@ function LoginForm() {
 
           {/* Back to home */}
           <Link href="/">
-            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-600 hover:text-gray-800"
+            >
               <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
               Back to Homepage
             </Button>
@@ -417,7 +430,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-green-50 to-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600"></div></div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-gray-50 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600"></div>
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

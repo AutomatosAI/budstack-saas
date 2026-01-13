@@ -1,11 +1,11 @@
-import { getServerSession } from 'next-auth';
-import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { TenantAdminSidebar } from '@/components/admin/TenantAdminSidebar';
-import { AccessibleAdminLayout } from '@/components/admin/AccessibleAdminLayout';
-import { NotificationCenter } from '@/components/admin/NotificationCenter';
-import { generateMockNotifications } from '@/lib/mock-data';
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { TenantAdminSidebar } from "@/components/admin/TenantAdminSidebar";
+import { AccessibleAdminLayout } from "@/components/admin/AccessibleAdminLayout";
+import { NotificationCenter } from "@/components/admin/NotificationCenter";
+import { generateMockNotifications } from "@/lib/mock-data";
 
 export default async function TenantAdminLayout({
   children,
@@ -14,8 +14,12 @@ export default async function TenantAdminLayout({
 }) {
   const session = await getServerSession(authOptions);
 
-  if (!session || (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
-    redirect('/auth/login');
+  if (
+    !session ||
+    (session.user.role !== "TENANT_ADMIN" &&
+      session.user.role !== "SUPER_ADMIN")
+  ) {
+    redirect("/auth/login");
   }
 
   const user = await prisma.users.findUnique({
@@ -30,7 +34,9 @@ export default async function TenantAdminLayout({
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">No Tenant Associated</h1>
-          <p className="text-gray-600">Your account is not associated with any tenant.</p>
+          <p className="text-gray-600">
+            Your account is not associated with any tenant.
+          </p>
         </div>
       </div>
     );
@@ -42,8 +48,8 @@ export default async function TenantAdminLayout({
   return (
     <div className="flex h-screen bg-gray-50 theme-force-light">
       <TenantAdminSidebar
-        userName={session.user.name || 'Tenant Admin'}
-        userEmail={session.user.email || ''}
+        userName={session.user.name || "Tenant Admin"}
+        userEmail={session.user.email || ""}
         tenantName={user.tenants.businessName}
       />
       <AccessibleAdminLayout theme="tenant-admin">
@@ -55,9 +61,7 @@ export default async function TenantAdminLayout({
             viewAllUrl="/tenant-admin/notifications"
           />
         </div>
-        <div className="flex-1 overflow-auto pl-0 md:pl-0">
-          {children}
-        </div>
+        <div className="flex-1 overflow-auto pl-0 md:pl-0">{children}</div>
       </AccessibleAdminLayout>
     </div>
   );
