@@ -4,15 +4,16 @@ import { notFound } from "next/navigation";
 import { EditTemplateClient } from "./client";
 
 interface PageProps {
-  params: {
-    id: string;
-  };
+    params: Promise<{
+        id: string;
+    }>;
 }
 
 export default async function EditEmailTemplatePage({ params }: PageProps) {
-  const template = await prisma.email_templates.findUnique({
-    where: { id: params.id },
-  });
+    const { id } = await params;
+    const template = await prisma.email_templates.findUnique({
+        where: { id },
+    });
 
   if (!template) {
     notFound();

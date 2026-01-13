@@ -32,6 +32,9 @@ export default async function SettingsPage() {
   if (user?.tenants?.drGreenApiKey) {
     user.tenants.drGreenApiKey = '********';
   }
+  if (user?.tenants?.drGreenApiKey) {
+    user.tenants.drGreenApiKey = '********';
+  }
 
   if (!user?.tenants) {
     redirect("/tenant-admin");

@@ -117,26 +117,23 @@ export default async function OrderConfirmationPage({
         </Card>
       )}
 
-      {/* Order Details */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Order Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {order.items.map((item: any) => (
-              <div key={item.id} className="flex justify-between border-b pb-3">
-                <div>
-                  <p className="font-semibold">{item.productName}</p>
-                  <p className="text-sm text-gray-600">
-                    Quantity: {item.quantity}g
-                  </p>
-                </div>
-                <p className="font-semibold">
-                  ${(item.price * item.quantity).toFixed(2)}
-                </p>
-              </div>
-            ))}
+                            <div className="pt-4 space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Subtotal</span>
+                                    <span>${order.subtotal.toFixed(2)}</span>
+                                </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Shipping</span>
+                                <span>${order.shippingCost.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-lg font-bold border-t pt-2">
+                                <span>Total</span>
+                                <span>${order.total.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             <div className="pt-4 space-y-2">
               <div className="flex justify-between text-sm">

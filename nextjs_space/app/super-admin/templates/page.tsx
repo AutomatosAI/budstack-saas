@@ -1,33 +1,20 @@
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { UploadTemplateDialog } from "./upload-dialog";
-import { TemplateActions } from "./template-actions";
-import { Breadcrumbs } from "@/components/admin/shared";
+import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { Button } from '@/components/ui/button';
+import { Eye } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { UploadTemplateDialog } from './upload-dialog';
+import { TemplateActions } from './template-actions';
+import { Breadcrumbs } from '@/components/admin/shared';
 
 export default async function TemplatesManagementPage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
-  if (!session?.user?.email) {
-    redirect("/auth/login");
-  }
-
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
-  });
-
-  if (user?.role !== "SUPER_ADMIN") {
-    redirect("/dashboard");
+  if (!session || session.user.role !== 'SUPER_ADMIN') {
+    redirect('/auth/login');
   }
 
   // Fetch all templates

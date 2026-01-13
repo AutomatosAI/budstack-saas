@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  EmailEditor,
-  EmailTemplateData,
-} from "@/components/admin/email/EmailEditor";
-import { toast } from "sonner";
+'use client';
+
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { EmailEditor, EmailTemplateData } from '@/components/admin/email/EmailEditor';
+import { toast } from '@/components/ui/sonner';
 
 export default function NewEmailTemplatePage() {
   const router = useRouter();

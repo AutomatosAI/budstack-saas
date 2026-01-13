@@ -11,9 +11,9 @@ export default async function PlatformSettingsConfigPage() {
     redirect("/auth/login");
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
-  });
+    const user = await prisma.users.findUnique({
+        where: { id: session.user.id },
+    });
 
   if (user?.role !== "SUPER_ADMIN") {
     redirect("/dashboard");

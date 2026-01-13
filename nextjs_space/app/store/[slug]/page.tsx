@@ -80,8 +80,8 @@ export default async function TenantStorePage() {
       include: { users: true },
     });
 
-    // Get the template component
-    const TemplateComponent = TEMPLATE_COMPONENTS[baseTemplate.slug!];
+    const templateSlug = baseTemplate.slug;
+    const TemplateComponent = templateSlug ? TEMPLATE_COMPONENTS[templateSlug] : undefined;
 
     // Process hero image URL (sign if S3 path)
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
@@ -154,6 +154,10 @@ export default async function TenantStorePage() {
         </TenantThemeProvider>
       );
     }
+    console.warn('[StorePage] Missing template component, falling back to legacy template.', {
+      templateSlug,
+      tenantId: tenant.id,
+    });
   }
 
   // LEGACY: Fallback to old system if no TenantTemplate
