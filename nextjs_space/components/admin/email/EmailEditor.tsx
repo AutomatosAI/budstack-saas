@@ -161,7 +161,7 @@ export const EmailEditor = ({ initialData, onSave, isSaving = false }: EmailEdit
                                                                     key={v}
                                                                     className="bg-slate-100 border px-1.5 py-0.5 rounded text-[10px] sm:text-xs cursor-pointer hover:bg-slate-200 transition-colors font-mono text-slate-700"
                                                                     onClick={() => {
-                                                                        const text = v.includes(' ') ? `{{${v}}}` : `{{${v}}}`;
+                                                                        const text = `{{${v}}}`;
                                                                         navigator.clipboard.writeText(text);
                                                                         toast.success(`Copied ${text}`);
                                                                     }}

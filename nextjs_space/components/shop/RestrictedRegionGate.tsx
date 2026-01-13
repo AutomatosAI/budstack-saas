@@ -26,9 +26,13 @@ interface ConsultationData {
 
 export function RestrictedRegionGate({ children, countryCode }: RestrictedRegionGateProps) {
   const router = useRouter();
-  const { data: session, status } = useSession() || {};
+  const { data: session, status } = useSession();
   const [consultationData, setConsultationData] = useState<ConsultationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  if (typeof status === 'undefined') {
+    throw new Error('RestrictedRegionGate must be used within a SessionProvider.');
+  }
 
   const isRestricted = RESTRICTED_COUNTRIES.includes(countryCode);
 

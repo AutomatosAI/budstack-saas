@@ -16,8 +16,6 @@ const getRedisConnection = () => {
 };
 
 export const getEmailQueue = () => {
-    console.log('DEBUG: getEmailQueue called');
-    console.trace('DEBUG: Trace for getEmailQueue');
     if (!emailQueueInstance) {
         const connection = getRedisConnection();
         emailQueueInstance = new Queue(emailQueueName, {
