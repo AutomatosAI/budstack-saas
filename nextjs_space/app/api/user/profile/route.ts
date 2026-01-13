@@ -43,16 +43,16 @@ export async function PATCH(request: NextRequest) {
         ? `${firstName} ${lastName}`
         : firstName || lastName || undefined;
 
-    const updatedUser = await prisma.users.update({
-      where: { email: session.user.email },
-      data: {
-        ...(firstName !== undefined && { firstName }),
-        ...(lastName !== undefined && { lastName }),
-        ...(fullName && { name: fullName }),
-        ...(phone !== undefined && { phone }),
-        ...(address && { address }),
-      },
-    });
+        const updatedUser = await prisma.users.update({
+            where: { id: session.user.id },
+            data: {
+                ...(firstName !== undefined && { firstName }),
+                ...(lastName !== undefined && { lastName }),
+                ...(fullName && { name: fullName }),
+                ...(phone !== undefined && { phone }),
+                ...(address && { address }),
+            },
+        });
 
     return NextResponse.json({
       success: true,

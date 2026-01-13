@@ -1,8 +1,9 @@
 import { PrismaClient } from '@prisma/client'
+import { getTenantContext } from '@/lib/tenant-context';
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
+  prisma: PrismaClient | undefined;
+};
 
 // Create a mock Prisma client for build time
 const createMockPrismaClient = (): any => {
@@ -16,23 +17,135 @@ const createMockPrismaClient = (): any => {
     count: async () => 0,
   };
 
-  return new Proxy({}, {
-    get: () => mockModel,
-  });
+  return new Proxy(
+    {},
+    {
+      get: () => mockModel,
+    },
+  );
 };
 
 // Only initialize real Prisma if we have a valid DATABASE_URL and not in build
 const shouldUseMockPrisma = () => {
-  const dbUrl = process.env.DATABASE_URL || '';
-  return dbUrl.includes('dummy') || dbUrl === '';
+  const dbUrl = process.env.DATABASE_URL || "";
+  return dbUrl.includes("dummy") || dbUrl === "";
 };
 
-export const prisma = globalForPrisma.prisma ?? (
-  shouldUseMockPrisma()
+export const prisma =
+  globalForPrisma.prisma ??
+  (shouldUseMockPrisma()
     ? createMockPrismaClient()
     : new PrismaClient({
-      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-    })
-);
+        log:
+          process.env.NODE_ENV === "development"
+            ? ["query", "error", "warn"]
+            : ["error"],
+      }));
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
+const tenantScopedModels = new Set([
+  'audit_logs',
+  'email_logs',
+  'email_templates',
+  'email_event_mappings',
+  'conditions',
+  'consultations',
+  'drgreen_carts',
+  'drgreen_webhook_logs',
+  'orders',
+  'posts',
+  'products',
+  'tenant_branding',
+  'tenant_templates',
+  'users',
+  'webhooks',
+]);
+
+const tenantScopedModelsWithNullAccess = new Set([
+  'email_templates',
+  'email_event_mappings',
+]);
+
+const tenantScopedActions = new Set([
+  'findMany',
+  'findFirst',
+  'findUnique',
+  'count',
+  'aggregate',
+  'groupBy',
+  'update',
+  'updateMany',
+  'delete',
+  'deleteMany',
+  'create',
+  'createMany',
+  'upsert',
+]);
+
+const applyTenantScope = (where: Record<string, any>, tenantId: string, allowNull: boolean) => {
+  if (allowNull) {
+    return {
+      AND: [
+        where,
+        {
+          OR: [{ tenantId }, { tenantId: null }],
+        },
+      ],
+    };
+  }
+
+  return {
+    ...where,
+    tenantId,
+  };
+};
+
+if ('$use' in prisma) {
+  prisma.$use(async (params, next) => {
+    const tenantId = getTenantContext();
+    if (!tenantId || !params.model || !tenantScopedModels.has(params.model) || !tenantScopedActions.has(params.action)) {
+      return next(params);
+    }
+
+    const allowNull = tenantScopedModelsWithNullAccess.has(params.model);
+
+    if (params.action === 'findUnique') {
+      params.action = 'findFirst';
+    }
+
+    if (params.action === 'create' || params.action === 'createMany') {
+      if (params.args?.data) {
+        if (Array.isArray(params.args.data)) {
+          params.args.data = params.args.data.map((item: Record<string, any>) => ({
+            ...item,
+            tenantId: item.tenantId ?? tenantId,
+          }));
+        } else {
+          params.args.data.tenantId = params.args.data.tenantId ?? tenantId;
+        }
+      }
+      return next(params);
+    }
+
+    if (params.action === 'upsert') {
+      if (params.args?.create) {
+        params.args.create.tenantId = params.args.create.tenantId ?? tenantId;
+      }
+      if (params.args?.update) {
+        params.args.update.tenantId = params.args.update.tenantId ?? tenantId;
+      }
+    }
+
+    if (params.args?.where) {
+      params.args.where = applyTenantScope(params.args.where, tenantId, allowNull);
+    } else if (params.action !== 'createMany') {
+      params.args = {
+        ...params.args,
+        where: applyTenantScope({}, tenantId, allowNull),
+      };
+    }
+
+    return next(params);
+  });
+}

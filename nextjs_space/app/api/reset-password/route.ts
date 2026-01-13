@@ -16,10 +16,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user exists
-    const user = await prisma.users.findUnique({
-      where: { email: email.toLowerCase() },
-    });
+        // Check if user exists
+        const user = await prisma.users.findFirst({
+            where: { email: email.toLowerCase() },
+        });
 
     if (!user) {
       // Get tenant for healingbuds
@@ -58,12 +58,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Update password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await prisma.users.update({
-      where: { email: email.toLowerCase() },
-      data: { password: hashedPassword },
-    });
+        // Update password
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await prisma.users.update({
+            where: { id: user.id },
+            data: { password: hashedPassword },
+        });
 
     return NextResponse.json({
       success: true,

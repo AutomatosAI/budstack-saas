@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by email
-    const user = await prisma.users.findUnique({
+    const user = await prisma.users.findFirst({
       where: { email },
     });
 

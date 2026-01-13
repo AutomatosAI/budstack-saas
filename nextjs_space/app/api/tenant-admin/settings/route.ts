@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
-import { encrypt } from "@/lib/encryption";
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { encrypt } from '@/lib/encryption';
+import { AUDIT_ACTIONS, createAuditLog, getClientInfo } from '@/lib/audit-log';
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,7 +43,6 @@ export async function POST(req: NextRequest) {
     const dataToUpdate: any = {
       customDomain: customDomain || null,
       drGreenApiUrl: drGreenApiUrl || null,
-      drGreenApiKey: drGreenApiKey || null,
     };
 
     // Update settings JSON for SMTP
@@ -82,9 +82,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log("Updating tenant with data:", {
+    if (drGreenApiKey && drGreenApiKey.trim() !== '') {
+      try {
+        dataToUpdate.drGreenApiKey = encrypt(drGreenApiKey);
+      } catch (e) {
+        console.error('Encryption failed:', e);
+        throw e;
+      }
+    }
+
+    console.log('Updating tenant with data:', {
       ...dataToUpdate,
-      drGreenSecretKey: dataToUpdate.drGreenSecretKey ? "***" : undefined,
+      drGreenSecretKey: dataToUpdate.drGreenSecretKey ? '***' : undefined,
+      drGreenApiKey: dataToUpdate.drGreenApiKey ? '***' : undefined,
     });
 
     // Update tenant
@@ -93,11 +103,24 @@ export async function POST(req: NextRequest) {
       data: dataToUpdate,
     });
 
-    console.log("Settings updated successfully");
-    return NextResponse.json({
-      success: true,
-      message: "Settings updated successfully",
+    const { ipAddress, userAgent } = getClientInfo(req.headers);
+    await createAuditLog({
+      action: AUDIT_ACTIONS.SETTINGS_UPDATED,
+      entityType: 'Tenant',
+      entityId: user.tenants.id,
+      userId: session.user.id,
+      userEmail: session.user.email,
+      tenantId: user.tenants.id,
+      metadata: {
+        updatedFields: Object.keys(dataToUpdate).filter((key) => key !== 'settings'),
+        hasSmtpUpdate: !!dataToUpdate.settings?.smtp,
+      },
+      ipAddress,
+      userAgent,
     });
+
+    console.log('Settings updated successfully');
+    return NextResponse.json({ success: true, message: 'Settings updated successfully' });
   } catch (error) {
     console.error("Error updating settings detailed:", error);
     return NextResponse.json(

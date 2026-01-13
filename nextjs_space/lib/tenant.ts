@@ -2,6 +2,7 @@
 import { headers } from 'next/headers';
 import { prisma } from './db';
 import { cache } from 'react';
+import { setTenantContext } from './tenant-context';
 
 // Extract Tenant type from Prisma query result
 type Tenant = Awaited<ReturnType<typeof prisma.tenants.findFirst>>;
@@ -12,11 +13,12 @@ type Tenant = Awaited<ReturnType<typeof prisma.tenants.findFirst>>;
  */
 export const getCurrentTenant = cache(async (): Promise<Tenant | null> => {
   const headersList = headers();
-  const subdomain = headersList.get('x-tenant-subdomain');
-  const customDomain = headersList.get('x-tenant-custom-domain');
-  const tenantSlug = headersList.get('x-tenant-slug');
+  const subdomain = headersList.get("x-tenant-subdomain");
+  const customDomain = headersList.get("x-tenant-custom-domain");
+  const tenantSlug = headersList.get("x-tenant-slug");
 
   if (!subdomain && !customDomain && !tenantSlug) {
+    setTenantContext(null);
     return null;
   }
 
@@ -47,9 +49,11 @@ export const getCurrentTenant = cache(async (): Promise<Tenant | null> => {
       });
     }
 
+    setTenantContext(tenant?.id ?? null);
     return tenant;
   } catch (error) {
     console.error('Error fetching tenant:', error);
+    setTenantContext(null);
     return null;
   }
 });
@@ -70,7 +74,7 @@ export async function requireTenant(): Promise<Tenant> {
   const tenant = await getCurrentTenant();
 
   if (!tenant) {
-    throw new Error('Tenant not found or inactive');
+    throw new Error("Tenant not found or inactive");
   }
 
   return tenant;
@@ -109,7 +113,7 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
 
     return tenant;
   } catch (error) {
-    console.error('Error fetching tenant by slug:', error);
+    console.error("Error fetching tenant by slug:", error);
     return null;
   }
 }
@@ -117,18 +121,41 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
 /**
  * Get tenant from Next.js request (for API routes)
  */
-export async function getTenantFromRequest(req: Request): Promise<Tenant | null> {
+export async function getTenantFromRequest(
+  req: Request,
+): Promise<Tenant | null> {
   // Try to get tenant from headers (set by middleware)
   const url = new URL(req.url);
   const host = req.headers.get('host') || url.host;
+  const pathname = url.pathname;
 
   try {
+    const pathMatch = pathname.match(/^\/store\/([^\/]+)/);
+    if (pathMatch) {
+      const tenantSlug = pathMatch[1];
+      const tenant = await prisma.tenants.findFirst({
+        where: {
+          subdomain: tenantSlug,
+          isActive: true,
+        },
+      });
+
+      if (tenant) {
+        setTenantContext(tenant.id);
+        return tenant;
+      }
+    }
+
     // Extract subdomain from host
-    const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstack.to';
-    const subdomain = host.split('.')[0];
+    const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstack.to";
+    const subdomain = host.split(".")[0];
 
     // Check if it's a subdomain request
-    if (host.includes(baseDomain) && subdomain && subdomain !== baseDomain.split('.')[0]) {
+    if (
+      host.includes(baseDomain) &&
+      subdomain &&
+      subdomain !== baseDomain.split(".")[0]
+    ) {
       const tenant = await prisma.tenants.findFirst({
         where: {
           subdomain: subdomain,
@@ -136,21 +163,18 @@ export async function getTenantFromRequest(req: Request): Promise<Tenant | null>
         },
       });
 
-      if (tenant) return tenant;
+      if (tenant) {
+        setTenantContext(tenant.id);
+        return tenant;
+      }
     }
-
-    // Fallback: get the first active tenant
-    const tenant = await prisma.tenants.findFirst({
-      where: {
-        isActive: true,
-      },
-    });
-
-    return tenant;
   } catch (error) {
     console.error('Error fetching tenant from request:', error);
+    setTenantContext(null);
     return null;
   }
+
+  return null;
 }
 
 /**
@@ -164,6 +188,6 @@ export function getTenantUrl(tenant: Tenant): string {
   }
 
   // Use path-based routing (primary method until subdomain DNS is configured)
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstack.to';
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstack.to";
   return `https://${baseDomain}/store/${tenant.subdomain}`;
 }
