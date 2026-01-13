@@ -89,7 +89,7 @@ export async function PATCH(
             while (await prisma.posts.findFirst({
                 where: {
                     slug: uniqueSlug,
-                    tenantId: user!.tenant!.id,
+                    tenantId: user!.tenantId,
                     NOT: { id }
                 }
             })) {

@@ -1,18 +1,19 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import BrandingForm from './branding-form';
 import { Breadcrumbs } from '@/components/admin/shared';
 
 export default async function BrandingPage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
-  if (!session?.user?.email) {
+  if (!session || (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
     redirect('/auth/login');
   }
 
   const user = await prisma.users.findUnique({
-    where: { email: session.user.email },
+    where: { id: session.user.id },
     include: {
       tenants: {
         include: {

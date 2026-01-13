@@ -50,7 +50,7 @@ export default async function TemplatesPage() {
     });
 
     // 2. Fetch Available Base Templates (Marketplace)
-    const templatess = await prisma.templates.findMany({
+    const baseTemplates = await prisma.templates.findMany({
         where: { isActive: true, isPublic: true },
     });
 
@@ -138,7 +138,7 @@ export default async function TemplatesPage() {
                 {/* MARKETPLACE TAB */}
                 <TabsContent value="marketplace">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {templatess.map((template: templates) => (
+                        {baseTemplates.map((template: templates) => (
                             <Card key={template.id} className="overflow-hidden hover:shadow-lg transition-all border-slate-200">
                                 <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-200 relative group">
                                     {template.thumbnailUrl ? (
@@ -180,7 +180,7 @@ export default async function TemplatesPage() {
                             </Card>
                         ))}
 
-                        {templatess.length === 0 && (
+                        {baseTemplates.length === 0 && (
                             <div className="col-span-full text-center py-12">
                                 <p className="text-slate-500">No base templates available in the system.</p>
                             </div>

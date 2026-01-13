@@ -23,7 +23,7 @@ interface Post {
     slug: string;
     published: boolean;
     createdAt: Date;
-    author: { name: string | null };
+    users?: { name: string | null } | null;
 }
 
 export default function PostsList({ initialPosts }: { initialPosts: any[] }) {
@@ -105,7 +105,7 @@ export default function PostsList({ initialPosts }: { initialPosts: any[] }) {
                                     </div>
                                     {/* Show author/date on mobile */}
                                     <div className="sm:hidden text-xs text-muted-foreground mt-1">
-                                        {post.author?.name || 'Unknown'} • {format(new Date(post.createdAt), 'MMM d')}
+                                        {post.users?.name || 'Unknown'} • {format(new Date(post.createdAt), 'MMM d')}
                                     </div>
                                 </div>
                             </TableCell>
@@ -114,7 +114,7 @@ export default function PostsList({ initialPosts }: { initialPosts: any[] }) {
                                     {post.published ? 'Published' : 'Draft'}
                                 </Badge>
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell">{post.author?.name || 'Unknown'}</TableCell>
+                            <TableCell className="hidden sm:table-cell">{post.users?.name || 'Unknown'}</TableCell>
                             <TableCell className="hidden sm:table-cell">
                                 {format(new Date(post.createdAt), 'MMM d, yyyy')}
                             </TableCell>

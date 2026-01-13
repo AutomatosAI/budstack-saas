@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendEmail, emailTemplates } from '@/lib/email';
+import { getCurrentTenant } from '@/lib/tenant';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -15,9 +16,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const tenant = await getCurrentTenant();
+
     // Find user by email
-    const user = await prisma.users.findUnique({
-      where: { email },
+    const user = await prisma.users.findFirst({
+      where: tenant?.id ? { email, tenantId: tenant.id } : { email },
     });
 
     // Always return success to prevent email enumeration

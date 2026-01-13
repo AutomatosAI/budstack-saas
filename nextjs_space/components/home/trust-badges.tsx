@@ -88,7 +88,7 @@ export function TrustBadges() {
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: index * 0.1 }}
-              whileHover={{ y: -5, shadow: '0 20px 40px -12px rgba(0,0,0,0.25)' }}
+              whileHover={{ y: -5, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.25)' }}
               className={`trust-badge ${getColorClasses(badge.color)}`}
             >
               <div className="flex items-start space-x-4">

@@ -40,7 +40,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Plus, MoreHorizontal, Edit, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
 const fetcher = async (url: string) => {
     const res = await fetch(url);

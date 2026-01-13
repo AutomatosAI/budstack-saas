@@ -23,6 +23,9 @@ export default async function SettingsPage() {
     // Only indicate it exists, don't send value
     user.tenants.drGreenSecretKey = '********';
   }
+  if (user?.tenants?.drGreenApiKey) {
+    user.tenants.drGreenApiKey = '********';
+  }
 
   if (!user?.tenants) {
     redirect('/tenant-admin');

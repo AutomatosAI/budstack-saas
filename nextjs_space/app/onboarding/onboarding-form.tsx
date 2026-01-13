@@ -317,7 +317,7 @@ export default function OnboardingForm({ initialTemplates = [] }: OnboardingForm
                             >
                                 <option value="PT">Portugal 🇵🇹</option>
                                 <option value="SA">South Africa 🇿🇦</option>
-                                <option value="UK">United Kingdom 🇬🇧</option>
+                                <option value="GB">United Kingdom 🇬🇧</option>
                                 <option value="DE">Germany 🇩🇪</option>
                                 <option value="ES">Spain 🇪🇸</option>
                                 <option value="FR">France 🇫🇷</option>
@@ -336,7 +336,7 @@ export default function OnboardingForm({ initialTemplates = [] }: OnboardingForm
                     </div>
                 );
 
-            case 4:
+            case 4: {
                 const selectedTemplate = templates.find((t) => t.id === formData.templateId);
                 return (
                     <div className="space-y-6">
@@ -396,6 +396,7 @@ export default function OnboardingForm({ initialTemplates = [] }: OnboardingForm
                         )}
                     </div>
                 );
+            }
 
             default:
                 return null;
