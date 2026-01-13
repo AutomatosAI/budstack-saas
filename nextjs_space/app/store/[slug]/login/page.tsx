@@ -68,8 +68,11 @@ function TenantLoginForm() {
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
 
-        if (!formData.email.trim()) newErrors.email = 'Email is required';
-        if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email format';
+        if (!formData.email.trim()) {
+            newErrors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+            newErrors.email = 'Invalid email format';
+        }
         if (!formData.password) newErrors.password = 'Password is required';
 
         setErrors(newErrors);

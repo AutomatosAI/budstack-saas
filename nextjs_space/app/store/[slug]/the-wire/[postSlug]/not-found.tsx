@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
 export default function ArticleNotFound() {
@@ -10,7 +9,7 @@ export default function ArticleNotFound() {
                     The article you're looking for doesn't exist or has been removed.
                 </p>
                 <Link
-                    href="../blog"
+                    href="../"
                     className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
                 >
                     Back to The Wire

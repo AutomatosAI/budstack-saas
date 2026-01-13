@@ -131,12 +131,11 @@ export default async function OrderConfirmationPage({
                             </div>
                         ))}
 
-                        <div className="pt-4 space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Subtotal</span>
-                                <span className="text-gray-600">Subtotal</span>
-                                <span>${order.subtotal.toFixed(2)}</span>
-                            </div>
+                            <div className="pt-4 space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Subtotal</span>
+                                    <span>${order.subtotal.toFixed(2)}</span>
+                                </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-600">Shipping</span>
                                 <span>${order.shippingCost.toFixed(2)}</span>

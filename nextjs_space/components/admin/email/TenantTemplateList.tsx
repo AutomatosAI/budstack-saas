@@ -16,9 +16,24 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Loader2, Plus, Copy, Eye, EyeOff } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+    const res = await fetch(url);
+    const text = await res.text();
+    let data = null;
+    if (text) {
+        try {
+            data = JSON.parse(text);
+        } catch (parseError) {
+            console.error('Failed to parse template list response:', parseError);
+        }
+    }
+    if (!res.ok) {
+        throw new Error(`Failed to fetch (${res.status}): ${text || res.statusText}`);
+    }
+    return data;
+};
 
 interface Template {
     id: string;
@@ -51,8 +66,9 @@ export function TenantTemplateList() {
     };
 
     const handleClone = async (sourceId: string) => {
+        let loadingToastId: string | number | undefined;
         try {
-            toast.loading('Cloning template...');
+            loadingToastId = toast.loading('Cloning template...');
             const res = await fetch('/api/tenant-admin/email-templates', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -61,12 +77,17 @@ export function TenantTemplateList() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
 
-            toast.dismiss();
+            if (loadingToastId) {
+                toast.dismiss(loadingToastId);
+            }
             toast.success('Template cloned');
             router.refresh();
             router.push(`/tenant-admin/emails/${data.id}`);
         } catch (err) {
-            toast.dismiss();
+            console.error(err);
+            if (loadingToastId) {
+                toast.dismiss(loadingToastId);
+            }
             toast.error('Failed to clone template');
         }
     };
@@ -131,7 +152,7 @@ export function TenantTemplateList() {
                                     )}
                                 </TableCell>
                                 <TableCell>
-                                    <Badge variant={template.isSystem ? 'secondary' : 'default'} className={!template.isSystem ? "bg-slate-900 override:bg-slate-700" : ""}>
+                                    <Badge variant={template.isSystem ? 'secondary' : 'default'} className={!template.isSystem ? "bg-slate-900 dark:bg-slate-700" : ""}>
                                         {template.isSystem ? 'System' : 'Custom'}
                                     </Badge>
                                 </TableCell>

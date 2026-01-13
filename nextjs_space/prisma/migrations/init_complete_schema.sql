@@ -404,7 +404,8 @@ CREATE UNIQUE INDEX "tenants_activeTenantTemplateId_key" ON "tenants"("activeTen
 CREATE UNIQUE INDEX "tenant_branding_tenantId_key" ON "tenant_branding"("tenantId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+CREATE UNIQUE INDEX "users_tenantId_email_key" ON "users"("tenantId", "email");
+CREATE UNIQUE INDEX "users_email_global_key" ON "users"("email") WHERE "tenantId" IS NULL;
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_resetToken_key" ON "users"("resetToken");
@@ -413,7 +414,7 @@ CREATE UNIQUE INDEX "users_resetToken_key" ON "users"("resetToken");
 CREATE UNIQUE INDEX "products_slug_tenantId_key" ON "products"("slug", "tenantId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "orders_orderNumber_key" ON "orders"("orderNumber");
+CREATE UNIQUE INDEX "orders_tenantId_orderNumber_key" ON "orders"("tenantId", "orderNumber");
 
 -- CreateIndex
 CREATE INDEX "orders_drGreenOrderId_idx" ON "orders"("drGreenOrderId");
@@ -519,4 +520,3 @@ ALTER TABLE "drgreen_carts" ADD CONSTRAINT "drgreen_carts_tenantId_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "drgreen_webhook_logs" ADD CONSTRAINT "drgreen_webhook_logs_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-

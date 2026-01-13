@@ -289,15 +289,17 @@ export default function ConditionPage() {
             Schedule a consultation with our specialists to discuss your condition and treatment options.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/contact">
-              <button className="border border-white/30 hover:bg-white/10 text-white px-8 py-3 rounded-lg text-lg transition-colors">
-                Contact Us
-              </button>
+            <Link
+              href="/contact"
+              className="border border-white/30 hover:bg-white/10 text-white px-8 py-3 rounded-lg text-lg transition-colors"
+            >
+              Contact Us
             </Link>
-            <Link href={`/store/${params.slug}/conditions`}>
-              <button className="border border-white/30 hover:bg-white/10 text-white px-8 py-3 rounded-lg text-lg transition-colors">
-                View All Conditions
-              </button>
+            <Link
+              href={`/store/${params.slug}/conditions`}
+              className="border border-white/30 hover:bg-white/10 text-white px-8 py-3 rounded-lg text-lg transition-colors"
+            >
+              View All Conditions
             </Link>
           </div>
         </div>

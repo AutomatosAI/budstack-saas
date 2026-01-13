@@ -105,7 +105,7 @@ export function CartProvider({
             setError(null);
 
             const response = await fetch(
-                `/api/store/${storeSlug}/cart/remove?strainId=${strainId}`,
+                `/api/store/${storeSlug}/cart/remove?strainId=${encodeURIComponent(strainId)}`,
                 { method: 'DELETE' }
             );
 

@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
@@ -10,18 +11,10 @@ import { TemplateActions } from './template-actions';
 import { Breadcrumbs } from '@/components/admin/shared';
 
 export default async function TemplatesManagementPage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
-  if (!session?.user?.email) {
+  if (!session || session.user.role !== 'SUPER_ADMIN') {
     redirect('/auth/login');
-  }
-
-  const user = await prisma.users.findUnique({
-    where: { email: session.user.email },
-  });
-
-  if (user?.role !== 'SUPER_ADMIN') {
-    redirect('/dashboard');
   }
 
   // Fetch all templates

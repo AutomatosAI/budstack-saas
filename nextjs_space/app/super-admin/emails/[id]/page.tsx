@@ -5,14 +5,15 @@ import { notFound } from 'next/navigation';
 import { EditTemplateClient } from './client';
 
 interface PageProps {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 export default async function EditEmailTemplatePage({ params }: PageProps) {
+    const { id } = await params;
     const template = await prisma.email_templates.findUnique({
-        where: { id: params.id },
+        where: { id },
     });
 
     if (!template) {

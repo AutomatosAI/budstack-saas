@@ -48,8 +48,8 @@ export default async function AuditLogsPage() {
               <div className="flex flex-col">
                 <span className="text-sm text-slate-600 mb-1">Active Monitoring</span>
                 <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-sm font-semibold text-emerald-600">Live</span>
+                  <div className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="text-sm font-semibold text-emerald-600">Monitoring Enabled</span>
                 </div>
               </div>
             </div>

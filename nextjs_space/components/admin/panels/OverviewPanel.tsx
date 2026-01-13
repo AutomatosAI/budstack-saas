@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, TrendingUp, UserPlus, Users } from 'lucide-react';
 import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
@@ -16,6 +17,8 @@ export function OverviewPanel({
     pendingOnboarding,
     totalUsers
 }: OverviewPanelProps) {
+    const events = useMemo(() => generateMockEvents(5), []);
+
     return (
         <div className="p-8">
             <div className="space-y-8">
@@ -111,7 +114,7 @@ export function OverviewPanel({
 
                 {/* Recent Activity Timeline */}
                 <ActivityTimeline
-                    events={generateMockEvents(5)}
+                    events={events}
                     maxVisible={5}
                     showViewAll={true}
                 />

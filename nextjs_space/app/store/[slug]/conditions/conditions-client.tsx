@@ -156,7 +156,7 @@ export default function ConditionsClient({ tenant, conditions }: ConditionsClien
                                             layout: { duration: 0.3 }
                                         }}
                                     >
-                                        <Link href={`conditions/${condition.slug}`}>
+                                        <Link href={`/store/${tenant.subdomain}/conditions/${condition.slug}`}>
                                             <div
                                                 className="group block rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border"
                                                 style={{
@@ -235,7 +235,7 @@ export default function ConditionsClient({ tenant, conditions }: ConditionsClien
                                 >
                                     Schedule a consultation with our medical professionals to discuss personalized treatment plans.
                                 </p>
-                                <Link href="contact">
+                                <Link href={`/store/${tenant.subdomain}/contact`}>
                                     <button
                                         className="px-8 py-3 text-lg rounded-lg font-semibold border transition-all duration-200 hover:shadow-lg"
                                         style={{

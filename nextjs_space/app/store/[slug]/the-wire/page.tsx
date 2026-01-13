@@ -48,7 +48,7 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {posts.map((post: posts & { author: { name: string | null } | null }) => (
+          {posts.map((post: posts & { users: { name: string | null } | null }) => (
             <Card key={post.id} className="flex flex-col overflow-hidden h-full hover:shadow-lg transition-shadow">
               {post.coverImage && (
                 <div className="aspect-video w-full overflow-hidden">
@@ -65,7 +65,7 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
                     {format(new Date(post.createdAt), 'MMM d, yyyy')}
                   </span>
                   <span>•</span>
-                  <span>{post.author?.name || 'Admin'}</span>
+                  <span>{post.users?.name || 'Admin'}</span>
                 </div>
 
                 <h2 className="text-xl font-bold mb-2 line-clamp-2">

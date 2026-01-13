@@ -129,7 +129,6 @@ export function TenantEventMapper() {
                         <TableRow>
                             <TableHead>Event</TableHead>
                             <TableHead>Active Template</TableHead>
-                            <TableHead>Active Template</TableHead>
                             <TableHead className="hidden md:table-cell">Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>

@@ -70,6 +70,10 @@ export default function ProductDetailPage() {
       setError(null);
       
       const res = await fetch(`/api/store/${slug}/products?id=${productId}`);
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(`Failed to fetch product ${productId}: ${res.status} ${res.statusText} ${errBody}`);
+      }
       const responseData: ApiResponse = await res.json();
       
       if (!responseData.success || !responseData.data) {

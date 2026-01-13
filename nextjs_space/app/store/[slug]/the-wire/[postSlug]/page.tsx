@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { format } from "date-fns";
+import createDOMPurify from "isomorphic-dompurify";
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, User } from "lucide-react";
 
 interface ArticlePageProps {
@@ -45,6 +45,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
     if (!post || !post.published) notFound();
 
+    const cleanContent = createDOMPurify.sanitize(post.content || '');
+
     return (
         <div className="min-h-screen bg-background text-foreground pt-36 pb-12">
             <div className="container px-4 mx-auto max-w-4xl">
@@ -68,7 +70,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                         </div>
                         <div className="flex items-center gap-1">
                             <User className="h-4 w-4" />
-                            {post.author?.name || 'Admin'}
+                            {post.users?.name || 'Admin'}
                         </div>
                     </div>
 
@@ -83,7 +85,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     )}
 
                     {/* Render HTML Content */}
-                    <div dangerouslySetInnerHTML={{ __html: post.content }} />
+                    <div dangerouslySetInnerHTML={{ __html: cleanContent }} />
                 </article>
             </div>
         </div>
