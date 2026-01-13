@@ -1,12 +1,15 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ConsultationFormData } from '../consultation-form';
-import { MEDICAL_CONDITIONS, PRESCRIBED_MEDICATIONS } from '@/lib/consultation-constants';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ConsultationFormData } from "../consultation-form";
+import {
+  MEDICAL_CONDITIONS,
+  PRESCRIBED_MEDICATIONS,
+} from "@/lib/consultation-constants";
 
 interface MedicalConditionsStepProps {
   data: ConsultationFormData;
@@ -15,13 +18,19 @@ interface MedicalConditionsStepProps {
   onBack: () => void;
 }
 
-export function MedicalConditionsStep({ data, onUpdate, onNext, onBack }: MedicalConditionsStepProps) {
+export function MedicalConditionsStep({
+  data,
+  onUpdate,
+  onNext,
+  onBack,
+}: MedicalConditionsStepProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (data.medicalConditions.length === 0) {
-      newErrors.medicalConditions = 'Please select at least one medical condition';
+      newErrors.medicalConditions =
+        "Please select at least one medical condition";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -36,14 +45,14 @@ export function MedicalConditionsStep({ data, onUpdate, onNext, onBack }: Medica
 
   const toggleCondition = (value: string) => {
     const conditions = data.medicalConditions.includes(value)
-      ? data.medicalConditions.filter(c => c !== value)
+      ? data.medicalConditions.filter((c) => c !== value)
       : [...data.medicalConditions, value];
     onUpdate({ medicalConditions: conditions });
   };
 
   const toggleMedication = (value: string) => {
     const medications = data.prescribedMedications.includes(value)
-      ? data.prescribedMedications.filter(m => m !== value)
+      ? data.prescribedMedications.filter((m) => m !== value)
       : [...data.prescribedMedications, value];
     onUpdate({ prescribedMedications: medications });
   };
@@ -51,13 +60,16 @@ export function MedicalConditionsStep({ data, onUpdate, onNext, onBack }: Medica
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Medical Conditions</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Medical Conditions
+        </h2>
         <p className="text-gray-600">Please tick all that apply</p>
       </div>
 
       <div>
         <Label className="text-base font-semibold mb-3 block">
-          Please select your medical condition(s). You may select more than one.*
+          Please select your medical condition(s). You may select more than
+          one.*
         </Label>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto border rounded-md p-4">
           {MEDICAL_CONDITIONS.map((condition) => (
@@ -77,13 +89,17 @@ export function MedicalConditionsStep({ data, onUpdate, onNext, onBack }: Medica
           ))}
         </div>
         {errors.medicalConditions && (
-          <p className="text-sm text-red-500 mt-2">{errors.medicalConditions}</p>
+          <p className="text-sm text-red-500 mt-2">
+            {errors.medicalConditions}
+          </p>
         )}
       </div>
 
-      {data.medicalConditions.includes('other') && (
+      {data.medicalConditions.includes("other") && (
         <div>
-          <Label htmlFor="otherCondition">Please specify other condition(s)</Label>
+          <Label htmlFor="otherCondition">
+            Please specify other condition(s)
+          </Label>
           <Textarea
             id="otherCondition"
             value={data.otherCondition}
@@ -96,7 +112,8 @@ export function MedicalConditionsStep({ data, onUpdate, onNext, onBack }: Medica
 
       <div>
         <Label className="text-base font-semibold mb-3 block">
-          Please select Prescribed Medicines / Treatments (if any). You may select more than one.
+          Please select Prescribed Medicines / Treatments (if any). You may
+          select more than one.
         </Label>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto border rounded-md p-4">
           {PRESCRIBED_MEDICATIONS.map((medication) => (
@@ -118,7 +135,9 @@ export function MedicalConditionsStep({ data, onUpdate, onNext, onBack }: Medica
       </div>
 
       <div>
-        <Label htmlFor="prescribedSupplements">List of supplements or prescriptions (if any)</Label>
+        <Label htmlFor="prescribedSupplements">
+          List of supplements or prescriptions (if any)
+        </Label>
         <Textarea
           id="prescribedSupplements"
           value={data.prescribedSupplements}
@@ -132,7 +151,11 @@ export function MedicalConditionsStep({ data, onUpdate, onNext, onBack }: Medica
         <Button type="button" variant="outline" size="lg" onClick={onBack}>
           Back
         </Button>
-        <Button type="submit" size="lg" className="bg-emerald-600 hover:bg-emerald-700">
+        <Button
+          type="submit"
+          size="lg"
+          className="bg-emerald-600 hover:bg-emerald-700"
+        >
           Next Step
         </Button>
       </div>

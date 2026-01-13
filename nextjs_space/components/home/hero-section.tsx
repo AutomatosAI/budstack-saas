@@ -1,26 +1,25 @@
+"use client";
 
-'use client';
-
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { 
-  Stethoscope, 
-  Shield, 
-  Award, 
-  MapPin, 
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { motion } from "framer-motion";
+import {
+  Stethoscope,
+  Shield,
+  Award,
+  MapPin,
   Clock,
   Users,
   CheckCircle,
   Star,
   ArrowRight,
-  Leaf
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tenant } from '@/types/client';
-import { useLanguage } from '@/lib/i18n';
+  Leaf,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tenant } from "@/types/client";
+import { useLanguage } from "@/lib/i18n";
 
 interface HeroSectionProps {
   tenant?: Tenant | null;
@@ -28,32 +27,37 @@ interface HeroSectionProps {
   consultationUrl?: string;
 }
 
-export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/healingbuds/consultation' }: HeroSectionProps = {}) {
+export function HeroSection({
+  tenant,
+  heroImageUrl,
+  consultationUrl = "/store/healingbuds/consultation",
+}: HeroSectionProps = {}) {
   const { t } = useLanguage();
   const settings = (tenant?.settings as any) || {};
-  const brandName = tenant?.businessName || 'HealingBuds';
-  const tagline = settings.tagline || t('hero.subtitle');
-  const primaryColor = settings.primaryColor || '#10b981'; // green-500
-  const secondaryColor = settings.secondaryColor || '#3b82f6'; // blue-500
-  const accentColor = settings.accentColor || '#fbbf24'; // yellow-400
-  
+  const brandName = tenant?.businessName || "HealingBuds";
+  const tagline = settings.tagline || t("hero.subtitle");
+  const primaryColor = settings.primaryColor || "#10b981"; // green-500
+  const secondaryColor = settings.secondaryColor || "#3b82f6"; // blue-500
+  const accentColor = settings.accentColor || "#fbbf24"; // yellow-400
+
   // Get custom content from tenant settings - fallback to translations
-  const heroTitle = settings.pageContent?.home?.heroTitle || t('hero.title');
+  const heroTitle = settings.pageContent?.home?.heroTitle || t("hero.title");
   const heroSubtitle = settings.pageContent?.home?.heroSubtitle || tagline;
-  const heroCtaText = settings.pageContent?.home?.heroCtaText || t('hero.cta.primary');
-  
+  const heroCtaText =
+    settings.pageContent?.home?.heroCtaText || t("hero.cta.primary");
+
   const [stats, setStats] = useState({
     patients: 0,
     consultations: 0,
     satisfaction: 0,
-    years: 0
+    years: 0,
   });
 
   const finalStats = {
     patients: 2500,
     consultations: 8600,
     satisfaction: 98,
-    years: 5
+    years: 5,
   };
 
   useEffect(() => {
@@ -61,24 +65,24 @@ export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/he
       const duration = 2000; // 2 seconds
       const interval = 50; // Update every 50ms
       const steps = duration / interval;
-      
+
       const increment = {
         patients: finalStats.patients / steps,
         consultations: finalStats.consultations / steps,
         satisfaction: finalStats.satisfaction / steps,
-        years: finalStats.years / steps
+        years: finalStats.years / steps,
       };
 
       let currentStep = 0;
       const timer = setInterval(() => {
         currentStep++;
-        
+
         if (currentStep <= steps) {
           setStats({
             patients: Math.floor(increment.patients * currentStep),
             consultations: Math.floor(increment.consultations * currentStep),
             satisfaction: Math.floor(increment.satisfaction * currentStep),
-            years: Math.floor(increment.years * currentStep)
+            years: Math.floor(increment.years * currentStep),
           });
         } else {
           setStats(finalStats);
@@ -98,10 +102,10 @@ export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/he
           }
         });
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
 
-    const statsElement = document.getElementById('stats-section');
+    const statsElement = document.getElementById("stats-section");
     if (statsElement) {
       observer.observe(statsElement);
     }
@@ -110,13 +114,13 @@ export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/he
   }, []);
 
   return (
-    <section 
+    <section
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
       style={{
         // @ts-ignore
-        '--primary-color': primaryColor,
-        '--secondary-color': secondaryColor,
-        '--accent-color': accentColor,
+        "--primary-color": primaryColor,
+        "--secondary-color": secondaryColor,
+        "--accent-color": accentColor,
       }}
     >
       {/* Background */}
@@ -124,8 +128,8 @@ export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/he
         {/* Hero Image if uploaded */}
         {heroImageUrl ? (
           <>
-            <Image 
-              src={heroImageUrl} 
+            <Image
+              src={heroImageUrl}
               alt={`${brandName} hero`}
               fill
               className="object-cover"
@@ -137,26 +141,32 @@ export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/he
           <>
             {/* Gradient overlay */}
             <div className="absolute inset-0 hero-gradient z-10" />
-            
+
             {/* Abstract medical/cannabis background pattern */}
             <div className="absolute inset-0 z-0">
-              <div 
-                className="absolute top-20 left-10 w-32 h-32 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" 
+              <div
+                className="absolute top-20 left-10 w-32 h-32 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"
                 style={{ backgroundColor: primaryColor }}
               />
-              <div 
-                className="absolute top-40 right-20 w-40 h-40 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" 
-                style={{ backgroundColor: secondaryColor, animationDelay: '1s' }}
+              <div
+                className="absolute top-40 right-20 w-40 h-40 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"
+                style={{
+                  backgroundColor: secondaryColor,
+                  animationDelay: "1s",
+                }}
               />
-              <div 
-                className="absolute bottom-20 left-20 w-36 h-36 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" 
-                style={{ backgroundColor: primaryColor, animationDelay: '2s' }}
+              <div
+                className="absolute bottom-20 left-20 w-36 h-36 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"
+                style={{ backgroundColor: primaryColor, animationDelay: "2s" }}
               />
-              <div 
-                className="absolute bottom-40 right-10 w-28 h-28 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" 
-                style={{ backgroundColor: secondaryColor, animationDelay: '1.5s' }}
+              <div
+                className="absolute bottom-40 right-10 w-28 h-28 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"
+                style={{
+                  backgroundColor: secondaryColor,
+                  animationDelay: "1.5s",
+                }}
               />
-              
+
               {/* Medical icons pattern */}
               <div className="absolute inset-0 opacity-5">
                 <div className="grid grid-cols-12 gap-8 h-full p-8">
@@ -208,18 +218,15 @@ export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/he
               className="space-y-4"
             >
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
-                <span 
-                  className="relative"
-                  style={{ color: primaryColor }}
-                >
+                <span className="relative" style={{ color: primaryColor }}>
                   {heroTitle}
-                  <div 
-                    className="absolute -bottom-2 left-0 right-0 h-1 rounded-full opacity-60" 
+                  <div
+                    className="absolute -bottom-2 left-0 right-0 h-1 rounded-full opacity-60"
                     style={{ backgroundColor: primaryColor }}
                   />
                 </span>
               </h1>
-              <p 
+              <p
                 className="text-xl sm:text-2xl font-medium"
                 style={{ color: secondaryColor }}
               >
@@ -234,8 +241,9 @@ export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/he
               transition={{ duration: 0.6, delay: 0.5 }}
               className="text-lg text-white/90 leading-relaxed max-w-xl"
             >
-              Free Online Consultations for Personalized Treatment Plans. 
-              Connect with licensed doctors for INFARMED-approved medical cannabis prescriptions.
+              Free Online Consultations for Personalized Treatment Plans.
+              Connect with licensed doctors for INFARMED-approved medical
+              cannabis prescriptions.
             </motion.p>
 
             {/* Key benefits */}
@@ -246,14 +254,17 @@ export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/he
               className="space-y-3"
             >
               {[
-                { icon: CheckCircle, text: 'Free consultation with licensed doctors' },
-                { icon: Shield, text: 'INFARMED-regulated prescriptions' },
-                { icon: Clock, text: '24-48 hour response time' },
-                { icon: MapPin, text: 'Available throughout Portugal' }
+                {
+                  icon: CheckCircle,
+                  text: "Free consultation with licensed doctors",
+                },
+                { icon: Shield, text: "INFARMED-regulated prescriptions" },
+                { icon: Clock, text: "24-48 hour response time" },
+                { icon: MapPin, text: "Available throughout Portugal" },
               ].map((benefit, index) => (
                 <div key={index} className="flex items-center gap-3">
-                  <benefit.icon 
-                    className="w-5 h-5 flex-shrink-0" 
+                  <benefit.icon
+                    className="w-5 h-5 flex-shrink-0"
                     style={{ color: accentColor }}
                   />
                   <span className="text-white/90">{benefit.text}</span>
@@ -277,7 +288,7 @@ export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/he
               </Link>
               <Link href="/how-it-works" className="inline-block">
                 <button className="btn-tenant-outline shadow-lg hover:shadow-xl transition-all duration-300">
-                  {t('nav.howItWorks')}
+                  {t("nav.howItWorks")}
                 </button>
               </Link>
             </motion.div>
@@ -314,55 +325,55 @@ export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/he
           >
             {/* Stats grid */}
             <div className="grid grid-cols-2 gap-6">
-              <motion.div 
+              <motion.div
                 className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center"
                 whileHover={{ scale: 1.05 }}
-                transition={{ type: 'spring', stiffness: 300 }}
+                transition={{ type: "spring", stiffness: 300 }}
               >
                 <div className="text-3xl font-bold text-white mb-2 animate-count-up">
                   {stats.patients.toLocaleString()}+
                 </div>
                 <div className="text-white/70 text-sm">
-                  {t('hero.stats.patients')}
+                  {t("hero.stats.patients")}
                 </div>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center"
                 whileHover={{ scale: 1.05 }}
-                transition={{ type: 'spring', stiffness: 300 }}
+                transition={{ type: "spring", stiffness: 300 }}
               >
                 <div className="text-3xl font-bold text-white mb-2 animate-count-up">
                   {stats.consultations.toLocaleString()}+
                 </div>
                 <div className="text-white/70 text-sm">
-                  {t('hero.stats.consultations')}
+                  {t("hero.stats.consultations")}
                 </div>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center"
                 whileHover={{ scale: 1.05 }}
-                transition={{ type: 'spring', stiffness: 300 }}
+                transition={{ type: "spring", stiffness: 300 }}
               >
                 <div className="text-3xl font-bold text-white mb-2 animate-count-up">
                   {stats.satisfaction}%
                 </div>
                 <div className="text-white/70 text-sm">
-                  {t('hero.stats.satisfaction')}
+                  {t("hero.stats.satisfaction")}
                 </div>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center"
                 whileHover={{ scale: 1.05 }}
-                transition={{ type: 'spring', stiffness: 300 }}
+                transition={{ type: "spring", stiffness: 300 }}
               >
                 <div className="text-3xl font-bold text-white mb-2 animate-count-up">
                   {stats.years}+
                 </div>
                 <div className="text-white/70 text-sm">
-                  {t('hero.stats.yearsOfService')}
+                  {t("hero.stats.yearsOfService")}
                 </div>
               </motion.div>
             </div>
@@ -374,42 +385,56 @@ export function HeroSection({ tenant, heroImageUrl, consultationUrl = '/store/he
               transition={{ duration: 0.6, delay: 1 }}
               className="bg-white/5 backdrop-blur-md rounded-xl p-6 space-y-4"
             >
-              <h3 className="text-lg font-semibold text-white mb-4">Our Certifications</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Our Certifications
+              </h3>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
                     style={{ backgroundColor: secondaryColor }}
                   >
                     <Shield className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <div className="text-white font-medium">INFARMED Licensed</div>
-                    <div className="text-white/70 text-sm">Portuguese Health Authority</div>
+                    <div className="text-white font-medium">
+                      INFARMED Licensed
+                    </div>
+                    <div className="text-white/70 text-sm">
+                      Portuguese Health Authority
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
                     style={{ backgroundColor: accentColor }}
                   >
                     <Award className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <div className="text-white font-medium">EU-GMP Certified</div>
-                    <div className="text-white/70 text-sm">Pharmaceutical Standards</div>
+                    <div className="text-white font-medium">
+                      EU-GMP Certified
+                    </div>
+                    <div className="text-white/70 text-sm">
+                      Pharmaceutical Standards
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
                     style={{ backgroundColor: primaryColor }}
                   >
                     <Users className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <div className="text-white font-medium">Licensed Doctors</div>
-                    <div className="text-white/70 text-sm">Ordem dos Médicos Registered</div>
+                    <div className="text-white font-medium">
+                      Licensed Doctors
+                    </div>
+                    <div className="text-white/70 text-sm">
+                      Ordem dos Médicos Registered
+                    </div>
                   </div>
                 </div>
               </div>

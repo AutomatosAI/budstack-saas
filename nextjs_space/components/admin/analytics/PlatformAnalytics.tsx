@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   TrendingUp,
   DollarSign,
@@ -10,13 +10,15 @@ import {
   AlertCircle,
   Users,
   Percent,
-  UserPlus
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+  UserPlus,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Dynamic import of Plotly for code splitting
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const Plot = dynamic(() => import('react-plotly.js') as any, { ssr: false }) as any;
+const Plot = dynamic(() => import("react-plotly.js") as any, {
+  ssr: false,
+}) as any;
 
 interface PlatformAnalyticsProps {
   className?: string;
@@ -54,7 +56,7 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
       setLoading(true);
 
       // In production, replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      await new Promise((resolve) => setTimeout(resolve, 1200));
 
       // Mock data generation
       const mockData: ChartData = {
@@ -87,7 +89,7 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
   if (!data) return null;
 
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn("space-y-6", className)}>
       {/* Section Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -138,51 +140,59 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
           <Plot
             data={[
               {
-                x: data.tenantSignups.map(d => d.date),
-                y: data.tenantSignups.map(d => d.count),
-                type: 'scatter',
-                mode: 'lines+markers',
+                x: data.tenantSignups.map((d) => d.date),
+                y: data.tenantSignups.map((d) => d.count),
+                type: "scatter",
+                mode: "lines+markers",
                 line: {
-                  color: '#06b6d4',
+                  color: "#06b6d4",
                   width: 3,
-                  shape: 'spline',
+                  shape: "spline",
                 },
                 marker: {
-                  color: '#06b6d4',
+                  color: "#06b6d4",
                   size: 6,
                   line: {
-                    color: '#0e7490',
+                    color: "#0e7490",
                     width: 2,
                   },
                 },
-                fill: 'tozeroy',
-                fillcolor: 'rgba(6, 182, 212, 0.1)',
+                fill: "tozeroy",
+                fillcolor: "rgba(6, 182, 212, 0.1)",
               },
             ]}
             layout={{
               autosize: true,
-              paper_bgcolor: 'rgba(0,0,0,0)',
-              plot_bgcolor: 'rgba(0,0,0,0)',
+              paper_bgcolor: "rgba(0,0,0,0)",
+              plot_bgcolor: "rgba(0,0,0,0)",
               margin: { l: 40, r: 20, t: 20, b: 40 },
               xaxis: {
-                gridcolor: '#e2e8f0',
+                gridcolor: "#e2e8f0",
                 showgrid: true,
                 zeroline: false,
-                tickfont: { family: 'JetBrains Mono, monospace', size: 10, color: '#64748b' },
+                tickfont: {
+                  family: "JetBrains Mono, monospace",
+                  size: 10,
+                  color: "#64748b",
+                },
               },
               yaxis: {
-                gridcolor: '#e2e8f0',
+                gridcolor: "#e2e8f0",
                 showgrid: true,
                 zeroline: false,
-                tickfont: { family: 'JetBrains Mono, monospace', size: 10, color: '#64748b' },
+                tickfont: {
+                  family: "JetBrains Mono, monospace",
+                  size: 10,
+                  color: "#64748b",
+                },
               },
-              hovermode: 'closest',
+              hovermode: "closest",
             }}
             config={{
               displayModeBar: false,
               responsive: true,
             }}
-            style={{ width: '100%', height: '100%' }}
+            style={{ width: "100%", height: "100%" }}
             useResizeHandler
           />
         </ChartCard>
@@ -197,16 +207,20 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
           <Plot
             data={[
               {
-                x: data.platformRevenue.map(d => d.month),
-                y: data.platformRevenue.map(d => d.revenue),
-                type: 'bar',
+                x: data.platformRevenue.map((d) => d.month),
+                y: data.platformRevenue.map((d) => d.revenue),
+                type: "bar",
                 marker: {
                   color: data.platformRevenue.map((_, i) =>
-                    i === data.platformRevenue.length - 1 ? '#06b6d4' : '#cbd5e1'
+                    i === data.platformRevenue.length - 1
+                      ? "#06b6d4"
+                      : "#cbd5e1",
                   ),
                   line: {
                     color: data.platformRevenue.map((_, i) =>
-                      i === data.platformRevenue.length - 1 ? '#0e7490' : '#94a3b8'
+                      i === data.platformRevenue.length - 1
+                        ? "#0e7490"
+                        : "#94a3b8",
                     ),
                     width: 2,
                   },
@@ -215,30 +229,38 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
             ]}
             layout={{
               autosize: true,
-              paper_bgcolor: 'rgba(0,0,0,0)',
-              plot_bgcolor: 'rgba(0,0,0,0)',
+              paper_bgcolor: "rgba(0,0,0,0)",
+              plot_bgcolor: "rgba(0,0,0,0)",
               margin: { l: 50, r: 20, t: 20, b: 60 },
               xaxis: {
-                gridcolor: '#e2e8f0',
+                gridcolor: "#e2e8f0",
                 showgrid: false,
                 zeroline: false,
-                tickfont: { family: 'JetBrains Mono, monospace', size: 10, color: '#64748b' },
+                tickfont: {
+                  family: "JetBrains Mono, monospace",
+                  size: 10,
+                  color: "#64748b",
+                },
                 tickangle: -45,
               },
               yaxis: {
-                gridcolor: '#e2e8f0',
+                gridcolor: "#e2e8f0",
                 showgrid: true,
                 zeroline: false,
-                tickfont: { family: 'JetBrains Mono, monospace', size: 10, color: '#64748b' },
-                tickprefix: '$',
+                tickfont: {
+                  family: "JetBrains Mono, monospace",
+                  size: 10,
+                  color: "#64748b",
+                },
+                tickprefix: "$",
               },
-              hovermode: 'closest',
+              hovermode: "closest",
             }}
             config={{
               displayModeBar: false,
               responsive: true,
             }}
-            style={{ width: '100%', height: '100%' }}
+            style={{ width: "100%", height: "100%" }}
             useResizeHandler
           />
         </ChartCard>
@@ -256,33 +278,40 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
           <Plot
             data={[
               {
-                values: [data.tenantDistribution.active, data.tenantDistribution.inactive],
-                labels: ['Active', 'Inactive'],
-                type: 'pie',
+                values: [
+                  data.tenantDistribution.active,
+                  data.tenantDistribution.inactive,
+                ],
+                labels: ["Active", "Inactive"],
+                type: "pie",
                 marker: {
-                  colors: ['#06b6d4', '#cbd5e1'],
+                  colors: ["#06b6d4", "#cbd5e1"],
                   line: {
-                    color: '#fff',
+                    color: "#fff",
                     width: 3,
                   },
                 },
                 textfont: {
-                  family: 'JetBrains Mono, monospace',
+                  family: "JetBrains Mono, monospace",
                   size: 14,
-                  color: '#fff',
+                  color: "#fff",
                 },
                 hole: 0.4,
               },
             ]}
             layout={{
               autosize: true,
-              paper_bgcolor: 'rgba(0,0,0,0)',
-              plot_bgcolor: 'rgba(0,0,0,0)',
+              paper_bgcolor: "rgba(0,0,0,0)",
+              plot_bgcolor: "rgba(0,0,0,0)",
               margin: { l: 20, r: 20, t: 20, b: 20 },
               showlegend: true,
               legend: {
-                font: { family: 'JetBrains Mono, monospace', size: 12, color: '#64748b' },
-                orientation: 'h',
+                font: {
+                  family: "JetBrains Mono, monospace",
+                  size: 12,
+                  color: "#64748b",
+                },
+                orientation: "h",
                 y: -0.2,
               },
             }}
@@ -290,7 +319,7 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
               displayModeBar: false,
               responsive: true,
             }}
-            style={{ width: '100%', height: '100%' }}
+            style={{ width: "100%", height: "100%" }}
             useResizeHandler
           />
         </ChartCard>
@@ -298,7 +327,7 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
         {/* Needs Attention Card */}
         <Card
           className="border-2 border-slate-200 shadow-lg bg-white overflow-hidden animate-in fade-in slide-in-from-bottom-4"
-          style={{ animationDelay: '600ms', animationFillMode: 'backwards' }}
+          style={{ animationDelay: "600ms", animationFillMode: "backwards" }}
         >
           <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
             <div className="flex items-center gap-2">
@@ -306,8 +335,12 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
                 <AlertCircle className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold text-slate-900">Needs Attention</CardTitle>
-                <p className="text-xs text-slate-600 mt-0.5">Action items requiring review</p>
+                <CardTitle className="text-lg font-bold text-slate-900">
+                  Needs Attention
+                </CardTitle>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Action items requiring review
+                </p>
               </div>
             </div>
           </CardHeader>
@@ -349,31 +382,38 @@ interface MetricCardProps {
   value: string;
   subValue: string;
   delay: string;
-  accentColor: 'cyan' | 'amber' | 'emerald';
+  accentColor: "cyan" | "amber" | "emerald";
 }
 
-function MetricCard({ icon: Icon, label, value, subValue, delay, accentColor }: MetricCardProps) {
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  subValue,
+  delay,
+  accentColor,
+}: MetricCardProps) {
   const colorMap = {
     cyan: {
-      border: 'border-cyan-200',
-      iconBg: 'bg-cyan-500/10',
-      iconBorder: 'border-cyan-500/20',
-      iconColor: 'text-cyan-600',
-      valueColor: 'text-cyan-600',
+      border: "border-cyan-200",
+      iconBg: "bg-cyan-500/10",
+      iconBorder: "border-cyan-500/20",
+      iconColor: "text-cyan-600",
+      valueColor: "text-cyan-600",
     },
     amber: {
-      border: 'border-amber-200',
-      iconBg: 'bg-amber-500/10',
-      iconBorder: 'border-amber-500/20',
-      iconColor: 'text-amber-600',
-      valueColor: 'text-amber-600',
+      border: "border-amber-200",
+      iconBg: "bg-amber-500/10",
+      iconBorder: "border-amber-500/20",
+      iconColor: "text-amber-600",
+      valueColor: "text-amber-600",
     },
     emerald: {
-      border: 'border-emerald-200',
-      iconBg: 'bg-emerald-500/10',
-      iconBorder: 'border-emerald-500/20',
-      iconColor: 'text-emerald-600',
-      valueColor: 'text-emerald-600',
+      border: "border-emerald-200",
+      iconBg: "bg-emerald-500/10",
+      iconBorder: "border-emerald-500/20",
+      iconColor: "text-emerald-600",
+      valueColor: "text-emerald-600",
     },
   };
 
@@ -382,25 +422,37 @@ function MetricCard({ icon: Icon, label, value, subValue, delay, accentColor }: 
   return (
     <Card
       className={cn(
-        'border-2 shadow-lg bg-white overflow-hidden hover:shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4',
-        colors.border
+        "border-2 shadow-lg bg-white overflow-hidden hover:shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
+        colors.border,
       )}
-      style={{ animationDelay: delay, animationFillMode: 'backwards' }}
+      style={{ animationDelay: delay, animationFillMode: "backwards" }}
     >
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div className="space-y-3">
-            <div className={cn('p-2.5 rounded-lg border inline-block', colors.iconBg, colors.iconBorder)}>
-              <Icon className={cn('h-5 w-5', colors.iconColor)} />
+            <div
+              className={cn(
+                "p-2.5 rounded-lg border inline-block",
+                colors.iconBg,
+                colors.iconBorder,
+              )}
+            >
+              <Icon className={cn("h-5 w-5", colors.iconColor)} />
             </div>
             <div>
               <p className="text-xs font-medium text-slate-600 uppercase tracking-wider">
                 {label}
               </p>
-              <p className={cn('text-4xl font-bold mt-2', colors.valueColor)} style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+              <p
+                className={cn("text-4xl font-bold mt-2", colors.valueColor)}
+                style={{ fontFamily: "JetBrains Mono, monospace" }}
+              >
                 {value}
               </p>
-              <p className="text-xs text-slate-500 mt-1" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+              <p
+                className="text-xs text-slate-500 mt-1"
+                style={{ fontFamily: "JetBrains Mono, monospace" }}
+              >
                 {subValue}
               </p>
             </div>
@@ -419,11 +471,17 @@ interface ChartCardProps {
   children: React.ReactNode;
 }
 
-function ChartCard({ title, subtitle, icon: Icon, delay, children }: ChartCardProps) {
+function ChartCard({
+  title,
+  subtitle,
+  icon: Icon,
+  delay,
+  children,
+}: ChartCardProps) {
   return (
     <Card
       className="border-2 border-slate-200 shadow-lg bg-white overflow-hidden animate-in fade-in slide-in-from-bottom-4"
-      style={{ animationDelay: delay, animationFillMode: 'backwards' }}
+      style={{ animationDelay: delay, animationFillMode: "backwards" }}
     >
       <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
         <div className="flex items-center gap-2">
@@ -431,15 +489,15 @@ function ChartCard({ title, subtitle, icon: Icon, delay, children }: ChartCardPr
             <Icon className="h-5 w-5 text-cyan-600" />
           </div>
           <div>
-            <CardTitle className="text-lg font-bold text-slate-900">{title}</CardTitle>
+            <CardTitle className="text-lg font-bold text-slate-900">
+              {title}
+            </CardTitle>
             <p className="text-xs text-slate-600 mt-0.5">{subtitle}</p>
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="h-[280px] relative">
-          {children}
-        </div>
+        <div className="h-[280px] relative">{children}</div>
       </CardContent>
     </Card>
   );
@@ -449,28 +507,33 @@ interface AttentionItemProps {
   icon: React.ElementType;
   label: string;
   count: number;
-  color: 'cyan' | 'red' | 'amber';
+  color: "cyan" | "red" | "amber";
 }
 
-function AttentionItem({ icon: Icon, label, count, color }: AttentionItemProps) {
+function AttentionItem({
+  icon: Icon,
+  label,
+  count,
+  color,
+}: AttentionItemProps) {
   const colorMap = {
     cyan: {
-      bg: 'bg-cyan-500/10',
-      border: 'border-cyan-500/20',
-      icon: 'text-cyan-600',
-      badge: 'bg-cyan-500 text-white',
+      bg: "bg-cyan-500/10",
+      border: "border-cyan-500/20",
+      icon: "text-cyan-600",
+      badge: "bg-cyan-500 text-white",
     },
     red: {
-      bg: 'bg-red-500/10',
-      border: 'border-red-500/20',
-      icon: 'text-red-600',
-      badge: 'bg-red-500 text-white',
+      bg: "bg-red-500/10",
+      border: "border-red-500/20",
+      icon: "text-red-600",
+      badge: "bg-red-500 text-white",
     },
     amber: {
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-500/20',
-      icon: 'text-amber-600',
-      badge: 'bg-amber-500 text-white',
+      bg: "bg-amber-500/10",
+      border: "border-amber-500/20",
+      icon: "text-amber-600",
+      badge: "bg-amber-500 text-white",
     },
   };
 
@@ -479,12 +542,15 @@ function AttentionItem({ icon: Icon, label, count, color }: AttentionItemProps) 
   return (
     <div className="flex items-center justify-between p-4 rounded-lg border-2 border-slate-200 hover:border-slate-300 transition-colors">
       <div className="flex items-center gap-3">
-        <div className={cn('p-2 rounded-lg border', colors.bg, colors.border)}>
-          <Icon className={cn('h-4 w-4', colors.icon)} />
+        <div className={cn("p-2 rounded-lg border", colors.bg, colors.border)}>
+          <Icon className={cn("h-4 w-4", colors.icon)} />
         </div>
         <span className="text-sm font-medium text-slate-700">{label}</span>
       </div>
-      <div className={cn('px-3 py-1 rounded-full text-sm font-bold', colors.badge)} style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+      <div
+        className={cn("px-3 py-1 rounded-full text-sm font-bold", colors.badge)}
+        style={{ fontFamily: "JetBrains Mono, monospace" }}
+      >
         {count}
       </div>
     </div>
@@ -493,7 +559,7 @@ function AttentionItem({ icon: Icon, label, count, color }: AttentionItemProps) 
 
 function AnalyticsLoadingSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn("space-y-6", className)}>
       {/* Header Skeleton */}
       <div className="space-y-2">
         <div className="h-8 w-64 bg-slate-200 rounded animate-pulse" />
@@ -575,7 +641,7 @@ function generateMockSignupData() {
     const count = Math.floor(Math.random() * 5) + 1;
 
     data.push({
-      date: date.toISOString().split('T')[0],
+      date: date.toISOString().split("T")[0],
       count,
     });
   }
@@ -584,7 +650,20 @@ function generateMockSignupData() {
 }
 
 function generateMockRevenueData() {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const data = [];
 
   for (let i = 11; i >= 0; i--) {
