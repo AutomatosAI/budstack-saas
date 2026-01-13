@@ -1,11 +1,17 @@
-'use client';
+"use client";
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ConsultationFormData } from '../consultation-form';
-import { BUSINESS_TYPES, COUNTRY_CODES } from '@/lib/consultation-constants';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ConsultationFormData } from "../consultation-form";
+import { BUSINESS_TYPES, COUNTRY_CODES } from "@/lib/consultation-constants";
 
 interface BusinessInfoStepProps {
   data: ConsultationFormData;
@@ -14,7 +20,12 @@ interface BusinessInfoStepProps {
   onBack: () => void;
 }
 
-export function BusinessInfoStep({ data, onUpdate, onNext, onBack }: BusinessInfoStepProps) {
+export function BusinessInfoStep({
+  data,
+  onUpdate,
+  onNext,
+  onBack,
+}: BusinessInfoStepProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onNext();
@@ -23,15 +34,21 @@ export function BusinessInfoStep({ data, onUpdate, onNext, onBack }: BusinessInf
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Type of Business</h2>
-        <p className="text-gray-600">Optional - Only complete if ordering for a business</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Type of Business
+        </h2>
+        <p className="text-gray-600">
+          Optional - Only complete if ordering for a business
+        </p>
       </div>
 
       <div>
         <Label htmlFor="businessType">Business Type</Label>
         <Select
-          value={data.businessType || 'none'}
-          onValueChange={(value) => onUpdate({ businessType: value === 'none' ? '' : value })}
+          value={data.businessType || "none"}
+          onValueChange={(value) =>
+            onUpdate({ businessType: value === "none" ? "" : value })
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Select business type" />
@@ -102,19 +119,21 @@ export function BusinessInfoStep({ data, onUpdate, onNext, onBack }: BusinessInf
               <Input
                 id="businessPostalCode"
                 value={data.businessPostalCode}
-                onChange={(e) => onUpdate({ businessPostalCode: e.target.value })}
+                onChange={(e) =>
+                  onUpdate({ businessPostalCode: e.target.value })
+                }
               />
             </div>
 
             <div>
               <Label htmlFor="businessCountry">Business Country</Label>
               <Select
-                value={data.businessCountryCode || 'none'}
+                value={data.businessCountryCode || "none"}
                 onValueChange={(value) => {
-                  const country = COUNTRY_CODES.find(c => c.code === value);
-                  onUpdate({ 
-                    businessCountryCode: value === 'none' ? '' : value,
-                    businessCountry: country?.label || ''
+                  const country = COUNTRY_CODES.find((c) => c.code === value);
+                  onUpdate({
+                    businessCountryCode: value === "none" ? "" : value,
+                    businessCountry: country?.label || "",
                   });
                 }}
               >
@@ -139,7 +158,11 @@ export function BusinessInfoStep({ data, onUpdate, onNext, onBack }: BusinessInf
         <Button type="button" variant="outline" size="lg" onClick={onBack}>
           Back
         </Button>
-        <Button type="submit" size="lg" className="bg-emerald-600 hover:bg-emerald-700">
+        <Button
+          type="submit"
+          size="lg"
+          className="bg-emerald-600 hover:bg-emerald-700"
+        >
           Next Step
         </Button>
       </div>

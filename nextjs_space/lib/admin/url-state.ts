@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useCallback, useMemo } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useCallback, useMemo } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 /**
  * Sort direction type
  */
-export type SortOrder = 'asc' | 'desc' | null;
+export type SortOrder = "asc" | "desc" | null;
 
 /**
  * Sort state containing column and direction
@@ -20,7 +20,9 @@ export interface SortState {
  * Table state returned by useTableState hook
  * @template TFilters - Type for custom filter values (defaults to Record<string, string>)
  */
-export interface TableState<TFilters extends Record<string, string> = Record<string, string>> {
+export interface TableState<
+  TFilters extends Record<string, string> = Record<string, string>,
+> {
   /** Current search query */
   search: string;
   /** Current filter values */
@@ -37,11 +39,16 @@ export interface TableState<TFilters extends Record<string, string> = Record<str
  * Table state setters returned by useTableState hook
  * @template TFilters - Type for custom filter values
  */
-export interface TableStateSetters<TFilters extends Record<string, string> = Record<string, string>> {
+export interface TableStateSetters<
+  TFilters extends Record<string, string> = Record<string, string>,
+> {
   /** Set the search query (updates URL param: ?search=value) */
   setSearch: (value: string) => void;
   /** Set a filter value (updates URL param: ?[key]=value) */
-  setFilter: <K extends keyof TFilters>(key: K, value: TFilters[K] | null) => void;
+  setFilter: <K extends keyof TFilters>(
+    key: K,
+    value: TFilters[K] | null,
+  ) => void;
   /** Set the current page (updates URL param: ?page=n) */
   setPage: (page: number) => void;
   /** Set the page size (updates URL param: ?pageSize=n, resets page to 1) */
@@ -68,11 +75,11 @@ export interface UseTableStateOptions<TFilters extends Record<string, string>> {
  * URL parameter names used by the hook
  */
 const URL_PARAMS = {
-  SEARCH: 'search',
-  PAGE: 'page',
-  PAGE_SIZE: 'pageSize',
-  SORT_BY: 'sortBy',
-  SORT_ORDER: 'sortOrder',
+  SEARCH: "search",
+  PAGE: "page",
+  PAGE_SIZE: "pageSize",
+  SORT_BY: "sortBy",
+  SORT_ORDER: "sortOrder",
 } as const;
 
 /**
@@ -126,8 +133,10 @@ const DEFAULT_PAGE_SIZES = [10, 20, 50, 100];
  * setters.setSort('businessName');
  * ```
  */
-export function useTableState<TFilters extends Record<string, string> = Record<string, string>>(
-  options: UseTableStateOptions<TFilters> = {}
+export function useTableState<
+  TFilters extends Record<string, string> = Record<string, string>,
+>(
+  options: UseTableStateOptions<TFilters> = {},
 ): [TableState<TFilters>, TableStateSetters<TFilters>] {
   const {
     defaultPageSize = 20,
@@ -147,7 +156,7 @@ export function useTableState<TFilters extends Record<string, string> = Record<s
       const params = new URLSearchParams(searchParams.toString());
 
       Object.entries(updates).forEach(([key, value]) => {
-        if (value === null || value === '' || value === undefined) {
+        if (value === null || value === "" || value === undefined) {
           params.delete(key);
         } else {
           params.set(key, value);
@@ -156,7 +165,7 @@ export function useTableState<TFilters extends Record<string, string> = Record<s
 
       return params;
     },
-    [searchParams]
+    [searchParams],
   );
 
   /**
@@ -168,12 +177,12 @@ export function useTableState<TFilters extends Record<string, string> = Record<s
       const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
       router.push(newUrl, { scroll: false });
     },
-    [pathname, router]
+    [pathname, router],
   );
 
   // Parse current state from URL
   const state = useMemo<TableState<TFilters>>(() => {
-    const search = searchParams.get(URL_PARAMS.SEARCH) || '';
+    const search = searchParams.get(URL_PARAMS.SEARCH) || "";
 
     // Parse page with validation
     const pageParam = searchParams.get(URL_PARAMS.PAGE);
@@ -182,18 +191,24 @@ export function useTableState<TFilters extends Record<string, string> = Record<s
 
     // Parse pageSize with validation
     const pageSizeParam = searchParams.get(URL_PARAMS.PAGE_SIZE);
-    const parsedPageSize = pageSizeParam ? parseInt(pageSizeParam, 10) : defaultPageSize;
-    const pageSize = pageSizes.includes(parsedPageSize) ? parsedPageSize : defaultPageSize;
+    const parsedPageSize = pageSizeParam
+      ? parseInt(pageSizeParam, 10)
+      : defaultPageSize;
+    const pageSize = pageSizes.includes(parsedPageSize)
+      ? parsedPageSize
+      : defaultPageSize;
 
     // Parse sort state
     const sortBy = searchParams.get(URL_PARAMS.SORT_BY);
     const sortOrderParam = searchParams.get(URL_PARAMS.SORT_ORDER);
     const sortOrder: SortOrder =
-      sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : null;
+      sortOrderParam === "asc" || sortOrderParam === "desc"
+        ? sortOrderParam
+        : null;
 
     const sort: SortState = {
       column: sortBy,
-      order: sortBy ? sortOrder || 'asc' : null,
+      order: sortBy ? sortOrder || "asc" : null,
     };
 
     // Parse filters - collect all params that match defaultFilters keys
@@ -217,7 +232,7 @@ export function useTableState<TFilters extends Record<string, string> = Record<s
       });
       updateUrl(params);
     },
-    [createUpdatedParams, updateUrl]
+    [createUpdatedParams, updateUrl],
   );
 
   const setFilter = useCallback(
@@ -228,7 +243,7 @@ export function useTableState<TFilters extends Record<string, string> = Record<s
       });
       updateUrl(params);
     },
-    [createUpdatedParams, updateUrl]
+    [createUpdatedParams, updateUrl],
   );
 
   const setPage = useCallback(
@@ -238,19 +253,20 @@ export function useTableState<TFilters extends Record<string, string> = Record<s
       });
       updateUrl(params);
     },
-    [createUpdatedParams, updateUrl]
+    [createUpdatedParams, updateUrl],
   );
 
   const setPageSize = useCallback(
     (size: number) => {
       const validSize = pageSizes.includes(size) ? size : defaultPageSize;
       const params = createUpdatedParams({
-        [URL_PARAMS.PAGE_SIZE]: validSize !== defaultPageSize ? String(validSize) : null,
+        [URL_PARAMS.PAGE_SIZE]:
+          validSize !== defaultPageSize ? String(validSize) : null,
         [URL_PARAMS.PAGE]: null, // Reset page when page size changes
       });
       updateUrl(params);
     },
-    [createUpdatedParams, updateUrl, pageSizes, defaultPageSize]
+    [createUpdatedParams, updateUrl, pageSizes, defaultPageSize],
   );
 
   const setSort = useCallback(
@@ -260,17 +276,17 @@ export function useTableState<TFilters extends Record<string, string> = Record<s
 
       if (state.sort.column === column) {
         // Cycle through: asc -> desc -> null
-        if (state.sort.order === 'asc') {
-          newOrder = 'desc';
-        } else if (state.sort.order === 'desc') {
+        if (state.sort.order === "asc") {
+          newOrder = "desc";
+        } else if (state.sort.order === "desc") {
           newOrder = null;
           newColumn = null;
         } else {
-          newOrder = 'asc';
+          newOrder = "asc";
         }
       } else {
         // New column, start with asc
-        newOrder = 'asc';
+        newOrder = "asc";
       }
 
       const params = createUpdatedParams({
@@ -279,7 +295,7 @@ export function useTableState<TFilters extends Record<string, string> = Record<s
       });
       updateUrl(params);
     },
-    [createUpdatedParams, updateUrl, state.sort]
+    [createUpdatedParams, updateUrl, state.sort],
   );
 
   const resetFilters = useCallback(() => {
@@ -299,7 +315,7 @@ export function useTableState<TFilters extends Record<string, string> = Record<s
       setSort,
       resetFilters,
     }),
-    [setSearch, setFilter, setPage, setPageSize, setSort, resetFilters]
+    [setSearch, setFilter, setPage, setPageSize, setSort, resetFilters],
   );
 
   return [state, setters];
@@ -321,7 +337,7 @@ export function useTableState<TFilters extends Record<string, string> = Record<s
  */
 export function buildQueryString<TFilters extends Record<string, string>>(
   state: TableState<TFilters>,
-  filterKeys: (keyof TFilters)[] = []
+  filterKeys: (keyof TFilters)[] = [],
 ): string {
   const params = new URLSearchParams();
 
@@ -344,7 +360,7 @@ export function buildQueryString<TFilters extends Record<string, string>>(
 
   filterKeys.forEach((key) => {
     const value = state.filters[key];
-    if (value && value !== 'all') {
+    if (value && value !== "all") {
       params.set(key as string, value);
     }
   });
@@ -374,26 +390,32 @@ export function buildQueryString<TFilters extends Record<string, string>>(
 export function parseTableState<TFilters extends Record<string, string>>(
   searchParams: URLSearchParams,
   defaultFilters: TFilters = {} as TFilters,
-  defaultPageSize: number = 20
+  defaultPageSize: number = 20,
 ): TableState<TFilters> {
-  const search = searchParams.get(URL_PARAMS.SEARCH) || '';
+  const search = searchParams.get(URL_PARAMS.SEARCH) || "";
 
   const pageParam = searchParams.get(URL_PARAMS.PAGE);
   const parsedPage = pageParam ? parseInt(pageParam, 10) : 1;
   const page = Number.isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
 
   const pageSizeParam = searchParams.get(URL_PARAMS.PAGE_SIZE);
-  const parsedPageSize = pageSizeParam ? parseInt(pageSizeParam, 10) : defaultPageSize;
-  const pageSize = DEFAULT_PAGE_SIZES.includes(parsedPageSize) ? parsedPageSize : defaultPageSize;
+  const parsedPageSize = pageSizeParam
+    ? parseInt(pageSizeParam, 10)
+    : defaultPageSize;
+  const pageSize = DEFAULT_PAGE_SIZES.includes(parsedPageSize)
+    ? parsedPageSize
+    : defaultPageSize;
 
   const sortBy = searchParams.get(URL_PARAMS.SORT_BY);
   const sortOrderParam = searchParams.get(URL_PARAMS.SORT_ORDER);
   const sortOrder: SortOrder =
-    sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : null;
+    sortOrderParam === "asc" || sortOrderParam === "desc"
+      ? sortOrderParam
+      : null;
 
   const sort: SortState = {
     column: sortBy,
-    order: sortBy ? sortOrder || 'asc' : null,
+    order: sortBy ? sortOrder || "asc" : null,
   };
 
   const filters = { ...defaultFilters } as TFilters;

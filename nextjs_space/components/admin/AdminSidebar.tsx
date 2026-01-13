@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
   LogOut,
   type LucideIcon,
-} from 'lucide-react';
-import { signOut } from 'next-auth/react';
-import { cn } from '@/lib/utils';
-import { KeyboardHint } from './KeyboardShortcutsProvider';
+} from "lucide-react";
+import { signOut } from "next-auth/react";
+import { cn } from "@/lib/utils";
+import { KeyboardHint } from "./KeyboardShortcutsProvider";
 
 /**
  * Menu item configuration for the sidebar navigation
@@ -32,7 +32,7 @@ export interface AdminMenuItem {
 /**
  * Theme configuration for visual differentiation between admin types
  */
-export type AdminTheme = 'super-admin' | 'tenant-admin';
+export type AdminTheme = "super-admin" | "tenant-admin";
 
 /**
  * Props for the AdminSidebar component
@@ -56,43 +56,43 @@ export interface AdminSidebarProps {
  * Tenant Admin: Vibrant cyan/blue palette for energetic store management
  */
 const themeStyles = {
-  'super-admin': {
+  "super-admin": {
     // Dark, authoritative gradient - slate to zinc for depth
-    gradient: 'from-slate-800 via-slate-900 to-zinc-900',
+    gradient: "from-slate-800 via-slate-900 to-zinc-900",
     // Subtle slate active states with left border accent
-    activeItem: 'bg-slate-700/50 border-l-4 border-slate-400',
-    activeIcon: 'text-slate-100',
-    hoverBg: 'hover:bg-slate-700/30',
+    activeItem: "bg-slate-700/50 border-l-4 border-slate-400",
+    activeIcon: "text-slate-100",
+    hoverBg: "hover:bg-slate-700/30",
     // Muted, professional avatar gradient
-    avatarGradient: 'from-slate-400 to-slate-600',
+    avatarGradient: "from-slate-400 to-slate-600",
     // Bold badge styling for SUPER ADMIN distinction - increased contrast
-    badgeBg: 'bg-slate-700/80 border border-slate-500/50',
-    badgeText: 'text-white font-bold tracking-wide uppercase text-xs',
+    badgeBg: "bg-slate-700/80 border border-slate-500/50",
+    badgeText: "text-white font-bold tracking-wide uppercase text-xs",
     // Slate-toned logo
-    logoAccent: 'text-slate-800',
-    logoBg: 'bg-slate-400',
+    logoAccent: "text-slate-800",
+    logoBg: "bg-slate-400",
     // Border and divider colors
-    borderColor: 'border-slate-700/50',
+    borderColor: "border-slate-700/50",
     // Button styling
-    buttonBg: 'bg-slate-700/50 hover:bg-slate-600/50',
+    buttonBg: "bg-slate-700/50 hover:bg-slate-600/50",
   },
-  'tenant-admin': {
+  "tenant-admin": {
     // Vibrant, energetic gradient - cyan/blue palette for store management
-    gradient: 'from-cyan-600 via-blue-600 to-indigo-700',
+    gradient: "from-cyan-600 via-blue-600 to-indigo-700",
     // Cyan accent for active states
-    activeItem: 'bg-cyan-500/30 border-l-4 border-cyan-300',
-    activeIcon: 'text-white',
-    hoverBg: 'hover:bg-white/10',
+    activeItem: "bg-cyan-500/30 border-l-4 border-cyan-300",
+    activeIcon: "text-white",
+    hoverBg: "hover:bg-white/10",
     // Cyan-to-blue avatar gradient
-    avatarGradient: 'from-cyan-400 to-blue-500',
+    avatarGradient: "from-cyan-400 to-blue-500",
     // Tenant business name badge styling - improved contrast
-    badgeBg: 'bg-white/25 backdrop-blur-sm',
-    badgeText: 'text-white font-medium drop-shadow-sm',
+    badgeBg: "bg-white/25 backdrop-blur-sm",
+    badgeText: "text-white font-medium drop-shadow-sm",
     // Cyan-toned logo
-    logoAccent: 'text-cyan-700',
-    logoBg: 'bg-cyan-100',
-    borderColor: 'border-white/10',
-    buttonBg: 'bg-white/10 hover:bg-white/20',
+    logoAccent: "text-cyan-700",
+    logoBg: "bg-cyan-100",
+    borderColor: "border-white/10",
+    buttonBg: "bg-white/10 hover:bg-white/20",
   },
 } as const;
 
@@ -131,14 +131,14 @@ export function AdminSidebar({
   }, [pathname]);
 
   const handleLogout = async () => {
-    if (confirm('Are you sure you want to logout?')) {
-      await signOut({ callbackUrl: '/auth/login' });
+    if (confirm("Are you sure you want to logout?")) {
+      await signOut({ callbackUrl: "/auth/login" });
     }
   };
 
   const isActive = (href: string) => {
     // Get the base path for exact matching on root admin routes
-    const basePath = theme === 'super-admin' ? '/super-admin' : '/tenant-admin';
+    const basePath = theme === "super-admin" ? "/super-admin" : "/tenant-admin";
     if (href === basePath) {
       return pathname === href;
     }
@@ -167,23 +167,30 @@ export function AdminSidebar({
       <div
         className={cn(
           // Base styles
-          'text-white flex flex-col transition-all duration-300 ease-in-out relative h-full',
+          "text-white flex flex-col transition-all duration-300 ease-in-out relative h-full",
           // Gradient background
           `bg-gradient-to-b ${styles.gradient}`,
           // Width handling
-          collapsed ? 'w-20' : 'w-64',
+          collapsed ? "w-20" : "w-64",
           // Mobile: fixed overlay, Desktop: static
-          'fixed md:static inset-y-0 left-0 z-50',
+          "fixed md:static inset-y-0 left-0 z-50",
           // Mobile visibility
-          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         )}
       >
         {/* Header */}
         <div className="p-6 flex items-center justify-between">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', styles.logoBg)}>
-                <span className={cn('font-bold text-lg', styles.logoAccent)}>B</span>
+              <div
+                className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center",
+                  styles.logoBg,
+                )}
+              >
+                <span className={cn("font-bold text-lg", styles.logoAccent)}>
+                  B
+                </span>
               </div>
               <h1 className="text-xl font-bold">BudStack</h1>
             </div>
@@ -191,8 +198,8 @@ export function AdminSidebar({
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors hidden md:block"
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-expanded={!collapsed}
           >
             {collapsed ? (
@@ -214,20 +221,25 @@ export function AdminSidebar({
         {/* Role/Tenant Badge */}
         {!collapsed && headerBadge && (
           <div className="px-6 pb-4">
-            <div className={cn(
-              'rounded-lg px-3 py-1.5 backdrop-blur-sm',
-              styles.badgeBg,
-              styles.badgeText,
-              // Enhanced contrast with text shadow for WCAG AA compliance
-              'drop-shadow-sm'
-            )}>
+            <div
+              className={cn(
+                "rounded-lg px-3 py-1.5 backdrop-blur-sm",
+                styles.badgeBg,
+                styles.badgeText,
+                // Enhanced contrast with text shadow for WCAG AA compliance
+                "drop-shadow-sm",
+              )}
+            >
               {headerBadge}
             </div>
           </div>
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto" aria-label="Main navigation">
+        <nav
+          className="flex-1 px-3 space-y-1 overflow-y-auto"
+          aria-label="Main navigation"
+        >
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -238,25 +250,32 @@ export function AdminSidebar({
                 href={item.href}
                 onClick={handleNavClick}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-3 rounded-lg transition-all group relative',
+                  "flex items-center gap-3 px-3 py-3 rounded-lg transition-all group relative",
                   active
                     ? styles.activeItem
-                    : cn('text-white/80', styles.hoverBg, 'hover:text-white')
+                    : cn("text-white/80", styles.hoverBg, "hover:text-white"),
                 )}
                 title={collapsed ? item.label : undefined}
                 aria-label={`Navigate to ${item.label}`}
-                aria-current={active ? 'page' : undefined}
+                aria-current={active ? "page" : undefined}
               >
                 <Icon
                   className={cn(
-                    'h-5 w-5 transition-colors',
-                    active ? styles.activeIcon : 'text-white/70 group-hover:text-white'
+                    "h-5 w-5 transition-colors",
+                    active
+                      ? styles.activeIcon
+                      : "text-white/70 group-hover:text-white",
                   )}
                   aria-hidden="true"
                 />
                 {!collapsed && (
                   <>
-                    <span className={cn('font-medium flex-1', active ? 'text-white' : 'text-white/90')}>
+                    <span
+                      className={cn(
+                        "font-medium flex-1",
+                        active ? "text-white" : "text-white/90",
+                      )}
+                    >
                       {item.label}
                     </span>
                     {item.shortcut && (
@@ -270,7 +289,7 @@ export function AdminSidebar({
                     {item.label}
                     {item.shortcut && (
                       <span className="ml-2 text-xs text-gray-400">
-                        {item.shortcut.join(' ')}
+                        {item.shortcut.join(" ")}
                       </span>
                     )}
                   </div>
@@ -281,28 +300,30 @@ export function AdminSidebar({
         </nav>
 
         {/* User Profile */}
-        <div className={cn('p-4 border-t', styles.borderColor)}>
+        <div className={cn("p-4 border-t", styles.borderColor)}>
           {!collapsed ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg bg-gradient-to-br',
-                    styles.avatarGradient
+                    "w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-lg bg-gradient-to-br",
+                    styles.avatarGradient,
                   )}
                 >
                   {userName.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{userName}</p>
+                  <p className="text-sm font-medium text-white truncate">
+                    {userName}
+                  </p>
                   <p className="text-xs text-white/70 truncate">{userEmail}</p>
                 </div>
               </div>
               <button
                 onClick={handleLogout}
                 className={cn(
-                  'w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium',
-                  styles.buttonBg
+                  "w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium",
+                  styles.buttonBg,
                 )}
                 aria-label={`Logout ${userName}`}
               >
@@ -327,7 +348,11 @@ export function AdminSidebar({
       </div>
 
       {/* Mobile hamburger button - rendered outside sidebar for layout contexts */}
-      <MobileMenuButton onOpen={() => setMobileOpen(true)} isOpen={mobileOpen} theme={theme} />
+      <MobileMenuButton
+        onOpen={() => setMobileOpen(true)}
+        isOpen={mobileOpen}
+        theme={theme}
+      />
     </>
   );
 }
@@ -348,8 +373,8 @@ interface MobileMenuButtonProps {
  * Mobile menu button gradient styles by theme
  */
 const mobileButtonStyles = {
-  'super-admin': 'from-slate-700 to-slate-900',
-  'tenant-admin': 'from-cyan-600 to-indigo-700',
+  "super-admin": "from-slate-700 to-slate-900",
+  "tenant-admin": "from-cyan-600 to-indigo-700",
 } as const;
 
 /**
@@ -363,8 +388,8 @@ function MobileMenuButton({ onOpen, isOpen, theme }: MobileMenuButtonProps) {
     <button
       onClick={onOpen}
       className={cn(
-        'fixed top-4 left-4 z-50 p-2 bg-gradient-to-br text-white rounded-lg shadow-lg md:hidden',
-        mobileButtonStyles[theme]
+        "fixed top-4 left-4 z-50 p-2 bg-gradient-to-br text-white rounded-lg shadow-lg md:hidden",
+        mobileButtonStyles[theme],
       )}
       aria-label="Open navigation menu"
     >

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   LayoutDashboard,
@@ -9,35 +9,77 @@ import {
   Layout,
   Settings,
   Mail,
-} from 'lucide-react';
-import { AdminSidebar, type AdminMenuItem } from './AdminSidebar';
+} from "lucide-react";
+import { AdminSidebar, type AdminMenuItem } from "./AdminSidebar";
 
 /**
  * Panel types for super admin navigation
  */
 export enum PanelType {
-  OVERVIEW = 'overview',
-  TENANTS = 'tenants',
-  ONBOARDING = 'onboarding',
-  ANALYTICS = 'analytics',
-  BRANDING = 'branding',
-  TEMPLATES = 'templates',
-  EMAILS = 'emails',
-  SETTINGS = 'settings',
+  OVERVIEW = "overview",
+  TENANTS = "tenants",
+  ONBOARDING = "onboarding",
+  ANALYTICS = "analytics",
+  BRANDING = "branding",
+  TEMPLATES = "templates",
+  EMAILS = "emails",
+  SETTINGS = "settings",
 }
 
 /**
  * Menu items for the super admin sidebar
  */
 const superAdminMenuItems: AdminMenuItem[] = [
-  { id: PanelType.OVERVIEW, label: 'Overview', icon: LayoutDashboard, href: '/super-admin', shortcut: ['G', 'D'] },
-  { id: PanelType.TENANTS, label: 'Tenants', icon: Building2, href: '/super-admin/tenants', shortcut: ['G', 'T'] },
-  { id: PanelType.ONBOARDING, label: 'Onboarding', icon: UserPlus, href: '/super-admin/onboarding' },
-  { id: PanelType.ANALYTICS, label: 'Analytics', icon: BarChart3, href: '/super-admin/analytics' },
-  { id: PanelType.BRANDING, label: 'Branding', icon: Palette, href: '/super-admin/platform-settings' },
-  { id: PanelType.TEMPLATES, label: 'Store Templates', icon: Layout, href: '/super-admin/templates' },
-  { id: PanelType.EMAILS, label: 'Email Templates', icon: Mail, href: '/super-admin/emails' },
-  { id: PanelType.SETTINGS, label: 'Settings', icon: Settings, href: '/super-admin/settings' },
+  {
+    id: PanelType.OVERVIEW,
+    label: "Overview",
+    icon: LayoutDashboard,
+    href: "/super-admin",
+    shortcut: ["G", "D"],
+  },
+  {
+    id: PanelType.TENANTS,
+    label: "Tenants",
+    icon: Building2,
+    href: "/super-admin/tenants",
+    shortcut: ["G", "T"],
+  },
+  {
+    id: PanelType.ONBOARDING,
+    label: "Onboarding",
+    icon: UserPlus,
+    href: "/super-admin/onboarding",
+  },
+  {
+    id: PanelType.ANALYTICS,
+    label: "Analytics",
+    icon: BarChart3,
+    href: "/super-admin/analytics",
+  },
+  {
+    id: PanelType.BRANDING,
+    label: "Branding",
+    icon: Palette,
+    href: "/super-admin/platform-settings",
+  },
+  {
+    id: PanelType.TEMPLATES,
+    label: "Store Templates",
+    icon: Layout,
+    href: "/super-admin/templates",
+  },
+  {
+    id: PanelType.EMAILS,
+    label: "Email Templates",
+    icon: Mail,
+    href: "/super-admin/emails",
+  },
+  {
+    id: PanelType.SETTINGS,
+    label: "Settings",
+    icon: Settings,
+    href: "/super-admin/settings",
+  },
 ];
 
 interface SuperAdminSidebarProps {
@@ -57,7 +99,10 @@ interface SuperAdminSidebarProps {
  * - Desktop behavior unchanged (sidebar always visible)
  * - Smooth transitions (300ms) for open/close animations
  */
-export function SuperAdminSidebar({ userName, userEmail }: SuperAdminSidebarProps) {
+export function SuperAdminSidebar({
+  userName,
+  userEmail,
+}: SuperAdminSidebarProps) {
   return (
     <AdminSidebar
       theme="super-admin"

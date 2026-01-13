@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { usePathname } from 'next/navigation';
-import { SkipToContent } from './SkipToContent';
-import { KeyboardShortcutsProvider } from './KeyboardShortcutsProvider';
+import { usePathname } from "next/navigation";
+import { SkipToContent } from "./SkipToContent";
+import { KeyboardShortcutsProvider } from "./KeyboardShortcutsProvider";
 
 /**
  * AccessibleAdminLayout Component
@@ -19,7 +19,7 @@ import { KeyboardShortcutsProvider } from './KeyboardShortcutsProvider';
 
 export interface AccessibleAdminLayoutProps {
   children: React.ReactNode;
-  theme: 'super-admin' | 'tenant-admin';
+  theme: "super-admin" | "tenant-admin";
 }
 
 export function AccessibleAdminLayout({
@@ -29,12 +29,13 @@ export function AccessibleAdminLayout({
   const pathname = usePathname();
 
   // Determine page title from pathname for screen readers
-  const pageTitle = pathname
-    .split('/')
-    .filter(Boolean)
-    .pop()
-    ?.replace(/-/g, ' ')
-    .replace(/\b\w/g, (l) => l.toUpperCase()) || 'Dashboard';
+  const pageTitle =
+    pathname
+      .split("/")
+      .filter(Boolean)
+      .pop()
+      ?.replace(/-/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase()) || "Dashboard";
 
   return (
     <KeyboardShortcutsProvider theme={theme}>
@@ -45,7 +46,7 @@ export function AccessibleAdminLayout({
       <main
         id="main-content"
         role="main"
-        aria-label={`${pageTitle} - ${theme === 'super-admin' ? 'Super Admin' : 'Tenant Admin'} Panel`}
+        aria-label={`${pageTitle} - ${theme === "super-admin" ? "Super Admin" : "Tenant Admin"} Panel`}
         tabIndex={-1}
         className="flex-1 flex flex-col min-h-full bg-gray-50 focus:outline-none"
       >

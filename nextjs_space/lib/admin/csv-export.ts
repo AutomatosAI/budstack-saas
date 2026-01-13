@@ -13,13 +13,17 @@
  */
 function escapeCsvField(value: any): string {
   if (value === null || value === undefined) {
-    return '';
+    return "";
   }
 
   const stringValue = String(value);
 
   // If the value contains comma, quotes, or newlines, wrap in quotes and escape quotes
-  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+  if (
+    stringValue.includes(",") ||
+    stringValue.includes('"') ||
+    stringValue.includes("\n")
+  ) {
     return `"${stringValue.replace(/"/g, '""')}"`;
   }
 
@@ -31,21 +35,21 @@ function escapeCsvField(value: any): string {
  */
 export function convertToCSV<T extends Record<string, any>>(
   data: T[],
-  headers: { key: keyof T; label: string }[]
+  headers: { key: keyof T; label: string }[],
 ): string {
   if (data.length === 0) {
-    return headers.map(h => escapeCsvField(h.label)).join(',');
+    return headers.map((h) => escapeCsvField(h.label)).join(",");
   }
 
   // Create header row
-  const headerRow = headers.map(h => escapeCsvField(h.label)).join(',');
+  const headerRow = headers.map((h) => escapeCsvField(h.label)).join(",");
 
   // Create data rows
-  const dataRows = data.map(row => {
-    return headers
-      .map(header => escapeCsvField(row[header.key]))
-      .join(',');
-  }).join('\n');
+  const dataRows = data
+    .map((row) => {
+      return headers.map((header) => escapeCsvField(row[header.key])).join(",");
+    })
+    .join("\n");
 
   return `${headerRow}\n${dataRows}`;
 }
@@ -55,16 +59,18 @@ export function convertToCSV<T extends Record<string, any>>(
  */
 export function downloadCSV(csvContent: string, filename: string): void {
   // Create blob with UTF-8 BOM for Excel compatibility
-  const BOM = '\uFEFF';
-  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
 
   // Create download link and trigger click
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
 
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename);
+  link.style.visibility = "hidden";
 
   document.body.appendChild(link);
   link.click();
@@ -81,8 +87,8 @@ export function downloadCSV(csvContent: string, filename: string): void {
 export function generateCSVFilename(entityName: string): string {
   const date = new Date();
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
   return `${entityName}-export-${year}-${month}-${day}.csv`;
 }
@@ -113,13 +119,13 @@ export async function exportToCSV<T extends Record<string, any>>(
   entityName: string,
   onStart?: () => void,
   onComplete?: (recordCount: number, fileSize: string) => void,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
 ): Promise<void> {
   try {
     onStart?.();
 
     // Simulate brief processing time for better UX (shows loading state)
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Generate CSV content
     const csvContent = convertToCSV(data, headers);
@@ -136,6 +142,6 @@ export async function exportToCSV<T extends Record<string, any>>(
     // Notify completion
     onComplete?.(data.length, fileSize);
   } catch (error) {
-    onError?.(error instanceof Error ? error : new Error('Export failed'));
+    onError?.(error instanceof Error ? error : new Error("Export failed"));
   }
 }

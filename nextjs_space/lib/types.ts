@@ -1,6 +1,6 @@
 // Multi-Tenant Types
 
-export type UserType = 'customer' | 'tenant' | 'admin';
+export type UserType = "customer" | "tenant" | "admin";
 
 export interface TenantContext {
   id: string;
@@ -35,41 +35,53 @@ export interface AuthUser {
 export interface TenantSettings {
   // === BRANDING & IDENTITY ===
   tagline?: string;
-  template?: 'modern' | 'minimalist' | 'bold';
-  
+  template?: "modern" | "minimalist" | "bold";
+
   // === COLORS (Tailwind compatible hex values) ===
-  primaryColor?: string;      // Main brand color (headers, primary buttons)
-  secondaryColor?: string;    // Secondary elements (links, secondary buttons)
-  accentColor?: string;       // Call-to-action highlights
-  backgroundColor?: string;   // Page background
-  textColor?: string;         // Body text color
-  headingColor?: string;      // Heading text color
-  
+  primaryColor?: string; // Main brand color (headers, primary buttons)
+  secondaryColor?: string; // Secondary elements (links, secondary buttons)
+  accentColor?: string; // Call-to-action highlights
+  backgroundColor?: string; // Page background
+  textColor?: string; // Body text color
+  headingColor?: string; // Heading text color
+
   // === TYPOGRAPHY ===
-  fontFamily?: 'inter' | 'playfair' | 'roboto' | 'montserrat' | 'lato' | 'poppins';
-  headingFontFamily?: 'inter' | 'playfair' | 'roboto' | 'montserrat' | 'lato' | 'poppins';
-  fontSize?: 'small' | 'medium' | 'large';
-  
+  fontFamily?:
+    | "inter"
+    | "playfair"
+    | "roboto"
+    | "montserrat"
+    | "lato"
+    | "poppins";
+  headingFontFamily?:
+    | "inter"
+    | "playfair"
+    | "roboto"
+    | "montserrat"
+    | "lato"
+    | "poppins";
+  fontSize?: "small" | "medium" | "large";
+
   // === BUTTONS ===
-  buttonStyle?: 'rounded' | 'square' | 'pill'; // Border radius
-  buttonSize?: 'small' | 'medium' | 'large';
-  
+  buttonStyle?: "rounded" | "square" | "pill"; // Border radius
+  buttonSize?: "small" | "medium" | "large";
+
   // === LAYOUT & SPACING ===
-  borderRadius?: 'none' | 'small' | 'medium' | 'large'; // Global border radius
-  spacing?: 'compact' | 'normal' | 'comfortable'; // Global spacing scale
-  shadowStyle?: 'none' | 'soft' | 'medium' | 'bold'; // Card/button shadows
-  
+  borderRadius?: "none" | "small" | "medium" | "large"; // Global border radius
+  spacing?: "compact" | "normal" | "comfortable"; // Global spacing scale
+  shadowStyle?: "none" | "soft" | "medium" | "bold"; // Card/button shadows
+
   // === IMAGES (S3 cloud storage paths) ===
   logoPath?: string;
   heroImagePath?: string;
   faviconPath?: string;
-  
+
   // === HERO SECTION ===
-  heroType?: 'gradient' | 'image' | 'video';
-  
+  heroType?: "gradient" | "image" | "video";
+
   // === CONTACT ===
   contactInfo?: string;
-  
+
   // === BUSINESS INFORMATION ===
   businessInfo?: {
     phone?: string;
@@ -80,7 +92,7 @@ export interface TenantSettings {
     emergencyLine?: string;
     supportHours?: string; // e.g., "Mon-Fri: 9AM-6PM"
   };
-  
+
   // === BUSINESS HOURS ===
   businessHours?: {
     monday?: { open?: string; close?: string; closed?: boolean };
@@ -91,7 +103,7 @@ export interface TenantSettings {
     saturday?: { open?: string; close?: string; closed?: boolean };
     sunday?: { open?: string; close?: string; closed?: boolean };
   };
-  
+
   // === FOOTER CONTENT ===
   footer?: {
     description?: string;
@@ -115,7 +127,7 @@ export interface TenantSettings {
     servingArea?: string; // e.g., "Serving All of Portugal"
     servingDetails?: string; // e.g., "From Lisbon to Porto, Algarve to Braga"
   };
-  
+
   // === PAGE CONTENT (Personal Pages - Tenant Editable) ===
   pageContent?: {
     home?: {
@@ -184,10 +196,10 @@ export interface TenantSettings {
       description?: string;
     };
   };
-  
+
   // === ADVANCED ===
   customCSS?: string; // Custom CSS for advanced users
-  
+
   // === DOCTOR GREEN API ===
   doctorGreenCredentials?: {
     clientId?: string;

@@ -6,7 +6,7 @@
  * - Mutations automatically invalidate related queries
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // ============================================================================
 // Types
@@ -17,7 +17,7 @@ interface PaginationParams {
   pageSize?: number;
   search?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 interface Tenant {
@@ -61,17 +61,17 @@ interface Order {
  */
 export function useTenants(params: PaginationParams = {}) {
   return useQuery({
-    queryKey: ['tenants', params],
+    queryKey: ["tenants", params],
     queryFn: async () => {
       const queryString = new URLSearchParams(
         Object.entries(params)
-          .filter(([_, value]) => value !== undefined && value !== '')
-          .map(([key, value]) => [key, String(value)])
+          .filter(([_, value]) => value !== undefined && value !== "")
+          .map(([key, value]) => [key, String(value)]),
       ).toString();
 
       const response = await fetch(`/api/super-admin/tenants?${queryString}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch tenants');
+        throw new Error("Failed to fetch tenants");
       }
       return response.json();
     },
@@ -99,23 +99,23 @@ export function useTenantBulkAction() {
       action,
       tenantIds,
     }: {
-      action: 'activate' | 'deactivate';
+      action: "activate" | "deactivate";
       tenantIds: string[];
     }) => {
-      const response = await fetch('/api/super-admin/tenants/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/super-admin/tenants/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, tenantIds }),
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Bulk action failed');
+        throw new Error(error.error || "Bulk action failed");
       }
       return response.json();
     },
     onSuccess: () => {
       // Invalidate tenants queries to refetch data
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: ["tenants"] });
     },
   });
 }
@@ -132,17 +132,17 @@ export function useTenantBulkAction() {
  */
 export function useProducts(params: PaginationParams = {}) {
   return useQuery({
-    queryKey: ['products', params],
+    queryKey: ["products", params],
     queryFn: async () => {
       const queryString = new URLSearchParams(
         Object.entries(params)
-          .filter(([_, value]) => value !== undefined && value !== '')
-          .map(([key, value]) => [key, String(value)])
+          .filter(([_, value]) => value !== undefined && value !== "")
+          .map(([key, value]) => [key, String(value)]),
       ).toString();
 
       const response = await fetch(`/api/tenant-admin/products?${queryString}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch products');
+        throw new Error("Failed to fetch products");
       }
       return response.json();
     },
@@ -162,24 +162,24 @@ export function useProductBulkAction() {
       action,
       productIds,
     }: {
-      action: 'set-in-stock' | 'set-out-of-stock' | 'delete';
+      action: "set-in-stock" | "set-out-of-stock" | "delete";
       productIds: string[];
     }) => {
-      const response = await fetch('/api/tenant-admin/products/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/tenant-admin/products/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, productIds }),
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Bulk action failed');
+        throw new Error(error.error || "Bulk action failed");
       }
       return response.json();
     },
     onSuccess: () => {
       // Invalidate products and analytics queries
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['tenant-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["tenant-analytics"] });
     },
   });
 }
@@ -196,17 +196,17 @@ export function useProductBulkAction() {
  */
 export function useOrders(params: PaginationParams = {}) {
   return useQuery({
-    queryKey: ['orders', params],
+    queryKey: ["orders", params],
     queryFn: async () => {
       const queryString = new URLSearchParams(
         Object.entries(params)
-          .filter(([_, value]) => value !== undefined && value !== '')
-          .map(([key, value]) => [key, String(value)])
+          .filter(([_, value]) => value !== undefined && value !== "")
+          .map(([key, value]) => [key, String(value)]),
       ).toString();
 
       const response = await fetch(`/api/tenant-admin/orders?${queryString}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch orders');
+        throw new Error("Failed to fetch orders");
       }
       return response.json();
     },
@@ -226,24 +226,24 @@ export function useOrderBulkAction() {
       action,
       orderIds,
     }: {
-      action: 'mark-processing' | 'mark-completed';
+      action: "mark-processing" | "mark-completed";
       orderIds: string[];
     }) => {
-      const response = await fetch('/api/tenant-admin/orders/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/tenant-admin/orders/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, orderIds }),
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Bulk action failed');
+        throw new Error(error.error || "Bulk action failed");
       }
       return response.json();
     },
     onSuccess: () => {
       // Invalidate orders and analytics queries
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      queryClient.invalidateQueries({ queryKey: ['tenant-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["tenant-analytics"] });
     },
   });
 }

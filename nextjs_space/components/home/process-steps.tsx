@@ -1,88 +1,92 @@
+"use client";
 
-'use client';
-
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-import { 
-  UserPlus, 
-  Stethoscope, 
-  FileText, 
+import { motion } from "framer-motion";
+import Link from "next/link";
+import {
+  UserPlus,
+  Stethoscope,
+  FileText,
   MapPin,
   Clock,
   Shield,
   CheckCircle,
   ArrowRight,
   Calendar,
-  Pill
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+  Pill,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface ProcessStepsProps {
   consultationUrl?: string;
 }
 
-export function ProcessSteps({ consultationUrl = '/store/healingbuds/consultation' }: ProcessStepsProps = {}) {
+export function ProcessSteps({
+  consultationUrl = "/store/healingbuds/consultation",
+}: ProcessStepsProps = {}) {
   const steps = [
     {
       step: 1,
-      title: 'Registration & KYC',
-      subtitle: 'Quick Identity Verification',
-      description: 'Create your secure account and verify your Portuguese identity with Cartão de Cidadão. Complete medical history form.',
+      title: "Registration & KYC",
+      subtitle: "Quick Identity Verification",
+      description:
+        "Create your secure account and verify your Portuguese identity with Cartão de Cidadão. Complete medical history form.",
       icon: UserPlus,
-      duration: '5-10 minutes',
+      duration: "5-10 minutes",
       features: [
-        'Secure identity verification',
-        'Medical history assessment',
-        'Privacy protection (GDPR)',
-        'Portuguese ID integration'
+        "Secure identity verification",
+        "Medical history assessment",
+        "Privacy protection (GDPR)",
+        "Portuguese ID integration",
       ],
-      color: 'blue'
+      color: "blue",
     },
     {
       step: 2,
-      title: 'Free Medical Consultation',
-      subtitle: 'Licensed Doctor Review',
-      description: 'Connect with INFARMED-approved doctors for personalized medical cannabis evaluation and prescription.',
+      title: "Free Medical Consultation",
+      subtitle: "Licensed Doctor Review",
+      description:
+        "Connect with INFARMED-approved doctors for personalized medical cannabis evaluation and prescription.",
       icon: Stethoscope,
-      duration: '24-48 hours',
+      duration: "24-48 hours",
       features: [
-        'Licensed Portuguese doctors',
-        'Personalized treatment plans',
-        'INFARMED prescription',
-        'Follow-up consultations'
+        "Licensed Portuguese doctors",
+        "Personalized treatment plans",
+        "INFARMED prescription",
+        "Follow-up consultations",
       ],
-      color: 'green'
-    }
+      color: "green",
+    },
   ];
 
   const futurePhase = {
-    title: 'Phase 2: Pharmacy Integration',
-    subtitle: 'Coming Soon',
-    description: 'Direct pharmacy partnerships for convenient prescription fulfillment and delivery throughout Portugal.',
+    title: "Phase 2: Pharmacy Integration",
+    subtitle: "Coming Soon",
+    description:
+      "Direct pharmacy partnerships for convenient prescription fulfillment and delivery throughout Portugal.",
     icon: MapPin,
     features: [
-      'Licensed pharmacy network',
-      'Home delivery options',
-      'Insurance integration',
-      'Prescription tracking'
-    ]
+      "Licensed pharmacy network",
+      "Home delivery options",
+      "Insurance integration",
+      "Prescription tracking",
+    ],
   };
 
   const getStepColors = (color: string) => {
     const colorMap = {
       blue: {
-        bg: 'bg-blue-50',
-        border: 'border-blue-200',
-        icon: 'bg-blue-600 text-white',
-        accent: 'text-blue-600'
+        bg: "bg-blue-50",
+        border: "border-blue-200",
+        icon: "bg-blue-600 text-white",
+        accent: "text-blue-600",
       },
       green: {
-        bg: 'bg-green-50',
-        border: 'border-green-200', 
-        icon: 'bg-green-600 text-white',
-        accent: 'text-green-600'
-      }
+        bg: "bg-green-50",
+        border: "border-green-200",
+        icon: "bg-green-600 text-white",
+        accent: "text-green-600",
+      },
     };
     return colorMap[color as keyof typeof colorMap];
   };
@@ -105,8 +109,9 @@ export function ProcessSteps({ consultationUrl = '/store/healingbuds/consultatio
             How HealingBuds Works
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Start your medical cannabis journey in Portugal with our streamlined, 
-            INFARMED-compliant consultation process designed for your convenience.
+            Start your medical cannabis journey in Portugal with our
+            streamlined, INFARMED-compliant consultation process designed for
+            your convenience.
           </p>
         </motion.div>
 
@@ -114,7 +119,7 @@ export function ProcessSteps({ consultationUrl = '/store/healingbuds/consultatio
         <div className="space-y-12 mb-16">
           {steps.map((step, index) => {
             const colors = getStepColors(step.color);
-            
+
             return (
               <motion.div
                 key={index}
@@ -123,17 +128,26 @@ export function ProcessSteps({ consultationUrl = '/store/healingbuds/consultatio
                 transition={{ duration: 0.8, delay: index * 0.2 }}
                 className="relative"
               >
-                <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-center ${
-                  index % 2 === 1 ? 'lg:grid-flow-col-dense' : ''
-                }`}>
+                <div
+                  className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-center ${
+                    index % 2 === 1 ? "lg:grid-flow-col-dense" : ""
+                  }`}
+                >
                   {/* Content */}
-                  <div className={`space-y-6 ${index % 2 === 1 ? 'lg:col-start-2' : ''}`}>
+                  <div
+                    className={`space-y-6 ${index % 2 === 1 ? "lg:col-start-2" : ""}`}
+                  >
                     <div className="flex items-center space-x-4">
-                      <div className={`w-16 h-16 rounded-full flex items-center justify-center ${colors.icon}`}>
+                      <div
+                        className={`w-16 h-16 rounded-full flex items-center justify-center ${colors.icon}`}
+                      >
                         <step.icon className="w-8 h-8" />
                       </div>
                       <div>
-                        <Badge variant="outline" className={`mb-2 ${colors.accent} border-current`}>
+                        <Badge
+                          variant="outline"
+                          className={`mb-2 ${colors.accent} border-current`}
+                        >
                           Step {step.step}
                         </Badge>
                         <h3 className="text-2xl font-bold text-gray-900 font-serif">
@@ -166,7 +180,10 @@ export function ProcessSteps({ consultationUrl = '/store/healingbuds/consultatio
 
                     <div className="space-y-2">
                       {step.features.map((feature, featureIndex) => (
-                        <div key={featureIndex} className="flex items-center space-x-2">
+                        <div
+                          key={featureIndex}
+                          className="flex items-center space-x-2"
+                        >
                           <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                           <span className="text-gray-700">{feature}</span>
                         </div>
@@ -193,10 +210,10 @@ export function ProcessSteps({ consultationUrl = '/store/healingbuds/consultatio
                   </div>
 
                   {/* Visual */}
-                  <div className={`${index % 2 === 1 ? 'lg:col-start-1' : ''}`}>
+                  <div className={`${index % 2 === 1 ? "lg:col-start-1" : ""}`}>
                     <motion.div
                       whileHover={{ scale: 1.05 }}
-                      transition={{ type: 'spring', stiffness: 300 }}
+                      transition={{ type: "spring", stiffness: 300 }}
                       className={`relative p-8 rounded-2xl ${colors.bg} ${colors.border} border-2`}
                     >
                       {/* Step number */}
@@ -208,7 +225,9 @@ export function ProcessSteps({ consultationUrl = '/store/healingbuds/consultatio
 
                       {/* Visual content */}
                       <div className="text-center space-y-6">
-                        <div className={`w-24 h-24 rounded-full mx-auto flex items-center justify-center ${colors.icon}`}>
+                        <div
+                          className={`w-24 h-24 rounded-full mx-auto flex items-center justify-center ${colors.icon}`}
+                        >
                           <step.icon className="w-12 h-12" />
                         </div>
 
@@ -216,15 +235,23 @@ export function ProcessSteps({ consultationUrl = '/store/healingbuds/consultatio
                           <h4 className="text-lg font-semibold text-gray-900">
                             {step.title}
                           </h4>
-                          
+
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div className="bg-white rounded-lg p-3 shadow-sm">
-                              <div className="font-semibold text-gray-900">Duration</div>
-                              <div className="text-gray-600">{step.duration}</div>
+                              <div className="font-semibold text-gray-900">
+                                Duration
+                              </div>
+                              <div className="text-gray-600">
+                                {step.duration}
+                              </div>
                             </div>
                             <div className="bg-white rounded-lg p-3 shadow-sm">
-                              <div className="font-semibold text-gray-900">Status</div>
-                              <div className="text-green-600 font-medium">Available</div>
+                              <div className="font-semibold text-gray-900">
+                                Status
+                              </div>
+                              <div className="text-green-600 font-medium">
+                                Available
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -256,15 +283,16 @@ export function ProcessSteps({ consultationUrl = '/store/healingbuds/consultatio
           <div className="bg-gradient-to-r from-gray-50 to-green-50 rounded-2xl p-8 border border-gray-200">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
               <div className="space-y-4">
-                <Badge variant="outline" className="text-orange-600 border-orange-300">
+                <Badge
+                  variant="outline"
+                  className="text-orange-600 border-orange-300"
+                >
                   Coming Soon
                 </Badge>
                 <h3 className="text-2xl font-bold text-gray-900 font-serif">
                   {futurePhase.title}
                 </h3>
-                <p className="text-gray-600">
-                  {futurePhase.description}
-                </p>
+                <p className="text-gray-600">{futurePhase.description}</p>
               </div>
 
               <div className="space-y-3">
@@ -281,7 +309,10 @@ export function ProcessSteps({ consultationUrl = '/store/healingbuds/consultatio
                   <futurePhase.icon className="w-10 h-10 text-orange-600" />
                 </div>
                 <Link href="/contact">
-                  <Button variant="outline" className="border-orange-200 text-orange-700 hover:bg-orange-50">
+                  <Button
+                    variant="outline"
+                    className="border-orange-200 text-orange-700 hover:bg-orange-50"
+                  >
                     Get Notified
                   </Button>
                 </Link>
@@ -310,19 +341,27 @@ export function ProcessSteps({ consultationUrl = '/store/healingbuds/consultatio
                 Ready to Start Your Medical Cannabis Journey?
               </h3>
               <p className="text-xl text-green-100 max-w-2xl mx-auto">
-                Join thousands of Portuguese patients who have found relief through our 
-                INFARMED-approved medical cannabis consultation service.
+                Join thousands of Portuguese patients who have found relief
+                through our INFARMED-approved medical cannabis consultation
+                service.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link href="/auth/signup">
-                  <Button size="lg" className="bg-white text-green-800 hover:bg-green-50 shadow-xl hover:shadow-2xl transition-all duration-300 group">
+                  <Button
+                    size="lg"
+                    className="bg-white text-green-800 hover:bg-green-50 shadow-xl hover:shadow-2xl transition-all duration-300 group"
+                  >
                     <UserPlus className="w-5 h-5 mr-2" />
                     Start Free Registration
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
                 <Link href="/how-it-works">
-                  <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="border-white/30 text-white hover:bg-white/10 shadow-lg hover:shadow-xl transition-all duration-300"
+                  >
                     Learn More
                   </Button>
                 </Link>

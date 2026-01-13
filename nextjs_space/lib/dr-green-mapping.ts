@@ -10,5 +10,5 @@ export function mapMedicalConditionsForDrGreen(conditions: string[]): string[] {
         'lupus': 'other_medical_condition',
     };
 
-    return conditions.map(c => extrasToOther[c] || c); // Most pass through unchanged
+  return conditions.map((c) => extrasToOther[c] || c); // Most pass through unchanged
 }

@@ -1,16 +1,21 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import * as React from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 /**
  * Props for the Pagination component.
@@ -86,28 +91,27 @@ export function Pagination({
         onPageChange(1);
       }
     },
-    [page, totalItems, onPageChange, onPageSizeChange]
+    [page, totalItems, onPageChange, onPageSizeChange],
   );
 
   return (
     <div
       className={cn(
-        'flex flex-col sm:flex-row items-center justify-between gap-4',
-        'py-4 px-2',
-        className
+        "flex flex-col sm:flex-row items-center justify-between gap-4",
+        "py-4 px-2",
+        className,
       )}
       role="navigation"
       aria-label="Pagination"
     >
       {/* Results summary */}
       <p className="text-sm text-muted-foreground order-2 sm:order-1">
-        Showing{' '}
-        <span className="font-medium text-foreground">{startItem}</span>
-        {' - '}
+        Showing <span className="font-medium text-foreground">{startItem}</span>
+        {" - "}
         <span className="font-medium text-foreground">{endItem}</span>
-        {' of '}
+        {" of "}
         <span className="font-medium text-foreground">{totalItems}</span>
-        {' results'}
+        {" results"}
       </p>
 
       <div className="flex items-center gap-4 order-1 sm:order-2">
@@ -123,11 +127,11 @@ export function Pagination({
             >
               <SelectTrigger
                 className={cn(
-                  'w-[70px] h-8',
-                  'bg-background/50 backdrop-blur-sm',
-                  'border-border/60 hover:border-border',
-                  'focus:ring-primary/20 focus:border-primary',
-                  'transition-all duration-200'
+                  "w-[70px] h-8",
+                  "bg-background/50 backdrop-blur-sm",
+                  "border-border/60 hover:border-border",
+                  "focus:ring-primary/20 focus:border-primary",
+                  "transition-all duration-200",
                 )}
                 aria-label="Select page size"
               >
@@ -135,10 +139,10 @@ export function Pagination({
               </SelectTrigger>
               <SelectContent
                 className={cn(
-                  'bg-popover/95 backdrop-blur-md',
-                  'border-border/60',
-                  'shadow-lg shadow-black/5',
-                  'min-w-[70px]'
+                  "bg-popover/95 backdrop-blur-md",
+                  "border-border/60",
+                  "shadow-lg shadow-black/5",
+                  "min-w-[70px]",
                 )}
               >
                 {pageSizeOptions.map((size) => (
@@ -165,10 +169,10 @@ export function Pagination({
               disabled={!canGoPrevious}
               aria-label="Go to first page"
               className={cn(
-                'h-8 w-8',
-                'border-border/60 hover:border-border',
-                'bg-background/50 hover:bg-accent',
-                'transition-all duration-200'
+                "h-8 w-8",
+                "border-border/60 hover:border-border",
+                "bg-background/50 hover:bg-accent",
+                "transition-all duration-200",
               )}
             >
               <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
@@ -182,10 +186,10 @@ export function Pagination({
             disabled={!canGoPrevious}
             aria-label="Go to previous page"
             className={cn(
-              'h-8 w-8',
-              'border-border/60 hover:border-border',
-              'bg-background/50 hover:bg-accent',
-              'transition-all duration-200'
+              "h-8 w-8",
+              "border-border/60 hover:border-border",
+              "bg-background/50 hover:bg-accent",
+              "transition-all duration-200",
             )}
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -193,9 +197,7 @@ export function Pagination({
 
           {/* Page indicator */}
           <div className="flex items-center gap-1 px-2">
-            <span className="text-sm font-medium tabular-nums">
-              {page}
-            </span>
+            <span className="text-sm font-medium tabular-nums">{page}</span>
             <span className="text-sm text-muted-foreground">/</span>
             <span className="text-sm text-muted-foreground tabular-nums">
               {totalPages || 1}
@@ -209,10 +211,10 @@ export function Pagination({
             disabled={!canGoNext}
             aria-label="Go to next page"
             className={cn(
-              'h-8 w-8',
-              'border-border/60 hover:border-border',
-              'bg-background/50 hover:bg-accent',
-              'transition-all duration-200'
+              "h-8 w-8",
+              "border-border/60 hover:border-border",
+              "bg-background/50 hover:bg-accent",
+              "transition-all duration-200",
             )}
           >
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -226,10 +228,10 @@ export function Pagination({
               disabled={!canGoNext}
               aria-label="Go to last page"
               className={cn(
-                'h-8 w-8',
-                'border-border/60 hover:border-border',
-                'bg-background/50 hover:bg-accent',
-                'transition-all duration-200'
+                "h-8 w-8",
+                "border-border/60 hover:border-border",
+                "bg-background/50 hover:bg-accent",
+                "transition-all duration-200",
               )}
             >
               <ChevronsRight className="h-4 w-4" aria-hidden="true" />
@@ -241,4 +243,4 @@ export function Pagination({
   );
 }
 
-Pagination.displayName = 'Pagination';
+Pagination.displayName = "Pagination";

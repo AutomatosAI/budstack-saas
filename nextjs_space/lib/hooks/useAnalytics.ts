@@ -6,7 +6,7 @@
  * - Automatically refetches on mount if stale
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
 interface TenantAnalyticsData {
   totalProducts: number;
@@ -50,15 +50,15 @@ interface SuperAdminAnalyticsData {
  * const { data, isLoading, error } = useTenantAnalytics('30d');
  * ```
  */
-export function useTenantAnalytics(timeRange: '7d' | '30d' | '90d' = '30d') {
+export function useTenantAnalytics(timeRange: "7d" | "30d" | "90d" = "30d") {
   return useQuery({
-    queryKey: ['tenant-analytics', timeRange],
+    queryKey: ["tenant-analytics", timeRange],
     queryFn: async () => {
       const response = await fetch(
-        `/api/tenant-admin/analytics?timeRange=${timeRange}`
+        `/api/tenant-admin/analytics?timeRange=${timeRange}`,
       );
       if (!response.ok) {
-        throw new Error('Failed to fetch tenant analytics');
+        throw new Error("Failed to fetch tenant analytics");
       }
       return response.json() as Promise<TenantAnalyticsData>;
     },
@@ -79,16 +79,16 @@ export function useTenantAnalytics(timeRange: '7d' | '30d' | '90d' = '30d') {
  * ```
  */
 export function useSuperAdminAnalytics(
-  timeRange: '7d' | '30d' | '90d' = '30d'
+  timeRange: "7d" | "30d" | "90d" = "30d",
 ) {
   return useQuery({
-    queryKey: ['super-admin-analytics', timeRange],
+    queryKey: ["super-admin-analytics", timeRange],
     queryFn: async () => {
       const response = await fetch(
-        `/api/super-admin/analytics?timeRange=${timeRange}`
+        `/api/super-admin/analytics?timeRange=${timeRange}`,
       );
       if (!response.ok) {
-        throw new Error('Failed to fetch super admin analytics');
+        throw new Error("Failed to fetch super admin analytics");
       }
       return response.json() as Promise<SuperAdminAnalyticsData>;
     },

@@ -1,17 +1,34 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { Bell, CheckCircle, AlertCircle, Package, Clock, ChevronRight, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
+import * as React from "react";
+import {
+  Bell,
+  CheckCircle,
+  AlertCircle,
+  Package,
+  Clock,
+  ChevronRight,
+  X,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 /**
  * Notification types with associated metadata
  */
-export type NotificationType = 'PENDING_APPROVAL' | 'FAILED_ORDER' | 'LOW_STOCK' | 'SYSTEM_ALERT' | 'USER_ACTION';
+export type NotificationType =
+  | "PENDING_APPROVAL"
+  | "FAILED_ORDER"
+  | "LOW_STOCK"
+  | "SYSTEM_ALERT"
+  | "USER_ACTION";
 
 /**
  * Notification item structure
@@ -29,7 +46,7 @@ export interface Notification {
 /**
  * Theme for notification center (matches admin panel themes)
  */
-export type NotificationTheme = 'super-admin' | 'tenant-admin';
+export type NotificationTheme = "super-admin" | "tenant-admin";
 
 /**
  * Props for NotificationCenter component
@@ -54,47 +71,50 @@ export interface NotificationCenterProps {
 /**
  * Configuration for notification types with tactical styling
  */
-const notificationConfig: Record<NotificationType, {
-  icon: React.ElementType;
-  color: string;
-  bgColor: string;
-  borderColor: string;
-  label: string;
-}> = {
+const notificationConfig: Record<
+  NotificationType,
+  {
+    icon: React.ElementType;
+    color: string;
+    bgColor: string;
+    borderColor: string;
+    label: string;
+  }
+> = {
   PENDING_APPROVAL: {
     icon: Clock,
-    color: 'text-amber-700',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-300',
-    label: 'PENDING',
+    color: "text-amber-700",
+    bgColor: "bg-amber-50",
+    borderColor: "border-amber-300",
+    label: "PENDING",
   },
   FAILED_ORDER: {
     icon: AlertCircle,
-    color: 'text-red-700',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-300',
-    label: 'FAILED',
+    color: "text-red-700",
+    bgColor: "bg-red-50",
+    borderColor: "border-red-300",
+    label: "FAILED",
   },
   LOW_STOCK: {
     icon: Package,
-    color: 'text-orange-700',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-300',
-    label: 'LOW STOCK',
+    color: "text-orange-700",
+    bgColor: "bg-orange-50",
+    borderColor: "border-orange-300",
+    label: "LOW STOCK",
   },
   SYSTEM_ALERT: {
     icon: AlertCircle,
-    color: 'text-purple-700',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-300',
-    label: 'SYSTEM',
+    color: "text-purple-700",
+    bgColor: "bg-purple-50",
+    borderColor: "border-purple-300",
+    label: "SYSTEM",
   },
   USER_ACTION: {
     icon: CheckCircle,
-    color: 'text-cyan-700',
-    bgColor: 'bg-cyan-50',
-    borderColor: 'border-cyan-300',
-    label: 'ACTION',
+    color: "text-cyan-700",
+    bgColor: "bg-cyan-50",
+    borderColor: "border-cyan-300",
+    label: "ACTION",
   },
 };
 
@@ -102,27 +122,27 @@ const notificationConfig: Record<NotificationType, {
  * Theme-specific styling for notification center
  */
 const themeStyles = {
-  'super-admin': {
-    badgeBg: 'bg-red-600',
-    badgeText: 'text-white',
-    badgePulse: 'animate-pulse ring-4 ring-red-600/30',
-    bellHover: 'hover:bg-slate-700/50 hover:text-slate-100',
-    bellActive: 'bg-slate-700/50 text-slate-100',
-    headerGradient: 'from-slate-800 to-slate-900',
-    accentColor: 'text-slate-400',
-    borderColor: 'border-slate-700/50',
-    hoverBg: 'hover:bg-slate-50',
+  "super-admin": {
+    badgeBg: "bg-red-600",
+    badgeText: "text-white",
+    badgePulse: "animate-pulse ring-4 ring-red-600/30",
+    bellHover: "hover:bg-slate-700/50 hover:text-slate-100",
+    bellActive: "bg-slate-700/50 text-slate-100",
+    headerGradient: "from-slate-800 to-slate-900",
+    accentColor: "text-slate-400",
+    borderColor: "border-slate-700/50",
+    hoverBg: "hover:bg-slate-50",
   },
-  'tenant-admin': {
-    badgeBg: 'bg-red-600',
-    badgeText: 'text-white',
-    badgePulse: 'animate-pulse ring-4 ring-red-600/30',
-    bellHover: 'hover:bg-cyan-500/20 hover:text-white',
-    bellActive: 'bg-cyan-500/30 text-white',
-    headerGradient: 'from-cyan-600 to-blue-700',
-    accentColor: 'text-cyan-400',
-    borderColor: 'border-cyan-700/30',
-    hoverBg: 'hover:bg-cyan-50',
+  "tenant-admin": {
+    badgeBg: "bg-red-600",
+    badgeText: "text-white",
+    badgePulse: "animate-pulse ring-4 ring-red-600/30",
+    bellHover: "hover:bg-cyan-500/20 hover:text-white",
+    bellActive: "bg-cyan-500/30 text-white",
+    headerGradient: "from-cyan-600 to-blue-700",
+    accentColor: "text-cyan-400",
+    borderColor: "border-cyan-700/30",
+    hoverBg: "hover:bg-cyan-50",
   },
 } as const;
 
@@ -136,12 +156,12 @@ function formatTimestamp(date: Date): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'Just now';
+  if (diffMins < 1) return "Just now";
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 /**
@@ -166,14 +186,14 @@ export function NotificationCenter({
   onMarkAsRead,
   onMarkAllAsRead,
   maxVisible = 5,
-  viewAllUrl = '/notifications',
+  viewAllUrl = "/notifications",
   className,
 }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const styles = themeStyles[theme];
 
   // Calculate unread count
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
   const hasUnread = unreadCount > 0;
 
   // Get visible notifications (limit to maxVisible, prioritize unread)
@@ -199,39 +219,41 @@ export function NotificationCenter({
           variant="ghost"
           size="icon"
           className={cn(
-            'relative transition-all duration-200',
+            "relative transition-all duration-200",
             styles.bellHover,
             isOpen && styles.bellActive,
-            className
+            className,
           )}
-          aria-label={`Notifications${hasUnread ? ` (${unreadCount} unread)` : ''}`}
+          aria-label={`Notifications${hasUnread ? ` (${unreadCount} unread)` : ""}`}
         >
-          <Bell className={cn(
-            'h-5 w-5 transition-transform duration-200',
-            hasUnread && 'animate-[wiggle_0.5s_ease-in-out_3]',
-          )} />
+          <Bell
+            className={cn(
+              "h-5 w-5 transition-transform duration-200",
+              hasUnread && "animate-[wiggle_0.5s_ease-in-out_3]",
+            )}
+          />
 
           {/* Unread badge with radar ping effect */}
           {hasUnread && (
             <>
               <Badge
                 className={cn(
-                  'absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0',
-                  'text-[10px] font-bold',
+                  "absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0",
+                  "text-[10px] font-bold",
                   styles.badgeBg,
                   styles.badgeText,
-                  'shadow-lg',
+                  "shadow-lg",
                 )}
               >
-                {unreadCount > 9 ? '9+' : unreadCount}
+                {unreadCount > 9 ? "9+" : unreadCount}
               </Badge>
 
               {/* Radar ping animation */}
               <span
                 className={cn(
-                  'absolute -top-1 -right-1 h-5 w-5 rounded-full',
+                  "absolute -top-1 -right-1 h-5 w-5 rounded-full",
                   styles.badgePulse,
-                  'pointer-events-none',
+                  "pointer-events-none",
                 )}
                 aria-hidden="true"
               />
@@ -243,21 +265,21 @@ export function NotificationCenter({
       <PopoverContent
         align="end"
         className={cn(
-          'w-[420px] p-0 shadow-2xl',
-          'border-2',
+          "w-[420px] p-0 shadow-2xl",
+          "border-2",
           styles.borderColor,
-          'bg-white',
+          "bg-white",
         )}
         sideOffset={8}
       >
         {/* Header with gradient */}
         <div
           className={cn(
-            'px-4 py-3 border-b-2',
+            "px-4 py-3 border-b-2",
             styles.borderColor,
-            'bg-gradient-to-r',
+            "bg-gradient-to-r",
             styles.headerGradient,
-            'text-white',
+            "text-white",
           )}
         >
           <div className="flex items-center justify-between">
@@ -269,7 +291,7 @@ export function NotificationCenter({
               {hasUnread && (
                 <Badge
                   className={cn(
-                    'h-5 px-2 text-[10px] font-mono font-bold',
+                    "h-5 px-2 text-[10px] font-mono font-bold",
                     styles.badgeBg,
                     styles.badgeText,
                   )}
@@ -296,14 +318,18 @@ export function NotificationCenter({
         <div className="max-h-[400px] overflow-y-auto">
           {visibleNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <div className={cn(
-                'w-16 h-16 rounded-full flex items-center justify-center mb-3',
-                'bg-slate-100 border-2 border-slate-200',
-              )}>
+              <div
+                className={cn(
+                  "w-16 h-16 rounded-full flex items-center justify-center mb-3",
+                  "bg-slate-100 border-2 border-slate-200",
+                )}
+              >
                 <Bell className="h-8 w-8 text-slate-400" aria-hidden="true" />
               </div>
               <p className="text-sm font-medium text-slate-900">All Clear</p>
-              <p className="text-xs text-slate-500 mt-1">No active notifications</p>
+              <p className="text-xs text-slate-500 mt-1">
+                No active notifications
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-slate-200">
@@ -315,14 +341,14 @@ export function NotificationCenter({
                   <div
                     key={notification.id}
                     className={cn(
-                      'p-4 transition-all duration-200 relative group',
-                      !notification.isRead && 'bg-slate-50/50',
+                      "p-4 transition-all duration-200 relative group",
+                      !notification.isRead && "bg-slate-50/50",
                       styles.hoverBg,
-                      'cursor-pointer',
+                      "cursor-pointer",
                     )}
                     style={{
                       animationDelay: `${index * 50}ms`,
-                      animationFillMode: 'backwards',
+                      animationFillMode: "backwards",
                     }}
                   >
                     {notification.actionUrl ? (
@@ -355,20 +381,20 @@ export function NotificationCenter({
         {visibleNotifications.length > 0 && (
           <div
             className={cn(
-              'px-4 py-3 border-t-2',
+              "px-4 py-3 border-t-2",
               styles.borderColor,
-              'bg-slate-50',
+              "bg-slate-50",
             )}
           >
             <Link
               href={viewAllUrl}
               className={cn(
-                'flex items-center justify-center gap-2',
-                'text-sm font-semibold',
+                "flex items-center justify-center gap-2",
+                "text-sm font-semibold",
                 styles.accentColor,
-                'hover:underline',
-                'transition-all duration-200',
-                'group',
+                "hover:underline",
+                "transition-all duration-200",
+                "group",
               )}
               onClick={() => setIsOpen(false)}
             >
@@ -396,24 +422,26 @@ function NotificationItem({
   styles,
 }: {
   notification: Notification;
-  config: typeof notificationConfig[NotificationType];
+  config: (typeof notificationConfig)[NotificationType];
   Icon: React.ElementType;
   onMarkAsRead: (id: string, e: React.MouseEvent) => void;
-  styles: typeof themeStyles['super-admin'] | typeof themeStyles['tenant-admin'];
+  styles:
+    | (typeof themeStyles)["super-admin"]
+    | (typeof themeStyles)["tenant-admin"];
 }) {
   return (
     <div className="flex gap-3">
       {/* Icon badge */}
       <div
         className={cn(
-          'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center',
-          'border-2 shadow-sm',
+          "flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
+          "border-2 shadow-sm",
           config.bgColor,
           config.borderColor,
-          'transition-transform duration-200 group-hover:scale-110',
+          "transition-transform duration-200 group-hover:scale-110",
         )}
       >
-        <Icon className={cn('h-5 w-5', config.color)} aria-hidden="true" />
+        <Icon className={cn("h-5 w-5", config.color)} aria-hidden="true" />
       </div>
 
       {/* Content */}
@@ -423,10 +451,10 @@ function NotificationItem({
             <Badge
               variant="outline"
               className={cn(
-                'text-[10px] font-bold tracking-wider px-1.5 py-0',
+                "text-[10px] font-bold tracking-wider px-1.5 py-0",
                 config.color,
                 config.borderColor,
-                'bg-white',
+                "bg-white",
               )}
             >
               {config.label}
@@ -446,9 +474,9 @@ function NotificationItem({
               size="sm"
               onClick={(e) => onMarkAsRead(notification.id, e)}
               className={cn(
-                'h-6 w-6 p-0 opacity-0 group-hover:opacity-100',
-                'transition-opacity duration-200',
-                'hover:bg-slate-200',
+                "h-6 w-6 p-0 opacity-0 group-hover:opacity-100",
+                "transition-opacity duration-200",
+                "hover:bg-slate-200",
               )}
               aria-label="Mark as read"
             >
@@ -482,13 +510,35 @@ function NotificationItem({
  * Generate mock notifications for testing/demo
  */
 export function generateMockNotifications(count: number = 10): Notification[] {
-  const types: NotificationType[] = ['PENDING_APPROVAL', 'FAILED_ORDER', 'LOW_STOCK', 'SYSTEM_ALERT', 'USER_ACTION'];
+  const types: NotificationType[] = [
+    "PENDING_APPROVAL",
+    "FAILED_ORDER",
+    "LOW_STOCK",
+    "SYSTEM_ALERT",
+    "USER_ACTION",
+  ];
   const titles: Record<NotificationType, string[]> = {
-    PENDING_APPROVAL: ['New tenant application', 'Consultation request pending', 'Approval required'],
-    FAILED_ORDER: ['Payment processing failed', 'Order fulfillment error', 'Delivery failed'],
-    LOW_STOCK: ['Product stock critical', 'Inventory alert', 'Restock needed'],
-    SYSTEM_ALERT: ['System maintenance scheduled', 'Security update available', 'Performance alert'],
-    USER_ACTION: ['Profile updated successfully', 'Settings saved', 'Export completed'],
+    PENDING_APPROVAL: [
+      "New tenant application",
+      "Consultation request pending",
+      "Approval required",
+    ],
+    FAILED_ORDER: [
+      "Payment processing failed",
+      "Order fulfillment error",
+      "Delivery failed",
+    ],
+    LOW_STOCK: ["Product stock critical", "Inventory alert", "Restock needed"],
+    SYSTEM_ALERT: [
+      "System maintenance scheduled",
+      "Security update available",
+      "Performance alert",
+    ],
+    USER_ACTION: [
+      "Profile updated successfully",
+      "Settings saved",
+      "Export completed",
+    ],
   };
 
   return Array.from({ length: count }, (_, i) => {
