@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
-import Link from 'next/link';
-import { format } from 'date-fns';
-import { Users, Search, Phone, ShoppingBag, Share2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useMemo } from "react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { Users, Search, Phone, ShoppingBag, Share2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -14,12 +14,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { SearchInput, EmptyState, Pagination, SortableTableHeader, ExportButton } from '@/components/admin/shared';
-import { useTableState } from '@/lib/admin/url-state';
-import { exportToCSV } from '@/lib/admin/csv-export';
-import { toast } from '@/components/ui/sonner';
-import { useCallback } from 'react';
+} from "@/components/ui/table";
+import {
+  SearchInput,
+  EmptyState,
+  Pagination,
+  SortableTableHeader,
+  ExportButton,
+} from "@/components/admin/shared";
+import { useTableState } from "@/lib/admin/url-state";
+import { exportToCSV } from "@/lib/admin/csv-export";
+import { toast } from "@/components/ui/sonner";
+import { useCallback } from "react";
 
 /**
  * Customer data shape from Prisma query
@@ -53,7 +59,10 @@ interface CustomersTableProps {
  * - Empty state for no results with clear action
  */
 export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
-  const [{ search, page, pageSize, sort }, { setSearch, setPage, setPageSize, setSort }] = useTableState({
+  const [
+    { search, page, pageSize, sort },
+    { setSearch, setPage, setPageSize, setSort },
+  ] = useTableState({
     defaultPageSize: 20,
   });
 
@@ -65,12 +74,12 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
     if (hasSearchQuery) {
       return `No customers found matching "${search}". Try a different search term.`;
     }
-    return 'No customers yet. Share your store URL to get started.';
+    return "No customers yet. Share your store URL to get started.";
   }, [hasSearchQuery, search]);
 
   // Clear search handler
   const handleClearSearch = () => {
-    setSearch('');
+    setSearch("");
   };
 
   // Export handler
@@ -78,39 +87,39 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
     if (customers.length === 0) return;
 
     const exportData = customers.map((c) => ({
-      name: c.name || 'N/A',
+      name: c.name || "N/A",
       email: c.email,
-      phone: c.phone || 'N/A',
+      phone: c.phone || "N/A",
       orders: c._count.orders,
-      createdAt: format(new Date(c.createdAt), 'yyyy-MM-dd'),
+      createdAt: format(new Date(c.createdAt), "yyyy-MM-dd"),
     }));
 
     const csvHeaders = [
-      { key: 'name' as const, label: 'Name' },
-      { key: 'email' as const, label: 'Email' },
-      { key: 'phone' as const, label: 'Phone' },
-      { key: 'orders' as const, label: 'Orders' },
-      { key: 'createdAt' as const, label: 'Joined' },
+      { key: "name" as const, label: "Name" },
+      { key: "email" as const, label: "Email" },
+      { key: "phone" as const, label: "Phone" },
+      { key: "orders" as const, label: "Orders" },
+      { key: "createdAt" as const, label: "Joined" },
     ];
 
     await exportToCSV(
       exportData,
       csvHeaders,
-      'customers',
+      "customers",
       undefined,
       (recordCount, fileSize) => {
         toast.success(`Exported ${recordCount} customers to CSV (${fileSize})`);
       },
       (error) => {
         toast.error(`Export failed: ${error.message}`);
-      }
+      },
     );
   }, [customers]);
 
   // Get initials for avatar
   const getInitials = (name: string | null): string => {
-    if (!name) return '?';
-    const parts = name.trim().split(' ');
+    if (!name) return "?";
+    const parts = name.trim().split(" ");
     if (parts.length >= 2) {
       return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
     }
@@ -127,7 +136,10 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                 ? `Results (${totalCount})`
                 : `All Customers (${totalCount})`}
             </span>
-            <Badge variant="outline" className="text-sm font-normal bg-white/60">
+            <Badge
+              variant="outline"
+              className="text-sm font-normal bg-white/60"
+            >
               {totalCount} Total
             </Badge>
           </CardTitle>
@@ -164,9 +176,9 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
             variant="muted"
             size="default"
             action={{
-              label: 'Clear search',
+              label: "Clear search",
               onClick: handleClearSearch,
-              variant: 'outline',
+              variant: "outline",
             }}
             className="my-8"
           />
@@ -179,7 +191,7 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
             theme="cyan"
             showDecoration
             action={{
-              label: 'Copy Store URL',
+              label: "Copy Store URL",
               onClick: () => {
                 navigator.clipboard.writeText(window.location.origin);
               },
@@ -235,7 +247,7 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-slate-900 truncate">
-                            {customer.name || 'N/A'}
+                            {customer.name || "N/A"}
                           </p>
                           {/* Show email on mobile */}
                           <a
@@ -267,7 +279,7 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                       </span>
                     </TableCell>
                     <TableCell className="text-slate-600 text-sm hidden sm:table-cell">
-                      {format(new Date(customer.createdAt), 'MMM d, yyyy')}
+                      {format(new Date(customer.createdAt), "MMM d, yyyy")}
                     </TableCell>
                     <TableCell>
                       <Link href={`/tenant-admin/customers/${customer.id}`}>

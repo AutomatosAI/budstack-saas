@@ -1,16 +1,19 @@
-
-import { getServerSession } from 'next-auth';
-import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import SettingsForm from './settings-form';
-import { Breadcrumbs } from '@/components/admin/shared';
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import SettingsForm from "./settings-form";
+import { Breadcrumbs } from "@/components/admin/shared";
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
 
-  if (!session || (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
-    redirect('/auth/login');
+  if (
+    !session ||
+    (session.user.role !== "TENANT_ADMIN" &&
+      session.user.role !== "SUPER_ADMIN")
+  ) {
+    redirect("/auth/login");
   }
 
   const user = await prisma.users.findUnique({
@@ -21,14 +24,14 @@ export default async function SettingsPage() {
   // Mask the secret key before passing to client
   if (user?.tenants?.drGreenSecretKey) {
     // Only indicate it exists, don't send value
-    user.tenants.drGreenSecretKey = '********';
+    user.tenants.drGreenSecretKey = "********";
   }
   if (user?.tenants?.drGreenApiKey) {
-    user.tenants.drGreenApiKey = '********';
+    user.tenants.drGreenApiKey = "********";
   }
 
   if (!user?.tenants) {
-    redirect('/tenant-admin');
+    redirect("/tenant-admin");
   }
 
   return (
@@ -36,14 +39,16 @@ export default async function SettingsPage() {
       {/* Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', href: '/tenant-admin' },
-          { label: 'Settings' },
+          { label: "Dashboard", href: "/tenant-admin" },
+          { label: "Settings" },
         ]}
         className="mb-4"
       />
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Store Settings</h1>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          Store Settings
+        </h1>
         <p className="text-slate-600 mt-2">Configure your store preferences</p>
       </div>
 

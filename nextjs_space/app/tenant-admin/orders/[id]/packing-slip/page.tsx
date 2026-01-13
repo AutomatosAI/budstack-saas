@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { PackingSlip } from '@/components/admin/PackingSlip';
-import { toast } from '@/components/ui/sonner';
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { PackingSlip } from "@/components/admin/PackingSlip";
+import { toast } from "@/components/ui/sonner";
 
 interface OrderItem {
   id: string;
@@ -54,8 +54,8 @@ export default function PackingSlipPage() {
   const orderId = params.id as string;
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
+    if (status === "unauthenticated") {
+      router.push("/auth/login");
     }
   }, [status, router]);
 
@@ -65,22 +65,24 @@ export default function PackingSlipPage() {
     const fetchOrderAndTenant = async () => {
       try {
         // Fetch order data
-        const orderResponse = await fetch(`/api/tenant-admin/orders/${orderId}`);
+        const orderResponse = await fetch(
+          `/api/tenant-admin/orders/${orderId}`,
+        );
         if (!orderResponse.ok) {
-          throw new Error('Failed to fetch order');
+          throw new Error("Failed to fetch order");
         }
         const orderData = await orderResponse.json();
         setOrder(orderData);
 
         // Fetch tenant data for business name
-        const tenantResponse = await fetch('/api/tenant-admin/tenant');
+        const tenantResponse = await fetch("/api/tenant-admin/tenant");
         if (tenantResponse.ok) {
           const tenantData = await tenantResponse.json();
           setTenant(tenantData);
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
-        toast.error('Failed to load packing slip');
+        console.error("Error fetching data:", error);
+        toast.error("Failed to load packing slip");
       } finally {
         setLoading(false);
       }
@@ -89,7 +91,7 @@ export default function PackingSlipPage() {
     fetchOrderAndTenant();
   }, [session, orderId]);
 
-  if (status === 'loading' || loading) {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
@@ -119,7 +121,7 @@ export default function PackingSlipPage() {
   return (
     <PackingSlip
       order={order}
-      businessName={tenant?.businessName || 'BudStack'}
+      businessName={tenant?.businessName || "BudStack"}
       autoPrint={true}
     />
   );
