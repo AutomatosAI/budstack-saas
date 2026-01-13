@@ -138,7 +138,12 @@ if ('$use' in prisma) {
       return next(params);
     }
 
-    if (tenantScopedReadActions.has(params.action) || tenantScopedWriteManyActions.has(params.action)) {
+    if (
+      tenantScopedReadActions.has(params.action)
+      || tenantScopedWriteManyActions.has(params.action)
+      || params.action === 'update'
+      || params.action === 'delete'
+    ) {
       if (params.args?.where) {
         params.args.where = applyTenantScope(params.args.where, tenantId, allowNull);
       } else {

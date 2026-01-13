@@ -294,3 +294,12 @@ function sanitizeCustomCss(css?: string | null): string {
     .replace(/url\(([^)]+)\)/gi, '')
     .replace(/expression\(([^)]+)\)/gi, '');
 }
+
+function sanitizeCustomCss(css?: string | null): string {
+  if (!css) return '';
+
+  return css
+    .replace(/@import[^;]+;/gi, '')
+    .replace(/url\(([^)]+)\)/gi, '')
+    .replace(/expression\(([^)]+)\)/gi, '');
+}

@@ -61,6 +61,23 @@ export function CookieConsent({ tenant }: CookieConsentProps) {
         }
     }, [showCustomize]);
 
+    if (!mounted || !isEnabled) return null;
+
+    const handleAccept = () => {
+        // Accept all categories
+        const allAccepted: ConsentCategories = {
+            essential: true,
+            analytics: true,
+            marketing: true,
+            preferences: true,
+        };
+        saveCategories(allAccepted);
+        saveConsent();
+        setCategories(allAccepted);
+        setShowCustomize(false);
+        setShowBanner(false);
+    };
+
   if (!mounted || !isEnabled) return null;
 
   const handleAccept = () => {

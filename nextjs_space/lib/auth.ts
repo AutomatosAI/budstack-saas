@@ -20,7 +20,10 @@ export const authOptions: AuthOptions = {
         const tenant = await getCurrentTenant();
         const user = await prisma.users.findFirst({
           where: tenant?.id
-            ? { email: credentials.email, tenantId: tenant.id }
+            ? {
+              email: credentials.email,
+              OR: [{ tenantId: tenant.id }, { tenantId: null }],
+            }
             : { email: credentials.email },
           include: { tenants: true },
           orderBy: { createdAt: 'asc' },

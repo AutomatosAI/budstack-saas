@@ -38,7 +38,11 @@ export async function POST(req: NextRequest) {
       try {
         config = await getTenantDrGreenConfig(tenant.id);
       } catch (error) {
-        console.warn('Using platform Dr. Green credentials fallback:', error);
+        console.warn(
+          `Using platform Dr. Green credentials fallback: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
       }
     }
 

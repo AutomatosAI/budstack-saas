@@ -19,12 +19,12 @@ export interface OrderSubmissionData {
 }
 
 export interface DrGreenOrderResponse {
-  orderId: string;
-  drGreenOrderId: string;
-  orderNumber: string;
-  status: string;
-  total: number;
-  message: string;
+    orderId: string;
+    drGreenOrderId: string;
+    orderNumber: string;
+    status: string;
+    total: number;
+    message: string;
 }
 
 /**

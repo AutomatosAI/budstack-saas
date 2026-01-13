@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { sendEmail, emailTemplates } from "@/lib/email";
-import crypto from "crypto";
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { sendEmail, emailTemplates } from '@/lib/email';
+import { getCurrentTenant } from '@/lib/tenant';
+import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,9 +13,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
+    const tenant = await getCurrentTenant();
+
     // Find user by email
     const user = await prisma.users.findFirst({
-      where: { email },
+      where: tenant?.id ? { email, tenantId: tenant.id } : { email },
     });
 
     // Always return success to prevent email enumeration

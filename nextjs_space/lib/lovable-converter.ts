@@ -472,10 +472,6 @@ async function refactorHeaderComponent(filePath: string): Promise<void> {
   }
 
   content = content.replace(
-    /import \{ Link, useLocation \} from ["']react-router-dom["'];?/g,
-    "import Link from 'next/link';\nimport { usePathname } from 'next/navigation';",
-  );
-  content = content.replace(
     /import \{[^}]*\} from ["']react-router-dom["'];?/g,
     ''
   );

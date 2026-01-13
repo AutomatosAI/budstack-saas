@@ -144,6 +144,7 @@ export async function getTenantFromRequest(
         setTenantContext(tenant.id);
         return tenant;
       }
+      setTenantContext(null);
     }
 
     // Extract subdomain from host
@@ -167,6 +168,7 @@ export async function getTenantFromRequest(
         setTenantContext(tenant.id);
         return tenant;
       }
+      setTenantContext(null);
     }
   } catch (error) {
     console.error('Error fetching tenant from request:', error);
@@ -174,6 +176,7 @@ export async function getTenantFromRequest(
     return null;
   }
 
+  setTenantContext(null);
   return null;
 }
 
