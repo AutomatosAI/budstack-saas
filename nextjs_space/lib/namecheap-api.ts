@@ -12,7 +12,7 @@ interface NamecheapConfig {
 }
 
 interface DnsRecord {
-  type: 'CNAME' | 'A' | 'TXT';
+  type: "CNAME" | "A" | "TXT";
   hostname: string;
   address: string;
   ttl?: number;
@@ -20,7 +20,7 @@ interface DnsRecord {
 
 export class NamecheapAPI {
   private config: NamecheapConfig;
-  private baseUrl = 'https://api.namecheap.com/xml.response';
+  private baseUrl = "https://api.namecheap.com/xml.response";
 
   constructor(config: NamecheapConfig) {
     this.config = config;
@@ -33,10 +33,10 @@ export class NamecheapAPI {
     try {
       // First, get existing DNS records
       const existingRecords = await this.getHostRecords();
-      
+
       // Add new CNAME record for the subdomain
       const newRecord: DnsRecord = {
-        type: 'CNAME',
+        type: "CNAME",
         hostname: subdomain,
         address: this.config.baseDomain,
         ttl: 1800,
@@ -47,10 +47,10 @@ export class NamecheapAPI {
 
       // Update all records
       const result = await this.setHostRecords(updatedRecords);
-      
+
       return result;
     } catch (error) {
-      console.error('Error creating tenant subdomain:', error);
+      console.error("Error creating tenant subdomain:", error);
       return false;
     }
   }
@@ -62,18 +62,18 @@ export class NamecheapAPI {
     try {
       // Get existing DNS records
       const existingRecords = await this.getHostRecords();
-      
+
       // Filter out the subdomain record
       const updatedRecords = existingRecords.filter(
-        record => record.hostname !== subdomain
+        (record) => record.hostname !== subdomain,
       );
 
       // Update all records
       const result = await this.setHostRecords(updatedRecords);
-      
+
       return result;
     } catch (error) {
-      console.error('Error deleting tenant subdomain:', error);
+      console.error("Error deleting tenant subdomain:", error);
       return false;
     }
   }
@@ -86,20 +86,21 @@ export class NamecheapAPI {
       ApiUser: this.config.apiUser,
       ApiKey: this.config.apiKey,
       UserName: this.config.username,
-      Command: 'namecheap.domains.dns.getHosts',
+      Command: "namecheap.domains.dns.getHosts",
       ClientIp: this.config.clientIp,
-      SLD: this.config.baseDomain.split('.')[0],
-      TLD: this.config.baseDomain.split('.')[1],
+      SLD: this.config.baseDomain.split(".")[0],
+      TLD: this.config.baseDomain.split(".")[1],
     });
 
     const response = await fetch(`${this.baseUrl}?${params.toString()}`);
     const xmlText = await response.text();
-    
+
     // Parse XML response (simplified - in production use proper XML parser)
     const records: DnsRecord[] = [];
-    const hostRegex = /<host[^>]*HostName="([^"]*)"[^>]*Type="([^"]*)"[^>]*Address="([^"]*)"[^>]*TTL="([^"]*)"[^>]*\/>/g;
+    const hostRegex =
+      /<host[^>]*HostName="([^"]*)"[^>]*Type="([^"]*)"[^>]*Address="([^"]*)"[^>]*TTL="([^"]*)"[^>]*\/>/g;
     let match;
-    
+
     while ((match = hostRegex.exec(xmlText)) !== null) {
       records.push({
         hostname: match[1],
@@ -120,10 +121,10 @@ export class NamecheapAPI {
       ApiUser: this.config.apiUser,
       ApiKey: this.config.apiKey,
       UserName: this.config.username,
-      Command: 'namecheap.domains.dns.setHosts',
+      Command: "namecheap.domains.dns.setHosts",
       ClientIp: this.config.clientIp,
-      SLD: this.config.baseDomain.split('.')[0],
-      TLD: this.config.baseDomain.split('.')[1],
+      SLD: this.config.baseDomain.split(".")[0],
+      TLD: this.config.baseDomain.split(".")[1],
     });
 
     // Add each record as a numbered parameter
@@ -137,7 +138,7 @@ export class NamecheapAPI {
 
     const response = await fetch(`${this.baseUrl}?${params.toString()}`);
     const xmlText = await response.text();
-    
+
     // Check if successful
     return xmlText.includes('Status="OK"');
   }
@@ -148,9 +149,9 @@ export class NamecheapAPI {
   async subdomainExists(subdomain: string): Promise<boolean> {
     try {
       const records = await this.getHostRecords();
-      return records.some(record => record.hostname === subdomain);
+      return records.some((record) => record.hostname === subdomain);
     } catch (error) {
-      console.error('Error checking subdomain existence:', error);
+      console.error("Error checking subdomain existence:", error);
       return false;
     }
   }

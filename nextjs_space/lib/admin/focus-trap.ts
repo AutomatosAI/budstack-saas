@@ -30,12 +30,11 @@ export function createFocusTrap(container: HTMLElement): () => void {
   // Get all focusable elements within the container
   const getFocusableElements = (): HTMLElement[] => {
     return Array.from(
-      container.querySelectorAll<HTMLElement>(FOCUSABLE_ELEMENTS)
+      container.querySelectorAll<HTMLElement>(FOCUSABLE_ELEMENTS),
     ).filter((el) => {
       // Filter out elements that are not visible or have display: none
       return (
-        el.offsetParent !== null &&
-        getComputedStyle(el).visibility !== 'hidden'
+        el.offsetParent !== null && getComputedStyle(el).visibility !== "hidden"
       );
     });
   };
@@ -51,7 +50,7 @@ export function createFocusTrap(container: HTMLElement): () => void {
 
   // Handle Tab key presses
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key !== 'Tab') return;
+    if (e.key !== "Tab") return;
 
     const focusableElements = getFocusableElements();
     if (focusableElements.length === 0) return;
@@ -75,11 +74,11 @@ export function createFocusTrap(container: HTMLElement): () => void {
   };
 
   // Add event listener
-  container.addEventListener('keydown', handleKeyDown);
+  container.addEventListener("keydown", handleKeyDown);
 
   // Return cleanup function
   return () => {
-    container.removeEventListener('keydown', handleKeyDown);
+    container.removeEventListener("keydown", handleKeyDown);
     // Restore focus to the previously focused element
     if (previouslyFocusedElement) {
       previouslyFocusedElement.focus();
@@ -101,7 +100,7 @@ export function createFocusTrap(container: HTMLElement): () => void {
  */
 export function useFocusTrap(
   isActive: boolean,
-  containerRef: React.RefObject<HTMLElement>
+  containerRef: React.RefObject<HTMLElement>,
 ) {
   // This is a simplified version for TypeScript export
   // Actual implementation should use useEffect
