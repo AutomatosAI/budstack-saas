@@ -60,6 +60,12 @@
     --tenant-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
     --tenant-button-padding: 0.75rem 1.5rem;
     --tenant-button-font-size: 1rem;
+
+    /* SaaS light theme accents (platform surfaces) */
+    --saas-surface: 0 0% 100%;
+    --saas-surface-muted: 210 40% 98%;
+    --saas-border: 214.3 31.8% 91.4%;
+    --saas-shadow: 0 20px 40px -30px rgb(15 23 42 / 0.3);
   }
 
   .dark {
@@ -119,6 +125,31 @@
     color: #64748b !important;
   }
 
+  .saas-shell {
+    position: relative;
+    background-color: hsl(var(--saas-surface-muted));
+    background-image:
+      radial-gradient(circle at top left, rgba(255, 155, 80, 0.18), transparent 55%),
+      radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.08), transparent 45%),
+      radial-gradient(circle at 80% 10%, rgba(16, 185, 129, 0.08), transparent 45%),
+      linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(248, 250, 252, 0.95));
+  }
+
+  .saas-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(148, 163, 184, 0.3) 0.5px, transparent 0.5px);
+    background-size: 18px 18px;
+    opacity: 0.25;
+    pointer-events: none;
+  }
+
+  .saas-shell > * {
+    position: relative;
+    z-index: 1;
+  }
+
   * {
     @apply border-border;
   }
@@ -144,6 +175,27 @@
 }
 
 @layer components {
+  .saas-card {
+    background-color: hsl(var(--saas-surface));
+    border: 1px solid hsl(var(--saas-border));
+    border-radius: 1.25rem;
+    box-shadow: var(--saas-shadow);
+  }
+
+  .saas-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid hsl(var(--saas-border));
+    background: rgba(255, 255, 255, 0.7);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
   /* ============================================
      TENANT-AWARE BUTTON STYLES
      ============================================ */

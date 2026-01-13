@@ -1,8 +1,7 @@
-import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, TrendingUp, UserPlus, Users } from 'lucide-react';
-import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
-import { generateMockEvents } from '@/lib/mock-data';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Building2, TrendingUp, UserPlus, Users } from "lucide-react";
+import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
+import { generateMockEvents } from "@/lib/mock-data";
 
 interface OverviewPanelProps {
   totalTenants: number;
@@ -17,113 +16,118 @@ export function OverviewPanel({
   pendingOnboarding,
   totalUsers,
 }: OverviewPanelProps) {
-    const events = useMemo(() => generateMockEvents(5), []);
+  return (
+    <div className="min-h-screen saas-shell">
+      <div className="mx-auto w-full max-w-6xl px-6 py-10">
+        <div className="mb-10">
+          <span className="saas-pill text-slate-600">Super Admin</span>
+          <h1 className="mt-4 text-4xl font-semibold text-slate-900">
+            Platform overview
+          </h1>
+          <p className="mt-2 max-w-2xl text-slate-500">
+            Monitor the platform heartbeat, franchise readiness, and tenant
+            onboarding progress from a single view.
+          </p>
+        </div>
 
-    return (
-        <div className="p-8">
-            <div className="space-y-8">
-                {/* Header */}
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Overview</h1>
-                    <p className="text-slate-600 mt-2">Platform statistics and quick insights</p>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="saas-card relative overflow-hidden border-0 p-5">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500" />
+            <CardHeader className="space-y-2 p-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-slate-600">
+                  Total Tenants
+                </CardTitle>
+                <div className="rounded-full bg-cyan-100 p-2">
+                  <Building2 className="h-4 w-4 text-cyan-600" />
                 </div>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {/* Total Tenants */}
-                    <Card className="border-none shadow-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-                            <CardTitle className="text-sm font-medium text-cyan-50">Total Tenants</CardTitle>
-                            <Building2 className="h-5 w-5 text-cyan-100" />
-                        </CardHeader>
-                        <CardContent className="relative z-10">
-                            <div className="text-3xl font-bold">{totalTenants}</div>
-                            <p className="text-xs text-cyan-100 mt-1">NFT holders</p>
-                        </CardContent>
-                    </Card>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Total Tenants */}
-          <Card className="border-none shadow-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-cyan-50">
-                Total Tenants
-              </CardTitle>
-              <Building2 className="h-5 w-5 text-cyan-100" />
+              </div>
             </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold">{totalTenants}</div>
-              <p className="text-xs text-cyan-100 mt-1">NFT holders</p>
+            <CardContent className="p-0 pt-6">
+              <div className="text-3xl font-semibold text-slate-900">
+                {totalTenants}
+              </div>
+              <p className="mt-2 text-xs font-medium text-slate-500">
+                NFT holders onboarded
+              </p>
             </CardContent>
           </Card>
 
-          {/* Active Stores */}
-          <Card className="border-none shadow-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-emerald-50">
-                Active Stores
-              </CardTitle>
-              <TrendingUp className="h-5 w-5 text-emerald-100" />
+          <Card className="saas-card relative overflow-hidden border-0 p-5">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400" />
+            <CardHeader className="space-y-2 p-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-slate-600">
+                  Active Stores
+                </CardTitle>
+                <div className="rounded-full bg-emerald-100 p-2">
+                  <TrendingUp className="h-4 w-4 text-emerald-600" />
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold">{activeTenants}</div>
-              <p className="text-xs text-emerald-100 mt-1">Live storefronts</p>
+            <CardContent className="p-0 pt-6">
+              <div className="text-3xl font-semibold text-slate-900">
+                {activeTenants}
+              </div>
+              <p className="mt-2 text-xs font-medium text-slate-500">
+                Stores live with Dr. Green
+              </p>
             </CardContent>
           </Card>
 
-          {/* Pending Approval */}
-          <Card className="border-none shadow-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-amber-50">
-                Pending Approval
-              </CardTitle>
-              <UserPlus className="h-5 w-5 text-amber-100" />
+          <Card className="saas-card relative overflow-hidden border-0 p-5">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400" />
+            <CardHeader className="space-y-2 p-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-slate-600">
+                  Pending Approval
+                </CardTitle>
+                <div className="rounded-full bg-amber-100 p-2">
+                  <UserPlus className="h-4 w-4 text-amber-600" />
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold">{pendingOnboarding}</div>
-              <p className="text-xs text-amber-100 mt-1">
+            <CardContent className="p-0 pt-6">
+              <div className="text-3xl font-semibold text-slate-900">
+                {pendingOnboarding}
+              </div>
+              <p className="mt-2 text-xs font-medium text-slate-500">
                 Awaiting verification
               </p>
             </CardContent>
           </Card>
 
-          {/* Total Users */}
-          <Card className="border-none shadow-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-purple-50">
-                Total Users
-              </CardTitle>
-              <Users className="h-5 w-5 text-purple-100" />
+          <Card className="saas-card relative overflow-hidden border-0 p-5">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
+            <CardHeader className="space-y-2 p-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-slate-600">
+                  Total Users
+                </CardTitle>
+                <div className="rounded-full bg-indigo-100 p-2">
+                  <Users className="h-4 w-4 text-indigo-600" />
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold">{totalUsers}</div>
-              <p className="text-xs text-purple-100 mt-1">Platform-wide</p>
+            <CardContent className="p-0 pt-6">
+              <div className="text-3xl font-semibold text-slate-900">
+                {totalUsers}
+              </div>
+              <p className="mt-2 text-xs font-medium text-slate-500">
+                Platform-wide accounts
+              </p>
             </CardContent>
           </Card>
         </div>
 
-                {/* Recent Activity Timeline */}
-                <ActivityTimeline
-                    events={events}
-                    maxVisible={5}
-                    showViewAll={true}
-                />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity Timeline */}
-        <ActivityTimeline
-          events={generateMockEvents(5)}
-          maxVisible={5}
-          showViewAll={true}
-        />
+        <div className="mt-10">
+          <ActivityTimeline
+            events={generateMockEvents(5)}
+            maxVisible={5}
+            showViewAll
+            className="saas-card p-6"
+          />
+        </div>
       </div>
     </div>
   );

@@ -46,7 +46,7 @@ export default async function TenantAdminLayout({
   const mockNotifications = generateMockNotifications(8);
 
   return (
-    <div className="flex h-screen bg-gray-50 theme-force-light">
+    <div className="flex min-h-screen bg-slate-50 theme-force-light">
       <TenantAdminSidebar
         userName={session.user.name || "Tenant Admin"}
         userEmail={session.user.email || ""}
@@ -54,14 +54,14 @@ export default async function TenantAdminLayout({
       />
       <AccessibleAdminLayout theme="tenant-admin">
         {/* Header with notification center */}
-        <div className="sticky top-0 z-30 flex items-center justify-end px-6 py-3 bg-white border-b border-slate-200 shadow-sm">
+        <div className="sticky top-0 z-30 flex items-center justify-end border-b border-slate-200 bg-white/90 px-6 py-3 shadow-sm backdrop-blur">
           <NotificationCenter
             theme="tenant-admin"
             notifications={mockNotifications}
             viewAllUrl="/tenant-admin/notifications"
           />
         </div>
-        <div className="flex-1 overflow-auto pl-0 md:pl-0">{children}</div>
+        <div className="flex-1 overflow-auto">{children}</div>
       </AccessibleAdminLayout>
     </div>
   );
