@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
 /**
  * PATCH: Update admin notes for an order
@@ -10,27 +10,30 @@ import { prisma } from '@/lib/db';
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (
+      session.user.role !== "TENANT_ADMIN" &&
+      session.user.role !== "SUPER_ADMIN"
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const orderId = params.id;
     const body = await req.json();
     const { adminNotes } = body;
 
-    if (typeof adminNotes !== 'string') {
+    if (typeof adminNotes !== "string") {
       return NextResponse.json(
-        { error: 'Admin notes must be a string' },
-        { status: 400 }
+        { error: "Admin notes must be a string" },
+        { status: 400 },
       );
     }
 
@@ -41,7 +44,7 @@ export async function PATCH(
     });
 
     if (!user?.tenants) {
-      return NextResponse.json({ error: 'No tenant found' }, { status: 404 });
+      return NextResponse.json({ error: "No tenant found" }, { status: 404 });
     }
 
     // Verify the order belongs to this tenant
@@ -54,8 +57,8 @@ export async function PATCH(
 
     if (!order) {
       return NextResponse.json(
-        { error: 'Order not found or access denied' },
-        { status: 404 }
+        { error: "Order not found or access denied" },
+        { status: 404 },
       );
     }
 
@@ -79,10 +82,10 @@ export async function PATCH(
       updatedAt: updatedOrder.updatedAt,
     });
   } catch (error) {
-    console.error('Error updating admin notes:', error);
+    console.error("Error updating admin notes:", error);
     return NextResponse.json(
-      { error: 'Failed to update admin notes' },
-      { status: 500 }
+      { error: "Failed to update admin notes" },
+      { status: 500 },
     );
   }
 }

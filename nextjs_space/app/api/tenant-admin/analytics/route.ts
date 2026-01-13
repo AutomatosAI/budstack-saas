@@ -1,17 +1,16 @@
-
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { subDays, startOfDay, format, eachDayOfInterval } from 'date-fns';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { subDays, startOfDay, format, eachDayOfInterval } from "date-fns";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Rate limiting
@@ -26,16 +25,20 @@ export async function GET(req: NextRequest) {
       include: { tenants: true },
     });
 
-    if (!user?.tenantId || user.role !== 'TENANT_ADMIN') {
-      return NextResponse.json({ error: 'Not a tenant admin' }, { status: 403 });
+    if (!user?.tenantId || user.role !== "TENANT_ADMIN") {
+      return NextResponse.json(
+        { error: "Not a tenant admin" },
+        { status: 403 },
+      );
     }
 
     const tenantId = user.tenantId;
 
     // Get time range from query params
     const searchParams = req.nextUrl.searchParams;
-    const timeRangeParam = searchParams.get('timeRange') || '30d';
-    const days = timeRangeParam === '7d' ? 7 : timeRangeParam === '90d' ? 90 : 30;
+    const timeRangeParam = searchParams.get("timeRange") || "30d";
+    const days =
+      timeRangeParam === "7d" ? 7 : timeRangeParam === "90d" ? 90 : 30;
     const startDate = startOfDay(subDays(new Date(), days));
 
     // Get all-time totals for this tenant
@@ -48,7 +51,7 @@ export async function GET(req: NextRequest) {
     });
 
     const totalCustomers = await prisma.users.count({
-      where: { tenantId, role: 'PATIENT' },
+      where: { tenantId, role: "PATIENT" },
     });
 
     // Get total revenue
@@ -69,7 +72,7 @@ export async function GET(req: NextRequest) {
     const recentCustomers = await prisma.users.count({
       where: {
         tenantId,
-        role: 'PATIENT',
+        role: "PATIENT",
         createdAt: { gte: startDate },
       },
     });
@@ -106,10 +109,10 @@ export async function GET(req: NextRequest) {
         });
 
         return {
-          date: format(date, 'MMM dd'),
+          date: format(date, "MMM dd"),
           revenue: result._sum.total || 0,
         };
-      })
+      }),
     );
 
     // Get orders by day
@@ -129,15 +132,15 @@ export async function GET(req: NextRequest) {
         });
 
         return {
-          date: format(date, 'MMM dd'),
+          date: format(date, "MMM dd"),
           orders: count,
         };
-      })
+      }),
     );
 
     // Get top selling products
     const topProducts = await prisma.order_items.groupBy({
-      by: ['productId'],
+      by: ["productId"],
       where: {
         orders: {
           tenantId,
@@ -153,7 +156,7 @@ export async function GET(req: NextRequest) {
       },
       orderBy: {
         _sum: {
-          quantity: 'desc',
+          quantity: "desc",
         },
       },
       take: 5,
@@ -167,12 +170,12 @@ export async function GET(req: NextRequest) {
         });
         return {
           id: product?.id,
-          name: product?.name || 'Unknown Product',
+          name: product?.name || "Unknown Product",
           quantity: item._sum.quantity || 0,
           revenue: item._sum.price || 0,
           orders: item._count.id,
         };
-      })
+      }),
     );
 
     // Get customer growth by day
@@ -184,7 +187,7 @@ export async function GET(req: NextRequest) {
         const count = await prisma.users.count({
           where: {
             tenantId,
-            role: 'PATIENT',
+            role: "PATIENT",
             createdAt: {
               gte: dayStart,
               lt: dayEnd,
@@ -193,15 +196,15 @@ export async function GET(req: NextRequest) {
         });
 
         return {
-          date: format(date, 'MMM dd'),
+          date: format(date, "MMM dd"),
           customers: count,
         };
-      })
+      }),
     );
 
     // Get order status distribution
     const orderStatusData = await prisma.orders.groupBy({
-      by: ['status'],
+      by: ["status"],
       where: {
         tenantId,
         createdAt: { gte: startDate },
@@ -232,10 +235,10 @@ export async function GET(req: NextRequest) {
       ordersByStatus,
     });
   } catch (error) {
-    console.error('Error fetching analytics:', error);
+    console.error("Error fetching analytics:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch analytics' },
-      { status: 500 }
+      { error: "Failed to fetch analytics" },
+      { status: 500 },
     );
   }
 }

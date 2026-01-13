@@ -1,27 +1,29 @@
-
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { subDays, startOfDay, format, eachDayOfInterval } from 'date-fns';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { subDays, startOfDay, format, eachDayOfInterval } from "date-fns";
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || !['SUPER_ADMIN'].includes(session.user.role || '')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session || !["SUPER_ADMIN"].includes(session.user.role || "")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get time range from query params
     const searchParams = req.nextUrl.searchParams;
-    const timeRangeParam = searchParams.get('timeRange') || '30d';
-    const days = timeRangeParam === '7d' ? 7 : timeRangeParam === '90d' ? 90 : 30;
+    const timeRangeParam = searchParams.get("timeRange") || "30d";
+    const days =
+      timeRangeParam === "7d" ? 7 : timeRangeParam === "90d" ? 90 : 30;
     const startDate = startOfDay(subDays(new Date(), days));
 
     // Get all-time totals
     const totalTenants = await prisma.tenants.count();
-    const activeTenants = await prisma.tenants.count({ where: { isActive: true } });
+    const activeTenants = await prisma.tenants.count({
+      where: { isActive: true },
+    });
     const totalUsers = await prisma.users.count();
     const totalProducts = await prisma.products.count();
     const totalOrders = await prisma.orders.count();
@@ -70,7 +72,10 @@ export async function GET(req: NextRequest) {
       .map((tenant: any) => ({
         ...tenant,
         _sum: {
-          total: tenant.orders.reduce((sum: number, order: any) => sum + order.total, 0),
+          total: tenant.orders.reduce(
+            (sum: number, order: any) => sum + order.total,
+            0,
+          ),
         },
       }))
       .sort((a: any, b: any) => (b._sum?.total || 0) - (a._sum?.total || 0));
@@ -93,10 +98,10 @@ export async function GET(req: NextRequest) {
         });
 
         return {
-          date: format(date, 'MMM dd'),
+          date: format(date, "MMM dd"),
           revenue: result._sum.total || 0,
         };
-      })
+      }),
     );
 
     // Get orders by day
@@ -115,10 +120,10 @@ export async function GET(req: NextRequest) {
         });
 
         return {
-          date: format(date, 'MMM dd'),
+          date: format(date, "MMM dd"),
           orders: count,
         };
-      })
+      }),
     );
 
     // Get revenue by tenant for pie chart
@@ -135,7 +140,10 @@ export async function GET(req: NextRequest) {
     const revenueByTenant = tenantsWithRevenue
       .map((tenant: any) => ({
         name: tenant.businessName,
-        value: tenant.orders.reduce((sum: number, order: any) => sum + order.total, 0),
+        value: tenant.orders.reduce(
+          (sum: number, order: any) => sum + order.total,
+          0,
+        ),
       }))
       .filter((item: any) => item.value > 0)
       .sort((a: any, b: any) => b.value - a.value)
@@ -157,10 +165,10 @@ export async function GET(req: NextRequest) {
         });
 
         return {
-          date: format(date, 'MMM dd'),
+          date: format(date, "MMM dd"),
           customers: count,
         };
-      })
+      }),
     );
 
     return NextResponse.json({
@@ -181,10 +189,10 @@ export async function GET(req: NextRequest) {
       customerGrowth: customerGrowthData,
     });
   } catch (error) {
-    console.error('Error fetching analytics:', error);
+    console.error("Error fetching analytics:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch analytics' },
-      { status: 500 }
+      { error: "Failed to fetch analytics" },
+      { status: 500 },
     );
   }
 }

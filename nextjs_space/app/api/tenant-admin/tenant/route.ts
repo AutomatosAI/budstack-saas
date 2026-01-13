@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
 /**
  * GET /api/tenant-admin/tenant
@@ -14,10 +14,7 @@ export async function GET() {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Fetch user's tenant
@@ -38,8 +35,8 @@ export async function GET() {
 
     if (!user?.tenants) {
       return NextResponse.json(
-        { error: 'No tenant associated with user' },
-        { status: 403 }
+        { error: "No tenant associated with user" },
+        { status: 403 },
       );
     }
 
@@ -50,10 +47,10 @@ export async function GET() {
       customDomain: user.tenants.customDomain,
     });
   } catch (error) {
-    console.error('Error fetching tenant:', error);
+    console.error("Error fetching tenant:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch tenant' },
-      { status: 500 }
+      { error: "Failed to fetch tenant" },
+      { status: 500 },
     );
   }
 }

@@ -1,19 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.users.findUnique({
@@ -21,10 +18,13 @@ export async function POST(request: NextRequest) {
       include: { tenants: true },
     });
 
-    if (!user?.tenants || (user.role !== 'TENANT_ADMIN' && user.role !== 'SUPER_ADMIN')) {
+    if (
+      !user?.tenants ||
+      (user.role !== "TENANT_ADMIN" && user.role !== "SUPER_ADMIN")
+    ) {
       return NextResponse.json(
-        { error: 'Forbidden - Tenant admin access required' },
-        { status: 403 }
+        { error: "Forbidden - Tenant admin access required" },
+        { status: 403 },
       );
     }
 
@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
 
     if (!templateId) {
       return NextResponse.json(
-        { error: 'Template ID is required' },
-        { status: 400 }
+        { error: "Template ID is required" },
+        { status: 400 },
       );
     }
 
@@ -45,15 +45,15 @@ export async function POST(request: NextRequest) {
 
     if (!template) {
       return NextResponse.json(
-        { error: 'Template not found' },
-        { status: 404 }
+        { error: "Template not found" },
+        { status: 404 },
       );
     }
 
     if (!template.isActive) {
       return NextResponse.json(
-        { error: 'Template is not active' },
-        { status: 400 }
+        { error: "Template is not active" },
+        { status: 400 },
       );
     }
 
@@ -61,12 +61,19 @@ export async function POST(request: NextRequest) {
     let templateDefaults: any = {};
     if (template.slug) {
       try {
-        const defaultsPath = join(process.cwd(), 'templates', template.slug, 'defaults.json');
-        const defaultsContent = await readFile(defaultsPath, 'utf-8');
+        const defaultsPath = join(
+          process.cwd(),
+          "templates",
+          template.slug,
+          "defaults.json",
+        );
+        const defaultsContent = await readFile(defaultsPath, "utf-8");
         templateDefaults = JSON.parse(defaultsContent);
         console.log(`Loaded defaults for template ${template.slug}`);
       } catch (error) {
-        console.warn(`No defaults.json found for template ${template.slug}, using empty defaults`);
+        console.warn(
+          `No defaults.json found for template ${template.slug}, using empty defaults`,
+        );
       }
     }
 
@@ -78,7 +85,7 @@ export async function POST(request: NextRequest) {
       if (!path) return false;
       // Custom uploads will be in uploads/ folder or S3 paths
       // Template defaults will be in /templates/ folder
-      return path.includes('uploads/') || (!path.startsWith('/templates/'));
+      return path.includes("uploads/") || !path.startsWith("/templates/");
     };
 
     // Merge template defaults with preserved content
@@ -87,8 +94,12 @@ export async function POST(request: NextRequest) {
     const newSettings = {
       ...templateDefaults,
       // Only preserve logo/hero if it's a custom upload, not a template-specific file
-      ...(isCustomUpload(currentSettings.logoPath) && { logoPath: currentSettings.logoPath }),
-      ...(isCustomUpload(currentSettings.heroImagePath) && { heroImagePath: currentSettings.heroImagePath }),
+      ...(isCustomUpload(currentSettings.logoPath) && {
+        logoPath: currentSettings.logoPath,
+      }),
+      ...(isCustomUpload(currentSettings.heroImagePath) && {
+        heroImagePath: currentSettings.heroImagePath,
+      }),
     };
 
     // Update tenant's template selection AND settings
@@ -96,7 +107,7 @@ export async function POST(request: NextRequest) {
       where: { id: user.tenants.id },
       data: {
         templateId,
-        settings: newSettings
+        settings: newSettings,
       },
     });
 
@@ -108,15 +119,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Template applied successfully. All settings have been reset to template defaults.',
+      message:
+        "Template applied successfully. All settings have been reset to template defaults.",
       tenant: updatedTenant,
       appliedDefaults: templateDefaults,
     });
   } catch (error) {
-    console.error('Error selecting template:', error);
+    console.error("Error selecting template:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }

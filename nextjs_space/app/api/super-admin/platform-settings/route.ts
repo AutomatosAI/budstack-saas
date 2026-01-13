@@ -1,16 +1,15 @@
-
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { prisma } from '@/lib/db';
-import { authOptions } from '@/lib/auth';
-import { uploadFile } from '@/lib/s3';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { prisma } from "@/lib/db";
+import { authOptions } from "@/lib/auth";
+import { uploadFile } from "@/lib/s3";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Check if user is super admin
@@ -18,28 +17,28 @@ export async function POST(req: NextRequest) {
       where: { email: session.user.email },
     });
 
-    if (user?.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (user?.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const formData = await req.formData();
 
     // Extract form fields
-    const businessName = formData.get('businessName') as string;
-    const tagline = formData.get('tagline') as string;
-    const primaryColor = formData.get('primaryColor') as string;
-    const secondaryColor = formData.get('secondaryColor') as string;
-    const accentColor = formData.get('accentColor') as string;
-    const backgroundColor = formData.get('backgroundColor') as string;
-    const textColor = formData.get('textColor') as string;
-    const headingColor = formData.get('headingColor') as string;
-    const fontFamily = formData.get('fontFamily') as string;
-    const headingFontFamily = formData.get('headingFontFamily') as string;
-    const template = formData.get('template') as string;
+    const businessName = formData.get("businessName") as string;
+    const tagline = formData.get("tagline") as string;
+    const primaryColor = formData.get("primaryColor") as string;
+    const secondaryColor = formData.get("secondaryColor") as string;
+    const accentColor = formData.get("accentColor") as string;
+    const backgroundColor = formData.get("backgroundColor") as string;
+    const textColor = formData.get("textColor") as string;
+    const headingColor = formData.get("headingColor") as string;
+    const fontFamily = formData.get("fontFamily") as string;
+    const headingFontFamily = formData.get("headingFontFamily") as string;
+    const template = formData.get("template") as string;
 
     // Handle file uploads
-    const logoFile = formData.get('logo') as File | null;
-    const faviconFile = formData.get('favicon') as File | null;
+    const logoFile = formData.get("logo") as File | null;
+    const faviconFile = formData.get("favicon") as File | null;
 
     let logoUrl: string | undefined;
     let faviconUrl: string | undefined;
@@ -60,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     // Get or create platform settings
     let settings = await prisma.platform_settings.findUnique({
-      where: { id: 'platform' },
+      where: { id: "platform" },
     });
 
     const updateData: any = {
@@ -83,13 +82,13 @@ export async function POST(req: NextRequest) {
     if (!settings) {
       settings = await prisma.platform_settings.create({
         data: {
-          id: 'platform',
+          id: "platform",
           ...updateData,
         },
       });
     } else {
       settings = await prisma.platform_settings.update({
-        where: { id: 'platform' },
+        where: { id: "platform" },
         data: updateData,
       });
     }
@@ -99,10 +98,10 @@ export async function POST(req: NextRequest) {
       settings,
     });
   } catch (error) {
-    console.error('Platform settings update error:', error);
+    console.error("Platform settings update error:", error);
     return NextResponse.json(
-      { error: 'Failed to update platform settings' },
-      { status: 500 }
+      { error: "Failed to update platform settings" },
+      { status: 500 },
     );
   }
 }
@@ -110,23 +109,23 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const settings = await prisma.platform_settings.findUnique({
-      where: { id: 'platform' },
+      where: { id: "platform" },
     });
 
     if (!settings) {
       // Create default settings if not exists
       const newSettings = await prisma.platform_settings.create({
-        data: { id: 'platform' },
+        data: { id: "platform" },
       });
       return NextResponse.json({ settings: newSettings });
     }
 
     return NextResponse.json({ settings });
   } catch (error) {
-    console.error('Platform settings fetch error:', error);
+    console.error("Platform settings fetch error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch platform settings' },
-      { status: 500 }
+      { error: "Failed to fetch platform settings" },
+      { status: 500 },
     );
   }
 }
