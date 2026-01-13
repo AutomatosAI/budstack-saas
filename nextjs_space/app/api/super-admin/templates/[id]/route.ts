@@ -21,7 +21,7 @@ export async function DELETE(
     }
 
     const user = await prisma.users.findUnique({
-      where: { email: session.user.email },
+      where: { id: session.user.id },
     });
 
     if (user?.role !== 'SUPER_ADMIN') {

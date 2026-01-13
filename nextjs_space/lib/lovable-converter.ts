@@ -391,6 +391,10 @@ async function refactorComponentFile(filePath: string): Promise<void> {
 
   // Replace React Router imports with Next.js
   content = content.replace(
+    /import \{\s*Link\s*,\s*useLocation\s*\} from ["']react-router-dom["'];?/g,
+    "import Link from 'next/link';\nimport { usePathname } from 'next/navigation';"
+  );
+  content = content.replace(
     /import \{([^}]+)\} from ["']react-router-dom["'];?/g,
     (match, imports) => {
       if (imports.includes('Link')) {
@@ -401,7 +405,7 @@ async function refactorComponentFile(filePath: string): Promise<void> {
   );
 
   // Replace <Link to="..."> with <Link href="...">
-  content = content.replace(/to=/g, 'href=');
+  content = content.replace(/<Link\b([^>]*?)\s+to=/g, '<Link$1 href=');
 
   // Replace @/ imports with relative paths for local components
   content = content.replace(
@@ -425,14 +429,13 @@ async function refactorHeaderComponent(filePath: string): Promise<void> {
     content = "'use client'\n\n" + content;
   }
 
-  // Replace React Router imports
-  content = content.replace(
-    /import \{[^}]*\} from ["']react-router-dom["'];?/g,
-    ''
-  );
   content = content.replace(
     /import \{ Link, useLocation \} from ["']react-router-dom["'];?/g,
     "import Link from 'next/link';\nimport { usePathname } from 'next/navigation';"
+  );
+  content = content.replace(
+    /import \{[^}]*\} from ["']react-router-dom["'];?/g,
+    ''
   );
 
   // Replace useLocation with usePathname
@@ -440,7 +443,7 @@ async function refactorHeaderComponent(filePath: string): Promise<void> {
   content = content.replace(/location\.pathname/g, 'pathname');
 
   // Replace <Link to="..."> with <Link href="...">
-  content = content.replace(/ to=/g, ' href=');
+  content = content.replace(/<Link\b([^>]*?)\s+to=/g, '<Link$1 href=');
 
   // Remove asset imports (will be replaced with placeholder)
   content = content.replace(/import \w+ from ["']@\/assets\/[^"']+["'];?/g, '');
@@ -499,7 +502,7 @@ async function refactorFooterComponent(filePath: string): Promise<void> {
   );
 
   // Replace <Link to="..."> with <Link href="...">
-  content = content.replace(/ to=/g, ' href=');
+  content = content.replace(/<Link\b([^>]*?)\s+to=/g, '<Link$1 href=');
 
   // Remove asset imports
   content = content.replace(/import \w+ from ["']@\/assets\/[^"']+["'];?/g, '');

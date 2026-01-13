@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Tenant } from '@/types/client';
 import { TenantSettings } from '@/lib/types';
 
@@ -31,6 +31,7 @@ export function TenantThemeProvider({ tenant, tenantTemplate, children }: Tenant
   // Prioritize tenantTemplate.designSystem, then settings.designSystem
   const designSystem = tenantTemplate?.designSystem || (settings as any).designSystem;
   const customCss = tenantTemplate?.customCss || settings.customCSS;
+  const sanitizedCustomCss = useMemo(() => sanitizeCustomCss(customCss), [customCss]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,8 +44,8 @@ export function TenantThemeProvider({ tenant, tenantTemplate, children }: Tenant
   return (
     <>
       {/* Inject custom CSS if provided */}
-      {customCss && (
-        <style dangerouslySetInnerHTML={{ __html: customCss }} />
+      {sanitizedCustomCss && (
+        <style dangerouslySetInnerHTML={{ __html: sanitizedCustomCss }} />
       )}
 
       {/* Apply theme class to scoped container */}
@@ -247,4 +248,13 @@ function getTenantThemeClasses(settings: TenantSettings): string {
   }
 
   return classes.join(' ');
+}
+
+function sanitizeCustomCss(css?: string | null): string {
+  if (!css) return '';
+
+  return css
+    .replace(/@import[^;]+;/gi, '')
+    .replace(/url\(([^)]+)\)/gi, '')
+    .replace(/expression\(([^)]+)\)/gi, '');
 }

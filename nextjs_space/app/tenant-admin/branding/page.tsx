@@ -12,7 +12,7 @@ export default async function BrandingPage() {
   }
 
   const user = await prisma.users.findUnique({
-    where: { email: session.user.email },
+    where: { id: session.user.id },
     include: {
       tenants: {
         include: {
