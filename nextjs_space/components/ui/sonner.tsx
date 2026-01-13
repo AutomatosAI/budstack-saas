@@ -1,9 +1,15 @@
-'use client';
+"use client";
 
-import { useTheme } from 'next-themes';
-import { Toaster as Sonner, toast as sonnerToast } from 'sonner';
-import { CheckCircle2, XCircle, Loader2, AlertTriangle, Info } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useTheme } from "next-themes";
+import { Toaster as Sonner, toast as sonnerToast } from "sonner";
+import {
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  AlertTriangle,
+  Info,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
@@ -28,7 +34,9 @@ export const toast = {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-emerald-900">{message}</p>
             {options?.description && (
-              <p className="text-xs text-emerald-700 mt-0.5">{options.description}</p>
+              <p className="text-xs text-emerald-700 mt-0.5">
+                {options.description}
+              </p>
             )}
           </div>
           <button
@@ -40,7 +48,7 @@ export const toast = {
           </button>
         </div>
       ),
-      { duration: 3000 }
+      { duration: 3000 },
     );
   },
 
@@ -54,7 +62,9 @@ export const toast = {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-red-900">{message}</p>
             {options?.description && (
-              <p className="text-xs text-red-700 mt-0.5">{options.description}</p>
+              <p className="text-xs text-red-700 mt-0.5">
+                {options.description}
+              </p>
             )}
           </div>
           <button
@@ -66,7 +76,7 @@ export const toast = {
           </button>
         </div>
       ),
-      { duration: 5000 }
+      { duration: 5000 },
     );
   },
 
@@ -80,7 +90,9 @@ export const toast = {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-blue-900">{message}</p>
             {options?.description && (
-              <p className="text-xs text-blue-700 mt-0.5">{options.description}</p>
+              <p className="text-xs text-blue-700 mt-0.5">
+                {options.description}
+              </p>
             )}
           </div>
           <button
@@ -92,7 +104,7 @@ export const toast = {
           </button>
         </div>
       ),
-      { duration: Infinity }
+      { duration: Infinity },
     );
   },
 
@@ -106,7 +118,9 @@ export const toast = {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-amber-900">{message}</p>
             {options?.description && (
-              <p className="text-xs text-amber-700 mt-0.5">{options.description}</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                {options.description}
+              </p>
             )}
           </div>
           <button
@@ -118,7 +132,7 @@ export const toast = {
           </button>
         </div>
       ),
-      { duration: 4000 }
+      { duration: 4000 },
     );
   },
 
@@ -132,7 +146,9 @@ export const toast = {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-cyan-900">{message}</p>
             {options?.description && (
-              <p className="text-xs text-cyan-700 mt-0.5">{options.description}</p>
+              <p className="text-xs text-cyan-700 mt-0.5">
+                {options.description}
+              </p>
             )}
           </div>
           <button
@@ -144,7 +160,7 @@ export const toast = {
           </button>
         </div>
       ),
-      { duration: 3000 }
+      { duration: 3000 },
     );
   },
 
@@ -159,7 +175,7 @@ export const toast = {
  * - Mobile (<768px): top-center
  */
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = 'system' } = useTheme();
+  const { theme = "system" } = useTheme();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -168,27 +184,27 @@ const Toaster = ({ ...props }: ToasterProps) => {
     };
 
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   return (
     <Sonner
-      theme={theme as ToasterProps['theme']}
+      theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      position={isMobile ? 'top-center' : 'bottom-right'}
+      position={isMobile ? "top-center" : "bottom-right"}
       expand={true}
       richColors={false}
       closeButton={false}
       toastOptions={{
         unstyled: true,
         classNames: {
-          toast: 'w-full max-w-sm',
+          toast: "w-full max-w-sm",
         },
       }}
       style={
         {
-          '--width': '360px',
+          "--width": "360px",
         } as React.CSSProperties
       }
       {...props}

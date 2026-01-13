@@ -1,9 +1,8 @@
+"use client";
 
-'use client';
-
-import { useEffect, useRef } from 'react';
-import { Tenant } from '@/types/client';
-import { TenantSettings } from '@/lib/types';
+import { useEffect, useRef } from "react";
+import { Tenant } from "@/types/client";
+import { TenantSettings } from "@/lib/types";
 
 interface TenantThemeProviderProps {
   tenant?: Tenant;
@@ -16,20 +15,25 @@ interface TenantThemeProviderProps {
 
 /**
  * Scoped Theme Provider for Multi-Tenant Theming
- * 
+ *
  * This component injects CSS variables into a SCOPED container
  * (not document root) based on tenant branding settings or TenantTemplate.
  * This ensures BudStack.io core pages are NOT affected by tenant themes.
- * 
+ *
  * Supports BOTH:
  * - NEW: tenantTemplate with designSystem (TenantTemplate)
  * - LEGACY: tenant.settings (Tenant)
  */
-export function TenantThemeProvider({ tenant, tenantTemplate, children }: TenantThemeProviderProps) {
+export function TenantThemeProvider({
+  tenant,
+  tenantTemplate,
+  children,
+}: TenantThemeProviderProps) {
   /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
   const settings = tenant ? (tenant.settings as TenantSettings) || {} : {};
   // Prioritize tenantTemplate.designSystem, then settings.designSystem
-  const designSystem = tenantTemplate?.designSystem || (settings as any).designSystem;
+  const designSystem =
+    tenantTemplate?.designSystem || (settings as any).designSystem;
   const customCss = tenantTemplate?.customCss || settings.customCSS;
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -43,15 +47,13 @@ export function TenantThemeProvider({ tenant, tenantTemplate, children }: Tenant
   return (
     <>
       {/* Inject custom CSS if provided */}
-      {customCss && (
-        <style dangerouslySetInnerHTML={{ __html: customCss }} />
-      )}
+      {customCss && <style dangerouslySetInnerHTML={{ __html: customCss }} />}
 
       {/* Apply theme class to scoped container */}
       <div
         ref={containerRef}
         className={`tenant-theme-container theme-force-light ${getTenantThemeClasses(settings)}`}
-        style={{ minHeight: '100vh' }}
+        style={{ minHeight: "100vh" }}
       >
         {children}
       </div>
@@ -62,7 +64,11 @@ export function TenantThemeProvider({ tenant, tenantTemplate, children }: Tenant
 /**
  * Apply theme CSS variables to SCOPED container (not document root)
  */
-function applyThemeToContainer(container: HTMLElement, designSystem: any, settings: TenantSettings) {
+function applyThemeToContainer(
+  container: HTMLElement,
+  designSystem: any,
+  settings: TenantSettings,
+) {
   const root = container;
 
   // === COMPREHENSIVE DESIGN SYSTEM ===
@@ -74,7 +80,10 @@ function applyThemeToContainer(container: HTMLElement, designSystem: any, settin
         if (value) {
           const colorValue = formatColorValue(value as string);
           if (colorValue) {
-            root.style.setProperty(`--tenant-color-${camelToKebab(key)}`, colorValue);
+            root.style.setProperty(
+              `--tenant-color-${camelToKebab(key)}`,
+              colorValue,
+            );
           }
         }
       });
@@ -93,16 +102,25 @@ function applyThemeToContainer(container: HTMLElement, designSystem: any, settin
       // Helper to strip "hsl(" and ")" if present, or return as is if it looks like raw channels
       const toChannels = (val: string) => {
         if (!val) return null;
-        if (val.startsWith('hsl(')) return val.replace('hsl(', '').replace(')', '');
+        if (val.startsWith("hsl("))
+          return val.replace("hsl(", "").replace(")", "");
         return val;
       };
 
-      if (primary) root.style.setProperty('--primary', toChannels(primary as string));
-      if (secondary) root.style.setProperty('--secondary', toChannels(secondary as string));
-      if (accent) root.style.setProperty('--accent', toChannels(accent as string));
-      if (background) root.style.setProperty('--background', toChannels(background as string));
+      if (primary)
+        root.style.setProperty("--primary", toChannels(primary as string));
+      if (secondary)
+        root.style.setProperty("--secondary", toChannels(secondary as string));
+      if (accent)
+        root.style.setProperty("--accent", toChannels(accent as string));
+      if (background)
+        root.style.setProperty(
+          "--background",
+          toChannels(background as string),
+        );
       // Map text color to foreground
-      if (text) root.style.setProperty('--foreground', toChannels(text as string));
+      if (text)
+        root.style.setProperty("--foreground", toChannels(text as string));
     }
 
     // === TYPOGRAPHY ===
@@ -116,80 +134,85 @@ function applyThemeToContainer(container: HTMLElement, designSystem: any, settin
     };
 
     root.style.setProperty(
-      '--tenant-font-body',
-      fontMap[settings.fontFamily || 'inter'] || settings.fontFamily || "'Inter', sans-serif"
+      "--tenant-font-body",
+      fontMap[settings.fontFamily || "inter"] ||
+        settings.fontFamily ||
+        "'Inter', sans-serif",
     );
     root.style.setProperty(
-      '--tenant-font-heading',
-      fontMap[settings.headingFontFamily || settings.fontFamily || 'inter'] || settings.headingFontFamily || "'Inter', sans-serif"
+      "--tenant-font-heading",
+      fontMap[settings.headingFontFamily || settings.fontFamily || "inter"] ||
+        settings.headingFontFamily ||
+        "'Inter', sans-serif",
     );
 
     // Font size scale
     const fontSizeMap: Record<string, string> = {
-      small: '0.875rem',
-      medium: '1rem',
-      large: '1.125rem',
+      small: "0.875rem",
+      medium: "1rem",
+      large: "1.125rem",
     };
     root.style.setProperty(
-      '--tenant-font-size-base',
-      fontSizeMap[settings.fontSize || 'medium']
+      "--tenant-font-size-base",
+      fontSizeMap[settings.fontSize || "medium"],
     );
 
     // === BORDER RADIUS ===
     const borderRadiusMap: Record<string, string> = {
-      none: '0',
-      small: '0.25rem',
-      medium: '0.5rem',
-      large: '1rem',
+      none: "0",
+      small: "0.25rem",
+      medium: "0.5rem",
+      large: "1rem",
     };
     root.style.setProperty(
-      '--tenant-border-radius',
-      borderRadiusMap[settings.borderRadius || 'medium']
+      "--tenant-border-radius",
+      borderRadiusMap[settings.borderRadius || "medium"],
     );
 
     // Button-specific border radius
     const buttonStyleMap: Record<string, string> = {
-      rounded: '0.5rem',
-      square: '0.25rem',
-      pill: '9999px',
+      rounded: "0.5rem",
+      square: "0.25rem",
+      pill: "9999px",
     };
     root.style.setProperty(
-      '--tenant-button-radius',
-      buttonStyleMap[settings.buttonStyle || 'rounded']
+      "--tenant-button-radius",
+      buttonStyleMap[settings.buttonStyle || "rounded"],
     );
 
     // === SPACING ===
     const spacingMap: Record<string, string> = {
-      compact: '0.75',
-      normal: '1',
-      comfortable: '1.5',
+      compact: "0.75",
+      normal: "1",
+      comfortable: "1.5",
     };
     root.style.setProperty(
-      '--tenant-spacing-scale',
-      spacingMap[settings.spacing || 'normal']
+      "--tenant-spacing-scale",
+      spacingMap[settings.spacing || "normal"],
     );
 
     // === SHADOWS ===
     const shadowMap: Record<string, string> = {
-      none: 'none',
-      soft: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-      medium: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-      bold: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+      none: "none",
+      soft: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
+      medium: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+      bold: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
     };
     root.style.setProperty(
-      '--tenant-shadow',
-      shadowMap[settings.shadowStyle || 'soft']
+      "--tenant-shadow",
+      shadowMap[settings.shadowStyle || "soft"],
     );
 
     // === BUTTON SIZE ===
-    const buttonSizeMap: Record<string, { padding: string; fontSize: string }> = {
-      small: { padding: '0.5rem 1rem', fontSize: '0.875rem' },
-      medium: { padding: '0.75rem 1.5rem', fontSize: '1rem' },
-      large: { padding: '1rem 2rem', fontSize: '1.125rem' },
-    };
-    const buttonSize = buttonSizeMap[settings.buttonSize || 'medium'];
-    root.style.setProperty('--tenant-button-padding', buttonSize.padding);
-    root.style.setProperty('--tenant-button-font-size', buttonSize.fontSize);
+    const buttonSizeMap: Record<string, { padding: string; fontSize: string }> =
+      {
+        small: { padding: "0.5rem 1rem", fontSize: "0.875rem" },
+        medium: { padding: "0.75rem 1.5rem", fontSize: "1rem" },
+        large: { padding: "1rem 2rem", fontSize: "1.125rem" },
+      };
+    const buttonSize = buttonSizeMap[settings.buttonSize || "medium"];
+    root.style.setProperty("--tenant-button-padding", buttonSize.padding);
+    root.style.setProperty("--tenant-button-font-size", buttonSize.fontSize);
   }
 }
 
@@ -197,7 +220,7 @@ function applyThemeToContainer(container: HTMLElement, designSystem: any, settin
  * Convert camelCase to kebab-case
  */
 function camelToKebab(str: string): string {
-  return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+  return str.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 }
 
 /**
@@ -205,9 +228,9 @@ function camelToKebab(str: string): string {
  * This is required for shadcn/Tailwind core variables like --background, --foreground
  */
 function formatRawHSL(value: string | null | undefined): string {
-  if (!value || typeof value !== 'string') return '';
+  if (!value || typeof value !== "string") return "";
   // If it's already an HSL-like string with spaces and %, return it as is
-  if (value.includes('%') && !value.includes('(') && !value.includes('#')) {
+  if (value.includes("%") && !value.includes("(") && !value.includes("#")) {
     return value;
   }
   // For basic hex to HSL conversion if needed, but here we expect the design system to provide raw HSL
@@ -221,13 +244,13 @@ function formatRawHSL(value: string | null | undefined): string {
  */
 function formatColorValue(value: string | null | undefined): string {
   // Handle null/undefined values
-  if (!value || typeof value !== 'string') {
-    return '';
+  if (!value || typeof value !== "string") {
+    return "";
   }
 
   // Check if it's an HSL value without the hsl() wrapper
   // HSL values typically contain % and spaces but no parentheses
-  if (value.includes('%') && !value.includes('(') && !value.includes('#')) {
+  if (value.includes("%") && !value.includes("(") && !value.includes("#")) {
     // Assume it's in "H S% L%" format used by Tailwind
     return `hsl(${value})`;
   }
@@ -246,5 +269,5 @@ function getTenantThemeClasses(settings: TenantSettings): string {
     classes.push(`template-${settings.template}`);
   }
 
-  return classes.join(' ');
+  return classes.join(" ");
 }
