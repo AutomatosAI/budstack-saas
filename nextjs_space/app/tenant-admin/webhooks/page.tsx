@@ -36,7 +36,7 @@ import {
   XCircle,
   ExternalLink,
 } from "lucide-react";
-import { WEBHOOK_EVENT_CATEGORIES } from "@/lib/webhook";
+import { WEBHOOK_EVENT_CATEGORIES } from "@/lib/webhook-events";
 import { Breadcrumbs } from "@/components/admin/shared";
 
 interface WebhookData {

@@ -35,7 +35,7 @@ export default async function SuperAdminLayout({
       take: 8,
     });
 
-    notifications = auditLogs.map((log) => ({
+    notifications = auditLogs.map((log: typeof auditLogs[0]) => ({
       id: log.id,
       type: mapActionToType(log.action),
       title: log.action.replace(/_/g, " "),

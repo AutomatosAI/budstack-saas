@@ -36,11 +36,11 @@ export const prisma =
   (shouldUseMockPrisma()
     ? createMockPrismaClient()
     : new PrismaClient({
-        log:
-          process.env.NODE_ENV === "development"
-            ? ["query", "error", "warn"]
-            : ["error"],
-      }));
+      log:
+        process.env.NODE_ENV === "development"
+          ? ["query", "error", "warn"]
+          : ["error"],
+    }));
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
@@ -107,7 +107,7 @@ const applyTenantScope = (where: Record<string, any>, tenantId: string, allowNul
 };
 
 if ('$use' in prisma) {
-  prisma.$use(async (params, next) => {
+  (prisma as any).$use(async (params: any, next: (params: any) => Promise<any>) => {
     const tenantId = getTenantContext();
     if (!tenantId || !params.model || !tenantScopedModels.has(params.model)) {
       return next(params);

@@ -1,15 +1,11 @@
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Clock, Package, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { orders } from "@prisma/client";
 
 async function getOrder(orderId: string, slug: string) {
-  // This would call the API in a real scenario
-  // For now, get from database directly
   const tenant = await prisma.tenants.findUnique({
     where: { subdomain: slug },
     select: { id: true },
@@ -117,27 +113,25 @@ export default async function OrderConfirmationPage({
         </Card>
       )}
 
-                            <div className="pt-4 space-y-2">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Subtotal</span>
-                                    <span>${order.subtotal.toFixed(2)}</span>
-                                </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Shipping</span>
-                                <span>${order.shippingCost.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-lg font-bold border-t pt-2">
-                                <span>Total</span>
-                                <span>${order.total.toFixed(2)}</span>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+      {/* Order Summary */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Order Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {order.items?.map((item: any, idx: number) => (
+              <div key={idx} className="flex justify-between text-sm">
+                <span>{item.name || `Item ${idx + 1}`} × {item.quantity}</span>
+                <span>${Number(item.price || 0).toFixed(2)}</span>
+              </div>
+            ))}
 
             <div className="pt-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal</span>
                 <span className="text-gray-600">Subtotal</span>
                 <span>${order.subtotal.toFixed(2)}</span>
               </div>

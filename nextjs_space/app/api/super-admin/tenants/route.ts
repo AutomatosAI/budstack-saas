@@ -161,15 +161,18 @@ export async function POST(request: NextRequest) {
       async (tx: Prisma.TransactionClient) => {
         const newTenant = await tx.tenants.create({
           data: {
+            id: crypto.randomUUID(),
             businessName,
             subdomain,
             countryCode: countryCode || "PT",
             isActive: true,
+            updatedAt: new Date(),
           },
         });
 
         await tx.users.create({
           data: {
+            id: crypto.randomUUID(),
             email: adminEmail,
             password: hashedPassword,
             name:
@@ -180,12 +183,15 @@ export async function POST(request: NextRequest) {
             role: "TENANT_ADMIN",
             tenantId: newTenant.id,
             isActive: true,
+            updatedAt: new Date(),
           },
         });
 
         await tx.tenant_branding.create({
           data: {
+            id: crypto.randomUUID(),
             tenantId: newTenant.id,
+            updatedAt: new Date(),
           },
         });
 

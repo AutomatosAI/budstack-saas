@@ -1,10 +1,8 @@
 "use client";
 
-'use client';
-
-import { useEffect, useMemo, useRef } from 'react';
-import { Tenant } from '@/types/client';
-import { TenantSettings } from '@/lib/types';
+import { useEffect, useMemo, useRef } from "react";
+import { Tenant } from "@/types/client";
+import { TenantSettings } from "@/lib/types";
 
 interface TenantThemeProviderProps {
   tenant?: Tenant;
@@ -37,7 +35,10 @@ export function TenantThemeProvider({
   const designSystem =
     tenantTemplate?.designSystem || (settings as any).designSystem;
   const customCss = tenantTemplate?.customCss || settings.customCSS;
-  const sanitizedCustomCss = useMemo(() => sanitizeCustomCss(customCss), [customCss]);
+  const sanitizedCustomCss = useMemo(
+    () => sanitizeCustomCss(customCss),
+    [customCss],
+  );
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -80,7 +81,7 @@ function applyThemeToContainer(
   if (designSystem) {
     // Apply colors
     if (designSystem.colors) {
-      // 1. Set specific tenant variables using formatColorValue (Example: --tenant-color-primary: hsl(123 45% 67%))
+      // 1. Set specific tenant variables using formatColorValue
       Object.entries(designSystem.colors).forEach(([key, value]) => {
         if (value) {
           const colorValue = formatColorValue(value as string);
@@ -94,17 +95,13 @@ function applyThemeToContainer(
       });
 
       // 2. Set CORE Tailwind/Shadcn variables using the RAW HSL value if available
-      // Shadcn expects variables like --primary: 123 45% 67%; (NO hsl() wrapper)
-      // If the value in designSystem is raw HSL, use it directly. If it's hex, we might need conversion (or just use hex if standard css)
-      // Assuming designSystem stores valid CSS values. For Shadcn, we really need the HSL channels.
-
       const primary = designSystem.colors.primary;
       const secondary = designSystem.colors.secondary;
       const accent = designSystem.colors.accent;
       const background = designSystem.colors.background;
       const text = designSystem.colors.text;
 
-      // Helper to strip "hsl(" and ")" if present, or return as is if it looks like raw channels
+      // Helper to strip "hsl(" and ")" if present
       const toChannels = (val: string) => {
         if (!val) return null;
         if (val.startsWith("hsl("))
@@ -141,14 +138,14 @@ function applyThemeToContainer(
     root.style.setProperty(
       "--tenant-font-body",
       fontMap[settings.fontFamily || "inter"] ||
-        settings.fontFamily ||
-        "'Inter', sans-serif",
+      settings.fontFamily ||
+      "'Inter', sans-serif",
     );
     root.style.setProperty(
       "--tenant-font-heading",
       fontMap[settings.headingFontFamily || settings.fontFamily || "inter"] ||
-        settings.headingFontFamily ||
-        "'Inter', sans-serif",
+      settings.headingFontFamily ||
+      "'Inter', sans-serif",
     );
 
     // Font size scale
@@ -210,11 +207,11 @@ function applyThemeToContainer(
 
     // === BUTTON SIZE ===
     const buttonSizeMap: Record<string, { padding: string; fontSize: string }> =
-      {
-        small: { padding: "0.5rem 1rem", fontSize: "0.875rem" },
-        medium: { padding: "0.75rem 1.5rem", fontSize: "1rem" },
-        large: { padding: "1rem 2rem", fontSize: "1.125rem" },
-      };
+    {
+      small: { padding: "0.5rem 1rem", fontSize: "0.875rem" },
+      medium: { padding: "0.75rem 1.5rem", fontSize: "1rem" },
+      large: { padding: "1rem 2rem", fontSize: "1.125rem" },
+    };
     const buttonSize = buttonSizeMap[settings.buttonSize || "medium"];
     root.style.setProperty("--tenant-button-padding", buttonSize.padding);
     root.style.setProperty("--tenant-button-font-size", buttonSize.fontSize);
@@ -226,20 +223,6 @@ function applyThemeToContainer(
  */
 function camelToKebab(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-}
-
-/**
- * Format color value to raw HSL values (H S% L%)
- * This is required for shadcn/Tailwind core variables like --background, --foreground
- */
-function formatRawHSL(value: string | null | undefined): string {
-  if (!value || typeof value !== "string") return "";
-  // If it's already an HSL-like string with spaces and %, return it as is
-  if (value.includes("%") && !value.includes("(") && !value.includes("#")) {
-    return value;
-  }
-  // For basic hex to HSL conversion if needed, but here we expect the design system to provide raw HSL
-  return value;
 }
 
 /**
@@ -278,55 +261,10 @@ function getTenantThemeClasses(settings: TenantSettings): string {
 }
 
 function sanitizeCustomCss(css?: string | null): string {
-  if (!css) return '';
+  if (!css) return "";
 
   return css
-    .replace(/@import[^;]+;/gi, '')
-    .replace(/url\(([^)]+)\)/gi, '')
-    .replace(/expression\(([^)]+)\)/gi, '');
-}
-
-function sanitizeCustomCss(css?: string | null): string {
-  if (!css) return '';
-
-  return css
-    .replace(/@import[^;]+;/gi, '')
-    .replace(/url\(([^)]+)\)/gi, '')
-    .replace(/expression\(([^)]+)\)/gi, '');
-}
-
-function sanitizeCustomCss(css?: string | null): string {
-  if (!css) return '';
-
-  return css
-    .replace(/@import[^;]+;/gi, '')
-    .replace(/url\(([^)]+)\)/gi, '')
-    .replace(/expression\(([^)]+)\)/gi, '');
-}
-
-function sanitizeCustomCss(css?: string | null): string {
-  if (!css) return '';
-
-  return css
-    .replace(/@import[^;]+;/gi, '')
-    .replace(/url\(([^)]+)\)/gi, '')
-    .replace(/expression\(([^)]+)\)/gi, '');
-}
-
-function sanitizeCustomCss(css?: string | null): string {
-  if (!css) return '';
-
-  return css
-    .replace(/@import[^;]+;/gi, '')
-    .replace(/url\(([^)]+)\)/gi, '')
-    .replace(/expression\(([^)]+)\)/gi, '');
-}
-
-function sanitizeCustomCss(css?: string | null): string {
-  if (!css) return '';
-
-  return css
-    .replace(/@import[^;]+;/gi, '')
-    .replace(/url\(([^)]+)\)/gi, '')
-    .replace(/expression\(([^)]+)\)/gi, '');
+    .replace(/@import[^;]+;/gi, "")
+    .replace(/url\([^)]+\)/gi, "")
+    .replace(/expression\([^)]+\)/gi, "");
 }
