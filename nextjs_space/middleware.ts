@@ -19,6 +19,11 @@ export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const hostname = req.headers.get('host') || '';
   const pathname = url.pathname;
+
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.delete('x-tenant-slug');
+  requestHeaders.delete('x-tenant-subdomain');
+  requestHeaders.delete('x-tenant-custom-domain');
   
   // Extract subdomain or custom domain
   const currentHost = hostname.replace(/(:\d+)/, ''); // Remove port if present
@@ -33,16 +38,15 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/tenant-admin') ||
     pathname.startsWith('/api/tenant-admin')
   ) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // PRIORITY 1: Path-based routing /store/{tenantSlug} (PRIMARY METHOD)
   const storeMatch = pathname.match(/^\/store\/([^\/]+)/);
   if (storeMatch) {
     const tenantSlug = storeMatch[1];
-    const response = NextResponse.next();
-    response.headers.set('x-tenant-slug', tenantSlug);
-    return response;
+    requestHeaders.set('x-tenant-slug', tenantSlug);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // PRIORITY 2: Subdomain-based routing (e.g., portugalbuds.budstack.to)
@@ -55,9 +59,8 @@ export async function middleware(req: NextRequest) {
     
     // Exclude 'www' and root domain
     if (subdomain && subdomain !== 'www') {
-      const response = NextResponse.next();
-      response.headers.set('x-tenant-subdomain', subdomain);
-      return response;
+      requestHeaders.set('x-tenant-subdomain', subdomain);
+      return NextResponse.next({ request: { headers: requestHeaders } });
     }
   }
 
@@ -69,9 +72,8 @@ export async function middleware(req: NextRequest) {
     !currentHost.startsWith('www.')
   ) {
     // For custom domains, pass the full hostname
-    const response = NextResponse.next();
-    response.headers.set('x-tenant-custom-domain', currentHost);
-    return response;
+    requestHeaders.set('x-tenant-custom-domain', currentHost);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // For .abacusai.app deployment URLs, show platform landing page
@@ -84,9 +86,9 @@ export async function middleware(req: NextRequest) {
     currentHost === 'www.budstack.to'
   ) {
     // No tenant context for platform pages
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Default: no tenant context
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }

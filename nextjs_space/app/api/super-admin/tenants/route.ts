@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Rate limiting
-        const rateLimitResult = checkRateLimit(session.user.id);
+        const rateLimitResult = await checkRateLimit(session.user.id);
         if (!rateLimitResult.success) {
             return rateLimitResult.response;
         }
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Rate limiting
-        const rateLimitResult = checkRateLimit(session.user.id);
+        const rateLimitResult = await checkRateLimit(session.user.id);
         if (!rateLimitResult.success) {
             return rateLimitResult.response;
         }
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if admin email already exists
-        const existingUser = await prisma.users.findUnique({
+        const existingUser = await prisma.users.findFirst({
             where: { email: adminEmail },
         });
 

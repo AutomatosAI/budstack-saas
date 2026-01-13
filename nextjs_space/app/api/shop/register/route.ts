@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { createClient } from '@/lib/doctor-green-api';
 import { prisma } from '@/lib/db';
 import { getCurrentTenant } from '@/lib/tenant';
+import { getTenantDrGreenConfig } from '@/lib/tenant-config';
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,10 +32,18 @@ export async function POST(req: NextRequest) {
     const tenant = await getCurrentTenant();
 
     // Resolve credentials (tenant-specific or platform env fallback)
-    const config = {
-      apiKey: tenant?.drGreenApiKey || process.env.DR_GREEN_API_KEY || '',
-      secretKey: tenant?.drGreenSecretKey || process.env.DR_GREEN_SECRET_KEY || '',
+    let config = {
+      apiKey: process.env.DR_GREEN_API_KEY || '',
+      secretKey: process.env.DR_GREEN_SECRET_KEY || '',
     };
+
+    if (tenant?.id) {
+      try {
+        config = await getTenantDrGreenConfig(tenant.id);
+      } catch (error) {
+        console.warn('Using platform Dr. Green credentials fallback:', error);
+      }
+    }
 
     if (!config.apiKey || !config.secretKey) {
       console.error('Missing Dr. Green API credentials for registration');
@@ -67,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     // Update user with additional info
     await prisma.users.update({
-      where: { email: session.user.email },
+      where: { id: session.user.id },
       data: {
         name: `${personal.firstName} ${personal.lastName}`,
       },

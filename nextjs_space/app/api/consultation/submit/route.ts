@@ -5,6 +5,7 @@ import { triggerWebhook, WEBHOOK_EVENTS } from '@/lib/webhook';
 import { getTenantDrGreenConfig } from '@/lib/tenant-config';
 import { getPlatformConfig } from '@/lib/platform-config';
 import { prisma } from "@/lib/db";
+import { mapMedicalConditionsForDrGreen } from '@/lib/dr-green-mapping';
 
 /**
  * Generate ECDSA signature for API request (using Node.js crypto)
@@ -52,21 +53,6 @@ function convertToAlpha3CountryCode(alpha2: string): string {
   return mapping[alpha2.toUpperCase()] || alpha2;
 }
 
-/**
- * Map form medical condition values to Dr Green API enum values
- * Dr Green has specific enum values that must match exactly
- */
-function mapMedicalConditionsForDrGreen(conditions: string[]): string[] {
-  // Only map the few extras that aren't in Dr Green's enum
-  const extrasToOther: Record<string, string> = {
-    'asthma': 'other_medical_condition',
-    'glaucoma': 'other_medical_condition',
-    'lupus': 'other_medical_condition',
-  };
-
-  return conditions.map(c => extrasToOther[c] || c); // Most pass through unchanged
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -75,8 +61,11 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(body.password, 10);
 
     // Check if user already exists
-    const existingUser = await prisma.users.findUnique({
-      where: { email: body.email },
+    const existingUser = await prisma.users.findFirst({
+      where: {
+        email: body.email.toLowerCase(),
+        ...(body.tenantId ? { tenantId: body.tenantId } : {}),
+      },
     });
 
     let userId: string | undefined;

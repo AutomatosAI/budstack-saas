@@ -5,8 +5,7 @@
  */
 
 import { prisma } from '@/lib/db';
-import crypto from 'crypto';
-import { clearCart } from './drgreen-cart';
+import { callDrGreenAPI } from '@/lib/drgreen-api-client';
 
 export interface OrderSubmissionData {
     shippingInfo: {
@@ -26,51 +25,6 @@ export interface DrGreenOrderResponse {
     status: string;
     total: number;
     message: string;
-}
-
-/**
- * Generate RSA-SHA256 signature for Dr. Green API
- */
-function generateDrGreenSignature(payload: string, secretKey: string): string {
-    const privateKeyPEM = Buffer.from(secretKey, 'base64').toString('utf-8');
-    const sign = crypto.createSign('RSA-SHA256');
-    sign.update(payload);
-    return sign.sign(privateKeyPEM, 'base64');
-}
-
-/**
- * Make authenticated request to Dr. Green API
- */
-async function callDrGreenAPI(
-    endpoint: string,
-    method: 'GET' | 'POST',
-    apiKey: string,
-    secretKey: string,
-    body?: any
-): Promise<any> {
-    const apiUrl = process.env.DRGREEN_API_URL || 'https://api.drgreennft.com/api/v1';
-    const url = `${apiUrl}${endpoint}`;
-
-    const payload = body ? JSON.stringify(body) : '';
-    const signature = generateDrGreenSignature(payload || endpoint, secretKey);
-
-    const response = await fetch(url, {
-        method,
-        headers: {
-            'x-auth-apikey': apiKey,
-            'x-auth-signature': signature,
-            'Content-Type': 'application/json',
-        },
-        body: body ? payload : undefined,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data.success !== 'true') {
-        throw new Error(data.message || `Dr. Green API error: ${response.statusText}`);
-    }
-
-    return data;
 }
 
 /**
@@ -112,11 +66,14 @@ export async function submitOrder(params: {
     // Submit order to Dr. Green API
     const drGreenResponse = await callDrGreenAPI(
         '/dapp/orders',
-        'POST',
-        apiKey,
-        secretKey,
         {
-            clientId: user.drGreenClientId,
+            method: 'POST',
+            apiKey,
+            secretKey,
+            validateSuccessFlag: true,
+            body: {
+                clientId: user.drGreenClientId,
+            },
         }
     );
 
@@ -135,40 +92,55 @@ export async function submitOrder(params: {
     const shippingCost = 5.00; // Default shipping cost
     const total = subtotal + shippingCost;
 
-    // Create local order record
-    const order = await prisma.orders.create({
-        data: {
-            userId,
-            tenantId,
-            subtotal,
-            shippingCost,
-            total,
-            shippingInfo: shippingInfo as any,
-            status: 'PENDING',
-            paymentStatus: 'PENDING',
-            drGreenOrderId: orderData.id,
-            drGreenInvoiceNum: orderData.invoiceNumber,
-            items: {
-                create: cartItems.map((item) => ({
-                    productId: item.strainId,
-                    productName: item.strain?.name || 'Unknown Product',
-                    quantity: item.quantity,
-                    price: item.strain?.retailPrice || 0,
-                })),
+    const order = await prisma.$transaction(async (tx) => {
+        const createdOrder = await tx.orders.create({
+            data: {
+                userId,
+                tenantId,
+                subtotal,
+                shippingCost,
+                total,
+                shippingInfo: shippingInfo as any,
+                status: 'PENDING',
+                paymentStatus: 'PENDING',
+                drGreenOrderId: orderData.id,
+                drGreenInvoiceNum: orderData.invoiceNumber,
+                items: {
+                    create: cartItems.map((item) => ({
+                        productId: item.strainId,
+                        productName: item.strain?.name || 'Unknown Product',
+                        quantity: item.quantity,
+                        price: item.strain?.retailPrice || 0,
+                    })),
+                },
             },
-        },
-        include: {
-            items: true,
-        },
+            include: {
+                items: true,
+            },
+        });
+
+        await tx.drGreenCart.deleteMany({
+            where: {
+                userId,
+                tenantId,
+            },
+        });
+
+        return createdOrder;
     });
 
-    // Clear user's cart
-    await clearCart({
-        userId,
-        tenantId,
-        apiKey,
-        secretKey,
-    });
+    if (cart.drGreenCartId) {
+        await callDrGreenAPI(
+            `/dapp/carts/${cart.drGreenCartId}`,
+            {
+                method: 'DELETE',
+                apiKey,
+                secretKey,
+                validateSuccessFlag: true,
+                body: { cartId: cart.drGreenCartId },
+            }
+        );
+    }
 
     return {
         orderId: order.id,
@@ -213,9 +185,12 @@ export async function getOrder(params: {
         try {
             const drGreenOrder = await callDrGreenAPI(
                 `/dapp/orders/${order.drGreenOrderId}`,
-                'GET',
-                apiKey,
-                secretKey
+                {
+                    method: 'GET',
+                    apiKey,
+                    secretKey,
+                    validateSuccessFlag: true,
+                }
             );
 
             const orderDetails = drGreenOrder.data?.orderDetails;

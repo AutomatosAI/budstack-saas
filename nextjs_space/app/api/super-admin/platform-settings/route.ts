@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     // Check if user is super admin
     const user = await prisma.users.findUnique({
-      where: { email: session.user.email },
+      where: { id: session.user.id },
     });
 
     if (user?.role !== 'SUPER_ADMIN') {

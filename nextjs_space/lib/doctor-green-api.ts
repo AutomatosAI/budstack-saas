@@ -4,6 +4,8 @@
  * Two-layer security: API key + ECDSA cryptographic signature
  */
 
+import { callDrGreenAPI } from '@/lib/drgreen-api-client';
+
 const API_URL = process.env.DOCTOR_GREEN_API_URL || 'https://stage-api.drgreennft.com/api/v1';
 
 // Currency mapping by country code
@@ -61,41 +63,10 @@ export interface DoctorGreenConfig {
 }
 
 interface DoctorGreenAPIOptions {
-  method?: string;
+  method?: 'GET' | 'POST' | 'DELETE' | 'PATCH';
   body?: any;
   headers?: Record<string, string>;
   config?: DoctorGreenConfig;
-}
-
-/**
- * Generate ECDSA signature for API request (using Node.js crypto)
- */
-function generateSignature(payload: string, secretKey: string): string {
-  try {
-    const crypto = require('crypto');
-
-    // Decode the base64 private key - Handle potential raw private keys too
-    let privateKeyPEM = secretKey;
-    if (!secretKey.includes('BEGIN PRIVATE KEY')) {
-      try {
-        privateKeyPEM = Buffer.from(secretKey, 'base64').toString('utf-8');
-      } catch (e) {
-        // Keep original if not base64
-      }
-    }
-
-    // Sign the payload with SHA256
-    const sign = crypto.createSign('SHA256');
-    sign.update(payload);
-    sign.end();
-
-    // Generate signature and return as base64
-    const signature = sign.sign(privateKeyPEM);
-    return signature.toString('base64');
-  } catch (error) {
-    console.error('Error generating signature:', error);
-    throw new Error('Failed to generate API signature');
-  }
 }
 
 /**
@@ -117,44 +88,14 @@ export async function doctorGreenRequest<T>(
 
   if (!apiKey) console.warn('Warning: No Dr Green API Key provided');
 
-  // Prepare payload
-  const payload = body ? JSON.stringify(body) : '';
-
-  // Prepare request headers
-  const requestHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-auth-apikey': apiKey,
-    ...headers,
-  };
-
-  // Generate signature for POST/PATCH/DELETE requests (GET requests don't need signature)
-  if (method !== 'GET' && payload && secretKey) {
-    const signature = generateSignature(payload, secretKey);
-    requestHeaders['x-auth-signature'] = signature;
-  }
-
-  const url = `${API_URL}${endpoint}`;
-
-  try {
-    const response = await fetch(url, {
-      method,
-      headers: requestHeaders,
-      body: payload || undefined,
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        `Doctor Green API Error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Doctor Green API Request Error:', error);
-    throw error;
-  }
+  return callDrGreenAPI(endpoint, {
+    method,
+    apiKey,
+    secretKey,
+    body,
+    headers,
+    baseUrl: API_URL,
+  });
 }
 
 // ============================================
