@@ -1,17 +1,16 @@
+"use client";
 
-'use client';
-
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { ContactDetailsStep } from './steps/contact-details-step';
-import { AddressStep } from './steps/address-step';
-import { MedicalConditionsStep } from './steps/medical-conditions-step';
-import { MedicalHistoryPart1Step } from './steps/medical-history-part1-step';
-import { MedicalHistoryPart2Step } from './steps/medical-history-part2-step';
-import { toast } from '@/components/ui/sonner';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { ContactDetailsStep } from "./steps/contact-details-step";
+import { AddressStep } from "./steps/address-step";
+import { MedicalConditionsStep } from "./steps/medical-conditions-step";
+import { MedicalHistoryPart1Step } from "./steps/medical-history-part1-step";
+import { MedicalHistoryPart2Step } from "./steps/medical-history-part2-step";
+import { toast } from "@/components/ui/sonner";
+import { useRouter } from "next/navigation";
 
 export interface ConsultationFormData {
   // Contact Details
@@ -69,11 +68,11 @@ export interface ConsultationFormData {
 
 const TOTAL_STEPS = 5;
 const STEP_NAMES = [
-  'Contact Details',
-  'Address Information',
-  'Medical Conditions',
-  'Medical History (Part 1)',
-  'Medical History (Part 2)',
+  "Contact Details",
+  "Address Information",
+  "Medical Conditions",
+  "Medical History (Part 1)",
+  "Medical History (Part 2)",
 ];
 
 interface ConsultationFormProps {
@@ -81,43 +80,46 @@ interface ConsultationFormProps {
   tenantId: string;
 }
 
-export function ConsultationForm({ tenantSlug, tenantId }: ConsultationFormProps) {
+export function ConsultationForm({
+  tenantSlug,
+  tenantId,
+}: ConsultationFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<ConsultationFormData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneCode: '+44',
-    phoneNumber: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneCode: "+44",
+    phoneNumber: "",
     dateOfBirth: null,
-    gender: '',
-    password: '',
-    confirmPassword: '',
+    gender: "",
+    password: "",
+    confirmPassword: "",
 
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    country: '',
-    countryCode: 'GB',
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "",
+    countryCode: "GB",
 
-    businessType: '',
-    businessName: '',
-    businessAddress1: '',
-    businessAddress2: '',
-    businessCity: '',
-    businessState: '',
-    businessPostalCode: '',
-    businessCountry: '',
-    businessCountryCode: '',
+    businessType: "",
+    businessName: "",
+    businessAddress1: "",
+    businessAddress2: "",
+    businessCity: "",
+    businessState: "",
+    businessPostalCode: "",
+    businessCountry: "",
+    businessCountryCode: "",
 
     medicalConditions: [],
-    otherCondition: '',
+    otherCondition: "",
     prescribedMedications: [],
-    prescribedSupplements: '',
+    prescribedSupplements: "",
 
     hasHeartProblems: false,
     hasCancerTreatment: false,
@@ -127,10 +129,10 @@ export function ConsultationForm({ tenantSlug, tenantId }: ConsultationFormProps
 
     hasAlcoholAbuse: false,
     hasDrugServices: false,
-    alcoholUnitsPerWeek: '',
+    alcoholUnitsPerWeek: "",
     cannabisReducesMeds: false,
-    cannabisFrequency: '',
-    cannabisAmountPerDay: '',
+    cannabisFrequency: "",
+    cannabisAmountPerDay: "",
   });
 
   const progress = (currentStep / TOTAL_STEPS) * 100;
@@ -138,27 +140,27 @@ export function ConsultationForm({ tenantSlug, tenantId }: ConsultationFormProps
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep(currentStep + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleUpdateFormData = (data: Partial<ConsultationFormData>) => {
-    setFormData(prev => ({ ...prev, ...data }));
+    setFormData((prev) => ({ ...prev, ...data }));
   };
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/consultation/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/consultation/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           tenantId: tenantId, // Include tenant ID
@@ -168,21 +170,25 @@ export function ConsultationForm({ tenantSlug, tenantId }: ConsultationFormProps
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to submit consultation');
+        throw new Error(result.error || "Failed to submit consultation");
       }
 
-      toast.success('Consultation submitted successfully!');
-      toast.success(`Account created! You can now login at /store/${tenantSlug}/login`);
+      toast.success("Consultation submitted successfully!");
+      toast.success(
+        `Account created! You can now login at /store/${tenantSlug}/login`,
+      );
 
       // Redirect to tenant-scoped success page
-      router.push(`/store/${tenantSlug}/consultation/success?${new URLSearchParams({
-        id: result.questionnaireId || '',
-        clientId: result.drGreenClientId || '',
-        ...(result.kycLink && { kycLink: result.kycLink }),
-        approval: result.adminApproval || 'PENDING',
-      }).toString()}`);
+      router.push(
+        `/store/${tenantSlug}/consultation/success?${new URLSearchParams({
+          id: result.questionnaireId || "",
+          clientId: result.drGreenClientId || "",
+          ...(result.kycLink && { kycLink: result.kycLink }),
+          approval: result.adminApproval || "PENDING",
+        }).toString()}`,
+      );
     } catch (error: any) {
-      toast.error(error.message || 'Failed to submit consultation');
+      toast.error(error.message || "Failed to submit consultation");
     } finally {
       setIsSubmitting(false);
     }

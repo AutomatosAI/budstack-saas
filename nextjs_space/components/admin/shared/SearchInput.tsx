@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { Search, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import * as React from "react";
+import { Search, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 /**
  * Props for the SearchInput component.
@@ -22,7 +22,7 @@ export interface SearchInputProps {
   /** Additional CSS classes */
   className?: string;
   /** Accessible label for screen readers */
-  'aria-label'?: string;
+  "aria-label"?: string;
   /** Whether the input is disabled */
   disabled?: boolean;
 }
@@ -49,10 +49,10 @@ export interface SearchInputProps {
 export function SearchInput({
   value,
   onChange,
-  placeholder = 'Search...',
+  placeholder = "Search...",
   debounceMs = 300,
   className,
-  'aria-label': ariaLabel,
+  "aria-label": ariaLabel,
   disabled = false,
 }: SearchInputProps) {
   const [localValue, setLocalValue] = React.useState(value);
@@ -78,12 +78,12 @@ export function SearchInput({
         onChange(newValue);
       }, debounceMs);
     },
-    [onChange, debounceMs]
+    [onChange, debounceMs],
   );
 
   const handleClear = React.useCallback(() => {
-    setLocalValue('');
-    onChange('');
+    setLocalValue("");
+    onChange("");
     // Clear any pending debounce
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -100,7 +100,7 @@ export function SearchInput({
   }, []);
 
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn("relative", className)}>
       <Search
         className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none"
         aria-hidden="true"
@@ -111,13 +111,13 @@ export function SearchInput({
         onChange={handleChange}
         placeholder={placeholder}
         disabled={disabled}
-        aria-label={ariaLabel || placeholder?.replace('...', '')}
+        aria-label={ariaLabel || placeholder?.replace("...", "")}
         className={cn(
-          'pl-9 pr-9',
-          'bg-background/50 backdrop-blur-sm',
-          'border-border/60 hover:border-border',
-          'focus-visible:ring-primary/20 focus-visible:border-primary',
-          'transition-all duration-200'
+          "pl-9 pr-9",
+          "bg-background/50 backdrop-blur-sm",
+          "border-border/60 hover:border-border",
+          "focus-visible:ring-primary/20 focus-visible:border-primary",
+          "transition-all duration-200",
         )}
       />
       {localValue && (
@@ -129,11 +129,11 @@ export function SearchInput({
           disabled={disabled}
           aria-label="Clear search"
           className={cn(
-            'absolute right-1 top-1/2 -translate-y-1/2',
-            'h-7 w-7',
-            'text-muted-foreground hover:text-foreground',
-            'opacity-70 hover:opacity-100',
-            'transition-opacity duration-150'
+            "absolute right-1 top-1/2 -translate-y-1/2",
+            "h-7 w-7",
+            "text-muted-foreground hover:text-foreground",
+            "opacity-70 hover:opacity-100",
+            "transition-opacity duration-150",
           )}
         >
           <X className="h-3.5 w-3.5" />
@@ -143,4 +143,4 @@ export function SearchInput({
   );
 }
 
-SearchInput.displayName = 'SearchInput';
+SearchInput.displayName = "SearchInput";

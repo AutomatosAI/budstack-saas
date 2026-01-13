@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 /**
  * SkipToContent Component
@@ -13,26 +13,26 @@ import { cn } from '@/lib/utils';
  */
 
 export interface SkipToContentProps {
-  theme?: 'super-admin' | 'tenant-admin';
+  theme?: "super-admin" | "tenant-admin";
   targetId?: string;
 }
 
 export function SkipToContent({
-  theme = 'tenant-admin',
-  targetId = 'main-content',
+  theme = "tenant-admin",
+  targetId = "main-content",
 }: SkipToContentProps) {
   const themeStyles = {
-    'super-admin': {
-      bg: 'bg-slate-900',
-      text: 'text-white',
-      ring: 'focus:ring-slate-400',
-      shadow: 'shadow-slate-500/50',
+    "super-admin": {
+      bg: "bg-slate-900",
+      text: "text-white",
+      ring: "focus:ring-slate-400",
+      shadow: "shadow-slate-500/50",
     },
-    'tenant-admin': {
-      bg: 'bg-cyan-600',
-      text: 'text-white',
-      ring: 'focus:ring-cyan-400',
-      shadow: 'shadow-cyan-500/50',
+    "tenant-admin": {
+      bg: "bg-cyan-600",
+      text: "text-white",
+      ring: "focus:ring-cyan-400",
+      shadow: "shadow-cyan-500/50",
     },
   };
 
@@ -43,7 +43,7 @@ export function SkipToContent({
     const target = document.getElementById(targetId);
     if (target) {
       target.focus();
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -53,30 +53,30 @@ export function SkipToContent({
       onClick={handleSkip}
       className={cn(
         // Positioning - fixed at top, initially off-screen
-        'fixed top-4 left-4 z-[100]',
+        "fixed top-4 left-4 z-[100]",
         // Transform off-screen by default (account for top-4 offset + extra margin)
-        '-translate-y-[calc(100%+2rem)]',
+        "-translate-y-[calc(100%+2rem)]",
         // Slide down with dramatic animation on focus
-        'focus:translate-y-0 focus:animate-skip-link-slide',
+        "focus:translate-y-0 focus:animate-skip-link-slide",
         // Styling
         styles.bg,
         styles.text,
-        'px-6 py-3 rounded-lg font-semibold text-sm',
+        "px-6 py-3 rounded-lg font-semibold text-sm",
         // Focus ring with offset
-        'focus:outline-none focus:ring-2',
+        "focus:outline-none focus:ring-2",
         styles.ring,
-        'focus:ring-offset-2 focus:ring-offset-white',
+        "focus:ring-offset-2 focus:ring-offset-white",
         // Shadow and depth
-        'shadow-lg',
+        "shadow-lg",
         styles.shadow,
         // Smooth transitions
-        'transition-all duration-200 ease-out',
+        "transition-all duration-200 ease-out",
         // Prevent text selection
-        'select-none',
+        "select-none",
         // Cursor
-        'cursor-pointer'
+        "cursor-pointer",
       )}
-      aria-label={`Skip to ${targetId.replace('-', ' ')}`}
+      aria-label={`Skip to ${targetId.replace("-", " ")}`}
     >
       <span className="flex items-center gap-2">
         <svg

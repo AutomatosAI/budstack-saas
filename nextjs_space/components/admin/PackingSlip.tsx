@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { format } from 'date-fns';
-import { Package, MapPin, Phone, Mail, Hash } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { useEffect } from "react";
+import { format } from "date-fns";
+import { Package, MapPin, Phone, Mail, Hash } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 /**
  * Order item data shape
@@ -71,7 +71,7 @@ interface PackingSlipProps {
  */
 export function PackingSlip({
   order,
-  businessName = 'BudStack',
+  businessName = "BudStack",
   logoUrl,
   autoPrint = false,
 }: PackingSlipProps) {
@@ -87,15 +87,15 @@ export function PackingSlip({
 
   // Format shipping address
   const shippingAddress = order.shippingAddress || {
-    street: 'Not provided',
-    city: 'N/A',
-    state: 'N/A',
-    postalCode: 'N/A',
-    country: 'N/A',
+    street: "Not provided",
+    city: "N/A",
+    state: "N/A",
+    postalCode: "N/A",
+    country: "N/A",
   };
 
   // Generate tracking URL for QR code
-  const trackingUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/track/${order.orderNumber}`;
+  const trackingUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/track/${order.orderNumber}`;
 
   return (
     <>
@@ -142,8 +142,12 @@ export function PackingSlip({
                     </div>
                   </div>
                 )}
-                <h1 className="text-3xl font-bold tracking-tight mb-1">{businessName}</h1>
-                <p className="text-slate-300 text-sm font-medium uppercase tracking-wider">Packing Slip</p>
+                <h1 className="text-3xl font-bold tracking-tight mb-1">
+                  {businessName}
+                </h1>
+                <p className="text-slate-300 text-sm font-medium uppercase tracking-wider">
+                  Packing Slip
+                </p>
               </div>
 
               {/* QR Code */}
@@ -154,7 +158,9 @@ export function PackingSlip({
                   level="H"
                   includeMargin={false}
                 />
-                <p className="text-[10px] text-slate-600 text-center mt-2 font-mono">Scan to track</p>
+                <p className="text-[10px] text-slate-600 text-center mt-2 font-mono">
+                  Scan to track
+                </p>
               </div>
             </div>
           </div>
@@ -162,25 +168,33 @@ export function PackingSlip({
           {/* Order Information Bar */}
           <div className="bg-slate-100 border-b-2 border-slate-300 px-8 py-4 grid grid-cols-3 gap-4 print:border-slate-400">
             <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Order Number</p>
+              <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">
+                Order Number
+              </p>
               <p className="font-mono text-lg font-bold text-slate-900">
                 #{order.orderNumber.slice(-12).toUpperCase()}
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Order Date</p>
+              <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">
+                Order Date
+              </p>
               <p className="text-slate-900 font-semibold">
-                {format(new Date(order.createdAt), 'MMM d, yyyy')}
+                {format(new Date(order.createdAt), "MMM d, yyyy")}
               </p>
               <p className="text-slate-600 text-sm">
-                {format(new Date(order.createdAt), 'h:mm a')}
+                {format(new Date(order.createdAt), "h:mm a")}
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Status</p>
+              <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">
+                Status
+              </p>
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 border border-blue-300 rounded-md">
                 <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse print:animate-none" />
-                <span className="text-blue-900 font-semibold text-sm">{order.status}</span>
+                <span className="text-blue-900 font-semibold text-sm">
+                  {order.status}
+                </span>
               </div>
             </div>
           </div>
@@ -193,15 +207,22 @@ export function PackingSlip({
                 <div className="p-2 bg-slate-100 rounded-lg">
                   <MapPin className="w-5 h-5 text-slate-700" />
                 </div>
-                <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide">Ship To</h2>
+                <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide">
+                  Ship To
+                </h2>
               </div>
               <div className="space-y-2">
-                <p className="text-lg font-bold text-slate-900">{order.user?.name || 'Guest'}</p>
+                <p className="text-lg font-bold text-slate-900">
+                  {order.user?.name || "Guest"}
+                </p>
                 <p className="text-slate-700">{shippingAddress.street}</p>
                 <p className="text-slate-700">
-                  {shippingAddress.city}, {shippingAddress.state} {shippingAddress.postalCode}
+                  {shippingAddress.city}, {shippingAddress.state}{" "}
+                  {shippingAddress.postalCode}
                 </p>
-                <p className="text-slate-700 font-semibold">{shippingAddress.country}</p>
+                <p className="text-slate-700 font-semibold">
+                  {shippingAddress.country}
+                </p>
 
                 {/* Contact Info */}
                 <div className="pt-3 mt-3 border-t border-slate-200 space-y-1">
@@ -225,22 +246,34 @@ export function PackingSlip({
                 <div className="p-2 bg-slate-100 rounded-lg">
                   <Hash className="w-5 h-5 text-slate-700" />
                 </div>
-                <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide">Summary</h2>
+                <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide">
+                  Summary
+                </h2>
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200">
-                  <span className="text-slate-600 font-medium">Total Items</span>
-                  <span className="text-2xl font-bold text-slate-900">{order.items.length}</span>
+                  <span className="text-slate-600 font-medium">
+                    Total Items
+                  </span>
+                  <span className="text-2xl font-bold text-slate-900">
+                    {order.items.length}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200">
-                  <span className="text-slate-600 font-medium">Total Quantity</span>
+                  <span className="text-slate-600 font-medium">
+                    Total Quantity
+                  </span>
                   <span className="text-2xl font-bold text-slate-900">
                     {order.items.reduce((sum, item) => sum + item.quantity, 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border-2 border-emerald-300">
-                  <span className="text-emerald-900 font-bold">Order Total</span>
-                  <span className="text-2xl font-bold text-emerald-900">€{order.total.toFixed(2)}</span>
+                  <span className="text-emerald-900 font-bold">
+                    Order Total
+                  </span>
+                  <span className="text-2xl font-bold text-emerald-900">
+                    €{order.total.toFixed(2)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -252,17 +285,27 @@ export function PackingSlip({
               <div className="p-2 bg-slate-100 rounded-lg">
                 <Package className="w-5 h-5 text-slate-700" />
               </div>
-              <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide">Items to Pack</h2>
+              <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide">
+                Items to Pack
+              </h2>
             </div>
 
             <div className="border-2 border-slate-300 rounded-lg overflow-hidden print:border-slate-400">
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-800 text-white">
-                    <th className="text-left px-4 py-3 font-bold text-sm uppercase tracking-wider">Item</th>
-                    <th className="text-center px-4 py-3 font-bold text-sm uppercase tracking-wider w-24">Qty</th>
-                    <th className="text-right px-4 py-3 font-bold text-sm uppercase tracking-wider w-32">Price</th>
-                    <th className="text-right px-4 py-3 font-bold text-sm uppercase tracking-wider w-32">Total</th>
+                    <th className="text-left px-4 py-3 font-bold text-sm uppercase tracking-wider">
+                      Item
+                    </th>
+                    <th className="text-center px-4 py-3 font-bold text-sm uppercase tracking-wider w-24">
+                      Qty
+                    </th>
+                    <th className="text-right px-4 py-3 font-bold text-sm uppercase tracking-wider w-32">
+                      Price
+                    </th>
+                    <th className="text-right px-4 py-3 font-bold text-sm uppercase tracking-wider w-32">
+                      Total
+                    </th>
                     <th className="px-4 py-3 w-16 print:table-cell hidden">
                       <span className="sr-only">Packed</span>
                     </th>
@@ -273,11 +316,13 @@ export function PackingSlip({
                     <tr
                       key={item.id}
                       className={`border-b border-slate-200 ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-slate-50'
+                        index % 2 === 0 ? "bg-white" : "bg-slate-50"
                       }`}
                     >
                       <td className="px-4 py-4">
-                        <p className="font-semibold text-slate-900">{item.productName}</p>
+                        <p className="font-semibold text-slate-900">
+                          {item.productName}
+                        </p>
                       </td>
                       <td className="px-4 py-4 text-center">
                         <span className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 border-2 border-blue-300 rounded-lg font-bold text-blue-900 text-lg">
@@ -298,22 +343,40 @@ export function PackingSlip({
                 </tbody>
                 <tfoot>
                   <tr className="bg-slate-100 font-bold">
-                    <td colSpan={2} className="px-4 py-3 text-slate-600">Subtotal</td>
-                    <td colSpan={2} className="px-4 py-3 text-right font-mono text-slate-900">
+                    <td colSpan={2} className="px-4 py-3 text-slate-600">
+                      Subtotal
+                    </td>
+                    <td
+                      colSpan={2}
+                      className="px-4 py-3 text-right font-mono text-slate-900"
+                    >
                       €{order.subtotal.toFixed(2)}
                     </td>
                     <td className="print:table-cell hidden" />
                   </tr>
                   <tr className="bg-slate-100">
-                    <td colSpan={2} className="px-4 py-3 text-slate-600">Shipping</td>
-                    <td colSpan={2} className="px-4 py-3 text-right font-mono text-slate-700">
+                    <td colSpan={2} className="px-4 py-3 text-slate-600">
+                      Shipping
+                    </td>
+                    <td
+                      colSpan={2}
+                      className="px-4 py-3 text-right font-mono text-slate-700"
+                    >
                       €{order.shippingCost.toFixed(2)}
                     </td>
                     <td className="print:table-cell hidden" />
                   </tr>
                   <tr className="bg-slate-800 text-white">
-                    <td colSpan={2} className="px-4 py-4 text-lg font-bold uppercase tracking-wider">Total</td>
-                    <td colSpan={2} className="px-4 py-4 text-right text-xl font-bold font-mono">
+                    <td
+                      colSpan={2}
+                      className="px-4 py-4 text-lg font-bold uppercase tracking-wider"
+                    >
+                      Total
+                    </td>
+                    <td
+                      colSpan={2}
+                      className="px-4 py-4 text-right text-xl font-bold font-mono"
+                    >
                       €{order.total.toFixed(2)}
                     </td>
                     <td className="print:table-cell hidden" />
@@ -327,7 +390,9 @@ export function PackingSlip({
           <div className="bg-slate-100 px-8 py-6 border-t-2 border-slate-300 print:border-slate-400">
             <div className="grid grid-cols-2 gap-8 text-sm text-slate-600">
               <div>
-                <p className="font-semibold text-slate-900 mb-2">Packing Instructions:</p>
+                <p className="font-semibold text-slate-900 mb-2">
+                  Packing Instructions:
+                </p>
                 <ul className="space-y-1 list-disc list-inside">
                   <li>Verify all items before sealing package</li>
                   <li>Include this packing slip in shipment</li>
@@ -335,9 +400,11 @@ export function PackingSlip({
                 </ul>
               </div>
               <div className="text-right">
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Printed On</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                  Printed On
+                </p>
                 <p className="font-mono font-semibold text-slate-900">
-                  {format(new Date(), 'MMM d, yyyy • h:mm a')}
+                  {format(new Date(), "MMM d, yyyy • h:mm a")}
                 </p>
               </div>
             </div>
@@ -347,14 +414,19 @@ export function PackingSlip({
 
       {/* Print-specific styles */}
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap');
+        @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap");
 
         .packing-slip-container {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          font-family:
+            "Inter",
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            sans-serif;
         }
 
         .packing-slip-container .font-mono {
-          font-family: 'IBM Plex Mono', 'Courier New', monospace;
+          font-family: "IBM Plex Mono", "Courier New", monospace;
         }
 
         @media print {
