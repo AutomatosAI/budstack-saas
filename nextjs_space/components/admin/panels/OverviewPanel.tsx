@@ -1,7 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, TrendingUp, UserPlus, Users } from "lucide-react";
-import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
-import { generateMockEvents } from "@/lib/mock-data";
+import { useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Building2, TrendingUp, UserPlus, Users } from 'lucide-react';
+import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
+import { generateMockEvents } from '@/lib/mock-data';
 
 interface OverviewPanelProps {
   totalTenants: number;
@@ -16,18 +17,31 @@ export function OverviewPanel({
   pendingOnboarding,
   totalUsers,
 }: OverviewPanelProps) {
-  return (
-    <div className="p-8">
-      <div className="space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-            Overview
-          </h1>
-          <p className="text-slate-600 mt-2">
-            Platform statistics and quick insights
-          </p>
-        </div>
+    const events = useMemo(() => generateMockEvents(5), []);
+
+    return (
+        <div className="p-8">
+            <div className="space-y-8">
+                {/* Header */}
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Overview</h1>
+                    <p className="text-slate-600 mt-2">Platform statistics and quick insights</p>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Total Tenants */}
+                    <Card className="border-none shadow-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                            <CardTitle className="text-sm font-medium text-cyan-50">Total Tenants</CardTitle>
+                            <Building2 className="h-5 w-5 text-cyan-100" />
+                        </CardHeader>
+                        <CardContent className="relative z-10">
+                            <div className="text-3xl font-bold">{totalTenants}</div>
+                            <p className="text-xs text-cyan-100 mt-1">NFT holders</p>
+                        </CardContent>
+                    </Card>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -94,46 +108,12 @@ export function OverviewPanel({
           </Card>
         </div>
 
-        {/* Additional Info Card */}
-        <Card className="shadow-lg border-slate-200">
-          <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-slate-100">
-            <CardTitle className="text-xl">Platform Health</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                <span className="text-sm text-slate-600">
-                  Active Tenant Rate
-                </span>
-                <span className="text-sm font-semibold text-slate-900">
-                  {totalTenants > 0
-                    ? Math.round((activeTenants / totalTenants) * 100)
-                    : 0}
-                  %
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                <span className="text-sm text-slate-600">
-                  Pending Approvals
-                </span>
-                <span
-                  className={`text-sm font-semibold ${pendingOnboarding > 0 ? "text-amber-600" : "text-emerald-600"}`}
-                >
-                  {pendingOnboarding > 0
-                    ? `${pendingOnboarding} awaiting`
-                    : "All clear"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-slate-600">
-                  Avg. Users per Tenant
-                </span>
-                <span className="text-sm font-semibold text-slate-900">
-                  {totalTenants > 0
-                    ? (totalUsers / totalTenants).toFixed(1)
-                    : 0}
-                </span>
-              </div>
+                {/* Recent Activity Timeline */}
+                <ActivityTimeline
+                    events={events}
+                    maxVisible={5}
+                    showViewAll={true}
+                />
             </div>
           </CardContent>
         </Card>

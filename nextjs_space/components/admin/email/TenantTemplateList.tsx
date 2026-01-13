@@ -6,19 +6,34 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Loader2, Plus, Copy, Eye, EyeOff } from "lucide-react";
-import { toast } from "sonner";
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Edit, Trash2, Loader2, Plus, Copy, Eye, EyeOff } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+    const res = await fetch(url);
+    const text = await res.text();
+    let data = null;
+    if (text) {
+        try {
+            data = JSON.parse(text);
+        } catch (parseError) {
+            console.error('Failed to parse template list response:', parseError);
+        }
+    }
+    if (!res.ok) {
+        throw new Error(`Failed to fetch (${res.status}): ${text || res.statusText}`);
+    }
+    return data;
+};
 
 interface Template {
   id: string;
@@ -39,39 +54,48 @@ export function TenantTemplateList() {
   } = useSWR<Template[]>("/api/tenant-admin/email-templates", fetcher);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  const handleDelete = async (id: string) => {
-    if (
-      !confirm(
-        "Are you sure? If this template is active, the event will revert to System Default.",
-      )
-    )
-      return;
-    setIsDeleting(id);
-    try {
-      const res = await fetch(`/api/tenant-admin/email-templates/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete");
-      toast.success("Template deleted");
-      mutate();
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to delete template");
-    } finally {
-      setIsDeleting(null);
-    }
-  };
+    const handleDelete = async (id: string) => {
+        if (!confirm('Are you sure? If this template is active, the event will revert to System Default.')) return;
+        setIsDeleting(id);
+        try {
+            const res = await fetch(`/api/tenant-admin/email-templates/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed to delete');
+            toast.success('Template deleted');
+            mutate();
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to delete template');
+        } finally {
+            setIsDeleting(null);
+        }
+    };
 
-  const handleClone = async (sourceId: string) => {
-    try {
-      toast.loading("Cloning template...");
-      const res = await fetch("/api/tenant-admin/email-templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sourceTemplateId: sourceId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+    const handleClone = async (sourceId: string) => {
+        let loadingToastId: string | number | undefined;
+        try {
+            loadingToastId = toast.loading('Cloning template...');
+            const res = await fetch('/api/tenant-admin/email-templates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sourceTemplateId: sourceId }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            if (loadingToastId) {
+                toast.dismiss(loadingToastId);
+            }
+            toast.success('Template cloned');
+            router.refresh();
+            router.push(`/tenant-admin/emails/${data.id}`);
+        } catch (err) {
+            console.error(err);
+            if (loadingToastId) {
+                toast.dismiss(loadingToastId);
+            }
+            toast.error('Failed to clone template');
+        }
+    };
 
       toast.dismiss();
       toast.success("Template cloned");
@@ -113,15 +137,82 @@ export function TenantTemplateList() {
 
   if (!templates || templates.length === 0) {
     return (
-      <div className="text-center py-12 border rounded-lg bg-muted/10">
-        <h3 className="text-lg font-semibold">No Custom Templates</h3>
-        <p className="text-muted-foreground mb-4">
-          You are using System Defaults for all emails.
-        </p>
-        <div className="flex justify-center gap-2">
-          <p className="text-sm">
-            Go to <strong>Event Triggers</strong> tab to customize an event.
-          </p>
+        <div className="border rounded-md overflow-hidden">
+            <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Template Name</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="hidden md:table-cell">Last Updated</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {templates.map((template) => (
+                            <TableRow key={template.id}>
+                                <TableCell className="font-medium">
+                                    {template.name}
+                                    {template.description && (
+                                        <div className="text-xs text-muted-foreground truncate max-w-[300px]">
+                                            {template.description}
+                                        </div>
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant={template.isSystem ? 'secondary' : 'default'} className={!template.isSystem ? "bg-slate-900 dark:bg-slate-700" : ""}>
+                                        {template.isSystem ? 'System' : 'Custom'}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="hidden md:table-cell">
+                                    {format(new Date(template.updatedAt), 'MMM d, yyyy')}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-1">
+                                        {template.isSystem ? (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleClone(template.id)}
+                                                title="Clone/Customize this template"
+                                            >
+                                                <Copy className="h-4 w-4" />
+                                            </Button>
+                                        ) : (
+                                            <>
+                                                <Link href={`/tenant-admin/emails/${template.id}`} passHref>
+                                                    <Button variant="ghost" size="icon" title="Edit Template">
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                </Link>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleTogglePublish(template.id, template.isActive)}
+                                                    title={template.isActive ? 'Disable Template' : 'Enable Template'}
+                                                    className={template.isActive ? 'text-amber-600 hover:text-amber-700' : 'text-green-600 hover:text-green-700'}
+                                                >
+                                                    {template.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDelete(template.id)}
+                                                    disabled={isDeleting === template.id}
+                                                    className="text-destructive hover:text-destructive/90"
+                                                    title="Delete Template"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
       </div>
     );

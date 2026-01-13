@@ -206,9 +206,8 @@ export function CallToAction({
                     ))}
                   </div>
                   <blockquote className="text-white text-lg leading-relaxed mb-4">
-                    "HealingBuds completely transformed my quality of life. The
-                    consultation process was professional, and the treatment
-                    plan has been incredibly effective for my chronic pain."
+                    "{brandName} completely transformed my quality of life. The consultation process 
+                    was professional, and the treatment plan has been incredibly effective for my chronic pain."
                   </blockquote>
                   <div className="text-green-200 text-sm">
                     — Maria S., Chronic Pain Patient, Lisbon

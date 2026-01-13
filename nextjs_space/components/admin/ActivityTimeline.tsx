@@ -10,9 +10,10 @@ import {
   Settings,
   AlertTriangle,
   ArrowRight,
-  Activity,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+  Activity
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { generateMockEvents } from '@/lib/mock-data'
 
 // Event type definitions
 export type EventType =
@@ -352,83 +353,4 @@ export function ActivityTimeline({
   );
 }
 
-// Export event generator for testing/demo purposes
-export function generateMockEvents(count: number = 20): TimelineEvent[] {
-  const eventTypes: EventType[] = [
-    "TENANT_CREATED",
-    "TENANT_ACTIVATED",
-    "USER_REGISTERED",
-    "ORDER_PLACED",
-    "TENANT_SETTINGS_UPDATED",
-    "SYSTEM_ALERT",
-  ];
-
-  const descriptions: Record<EventType, string[]> = {
-    TENANT_CREATED: [
-      'New tenant "Green Leaf Dispensary" created',
-      "Cannabis Co. signed up for platform",
-      "Healing Herbs Store registered",
-    ],
-    TENANT_ACTIVATED: [
-      "Happy Buds activated and went live",
-      "Ocean View Cannabis approved and activated",
-      "Mountain High Dispensary now active",
-    ],
-    USER_REGISTERED: [
-      "New admin user Sarah J. registered",
-      "Staff member Mike T. joined the platform",
-      "Customer Emma W. created account",
-    ],
-    ORDER_PLACED: [
-      "Order #1247 placed for $127.50",
-      "New order #1248 - 3 items, $85.00",
-      "Order #1249 submitted - $210.00",
-    ],
-    TENANT_SETTINGS_UPDATED: [
-      "Branding updated for Coastal Cannabis",
-      "Payment settings configured",
-      "Store hours modified",
-    ],
-    SYSTEM_ALERT: [
-      "Payment processing delay detected",
-      "High API usage from tenant #42",
-      "Scheduled maintenance in 2 hours",
-    ],
-  };
-
-  const actors = [
-    "System",
-    "Sarah Johnson",
-    "Mike Thompson",
-    "Admin",
-    "Emma Wilson",
-    "Platform Bot",
-    "John Doe",
-  ];
-
-  const events: TimelineEvent[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const type = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-    const descArray = descriptions[type];
-    const description = descArray[Math.floor(Math.random() * descArray.length)];
-
-    // Generate realistic timestamps (recent events)
-    const minutesAgo = Math.floor(Math.random() * 240); // Up to 4 hours ago
-    const timestamp = new Date(Date.now() - minutesAgo * 60000);
-
-    events.push({
-      id: `event-${i}-${Date.now()}`,
-      type,
-      description,
-      timestamp,
-      actor:
-        Math.random() > 0.3
-          ? actors[Math.floor(Math.random() * actors.length)]
-          : undefined,
-    });
-  }
-
-  // Sort by timestamp descending (most recent first)
-  return events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-}
+export { generateMockEvents }
