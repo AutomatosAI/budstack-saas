@@ -30,6 +30,6 @@ export function getTenantUrl(tenant: TenantUrlData): string {
   }
 
   // Use path-based routing (primary method until subdomain DNS is configured)
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstack.to';
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstack.to";
   return `https://${baseDomain}/store/${tenant.subdomain}`;
 }

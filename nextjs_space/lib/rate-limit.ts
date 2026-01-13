@@ -3,7 +3,7 @@
  * Implements a sliding window rate limiter with 20 requests per minute per user
  */
 
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 interface RateLimitEntry {
   count: number;
@@ -15,14 +15,17 @@ interface RateLimitEntry {
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
 // Cleanup old entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now > entry.resetAt) {
-      rateLimitStore.delete(key);
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, entry] of rateLimitStore.entries()) {
+      if (now > entry.resetAt) {
+        rateLimitStore.delete(key);
+      }
     }
-  }
-}, 5 * 60 * 1000);
+  },
+  5 * 60 * 1000,
+);
 
 export interface RateLimitConfig {
   /**
@@ -54,7 +57,7 @@ export interface RateLimitConfig {
  */
 export function checkRateLimit(
   identifier: string,
-  config: RateLimitConfig = {}
+  config: RateLimitConfig = {},
 ): { success: true } | { success: false; response: NextResponse } {
   const { maxRequests = 20, windowMs = 60000 } = config;
   const now = Date.now();
@@ -80,18 +83,18 @@ export function checkRateLimit(
       success: false,
       response: NextResponse.json(
         {
-          error: 'Too many requests',
+          error: "Too many requests",
           message: `Rate limit exceeded. Please try again in ${retryAfter} seconds.`,
         },
         {
           status: 429,
           headers: {
-            'Retry-After': retryAfter.toString(),
-            'X-RateLimit-Limit': maxRequests.toString(),
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': new Date(entry.resetAt).toISOString(),
+            "Retry-After": retryAfter.toString(),
+            "X-RateLimit-Limit": maxRequests.toString(),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": new Date(entry.resetAt).toISOString(),
           },
-        }
+        },
       ),
     };
   }
@@ -112,7 +115,7 @@ export function checkRateLimit(
  */
 export function getRateLimitStatus(
   identifier: string,
-  config: RateLimitConfig = {}
+  config: RateLimitConfig = {},
 ): {
   remaining: number;
   limit: number;

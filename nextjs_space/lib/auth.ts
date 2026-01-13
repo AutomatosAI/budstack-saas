@@ -1,15 +1,15 @@
-import { AuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import { prisma } from '@/lib/db';
-import bcrypt from 'bcryptjs';
+import { AuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
-      name: 'credentials',
+      name: "credentials",
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -27,7 +27,7 @@ export const authOptions: AuthOptions = {
 
         const isValidPassword = await bcrypt.compare(
           credentials.password,
-          user.password
+          user.password,
         );
 
         if (!isValidPassword) {
@@ -41,7 +41,7 @@ export const authOptions: AuthOptions = {
           role: user.role,
           tenantId: user.tenantId,
         };
-      }
+      },
     }),
   ],
   callbacks: {
@@ -63,10 +63,10 @@ export const authOptions: AuthOptions = {
     },
   },
   pages: {
-    signIn: '/auth/login',
+    signIn: "/auth/login",
   },
   session: {
-    strategy: 'jwt',
+    strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
