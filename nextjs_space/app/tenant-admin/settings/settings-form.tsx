@@ -33,10 +33,10 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const hasApiKey = Boolean(tenant.drGreenApiKey);
   const [formData, setFormData] = useState({
-    customDomain: tenant.customDomain || "",
-    drGreenApiUrl: tenant.drGreenApiUrl || "",
-    drGreenApiKey: "",
-    drGreenSecretKey: "", // Always start empty for security
+    customDomain: tenant.customDomain || '',
+    drGreenApiUrl: tenant.drGreenApiUrl || '',
+    drGreenApiKey: '',
+    drGreenSecretKey: '', // Always start empty for security
     // SMTP (from settings json)
     smtpHost: tenant.settings?.smtp?.host || "",
     smtpPort: tenant.settings?.smtp?.port || "587",
@@ -167,17 +167,11 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
             <Input
               id="drGreenApiKey"
               value={formData.drGreenApiKey}
-              onChange={(e) =>
-                setFormData({ ...formData, drGreenApiKey: e.target.value })
-              }
-              placeholder={
-                hasApiKey ? "******** (Verified)" : "Paste your Public Key here"
-              }
+              onChange={(e) => setFormData({ ...formData, drGreenApiKey: e.target.value })}
+              placeholder={hasApiKey ? "******** (Verified)" : "Paste your Public Key here"}
             />
             <p className="text-xs text-gray-500 mt-1">
-              {hasApiKey
-                ? "Leave empty to keep existing key."
-                : "Required for Dr. Green integration."}
+              {hasApiKey ? "Leave empty to keep existing key." : "Required for Dr. Green integration."}
             </p>
           </div>
           <div>

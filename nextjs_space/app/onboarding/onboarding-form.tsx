@@ -405,40 +405,78 @@ export default function OnboardingForm({
           </div>
         );
 
-      case 4:
-        const selectedTemplate = templates.find(
-          (t) => t.id === formData.templateId,
-        );
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">
-                Choose Your Store Template
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {templates.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    onClick={() =>
-                      setFormData({ ...formData, templateId: template.id })
-                    }
-                    className={`p-4 border-2 rounded-lg text-left transition-all hover:shadow-lg ${
-                      formData.templateId === template.id
-                        ? "border-primary bg-primary/5"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      {template.thumbnailUrl ? (
-                        <img
-                          src={template.thumbnailUrl}
-                          alt={template.name}
-                          className="w-12 h-12 object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <Palette className="h-6 w-6 text-slate-400" />
+                        <div>
+                            <Label htmlFor="countryCode" className="flex items-center gap-2">
+                                <Globe className="h-4 w-4" />
+                                Operating Country *
+                            </Label>
+                            <select
+                                id="countryCode"
+                                value={formData.countryCode}
+                                onChange={(e) => setFormData({ ...formData, countryCode: e.target.value })}
+                                className="w-full px-3 py-2 mt-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+                            >
+                                <option value="PT">Portugal 🇵🇹</option>
+                                <option value="SA">South Africa 🇿🇦</option>
+                                <option value="GB">United Kingdom 🇬🇧</option>
+                                <option value="DE">Germany 🇩🇪</option>
+                                <option value="ES">Spain 🇪🇸</option>
+                                <option value="FR">France 🇫🇷</option>
+                                <option value="IT">Italy 🇮🇹</option>
+                                <option value="NL">Netherlands 🇳🇱</option>
+                                <option value="BE">Belgium 🇧🇪</option>
+                                <option value="AT">Austria 🇦🇹</option>
+                                <option value="IE">Ireland 🇮🇪</option>
+                                <option value="CH">Switzerland 🇨🇭</option>
+                                <option value="US">United States 🇺🇸</option>
+                                <option value="CA">Canada 🇨🇦</option>
+                                <option value="AU">Australia 🇦🇺</option>
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1">This affects currency, regulations, and localization</p>
+                        </div>
+                    </div>
+                );
+
+            case 4: {
+                const selectedTemplate = templates.find((t) => t.id === formData.templateId);
+                return (
+                    <div className="space-y-6">
+                        <div>
+                            <h3 className="text-lg font-semibold mb-4">Choose Your Store Template</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                {templates.map((template) => (
+                                    <button
+                                        key={template.id}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, templateId: template.id })}
+                                        className={`p-4 border-2 rounded-lg text-left transition-all hover:shadow-lg ${formData.templateId === template.id
+                                                ? 'border-primary bg-primary/5'
+                                                : 'border-gray-200 hover:border-gray-300'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3 mb-3">
+                                            {template.thumbnailUrl ? (
+                                                <img
+                                                    src={template.thumbnailUrl}
+                                                    alt={template.name}
+                                                    className="w-12 h-12 object-cover rounded-lg"
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center">
+                                                    <Palette className="h-6 w-6 text-slate-400" />
+                                                </div>
+                                            )}
+                                            <div className="flex-1">
+                                                <div className="font-semibold">{template.name}</div>
+                                                {formData.templateId === template.id && (
+                                                    <Badge className="mt-1">Selected</Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-gray-600 line-clamp-2">{template.description}</p>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                       )}
                       <div className="flex-1">
@@ -448,13 +486,8 @@ export default function OnboardingForm({
                         )}
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 line-clamp-2">
-                      {template.description}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
+                );
+            }
 
             {selectedTemplate && (
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">

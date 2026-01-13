@@ -57,10 +57,7 @@ export default function WebhooksPage() {
   const [webhooks, setWebhooks] = useState<WebhookData[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingWebhook, setEditingWebhook] = useState<WebhookData | null>(
-    null,
-  );
+  const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
 
   // Form state
   const [formData, setFormData] = useState({
@@ -130,9 +127,7 @@ export default function WebhooksPage() {
       });
 
       if (response.ok) {
-        toast.success("Webhook updated successfully");
-        setIsEditDialogOpen(false);
-        setEditingWebhook(null);
+        toast.success('Webhook updated successfully');
         fetchWebhooks();
       } else {
         const error = await response.json();
@@ -178,6 +173,25 @@ export default function WebhooksPage() {
         ? prev.events.filter((e) => e !== eventValue)
         : [...prev.events, eventValue],
     }));
+  };
+
+  const toggleSecretVisibility = (webhookId: string) => {
+    setVisibleSecrets((prev) => {
+      const next = new Set(prev);
+      if (next.has(webhookId)) {
+        next.delete(webhookId);
+      } else {
+        next.add(webhookId);
+      }
+      return next;
+    });
+  };
+
+  const maskSecret = (secret: string) => {
+    if (!secret) {
+      return '';
+    }
+    return '•'.repeat(Math.min(secret.length, 16));
   };
 
   return (
@@ -384,12 +398,21 @@ export default function WebhooksPage() {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Webhook Secret
-                    </Label>
-                    <code className="block mt-1 p-2 bg-muted rounded text-xs font-mono">
-                      {webhook.secret}
-                    </code>
+                    <Label className="text-xs text-muted-foreground">Webhook Secret</Label>
+                    <div className="mt-1 flex items-center gap-2">
+                      <code className="flex-1 p-2 bg-muted rounded text-xs font-mono">
+                        {visibleSecrets.has(webhook.id) ? webhook.secret : maskSecret(webhook.secret)}
+                      </code>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleSecretVisibility(webhook.id)}
+                        aria-pressed={visibleSecrets.has(webhook.id)}
+                        aria-label={visibleSecrets.has(webhook.id) ? 'Hide webhook secret' : 'Show webhook secret'}
+                      >
+                        {visibleSecrets.has(webhook.id) ? 'Hide' : 'Show'}
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span>{webhook._count.deliveries} deliveries</span>
