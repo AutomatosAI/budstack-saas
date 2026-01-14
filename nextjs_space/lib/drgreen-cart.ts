@@ -85,7 +85,7 @@ export async function addToCart(params: {
   const actualQuantity = quantity * size;
 
   // Call Dr. Green API to add to cart
-  const response = await callDrGreenAPI("/dapp/carts", {
+  const response = await callDrGreenAPI(`/dapp/carts?clientId=${clientId}`, {
     method: "POST",
     apiKey,
     secretKey,
