@@ -93,12 +93,12 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+      <CardHeader className="border-b border-slate-100">
         <div className="flex justify-between items-center">
           <CardTitle>Tenant Information</CardTitle>
           {!isEditing ? (
-            <Button onClick={() => setIsEditing(true)} variant="outline">
+            <Button onClick={() => setIsEditing(true)} variant="outline" className="rounded-full">
               Edit
             </Button>
           ) : (
@@ -107,10 +107,15 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                 onClick={handleCancel}
                 variant="outline"
                 disabled={isSaving}
+                className="rounded-full"
               >
                 Cancel
               </Button>
-              <Button onClick={handleSave} disabled={isSaving}>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full"
+              >
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>

@@ -1,11 +1,14 @@
-import { getServerSession } from 'next-auth';
-import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { SuperAdminSidebar } from '@/components/admin/SuperAdminSidebar';
-import { AccessibleAdminLayout } from '@/components/admin/AccessibleAdminLayout';
-import { NotificationCenter } from '@/components/admin/NotificationCenter';
-import type { Notification, NotificationType } from '@/components/admin/NotificationCenter';
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { SuperAdminSidebar } from "@/components/admin/SuperAdminSidebar";
+import { AccessibleAdminLayout } from "@/components/admin/AccessibleAdminLayout";
+import { NotificationCenter } from "@/components/admin/NotificationCenter";
+import type {
+  Notification,
+  NotificationType,
+} from "@/components/admin/NotificationCenter";
 
 export default async function SuperAdminLayout({
   children,
@@ -35,7 +38,7 @@ export default async function SuperAdminLayout({
       take: 8,
     });
 
-    notifications = auditLogs.map((log: typeof auditLogs[0]) => ({
+    notifications = auditLogs.map((log: (typeof auditLogs)[0]) => ({
       id: log.id,
       type: mapActionToType(log.action),
       title: log.action.replace(/_/g, " "),
@@ -53,20 +56,22 @@ export default async function SuperAdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 theme-force-light">
+    <div className="flex min-h-screen canvas-bg">
       <SuperAdminSidebar
         userName={session.user.name || "Super Admin"}
-        userEmail={session.user.email || "admin@budstack.io"}
+        userEmail={session.user.email || "admin@popcornmedia.eu"}
       />
       <AccessibleAdminLayout theme="super-admin">
-        <div className="sticky top-0 z-30 flex items-center justify-end border-b border-slate-200 bg-white/90 px-6 py-3 shadow-sm backdrop-blur">
+        {/* Notification bar - compact */}
+        <div className="sticky top-0 z-30 flex items-center justify-end px-8 py-2">
           <NotificationCenter
             theme="super-admin"
             notifications={notifications}
             viewAllUrl="/super-admin/notifications"
           />
         </div>
-        <div className="flex-1 overflow-auto">{children}</div>
+        {/* Main content */}
+        <div className="flex-1 overflow-auto px-8 py-6">{children}</div>
       </AccessibleAdminLayout>
     </div>
   );

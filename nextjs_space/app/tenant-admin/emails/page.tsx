@@ -5,26 +5,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TenantTemplateList } from "@/components/admin/email/TenantTemplateList";
 import { TenantEventMapper } from "@/components/admin/email/TenantEventMapper";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Mail } from "lucide-react";
 import Link from "next/link";
 
 export default function TenantEmailsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            Email Management
+      <div className="relative mb-8">
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="section-badge mb-4 inline-flex">
+            <Mail className="h-4 w-4" />
+            Email
+          </div>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            Email Templates
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
+          <p className="mt-3 text-muted-foreground mx-auto">
             Create templates and map them to system events.
           </p>
         </div>
-        <Link href="/tenant-admin/emails/new" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" /> Create Template
-          </Button>
-        </Link>
+        <div className="mt-4 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mt-0">
+          <Link href="/tenant-admin/emails/new">
+            <Button variant="hero" size="lg" className="rounded-xl shadow-lg hover:shadow-xl transition-all">
+              <Plus className="mr-2 h-4 w-4" /> Create Template
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Tabs defaultValue="templates" className="space-y-4">

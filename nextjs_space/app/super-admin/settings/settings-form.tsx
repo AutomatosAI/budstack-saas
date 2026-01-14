@@ -120,8 +120,8 @@ export default function SettingsForm({ config }: SettingsFormProps) {
       </Alert>
 
       {/* Dr. Green API */}
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-emerald-50 to-teal-50">
+      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+        <CardHeader className="border-b border-slate-100">
           <CardTitle>Dr. Green API Configuration</CardTitle>
           <CardDescription>
             Configure the default Dr. Green API endpoint
@@ -147,8 +147,8 @@ export default function SettingsForm({ config }: SettingsFormProps) {
       </Card>
 
       {/* AWS S3 Configuration */}
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-cyan-50">
+      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+        <CardHeader className="border-b border-slate-100">
           <CardTitle>AWS S3 Configuration</CardTitle>
           <CardDescription>Configure file storage settings</CardDescription>
         </CardHeader>
@@ -234,8 +234,8 @@ export default function SettingsForm({ config }: SettingsFormProps) {
       </Card>
 
       {/* Email Configuration */}
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
+      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+        <CardHeader className="border-b border-slate-100">
           <CardTitle>Email Configuration</CardTitle>
           <CardDescription>
             Configure SMTP settings for sending emails
@@ -314,11 +314,10 @@ export default function SettingsForm({ config }: SettingsFormProps) {
               </div>
               {smtpTestResult && (
                 <div
-                  className={`mt-3 p-3 rounded-md flex items-start gap-2 ${
-                    smtpTestResult.success
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
+                  className={`mt-3 p-3 rounded-md flex items-start gap-2 ${smtpTestResult.success
+                    ? "bg-green-100 text-green-800"
+                    : "bg-red-100 text-red-800"
+                    }`}
                 >
                   {smtpTestResult.success ? (
                     <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -334,8 +333,8 @@ export default function SettingsForm({ config }: SettingsFormProps) {
       </Card>
 
       {/* Redis Configuration */}
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-orange-50">
+      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+        <CardHeader className="border-b border-slate-100">
           <CardTitle>Redis Configuration</CardTitle>
           <CardDescription>
             Configure Redis for caching and sessions
@@ -369,7 +368,7 @@ export default function SettingsForm({ config }: SettingsFormProps) {
         <Button
           type="submit"
           disabled={isLoading}
-          className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all"
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium shadow-md hover:shadow-lg transition-all"
         >
           {isLoading ? "Saving..." : "Save Settings"}
         </Button>

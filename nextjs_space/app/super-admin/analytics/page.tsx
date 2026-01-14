@@ -23,7 +23,6 @@ import {
   Percent,
   UserPlus,
 } from "lucide-react";
-import { Breadcrumbs } from "@/components/admin/shared";
 import {
   LineChart,
   Line,
@@ -170,35 +169,27 @@ export default function ComprehensiveAnalyticsPage() {
   }
 
   return (
-    <div className="p-8 space-y-10">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/super-admin" },
-          { label: "Analytics" },
-        ]}
-        className="mb-4"
-      />
-
-      {/* Header with Time Range Selector */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
-            Platform Analytics
-          </h1>
-          <p className="text-slate-600 mt-2 text-lg">
-            Comprehensive insights across all dimensions
-          </p>
+    <div className="space-y-8">
+      {/* Centered Header with Time Range Selector */}
+      <div className="text-center max-w-2xl mx-auto">
+        <div className="section-badge mb-4 inline-flex">
+          Analytics
         </div>
-        <div className="flex gap-2">
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          Platform Analytics
+        </h1>
+        <p className="mt-3 text-muted-foreground">
+          Comprehensive insights across all dimensions.
+        </p>
+        <div className="flex gap-2 justify-center mt-6">
           <Button
             variant={timeRange === "7d" ? "default" : "outline"}
             size="sm"
             onClick={() => setTimeRange("7d")}
             className={
               timeRange === "7d"
-                ? "bg-gradient-to-r from-cyan-600 to-blue-600"
-                : ""
+                ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
+                : "rounded-xl"
             }
           >
             7 Days
@@ -209,8 +200,8 @@ export default function ComprehensiveAnalyticsPage() {
             onClick={() => setTimeRange("30d")}
             className={
               timeRange === "30d"
-                ? "bg-gradient-to-r from-cyan-600 to-blue-600"
-                : ""
+                ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
+                : "rounded-xl"
             }
           >
             30 Days
@@ -221,8 +212,8 @@ export default function ComprehensiveAnalyticsPage() {
             onClick={() => setTimeRange("90d")}
             className={
               timeRange === "90d"
-                ? "bg-gradient-to-r from-cyan-600 to-blue-600"
-                : ""
+                ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
+                : "rounded-xl"
             }
           >
             90 Days
@@ -350,8 +341,8 @@ export default function ComprehensiveAnalyticsPage() {
 
         {/* Revenue & Orders Trends */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <Card>
-            <CardHeader>
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle>Revenue Trend</CardTitle>
               <CardDescription>
                 Daily revenue over the selected period
@@ -379,8 +370,8 @@ export default function ComprehensiveAnalyticsPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle>Order Volume</CardTitle>
               <CardDescription>
                 Daily orders over the selected period
@@ -402,8 +393,8 @@ export default function ComprehensiveAnalyticsPage() {
 
         {/* Revenue by Tenant & Customer Growth */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle>Revenue by Store</CardTitle>
               <CardDescription>
                 Distribution of revenue across stores
@@ -437,8 +428,8 @@ export default function ComprehensiveAnalyticsPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle>Customer Growth</CardTitle>
               <CardDescription>
                 New customer registrations over time
@@ -668,10 +659,10 @@ export default function ComprehensiveAnalyticsPage() {
 
           {/* Needs Attention Card */}
           <Card
-            className="border-2 border-slate-200 shadow-lg bg-white overflow-hidden animate-in fade-in slide-in-from-bottom-4"
+            className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4"
             style={{ animationDelay: "600ms", animationFillMode: "backwards" }}
           >
-            <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
+            <CardHeader className="border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <AlertCircle className="h-5 w-5 text-amber-600" />
@@ -714,7 +705,7 @@ export default function ComprehensiveAnalyticsPage() {
 
       {/* ========== SECTION 5: Top Performing Stores ========== */}
       <section>
-        <Card>
+        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
           <CardHeader>
             <CardTitle className="text-2xl">Top Performing Stores</CardTitle>
             <CardDescription>
@@ -814,8 +805,7 @@ function MetricCard({
   return (
     <Card
       className={cn(
-        "border-2 shadow-lg bg-white overflow-hidden hover:shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
-        colors.border,
+        "bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden hover:shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
       )}
       style={{ animationDelay: delay, animationFillMode: "backwards" }}
     >
@@ -872,10 +862,10 @@ function ChartCard({
 }: ChartCardProps) {
   return (
     <Card
-      className="border-2 border-slate-200 shadow-lg bg-white overflow-hidden animate-in fade-in slide-in-from-bottom-4"
+      className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4"
       style={{ animationDelay: delay, animationFillMode: "backwards" }}
     >
-      <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
+      <CardHeader className="border-b border-slate-100">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
             <Icon className="h-5 w-5 text-cyan-600" />

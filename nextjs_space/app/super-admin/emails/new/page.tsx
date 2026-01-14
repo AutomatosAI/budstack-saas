@@ -34,9 +34,9 @@ export default function NewEmailTemplatePage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)]">
-      <div className="px-6 py-4 border-b">
-        <h1 className="text-2xl font-bold tracking-tight">Create Template</h1>
-        <p className="text-muted-foreground">
+      <div className="px-6 py-6 lg:px-8 lg:pt-8 lg:pb-6 border-b">
+        <h1 className="text-4xl font-semibold tracking-tight text-slate-900">Create Template</h1>
+        <p className="mt-2 text-slate-500">
           Design a new system email template.
         </p>
       </div>

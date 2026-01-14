@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import BrandingForm from './branding-form';
 import { Breadcrumbs } from '@/components/admin/shared';
+import { Sparkles } from 'lucide-react';
 
 export default async function BrandingPage() {
   const session = await getServerSession(authOptions);
@@ -36,28 +37,24 @@ export default async function BrandingPage() {
   // Fetch active tenant template
   const activeTemplate = user.tenants.activeTenantTemplateId
     ? await prisma.tenant_templates.findUnique({
-        where: { id: user.tenants.activeTenantTemplateId },
-      })
+      where: { id: user.tenants.activeTenantTemplateId },
+    })
     : null;
 
   return (
-    <div className="p-8">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/tenant-admin" },
-          { label: "Branding" },
-        ]}
-        className="mb-4"
-      />
-
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+      {/* Centered Page Header */}
+      <div className="text-center max-w-2xl mx-auto mb-8">
+        <div className="section-badge mb-4 inline-flex">
+          <Sparkles className="h-4 w-4" />
+          Branding
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
           Store Branding
         </h1>
-        <p className="text-slate-600 mt-2">
-          Customize the look and feel of your storefront
+        <p className="mt-3 text-muted-foreground mx-auto">
+          Customize the look and feel of your storefront.
         </p>
       </div>
 

@@ -2,17 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
+import { Globe, Key, Zap, Mail } from "lucide-react";
 
 interface SettingsFormProps {
   tenant: {
@@ -33,11 +27,10 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const hasApiKey = Boolean(tenant.drGreenApiKey);
   const [formData, setFormData] = useState({
-    customDomain: tenant.customDomain || '',
-    drGreenApiUrl: tenant.drGreenApiUrl || '',
-    drGreenApiKey: '',
-    drGreenSecretKey: '', // Always start empty for security
-    // SMTP (from settings json)
+    customDomain: tenant.customDomain || "",
+    drGreenApiUrl: tenant.drGreenApiUrl || "",
+    drGreenApiKey: "",
+    drGreenSecretKey: "",
     smtpHost: tenant.settings?.smtp?.host || "",
     smtpPort: tenant.settings?.smtp?.port || "587",
     smtpUser: tenant.settings?.smtp?.user || "",
@@ -48,7 +41,6 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
 
   const [testEmail, setTestEmail] = useState("");
   const [testLoading, setTestLoading] = useState(false);
-
   const smtpConfigured = !!tenant.settings?.smtp?.password;
 
   const handleTestSmtp = async () => {
@@ -97,26 +89,41 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-8">
       {/* Domain Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Domain Configuration</CardTitle>
-          <CardDescription>Manage your store's domain settings</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="card-floating p-8">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="icon-badge">
+            <Globe className="h-5 w-5 text-white" />
+          </div>
           <div>
-            <Label>Default Subdomain</Label>
+            <h2 className="font-display text-xl font-bold text-foreground">
+              Domain Configuration
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Manage your store&apos;s domain settings
+            </p>
+          </div>
+        </div>
+        <div className="space-y-6">
+          <div>
+            <Label className="text-foreground font-medium">Default Subdomain</Label>
             <div className="flex items-center mt-2">
-              <Input value={tenant.subdomain} disabled className="flex-1" />
-              <span className="ml-2 text-gray-500">.budstack.to</span>
+              <Input
+                value={tenant.subdomain}
+                disabled
+                className="flex-1 rounded-xl bg-slate-50"
+              />
+              <span className="ml-3 font-medium text-muted-foreground">.budstack.to</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-2">
               This is your permanent subdomain
             </p>
           </div>
           <div>
-            <Label htmlFor="customDomain">Custom Domain (Optional)</Label>
+            <Label htmlFor="customDomain" className="text-foreground font-medium">
+              Custom Domain (Optional)
+            </Label>
             <Input
               id="customDomain"
               value={formData.customDomain}
@@ -124,58 +131,80 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                 setFormData({ ...formData, customDomain: e.target.value })
               }
               placeholder="yourdispensary.com"
+              className="mt-2 rounded-xl"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-2">
               Contact support after adding a custom domain for DNS configuration
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* NFT Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>NFT License</CardTitle>
-          <CardDescription>Your store license information</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="card-floating p-8">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="icon-badge">
+            <Key className="h-5 w-5 text-white" />
+          </div>
           <div>
-            <Label>NFT Token ID</Label>
-            <Input
-              value={tenant.nftTokenId || "Not set"}
-              disabled
-              className="mt-2"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              This NFT verifies your license to operate on BudStack.io
+            <h2 className="font-display text-xl font-bold text-foreground">
+              NFT License
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Your store license information
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div>
+          <Label className="text-foreground font-medium">NFT Token ID</Label>
+          <Input
+            value={tenant.nftTokenId || "Not set"}
+            disabled
+            className="mt-2 rounded-xl bg-slate-50"
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            This NFT verifies your license to operate on BudStack.io
+          </p>
+        </div>
+      </div>
 
       {/* Dr. Green Integration */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Dr. Green Integration</CardTitle>
-          <CardDescription>
-            Configure your connection to the Dr. Green API
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="card-floating p-8">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="rounded-2xl bg-emerald-500 p-3">
+            <Zap className="h-5 w-5 text-white" />
+          </div>
           <div>
-            <Label htmlFor="drGreenApiKey">API Key</Label>
+            <h2 className="font-display text-xl font-bold text-foreground">
+              Dr. Green Integration
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Configure your connection to the Dr. Green API
+            </p>
+          </div>
+        </div>
+        <div className="space-y-6">
+          <div>
+            <Label htmlFor="drGreenApiKey" className="text-foreground font-medium">
+              API Key
+            </Label>
             <Input
               id="drGreenApiKey"
               value={formData.drGreenApiKey}
-              onChange={(e) => setFormData({ ...formData, drGreenApiKey: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, drGreenApiKey: e.target.value })
+              }
               placeholder={hasApiKey ? "******** (Verified)" : "Paste your Public Key here"}
+              className="mt-2 rounded-xl"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-2">
               {hasApiKey ? "Leave empty to keep existing key." : "Required for Dr. Green integration."}
             </p>
           </div>
           <div>
-            <Label htmlFor="drGreenSecretKey">Secret Key</Label>
+            <Label htmlFor="drGreenSecretKey" className="text-foreground font-medium">
+              Secret Key
+            </Label>
             <Input
               id="drGreenSecretKey"
               type="password"
@@ -188,28 +217,38 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                   ? "******** (Verified)"
                   : "Paste your Private Key here"
               }
+              className="mt-2 rounded-xl"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-2">
               {tenant.drGreenSecretKey
                 ? "Leave empty to keep existing secret."
                 : "Required for submitting consultations."}
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Email Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Email Configuration (SMTP)</CardTitle>
-          <CardDescription>
-            Configure your custom email server for branding.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="smtpHost">SMTP Host</Label>
+      <div className="card-floating p-8">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="rounded-2xl bg-purple-600 p-3">
+            <Mail className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="font-display text-xl font-bold text-foreground">
+              Email Configuration (SMTP)
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Configure your custom email server for branding
+            </p>
+          </div>
+        </div>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="smtpHost" className="text-foreground font-medium">
+                SMTP Host
+              </Label>
               <Input
                 id="smtpHost"
                 value={formData.smtpHost}
@@ -217,10 +256,13 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                   setFormData({ ...formData, smtpHost: e.target.value })
                 }
                 placeholder="smtp.mailgun.org"
+                className="mt-2 rounded-xl"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="smtpPort">Port</Label>
+            <div>
+              <Label htmlFor="smtpPort" className="text-foreground font-medium">
+                Port
+              </Label>
               <Input
                 id="smtpPort"
                 value={formData.smtpPort}
@@ -228,12 +270,15 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                   setFormData({ ...formData, smtpPort: e.target.value })
                 }
                 placeholder="587"
+                className="mt-2 rounded-xl"
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="smtpUser">Username</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="smtpUser" className="text-foreground font-medium">
+                Username
+              </Label>
               <Input
                 id="smtpUser"
                 value={formData.smtpUser}
@@ -241,10 +286,13 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                   setFormData({ ...formData, smtpUser: e.target.value })
                 }
                 placeholder="postmaster@domain.com"
+                className="mt-2 rounded-xl"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="smtpPassword">Password</Label>
+            <div>
+              <Label htmlFor="smtpPassword" className="text-foreground font-medium">
+                Password
+              </Label>
               <Input
                 type="password"
                 id="smtpPassword"
@@ -252,15 +300,16 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                 onChange={(e) =>
                   setFormData({ ...formData, smtpPassword: e.target.value })
                 }
-                placeholder={
-                  smtpConfigured ? "******** (Verified)" : "Enter password"
-                }
+                placeholder={smtpConfigured ? "******** (Verified)" : "Enter password"}
+                className="mt-2 rounded-xl"
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="smtpFromName">Sender Name</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="smtpFromName" className="text-foreground font-medium">
+                Sender Name
+              </Label>
               <Input
                 id="smtpFromName"
                 value={formData.smtpFromName}
@@ -268,10 +317,13 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                   setFormData({ ...formData, smtpFromName: e.target.value })
                 }
                 placeholder={tenant.businessName}
+                className="mt-2 rounded-xl"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="smtpFromEmail">Sender Email</Label>
+            <div>
+              <Label htmlFor="smtpFromEmail" className="text-foreground font-medium">
+                Sender Email
+              </Label>
               <Input
                 id="smtpFromEmail"
                 value={formData.smtpFromEmail}
@@ -279,21 +331,22 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                   setFormData({ ...formData, smtpFromEmail: e.target.value })
                 }
                 placeholder="orders@yourdomain.com"
+                className="mt-2 rounded-xl"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-3 pt-4 border-t mt-2">
+          <div className="flex flex-wrap items-center gap-4 pt-6 border-t border-slate-200">
             <Input
               placeholder="Test Email Address"
               value={testEmail}
               onChange={(e) => setTestEmail(e.target.value)}
-              className="max-w-[250px]"
+              className="max-w-[280px] rounded-xl"
             />
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              className="rounded-xl"
               onClick={handleTestSmtp}
               disabled={testLoading || !smtpConfigured}
             >
@@ -303,12 +356,18 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
               Save settings before testing.
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Submit */}
       <div className="flex justify-end">
-        <Button type="submit" disabled={isLoading}>
+        <Button
+          type="submit"
+          variant="hero"
+          size="lg"
+          className="rounded-xl"
+          disabled={isLoading}
+        >
           {isLoading ? "Saving..." : "Save Changes"}
         </Button>
       </div>

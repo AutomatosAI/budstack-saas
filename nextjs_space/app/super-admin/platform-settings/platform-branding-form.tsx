@@ -140,8 +140,8 @@ export default function PlatformBrandingForm({
 
         {/* DESIGN TAB */}
         <TabsContent value="design" className="space-y-6">
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-cyan-50">
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle>Platform Information</CardTitle>
               <CardDescription>
                 Basic information about BudStack
@@ -174,8 +174,8 @@ export default function PlatformBrandingForm({
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle>Template Style</CardTitle>
               <CardDescription>
                 Choose the overall design aesthetic
@@ -189,11 +189,10 @@ export default function PlatformBrandingForm({
                     onClick={() =>
                       setFormData({ ...formData, template: template.id })
                     }
-                    className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      formData.template === template.id
-                        ? "border-emerald-500 bg-emerald-50 shadow-md"
-                        : "border-slate-200 hover:border-slate-300 hover:shadow"
-                    }`}
+                    className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.template === template.id
+                      ? "border-emerald-500 bg-emerald-50 shadow-md"
+                      : "border-slate-200 hover:border-slate-300 hover:shadow"
+                      }`}
                   >
                     {formData.template === template.id && (
                       <Check className="absolute top-2 right-2 w-5 h-5 text-emerald-600" />
@@ -210,8 +209,8 @@ export default function PlatformBrandingForm({
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-orange-50">
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle>Brand Images</CardTitle>
               <CardDescription>Upload your logo and favicon</CardDescription>
             </CardHeader>
@@ -289,8 +288,8 @@ export default function PlatformBrandingForm({
 
         {/* COLORS TAB */}
         <TabsContent value="colors" className="space-y-6">
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="border-b bg-gradient-to-r from-pink-50 to-rose-50">
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle>Color Palette</CardTitle>
               <CardDescription>Define your brand colors</CardDescription>
             </CardHeader>
@@ -528,8 +527,8 @@ export default function PlatformBrandingForm({
 
         {/* TYPOGRAPHY TAB */}
         <TabsContent value="typography" className="space-y-6">
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="border-b bg-gradient-to-r from-indigo-50 to-purple-50">
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle>Font Selection</CardTitle>
               <CardDescription>Choose fonts for your platform</CardDescription>
             </CardHeader>
@@ -543,11 +542,10 @@ export default function PlatformBrandingForm({
                       onClick={() =>
                         setFormData({ ...formData, fontFamily: font.id })
                       }
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        formData.fontFamily === font.id
-                          ? "border-emerald-500 bg-emerald-50 shadow-md"
-                          : "border-slate-200 hover:border-slate-300 hover:shadow"
-                      }`}
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.fontFamily === font.id
+                        ? "border-emerald-500 bg-emerald-50 shadow-md"
+                        : "border-slate-200 hover:border-slate-300 hover:shadow"
+                        }`}
                     >
                       <div className="flex items-start justify-between">
                         <div>
@@ -579,11 +577,10 @@ export default function PlatformBrandingForm({
                       onClick={() =>
                         setFormData({ ...formData, headingFontFamily: font.id })
                       }
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        formData.headingFontFamily === font.id
-                          ? "border-emerald-500 bg-emerald-50 shadow-md"
-                          : "border-slate-200 hover:border-slate-300 hover:shadow"
-                      }`}
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.headingFontFamily === font.id
+                        ? "border-emerald-500 bg-emerald-50 shadow-md"
+                        : "border-slate-200 hover:border-slate-300 hover:shadow"
+                        }`}
                     >
                       <div className="flex items-start justify-between">
                         <div>
@@ -616,7 +613,7 @@ export default function PlatformBrandingForm({
           type="submit"
           size="lg"
           disabled={isLoading}
-          className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all"
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium shadow-md hover:shadow-lg transition-all"
         >
           {isLoading ? "Saving..." : "Save Platform Branding"}
         </Button>

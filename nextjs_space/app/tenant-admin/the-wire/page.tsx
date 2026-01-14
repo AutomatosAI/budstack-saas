@@ -4,9 +4,8 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Newspaper } from "lucide-react";
 import PostsList from "./posts-list";
-import { Breadcrumbs } from "@/components/admin/shared";
 
 export const metadata = {
   title: "The Wire Management",
@@ -35,30 +34,29 @@ export default async function TheWirePage() {
   });
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/tenant-admin" },
-          { label: "The Wire" },
-        ]}
-        className="mb-4"
-      />
-
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+    <div className="space-y-8">
+      {/* Centered Header with Absolute Right Button */}
+      <div className="relative mb-8">
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="section-badge mb-4 inline-flex">
+            <Newspaper className="h-4 w-4" />
+            Content
+          </div>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             The Wire
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1 sm:mt-2">
-            Manage your news and articles
+          <p className="mt-3 text-muted-foreground">
+            Manage your news and articles.
           </p>
         </div>
-        <Link href="/tenant-admin/the-wire/new" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all">
-            <Plus className="mr-2 h-4 w-4" /> New Article
-          </Button>
-        </Link>
+        <div className="mt-4 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mt-0">
+          <Link href="/tenant-admin/the-wire/new">
+            <Button variant="hero" size="lg" className="rounded-xl shadow-lg hover:shadow-xl transition-all">
+              <Plus className="mr-2 h-4 w-4" />
+              New Article
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <PostsList initialPosts={posts} />

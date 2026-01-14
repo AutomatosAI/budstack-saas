@@ -166,14 +166,16 @@ export const QuickActionsWidget = React.forwardRef<
     <Card
       ref={ref}
       className={cn(
-        "saas-card border-0 bg-white/80 shadow-xl",
+        "card-floating",
         className,
       )}
     >
-      <CardHeader className="border-b border-slate-100 bg-white/70 backdrop-blur-sm">
+      <CardHeader className="p-6 pb-4">
         <div className="flex items-center gap-3">
-          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
-          <CardTitle className="text-lg font-semibold tracking-tight text-slate-900">
+          <div className="icon-badge">
+            <Package className="h-5 w-5 text-white" />
+          </div>
+          <CardTitle className="font-display text-lg font-bold text-foreground">
             Quick Actions
           </CardTitle>
         </div>

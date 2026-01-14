@@ -2,13 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,71 +63,87 @@ export default function CookieSettingsForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-8">
       {/* Region Info Card */}
-      <Card className="border-emerald-200 bg-emerald-50/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Globe className="w-5 h-5 text-emerald-600" />
-            <CardTitle className="text-lg">Your Compliance Region</CardTitle>
+      <div className="card-floating p-8 border-emerald-200 bg-gradient-to-br from-emerald-50/50 to-white">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="rounded-2xl bg-emerald-500 p-3">
+            <Globe className="h-5 w-5 text-white" />
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-gray-500">Country Code</p>
-              <p className="font-semibold text-gray-900">{countryCode}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Consent Model</p>
-              <p className="font-semibold text-gray-900 capitalize">
-                {consentModel}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-500">GDPR Applies</p>
-              <p
-                className={`font-semibold ${isGDPR ? "text-amber-600" : "text-gray-400"}`}
-              >
-                {isGDPR ? "Yes" : "No"}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-500">POPIA Applies</p>
-              <p
-                className={`font-semibold ${isPOPIA ? "text-amber-600" : "text-gray-400"}`}
-              >
-                {isPOPIA ? "Yes" : "No"}
-              </p>
-            </div>
+          <h2 className="font-display text-xl font-bold text-foreground">
+            Your Compliance Region
+          </h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+              Country Code
+            </p>
+            <p className="font-display text-xl font-bold text-foreground">
+              {countryCode}
+            </p>
           </div>
-          {consentModel === "opt-in" && (
-            <p className="mt-4 text-sm text-amber-700 bg-amber-100 p-3 rounded-lg">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+              Consent Model
+            </p>
+            <p className="font-display text-xl font-bold text-foreground capitalize">
+              {consentModel}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+              GDPR Applies
+            </p>
+            <p
+              className={`font-display text-xl font-bold ${isGDPR ? "text-amber-600" : "text-slate-400"}`}
+            >
+              {isGDPR ? "Yes" : "No"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+              POPIA Applies
+            </p>
+            <p
+              className={`font-display text-xl font-bold ${isPOPIA ? "text-amber-600" : "text-slate-400"}`}
+            >
+              {isPOPIA ? "Yes" : "No"}
+            </p>
+          </div>
+        </div>
+        {consentModel === "opt-in" && (
+          <div className="mt-6 rounded-xl bg-amber-100 border border-amber-200 p-4">
+            <p className="text-sm text-amber-800">
               <strong>Opt-In Required:</strong> Users must give explicit consent
               before non-essential cookies are set.
             </p>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </div>
 
       {/* Cookie Banner Settings */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Cookie className="w-5 h-5 text-gray-600" />
-            <CardTitle>Cookie Banner</CardTitle>
+      <div className="card-floating p-8">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="icon-badge">
+            <Cookie className="h-5 w-5 text-white" />
           </div>
-          <CardDescription>
-            Configure how the cookie consent banner appears on your storefront
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-display text-xl font-bold text-foreground">
+              Cookie Banner
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Configure how the cookie consent banner appears on your storefront
+            </p>
+          </div>
+        </div>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
             <div>
-              <Label htmlFor="cookieConsentEnabled" className="text-base">
+              <Label htmlFor="cookieConsentEnabled" className="text-foreground font-medium">
                 Enable Cookie Banner
               </Label>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Show cookie consent banner to visitors
               </p>
             </div>
@@ -148,7 +157,7 @@ export default function CookieSettingsForm({
           </div>
 
           <div>
-            <Label htmlFor="cookieBannerMessage">
+            <Label htmlFor="cookieBannerMessage" className="text-foreground font-medium">
               Custom Banner Message (Optional)
             </Label>
             <Input
@@ -161,15 +170,15 @@ export default function CookieSettingsForm({
                 })
               }
               placeholder="We use cookies to enhance your experience..."
-              className="mt-2"
+              className="mt-2 rounded-xl"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-2">
               Leave empty to use the default message for your region
             </p>
           </div>
 
           <div>
-            <Label htmlFor="cookiePolicyUrl">
+            <Label htmlFor="cookiePolicyUrl" className="text-foreground font-medium">
               Cookie Policy URL (Optional)
             </Label>
             <Input
@@ -179,47 +188,58 @@ export default function CookieSettingsForm({
                 setFormData({ ...formData, cookiePolicyUrl: e.target.value })
               }
               placeholder="/cookies or https://yoursite.com/cookie-policy"
-              className="mt-2"
+              className="mt-2 rounded-xl"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-2">
               Link to your detailed cookie policy page
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Cookie Categories */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-gray-600" />
-            <CardTitle>Cookie Categories</CardTitle>
+      <div className="card-floating p-8">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="rounded-2xl bg-purple-600 p-3">
+            <Shield className="h-5 w-5 text-white" />
           </div>
-          <CardDescription>
-            Enable optional cookie categories for enhanced functionality
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+          <div>
+            <h2 className="font-display text-xl font-bold text-foreground">
+              Cookie Categories
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Enable optional cookie categories for enhanced functionality
+            </p>
+          </div>
+        </div>
+        <div className="space-y-4">
           {/* Essential - Always on */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div>
-              <p className="font-medium text-gray-900">Essential Cookies</p>
-              <p className="text-sm text-gray-500">
-                Required for site functionality (auth, cart, sessions)
-              </p>
+          <div className="flex items-center justify-between p-5 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex items-start gap-4">
+              <div className="rounded-xl bg-emerald-500 p-2.5">
+                <Shield className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Essential Cookies</p>
+                <p className="text-sm text-muted-foreground">
+                  Required for site functionality (auth, cart, sessions)
+                </p>
+              </div>
             </div>
-            <span className="text-emerald-600 font-medium text-sm">
+            <span className="text-sm font-semibold text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full">
               Always Enabled
             </span>
           </div>
 
           {/* Analytics */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-start gap-3">
-              <BarChart3 className="w-5 h-5 text-blue-600 mt-0.5" />
+          <div className="flex items-center justify-between p-5 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex items-start gap-4">
+              <div className="rounded-xl bg-blue-500 p-2.5">
+                <BarChart3 className="h-4 w-4 text-white" />
+              </div>
               <div>
-                <p className="font-medium text-gray-900">Analytics Cookies</p>
-                <p className="text-sm text-gray-500">
+                <p className="font-medium text-foreground">Analytics Cookies</p>
+                <p className="text-sm text-muted-foreground">
                   Track user behavior to improve your store
                 </p>
               </div>
@@ -233,12 +253,14 @@ export default function CookieSettingsForm({
           </div>
 
           {/* Marketing */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Target className="w-5 h-5 text-purple-600 mt-0.5" />
+          <div className="flex items-center justify-between p-5 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex items-start gap-4">
+              <div className="rounded-xl bg-purple-500 p-2.5">
+                <Target className="h-4 w-4 text-white" />
+              </div>
               <div>
-                <p className="font-medium text-gray-900">Marketing Cookies</p>
-                <p className="text-sm text-gray-500">
+                <p className="font-medium text-foreground">Marketing Cookies</p>
+                <p className="text-sm text-muted-foreground">
                   Enable personalized ads and retargeting
                 </p>
               </div>
@@ -250,12 +272,18 @@ export default function CookieSettingsForm({
               }
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Submit */}
       <div className="flex justify-end">
-        <Button type="submit" disabled={isLoading}>
+        <Button
+          type="submit"
+          variant="hero"
+          size="lg"
+          className="rounded-xl"
+          disabled={isLoading}
+        >
           {isLoading ? "Saving..." : "Save Cookie Settings"}
         </Button>
       </div>

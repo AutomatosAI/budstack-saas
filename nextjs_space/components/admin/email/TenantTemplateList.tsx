@@ -149,7 +149,7 @@ export function TenantTemplateList() {
   }
 
   return (
-    <div className="overflow-hidden rounded-md border">
+    <div className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>

@@ -50,9 +50,9 @@ export function EditTemplateClient({ template }: EditTemplateClientProps) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)]">
-      <div className="px-6 py-4 border-b">
-        <h1 className="text-2xl font-bold tracking-tight">Edit Template</h1>
-        <p className="text-muted-foreground">Editing: {template.name}</p>
+      <div className="px-6 py-6 lg:px-8 lg:pt-8 lg:pb-6 border-b">
+        <h1 className="text-4xl font-semibold tracking-tight text-slate-900">Edit Template</h1>
+        <p className="mt-2 text-slate-500">Editing: {template.name}</p>
       </div>
       <div className="flex-1 p-6 overflow-hidden">
         <EmailEditor

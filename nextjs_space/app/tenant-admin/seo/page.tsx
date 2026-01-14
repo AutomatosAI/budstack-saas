@@ -2,7 +2,8 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { Breadcrumbs } from "@/components/admin/shared";
+import { Search } from "lucide-react";
+
 import { SeoPageClient } from "./seo-page-client";
 
 export default async function SeoPage() {
@@ -74,23 +75,17 @@ export default async function SeoPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/tenant-admin" },
-          { label: "SEO Manager" },
-        ]}
-        className="mb-4"
-      />
-
-      <div className="mb-6 sm:mb-8">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-            SEO Manager
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600">
-            Optimize how your store appears in search engines and social media.
-          </p>
+      <div className="text-center max-w-2xl mx-auto mb-8">
+        <div className="section-badge mb-4 inline-flex">
+          <Search className="h-4 w-4" />
+          SEO
         </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          SEO Manager
+        </h1>
+        <p className="mt-3 text-muted-foreground mx-auto">
+          Optimize how your store appears in search engines and social media.
+        </p>
       </div>
 
       <SeoPageClient

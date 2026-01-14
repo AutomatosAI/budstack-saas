@@ -1,13 +1,6 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -19,8 +12,8 @@ import {
 } from "@/components/ui/table";
 import { prisma } from "@/lib/db";
 import { format } from "date-fns";
+import { UserPlus } from "lucide-react";
 import OnboardingActions from "./onboarding-actions";
-import { Breadcrumbs } from "@/components/admin/shared";
 
 export default async function OnboardingPage() {
   const session = await getServerSession(authOptions);
@@ -36,51 +29,50 @@ export default async function OnboardingPage() {
   });
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/super-admin" },
-          { label: "Onboarding" },
-        ]}
-        className="mb-4"
-      />
-
-      {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+    <div className="space-y-8">
+      {/* Centered Header */}
+      <div className="text-center max-w-2xl mx-auto">
+        <div className="section-badge mb-4 inline-flex">
+          <UserPlus className="h-4 w-4" />
+          Onboarding
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
           Onboarding Requests
         </h1>
-        <p className="text-sm sm:text-base text-slate-600 mt-1 sm:mt-2">
+        <p className="mt-3 text-muted-foreground">
           Review and approve new tenant applications
         </p>
       </div>
 
       {/* Pending Approvals Table */}
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-orange-50">
-          <CardTitle className="flex items-center justify-between">
-            <span>Pending Approvals ({pendingRequests.length})</span>
+      <div className="card-floating overflow-hidden">
+        <div className="p-6 border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-lg font-bold text-foreground">
+                Pending Approvals ({pendingRequests.length})
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Review and approve new tenant applications
+              </p>
+            </div>
             {pendingRequests.length > 0 && (
-              <Badge className="bg-amber-500 hover:bg-amber-600">
+              <Badge className="bg-primary hover:bg-primary/90">
                 {pendingRequests.length} Waiting
               </Badge>
             )}
-          </CardTitle>
-          <CardDescription>
-            Review and approve new tenant applications
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
+          </div>
+        </div>
+        <div>
           {pendingRequests.length === 0 ? (
             <div className="text-center py-16">
               <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
                 <span className="text-3xl">✓</span>
               </div>
-              <p className="text-slate-500 font-medium">
+              <p className="text-foreground font-medium">
                 No pending onboarding requests
               </p>
-              <p className="text-slate-400 text-sm mt-1">
+              <p className="text-muted-foreground text-sm mt-1">
                 All applications have been processed
               </p>
             </div>
@@ -111,29 +103,29 @@ export default async function OnboardingPage() {
                       key={request.id}
                       className="hover:bg-slate-50 transition-colors"
                     >
-                      <TableCell className="font-medium text-slate-900">
+                      <TableCell className="font-medium text-foreground">
                         <div className="min-w-0">
                           <span className="block truncate">
                             {request.businessName}
                           </span>
                           {/* Show subdomain on mobile where it's hidden from column */}
-                          <span className="block text-xs text-cyan-600 mt-0.5 md:hidden">
+                          <span className="block text-xs text-accent mt-0.5 md:hidden">
                             {request.subdomain}.budstack.io
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-sm text-slate-600 hidden md:table-cell">
+                      <TableCell className="font-mono text-sm text-muted-foreground hidden md:table-cell">
                         {request.nftTokenId || (
                           <span className="text-slate-400">Not provided</span>
                         )}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <span className="text-cyan-600 font-medium">
+                        <span className="text-accent font-medium">
                           {request.subdomain}
                         </span>
                         <span className="text-slate-400">.budstack.io</span>
                       </TableCell>
-                      <TableCell className="text-slate-600 text-sm hidden sm:table-cell">
+                      <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
                         {format(new Date(request.createdAt), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell>
@@ -153,8 +145,8 @@ export default async function OnboardingPage() {
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

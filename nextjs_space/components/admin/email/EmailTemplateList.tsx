@@ -109,13 +109,16 @@ export const EmailTemplateList = () => {
     const templateList = Array.isArray(templates) ? templates : [];
 
     return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100">
                 <div>
                     <CardTitle>Email Templates</CardTitle>
                     <CardDescription>Manage your system email templates.</CardDescription>
                 </div>
-                <Button onClick={() => router.push("/super-admin/emails/new")}>
+                <Button
+                    onClick={() => router.push("/super-admin/emails/new")}
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-full"
+                >
                     <Plus className="mr-2 h-4 w-4" /> Create Template
                 </Button>
             </CardHeader>
@@ -158,7 +161,11 @@ export const EmailTemplateList = () => {
                                     </TableCell>
                                     <TableCell>
                                         <Badge
-                                            variant={template.isActive ? "default" : "secondary"}
+                                            className={
+                                                template.isActive
+                                                    ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                    : "bg-slate-200 text-slate-800 hover:bg-slate-300"
+                                            }
                                         >
                                             {template.isActive ? "Active" : "Inactive"}
                                         </Badge>
