@@ -8,7 +8,7 @@ export default function Hero() {
             {/* Background decorative elements */}
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 {/* Calendar icon - left side */}
-                <div className="absolute left-[8%] top-[18%]">
+                <div className="hidden lg:block absolute left-[8%] top-[18%]">
                     <div className="card-floating-static h-28 w-24 p-2">
                         <div className="flex h-7 items-center justify-center border-b border-border/30">
                             <div className="h-2 w-2 rounded-full bg-muted-foreground/40" />
@@ -23,7 +23,7 @@ export default function Hero() {
                 </div>
 
                 {/* Orange gradient shape - right side */}
-                <div className="absolute right-[5%] top-[12%]">
+                <div className="hidden lg:block absolute right-[5%] top-[12%]">
                     <div
                         className="h-44 w-40 rounded-3xl bg-gradient-to-br from-accent to-warning shadow-lg"
                         style={{
@@ -34,7 +34,7 @@ export default function Hero() {
                 </div>
             </div>
 
-            <div className="relative mx-auto max-w-5xl text-center">
+            <div className="relative z-10 mx-auto max-w-5xl text-center">
                 {/* Badge */}
                 <div className="mb-8 flex justify-center">
                     <div className="badge-pill">
