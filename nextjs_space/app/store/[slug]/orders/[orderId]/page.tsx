@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { order_items } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Clock, Package, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ async function getOrder(orderId: string, slug: string) {
       tenantId: tenant.id,
     },
     include: {
-      items: true,
+      order_items: true,
     },
   });
 
@@ -123,10 +124,10 @@ export default async function OrderConfirmationPage({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {order.items?.map((item: any, idx: number) => (
-              <div key={idx} className="flex justify-between text-sm">
-                <span>{item.name || `Item ${idx + 1}`} × {item.quantity}</span>
-                <span>${Number(item.price || 0).toFixed(2)}</span>
+            {order.order_items?.map((item: order_items) => (
+              <div key={item.id} className="flex justify-between text-sm">
+                <span>{item.productName} × {item.quantity}</span>
+                <span>${(item.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
 
