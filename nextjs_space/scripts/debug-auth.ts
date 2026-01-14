@@ -12,7 +12,8 @@ async function debugAuth() {
     console.log('Password:', password);
 
     // Step 1: Find user
-    const user = await prisma.users.findUnique({
+    // Step 1: Find user
+    const user = await prisma.users.findFirst({
         where: { email },
         include: { tenants: true },
     });
