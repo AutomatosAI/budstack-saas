@@ -1,25 +1,21 @@
 import Link from "next/link";
-import { FileText, Palette, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const steps = [
     {
         number: "01",
-        icon: FileText,
         title: "Franchise Application",
         description:
             "Submit your franchise application with business details and ownership verification for Popcorn Media review",
     },
     {
         number: "02",
-        icon: Palette,
         title: "Customize Branding",
         description:
             "Choose a template, upload your logo, set brand colors, configure your domain, and customize content",
     },
     {
         number: "03",
-        icon: Rocket,
         title: "Launch & Scale",
         description:
             "Your storefront goes live instantly. Start accepting consultations, processing orders, and growing your business",

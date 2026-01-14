@@ -107,12 +107,12 @@ export default function Footer() {
                         <p className="text-sm text-muted-foreground">
                             © 2026 Popcorn Media. All rights reserved.
                         </p>
-                        <a
-                            href="#"
+                        <button
+                            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                             className="text-sm text-muted-foreground hover:text-foreground"
                         >
                             Back to top ↑
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>

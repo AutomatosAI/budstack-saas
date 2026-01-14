@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-// Force rebuild: 1
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -53,7 +52,11 @@ export async function GET(
       include: { tenants: true },
     });
 
-    if (post.tenantId !== user?.tenantId) {
+    // Super Admin can access all posts, Tenant Admin only their own
+    if (
+      session.user.role !== "SUPER_ADMIN" &&
+      post.tenantId !== user?.tenantId
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -91,7 +94,13 @@ export async function PATCH(
     });
 
     const existingPost = await prisma.posts.findUnique({ where: { id } });
-    if (!existingPost || existingPost.tenantId !== user?.tenantId) {
+
+    // Allow SUPER_ADMIN to bypass tenant check, otherwise enforce ownership
+    if (
+      !existingPost ||
+      (session.user.role !== "SUPER_ADMIN" &&
+        existingPost.tenantId !== user?.tenantId)
+    ) {
       return NextResponse.json(
         { error: "Post not found or unauthorized" },
         { status: 404 },
@@ -158,7 +167,12 @@ export async function DELETE(
     });
 
     const existingPost = await prisma.posts.findUnique({ where: { id } });
-    if (!existingPost || existingPost.tenantId !== user?.tenantId) {
+
+    if (
+      !existingPost ||
+      (session.user.role !== "SUPER_ADMIN" &&
+        existingPost.tenantId !== user?.tenantId)
+    ) {
       return NextResponse.json(
         { error: "Post not found or unauthorized" },
         { status: 404 },

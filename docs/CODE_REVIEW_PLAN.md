@@ -182,7 +182,7 @@ gh pr create --title "Code Review: Phase ${PHASE}" --body "Batch review for Code
 ## Quick Start
 
 ```bash
-cd /Users/gkavanagh/Development/HealingBuds/budstack-saas/nextjs_space
+cd ./nextjs_space
 
 # Phase 1
 git checkout -b review/phase1-core

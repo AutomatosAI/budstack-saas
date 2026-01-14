@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileText, ArrowLeft } from "lucide-react";
+import DOMPurify from "isomorphic-dompurify";
 import { Navbar, Footer } from "@/components/landing";
 
 // Sample blog posts data - in production this would come from a CMS/database
@@ -262,7 +263,9 @@ export default async function BlogPostPage({ params }: PageProps) {
                         {/* Article content */}
                         <div
                             className="prose prose-lg max-w-none prose-headings:font-display prose-headings:font-bold prose-headings:text-foreground prose-p:text-muted-foreground prose-a:text-accent hover:prose-a:text-accent/80 prose-strong:text-foreground prose-ul:text-muted-foreground prose-li:marker:text-accent"
-                            dangerouslySetInnerHTML={{ __html: post.content }}
+                            dangerouslySetInnerHTML={{
+                                __html: DOMPurify.sanitize(post.content),
+                            }}
                         />
                     </article>
                 </div>

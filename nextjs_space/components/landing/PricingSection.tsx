@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Diamond, Clock, Zap } from "lucide-react";
 
@@ -183,9 +184,9 @@ export default function PricingSection() {
                         <Diamond className="h-4 w-4" />
                         All prices in EUR. Taxes and third party fees may apply.
                     </p>
-                    <a href="#" className="font-medium text-accent hover:text-accent/80">
+                    <Link href="/contact" className="font-medium text-accent hover:text-accent/80">
                         Talk to sales →
-                    </a>
+                    </Link>
                 </div>
             </div>
         </section>

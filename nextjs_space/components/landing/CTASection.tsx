@@ -49,7 +49,11 @@ export default function CTASection() {
                             Start Free Trial
                         </Button>
                     </Link>
-                    <Button variant="hero-outline" size="lg">
+                    <Button
+                        variant="hero-outline"
+                        size="lg"
+                        onClick={() => alert("Demo video coming soon!")}
+                    >
                         Watch Demo
                     </Button>
                 </div>
