@@ -147,8 +147,8 @@ export default function ConditionsClient({
                       key={category.key}
                       onClick={() => setSelectedCategory(category.key)}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${selectedCategory === category.key
-                          ? "shadow-md"
-                          : "opacity-70 hover:opacity-100"
+                        ? "shadow-md"
+                        : "opacity-70 hover:opacity-100"
                         }`}
                       style={{
                         backgroundColor:
@@ -284,17 +284,16 @@ export default function ConditionsClient({
                   Schedule a consultation with our medical professionals to
                   discuss personalized treatment plans.
                 </p>
-                <Link href={`/store/${tenant.subdomain}/contact`}>
-                  <button
-                    className="px-8 py-3 text-lg rounded-lg font-semibold border transition-all duration-200 hover:shadow-lg"
-                    style={{
-                      backgroundColor: "white",
-                      color: "var(--tenant-color-primary)",
-                      fontFamily: "var(--tenant-font-base)",
-                    }}
-                  >
-                    Contact Us →
-                  </button>
+                <Link
+                  href={`/store/${tenant.subdomain}/contact`}
+                  className="inline-block px-8 py-3 text-lg rounded-lg font-semibold border transition-all duration-200 hover:shadow-lg"
+                  style={{
+                    backgroundColor: "white",
+                    color: "var(--tenant-color-primary)",
+                    fontFamily: "var(--tenant-font-base)",
+                  }}
+                >
+                  Contact Us →
                 </Link>
               </div>
             </motion.div>

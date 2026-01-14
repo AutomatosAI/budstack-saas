@@ -140,7 +140,7 @@ PATTERN=$2
 git checkout -b "review/phase${PHASE}"
 
 # Touch files (add trailing newline)
-find $PATTERN -name "*.ts" -o -name "*.tsx" | while read f; do
+find "$PATTERN" \( -name "*.ts" -o -name "*.tsx" \) | while read -r f; do
   echo "" >> "$f"
 done
 

@@ -55,7 +55,7 @@ const blogPosts = [
         excerpt:
             "How to leverage the Dr. Green API for seamless product catalog and order management.",
         image:
-            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=700&fit=crop",
+            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=700&fit=crop",
         content: `
       <p>The Dr. Green API is at the heart of every Popcorn Media franchise. This integration provides real-time product synchronization, automated inventory management, and seamless order fulfillment.</p>
       
@@ -183,11 +183,12 @@ function getRelatedPosts(currentSlug: string, limit = 2) {
 }
 
 interface PageProps {
-    params: { slug: string };
+    params: Promise<{ slug: string }>;
 }
 
-export default function BlogPostPage({ params }: PageProps) {
-    const post = blogPosts.find((p) => p.slug === params.slug);
+export default async function BlogPostPage({ params }: PageProps) {
+    const { slug } = await params;
+    const post = blogPosts.find((p) => p.slug === slug);
 
     if (!post) {
         notFound();

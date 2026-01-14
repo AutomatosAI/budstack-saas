@@ -22,7 +22,7 @@ const blogPosts = [
         excerpt:
             "How to leverage the Dr. Green API for seamless product catalog and order management.",
         image:
-            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=500&fit=crop",
     },
     {
         id: 3,
