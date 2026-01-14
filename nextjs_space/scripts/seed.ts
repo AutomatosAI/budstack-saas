@@ -98,39 +98,47 @@ export async function seedCore() {
 
   const superAdminPassword = await bcrypt.hash('admin123', 10);
 
-  const superAdmin = await prisma.users.upsert({
-    where: { email: 'admin@budstack.to' },
-    update: {},
-    create: {
-      id: crypto.randomUUID(),
-      updatedAt: new Date(),
-      email: 'admin@budstack.to',
-      password: superAdminPassword,
-      name: 'Super Admin',
-      firstName: 'Super',
-      lastName: 'Admin',
-      isActive: true,
-      role: 'SUPER_ADMIN',
-    },
+  let superAdmin = await prisma.users.findFirst({
+    where: { email: 'admin@budstack.to' }
   });
+
+  if (!superAdmin) {
+    superAdmin = await prisma.users.create({
+      data: {
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
+        email: 'admin@budstack.to',
+        password: superAdminPassword,
+        name: 'Super Admin',
+        firstName: 'Super',
+        lastName: 'Admin',
+        isActive: true,
+        role: 'SUPER_ADMIN',
+      }
+    });
+  }
 
   console.log('Super admin created:', superAdmin.email);
 
-  const superAdminIO = await prisma.users.upsert({
-    where: { email: 'admin@budstack.io' },
-    update: {},
-    create: {
-      id: crypto.randomUUID(),
-      updatedAt: new Date(),
-      email: 'admin@budstack.io',
-      password: superAdminPassword,
-      name: 'BudStack Super Admin',
-      firstName: 'BudStack',
-      lastName: 'Admin',
-      isActive: true,
-      role: 'SUPER_ADMIN',
-    },
+  let superAdminIO = await prisma.users.findFirst({
+    where: { email: 'admin@budstack.io' }
   });
+
+  if (!superAdminIO) {
+    superAdminIO = await prisma.users.create({
+      data: {
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
+        email: 'admin@budstack.io',
+        password: superAdminPassword,
+        name: 'BudStack Super Admin',
+        firstName: 'BudStack',
+        lastName: 'Admin',
+        isActive: true,
+        role: 'SUPER_ADMIN',
+      }
+    });
+  }
   console.log('Super admin IO created:', superAdminIO.email);
 
   // Create HealingBuds Tenant Admin
@@ -138,22 +146,26 @@ export async function seedCore() {
 
   const tenantAdminPassword = await bcrypt.hash('admin123', 10);
 
-  const tenantAdmin = await prisma.users.upsert({
-    where: { email: 'admin@healingbuds.pt' },
-    update: {},
-    create: {
-      id: crypto.randomUUID(),
-      updatedAt: new Date(),
-      email: 'admin@healingbuds.pt',
-      password: tenantAdminPassword,
-      name: 'HealingBuds Admin',
-      firstName: 'HealingBuds',
-      lastName: 'Admin',
-      isActive: true,
-      role: 'TENANT_ADMIN',
-      tenantId: healingBudsTenant.id,
-    },
+  let tenantAdmin = await prisma.users.findFirst({
+    where: { email: 'admin@healingbuds.pt', tenantId: healingBudsTenant.id }
   });
+
+  if (!tenantAdmin) {
+    tenantAdmin = await prisma.users.create({
+      data: {
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
+        email: 'admin@healingbuds.pt',
+        password: tenantAdminPassword,
+        name: 'HealingBuds Admin',
+        firstName: 'HealingBuds',
+        lastName: 'Admin',
+        isActive: true,
+        role: 'TENANT_ADMIN',
+        tenantId: healingBudsTenant.id,
+      }
+    });
+  }
 
   console.log('HealingBuds tenant admin created:', tenantAdmin.email);
 
@@ -162,29 +174,33 @@ export async function seedCore() {
 
   const testUserPassword = await bcrypt.hash('test123', 10);
 
-  const testUser = await prisma.users.upsert({
-    where: { email: 'test@healingbuds.pt' },
-    update: {},
-    create: {
-      id: crypto.randomUUID(),
-      updatedAt: new Date(),
-      email: 'test@healingbuds.pt',
-      password: testUserPassword,
-      name: 'Test Patient',
-      firstName: 'Test',
-      lastName: 'Patient',
-      phone: '+351 91 234 5678',
-      address: {
-        line1: '123 Test Street',
-        city: 'Lisbon',
-        postalCode: '1000-001',
-        country: 'Portugal'
-      },
-      isActive: true,
-      role: 'PATIENT',
-      tenantId: healingBudsTenant.id,
-    },
+  let testUser = await prisma.users.findFirst({
+    where: { email: 'test@healingbuds.pt', tenantId: healingBudsTenant.id }
   });
+
+  if (!testUser) {
+    testUser = await prisma.users.create({
+      data: {
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
+        email: 'test@healingbuds.pt',
+        password: testUserPassword,
+        name: 'Test Patient',
+        firstName: 'Test',
+        lastName: 'Patient',
+        phone: '+351 91 234 5678',
+        address: {
+          line1: '123 Test Street',
+          city: 'Lisbon',
+          postalCode: '1000-001',
+          country: 'Portugal'
+        },
+        isActive: true,
+        role: 'PATIENT',
+        tenantId: healingBudsTenant.id,
+      }
+    });
+  }
 
   console.log('Test user created:', testUser.email);
 
