@@ -16,6 +16,7 @@ export default async function TenantAdminLayout({
 
   if (
     !session ||
+    !session.user?.id ||
     (session.user.role !== "TENANT_ADMIN" &&
       session.user.role !== "SUPER_ADMIN")
   ) {
@@ -31,10 +32,12 @@ export default async function TenantAdminLayout({
 
   if (!user?.tenants) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">No Tenant Associated</h1>
-          <p className="text-gray-600">
+      <div className="min-h-screen canvas-bg flex items-center justify-center">
+        <div className="card-floating p-10 text-center max-w-md">
+          <h1 className="font-display text-2xl font-bold text-foreground mb-4">
+            No Tenant Associated
+          </h1>
+          <p className="text-muted-foreground">
             Your account is not associated with any tenant.
           </p>
         </div>
@@ -42,26 +45,27 @@ export default async function TenantAdminLayout({
     );
   }
 
-  // Generate mock notifications for demo (replace with real data in production)
+  // Generate mock notifications for demo
   const mockNotifications = generateMockNotifications(8);
 
   return (
-    <div className="flex h-screen bg-gray-50 theme-force-light">
+    <div className="flex min-h-screen canvas-bg">
       <TenantAdminSidebar
         userName={session.user.name || "Tenant Admin"}
         userEmail={session.user.email || ""}
         tenantName={user.tenants.businessName}
       />
       <AccessibleAdminLayout theme="tenant-admin">
-        {/* Header with notification center */}
-        <div className="sticky top-0 z-30 flex items-center justify-end px-6 py-3 bg-white border-b border-slate-200 shadow-sm">
+        {/* Notification bar - compact */}
+        <div className="sticky top-0 z-30 flex items-center justify-end px-8 py-2">
           <NotificationCenter
             theme="tenant-admin"
             notifications={mockNotifications}
             viewAllUrl="/tenant-admin/notifications"
           />
         </div>
-        <div className="flex-1 overflow-auto pl-0 md:pl-0">{children}</div>
+        {/* Main content */}
+        <div className="flex-1 overflow-auto px-8 py-6">{children}</div>
       </AccessibleAdminLayout>
     </div>
   );

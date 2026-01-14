@@ -113,10 +113,9 @@ export function SearchInput({
         disabled={disabled}
         aria-label={ariaLabel || placeholder?.replace("...", "")}
         className={cn(
-          "pl-9 pr-9",
-          "bg-background/50 backdrop-blur-sm",
-          "border-border/60 hover:border-border",
-          "focus-visible:ring-primary/20 focus-visible:border-primary",
+          "pl-9 pr-9 h-11 rounded-xl",
+          "bg-white border-slate-200",
+          "focus-visible:ring-accent/20 focus-visible:border-accent",
           "transition-all duration-200",
         )}
       />

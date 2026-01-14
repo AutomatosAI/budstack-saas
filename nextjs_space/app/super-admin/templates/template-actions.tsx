@@ -64,6 +64,7 @@ export function TemplateActions({
           size="sm"
           disabled
           title="Preview coming soon"
+          className="rounded-full"
         >
           <Edit className="h-4 w-4" />
         </Button>
@@ -72,7 +73,7 @@ export function TemplateActions({
           size="sm"
           onClick={() => setShowDeleteDialog(true)}
           disabled={isDeleting}
-          className="text-red-600 hover:text-red-700"
+          className="text-red-600 hover:text-red-700 rounded-full"
         >
           {isDeleting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -105,14 +106,14 @@ export function TemplateActions({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting} className="rounded-full">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
                 handleDelete();
               }}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 rounded-full"
             >
               {isDeleting ? (
                 <>

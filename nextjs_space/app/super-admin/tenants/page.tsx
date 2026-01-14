@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { TenantsTable } from "./tenants-table";
-import { Breadcrumbs } from "@/components/admin/shared";
 
 /** Default pagination settings */
 const DEFAULT_PAGE_SIZE = 20;
@@ -122,13 +121,13 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
         where: {
           ...(search
             ? {
-                OR: [
-                  { businessName: { contains: search, mode: "insensitive" } },
-                  { subdomain: { contains: search, mode: "insensitive" } },
-                  { customDomain: { contains: search, mode: "insensitive" } },
-                  { nftTokenId: { contains: search, mode: "insensitive" } },
-                ],
-              }
+              OR: [
+                { businessName: { contains: search, mode: "insensitive" } },
+                { subdomain: { contains: search, mode: "insensitive" } },
+                { customDomain: { contains: search, mode: "insensitive" } },
+                { nftTokenId: { contains: search, mode: "insensitive" } },
+              ],
+            }
             : {}),
           isActive: true,
         },
@@ -138,13 +137,13 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
         where: {
           ...(search
             ? {
-                OR: [
-                  { businessName: { contains: search, mode: "insensitive" } },
-                  { subdomain: { contains: search, mode: "insensitive" } },
-                  { customDomain: { contains: search, mode: "insensitive" } },
-                  { nftTokenId: { contains: search, mode: "insensitive" } },
-                ],
-              }
+              OR: [
+                { businessName: { contains: search, mode: "insensitive" } },
+                { subdomain: { contains: search, mode: "insensitive" } },
+                { customDomain: { contains: search, mode: "insensitive" } },
+                { nftTokenId: { contains: search, mode: "insensitive" } },
+              ],
+            }
             : {}),
           isActive: false,
         },
@@ -152,29 +151,21 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
     ]);
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/super-admin" },
-          { label: "Tenants" },
-        ]}
-        className="mb-4"
-      />
-
-      {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              Tenant Management
-            </h1>
-            <p className="text-sm sm:text-base text-slate-600 mt-1 sm:mt-2">
-              Manage all tenant accounts and NFT holders
-            </p>
-          </div>
-          <Link href="/super-admin/onboarding" className="w-full sm:w-auto">
-            <Button className="w-full sm:w-auto bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all">
+    <div className="space-y-8">
+      {/* Centered Header */}
+      <div className="text-center max-w-2xl mx-auto">
+        <div className="section-badge mb-4 inline-flex">
+          Tenants
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          All Tenants
+        </h1>
+        <p className="mt-3 text-muted-foreground">
+          Manage all tenant accounts and NFT holders from a single view.
+        </p>
+        <div className="mt-6">
+          <Link href="/super-admin/onboarding">
+            <Button variant="hero" size="lg" className="rounded-xl">
               Review Applications
             </Button>
           </Link>

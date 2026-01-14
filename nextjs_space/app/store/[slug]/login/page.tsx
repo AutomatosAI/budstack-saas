@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -69,7 +69,7 @@ function TenantLoginForm() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.email.trim()) newErrors.email = "Email is required";
-    if (!/\S+@\S+\.\S+/.test(formData.email))
+    else if (!/\S+@\S+\.\S+/.test(formData.email))
       newErrors.email = "Invalid email format";
     if (!formData.password) newErrors.password = "Password is required";
 
@@ -80,15 +80,7 @@ function TenantLoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const validateForm = () => {
-        const newErrors: Record<string, string> = {};
-
-        if (!formData.email.trim()) {
-            newErrors.email = 'Email is required';
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'Invalid email format';
-        }
-        if (!formData.password) newErrors.password = 'Password is required';
+    if (!validateForm()) return;
 
     setIsLoading(true);
 

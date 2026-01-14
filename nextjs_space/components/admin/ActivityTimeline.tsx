@@ -10,10 +10,10 @@ import {
   Settings,
   AlertTriangle,
   ArrowRight,
-  Activity
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { generateMockEvents } from '@/lib/mock-data'
+  Activity,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { generateMockEvents } from "@/lib/mock-data";
 
 // Event type definitions
 export type EventType =
@@ -52,37 +52,37 @@ const eventConfig: Record<
 > = {
   TENANT_CREATED: {
     icon: Building2,
-    color: "text-cyan-400",
+    color: "text-cyan-600",
     bgGlow: "bg-cyan-500/10",
     label: "Tenant Created",
   },
   TENANT_ACTIVATED: {
     icon: CheckCircle2,
-    color: "text-emerald-400",
+    color: "text-emerald-600",
     bgGlow: "bg-emerald-500/10",
     label: "Tenant Activated",
   },
   USER_REGISTERED: {
     icon: UserPlus,
-    color: "text-blue-400",
+    color: "text-blue-600",
     bgGlow: "bg-blue-500/10",
     label: "User Registered",
   },
   ORDER_PLACED: {
     icon: ShoppingBag,
-    color: "text-purple-400",
+    color: "text-purple-600",
     bgGlow: "bg-purple-500/10",
     label: "Order Placed",
   },
   TENANT_SETTINGS_UPDATED: {
     icon: Settings,
-    color: "text-slate-400",
+    color: "text-slate-600",
     bgGlow: "bg-slate-500/10",
     label: "Settings Updated",
   },
   SYSTEM_ALERT: {
     icon: AlertTriangle,
-    color: "text-amber-400",
+    color: "text-amber-600",
     bgGlow: "bg-amber-500/10",
     label: "System Alert",
   },
@@ -132,22 +132,22 @@ export function ActivityTimeline({
   const displayEvents = events.slice(0, maxVisible);
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative overflow-hidden", className)}>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="absolute inset-0 animate-pulse rounded-lg bg-cyan-500/20 blur-md" />
-            <div className="relative rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-2.5 ring-1 ring-cyan-500/30">
-              <Activity className="h-5 w-5 text-cyan-400" />
+            <div className="absolute inset-0 rounded-full bg-cyan-400/20 blur-md" />
+            <div className="relative rounded-xl bg-white p-2.5 ring-1 ring-slate-200 shadow-sm">
+              <Activity className="h-5 w-5 text-cyan-600" />
             </div>
           </div>
           <div>
-            <h3 className="font-mono text-lg font-bold uppercase tracking-wider text-slate-100">
-              Live Activity Stream
+            <h3 className="text-lg font-semibold text-slate-900">
+              Live activity stream
             </h3>
-            <p className="font-mono text-xs text-slate-500">
-              REAL-TIME PLATFORM EVENTS
+            <p className="text-xs text-slate-500">
+              Real-time platform events and system alerts.
             </p>
           </div>
         </div>
@@ -155,7 +155,7 @@ export function ActivityTimeline({
         {showViewAll && (
           <Link
             href="/super-admin/audit-logs"
-            className="group flex items-center gap-2 rounded-md bg-slate-800/50 px-4 py-2 font-mono text-sm font-medium text-cyan-400 ring-1 ring-slate-700 transition-all hover:bg-slate-800 hover:ring-cyan-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            className="group flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition-all hover:text-slate-900 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             aria-label="View full audit log"
           >
             <span>VIEW ALL</span>
@@ -164,21 +164,19 @@ export function ActivityTimeline({
         )}
       </div>
 
-      {/* Scanning line effect */}
-      <div className="pointer-events-none absolute left-0 right-0 top-24 h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50">
-        <div className="h-full w-full animate-scan-line" />
-      </div>
+      {/* Subtle divider */}
+      <div className="pointer-events-none absolute left-0 right-0 top-24 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
       {/* Timeline container */}
       <div className="space-y-3">
         {displayEvents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-700 bg-slate-900/30 py-12">
-            <Activity className="mb-3 h-12 w-12 text-slate-600" />
-            <p className="font-mono text-sm text-slate-500">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 py-12">
+            <Activity className="mb-3 h-12 w-12 text-slate-300" />
+            <p className="text-sm font-semibold text-slate-500">
               No recent activity
             </p>
-            <p className="font-mono text-xs text-slate-600">
-              Events will appear here in real-time
+            <p className="text-xs text-slate-400">
+              Events will appear here in real-time.
             </p>
           </div>
         ) : (
@@ -196,7 +194,7 @@ export function ActivityTimeline({
                   animationFillMode: "backwards",
                 }}
               >
-                <div className="relative overflow-hidden rounded-lg border border-slate-700/50 bg-gradient-to-br from-slate-900 to-slate-950 p-4 transition-all hover:border-slate-600 hover:shadow-lg hover:shadow-slate-900/50">
+                <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/80 p-4 transition-all hover:border-slate-300 hover:shadow-lg hover:shadow-slate-200/70">
                   {/* Background glow effect */}
                   <div
                     className={cn(
@@ -223,19 +221,17 @@ export function ActivityTimeline({
                       {/* Icon container */}
                       <div
                         className={cn(
-                          "relative flex h-10 w-10 items-center justify-center rounded-lg ring-1 transition-all",
+                          "relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition-transform",
                           config.bgGlow,
-                          config.color.replace("text-", "ring-"),
-                          "group-hover:scale-110",
+                          "group-hover:scale-105",
                         )}
                       >
                         <Icon className={cn("h-5 w-5", config.color)} />
 
-                        {/* Pulse effect for recent events */}
                         {index < 3 && (
                           <div
                             className={cn(
-                              "absolute inset-0 animate-ping rounded-lg opacity-20",
+                              "absolute inset-0 animate-ping rounded-xl opacity-20",
                               config.bgGlow,
                             )}
                           />
@@ -247,13 +243,13 @@ export function ActivityTimeline({
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-200 transition-colors group-hover:text-white">
+                          <p className="font-semibold text-slate-800 transition-colors group-hover:text-slate-900">
                             {event.description}
                           </p>
                           {event.actor && (
-                            <p className="mt-0.5 font-mono text-xs text-slate-500">
+                            <p className="mt-0.5 text-xs text-slate-500">
                               by{" "}
-                              <span className="text-slate-400">
+                              <span className="font-medium text-slate-600">
                                 {event.actor}
                               </span>
                             </p>
@@ -262,24 +258,24 @@ export function ActivityTimeline({
 
                         {/* Timestamp badge */}
                         <div className="shrink-0 text-right">
-                          <div className="font-mono text-xs font-medium text-cyan-400">
+                          <div className="text-xs font-semibold text-cyan-600">
                             {timestamp.relative}
                           </div>
-                          <div className="mt-0.5 font-mono text-[10px] text-slate-600">
+                          <div className="mt-0.5 text-[10px] text-slate-400">
                             {timestamp.time}
                           </div>
                         </div>
                       </div>
 
                       {/* Event type badge */}
-                      <div className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-slate-800/50 px-2 py-0.5 ring-1 ring-slate-700/50">
+                      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">
                         <div
                           className={cn(
                             "h-1.5 w-1.5 rounded-full",
                             config.color.replace("text-", "bg-"),
                           )}
                         />
-                        <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                           {config.label}
                         </span>
                       </div>
@@ -304,16 +300,18 @@ export function ActivityTimeline({
 
       {/* Footer stats */}
       {displayEvents.length > 0 && (
-        <div className="mt-6 flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/30 px-4 py-3">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white/70 px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-            <span className="font-mono text-xs text-slate-500">
+            <span className="text-xs text-slate-500">
               Monitoring{" "}
-              <span className="font-bold text-slate-400">{events.length}</span>{" "}
+              <span className="font-semibold text-slate-600">
+                {events.length}
+              </span>{" "}
               events
             </span>
           </div>
-          <span className="font-mono text-xs text-slate-600">
+          <span className="text-xs text-slate-400">
             Last updated:{" "}
             {new Date().toLocaleTimeString("en-US", { hour12: false })}
           </span>

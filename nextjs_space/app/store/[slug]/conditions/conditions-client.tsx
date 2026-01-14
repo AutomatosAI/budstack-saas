@@ -140,62 +140,36 @@ export default function ConditionsClient({
                   />
                 </div>
 
-                {/* Conditions Grid */}
-                <section className="py-20 md:py-32" style={{ backgroundColor: 'var(--tenant-color-background)' }}>
-                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                        <motion.div
-                            layout
-                            className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto"
-                        >
-                            <AnimatePresence mode="popLayout">
-                                {filteredConditions.map((condition) => (
-                                    <motion.div
-                                        key={condition.id}
-                                        layout
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.8 }}
-                                        transition={{
-                                            duration: 0.3,
-                                            layout: { duration: 0.3 }
-                                        }}
-                                    >
-                                        <Link href={`/store/${tenant.subdomain}/conditions/${condition.slug}`}>
-                                            <div
-                                                className="group block rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border"
-                                                style={{
-                                                    backgroundColor: 'var(--tenant-color-surface, var(--tenant-color-background))',
-                                                    borderColor: 'var(--tenant-color-border, rgba(0,0,0,0.2))'
-                                                }}
-                                            >
-                                                <div className="h-48 overflow-hidden relative">
-                                                    <Image
-                                                        src={condition.image || '/placeholder-condition.jpg'}
-                                                        alt={condition.name}
-                                                        fill
-                                                        className="object-contain p-6 group-hover:scale-105 transition-transform duration-500"
-                                                    />
-                                                </div>
-                                                <div className="p-5">
-                                                    <h3
-                                                        className="text-xl font-semibold mb-2 group-hover:opacity-80 transition-colors"
-                                                        style={{ color: 'var(--tenant-color-heading)', fontFamily: 'var(--tenant-font-heading)' }}
-                                                    >
-                                                        {condition.name}
-                                                    </h3>
-                                                    <p
-                                                        className="text-sm"
-                                                        style={{ color: 'var(--tenant-color-text)', fontFamily: 'var(--tenant-font-base)' }}
-                                                    >
-                                                        {condition.category}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
-                        </motion.div>
+                {/* Category Filter */}
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {categories.map((category) => (
+                    <button
+                      key={category.key}
+                      onClick={() => setSelectedCategory(category.key)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${selectedCategory === category.key
+                        ? "shadow-md"
+                        : "opacity-70 hover:opacity-100"
+                        }`}
+                      style={{
+                        backgroundColor:
+                          selectedCategory === category.key
+                            ? "var(--tenant-color-primary)"
+                            : "var(--tenant-color-surface, var(--tenant-color-background))",
+                        color:
+                          selectedCategory === category.key
+                            ? "white"
+                            : "var(--tenant-color-text)",
+                        fontFamily: "var(--tenant-font-base)",
+                      }}
+                    >
+                      {category.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
 
         {/* Conditions Grid */}
         <section
@@ -307,42 +281,25 @@ export default function ConditionsClient({
                   className="text-lg md:text-xl mb-10 max-w-2xl mx-auto text-white opacity-90"
                   style={{ fontFamily: "var(--tenant-font-base)" }}
                 >
-                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                        >
-                            <div className="max-w-4xl mx-auto text-center">
-                                <h2
-                                    className="text-3xl md:text-4xl lg:text-5xl font-semibold mb-6 tracking-tight text-white"
-                                    style={{ fontFamily: 'var(--tenant-font-heading)' }}
-                                >
-                                    Ready to Explore Treatment Options?
-                                </h2>
-                                <p
-                                    className="text-lg md:text-xl mb-10 max-w-2xl mx-auto text-white opacity-90"
-                                    style={{ fontFamily: 'var(--tenant-font-base)' }}
-                                >
-                                    Schedule a consultation with our medical professionals to discuss personalized treatment plans.
-                                </p>
-                                <Link href={`/store/${tenant.subdomain}/contact`}>
-                                    <button
-                                        className="px-8 py-3 text-lg rounded-lg font-semibold border transition-all duration-200 hover:shadow-lg"
-                                        style={{
-                                            backgroundColor: 'white',
-                                            color: 'var(--tenant-color-primary)',
-                                            fontFamily: 'var(--tenant-font-base)'
-                                        }}
-                                    >
-                                        Contact Us →
-                                    </button>
-                                </Link>
-                            </div>
-                        </motion.div>
-                    </div>
-                </section>
-            </main>
-        </div>
-    );
+                  Schedule a consultation with our medical professionals to
+                  discuss personalized treatment plans.
+                </p>
+                <Link
+                  href={`/store/${tenant.subdomain}/contact`}
+                  className="inline-block px-8 py-3 text-lg rounded-lg font-semibold border transition-all duration-200 hover:shadow-lg"
+                  style={{
+                    backgroundColor: "white",
+                    color: "var(--tenant-color-primary)",
+                    fontFamily: "var(--tenant-font-base)",
+                  }}
+                >
+                  Contact Us →
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
 }

@@ -129,7 +129,7 @@ export function UploadTemplateDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all">
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all rounded-full">
           <Plus className="mr-2 h-4 w-4" />
           Upload New Template
         </Button>
@@ -230,10 +230,11 @@ export function UploadTemplateDialog() {
             variant="outline"
             onClick={() => setOpen(false)}
             disabled={isUploading}
+            className="rounded-full"
           >
             Cancel
           </Button>
-          <Button onClick={handleUpload} disabled={isUploading}>
+          <Button onClick={handleUpload} disabled={isUploading} className="rounded-full bg-blue-600 hover:bg-blue-700">
             {isUploading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

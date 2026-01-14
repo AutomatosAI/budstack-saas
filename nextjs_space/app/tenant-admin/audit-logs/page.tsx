@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { format } from "date-fns";
 import { Shield, ChevronLeft, ChevronRight, Filter } from "lucide-react";
-import { Breadcrumbs } from "@/components/admin/shared";
+
 
 interface AuditLog {
   id: string;
@@ -101,24 +101,20 @@ export default function TenantAuditLogsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/tenant-admin" },
-          { label: "Audit Logs" },
-        ]}
-        className="mb-4"
-      />
-
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+      <div className="text-center max-w-2xl mx-auto mb-8">
+        <div className="section-badge mb-4 inline-flex">
+          <Shield className="h-4 w-4" />
+          Security
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
           Audit Logs
         </h1>
-        <p className="text-sm sm:text-base text-slate-600 mt-1 sm:mt-2">
-          Track all actions and changes in your dispensary
+        <p className="mt-3 text-muted-foreground mx-auto">
+          Track all actions and changes in your dispensary.
         </p>
       </div>
 
-      <Card className="shadow-lg border-slate-200">
+      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden">
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>

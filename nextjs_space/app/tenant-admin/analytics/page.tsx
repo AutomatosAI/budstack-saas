@@ -25,7 +25,7 @@ import {
   ArrowUpRight,
   ShoppingBag,
 } from "lucide-react";
-import { Breadcrumbs } from "@/components/admin/shared";
+
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
@@ -526,74 +526,60 @@ export default function TenantAnalyticsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50/30 via-white to-cyan-50/30 p-4 sm:p-6 lg:p-8">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/tenant-admin" },
-          { label: "Analytics" },
-        ]}
-        className="mb-4"
-      />
-
-      {/* Header with Living Garden aesthetic */}
-      <div className="mb-6 sm:mb-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-full blur-md opacity-60 animate-pulse" />
-                <Sparkles className="relative h-6 w-6 sm:h-8 sm:w-8 text-emerald-600" />
-              </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-emerald-700 via-emerald-600 to-cyan-600 bg-clip-text text-transparent">
-                Store Analytics
-              </h1>
-            </div>
-            <p className="text-sm sm:text-base text-slate-600 mt-1 sm:mt-2 ml-9 sm:ml-11">
-              Your garden of insights and performance metrics
-            </p>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-2 lg:pb-0">
-            <Button
-              variant={timeRange === "7d" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTimeRange("7d")}
-              className={cn(
-                "flex-shrink-0",
-                timeRange === "7d"
-                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-                  : "border-emerald-300 text-emerald-700 hover:bg-emerald-50",
-              )}
-            >
-              7 Days
-            </Button>
-            <Button
-              variant={timeRange === "30d" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTimeRange("30d")}
-              className={cn(
-                "flex-shrink-0",
-                timeRange === "30d"
-                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-                  : "border-emerald-300 text-emerald-700 hover:bg-emerald-50",
-              )}
-            >
-              30 Days
-            </Button>
-            <Button
-              variant={timeRange === "90d" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTimeRange("90d")}
-              className={cn(
-                "flex-shrink-0",
-                timeRange === "90d"
-                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-                  : "border-emerald-300 text-emerald-700 hover:bg-emerald-50",
-              )}
-            >
-              90 Days
-            </Button>
-          </div>
+    <div className="min-h-screen saas-shell p-4 sm:p-6 lg:p-8">
+      {/* Flowa-style Header */}
+      {/* Centered Flowa-style Header */}
+      <div className="text-center max-w-2xl mx-auto mb-10">
+        <div className="section-badge mb-4 inline-flex">
+          <TrendingUp className="h-4 w-4" />
+          Analytics
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          Store Analytics
+        </h1>
+        <p className="mt-3 max-w-2xl text-muted-foreground mx-auto">
+          Your garden of insights and performance metrics.
+        </p>
+        <div className="flex gap-2 justify-center mt-6">
+          <Button
+            variant={timeRange === "7d" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTimeRange("7d")}
+            className={cn(
+              "rounded-xl transition-all",
+              timeRange === "7d"
+                ? "bg-accent hover:bg-accent/90 text-white"
+                : "border-slate-200 text-slate-700 hover:bg-slate-50",
+            )}
+          >
+            7 Days
+          </Button>
+          <Button
+            variant={timeRange === "30d" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTimeRange("30d")}
+            className={cn(
+              "rounded-xl transition-all",
+              timeRange === "30d"
+                ? "bg-accent hover:bg-accent/90 text-white"
+                : "border-slate-200 text-slate-700 hover:bg-slate-50",
+            )}
+          >
+            30 Days
+          </Button>
+          <Button
+            variant={timeRange === "90d" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTimeRange("90d")}
+            className={cn(
+              "rounded-xl transition-all",
+              timeRange === "90d"
+                ? "bg-accent hover:bg-accent/90 text-white"
+                : "border-slate-200 text-slate-700 hover:bg-slate-50",
+            )}
+          >
+            90 Days
+          </Button>
         </div>
       </div>
 
@@ -605,19 +591,22 @@ export default function TenantAnalyticsPage() {
             Key Business Metrics
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-            <Card className="border-none shadow-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white overflow-hidden relative group hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-                <CardTitle className="text-sm font-medium text-emerald-50">
-                  Total Revenue
-                </CardTitle>
-                <DollarSign className="h-5 w-5 text-emerald-100" />
+            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+              <CardHeader className="p-0 pb-4 space-y-0">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold text-slate-600">
+                    Total Revenue
+                  </CardTitle>
+                  <div className="rounded-xl bg-emerald-50 p-2.5">
+                    <DollarSign className="h-5 w-5 text-emerald-600" />
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="relative z-10">
-                <div className="text-3xl font-bold">
+              <CardContent className="p-0">
+                <div className="text-3xl font-semibold text-slate-900">
                   €{analytics.totalRevenue.toFixed(2)}
                 </div>
-                <div className="flex items-center gap-1 text-xs mt-2">
+                <div className="flex items-center gap-1 text-xs font-medium mt-1 text-emerald-600">
                   <TrendingUp className="w-3 h-3" />
                   <span>
                     +€{analytics.recentRevenue.toFixed(2)} this period
@@ -626,55 +615,64 @@ export default function TenantAnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white overflow-hidden relative group hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-                <CardTitle className="text-sm font-medium text-amber-50">
-                  Total Orders
-                </CardTitle>
-                <ShoppingCart className="h-5 w-5 text-amber-100" />
+            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+              <CardHeader className="p-0 pb-4 space-y-0">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold text-slate-600">
+                    Total Orders
+                  </CardTitle>
+                  <div className="rounded-xl bg-amber-50 p-2.5">
+                    <ShoppingCart className="h-5 w-5 text-amber-600" />
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="relative z-10">
-                <div className="text-3xl font-bold">
+              <CardContent className="p-0">
+                <div className="text-3xl font-semibold text-slate-900">
                   {analytics.totalOrders}
                 </div>
-                <p className="text-xs mt-2">
+                <p className="mt-1 text-xs font-medium text-slate-400">
                   +{analytics.recentOrders} this period
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white overflow-hidden relative group hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-                <CardTitle className="text-sm font-medium text-purple-50">
-                  Total Customers
-                </CardTitle>
-                <Users className="h-5 w-5 text-purple-100" />
+            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+              <CardHeader className="p-0 pb-4 space-y-0">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold text-slate-600">
+                    Total Customers
+                  </CardTitle>
+                  <div className="rounded-xl bg-purple-50 p-2.5">
+                    <Users className="h-5 w-5 text-purple-600" />
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="relative z-10">
-                <div className="text-3xl font-bold">
+              <CardContent className="p-0">
+                <div className="text-3xl font-semibold text-slate-900">
                   {analytics.totalCustomers}
                 </div>
-                <p className="text-xs mt-2">
+                <p className="mt-1 text-xs font-medium text-slate-400">
                   +{analytics.recentCustomers} this period
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white overflow-hidden relative group hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-                <CardTitle className="text-sm font-medium text-cyan-50">
-                  Avg Order Value
-                </CardTitle>
-                <Package className="h-5 w-5 text-cyan-100" />
+            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+              <CardHeader className="p-0 pb-4 space-y-0">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold text-slate-600">
+                    Avg Order Value
+                  </CardTitle>
+                  <div className="rounded-xl bg-cyan-50 p-2.5">
+                    <Package className="h-5 w-5 text-cyan-600" />
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="relative z-10">
-                <div className="text-3xl font-bold">
+              <CardContent className="p-0">
+                <div className="text-3xl font-semibold text-slate-900">
                   €{analytics.avgOrderValue.toFixed(2)}
                 </div>
-                <p className="text-xs mt-2">
+                <p className="mt-1 text-xs font-medium text-slate-400">
                   {analytics.totalProducts} products
                 </p>
               </CardContent>
@@ -682,52 +680,48 @@ export default function TenantAnalyticsPage() {
           </div>
         </section>
 
-        {/* Section 2: Living Garden Revenue Metrics */}
+        {/* Section 2: Revenue Metrics */}
         <section>
           <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <div className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-cyan-500 rounded-full" />
+            <div className="w-1 h-6 bg-slate-900 rounded-full" />
             Revenue Overview
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {revenueMetrics.map((metric, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {revenueMetrics.map((metric) => (
               <Card
                 key={metric.label}
-                className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-cyan-50 border-emerald-200/50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] group"
+                className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6 relative overflow-hidden group"
               >
-                <div className="absolute -right-8 -top-8 w-32 h-32 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <Leaf className="w-full h-full text-emerald-600 rotate-45" />
-                </div>
-
-                <div className="relative p-6 space-y-2">
+                <div className="relative space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-emerald-900">
+                    <span className="text-sm font-semibold text-slate-600">
                       {metric.label}
                     </span>
-                    <DollarSign className="h-4 w-4 text-emerald-700 opacity-70" />
+                    <DollarSign className="h-4 w-4 text-emerald-600" />
                   </div>
 
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold bg-gradient-to-br from-emerald-800 to-emerald-700 bg-clip-text text-transparent">
+                    <span className="text-3xl font-semibold text-slate-900">
                       {formatCurrency(metric.value)}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-xs font-medium">
                     <div
                       className={cn(
                         "flex items-center gap-1 px-2 py-0.5 rounded-full",
                         metric.change > 0
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-amber-100 text-amber-800",
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-amber-50 text-amber-700",
                       )}
                     >
                       <TrendingUp className="h-3 w-3" />
-                      <span className="font-semibold">
+                      <span>
                         {metric.change > 0 ? "+" : ""}
                         {metric.change}%
                       </span>
                     </div>
-                    <span className="text-slate-600">{metric.period}</span>
+                    <span className="text-slate-400">{metric.period}</span>
                   </div>
                 </div>
               </Card>
@@ -738,13 +732,13 @@ export default function TenantAnalyticsPage() {
         {/* Section 3: Sales Intelligence (Recharts) */}
         <section>
           <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <div className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-cyan-500 rounded-full" />
+            <div className="w-1 h-6 bg-slate-900 rounded-full" />
             Sales Intelligence
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-emerald-100 shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-emerald-900">
+            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+              <CardHeader className="p-0 pb-6">
+                <CardTitle className="flex items-center gap-2 text-slate-900">
                   <TrendingUp className="h-5 w-5 text-emerald-600" />
                   Revenue Trend
                 </CardTitle>
@@ -784,10 +778,10 @@ export default function TenantAnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-cyan-100 shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-cyan-900">
-                  <ShoppingCart className="h-5 w-5 text-cyan-600" />
+            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+              <CardHeader className="p-0 pb-6">
+                <CardTitle className="flex items-center gap-2 text-slate-900">
+                  <ShoppingCart className="h-5 w-5 text-purple-600" />
                   Order Volume
                 </CardTitle>
                 <CardDescription>

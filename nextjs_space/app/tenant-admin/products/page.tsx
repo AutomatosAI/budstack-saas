@@ -4,8 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { Package, RefreshCw } from "lucide-react";
 import { ProductsTable } from "./products-table";
-import { Breadcrumbs } from "@/components/admin/shared";
 
 /** Default pagination settings */
 const DEFAULT_PAGE_SIZE = 20;
@@ -118,12 +118,11 @@ export default async function ProductsPage({
   const skip = (page - 1) * pageSize;
 
   // Build orderBy clause - default to displayOrder asc if no sort specified
-  const orderBy: Prisma.productsOrderByWithRelationInput = sortBy
+  const orderBy: any = sortBy
     ? { [sortBy]: sortOrder }
     : { displayOrder: "asc" };
 
   // Get filtered count and paginated products in parallel
-  // Also get counts for filter badges
   const [
     filteredCount,
     products,
@@ -138,51 +137,48 @@ export default async function ProductsPage({
       skip,
       take: pageSize,
     }),
-    // Count in-stock products (with search applied if present)
     prisma.products.count({
       where: {
         tenantId,
         ...(search
           ? {
-              OR: [
-                { name: { contains: search, mode: "insensitive" } },
-                { category: { contains: search, mode: "insensitive" } },
-                { slug: { contains: search, mode: "insensitive" } },
-              ],
-            }
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { category: { contains: search, mode: "insensitive" } },
+              { slug: { contains: search, mode: "insensitive" } },
+            ],
+          }
           : {}),
         stock: { gt: 0 },
       },
     }),
-    // Count out-of-stock products (with search applied if present)
     prisma.products.count({
       where: {
         tenantId,
         ...(search
           ? {
-              OR: [
-                { name: { contains: search, mode: "insensitive" } },
-                { category: { contains: search, mode: "insensitive" } },
-                { slug: { contains: search, mode: "insensitive" } },
-              ],
-            }
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { category: { contains: search, mode: "insensitive" } },
+              { slug: { contains: search, mode: "insensitive" } },
+            ],
+          }
           : {}),
         stock: { equals: 0 },
       },
     }),
-    // Get category counts for filter badges
     prisma.products.groupBy({
       by: ["category"],
       where: {
         tenantId,
         ...(search
           ? {
-              OR: [
-                { name: { contains: search, mode: "insensitive" } },
-                { category: { contains: search, mode: "insensitive" } },
-                { slug: { contains: search, mode: "insensitive" } },
-              ],
-            }
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { category: { contains: search, mode: "insensitive" } },
+              { slug: { contains: search, mode: "insensitive" } },
+            ],
+          }
           : {}),
       },
       _count: { id: true },
@@ -195,31 +191,28 @@ export default async function ProductsPage({
     (item: { category: string | null; _count: { id: number } }) => {
       const cat = item.category?.toLowerCase() || "uncategorized";
       categoryCountsMap[cat] = item._count.id;
-    },
+    }
   );
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/tenant-admin" },
-          { label: "Products" },
-        ]}
-        className="mb-4"
-      />
-
-      <div className="mb-6 sm:mb-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              Product Management
-            </h1>
-            <p className="text-sm sm:text-base text-slate-600 mt-1 sm:mt-2">
-              Manage your product catalog
-            </p>
+    <div className="space-y-8">
+      {/* Centered Header with Absolute Right Button */}
+      <div className="relative mb-8">
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="section-badge mb-4 inline-flex">
+            <Package className="h-4 w-4" />
+            Products
           </div>
-          <Button className="w-full sm:w-auto bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            Product Catalog
+          </h1>
+          <p className="mt-3 text-muted-foreground">
+            Manage your product catalog and inventory.
+          </p>
+        </div>
+        <div className="mt-4 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mt-0">
+          <Button variant="hero" size="lg" className="rounded-xl shadow-lg hover:shadow-xl transition-all">
+            <RefreshCw className="mr-2 h-4 w-4" />
             Sync from Dr Green Admin
           </Button>
         </div>

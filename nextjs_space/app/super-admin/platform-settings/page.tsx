@@ -1,13 +1,13 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import PlatformBrandingForm from "./platform-branding-form";
-import { Breadcrumbs } from "@/components/admin/shared";
 
 export default async function PlatformSettingsPage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
-  if (!session?.user?.email) {
+  if (!session?.user?.email || !session?.user?.id) {
     redirect("/auth/login");
   }
 
@@ -31,22 +31,13 @@ export default async function PlatformSettingsPage() {
   }
 
   return (
-    <div className="p-8">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/super-admin" },
-          { label: "Platform Branding" },
-        ]}
-        className="mb-4"
-      />
-
+    <div className="p-6 lg:p-8">
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+      <div className="mb-10">
+        <h1 className="text-4xl font-semibold tracking-tight text-slate-900">
           Platform Branding
         </h1>
-        <p className="text-slate-600 mt-2">
+        <p className="mt-2 max-w-2xl text-slate-500">
           Customize the look and feel of the main BudStack platform
         </p>
       </div>

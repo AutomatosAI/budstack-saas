@@ -155,100 +155,99 @@ export function TenantEventMapper() {
     }
   };
 
-  if (loadingMappings || loadingTemplates)
-    return (
-        <div className="border rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Event</TableHead>
-                            <TableHead>Active Template</TableHead>
-                            <TableHead className="hidden md:table-cell">Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {SYSTEM_EVENTS.map(event => {
-                            const mapping = getMapping(event.id);
-                            const isCustom = mapping?.isCustom || false;
-                            const currentTemplateId = isCustom ? mapping?.template?.id : 'default';
-
-                            // We need original Template ID for "Customize" button logic (Cloning).
-                            // If it's default, mapping.template.id is the System Template ID.
-                            const systemTemplateId = !isCustom && mapping?.template ? mapping.template.id : undefined;
-
-                            return (
-                                <TableRow key={event.id}>
-                                    <TableCell>
-                                        <div className="font-medium">{event.label}</div>
-                                        <div className="text-xs text-muted-foreground hidden md:block">{event.description}</div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Select
-                                                value={currentTemplateId || 'default'}
-                                                onValueChange={(val) => handleMappingChange(event.id, val)}
-                                                disabled={saving === event.id}
-                                            >
-                                                <SelectTrigger className="w-[180px] md:w-[250px]">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="default">
-                                                        <span className="font-semibold">System Default</span>
-                                                    </SelectItem>
-                                                    {templatesList.length > 0 && <SelectItem disabled value="separator">──────────</SelectItem>}
-                                                    {templatesList.map(t => (
-                                                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            {saving === event.id && <Loader2 className="h-4 w-4 animate-spin" />}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="hidden md:table-cell">
-                                        <Badge variant={isCustom ? 'default' : 'outline'} className={isCustom ? "bg-slate-900" : ""}>
-                                            {isCustom ? 'Custom' : 'Default'}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {isCustom ? (
-                                            <Link href={`/tenant-admin/emails/${mapping?.template?.id}`}>
-                                                <Button variant="ghost" size="sm">
-                                                    <Edit className="h-4 w-4 mr-2" /> Edit Template
-                                                </Button>
-                                            </Link>
-                                        ) : (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleCustomize(event.id, systemTemplateId)}
-                                                disabled={!systemTemplateId || saving === event.id}
-                                            >
-                                                <Copy className="h-4 w-4 mr-2" /> Customize
-                                            </Button>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
-            </div>
-        </div>
-    );
-
   const templatesList = customTemplates || [];
 
+  if (loadingMappings || loadingTemplates)
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Event</TableHead>
+                <TableHead>Active Template</TableHead>
+                <TableHead className="hidden md:table-cell">Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {SYSTEM_EVENTS.map(event => {
+                const mapping = getMapping(event.id);
+                const isCustom = mapping?.isCustom || false;
+                const currentTemplateId = isCustom ? mapping?.template?.id : 'default';
+
+                // We need original Template ID for "Customize" button logic (Cloning).
+                // If it's default, mapping.template.id is the System Template ID.
+                const systemTemplateId = !isCustom && mapping?.template ? mapping.template.id : undefined;
+
+                return (
+                  <TableRow key={event.id}>
+                    <TableCell>
+                      <div className="font-medium">{event.label}</div>
+                      <div className="text-xs text-muted-foreground hidden md:block">{event.description}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={currentTemplateId || 'default'}
+                          onValueChange={(val) => handleMappingChange(event.id, val)}
+                          disabled={saving === event.id}
+                        >
+                          <SelectTrigger className="w-[180px] md:w-[250px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="default">
+                              <span className="font-semibold">System Default</span>
+                            </SelectItem>
+                            {templatesList.length > 0 && <SelectItem disabled value="separator">──────────</SelectItem>}
+                            {templatesList.map(t => (
+                              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {saving === event.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Badge variant={isCustom ? 'default' : 'outline'} className={isCustom ? "bg-slate-900" : ""}>
+                        {isCustom ? 'Custom' : 'Default'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {isCustom ? (
+                        <Link href={`/tenant-admin/emails/${mapping?.template?.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4 mr-2" /> Edit Template
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCustomize(event.id, systemTemplateId)}
+                          disabled={!systemTemplateId || saving === event.id}
+                        >
+                          <Copy className="h-4 w-4 mr-2" /> Customize
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+
   return (
-    <div className="border rounded-md overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Event</TableHead>
-              <TableHead>Active Template</TableHead>
               <TableHead>Active Template</TableHead>
               <TableHead className="hidden md:table-cell">Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>

@@ -25,6 +25,7 @@ import {
   Printer,
   FileText,
   Check,
+  ShoppingBag,
 } from "lucide-react";
 import {
   Dialog,
@@ -42,7 +43,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { OrdersTable } from "./orders-table";
-import { Breadcrumbs } from "@/components/admin/shared";
+
 
 interface OrderItem {
   id: string;
@@ -324,70 +325,85 @@ export default function TenantOrdersPage() {
     statusCounts.CANCELLED;
 
   return (
-    <div className="p-8">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/tenant-admin" },
-          { label: "Orders" },
-        ]}
-        className="mb-4"
-      />
-
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Flowa-style Header */}
+      {/* Centered Header */}
+      <div className="text-center max-w-2xl mx-auto mb-8">
+        <div className="section-badge mb-4 inline-flex">
+          <ShoppingBag className="h-4 w-4" />
+          Orders
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
           Order Management
         </h1>
-        <p className="text-slate-600 mt-2">
-          Manage and fulfill customer orders
+        <p className="mt-2 max-w-2xl text-muted-foreground mx-auto">
+          Manage and fulfill customer orders with clarity and speed.
         </p>
       </div>
 
       {/* Order Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card className="border-none shadow-lg bg-gradient-to-br from-slate-500 to-gray-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-          <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-sm font-medium text-slate-50">
-              Total Orders
-            </CardTitle>
+        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+          <CardHeader className="p-0 pb-4 space-y-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-slate-600">
+                Total Orders
+              </CardTitle>
+              <div className="rounded-xl bg-slate-100 p-2.5">
+                <Package className="h-5 w-5 text-slate-600" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-3xl font-bold">{totalOrders}</div>
+          <CardContent className="p-0">
+            <div className="text-3xl font-semibold text-slate-900">{totalOrders}</div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-          <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-sm font-medium text-amber-50">
-              Pending
-            </CardTitle>
+
+        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+          <CardHeader className="p-0 pb-4 space-y-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-slate-600">
+                Pending
+              </CardTitle>
+              <div className="rounded-xl bg-amber-50 p-2.5">
+                <Clock className="h-5 w-5 text-amber-600" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-3xl font-bold">{statusCounts.PENDING}</div>
+          <CardContent className="p-0">
+            <div className="text-3xl font-semibold text-slate-900">{statusCounts.PENDING}</div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-          <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-sm font-medium text-cyan-50">
-              Processing
-            </CardTitle>
+
+        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+          <CardHeader className="p-0 pb-4 space-y-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-slate-600">
+                Processing
+              </CardTitle>
+              <div className="rounded-xl bg-blue-50 p-2.5">
+                <Truck className="h-5 w-5 text-blue-600" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-3xl font-bold">{statusCounts.PROCESSING}</div>
+          <CardContent className="p-0">
+            <div className="text-3xl font-semibold text-slate-900">{statusCounts.PROCESSING}</div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-          <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-sm font-medium text-emerald-50">
-              Completed
-            </CardTitle>
+
+        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+          <CardHeader className="p-0 pb-4 space-y-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-slate-600">
+                Completed
+              </CardTitle>
+              <div className="rounded-xl bg-emerald-50 p-2.5">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-3xl font-bold">{statusCounts.COMPLETED}</div>
+          <CardContent className="p-0">
+            <div className="text-3xl font-semibold text-slate-900">{statusCounts.COMPLETED}</div>
           </CardContent>
         </Card>
       </div>

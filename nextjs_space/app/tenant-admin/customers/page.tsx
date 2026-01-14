@@ -3,10 +3,8 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users } from "lucide-react";
 import { CustomersTable } from "./customers-table";
-import { Breadcrumbs } from "@/components/admin/shared";
 
 /** Default pagination settings */
 const DEFAULT_PAGE_SIZE = 20;
@@ -140,69 +138,73 @@ export default async function CustomersListPage({
     ]);
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/tenant-admin" },
-          { label: "Customers" },
-        ]}
-        className="mb-4"
-      />
-
-      {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+    <div className="space-y-8">
+      {/* Centered Header */}
+      <div className="text-center max-w-2xl mx-auto">
+        <div className="section-badge mb-4 inline-flex">
+          <Users className="h-4 w-4" />
+          Customers
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
           Customer Management
         </h1>
-        <p className="text-sm sm:text-base text-slate-600 mt-1 sm:mt-2">
-          Manage your customer base
+        <p className="mt-3 text-muted-foreground">
+          Manage your customer base and view engagement metrics.
         </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <Card className="border-none shadow-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium text-cyan-50">
-              Total Customers
-            </CardTitle>
-            <Users className="h-5 w-5 text-cyan-100" />
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-3xl font-bold">{totalCustomersCount}</div>
-            <p className="text-xs mt-2 text-cyan-100">Registered users</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="card-floating p-6">
+          <div className="flex items-start justify-between">
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Customers
+              </p>
+              <p className="font-display text-3xl font-bold tracking-tight text-foreground">
+                {totalCustomersCount}
+              </p>
+              <p className="text-xs text-muted-foreground">Registered users</p>
+            </div>
+            <div className="rounded-2xl bg-primary p-3">
+              <Users className="h-5 w-5 text-white" />
+            </div>
+          </div>
+        </div>
 
-        <Card className="border-none shadow-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium text-emerald-50">
-              Active Customers
-            </CardTitle>
-            <Users className="h-5 w-5 text-emerald-100" />
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-3xl font-bold">{totalCustomersCount}</div>
-            <p className="text-xs mt-2 text-emerald-100">Currently active</p>
-          </CardContent>
-        </Card>
+        <div className="card-floating p-6">
+          <div className="flex items-start justify-between">
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">
+                Active Customers
+              </p>
+              <p className="font-display text-3xl font-bold tracking-tight text-foreground">
+                {totalCustomersCount}
+              </p>
+              <p className="text-xs text-muted-foreground">Currently active</p>
+            </div>
+            <div className="rounded-2xl bg-emerald-500 p-3">
+              <Users className="h-5 w-5 text-white" />
+            </div>
+          </div>
+        </div>
 
-        <Card className="border-none shadow-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium text-purple-50">
-              Recent Sign-ups
-            </CardTitle>
-            <Users className="h-5 w-5 text-purple-100" />
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-3xl font-bold">{recentSignupsCount}</div>
-            <p className="text-xs mt-2 text-purple-100">Last 30 days</p>
-          </CardContent>
-        </Card>
+        <div className="card-floating p-6">
+          <div className="flex items-start justify-between">
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">
+                Recent Sign-ups
+              </p>
+              <p className="font-display text-3xl font-bold tracking-tight text-foreground">
+                {recentSignupsCount}
+              </p>
+              <p className="text-xs text-muted-foreground">Last 30 days</p>
+            </div>
+            <div className="rounded-2xl bg-purple-600 p-3">
+              <Users className="h-5 w-5 text-white" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Customers Table with Search and Pagination */}

@@ -13,7 +13,6 @@ import { Separator } from "@/components/ui/separator";
 import { prisma } from "@/lib/db";
 import { format } from "date-fns";
 import TenantEditForm from "./tenant-edit-form";
-import { Breadcrumbs } from "@/components/admin/shared";
 
 export default async function TenantDetailPage({
   params,
@@ -53,15 +52,6 @@ export default async function TenantDetailPage({
 
   return (
     <div className="p-8">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/super-admin" },
-          { label: "Tenants", href: "/super-admin/tenants" },
-          { label: tenant.businessName || "Tenant Details" },
-        ]}
-        className="mb-4"
-      />
 
       {/* Header */}
       <div className="mb-8">
@@ -95,8 +85,8 @@ export default async function TenantDetailPage({
         <div className="lg:col-span-2 space-y-6">
           <TenantEditForm tenant={tenant} />
 
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-slate-100">
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle className="flex items-center justify-between">
                 <span>Users ({tenant.users.length})</span>
                 <Badge variant="outline">
@@ -145,8 +135,8 @@ export default async function TenantDetailPage({
 
         {/* Right Column - Stats & Actions */}
         <div className="space-y-6">
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-cyan-50">
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle>Statistics</CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
@@ -194,8 +184,8 @@ export default async function TenantDetailPage({
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-slate-200">
-            <CardHeader className="border-b bg-gradient-to-r from-red-50 to-orange-50">
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
               <CardTitle>Actions</CardTitle>
             </CardHeader>
             <CardContent className="pt-6">

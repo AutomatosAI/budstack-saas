@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
-// Slugify helper (reused - in real app should be in utils)
 function slugify(text: string) {
   return text
     .toString()
@@ -48,12 +47,16 @@ export async function GET(
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    // Verify tenant
     const user = await prisma.users.findUnique({
       where: { id: session.user.id },
       include: { tenants: true },
     });
-    if (post.tenantId !== user?.tenantId) {
+
+    // Super Admin can access all posts, Tenant Admin only their own
+    if (
+      session.user.role !== "SUPER_ADMIN" &&
+      post.tenantId !== user?.tenantId
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -71,77 +74,56 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session || (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { id } = params;
-        const body = await req.json();
-        const validatedData = postSchema.partial().parse(body);
-
-        const user = await prisma.users.findUnique({ where: { id: session.user.id }, include: { tenants: true } });
-
-        const existingPost = await prisma.posts.findUnique({ where: { id } });
-        if (!existingPost || existingPost.tenantId !== user?.tenantId) {
-            return NextResponse.json({ error: 'Post not found or unauthorized' }, { status: 404 });
-        }
-
-        const dataToUpdate: any = { ...validatedData };
-
-        // If title changes, regen slug? Optional. Let's do it for SEO.
-        if (validatedData.title && validatedData.title !== existingPost.title) {
-            let slug = slugify(validatedData.title);
-            let uniqueSlug = slug;
-            let counter = 1;
-            // Check collision excluding current post
-            while (await prisma.posts.findFirst({
-                where: {
-                    slug: uniqueSlug,
-                    tenantId: user!.tenantId,
-                    NOT: { id }
-                }
-            })) {
-                uniqueSlug = `${slug}-${counter}`;
-                counter++;
-            }
-            dataToUpdate.slug = uniqueSlug;
-        }
-
-        const updatedPost = await prisma.posts.update({
-            where: { id },
-            data: dataToUpdate,
-        });
-
-        return NextResponse.json(updatedPost);
-    } catch (error) {
-        if (error instanceof z.ZodError) {
-            return NextResponse.json({ error: error.errors }, { status: 400 });
-        }
-        console.error('Error updating post:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  try {
+    const session = await getServerSession(authOptions);
+    if (
+      !session ||
+      (session.user.role !== "TENANT_ADMIN" &&
+        session.user.role !== "SUPER_ADMIN")
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const dataToUpdate: any = { ...validatedData };
+    const { id } = params;
+    const body = await req.json();
+    const validatedData = postSchema.partial().parse(body);
 
-    // If title changes, regen slug? Optional. Let's do it for SEO.
+    const user = await prisma.users.findUnique({
+      where: { id: session.user.id },
+      include: { tenants: true },
+    });
+
+    const existingPost = await prisma.posts.findUnique({ where: { id } });
+
+    // Allow SUPER_ADMIN to bypass tenant check, otherwise enforce ownership
+    if (
+      !existingPost ||
+      (session.user.role !== "SUPER_ADMIN" &&
+        existingPost.tenantId !== user?.tenantId)
+    ) {
+      return NextResponse.json(
+        { error: "Post not found or unauthorized" },
+        { status: 404 },
+      );
+    }
+
+    const dataToUpdate: Record<string, unknown> = { ...validatedData };
+
     if (validatedData.title && validatedData.title !== existingPost.title) {
-      let slug = slugify(validatedData.title);
-      let uniqueSlug = slug;
+      const baseSlug = slugify(validatedData.title);
+      let uniqueSlug = baseSlug;
       let counter = 1;
-      // Check collision excluding current post
       while (
         await prisma.posts.findFirst({
           where: {
             slug: uniqueSlug,
-            tenantId: user!.tenant!.id,
+            tenantId: user!.tenantId,
             NOT: { id },
           },
         })
       ) {
-        uniqueSlug = `${slug}-${counter}`;
-        counter++;
+        uniqueSlug = `${baseSlug}-${counter}`;
+        counter += 1;
       }
       dataToUpdate.slug = uniqueSlug;
     }
@@ -185,7 +167,12 @@ export async function DELETE(
     });
 
     const existingPost = await prisma.posts.findUnique({ where: { id } });
-    if (!existingPost || existingPost.tenantId !== user?.tenantId) {
+
+    if (
+      !existingPost ||
+      (session.user.role !== "SUPER_ADMIN" &&
+        existingPost.tenantId !== user?.tenantId)
+    ) {
       return NextResponse.json(
         { error: "Post not found or unauthorized" },
         { status: 404 },

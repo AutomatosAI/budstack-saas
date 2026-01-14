@@ -59,7 +59,7 @@ export default function OnboardingActions({ tenantId }: { tenantId: string }) {
 
   return (
     <div className="flex gap-2">
-      <Button size="sm" onClick={approveTenant} disabled={isLoading}>
+      <Button size="sm" onClick={approveTenant} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full">
         Approve
       </Button>
       <Button
@@ -67,6 +67,7 @@ export default function OnboardingActions({ tenantId }: { tenantId: string }) {
         variant="outline"
         onClick={rejectTenant}
         disabled={isLoading}
+        className="rounded-full"
       >
         Reject
       </Button>

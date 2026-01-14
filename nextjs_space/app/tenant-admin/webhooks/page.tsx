@@ -2,13 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,20 +17,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/sonner";
 import {
   Webhook,
   Plus,
   Trash2,
-  Edit2,
   CheckCircle,
   XCircle,
   ExternalLink,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
-import { WEBHOOK_EVENT_CATEGORIES } from "@/lib/webhook";
-import { Breadcrumbs } from "@/components/admin/shared";
+import { WEBHOOK_EVENT_CATEGORIES } from "@/lib/webhook-events";
 
 interface WebhookData {
   id: string;
@@ -59,7 +51,6 @@ export default function WebhooksPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
 
-  // Form state
   const [formData, setFormData] = useState({
     url: "",
     events: [] as string[],
@@ -117,7 +108,7 @@ export default function WebhooksPage() {
 
   const handleUpdate = async (
     webhookId: string,
-    updates: Partial<WebhookData>,
+    updates: Partial<WebhookData>
   ) => {
     try {
       const response = await fetch(`/api/tenant-admin/webhooks/${webhookId}`, {
@@ -127,7 +118,7 @@ export default function WebhooksPage() {
       });
 
       if (response.ok) {
-        toast.success('Webhook updated successfully');
+        toast.success("Webhook updated successfully");
         fetchWebhooks();
       } else {
         const error = await response.json();
@@ -188,49 +179,42 @@ export default function WebhooksPage() {
   };
 
   const maskSecret = (secret: string) => {
-    if (!secret) {
-      return '';
-    }
-    return '•'.repeat(Math.min(secret.length, 16));
+    if (!secret) return "";
+    return "•".repeat(Math.min(secret.length, 16));
   };
 
   return (
-    <div className="p-8">
-      {/* Breadcrumbs */}
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/tenant-admin" },
-          { label: "Webhooks" },
-        ]}
-        className="mb-4"
-      />
-
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-              Webhooks
-            </h1>
-            <p className="text-slate-600 mt-2">
-              Send real-time event notifications to external systems
-            </p>
+    <div className="space-y-8">
+      {/* Centered Header */}
+      {/* Centered Header with Absolute Right Button */}
+      <div className="relative mb-8">
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="section-badge mb-4 inline-flex">
+            <Webhook className="h-4 w-4" />
+            Integrations
           </div>
-          <Dialog
-            open={isCreateDialogOpen}
-            onOpenChange={setIsCreateDialogOpen}
-          >
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            Webhooks
+          </h1>
+          <p className="mt-3 text-muted-foreground mx-auto">
+            Send real-time event notifications to external systems.
+          </p>
+        </div>
+        <div className="mt-4 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mt-0">
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all">
+              <Button variant="hero" size="lg" className="rounded-xl shadow-lg hover:shadow-xl transition-all">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Webhook
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Create New Webhook</DialogTitle>
+                <DialogTitle className="font-display text-xl">
+                  Create New Webhook
+                </DialogTitle>
                 <DialogDescription>
-                  Add a webhook endpoint to receive real-time event
-                  notifications
+                  Add a webhook endpoint to receive real-time event notifications
                 </DialogDescription>
               </DialogHeader>
 
@@ -244,6 +228,7 @@ export default function WebhooksPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, url: e.target.value })
                     }
+                    className="mt-2 rounded-xl"
                   />
                 </div>
 
@@ -256,12 +241,13 @@ export default function WebhooksPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
                     }
+                    className="mt-2 rounded-xl"
                   />
                 </div>
 
                 <div>
                   <Label>Events to Subscribe *</Label>
-                  <div className="mt-2 space-y-4 max-h-[300px] overflow-y-auto border rounded-lg p-4">
+                  <div className="mt-2 space-y-4 max-h-[300px] overflow-y-auto border border-slate-200 rounded-xl p-4">
                     {WEBHOOK_EVENT_CATEGORIES.map((category) => (
                       <div key={category.name}>
                         <h4 className="font-medium mb-2">{category.name}</h4>
@@ -292,170 +278,190 @@ export default function WebhooksPage() {
                   </div>
                 </div>
 
-                <Alert>
-                  <AlertDescription>
-                    A unique secret will be generated for this webhook. Use it
-                    to verify webhook signatures.
-                  </AlertDescription>
-                </Alert>
+                <div className="rounded-xl bg-blue-50 border border-blue-200 p-4 flex gap-3">
+                  <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-800">
+                    A unique secret will be generated for this webhook. Use it to
+                    verify webhook signatures.
+                  </p>
+                </div>
               </div>
 
               <DialogFooter>
                 <Button
                   variant="outline"
+                  className="rounded-xl"
                   onClick={() => setIsCreateDialogOpen(false)}
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleCreate}>Create Webhook</Button>
+                <Button
+                  variant="hero"
+                  className="rounded-xl"
+                  onClick={handleCreate}
+                >
+                  Create Webhook
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
+      {/* Webhooks List */}
       {loading ? (
-        <Card>
-          <CardContent className="py-8 text-center">
-            Loading webhooks...
-          </CardContent>
-        </Card>
+        <div className="card-floating p-12 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading webhooks...</p>
+        </div>
       ) : webhooks.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Webhook className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">
-              No webhooks configured
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              Create your first webhook to start receiving event notifications
-            </p>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Webhook
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="card-floating p-12 text-center">
+          <div className="icon-badge mx-auto mb-4">
+            <Webhook className="h-6 w-6 text-white" />
+          </div>
+          <h3 className="font-display text-lg font-bold text-foreground mb-2">
+            No webhooks configured
+          </h3>
+          <p className="text-muted-foreground mb-6">
+            Create your first webhook to start receiving event notifications
+          </p>
+          <Button
+            variant="hero"
+            className="rounded-xl"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Webhook
+          </Button>
+        </div>
       ) : (
         <div className="space-y-4">
           {webhooks.map((webhook) => (
-            <Card key={webhook.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <CardTitle className="text-lg">{webhook.url}</CardTitle>
-                      {webhook.isActive ? (
-                        <Badge variant="default" className="gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="gap-1">
-                          <XCircle className="h-3 w-3" />
-                          Inactive
-                        </Badge>
-                      )}
-                    </div>
-                    <CardDescription>
-                      {webhook.description || "No description"}
-                    </CardDescription>
+            <div key={webhook.id} className="card-floating p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1">
+                    <h3 className="font-medium text-foreground truncate">
+                      {webhook.url}
+                    </h3>
+                    {webhook.isActive ? (
+                      <Badge className="bg-emerald-100 text-emerald-700 gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        Active
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="gap-1">
+                        <XCircle className="h-3 w-3" />
+                        Inactive
+                      </Badge>
+                    )}
                   </div>
-                  <div className="flex gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    {webhook.description || "No description"}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => toggleWebhookActive(webhook)}
+                  >
+                    {webhook.isActive ? "Disable" : "Enable"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => handleDelete(webhook.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">
+                    Subscribed Events
+                  </Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {webhook.events.map((event) => (
+                      <Badge key={event} variant="outline" className="text-xs">
+                        {event}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">
+                    Webhook Secret
+                  </Label>
+                  <div className="mt-2 flex items-center gap-2">
+                    <code className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono">
+                      {visibleSecrets.has(webhook.id)
+                        ? webhook.secret
+                        : maskSecret(webhook.secret)}
+                    </code>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => toggleWebhookActive(webhook)}
+                      className="rounded-xl"
+                      onClick={() => toggleSecretVisibility(webhook.id)}
                     >
-                      {webhook.isActive ? "Disable" : "Enable"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(webhook.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
+                      {visibleSecrets.has(webhook.id) ? "Hide" : "Show"}
                     </Button>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Subscribed Events
-                    </Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {webhook.events.map((event) => (
-                        <Badge
-                          key={event}
-                          variant="outline"
-                          className="text-xs"
-                        >
-                          {event}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Webhook Secret</Label>
-                    <div className="mt-1 flex items-center gap-2">
-                      <code className="flex-1 p-2 bg-muted rounded text-xs font-mono">
-                        {visibleSecrets.has(webhook.id) ? webhook.secret : maskSecret(webhook.secret)}
-                      </code>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleSecretVisibility(webhook.id)}
-                        aria-pressed={visibleSecrets.has(webhook.id)}
-                        aria-label={visibleSecrets.has(webhook.id) ? 'Hide webhook secret' : 'Show webhook secret'}
-                      >
-                        {visibleSecrets.has(webhook.id) ? 'Hide' : 'Show'}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{webhook._count.deliveries} deliveries</span>
-                    <span>•</span>
-                    <span>
-                      Created {new Date(webhook.createdAt).toLocaleDateString()}
-                    </span>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-xs"
-                      onClick={() =>
-                        window.open(
-                          `/tenant-admin/webhooks/${webhook.id}/deliveries`,
-                          "_blank",
-                        )
-                      }
-                    >
-                      View delivery logs
-                      <ExternalLink className="h-3 w-3 ml-1" />
-                    </Button>
-                  </div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t border-slate-100">
+                  <span>{webhook._count.deliveries} deliveries</span>
+                  <span>•</span>
+                  <span>
+                    Created {new Date(webhook.createdAt).toLocaleDateString()}
+                  </span>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs text-accent"
+                    onClick={() =>
+                      window.open(
+                        `/tenant-admin/webhooks/${webhook.id}/deliveries`,
+                        "_blank"
+                      )
+                    }
+                  >
+                    View delivery logs
+                    <ExternalLink className="h-3 w-3 ml-1" />
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       )}
 
       {/* Help Card */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-lg">How Webhooks Work</CardTitle>
-        </CardHeader>
-        <CardContent className="prose prose-sm max-w-none">
+      <div className="card-floating p-8">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="rounded-2xl bg-slate-500 p-3">
+            <Info className="h-5 w-5 text-white" />
+          </div>
+          <h2 className="font-display text-xl font-bold text-foreground">
+            How Webhooks Work
+          </h2>
+        </div>
+        <div className="prose prose-sm max-w-none text-muted-foreground">
           <p>
             Webhooks send HTTP POST requests to your specified URL when events
             occur in your dispensary. Each request includes a signature header (
-            <code>X-Webhook-Signature</code>) that you can use to verify
-            authenticity.
+            <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">
+              X-Webhook-Signature
+            </code>
+            ) that you can use to verify authenticity.
           </p>
-          <h4>Example Payload:</h4>
-          <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
+          <h4 className="font-display font-bold text-foreground mt-4 mb-2">
+            Example Payload:
+          </h4>
+          <pre className="bg-slate-50 border border-slate-200 p-4 rounded-xl text-xs overflow-x-auto">
             {`{
   "event": "order.created",
   "tenantId": "your-tenant-id",
@@ -467,13 +473,18 @@ export default function WebhooksPage() {
   "timestamp": "2025-11-24T12:00:00Z"
 }`}
           </pre>
-          <h4>Verifying Signatures:</h4>
+          <h4 className="font-display font-bold text-foreground mt-4 mb-2">
+            Verifying Signatures:
+          </h4>
           <p>
             Use the webhook secret to verify the{" "}
-            <code>X-Webhook-Signature</code> header using HMAC SHA256.
+            <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">
+              X-Webhook-Signature
+            </code>{" "}
+            header using HMAC SHA256.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -397,8 +397,8 @@ export function TenantsTable({
 
   return (
     <>
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-slate-100">
+      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+        <CardHeader className="border-b border-slate-100">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <CardTitle className="flex items-center gap-3">
               <span>
@@ -584,7 +584,7 @@ export function TenantsTable({
                               </a>
                             </div>
                           </TableCell>
-                          <TableCell className="text-slate-600 font-mono text-sm hidden lg:table-cell">
+                          <TableCell className="text-slate-600 font-mono text-sm hidden lg:table-cell max-w-[200px] truncate" title={tenant.nftTokenId || ""}>
                             {tenant.nftTokenId || (
                               <span className="text-slate-400">N/A</span>
                             )}
@@ -762,7 +762,7 @@ export function TenantsTable({
               disabled={isProcessing}
               className={cn(
                 confirmAction === "activate" &&
-                  "bg-emerald-600 hover:bg-emerald-700",
+                "bg-emerald-600 hover:bg-emerald-700",
               )}
             >
               {isProcessing ? (

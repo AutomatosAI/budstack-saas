@@ -166,14 +166,16 @@ export const QuickActionsWidget = React.forwardRef<
     <Card
       ref={ref}
       className={cn(
-        "bg-gradient-to-br from-slate-50 via-white to-slate-50/80 border-slate-200 shadow-xl",
+        "card-floating",
         className,
       )}
     >
-      <CardHeader className="border-b border-slate-100 bg-white/60 backdrop-blur-sm">
+      <CardHeader className="p-6 pb-4">
         <div className="flex items-center gap-3">
-          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
-          <CardTitle className="text-lg font-bold tracking-tight bg-gradient-to-r from-slate-700 to-slate-900 bg-clip-text text-transparent">
+          <div className="icon-badge">
+            <Package className="h-5 w-5 text-white" />
+          </div>
+          <CardTitle className="font-display text-lg font-bold text-foreground">
             Quick Actions
           </CardTitle>
         </div>
@@ -190,7 +192,7 @@ export const QuickActionsWidget = React.forwardRef<
                 href={action.href}
                 className={cn(
                   "group relative flex flex-col items-center gap-3 p-5",
-                  "bg-white border-2 rounded-xl",
+                  "bg-white/90 border rounded-2xl",
                   "transition-all duration-300 ease-out",
                   "hover:scale-[1.02] hover:-translate-y-1",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2",

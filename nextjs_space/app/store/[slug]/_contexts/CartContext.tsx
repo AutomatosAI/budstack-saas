@@ -1,5 +1,7 @@
 "use client";
 
+// Force rebuild: 1
+
 /**
  * Cart Context Provider
  *
@@ -37,11 +39,7 @@ interface CartContextType {
   cart: Cart | null;
   isLoading: boolean;
   error: string | null;
-  addToCart: (
-    strainId: string,
-    quantity: number,
-    size: number,
-  ) => Promise<void>;
+  addToCart: (strainId: string, quantity: number, size: number) => Promise<void>;
   removeFromCart: (strainId: string) => Promise<void>;
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
@@ -56,87 +54,55 @@ export function CartProvider({
   children: React.ReactNode;
   storeSlug: string;
 }) {
-    const [cart, setCart] = useState<Cart | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    const refreshCart = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
+  const refreshCart = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-            const response = await fetch(`/api/store/${storeSlug}/cart`);
-            const data = await response.json();
+      const response = await fetch(`/api/store/${storeSlug}/cart`);
+      const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to fetch cart');
-            }
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch cart");
+      }
 
-            setCart(data.cart);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load cart');
-            console.error('[Cart] Error fetching cart:', err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [storeSlug]);
+      setCart(data.cart);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load cart");
+      console.error("[Cart] Error fetching cart:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [storeSlug]);
 
-    const addToCart = useCallback(async (strainId: string, quantity: number, size: number) => {
-        try {
-            setIsLoading(true);
-            setError(null);
+  const addToCart = useCallback(
+    async (strainId: string, quantity: number, size: number) => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-            const response = await fetch(`/api/store/${storeSlug}/cart/add`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ strainId, quantity, size }),
-            });
+        const response = await fetch(`/api/store/${storeSlug}/cart/add`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ strainId, quantity, size }),
+        });
 
-            const data = await response.json();
+        const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to add item to cart');
-            }
-
-            setCart(data.cart);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to add to cart');
-            throw err; // Re-throw so UI can show error
-        } finally {
-            setIsLoading(false);
-        }
-    }, [storeSlug]);
-
-    const removeFromCart = useCallback(async (strainId: string) => {
-        try {
-            setIsLoading(true);
-            setError(null);
-
-            const response = await fetch(
-                `/api/store/${storeSlug}/cart/remove?strainId=${encodeURIComponent(strainId)}`,
-                { method: 'DELETE' }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to remove item');
-            }
-
-            setCart(data.cart);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to remove from cart');
-            throw err;
-        } finally {
-            setIsLoading(false);
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to add item to cart");
         }
 
         setCart(data.cart);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to add to cart");
-        throw err; // Re-throw so UI can show error
+        throw err;
       } finally {
         setIsLoading(false);
       }
@@ -151,7 +117,7 @@ export function CartProvider({
         setError(null);
 
         const response = await fetch(
-          `/api/store/${storeSlug}/cart/remove?strainId=${strainId}`,
+          `/api/store/${storeSlug}/cart/remove?strainId=${encodeURIComponent(strainId)}`,
           { method: "DELETE" },
         );
 
@@ -201,7 +167,6 @@ export function CartProvider({
     }
   }, [storeSlug]);
 
-  // Load cart on mount
   useEffect(() => {
     refreshCart();
   }, [refreshCart]);
@@ -221,7 +186,7 @@ export function CartProvider({
 
 export function useCart() {
   const context = useContext(CartContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useCart must be used within a CartProvider");
   }
   return context;
