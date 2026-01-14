@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+// Force rebuild: 1
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
