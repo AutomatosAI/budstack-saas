@@ -319,7 +319,7 @@ export function TenantEventMapper() {
                       {isCustom ? "Custom" : "Default"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     {isCustom ? (
                       <Link
                         href={`/tenant-admin/emails/${mapping?.template?.id}`}

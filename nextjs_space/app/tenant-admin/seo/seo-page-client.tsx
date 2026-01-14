@@ -193,9 +193,9 @@ export function SeoPageClient({
                   {localProducts.map((product) => (
                     <div
                       key={product.id}
-                      className="flex items-center justify-between py-3 gap-4"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-4"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
                         {product.images[0] && (
                           <img
                             src={product.images[0]}
@@ -212,7 +212,7 @@ export function SeoPageClient({
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 w-full sm:w-auto pl-14 sm:pl-0">
                         <SeoStatusBadge hasCustomSeo={hasSeo(product.seo)} />
                         <Button
                           variant="outline"
@@ -250,9 +250,9 @@ export function SeoPageClient({
                   {localPosts.map((post) => (
                     <div
                       key={post.id}
-                      className="flex items-center justify-between py-3 gap-4"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-4"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
                         {post.coverImage && (
                           <img
                             src={post.coverImage}
@@ -269,7 +269,7 @@ export function SeoPageClient({
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 w-full sm:w-auto pl-14 sm:pl-0">
                         <SeoStatusBadge hasCustomSeo={hasSeo(post.seo)} />
                         <Button
                           variant="outline"
@@ -302,16 +302,16 @@ export function SeoPageClient({
                 {STATIC_PAGES.map((page) => (
                   <div
                     key={page.key}
-                    className="flex items-center justify-between py-3 gap-4"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-4"
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 w-full sm:w-auto">
                       <p className="font-medium text-slate-900">{page.name}</p>
                       <p className="text-xs text-slate-500 truncate">
                         {baseUrl}
                         {page.path || "/"}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 w-full sm:w-auto">
                       <SeoStatusBadge
                         hasCustomSeo={hasSeo(localPageSeo[page.key])}
                       />

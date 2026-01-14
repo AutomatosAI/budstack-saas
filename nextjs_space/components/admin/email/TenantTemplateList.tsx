@@ -168,7 +168,7 @@ export function TenantTemplateList() {
                 <TableCell className="font-medium">
                   {template.name}
                   {template.description && (
-                    <div className="max-w-[300px] truncate text-xs text-muted-foreground">
+                    <div className="max-w-[150px] sm:max-w-[300px] truncate text-xs text-muted-foreground">
                       {template.description}
                     </div>
                   )}
@@ -187,7 +187,7 @@ export function TenantTemplateList() {
                   {format(new Date(template.updatedAt), "MMM d, yyyy")}
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
+                  <div className="flex items-center justify-end gap-1 flex-nowrap whitespace-nowrap min-w-[120px]">
                     {template.isSystem ? (
                       <Button
                         variant="ghost"
