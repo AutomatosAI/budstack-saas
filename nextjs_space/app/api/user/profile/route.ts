@@ -43,7 +43,7 @@ export async function PATCH(request: NextRequest) {
         : firstName || lastName || undefined;
 
     const updatedUser = await prisma.users.update({
-      where: { email: user.email! },
+      where: { id: user.id },
       data: {
         ...(firstName !== undefined && { firstName }),
         ...(lastName !== undefined && { lastName }),

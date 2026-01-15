@@ -30,78 +30,79 @@ async function seedOrgs() {
         try {
             console.log(`Processing Tenant: ${tenant.businessName} (${tenant.id})`);
 
-            // 1. Check if Org Exists (by slug or external ID mechanism... let's try searching or assume slug logic)
-            // Clerk Org Slugs must be unique. Let's try to find an org by slug matching the subdomain.
-            // Note: Backend API normally doesn't have "getOrgBySlug" easily exposed in all versions, 
-            // but let's try to CREATE and handle "already exists" error, or just list user's memberships to infer?
-            // Actually, we can list all organizations if not too many, or just try to create.
-
             const slug = tenant.subdomain || `tenant-${tenant.id.substring(0, 8)}`;
             let orgId: string | null = null;
             let isNew = false;
 
-            // Attempt to create
-            try {
-                const org = await clerkClient.organizations.createOrganization({
-                    name: tenant.businessName,
-                    slug: slug,
-                    publicMetadata: {
-                        tenantId: tenant.id
-                    },
-                    createdBy: tenant.users[0]?.id // If we have an admin, make them creator. 
-                    // Requires that user to exist in Clerk already.
-                });
-                orgId = org.id;
-                isNew = true;
-                console.log(`✅ Created Org: ${tenant.businessName} (${org.id})`);
-            } catch (e: any) {
-                if (e.errors && e.errors[0]?.code === 'form_identifier_exists') {
-                    console.log(`ℹ️ Org with slug ${slug} likely exists. Retrieving...`);
-                    // Sadly, retrieving by slug isn't a direct method in all SDK versions efficiently without listing.
-                    // But we can try to update it? Or we can just skip if we assume it's set up.
-                    // Ideally we want to get the ID.
-                    // For now, let's assume we might need to list orgs to find it if we can't get it by error.
-                    // IF the error gives us the ID, valid. If not, we might scan. 
-                    // BUT, let's try to just find the admin user and list their orgs?
+            // Resolve Admin Clerk ID
+            let adminClerkId: string | null = null;
+            if (tenant.users.length > 0) {
+                const adminEmail = tenant.users[0].email;
+                const clerkUsers = await clerkClient.users.getUserList({ emailAddress: [adminEmail], limit: 1 });
+                if (clerkUsers.data.length > 0) {
+                    adminClerkId = clerkUsers.data[0].id;
+                } else {
+                    console.warn(`⚠️ Admin user ${adminEmail} not found in Clerk. Skipping Org creation/authorship.`);
+                }
+            }
 
-                    if (tenant.users.length > 0) {
-                        const adminId = tenant.users[0].id;
-                        const memberships = await clerkClient.users.getOrganizationMembershipList({ userId: adminId });
+            // Attempt to create org if we have an admin
+            if (!orgId && adminClerkId) {
+                try {
+                    const org = await clerkClient.organizations.createOrganization({
+                        name: tenant.businessName,
+                        slug: slug,
+                        publicMetadata: {
+                            tenantId: tenant.id
+                        },
+                        createdBy: adminClerkId
+                    });
+                    orgId = org.id;
+                    isNew = true;
+                    console.log(`✅ Created Org: ${tenant.businessName} (${org.id})`);
+                } catch (e: any) {
+                    if (e.errors && e.errors[0]?.code === 'form_identifier_exists') {
+                        console.log(`ℹ️ Org with slug ${slug} likely exists. Retrieving...`);
+
+                        // Try to find it via the admin user's memberships
+                        const memberships = await clerkClient.users.getOrganizationMembershipList({ userId: adminClerkId });
                         const match = memberships.data.find(m => m.organization.slug === slug);
                         if (match) {
                             orgId = match.organization.id;
                             console.log(`✅ Found existing Org ID from admin membership: ${orgId}`);
                         } else {
-                            console.warn(`⚠️ Could not find Org ID for slug ${slug} even though it exists. User ${adminId} is not a member?`);
-                            // We might need to manually list all orgs (expensive) or just fail this one.
-                            // For this script, let's list all (limit 100) as fallback.
-                            const allOrgs = await clerkClient.organizations.getOrganizationList({ limit: 100 });
-                            const found = allOrgs.data.find(o => o.slug === slug);
-                            if (found) {
-                                orgId = found.id;
-                                console.log(`✅ Found Org ID from list: ${orgId}`);
-                            }
+                            // Fallback: This might fail if the admin isn't in it, but we tried.
+                            console.warn(`⚠️ Could not find Org ID for slug ${slug}.`);
                         }
+                    } else {
+                        console.error(`❌ Failed to create org:`, e);
                     }
-                } else {
-                    console.error(`❌ Failed to create org:`, e);
                 }
             }
 
             if (orgId) {
                 // 2. Ensure Members
                 for (const user of tenant.users) {
-                    console.log(`   Ensuring user ${user.email} (${user.id}) is in Org...`);
+                    // Resolve Clerk ID for this user
+                    const clerkUserList = await clerkClient.users.getUserList({ emailAddress: [user.email], limit: 1 });
+                    const clerkUserId = clerkUserList.data[0]?.id;
+
+                    if (!clerkUserId) {
+                        console.warn(`⚠️ User ${user.email} not found in Clerk. Skipping membership.`);
+                        continue;
+                    }
+
+                    console.log(`   Ensuring user ${user.email} (${clerkUserId}) is in Org...`);
                     try {
                         await clerkClient.organizations.createOrganizationMembership({
                             organizationId: orgId,
-                            userId: user.id,
+                            userId: clerkUserId,
                             role: 'org:admin'
                         });
                         console.log(`   ✅ Added ${user.email} as Admin`);
                     } catch (e: any) {
-                        // Ignore if already member
-                        if (e.errors && e.errors[0]?.code === 'resource_conflict') {
+                        // Ignore if already member (resource_conflict or membership_exists)
+                        if (e.errors && (e.errors[0]?.code === 'resource_conflict' || e.errors[0]?.code === 'membership_exists')) {
                             console.log(`   ℹ️ User already a member.`);
                         } else {
                             console.error(`   ❌ Failed to add member:`, e);
@@ -109,7 +110,7 @@ async function seedOrgs() {
                     }
                 }
 
-                // 3. Update Org Metadata to be sure
+                // 3. Update Org Metadata to be sure (if it was existing)
                 if (!isNew) {
                     await clerkClient.organizations.updateOrganization(orgId, {
                         publicMetadata: { tenantId: tenant.id }

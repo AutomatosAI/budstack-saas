@@ -22,6 +22,10 @@ export async function GET(
     const email = user.emailAddresses[0]?.emailAddress;
     const role = (user.publicMetadata.role as string) || "";
 
+    if (!email) {
+      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
+
     if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -142,6 +146,10 @@ export async function PATCH(
     const email = user.emailAddresses[0]?.emailAddress;
     const role = (user.publicMetadata.role as string) || "";
 
+    if (!email) {
+      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
+
     if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -249,6 +257,10 @@ export async function DELETE(
 
     const email = user.emailAddresses[0]?.emailAddress;
     const role = (user.publicMetadata.role as string) || "";
+
+    if (!email) {
+      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
 
     if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

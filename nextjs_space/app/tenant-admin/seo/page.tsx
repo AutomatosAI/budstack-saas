@@ -16,7 +16,12 @@ export default async function SeoPage() {
   }
 
   const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
+
+  if (!email) {
+    redirect("/sign-in");
+  }
+
+  const localUser = await prisma.users.findUnique({
     where: { email: email },
     select: { tenantId: true },
   });

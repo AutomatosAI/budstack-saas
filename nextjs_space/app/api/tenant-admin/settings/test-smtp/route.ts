@@ -15,6 +15,10 @@ export async function POST(req: NextRequest) {
     const email = user.emailAddresses[0]?.emailAddress;
     const role = (user.publicMetadata.role as string) || "";
 
+    if (!email) {
+      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
+
     if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { submitOrder } from "@/lib/drgreen-orders";
@@ -10,10 +10,23 @@ export async function POST(
   { params }: { params: { slug: string } },
 ) {
   try {
-    const user = await getCurrentUser();
+    const user = await currentUser();
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = user.emailAddresses[0]?.emailAddress;
+    if (!email) {
+      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
+
+    const dbUser = await prisma.users.findFirst({
+      where: { email },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found in database" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -49,7 +62,7 @@ export async function POST(
 
     // Submit order
     const orderResponse = await submitOrder({
-      userId: user.id,
+      userId: dbUser.id,
       tenantId: tenant.id,
       shippingInfo,
       apiKey: drGreenConfig.apiKey,
@@ -65,8 +78,8 @@ export async function POST(
         drGreenOrderId: orderResponse.drGreenOrderId,
         orderNumber: orderResponse.orderNumber,
         total: orderResponse.total,
-        userId: user.id,
-        userEmail: user.email,
+        userId: dbUser.id,
+        userEmail: email,
       },
     });
 

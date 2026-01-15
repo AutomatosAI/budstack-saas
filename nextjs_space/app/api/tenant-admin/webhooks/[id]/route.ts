@@ -22,6 +22,10 @@ export async function PATCH(
     const email = user.emailAddresses[0]?.emailAddress;
     const role = (user.publicMetadata.role as string) || "";
 
+    if (!email) {
+      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
+
     if (role !== "TENANT_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
