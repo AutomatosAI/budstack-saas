@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import crypto from "crypto";
@@ -19,13 +18,13 @@ import crypto from "crypto";
 export async function POST(request: NextRequest) {
   try {
     // Check authentication and authorization
-    const session = await getServerSession(authOptions);
-    if (!session || !["SUPER_ADMIN"].includes(session.user.role || "")) {
+    const user = await currentUser();
+    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Rate limiting
-    const rateLimitResult = await checkRateLimit(session.user.id);
+    const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }
@@ -84,8 +83,8 @@ export async function POST(request: NextRequest) {
             : "TENANT_BULK_DEACTIVATED",
         entityType: "Tenant",
         entityId: tenant.id,
-        userId: session.user.id,
-        userEmail: session.user.email,
+        userId: user.id,
+        userEmail: user.emailAddresses[0]?.emailAddress,
         tenantId: tenant.id,
         metadata: {
           businessName: tenant.businessName,

@@ -1,27 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { decrypt } from "@/lib/encryption";
 import nodemailer from "nodemailer";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
 
-    if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
-    ) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    const email = user.emailAddresses[0]?.emailAddress;
+    const role = (user.publicMetadata.role as string) || "";
+
+    if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
       include: { tenants: true },
     });
 
-    if (!user?.tenants) {
+    if (!localUser?.tenants) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
@@ -34,7 +37,7 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
 
-    const settings = user.tenants.settings as any;
+    const settings = localUser.tenants.settings as any;
     const smtp = settings?.smtp;
 
     if (!smtp || !smtp.host || !smtp.user || !smtp.password) {
@@ -69,12 +72,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`[TenantSMTP] Verifying connection for ${user.tenants.id}...`);
+    console.log(`[TenantSMTP] Verifying connection for ${localUser.tenants.id}...`);
     await transporter.verify();
 
     const fromAddress = smtp.fromEmail
-      ? `"${smtp.fromName || user.tenants.businessName}" <${smtp.fromEmail}>`
-      : `"${user.tenants.businessName}" <${smtp.user}>`;
+      ? `"${smtp.fromName || localUser.tenants.businessName}" <${smtp.fromEmail}>`
+      : `"${localUser.tenants.businessName}" <${smtp.user}>`;
 
     await transporter.sendMail({
       from: fromAddress,

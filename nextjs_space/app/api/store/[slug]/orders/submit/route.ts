@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { submitOrder } from "@/lib/drgreen-orders";
@@ -11,9 +10,9 @@ export async function POST(
   { params }: { params: { slug: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -50,7 +49,7 @@ export async function POST(
 
     // Submit order
     const orderResponse = await submitOrder({
-      userId: session.user.id,
+      userId: user.id,
       tenantId: tenant.id,
       shippingInfo,
       apiKey: drGreenConfig.apiKey,
@@ -66,8 +65,8 @@ export async function POST(
         drGreenOrderId: orderResponse.drGreenOrderId,
         orderNumber: orderResponse.orderNumber,
         total: orderResponse.total,
-        userId: session.user.id,
-        userEmail: session.user.email,
+        userId: user.id,
+        userEmail: user.email,
       },
     });
 

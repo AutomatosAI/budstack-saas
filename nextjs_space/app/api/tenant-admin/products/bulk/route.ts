@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import crypto from "crypto";
@@ -19,34 +18,30 @@ import crypto from "crypto";
 export async function POST(request: NextRequest) {
   try {
     // Check authentication and authorization
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
+
     if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+      !user ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Rate limiting
-    const rateLimitResult = await checkRateLimit(session.user.id);
+    const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }
 
-    // Get user's tenant ID
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      select: { tenantId: true },
-    });
+    // Get user's tenant ID from metadata
+    const tenantId = user.tenantId;
 
-    if (!user?.tenantId) {
+    if (!tenantId) {
       return NextResponse.json(
         { error: "No tenant associated with user" },
         { status: 403 },
       );
     }
-
-    const tenantId = user.tenantId;
 
     const body = await request.json();
     const { action, productIds } = body;
@@ -128,8 +123,8 @@ export async function POST(request: NextRequest) {
         action: auditAction,
         entityType: "Product",
         entityId: product.id,
-        userId: session.user.id,
-        userEmail: session.user.email,
+        userId: user.id,
+        userEmail: user.email,
         tenantId: tenantId,
         metadata: {
           productName: product.name,

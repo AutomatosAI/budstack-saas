@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -16,10 +15,10 @@ import { UserPlus } from "lucide-react";
 import OnboardingActions from "./onboarding-actions";
 
 export default async function OnboardingPage() {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
-  if (!session || session.user.role !== "SUPER_ADMIN") {
-    redirect("/auth/login");
+  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
+    redirect("/sign-in");
   }
 
   // Get pending onboarding requests (inactive tenants)

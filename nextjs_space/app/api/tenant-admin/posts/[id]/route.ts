@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
@@ -27,12 +26,15 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (
-      !session ||
-      (session.user.role !== "TENANT_ADMIN" &&
-        session.user.role !== "SUPER_ADMIN")
-    ) {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = user.emailAddresses[0]?.emailAddress;
+    const role = (user.publicMetadata.role as string) || "";
+
+    if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -47,16 +49,13 @@ export async function GET(
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
       include: { tenants: true },
     });
 
     // Super Admin can access all posts, Tenant Admin only their own
-    if (
-      session.user.role !== "SUPER_ADMIN" &&
-      post.tenantId !== user?.tenantId
-    ) {
+    if (role !== "SUPER_ADMIN" && post.tenantId !== localUser?.tenantId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -75,12 +74,15 @@ export async function PATCH(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (
-      !session ||
-      (session.user.role !== "TENANT_ADMIN" &&
-        session.user.role !== "SUPER_ADMIN")
-    ) {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = user.emailAddresses[0]?.emailAddress;
+    const role = (user.publicMetadata.role as string) || "";
+
+    if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -88,8 +90,8 @@ export async function PATCH(
     const body = await req.json();
     const validatedData = postSchema.partial().parse(body);
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
       include: { tenants: true },
     });
 
@@ -98,8 +100,7 @@ export async function PATCH(
     // Allow SUPER_ADMIN to bypass tenant check, otherwise enforce ownership
     if (
       !existingPost ||
-      (session.user.role !== "SUPER_ADMIN" &&
-        existingPost.tenantId !== user?.tenantId)
+      (role !== "SUPER_ADMIN" && existingPost.tenantId !== localUser?.tenantId)
     ) {
       return NextResponse.json(
         { error: "Post not found or unauthorized" },
@@ -117,7 +118,7 @@ export async function PATCH(
         await prisma.posts.findFirst({
           where: {
             slug: uniqueSlug,
-            tenantId: user!.tenantId,
+            tenantId: localUser!.tenantId,
             NOT: { id },
           },
         })
@@ -151,18 +152,21 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (
-      !session ||
-      (session.user.role !== "TENANT_ADMIN" &&
-        session.user.role !== "SUPER_ADMIN")
-    ) {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = user.emailAddresses[0]?.emailAddress;
+    const role = (user.publicMetadata.role as string) || "";
+
+    if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = params;
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
       include: { tenants: true },
     });
 
@@ -170,8 +174,7 @@ export async function DELETE(
 
     if (
       !existingPost ||
-      (session.user.role !== "SUPER_ADMIN" &&
-        existingPost.tenantId !== user?.tenantId)
+      (role !== "SUPER_ADMIN" && existingPost.tenantId !== localUser?.tenantId)
     ) {
       return NextResponse.json(
         { error: "Post not found or unauthorized" },

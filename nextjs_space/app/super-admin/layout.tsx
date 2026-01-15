@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SuperAdminSidebar } from "@/components/admin/SuperAdminSidebar";
 import { AccessibleAdminLayout } from "@/components/admin/AccessibleAdminLayout";
@@ -10,15 +9,17 @@ import type {
   NotificationType,
 } from "@/components/admin/NotificationCenter";
 
+import { HeaderProfile } from "@/components/admin/HeaderProfile";
+
 export default async function SuperAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
-  if (!session || session.user.role !== "SUPER_ADMIN") {
-    redirect("/auth/login");
+  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
+    redirect("/sign-in");
   }
 
   const mapActionToType = (action: string): NotificationType => {
@@ -58,8 +59,8 @@ export default async function SuperAdminLayout({
   return (
     <div className="flex min-h-screen canvas-bg">
       <SuperAdminSidebar
-        userName={session.user.name || "Super Admin"}
-        userEmail={session.user.email || "admin@popcornmedia.eu"}
+        userName={`${user.firstName || ""} ${user.lastName || ""}`.trim() || "Super Admin"}
+        userEmail={user.emailAddresses[0]?.emailAddress || "admin@budstack.io"}
       />
       <AccessibleAdminLayout theme="super-admin">
         {/* Notification bar - compact */}
@@ -69,6 +70,7 @@ export default async function SuperAdminLayout({
             notifications={notifications}
             viewAllUrl="/super-admin/notifications"
           />
+          <HeaderProfile theme="super-admin" />
         </div>
         {/* Main content */}
         <div className="flex-1 overflow-auto px-8 py-6">{children}</div>

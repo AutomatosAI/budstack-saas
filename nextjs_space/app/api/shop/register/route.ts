@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { currentUser } from "@clerk/nextjs/server";
 import { createClient } from '@/lib/doctor-green-api';
 import { prisma } from '@/lib/db';
 import { getCurrentTenant } from '@/lib/tenant';
@@ -8,10 +7,18 @@ import { getTenantDrGreenConfig } from '@/lib/tenant-config';
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
 
-    if (!session?.user?.email) {
+    if (!user?.emailAddresses?.[0]?.emailAddress) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = user.emailAddresses[0].emailAddress;
+
+    // Find linked DB user
+    const dbUser = await prisma.users.findFirst({ where: { email } });
+    if (!dbUser) {
+      return NextResponse.json({ error: "User record not found" }, { status: 404 });
     }
 
     const body = await req.json();
@@ -39,8 +46,7 @@ export async function POST(req: NextRequest) {
         config = await getTenantDrGreenConfig(tenant.id);
       } catch (error) {
         console.warn(
-          `Using platform Dr. Green credentials fallback: ${
-            error instanceof Error ? error.message : String(error)
+          `Using platform Dr. Green credentials fallback: ${error instanceof Error ? error.message : String(error)
           }`
         );
       }
@@ -80,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     // Update user with additional info
     await prisma.users.update({
-      where: { id: session.user.id },
+      where: { id: dbUser.id },
       data: {
         name: `${personal.firstName} ${personal.lastName}`,
       },

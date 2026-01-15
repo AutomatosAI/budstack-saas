@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import {
   Card,
   CardContent,
@@ -19,10 +18,10 @@ export default async function TenantDetailPage({
 }: {
   params: { id: string };
 }) {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
-  if (!session || session.user.role !== "SUPER_ADMIN") {
-    redirect("/auth/login");
+  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
+    redirect("/sign-in");
   }
 
   const tenant = await prisma.tenants.findUnique({

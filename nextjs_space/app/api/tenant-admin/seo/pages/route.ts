@@ -1,33 +1,29 @@
-import { getServerSession } from "next-auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 const VALID_PAGE_KEYS = ["home", "about", "contact", "faq"];
 
 // GET - Fetch tenant page SEO
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
   if (
-    !session ||
-    (session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN")
+    !user ||
+    (user.role !== "TENANT_ADMIN" &&
+      user.role !== "SUPER_ADMIN")
   ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
-    select: { tenantId: true },
-  });
+  const tenantId = user.tenantId;
 
-  if (!user?.tenantId) {
+  if (!tenantId) {
     return NextResponse.json({ error: "No tenant" }, { status: 400 });
   }
 
   const tenant = await prisma.tenants.findUnique({
-    where: { id: user.tenantId },
+    where: { id: tenantId },
     select: { pageSeo: true },
   });
 
@@ -36,22 +32,19 @@ export async function GET() {
 
 // PUT - Update tenant page SEO
 export async function PUT(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
   if (
-    !session ||
-    (session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN")
+    !user ||
+    (user.role !== "TENANT_ADMIN" &&
+      user.role !== "SUPER_ADMIN")
   ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
-    select: { tenantId: true },
-  });
+  const tenantId = user.tenantId;
 
-  if (!user?.tenantId) {
+  if (!tenantId) {
     return NextResponse.json({ error: "No tenant" }, { status: 400 });
   }
 
@@ -64,7 +57,7 @@ export async function PUT(request: NextRequest) {
 
   // Get current pageSeo
   const tenant = await prisma.tenants.findUnique({
-    where: { id: user.tenantId },
+    where: { id: tenantId },
     select: { pageSeo: true },
   });
 
@@ -91,7 +84,7 @@ export async function PUT(request: NextRequest) {
   });
 
   const updated = await prisma.tenants.update({
-    where: { id: user.tenantId },
+    where: { id: tenantId },
     data: {
       pageSeo: Object.keys(updatedPageSeo).length > 0 ? updatedPageSeo : null,
       updatedAt: new Date(),

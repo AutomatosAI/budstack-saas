@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.email) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -28,13 +27,13 @@ export async function PATCH(request: NextRequest) {
     const address =
       addressLine1 || city || state || postalCode || country
         ? {
-            addressLine1: addressLine1 || "",
-            addressLine2: addressLine2 || "",
-            city: city || "",
-            state: state || "",
-            postalCode: postalCode || "",
-            country: country || "",
-          }
+          addressLine1: addressLine1 || "",
+          addressLine2: addressLine2 || "",
+          city: city || "",
+          state: state || "",
+          postalCode: postalCode || "",
+          country: country || "",
+        }
         : undefined;
 
     // Update user with name constructed from firstName + lastName
@@ -43,16 +42,16 @@ export async function PATCH(request: NextRequest) {
         ? `${firstName} ${lastName}`
         : firstName || lastName || undefined;
 
-        const updatedUser = await prisma.users.update({
-            where: { id: session.user.id },
-            data: {
-                ...(firstName !== undefined && { firstName }),
-                ...(lastName !== undefined && { lastName }),
-                ...(fullName && { name: fullName }),
-                ...(phone !== undefined && { phone }),
-                ...(address && { address }),
-            },
-        });
+    const updatedUser = await prisma.users.update({
+      where: { email: user.email! },
+      data: {
+        ...(firstName !== undefined && { firstName }),
+        ...(lastName !== undefined && { lastName }),
+        ...(fullName && { name: fullName }),
+        ...(phone !== undefined && { phone }),
+        ...(address && { address }),
+      },
+    });
 
     return NextResponse.json({
       success: true,

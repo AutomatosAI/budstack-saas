@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import fs from "fs/promises";
 import path from "path";
@@ -11,22 +10,13 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
 
-    if (!session?.user?.email) {
+    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-    });
-
-    if (user?.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Forbidden: Super admin access required" },
-        { status: 403 },
-      );
-    }
+    const email = user.emailAddresses[0]?.emailAddress;
 
     const templateId = params.id;
 
@@ -96,7 +86,7 @@ export async function DELETE(
       entityType: "template",
       entityId: templateId,
       userId: user.id,
-      userEmail: user.email,
+      userEmail: email!,
       metadata: {
         templateName: template.name,
         templateSlug: template.slug || "",

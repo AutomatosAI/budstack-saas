@@ -9,7 +9,7 @@ interface DrGreenApiOptions {
 }
 
 const DEFAULT_DOCTOR_GREEN_API_URL =
-  process.env.DOCTOR_GREEN_API_URL || 'https://stage-api.drgreennft.com/api/v1';
+  process.env.DOCTOR_GREEN_API_URL || 'https://api.drgreennft.com/api/v1';
 
 /**
  * Generate ECDSA signature for API request (using Node.js crypto)

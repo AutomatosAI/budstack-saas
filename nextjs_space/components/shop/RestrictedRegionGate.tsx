@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import {
   ShieldAlert,
@@ -36,19 +36,17 @@ export function RestrictedRegionGate({
   countryCode,
 }: RestrictedRegionGateProps) {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, isLoaded, isSignedIn } = useUser();
   const [consultationData, setConsultationData] = useState<ConsultationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  if (typeof status === 'undefined') {
-    throw new Error('RestrictedRegionGate must be used within a SessionProvider.');
-  }
+  // Removed throw error as useUser hook handles context internally
 
   const isRestricted = RESTRICTED_COUNTRIES.includes(countryCode);
 
   useEffect(() => {
     const fetchConsultationData = async () => {
-      if (status === "loading" || !session?.user?.email) {
+      if (!isLoaded || !isSignedIn || !user?.primaryEmailAddress?.emailAddress) {
         setIsLoading(false);
         return;
       }
@@ -67,7 +65,7 @@ export function RestrictedRegionGate({
     };
 
     fetchConsultationData();
-  }, [session, status]);
+  }, [user, isLoaded, isSignedIn]);
 
   // If not a restricted country, show products freely
   if (!isRestricted) {
@@ -75,7 +73,7 @@ export function RestrictedRegionGate({
   }
 
   // Loading state
-  if (isLoading || status === "loading") {
+  if (isLoading || !isLoaded) {
     return (
       <div className="flex items-center justify-center py-16">
         <div
@@ -87,7 +85,7 @@ export function RestrictedRegionGate({
   }
 
   // Not logged in - require login
-  if (!session?.user) {
+  if (!isSignedIn) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}

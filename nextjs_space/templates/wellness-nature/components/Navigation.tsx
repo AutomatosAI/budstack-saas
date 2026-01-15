@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { useUser, useClerk } from "@clerk/nextjs";
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ShoppingCart, User, Menu, X, Leaf } from 'lucide-react';
@@ -22,7 +22,8 @@ export default function Navigation({ businessName, logoUrl, tenant }: Navigation
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerk();
 
   const slug = tenant?.subdomain || '';
   const baseUrl = `/store/${slug}`;
@@ -48,8 +49,7 @@ export default function Navigation({ businessName, logoUrl, tenant }: Navigation
   ];
 
   const handleSignOut = async () => {
-    await signOut({ redirect: false });
-    router.push('/');
+    await signOut({ redirectUrl: '/' });
   };
 
   // Use the wellness logo from the template
@@ -118,7 +118,7 @@ export default function Navigation({ businessName, logoUrl, tenant }: Navigation
               <CartDropdown />
 
               {/* User Menu */}
-              {session?.user ? (
+              {isLoaded && isSignedIn ? (
                 <div className="relative">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -141,8 +141,8 @@ export default function Navigation({ businessName, logoUrl, tenant }: Navigation
                       {/* Menu */}
                       <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-50 border border-gray-100">
                         <div className="px-4 py-2 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900">{session.user.name}</p>
-                          <p className="text-xs text-gray-500 truncate">{session.user.email}</p>
+                          <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
+                          <p className="text-xs text-gray-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
                         </div>
                         <Link
                           href="/dashboard"
@@ -216,7 +216,7 @@ export default function Navigation({ businessName, logoUrl, tenant }: Navigation
                     {link.label}
                   </Link>
                 ))}
-                {session?.user ? (
+                {isLoaded && isSignedIn ? (
                   <>
                     <Link
                       href="/dashboard"

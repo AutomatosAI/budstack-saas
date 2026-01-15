@@ -4,7 +4,7 @@ import { Inter, Playfair_Display, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
-import { SessionProvider } from '@/components/session-provider';
+import { ClerkProvider } from '@clerk/nextjs';
 import { LanguageProvider } from '@/lib/i18n';
 import { QueryProvider } from '@/components/query-provider';
 
@@ -56,7 +56,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
-        <SessionProvider>
+        <ClerkProvider>
           <QueryProvider>
             <LanguageProvider>
               <ThemeProvider
@@ -70,7 +70,7 @@ export default function RootLayout({
               </ThemeProvider>
             </LanguageProvider>
           </QueryProvider>
-        </SessionProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

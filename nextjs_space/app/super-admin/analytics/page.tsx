@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -80,9 +80,7 @@ interface PlatformMetrics {
 }
 
 export default function ComprehensiveAnalyticsPage() {
-  const sessionResult = useSession();
-  const session = sessionResult?.data;
-  const status = sessionResult?.status;
+  const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -92,19 +90,19 @@ export default function ComprehensiveAnalyticsPage() {
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("30d");
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (isLoaded && !isSignedIn) {
       router.push("/auth/login");
     }
-    if (status === "authenticated" && session?.user?.role !== "SUPER_ADMIN") {
-      router.push("/auth/login");
+    if (isLoaded && isSignedIn && user?.publicMetadata?.role !== "SUPER_ADMIN") {
+      router.push("/auth/login"); // Or access denied page
     }
-  }, [status, session, router]);
+  }, [isLoaded, isSignedIn, user, router]);
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (user?.id) {
       fetchAllData();
     }
-  }, [session, timeRange]);
+  }, [user, timeRange]);
 
   const fetchAllData = async () => {
     try {
@@ -151,7 +149,7 @@ export default function ComprehensiveAnalyticsPage() {
     "#ec4899",
   ];
 
-  if (status === "loading" || loading) {
+  if (!isLoaded || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center theme-force-light">
         <div className="text-center">
@@ -164,7 +162,7 @@ export default function ComprehensiveAnalyticsPage() {
     );
   }
 
-  if (!session || !analytics || !platformMetrics) {
+  if (!isSignedIn || !user || !analytics || !platformMetrics) {
     return null;
   }
 

@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { Users } from "lucide-react";
@@ -21,21 +20,28 @@ interface CustomersPageProps {
 export default async function CustomersListPage({
   searchParams,
 }: CustomersPageProps) {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
   if (
-    !session ||
-    !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role!)
+    !user ||
+    !["TENANT_ADMIN", "SUPER_ADMIN"].includes((user.publicMetadata.role as string) || "")
   ) {
-    redirect("/auth/login");
+    redirect("/sign-in");
   }
 
   // Tenant admins only see their own customers
-  const tenantId =
-    session.user.role === "TENANT_ADMIN" ? session.user.tenantId : undefined;
+  let tenantId: string | undefined;
+  if (user.publicMetadata.role === "TENANT_ADMIN") {
+    const email = user.emailAddresses[0]?.emailAddress;
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
+      select: { tenantId: true },
+    });
+    tenantId = localUser?.tenantId;
+  }
 
-  if (!tenantId && session.user.role === "TENANT_ADMIN") {
-    redirect("/auth/login");
+  if (!tenantId && user.publicMetadata.role === "TENANT_ADMIN") {
+    redirect("/sign-in");
   }
 
   // Await searchParams (Next.js 15+ async searchParams)

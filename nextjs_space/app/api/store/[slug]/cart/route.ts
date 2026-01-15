@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { getCart } from "@/lib/drgreen-cart";
@@ -10,9 +9,9 @@ export async function GET(
   { params }: { params: { slug: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -31,7 +30,7 @@ export async function GET(
 
     // Get cart
     const cart = await getCart({
-      userId: session.user.id,
+      userId: user.id,
       tenantId: tenant.id,
       apiKey: drGreenConfig.apiKey,
       secretKey: drGreenConfig.secretKey,

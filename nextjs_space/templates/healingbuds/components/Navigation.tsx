@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Menu, X, ChevronDown, Globe, ShoppingCart, User, LogOut, LayoutDashboard } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
-import { useSession, signOut } from "next-auth/react";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -25,7 +25,8 @@ interface NavigationProps {
 }
 
 export default function Navigation({ businessName, logoUrl, tenant }: NavigationProps) {
-  const { data: session, status } = useSession();
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerk();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [whatWeDoOpen, setWhatWeDoOpen] = useState(false);
@@ -255,11 +256,11 @@ export default function Navigation({ businessName, logoUrl, tenant }: Navigation
                       <button className={cn(
                         "p-2 rounded-full transition-all duration-300 hover:scale-105 hover:bg-white/10 text-white relative outline-none focus:outline-none",
                       )}>
-                        {session?.user?.image ? (
+                        {user?.imageUrl ? (
                           <div className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-white/20">
                             <Image
-                              src={session.user.image}
-                              alt={session.user.name || 'Profile'}
+                              src={user.imageUrl}
+                              alt={user.fullName || 'Profile'}
                               fill
                               className="object-cover"
                             />
@@ -272,9 +273,9 @@ export default function Navigation({ businessName, logoUrl, tenant }: Navigation
                     <DropdownMenuContent className="w-56 z-[100]" align="end" forceMount>
                       <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium leading-none">{session?.user?.name || 'User'}</p>
+                          <p className="text-sm font-medium leading-none">{user?.fullName || 'User'}</p>
                           <p className="text-xs leading-none text-muted-foreground">
-                            {session?.user?.email}
+                            {user?.primaryEmailAddress?.emailAddress}
                           </p>
                         </div>
                       </DropdownMenuLabel>
@@ -287,7 +288,7 @@ export default function Navigation({ businessName, logoUrl, tenant }: Navigation
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => signOut({ callbackUrl: `/store/${tenant.subdomain}` })}
+                        onClick={() => signOut({ redirectUrl: `/store/${tenant.subdomain}` })}
                         className="cursor-pointer text-red-600 focus:text-red-600"
                       >
                         <LogOut className="mr-2 h-4 w-4" />
@@ -410,7 +411,7 @@ export default function Navigation({ businessName, logoUrl, tenant }: Navigation
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);
-                        signOut({ callbackUrl: `/store/${tenant.subdomain}` });
+                        signOut({ redirectUrl: `/store/${tenant.subdomain}` });
                       }}
                       className="block w-full py-3 px-4 text-center rounded-full border-2 border-red-500/50 text-red-400 font-body font-bold hover:bg-red-500/10"
                     >

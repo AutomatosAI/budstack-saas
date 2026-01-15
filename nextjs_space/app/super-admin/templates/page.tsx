@@ -1,6 +1,5 @@
-import { getServerSession } from 'next-auth';
+import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Eye, Layout } from 'lucide-react';
@@ -9,10 +8,10 @@ import { UploadTemplateDialog } from './upload-dialog';
 import { TemplateActions } from './template-actions';
 
 export default async function TemplatesManagementPage() {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
-  if (!session || session.user.role !== 'SUPER_ADMIN') {
-    redirect('/auth/login');
+  if (!user || user.publicMetadata.role !== 'SUPER_ADMIN') {
+    redirect('/sign-in');
   }
 
   // Fetch all templates

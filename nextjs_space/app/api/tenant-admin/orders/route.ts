@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 
@@ -20,30 +19,24 @@ type SortColumn = (typeof VALID_SORT_COLUMNS)[number];
 // GET: Fetch orders for tenant with optional pagination, search, and filters
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (
-      session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN"
+      user.role !== "TENANT_ADMIN" &&
+      user.role !== "SUPER_ADMIN"
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Get user's tenant
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
-    });
+    const tenantId = user.tenantId;
 
-    if (!user?.tenants) {
-      return NextResponse.json({ error: "No tenant found" }, { status: 404 });
+    if (!tenantId) {
+      return NextResponse.json({ error: "No tenant found for user" }, { status: 404 });
     }
-
-    const tenantId = user.tenants.id;
 
     // Parse query params
     const { searchParams } = new URL(req.url);
@@ -165,32 +158,32 @@ export async function GET(req: NextRequest) {
           tenantId,
           ...(search
             ? {
-                OR: [
-                  { orderNumber: { contains: search, mode: "insensitive" } },
-                  {
-                    users: { name: { contains: search, mode: "insensitive" } },
-                  },
-                  {
-                    users: { email: { contains: search, mode: "insensitive" } },
-                  },
-                ],
-              }
+              OR: [
+                { orderNumber: { contains: search, mode: "insensitive" } },
+                {
+                  users: { name: { contains: search, mode: "insensitive" } },
+                },
+                {
+                  users: { email: { contains: search, mode: "insensitive" } },
+                },
+              ],
+            }
             : {}),
           ...(dateFrom || dateTo
             ? {
-                createdAt: {
-                  ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-                  ...(dateTo
-                    ? {
-                        lte: new Date(
-                          new Date(dateTo).setDate(
-                            new Date(dateTo).getDate() + 1,
-                          ),
-                        ),
-                      }
-                    : {}),
-                },
-              }
+              createdAt: {
+                ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+                ...(dateTo
+                  ? {
+                    lte: new Date(
+                      new Date(dateTo).setDate(
+                        new Date(dateTo).getDate() + 1,
+                      ),
+                    ),
+                  }
+                  : {}),
+              },
+            }
             : {}),
           status: "PENDING",
         },
@@ -200,32 +193,32 @@ export async function GET(req: NextRequest) {
           tenantId,
           ...(search
             ? {
-                OR: [
-                  { orderNumber: { contains: search, mode: "insensitive" } },
-                  {
-                    users: { name: { contains: search, mode: "insensitive" } },
-                  },
-                  {
-                    users: { email: { contains: search, mode: "insensitive" } },
-                  },
-                ],
-              }
+              OR: [
+                { orderNumber: { contains: search, mode: "insensitive" } },
+                {
+                  users: { name: { contains: search, mode: "insensitive" } },
+                },
+                {
+                  users: { email: { contains: search, mode: "insensitive" } },
+                },
+              ],
+            }
             : {}),
           ...(dateFrom || dateTo
             ? {
-                createdAt: {
-                  ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-                  ...(dateTo
-                    ? {
-                        lte: new Date(
-                          new Date(dateTo).setDate(
-                            new Date(dateTo).getDate() + 1,
-                          ),
-                        ),
-                      }
-                    : {}),
-                },
-              }
+              createdAt: {
+                ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+                ...(dateTo
+                  ? {
+                    lte: new Date(
+                      new Date(dateTo).setDate(
+                        new Date(dateTo).getDate() + 1,
+                      ),
+                    ),
+                  }
+                  : {}),
+              },
+            }
             : {}),
           status: "PROCESSING",
         },
@@ -235,32 +228,32 @@ export async function GET(req: NextRequest) {
           tenantId,
           ...(search
             ? {
-                OR: [
-                  { orderNumber: { contains: search, mode: "insensitive" } },
-                  {
-                    users: { name: { contains: search, mode: "insensitive" } },
-                  },
-                  {
-                    users: { email: { contains: search, mode: "insensitive" } },
-                  },
-                ],
-              }
+              OR: [
+                { orderNumber: { contains: search, mode: "insensitive" } },
+                {
+                  users: { name: { contains: search, mode: "insensitive" } },
+                },
+                {
+                  users: { email: { contains: search, mode: "insensitive" } },
+                },
+              ],
+            }
             : {}),
           ...(dateFrom || dateTo
             ? {
-                createdAt: {
-                  ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-                  ...(dateTo
-                    ? {
-                        lte: new Date(
-                          new Date(dateTo).setDate(
-                            new Date(dateTo).getDate() + 1,
-                          ),
-                        ),
-                      }
-                    : {}),
-                },
-              }
+              createdAt: {
+                ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+                ...(dateTo
+                  ? {
+                    lte: new Date(
+                      new Date(dateTo).setDate(
+                        new Date(dateTo).getDate() + 1,
+                      ),
+                    ),
+                  }
+                  : {}),
+              },
+            }
             : {}),
           status: "COMPLETED",
         },
@@ -270,32 +263,32 @@ export async function GET(req: NextRequest) {
           tenantId,
           ...(search
             ? {
-                OR: [
-                  { orderNumber: { contains: search, mode: "insensitive" } },
-                  {
-                    users: { name: { contains: search, mode: "insensitive" } },
-                  },
-                  {
-                    users: { email: { contains: search, mode: "insensitive" } },
-                  },
-                ],
-              }
+              OR: [
+                { orderNumber: { contains: search, mode: "insensitive" } },
+                {
+                  users: { name: { contains: search, mode: "insensitive" } },
+                },
+                {
+                  users: { email: { contains: search, mode: "insensitive" } },
+                },
+              ],
+            }
             : {}),
           ...(dateFrom || dateTo
             ? {
-                createdAt: {
-                  ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-                  ...(dateTo
-                    ? {
-                        lte: new Date(
-                          new Date(dateTo).setDate(
-                            new Date(dateTo).getDate() + 1,
-                          ),
-                        ),
-                      }
-                    : {}),
-                },
-              }
+              createdAt: {
+                ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+                ...(dateTo
+                  ? {
+                    lte: new Date(
+                      new Date(dateTo).setDate(
+                        new Date(dateTo).getDate() + 1,
+                      ),
+                    ),
+                  }
+                  : {}),
+              },
+            }
             : {}),
           status: "CANCELLED",
         },
@@ -338,15 +331,15 @@ export async function GET(req: NextRequest) {
 // PATCH: Update order status
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (
-      session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN"
+      user.role !== "TENANT_ADMIN" &&
+      user.role !== "SUPER_ADMIN"
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -367,13 +360,9 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    // Get user's tenant
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
-    });
+    const tenantId = user.tenantId;
 
-    if (!user?.tenants) {
+    if (!tenantId) {
       return NextResponse.json({ error: "No tenant found" }, { status: 404 });
     }
 
@@ -381,7 +370,7 @@ export async function PATCH(req: NextRequest) {
     const order = await prisma.orders.findFirst({
       where: {
         id: orderId,
-        tenantId: user.tenants.id,
+        tenantId: tenantId,
       },
     });
 

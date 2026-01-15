@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -12,23 +11,24 @@ export const metadata = {
 };
 
 export default async function TheWirePage() {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
-  if (!session) {
-    redirect("/auth/login");
+  if (!user) {
+    redirect("/sign-in");
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
+  const email = user.emailAddresses[0]?.emailAddress;
+  const localUser = await prisma.users.findFirst({
+    where: { email: email },
     include: { tenants: true },
   });
 
-  if (!user?.tenants) {
+  if (!localUser?.tenants) {
     redirect("/tenant-admin");
   }
 
   const posts = await prisma.posts.findMany({
-    where: { tenantId: user.tenants.id },
+    where: { tenantId: localUser.tenants.id },
     orderBy: { createdAt: "desc" },
     include: { users: true },
   });

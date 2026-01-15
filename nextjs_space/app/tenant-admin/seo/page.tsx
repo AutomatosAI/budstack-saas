@@ -1,32 +1,31 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Search } from "lucide-react";
-
 import { SeoPageClient } from "./seo-page-client";
 
 export default async function SeoPage() {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
   if (
-    !session ||
-    (session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN")
+    !user ||
+    (user.publicMetadata.role !== "TENANT_ADMIN" &&
+      user.publicMetadata.role !== "SUPER_ADMIN")
   ) {
-    redirect("/auth/login");
+    redirect("/sign-in");
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
+  const email = user.emailAddresses[0]?.emailAddress;
+  const localUser = await prisma.users.findFirst({
+    where: { email: email },
     select: { tenantId: true },
   });
 
-  if (!user?.tenantId) {
+  if (!localUser?.tenantId) {
     redirect("/tenant-admin");
   }
 
-  const tenantId = user.tenantId;
+  const tenantId = localUser.tenantId;
 
   // Fetch tenant with subdomain and products/posts for SEO management
   const [tenant, products, posts] = await Promise.all([

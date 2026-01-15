@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import PostForm from "../post-form";
@@ -13,10 +12,10 @@ export default async function EditPostPage({
 }: {
   params: { id: string };
 }) {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
-  if (!session) {
-    redirect("/auth/login");
+  if (!user) {
+    redirect("/sign-in");
   }
 
   const { id } = params;
@@ -30,12 +29,13 @@ export default async function EditPostPage({
   }
 
   // Verify tenant access
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
+  const email = user.emailAddresses[0]?.emailAddress;
+  const localUser = await prisma.users.findFirst({
+    where: { email: email },
     include: { tenants: true },
   });
 
-  if (post.tenantId !== user?.tenantId) {
+  if (post.tenantId !== localUser?.tenantId) {
     redirect("/tenant-admin/the-wire");
   }
 

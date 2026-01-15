@@ -27,66 +27,56 @@ model audit_logs {
 }
 
 model email_logs {
-  id            String   @id @default(uuid())
-  tenantId      String
-  recipient     String
-  subject       String
-  templateName  String
-  status        EmailStatus @default(QUEUED)
-  smtpResponse  String?
-  errorMessage  String?
-  metadata      String?
-  sentAt        DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  tenants       tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id           String      @id @default(uuid())
+  tenantId     String
+  recipient    String
+  subject      String
+  templateName String
+  status       EmailStatus @default(QUEUED)
+  smtpResponse String?
+  errorMessage String?
+  metadata     String?
+  sentAt       DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  tenants      tenants     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt])
   @@index([status])
 }
 
 model email_templates {
-  id          String   @id @default(uuid())
+  id          String                 @id @default(uuid())
   name        String
   subject     String
-  contentHtml String   @db.Text
-  contentJson Json?    // For the visual editor state
+  contentHtml String
+  contentJson Json?
   description String?
-  category    String   @default("transactional") // transactional, marketing, etc.
-  isSystem    Boolean  @default(false)           // If true, cannot be deleted (e.g. system defaults)
-  isActive    Boolean  @default(true)
-  tenantId    String?  // Null = System Template (Available to all), ID = Tenant Specific replacement
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  tenants     tenants? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category    String                 @default("transactional")
+  isSystem    Boolean                @default(false)
+  isActive    Boolean                @default(true)
+  tenantId    String?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
   mappings    email_event_mappings[]
+  tenants     tenants?               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([category])
 }
 
 model email_event_mappings {
-  id          String   @id @default(uuid())
-  eventType   String   // e.g. "USER_SIGNUP", "PASSWORD_RESET"
-  tenantId    String?  // Null = System Default Mapping
-  templateId  String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String          @id @default(uuid())
+  eventType  String
+  tenantId   String?
+  templateId String
+  isActive   Boolean         @default(true)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  template   email_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  tenants    tenants?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relations
-  template    email_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  tenants     tenants?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([eventType, tenantId]) // Only one active mapping per event per tenant (or system)
-}
-
-enum EmailStatus {
-  QUEUED
-  SENT
-  FAILED
+  @@unique([eventType, tenantId])
 }
 
 model conditions {
@@ -105,9 +95,9 @@ model conditions {
   faqs            Json?
   published       Boolean  @default(true)
   tenantId        String
-  seo             Json?    // { title?: string, description?: string, ogImage?: string }
   createdAt       DateTime @default(now())
   updatedAt       DateTime
+  seo             Json?
   tenants         tenants  @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, slug])
@@ -228,8 +218,7 @@ model orders {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime
   notes             String?
-  adminNotes        String?
-  orderNumber       String
+  orderNumber       String        @unique
   shippingCost      Float         @default(5.00)
   shippingInfo      Json?
   subtotal          Float
@@ -239,13 +228,13 @@ model orders {
   paymentStatus     PaymentStatus @default(PENDING)
   paymentInvoices   Json?
   nonce             String?
+  adminNotes        String?
   order_items       order_items[]
   tenants           tenants       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   users             users         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([drGreenOrderId])
   @@index([nonce])
-  @@unique([tenantId, orderNumber])
 }
 
 model platform_config {
@@ -278,9 +267,9 @@ model platform_settings {
   fontFamily        String   @default("inter")
   headingFontFamily String   @default("inter")
   template          String   @default("modern")
-  seo               Json?    // { title?: string, description?: string, ogImage?: string }
-  pageSeo           Json?    // { home: {}, about: {}, pricing: {}, contact: {} }
   updatedAt         DateTime
+  pageSeo           Json?
+  seo               Json?
 }
 
 model posts {
@@ -293,9 +282,9 @@ model posts {
   published  Boolean  @default(false)
   tenantId   String
   authorId   String
-  seo        Json?    // { title?: string, description?: string, ogImage?: string }
   createdAt  DateTime @default(now())
   updatedAt  DateTime
+  seo        Json?
   users      users    @relation(fields: [authorId], references: [id])
   tenants    tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -314,11 +303,11 @@ model products {
   price        Float
   stock        Int         @default(0)
   images       String[]
-  displayOrder Int         @default(0)
   tenantId     String
-  seo          Json?       // { title?: string, description?: string, ogImage?: string }
   createdAt    DateTime    @default(now())
   updatedAt    DateTime
+  displayOrder Int         @default(0)
+  seo          Json?
   tenants      tenants     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([slug, tenantId])
@@ -371,70 +360,70 @@ model tenant_branding {
 }
 
 model tenant_templates {
-  id                                                       String    @id
-  tenantId                                                 String
-  baseTemplateId                                           String
-  templateName                                             String
-  s3Path                                                   String?
-  designSystem                                             Json?
-  pageContent                                              Json?
-  navigation                                               Json?
-  footer                                                   Json?
-  logoUrl                                                  String?
-  heroImageUrl                                             String?
-  faviconUrl                                               String?
-  customCss                                                String?
-  customJs                                                 String?
-  isActive                                                 Boolean   @default(true)
-  isDraft                                                  Boolean   @default(false)
-  expiresAt                                                DateTime?
-  createdAt                                                DateTime  @default(now())
-  updatedAt                                                DateTime
-  templates                                                templates @relation(fields: [baseTemplateId], references: [id])
-  tenant                                                   tenants   @relation("tenant_templates_tenantIdTotenants", fields: [tenantId], references: [id], onDelete: Cascade)
-  activeForTenant                                          tenants?  @relation("tenants_activeTenantTemplateIdTotenant_templates")
+  id              String    @id
+  tenantId        String
+  baseTemplateId  String
+  templateName    String
+  s3Path          String?
+  designSystem    Json?
+  pageContent     Json?
+  navigation      Json?
+  footer          Json?
+  logoUrl         String?
+  heroImageUrl    String?
+  faviconUrl      String?
+  customCss       String?
+  customJs        String?
+  isActive        Boolean   @default(true)
+  isDraft         Boolean   @default(false)
+  expiresAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+  templates       templates @relation(fields: [baseTemplateId], references: [id])
+  tenant          tenants   @relation("tenant_templates_tenantIdTotenants", fields: [tenantId], references: [id], onDelete: Cascade)
+  activeForTenant tenants?  @relation("tenants_activeTenantTemplateIdTotenant_templates")
 
   @@unique([tenantId, templateName])
   @@index([tenantId, isActive])
 }
 
 model tenants {
-  id                                                                String                 @id
-  businessName                                                      String
-  subdomain                                                         String                 @unique
-  customDomain                                                      String?                @unique
-  nftTokenId                                                        String?
-  isActive                                                          Boolean                @default(false)
-  settings                                                          Json?
-  createdAt                                                         DateTime               @default(now())
-  updatedAt                                                         DateTime
-  countryCode                                                       String                 @default("PT")
-  templateId                                                        String?
-  activeTenantTemplateId                                            String?                @unique
-  drGreenApiUrl                                                     String?
-  drGreenApiKey                                                     String?
-  drGreenSecretKey                                                  String?
-  pageSeo                                                           Json?    // { home: {}, about: {}, contact: {}, faq: {} }
-  conditions                                                        conditions[]
-  consultations                                                     consultations[]
-  drgreen_carts                                                     drgreen_carts[]
-  drgreen_webhook_logs                                              drgreen_webhook_logs[]
-  email_logs                                                        email_logs[]
-  email_templates                                                   email_templates[]
-  email_event_mappings                                              email_event_mappings[]
-  orders                                                            orders[]
-  posts                                                             posts[]
-  products                                                          products[]
-  tenant_branding                                                   tenant_branding?
-  tenantTemplates                                                   tenant_templates[]     @relation("tenant_templates_tenantIdTotenants")
-  activeTenantTemplate                                              tenant_templates?      @relation("tenants_activeTenantTemplateIdTotenant_templates", fields: [activeTenantTemplateId], references: [id])
-  template                                                          templates?             @relation(fields: [templateId], references: [id])
-  users                                                             users[]
+  id                     String                 @id
+  businessName           String
+  subdomain              String                 @unique
+  customDomain           String?                @unique
+  nftTokenId             String?
+  isActive               Boolean                @default(false)
+  settings               Json?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime
+  countryCode            String                 @default("PT")
+  templateId             String?
+  activeTenantTemplateId String?                @unique
+  drGreenApiUrl          String?
+  drGreenApiKey          String?
+  drGreenSecretKey       String?
+  pageSeo                Json?
+  conditions             conditions[]
+  consultations          consultations[]
+  drgreen_carts          drgreen_carts[]
+  drgreen_webhook_logs   drgreen_webhook_logs[]
+  email_event_mappings   email_event_mappings[]
+  email_logs             email_logs[]
+  email_templates        email_templates[]
+  orders                 orders[]
+  posts                  posts[]
+  products               products[]
+  tenant_branding        tenant_branding?
+  tenantTemplates        tenant_templates[]     @relation("tenant_templates_tenantIdTotenants")
+  activeTenantTemplate   tenant_templates?      @relation("tenants_activeTenantTemplateIdTotenant_templates", fields: [activeTenantTemplateId], references: [id])
+  template               templates?             @relation(fields: [templateId], references: [id])
+  users                  users[]
 }
 
 model users {
   id               String          @id
-  email            String
+  email            String          @unique
   password         String
   name             String?
   role             Role            @default(PATIENT)
@@ -454,8 +443,6 @@ model users {
   orders           orders[]
   posts            posts[]
   tenants          tenants?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, email])
 }
 
 model webhook_deliveries {
@@ -488,6 +475,12 @@ model webhooks {
   webhook_deliveries webhook_deliveries[]
 
   @@index([tenantId])
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  FAILED
 }
 
 enum ConsultationStatus {

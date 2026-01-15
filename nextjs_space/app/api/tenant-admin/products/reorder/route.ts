@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -10,33 +9,27 @@ import { checkRateLimit } from "@/lib/rate-limit";
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
     if (
-      !session ||
-      (session.user.role !== "TENANT_ADMIN" &&
-        session.user.role !== "SUPER_ADMIN")
+      !user ||
+      (user.role !== "TENANT_ADMIN" &&
+        user.role !== "SUPER_ADMIN")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Rate limiting
-    const rateLimitResult = await checkRateLimit(session.user.id);
+    const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }
 
-    // Get user's tenant ID
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      select: { tenantId: true },
-    });
+    const tenantId = user.tenantId;
 
-    if (!user?.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
-
-    const tenantId = user.tenantId;
 
     // Parse request body
     const body = await request.json();

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { sendEmail, emailTemplates } from "@/lib/email";
 import { getTenantFromRequest } from "@/lib/tenant";
 
@@ -56,14 +56,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Use placeholder password for local mirror
+    const placeholderPassword = `clerk_managed_${crypto.randomUUID()}`;
 
     // Create user
     const user = await prisma.users.create({
       data: {
         email,
-        password: hashedPassword,
+        password: placeholderPassword,
         name: `${firstName} ${lastName}`,
         role: "PATIENT",
         tenantId: tenant.id,

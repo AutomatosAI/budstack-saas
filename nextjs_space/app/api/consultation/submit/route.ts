@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
+
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { getPlatformConfig } from "@/lib/platform-config";
 import { prisma } from "@/lib/db";
 import { mapMedicalConditionsForDrGreen } from '@/lib/dr-green-mapping';
+import crypto from "crypto";
 
 /**
  * Generate ECDSA signature for API request (using Node.js crypto)
@@ -57,9 +58,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Hash the password before storing
-    const hashedPassword = await bcrypt.hash(body.password, 10);
-
     // Check if user already exists
     const existingUser = await prisma.users.findFirst({
       where: {
@@ -70,19 +68,22 @@ export async function POST(request: NextRequest) {
 
     let userId: string | undefined;
 
-    // Create user account if doesn't exist
+    // Create user account if doesn't exist (Local Mirror only, Auth is handled by Clerk)
     if (!existingUser) {
+      // Use a distinct placeholder for the password since we don't manage it anymore
+      const placeholderPassword = `clerk_managed_${crypto.randomUUID()}`;
+
       const newUser = await prisma.users.create({
         data: {
           email: body.email.toLowerCase(), // Ensure lowercase
-          password: hashedPassword,
+          password: placeholderPassword,
           name: `${body.firstName} ${body.lastName}`,
           role: "PATIENT",
-          tenantId: body.tenantId, // Fixed: was || null, now always uses provided tenantId
+          tenantId: body.tenantId,
         },
       });
       userId = newUser.id;
-      console.log(`✅ Created user account for ${body.email}`);
+      console.log(`✅ Created local user mirror for ${body.email}`);
     } else {
       userId = existingUser.id;
       console.log(
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
         phoneNumber: body.phoneNumber,
         dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : new Date(),
         gender: body.gender,
-        password: hashedPassword,
+        password: "clerk_managed", // Placeholder in questionnaire too if it exists
 
         addressLine1: body.addressLine1,
         addressLine2: body.addressLine2,
@@ -194,18 +195,18 @@ export async function POST(request: NextRequest) {
 
         ...(body.businessType && body.businessName
           ? {
-              clientBusiness: {
-                businessType: body.businessType,
-                name: body.businessName,
-                address1: body.businessAddress1 || "",
-                address2: body.businessAddress2 || "",
-                city: body.businessCity || "",
-                state: body.businessState || "",
-                postalCode: body.businessPostalCode || "",
-                country: body.businessCountry || "",
-                countryCode: body.businessCountryCode || "",
-              },
-            }
+            clientBusiness: {
+              businessType: body.businessType,
+              name: body.businessName,
+              address1: body.businessAddress1 || "",
+              address2: body.businessAddress2 || "",
+              city: body.businessCity || "",
+              state: body.businessState || "",
+              postalCode: body.businessPostalCode || "",
+              country: body.businessCountry || "",
+              countryCode: body.businessCountryCode || "",
+            },
+          }
           : {}),
 
         medicalRecord: {
@@ -216,28 +217,28 @@ export async function POST(request: NextRequest) {
           ),
           // Only include otherMedicalCondition if we have conditions that map to 'other_medical_condition'
           ...(body.medicalConditions?.includes("lupus") ||
-          body.medicalConditions?.includes("asthma") ||
-          body.medicalConditions?.includes("glaucoma") ||
-          body.medicalConditions?.includes("other_medical_condition") ||
-          body.medicalConditions?.includes("other") ||
-          body.otherCondition
+            body.medicalConditions?.includes("asthma") ||
+            body.medicalConditions?.includes("glaucoma") ||
+            body.medicalConditions?.includes("other_medical_condition") ||
+            body.medicalConditions?.includes("other") ||
+            body.otherCondition
             ? {
-                otherMedicalCondition:
-                  body.medicalConditions
-                    ?.filter((c: string) =>
-                      [
-                        "lupus",
-                        "asthma",
-                        "glaucoma",
-                        "other_medical_condition",
-                        "other",
-                      ].includes(c),
-                    )
-                    .map((c: string) => c.charAt(0).toUpperCase() + c.slice(1))
-                    .join(", ") ||
-                  body.otherCondition ||
-                  "Other medical condition",
-              }
+              otherMedicalCondition:
+                body.medicalConditions
+                  ?.filter((c: string) =>
+                    [
+                      "lupus",
+                      "asthma",
+                      "glaucoma",
+                      "other_medical_condition",
+                      "other",
+                    ].includes(c),
+                  )
+                  .map((c: string) => c.charAt(0).toUpperCase() + c.slice(1))
+                  .join(", ") ||
+                body.otherCondition ||
+                "Other medical condition",
+            }
             : {}),
           otherMedicalTreatments: "",
           prescribedSupplements: body.prescribedSupplements || "",

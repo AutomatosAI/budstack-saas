@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 
 /**
@@ -14,19 +13,21 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const email = user.emailAddresses[0]?.emailAddress;
+
     // Fetch user's tenant
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
       select: { tenantId: true },
     });
 
-    if (!user?.tenantId) {
+    if (!localUser?.tenantId) {
       return NextResponse.json(
         { error: "No tenant associated with user" },
         { status: 403 },
@@ -37,7 +38,7 @@ export async function GET(
     const order = await prisma.orders.findFirst({
       where: {
         id: params.id,
-        tenantId: user.tenantId,
+        tenantId: localUser.tenantId,
       },
       select: {
         id: true,

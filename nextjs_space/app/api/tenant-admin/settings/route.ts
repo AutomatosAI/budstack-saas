@@ -1,27 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth-helper';
 import { prisma } from '@/lib/db';
 import { encrypt } from '@/lib/encryption';
 import { AUDIT_ACTIONS, createAuditLog, getClientInfo } from '@/lib/audit-log';
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
     if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+      !user ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
+    const tenantId = user.tenantId;
+
+    if (!tenantId) {
+      return NextResponse.json({ error: "Tenant ID not found in user metadata" }, { status: 400 });
+    }
+
+    const tenant = await prisma.tenants.findUnique({
+      where: { id: tenantId },
     });
 
-    if (!user?.tenants) {
+    if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
@@ -46,7 +50,7 @@ export async function POST(req: NextRequest) {
     };
 
     // Update settings JSON for SMTP
-    const currentSettings = (user.tenants.settings as any) || {};
+    const currentSettings = (tenant.settings as any) || {};
     const smtpSettings = {
       ...currentSettings.smtp, // keep existing (e.g. if partial update)
       host: smtpHost,
@@ -108,7 +112,7 @@ export async function POST(req: NextRequest) {
 
     // Update tenant
     await prisma.tenants.update({
-      where: { id: user.tenants.id },
+      where: { id: tenant.id },
       data: dataToUpdate,
     });
 
@@ -116,10 +120,10 @@ export async function POST(req: NextRequest) {
     await createAuditLog({
       action: AUDIT_ACTIONS.SETTINGS_UPDATED,
       entityType: 'Tenant',
-      entityId: user.tenants.id,
-      userId: session.user.id,
-      userEmail: session.user.email,
-      tenantId: user.tenants.id,
+      entityId: tenant.id,
+      userId: user.id,
+      userEmail: user.email,
+      tenantId: tenant.id,
       metadata: {
         updatedFields: Object.keys(dataToUpdate).filter((key) => key !== 'settings'),
         hasSmtpUpdate: !!dataToUpdate.settings?.smtp,

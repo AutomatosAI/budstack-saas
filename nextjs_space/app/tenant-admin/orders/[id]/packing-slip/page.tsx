@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { PackingSlip } from "@/components/admin/PackingSlip";
 import { toast } from "@/components/ui/sonner";
 
@@ -46,7 +46,7 @@ interface Order {
 export default function PackingSlipPage() {
   const params = useParams();
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, isLoaded, isSignedIn } = useUser();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [tenant, setTenant] = useState<{ businessName: string } | null>(null);
@@ -54,13 +54,13 @@ export default function PackingSlipPage() {
   const orderId = params.id as string;
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (isLoaded && !isSignedIn) {
       router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [isLoaded, isSignedIn, router]);
 
   useEffect(() => {
-    if (!session?.user?.id) return;
+    if (!user?.id) return;
 
     const fetchOrderAndTenant = async () => {
       try {
@@ -89,9 +89,9 @@ export default function PackingSlipPage() {
     };
 
     fetchOrderAndTenant();
-  }, [session, orderId]);
+  }, [user, orderId]);
 
-  if (status === "loading" || loading) {
+  if (!isLoaded || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">

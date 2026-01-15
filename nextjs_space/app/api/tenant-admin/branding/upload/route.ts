@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { uploadFile } from "@/lib/s3";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
 
     if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+      !user ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(
+        (user.publicMetadata.role as string) || "",
+      )
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

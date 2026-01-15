@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { User, Mail, Shield, Save, Phone, MapPin } from "lucide-react";
@@ -12,9 +12,7 @@ import Link from "next/link";
 import { toast } from "@/components/ui/sonner";
 
 export default function SettingsPage() {
-  const sessionResult = useSession();
-  const session = sessionResult?.data;
-  const status = sessionResult?.status;
+  const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const params = useParams();
   const slug = params?.slug as string;
@@ -34,25 +32,32 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (isLoaded && !isSignedIn) {
       router.push(`/store/${slug}/login`);
     }
-    if (session?.user) {
+    if (user) {
       // Load existing data
-      const userData = session.user as any;
+      // Note: user.firstName etc are available directly.
+      // Address might be in metadata or external DB. 
+      // For now we map what we can from Clerk User or assume metadata structure.
+      // We'll trust the component to handle empty strings if not present.
+
+      const meta = user.publicMetadata as any;
+      const unsafe = user.unsafeMetadata as any;
+
       setFormData({
-        firstName: userData.firstName || "",
-        lastName: userData.lastName || "",
-        phone: userData.phone || "",
-        addressLine1: userData.address?.addressLine1 || "",
-        addressLine2: userData.address?.addressLine2 || "",
-        city: userData.address?.city || "",
-        state: userData.address?.state || "",
-        postalCode: userData.address?.postalCode || "",
-        country: userData.address?.country || "",
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        phone: (user.primaryPhoneNumber?.phoneNumber) || (unsafe?.phone) || "",
+        addressLine1: unsafe?.address?.addressLine1 || "",
+        addressLine2: unsafe?.address?.addressLine2 || "",
+        city: unsafe?.address?.city || "",
+        state: unsafe?.address?.state || "",
+        postalCode: unsafe?.address?.postalCode || "",
+        country: unsafe?.address?.country || "",
       });
     }
-  }, [status, router, slug, session]);
+  }, [isLoaded, isSignedIn, router, slug, user]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -78,7 +83,7 @@ export default function SettingsPage() {
     }
   };
 
-  if (status === "loading") {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -89,7 +94,7 @@ export default function SettingsPage() {
     );
   }
 
-  if (!session) {
+  if (!isSignedIn || !user) {
     return null;
   }
 
@@ -165,7 +170,7 @@ export default function SettingsPage() {
                 <Label htmlFor="email">Email Address</Label>
                 <div className="px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg flex items-center gap-2 mt-1">
                   <Mail className="w-4 h-4 text-gray-400" />
-                  {session?.user?.email}
+                  {user.primaryEmailAddress?.emailAddress}
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Email cannot be changed
@@ -202,7 +207,7 @@ export default function SettingsPage() {
                 <Label>Account Role</Label>
                 <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-2 mt-1">
                   <Shield className="w-4 h-4 text-gray-400" />
-                  {(session?.user as any)?.role || "PATIENT"}
+                  {(user.publicMetadata?.role as string) || "PATIENT"}
                 </div>
               </div>
 
@@ -352,17 +357,18 @@ export default function SettingsPage() {
                   onClick={() => {
                     setIsEditing(false);
                     // Reset form
-                    const userData = session?.user as any;
+                    const userData = user?.publicMetadata as any;
+                    const unsafe = user?.unsafeMetadata as any;
                     setFormData({
-                      firstName: userData.firstName || "",
-                      lastName: userData.lastName || "",
-                      phone: userData.phone || "",
-                      addressLine1: userData.address?.addressLine1 || "",
-                      addressLine2: userData.address?.addressLine2 || "",
-                      city: userData.address?.city || "",
-                      state: userData.address?.state || "",
-                      postalCode: userData.address?.postalCode || "",
-                      country: userData.address?.country || "",
+                      firstName: user?.firstName || "",
+                      lastName: user?.lastName || "",
+                      phone: (user?.primaryPhoneNumber?.phoneNumber) || (unsafe?.phone) || "",
+                      addressLine1: unsafe?.address?.addressLine1 || "",
+                      addressLine2: unsafe?.address?.addressLine2 || "",
+                      city: unsafe?.address?.city || "",
+                      state: unsafe?.address?.state || "",
+                      postalCode: unsafe?.address?.postalCode || "",
+                      country: unsafe?.address?.country || "",
                     });
                   }}
                   variant="outline"

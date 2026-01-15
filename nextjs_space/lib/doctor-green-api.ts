@@ -5,7 +5,7 @@
 
 import { callDrGreenAPI } from '@/lib/drgreen-api-client';
 
-const API_URL = process.env.DOCTOR_GREEN_API_URL || 'https://stage-api.drgreennft.com/api/v1';
+const API_URL = process.env.DOCTOR_GREEN_API_URL || 'https://api.drgreennft.com/api/v1';
 
 // Currency mapping by country code
 const CURRENCY_MAP: Record<string, string> = {
@@ -170,28 +170,19 @@ export interface DoctorGreenOrder {
 
 // Professional product image fallbacks (AI-generated medical-grade images)
 // Doctor Green staging API returns image paths but files are not hosted (404 errors)
-const PRODUCT_IMAGE_FALLBACKS: Record<string, string> = {
-  "Acapulco Gold":
-    "https://cdn.abacus.ai/images/f18d746e-06d5-4a86-93d1-aef2e7d1a4a6.png",
-  "Wedding Crasher":
-    "https://cdn.abacus.ai/images/dbd04817-f7b5-4916-8b8c-867f43f506d7.png",
-  "The Soap":
-    "https://cdn.abacus.ai/images/682bfd15-fad7-4194-b995-072b0e02afdd.png",
-  "Gelato #33":
-    "https://cdn.abacus.ai/images/a460c225-4d56-45d2-bb03-7d5999b4e8f4.png",
-  Nerds:
-    "https://cdn.abacus.ai/images/f1c0b74b-c7cf-4c49-b0d5-82d25b8f4b39.png",
-  "Godfather OG":
-    "https://cdn.abacus.ai/images/e93e05e9-d028-4d9c-9cd0-69d92300ed36.png",
-  "Pink Panties":
-    "https://cdn.abacus.ai/images/6f89e66f-7d05-4f4f-bddf-f5ffec7abae2.png",
-  "Skywalker OG":
-    "https://cdn.abacus.ai/images/d05ad43d-0470-4e62-8b21-beb43a3f28da.png",
-  "Animal Mints":
-    "https://cdn.abacus.ai/images/ed270b17-ac4a-4e63-87f2-4db29bdd8baf.png",
-  Zkittlez:
-    "https://cdn.abacus.ai/images/9e1e39ad-b91b-49fc-9f95-9f35040d72b9.png",
+// Country code conversion (Alpha-2 to Alpha-3 ISO codes)
+// Country code conversion (Alpha-2 to Alpha-3 ISO codes)
+const COUNTRY_CODE_MAP: Record<string, string> = {
+  PT: 'PRT',
+  GB: 'GBR',
+  ZA: 'ZAF',
+  TH: 'THA',
+  US: 'USA',
 };
+
+function toAlpha3(code: string): string {
+  return COUNTRY_CODE_MAP[code.toUpperCase()] || code;
+}
 
 /**
  * Fetch all products from Doctor Green
@@ -202,31 +193,32 @@ export async function fetchProducts(
   country: string = "SA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct[]> {
+  const alpha3Code = toAlpha3(country);
   const response = await doctorGreenRequest<{
     data: { strains: DoctorGreenProduct[] };
-  }>(`/strains?country=${country}`, { config });
+  }>(`/strains?country=${alpha3Code}`, { config });
 
   // Extract strains from the response and normalize the data
   const products = response.data?.strains || [];
 
-  // Base URL for Doctor Green images (staging)
-  const IMAGE_BASE_URL = "https://stage-api.drgreennft.com";
+  // Base URL for Doctor Green images
+  // Use the API_URL environment variable base, removing /api/v1 if present
+  // or default to staging base if not set
+  const apiBase = API_URL.replace(/\/api\/v1\/?$/, '');
+  const IMAGE_BASE_URL = apiBase || "https://api.drgreennft.com";
 
-  // Get currency for this country
-  const currency = getCurrencyByCountry(country);
+  // Get default currency for this country as fallback
+  const defaultCurrency = getCurrencyByCountry(country);
 
   // Normalize fields for backwards compatibility with our UI
   return products.map((product) => {
     // Construct full image URL if imageUrl is relative
     let fullImageUrl = product.imageUrl;
     if (fullImageUrl && !fullImageUrl.startsWith("http")) {
-      fullImageUrl = `${IMAGE_BASE_URL}/${fullImageUrl}`;
-    }
-
-    // Use fallback image - Doctor Green staging doesn't host actual images yet
-    const fallbackImage = PRODUCT_IMAGE_FALLBACKS[product.name];
-    if (fallbackImage) {
-      fullImageUrl = fallbackImage;
+      // Ensure we don't end up with double slashes
+      const baseUrl = IMAGE_BASE_URL.endsWith('/') ? IMAGE_BASE_URL.slice(0, -1) : IMAGE_BASE_URL;
+      const path = fullImageUrl.startsWith('/') ? fullImageUrl : `/${fullImageUrl}`;
+      fullImageUrl = `${baseUrl}${path}`;
     }
 
     // Calculate stock from strainLocations array
@@ -239,6 +231,10 @@ export async function fetchProducts(
       (loc: any) => loc.isAvailable === true,
     );
 
+    // Verify Currency
+    const resolvedCurrency = product.currency || defaultCurrency;
+    console.log(`[DrGreen Debug] ID: ${product.id} | Raw Currency: ${product.currency} | Default: ${defaultCurrency} | Resolved: ${resolvedCurrency} | Image: ${fullImageUrl}`);
+
     return {
       ...product,
       strain_type:
@@ -247,7 +243,7 @@ export async function fetchProducts(
       thc_content: product.thc || 0,
       cbd_content: product.cbd || 0,
       price: product.retailPrice || 0,
-      currency: currency, // Dynamic currency based on country
+      currency: product.currency || defaultCurrency, // Use API currency if available, else fallback
       in_stock: isAvailableAtAnyLocation && totalStock > 0, // Available if any location has stock
       stock_quantity: totalStock, // Sum of all location stock
       image_url: fullImageUrl,
@@ -265,6 +261,7 @@ export async function fetchProduct(
   country: string = "SA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct> {
+  const alpha3Code = toAlpha3(country);
   const response = await doctorGreenRequest<{ data: DoctorGreenProduct }>(
     `/strains/${productId}`,
     { config },
@@ -272,16 +269,20 @@ export async function fetchProduct(
 
   const product = response.data;
 
-  // Base URL for Doctor Green images (staging)
-  const IMAGE_BASE_URL = "https://stage-api.drgreennft.com";
+  // Base URL for Doctor Green images
+  const apiBase = API_URL.replace(/\/api\/v1\/?$/, '');
+  const IMAGE_BASE_URL = apiBase || "https://api.drgreennft.com";
 
-  // Get currency for this country
-  const currency = getCurrencyByCountry(country);
+  // Get default currency for this country as fallback
+  const defaultCurrency = getCurrencyByCountry(country);
 
   // Construct full image URL if imageUrl is relative
   let fullImageUrl = product.imageUrl;
   if (fullImageUrl && !fullImageUrl.startsWith("http")) {
-    fullImageUrl = `${IMAGE_BASE_URL}/${fullImageUrl}`;
+    // Ensure we don't end up with double slashes
+    const baseUrl = IMAGE_BASE_URL.endsWith('/') ? IMAGE_BASE_URL.slice(0, -1) : IMAGE_BASE_URL;
+    const path = fullImageUrl.startsWith('/') ? fullImageUrl : `/${fullImageUrl}`;
+    fullImageUrl = `${baseUrl}${path}`;
   }
 
   // Calculate stock from strainLocations array
@@ -303,9 +304,9 @@ export async function fetchProduct(
     thc_content: product.thc || 0,
     cbd_content: product.cbd || 0,
     price: product.retailPrice || 0,
-    currency: currency, // Dynamic currency based on country
-    in_stock: isAvailableAtAnyLocation && totalStock > 0, // Available if any location has stock
-    stock_quantity: totalStock, // Sum of all location stock
+    currency: product.currency || defaultCurrency,
+    in_stock: isAvailableAtAnyLocation && totalStock > 0,
+    stock_quantity: totalStock,
     image_url: fullImageUrl,
     imageUrl: fullImageUrl,
   };
@@ -419,12 +420,12 @@ export async function createClient(
       },
       medical_record: clientData.medicalRecord
         ? {
-            conditions: clientData.medicalRecord.conditions,
-            current_medications: clientData.medicalRecord.currentMedications,
-            allergies: clientData.medicalRecord.allergies,
-            previous_cannabis_use: clientData.medicalRecord.previousCannabisUse,
-            doctor_approval: clientData.medicalRecord.doctorApproval,
-          }
+          conditions: clientData.medicalRecord.conditions,
+          current_medications: clientData.medicalRecord.currentMedications,
+          allergies: clientData.medicalRecord.allergies,
+          previous_cannabis_use: clientData.medicalRecord.previousCannabisUse,
+          doctor_approval: clientData.medicalRecord.doctorApproval,
+        }
         : undefined,
     }),
     config,

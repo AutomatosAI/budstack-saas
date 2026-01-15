@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 
 export async function GET(
@@ -8,17 +7,21 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const clerkUser = await currentUser();
 
     if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+      !clerkUser ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(
+        (clerkUser.publicMetadata.role as string) || "",
+      )
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    const email = clerkUser.emailAddresses[0]?.emailAddress;
+
+    const user = await prisma.users.findFirst({
+      where: { email: email },
       include: { tenants: true },
     });
 
@@ -55,17 +58,21 @@ export async function PUT(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const clerkUser = await currentUser();
 
     if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+      !clerkUser ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(
+        (clerkUser.publicMetadata.role as string) || "",
+      )
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    const email = clerkUser.emailAddresses[0]?.emailAddress;
+
+    const user = await prisma.users.findFirst({
+      where: { email: email },
       include: { tenants: true },
     });
 
@@ -115,17 +122,21 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const clerkUser = await currentUser();
 
     if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+      !clerkUser ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(
+        (clerkUser.publicMetadata.role as string) || "",
+      )
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    const email = clerkUser.emailAddresses[0]?.emailAddress;
+
+    const user = await prisma.users.findFirst({
+      where: { email: email },
       include: { tenants: true },
     });
 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 
 /**
@@ -11,20 +10,21 @@ import { prisma } from "@/lib/db";
 export async function GET(request: NextRequest) {
   try {
     // Check authentication and authorization
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
+
     if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+      !user ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Tenant admins can only see their own customers
     const tenantId =
-      session.user.role === "TENANT_ADMIN" ? session.user.tenantId : undefined;
+      user.role === "TENANT_ADMIN" ? user.tenantId : undefined;
 
-    if (!tenantId && session.user.role === "TENANT_ADMIN") {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    if (!tenantId && user.role === "TENANT_ADMIN") {
+      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
     }
 
     // Get query parameters

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { copyDirectory } from "@/lib/s3-copy";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
@@ -9,10 +8,10 @@ import crypto from "crypto";
 export async function POST(request: NextRequest) {
   try {
     // 1. Verify Authentication
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
     if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+      !user ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -28,12 +27,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Verify Tenant
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
-    });
+    const tenantId = user.tenantId;
 
-    if (!user?.tenants) {
+    if (!tenantId) {
       return NextResponse.json({ error: "No tenant found" }, { status: 400 });
     }
 
@@ -52,7 +48,7 @@ export async function POST(request: NextRequest) {
     // 4. Define S3 paths
     const sourceS3Prefix = `templates/${baseTemplate.slug || baseTemplateId}/`;
     const timestamp = Date.now();
-    const destS3Prefix = `tenants/${user.tenants.id}/templates/${timestamp}/`;
+    const destS3Prefix = `tenants/${tenantId}/templates/${timestamp}/`;
 
     console.log(`Cloning template from ${sourceS3Prefix} to ${destS3Prefix}`);
 
@@ -64,7 +60,7 @@ export async function POST(request: NextRequest) {
     const tenantTemplate = await prisma.tenant_templates.create({
       data: {
         id: crypto.randomUUID(),
-        tenantId: user.tenants.id,
+        tenantId: tenantId,
         baseTemplateId: baseTemplateId,
         templateName: `${baseTemplate.name}`,
         s3Path: destS3Prefix,
@@ -81,9 +77,9 @@ export async function POST(request: NextRequest) {
       action: AUDIT_ACTIONS.TEMPLATE.CREATED,
       entityType: "TenantTemplate",
       entityId: tenantTemplate.id,
-      userId: session.user.id,
-      userEmail: session.user.email,
-      tenantId: user.tenants.id,
+      userId: user.id,
+      userEmail: user.email || undefined,
+      tenantId: tenantId,
       metadata: {
         baseTemplateId,
         baseTemplateName: baseTemplate.name,

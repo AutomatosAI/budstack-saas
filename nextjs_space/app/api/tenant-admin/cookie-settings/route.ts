@@ -1,30 +1,34 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
     if (
-      !session ||
-      (session.user.role !== "TENANT_ADMIN" &&
-        session.user.role !== "SUPER_ADMIN")
+      !user ||
+      (user.role !== "TENANT_ADMIN" &&
+        user.role !== "SUPER_ADMIN")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
+    const tenantId = user.tenantId;
+    if (!tenantId) {
+      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
+    }
+
+    const tenant = await prisma.tenants.findUnique({
+      where: { id: tenantId },
+      select: { settings: true },
     });
 
-    if (!user?.tenants) {
+    if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
-    const settings = (user.tenants.settings as Record<string, any>) || {};
+    const settings = (tenant.settings as Record<string, any>) || {};
 
     return NextResponse.json({
       cookieConsentEnabled: settings.cookieConsentEnabled ?? true,
@@ -44,22 +48,28 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
     if (
-      !session ||
-      (session.user.role !== "TENANT_ADMIN" &&
-        session.user.role !== "SUPER_ADMIN")
+      !user ||
+      (user.role !== "TENANT_ADMIN" &&
+        user.role !== "SUPER_ADMIN")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
+    const tenantId = user.tenantId;
+
+    if (!tenantId) {
+      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
+    }
+
+    const tenant = await prisma.tenants.findUnique({
+      where: { id: tenantId },
+      select: { settings: true },
     });
 
-    if (!user?.tenants) {
+    if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
@@ -74,7 +84,7 @@ export async function POST(request: Request) {
 
     // Merge with existing settings
     const existingSettings =
-      (user.tenants.settings as Record<string, any>) || {};
+      (tenant.settings as Record<string, any>) || {};
     const updatedSettings = {
       ...existingSettings,
       cookieConsentEnabled,
@@ -85,7 +95,7 @@ export async function POST(request: Request) {
     };
 
     await prisma.tenants.update({
-      where: { id: user.tenants.id },
+      where: { id: tenantId },
       data: {
         settings: updatedSettings,
         updatedAt: new Date(),

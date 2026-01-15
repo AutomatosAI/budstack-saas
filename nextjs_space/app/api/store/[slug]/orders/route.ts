@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
-import { authOptions } from "@/lib/auth";
 import { getTenantBySlug } from "@/lib/tenant";
 
 export async function GET(
@@ -9,9 +8,9 @@ export async function GET(
   { params }: { params: { slug: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -25,7 +24,7 @@ export async function GET(
     // Get orders for the current user AND specific tenant
     const orders = await prisma.orders.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         tenantId: tenant.id,
       },
       include: {

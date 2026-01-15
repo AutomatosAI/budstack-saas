@@ -63,7 +63,7 @@ export default function FeaturesSection() {
                 <div className="grid gap-10 lg:grid-cols-2">
                     {/* Revenue Analytics Card */}
                     <div className="card-floating p-8 lg:p-10">
-                        <div className="mb-8 flex items-start justify-between">
+                        <div className="mb-6 flex items-start justify-between">
                             <div className="flex items-center gap-4">
                                 <div className="icon-badge">
                                     <TrendingUp className="h-5 w-5 text-white" />
@@ -80,7 +80,7 @@ export default function FeaturesSection() {
                         </div>
 
                         {/* Stats row */}
-                        <div className="mb-6 flex items-center justify-between">
+                        <div className="mb-4 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <div className="h-2.5 w-2.5 rounded-full bg-success" />
                                 <span className="text-sm text-muted-foreground">
@@ -92,7 +92,7 @@ export default function FeaturesSection() {
 
                         {/* Chart */}
                         <div className="chart-inner p-4">
-                            <div className="h-48 w-full">
+                            <div className="h-40 w-full">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={revenueData}>
                                         <defs>
@@ -147,7 +147,7 @@ export default function FeaturesSection() {
                         </div>
 
                         {/* Bottom stat */}
-                        <div className="mt-6 tile flex items-center justify-between px-5 py-4">
+                        <div className="mt-4 tile flex items-center justify-between px-5 py-4">
                             <div className="flex items-center gap-2">
                                 <div className="h-2.5 w-2.5 rounded-full bg-accent" />
                                 <span className="text-sm text-muted-foreground">
@@ -160,7 +160,7 @@ export default function FeaturesSection() {
 
                     {/* Order Management Card */}
                     <div className="card-floating p-8 lg:p-10">
-                        <div className="mb-8 flex items-start justify-between">
+                        <div className="mb-6 flex items-start justify-between">
                             <div className="flex items-center gap-4">
                                 <div className="icon-badge">
                                     <Package className="h-5 w-5 text-white" />
@@ -177,7 +177,7 @@ export default function FeaturesSection() {
                         </div>
 
                         {/* Stats grid */}
-                        <div className="mb-6 grid grid-cols-3 gap-4">
+                        <div className="mb-4 grid grid-cols-3 gap-4">
                             <div className="tile p-4">
                                 <p className="text-xs text-muted-foreground">Pending</p>
                                 <p className="font-display text-2xl font-bold text-foreground">
@@ -199,7 +199,7 @@ export default function FeaturesSection() {
                         </div>
 
                         {/* Alert */}
-                        <div className="card-nested mb-6 flex items-center justify-between bg-accent/5 px-5 py-4">
+                        <div className="card-nested mb-4 flex items-center justify-between bg-accent/5 px-5 py-4">
                             <div className="flex items-center gap-2">
                                 <div className="h-2.5 w-2.5 rounded-full bg-accent" />
                                 <span className="text-sm text-foreground">

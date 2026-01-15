@@ -1,25 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { readFile } from "fs/promises";
 import { join } from "path";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
-    });
+    const user = await getCurrentUser();
 
     if (
-      !user?.tenants ||
+      !user ||
+      !user.tenantId ||
       (user.role !== "TENANT_ADMIN" && user.role !== "SUPER_ADMIN")
     ) {
       return NextResponse.json(
@@ -78,7 +69,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Preserve tenant-specific uploaded content (logo, hero image)
-    const currentSettings = (user.tenants.settings as any) || {};
+    const tenant = await prisma.tenants.findUnique({
+      where: { id: user.tenantId },
+      select: { settings: true }
+    });
+
+    const currentSettings = (tenant?.settings as any) || {};
 
     // Helper to determine if a path is a custom upload (not a template default)
     const isCustomUpload = (path: string | null | undefined): boolean => {
@@ -104,7 +100,7 @@ export async function POST(request: NextRequest) {
 
     // Update tenant's template selection AND settings
     const updatedTenant = await prisma.tenants.update({
-      where: { id: user.tenants.id },
+      where: { id: user.tenantId },
       data: {
         templateId,
         settings: newSettings,

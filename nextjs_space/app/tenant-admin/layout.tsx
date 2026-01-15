@@ -1,36 +1,42 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { TenantAdminSidebar } from "@/components/admin/TenantAdminSidebar";
 import { AccessibleAdminLayout } from "@/components/admin/AccessibleAdminLayout";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
 import { generateMockNotifications } from "@/lib/mock-data";
 
+import { HeaderProfile } from "@/components/admin/HeaderProfile";
+
 export default async function TenantAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
   if (
-    !session ||
-    !session.user?.id ||
-    (session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN")
+    !user ||
+    (user.publicMetadata.role !== "TENANT_ADMIN" &&
+      user.publicMetadata.role !== "SUPER_ADMIN")
   ) {
-    redirect("/auth/login");
+    redirect("/sign-in");
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
+  const email = user.emailAddresses[0]?.emailAddress;
+  const localUser = await prisma.users.findFirst({
+    where: { email: email },
     include: {
-      tenants: true,
+      tenants: {
+        select: {
+          id: true,
+          businessName: true,
+        },
+      },
     },
   });
 
-  if (!user?.tenants) {
+  if (!localUser?.tenants) {
     return (
       <div className="min-h-screen canvas-bg flex items-center justify-center">
         <div className="card-floating p-10 text-center max-w-md">
@@ -51,9 +57,9 @@ export default async function TenantAdminLayout({
   return (
     <div className="flex min-h-screen canvas-bg">
       <TenantAdminSidebar
-        userName={session.user.name || "Tenant Admin"}
-        userEmail={session.user.email || ""}
-        tenantName={user.tenants.businessName}
+        userName={`${user.firstName || ""} ${user.lastName || ""}`.trim() || "Tenant Admin"}
+        userEmail={user.emailAddresses[0]?.emailAddress || ""}
+        tenantName={localUser.tenants.businessName || "My Store"}
       />
       <AccessibleAdminLayout theme="tenant-admin">
         {/* Notification bar - compact */}
@@ -63,6 +69,7 @@ export default async function TenantAdminLayout({
             notifications={mockNotifications}
             viewAllUrl="/tenant-admin/notifications"
           />
+          <HeaderProfile theme="tenant-admin" />
         </div>
         {/* Main content */}
         <div className="flex-1 overflow-auto px-8 py-6">{children}</div>

@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,19 +15,19 @@ import { getTenantUrl } from "@/lib/tenant";
 import { QuickActionsWidget } from "@/components/admin/QuickActionsWidget";
 
 export default async function TenantAdminDashboard() {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
   if (
-    !session ||
-    !session.user?.id ||
-    (session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN")
+    !user ||
+    (user.publicMetadata.role !== "TENANT_ADMIN" &&
+      user.publicMetadata.role !== "SUPER_ADMIN")
   ) {
-    redirect("/auth/login");
+    redirect("/sign-in");
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
+  const email = user.emailAddresses[0]?.emailAddress;
+  const localUser = await prisma.users.findFirst({
+    where: { email: email },
     include: {
       tenants: {
         include: {
@@ -44,11 +43,11 @@ export default async function TenantAdminDashboard() {
     },
   });
 
-  if (!user?.tenants) {
-    redirect("/auth/login");
+  if (!localUser?.tenants) {
+    redirect("/sign-in");
   }
 
-  const tenant = user.tenants;
+  const tenant = localUser.tenants;
   const tenantStoreUrl = getTenantUrl(tenant);
 
   return (

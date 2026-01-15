@@ -1,40 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // 1. Authentication
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
     if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+      !user ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 2. Get tenant
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
-    });
+    const tenantId = user.tenantId;
 
-    if (!user?.tenants) {
+    if (!tenantId) {
       return NextResponse.json({ error: "No tenant found" }, { status: 400 });
     }
 
-    const templateId = params.id;
+    const { id } = await params;
+    const templateId = id;
 
     // 3. Verify template belongs to tenant
     const template = await prisma.tenant_templates.findFirst({
       where: {
         id: templateId,
-        tenantId: user.tenants.id,
+        tenantId: tenantId,
       },
     });
 
@@ -48,7 +45,7 @@ export async function PATCH(
     // 4. Deactivate all other templates for this tenant
     await prisma.tenant_templates.updateMany({
       where: {
-        tenantId: user.tenants.id,
+        tenantId: tenantId,
         id: { not: templateId },
       },
       data: { isActive: false },
@@ -62,7 +59,7 @@ export async function PATCH(
 
     // 6. Update tenant's activeTenantTemplateId
     await prisma.tenants.update({
-      where: { id: user.tenants.id },
+      where: { id: tenantId },
       data: { activeTenantTemplateId: templateId },
     });
 
@@ -71,9 +68,9 @@ export async function PATCH(
       action: AUDIT_ACTIONS.TEMPLATE.UPDATED,
       entityType: "TenantTemplate",
       entityId: templateId,
-      userId: session.user.id,
-      userEmail: session.user.email,
-      tenantId: user.tenants.id,
+      userId: user.id,
+      userEmail: user.email || undefined,
+      tenantId: tenantId,
       metadata: {
         action: "activated",
         templateName: template.templateName,
@@ -81,7 +78,7 @@ export async function PATCH(
     });
 
     console.log(
-      `✅ Activated template ${templateId} for tenant ${user.tenants.id}`,
+      `✅ Activated template ${templateId} for tenant ${tenantId}`,
     );
 
     return NextResponse.json({

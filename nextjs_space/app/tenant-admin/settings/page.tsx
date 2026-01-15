@@ -1,35 +1,35 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Settings } from "lucide-react";
 import SettingsForm from "./settings-form";
 
 export default async function SettingsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
   if (
-    !session ||
-    (session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN")
+    !user ||
+    (user.publicMetadata.role !== "TENANT_ADMIN" &&
+      user.publicMetadata.role !== "SUPER_ADMIN")
   ) {
-    redirect("/auth/login");
+    redirect("/sign-in");
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
+  const email = user.emailAddresses[0]?.emailAddress;
+  const localUser = await prisma.users.findFirst({
+    where: { email: email },
     include: { tenants: true },
   });
 
   // Mask the secret key before passing to client
-  if (user?.tenants?.drGreenSecretKey) {
-    user.tenants.drGreenSecretKey = "********";
+  if (localUser?.tenants?.drGreenSecretKey) {
+    localUser.tenants.drGreenSecretKey = "********";
   }
-  if (user?.tenants?.drGreenApiKey) {
-    user.tenants.drGreenApiKey = "********";
+  if (localUser?.tenants?.drGreenApiKey) {
+    localUser.tenants.drGreenApiKey = "********";
   }
 
-  if (!user?.tenants) {
+  if (!localUser?.tenants) {
     redirect("/tenant-admin");
   }
 
@@ -49,7 +49,7 @@ export default async function SettingsPage() {
         </p>
       </div>
 
-      <SettingsForm tenant={user.tenants} />
+      <SettingsForm tenant={localUser.tenants} />
     </div>
   );
 }

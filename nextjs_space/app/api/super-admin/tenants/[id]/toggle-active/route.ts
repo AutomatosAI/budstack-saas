@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 
@@ -15,8 +14,8 @@ export async function PATCH(
 ) {
   try {
     // Check authentication and authorization
-    const session = await getServerSession(authOptions);
-    if (!session || !["SUPER_ADMIN"].includes(session.user.role || "")) {
+    const user = await currentUser();
+    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -45,8 +44,8 @@ export async function PATCH(
         action: tenant.isActive ? "TENANT_DEACTIVATED" : "TENANT_ACTIVATED",
         entityType: "Tenant",
         entityId: params.id,
-        userId: session.user.id,
-        userEmail: session.user.email,
+        userId: user.id,
+        userEmail: user.emailAddresses[0]?.emailAddress,
         tenantId: params.id,
         metadata: {
           businessName: tenant.businessName,
