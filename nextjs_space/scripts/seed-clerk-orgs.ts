@@ -101,8 +101,8 @@ async function seedOrgs() {
                         });
                         console.log(`   ✅ Added ${user.email} as Admin`);
                     } catch (e: any) {
-                        // Ignore if already member (resource_conflict or membership_exists)
-                        if (e.errors && (e.errors[0]?.code === 'resource_conflict' || e.errors[0]?.code === 'membership_exists')) {
+                        // Ignore if already member (already_a_member_in_organization)
+                        if (e.errors && e.errors[0]?.code === 'already_a_member_in_organization') {
                             console.log(`   ℹ️ User already a member.`);
                         } else {
                             console.error(`   ❌ Failed to add member:`, e);

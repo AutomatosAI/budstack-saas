@@ -17,7 +17,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user from DB linked by email
-    const email = user.emailAddresses[0].emailAddress;
+    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
+    const email = primaryEmail || user.emailAddresses[0]?.emailAddress;
+
+    if (!email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const dbUser = await prisma.users.findFirst({ where: { email } });
 
     if (!dbUser) {

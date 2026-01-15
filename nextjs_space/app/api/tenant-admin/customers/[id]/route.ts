@@ -155,9 +155,14 @@ export async function PATCH(
     }
 
     // Fetch local user to get tenantId for authorization
+    // Fetch local user to get tenantId for authorization
     const localUser = await prisma.users.findFirst({
       where: { email: email },
     });
+
+    if (!localUser && role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const body = await request.json();
     const { firstName, lastName, phone, address } = body;
@@ -270,6 +275,10 @@ export async function DELETE(
     const localUser = await prisma.users.findFirst({
       where: { email: email },
     });
+
+    if (!localUser && role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     // Get existing customer
     const existingCustomer = await prisma.users.findUnique({
