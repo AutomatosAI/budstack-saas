@@ -1,28 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { uploadFile } from "@/lib/s3";
 import { TenantSettings } from "@/lib/types";
 
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
     if (
-      !session ||
-      (session.user.role !== "TENANT_ADMIN" &&
-        session.user.role !== "SUPER_ADMIN")
+      !user ||
+      (user.role !== "TENANT_ADMIN" &&
+        user.role !== "SUPER_ADMIN")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
+    const tenantId = user.tenantId;
+
+    if (!tenantId) {
+      return NextResponse.json({ error: "No tenant associated with user" }, { status: 403 });
+    }
+
+    const tenant = await prisma.tenants.findUnique({
+      where: { id: tenantId },
     });
 
-    if (!user?.tenants) {
+    if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
@@ -64,7 +68,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Check for active template
-    const activeTemplateId = user.tenants.activeTenantTemplateId;
+    const activeTemplateId = tenant.activeTenantTemplateId;
 
     if (activeTemplateId) {
       // Fetch current template to get existing designSystem
@@ -134,7 +138,7 @@ export async function PUT(req: NextRequest) {
 
       // ALSO update Tenant settings for fallback/consistency
       await prisma.tenants.update({
-        where: { id: user.tenants.id },
+        where: { id: tenant.id },
         data: {
           businessName,
           settings: settings as any,
@@ -143,7 +147,7 @@ export async function PUT(req: NextRequest) {
     } else {
       // Legacy behavior: Update only Tenant settings
       await prisma.tenants.update({
-        where: { id: user.tenants.id },
+        where: { id: tenant.id },
         data: {
           businessName,
           settings: settings as any,

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 
@@ -14,13 +13,31 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
-    // Check authentication and authorization
-    const session = await getServerSession(authOptions);
-    if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
-    ) {
+    // Check authentication
+    const user = await currentUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
+    const email = primaryEmail || user.emailAddresses[0]?.emailAddress;
+    const role = (user.publicMetadata.role as string) || "";
+
+    if (!email) {
+      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
+
+    if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Fetch local user to get tenantId for authorization
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
+    });
+
+    if (!localUser && role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Get customer
@@ -69,8 +86,8 @@ export async function GET(
 
     // Verify tenant access for tenant admins
     if (
-      session.user.role === "TENANT_ADMIN" &&
-      customer.tenantId !== session.user.tenantId
+      role === "TENANT_ADMIN" &&
+      customer.tenantId !== localUser?.tenantId
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
@@ -121,13 +138,31 @@ export async function PATCH(
   { params }: { params: { id: string } },
 ) {
   try {
-    // Check authentication and authorization
-    const session = await getServerSession(authOptions);
-    if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
-    ) {
+    // Check authentication
+    const user = await currentUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = user.emailAddresses[0]?.emailAddress;
+    const role = (user.publicMetadata.role as string) || "";
+
+    if (!email) {
+      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
+
+    if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Fetch local user to get tenantId for authorization
+    // Fetch local user to get tenantId for authorization
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
+    });
+
+    if (!localUser && role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -148,8 +183,8 @@ export async function PATCH(
 
     // Verify tenant access for tenant admins
     if (
-      session.user.role === "TENANT_ADMIN" &&
-      existingCustomer.tenantId !== session.user.tenantId
+      role === "TENANT_ADMIN" &&
+      existingCustomer.tenantId !== localUser?.tenantId
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
@@ -184,8 +219,8 @@ export async function PATCH(
         action: "CUSTOMER_UPDATED",
         entityType: "User",
         entityId: params.id,
-        userId: session.user.id,
-        userEmail: session.user.email,
+        userId: user.id,
+        userEmail: email!,
         tenantId: existingCustomer.tenantId || undefined,
         metadata: {
           targetUserEmail: existingCustomer.email,
@@ -220,13 +255,30 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    // Check authentication and authorization
-    const session = await getServerSession(authOptions);
-    if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
-    ) {
+    // Check authentication
+    const user = await currentUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = user.emailAddresses[0]?.emailAddress;
+    const role = (user.publicMetadata.role as string) || "";
+
+    if (!email) {
+      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
+
+    if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Fetch local user to get tenantId for authorization
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
+    });
+
+    if (!localUser && role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Get existing customer
@@ -244,8 +296,8 @@ export async function DELETE(
 
     // Verify tenant access for tenant admins
     if (
-      session.user.role === "TENANT_ADMIN" &&
-      existingCustomer.tenantId !== session.user.tenantId
+      role === "TENANT_ADMIN" &&
+      existingCustomer.tenantId !== localUser?.tenantId
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
@@ -275,8 +327,8 @@ export async function DELETE(
         action: "CUSTOMER_DELETED_GDPR",
         entityType: "User",
         entityId: params.id,
-        userId: session.user.id,
-        userEmail: session.user.email,
+        userId: user.id,
+        userEmail: email!,
         tenantId: existingCustomer.tenantId || undefined,
         metadata: {
           targetUserEmail: existingCustomer.email,

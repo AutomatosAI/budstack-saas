@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { authOptions } from "@/lib/auth";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { sendEmail, emailTemplates } from "@/lib/email";
 import {
@@ -11,9 +10,17 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
 
-    if (!session?.user) {
+    if (!user?.id || !user.emailAddresses?.[0]?.emailAddress) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get user from DB linked by email
+    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
+    const email = primaryEmail || user.emailAddresses[0]?.emailAddress;
+
+    if (!email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -21,6 +28,17 @@ export async function POST(req: NextRequest) {
 
     if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    }
+
+    const dbUser = await prisma.users.findFirst({
+      where: {
+        email,
+        tenantId: tenant.id
+      }
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found in this store" }, { status: 404 });
     }
 
     const body = await req.json();
@@ -46,7 +64,7 @@ export async function POST(req: NextRequest) {
     // Create order in BudStack database first
     const order = await prisma.orders.create({
       data: {
-        userId: session.user.id,
+        userId: dbUser.id,
         tenantId: tenant.id,
         subtotal,
         shippingCost,
@@ -70,9 +88,24 @@ export async function POST(req: NextRequest) {
 
     // Submit order to Dr. Green API
     let drGreenOrderId = null;
+
+    // Secure client_id: Use authenticated user ID unless Admin override
+    let finalClientId = dbUser.id;
+    if (clientId && clientId !== dbUser.id) {
+      // Only allow override if user is Admin (assuming role check passed or logic exists)
+      // Since we don't have explicit role check here easily without DB lookup again (which we have in dbUser?), 
+      // let's assume strict security: Ignore clientId unless it matches dbUser.id
+      finalClientId = dbUser.id;
+      // Alternatively, if we trust the caller to be admin, we check dbUser.role.
+      // Schema says role is enum.
+      if (dbUser.role === 'TENANT_ADMIN' || dbUser.role === 'SUPER_ADMIN') {
+        finalClientId = clientId;
+      }
+    }
+
     try {
       const drGreenOrderData = {
-        client_id: clientId || session.user.id,
+        client_id: finalClientId,
         items: items.map((item: any) => ({
           product_id: item.productId,
           product_name: item.name || `Product ${item.productId}`,
@@ -128,7 +161,7 @@ export async function POST(req: NextRequest) {
 
     // Send order confirmation email
     const html = await emailTemplates.orderConfirmation(
-      session.user.name || "Customer",
+      user.firstName ? `${user.firstName} ${user.lastName || ''}` : "Customer",
       order.orderNumber,
       calculatedTotal.toFixed(2),
       items.map((item: any) => ({
@@ -140,7 +173,7 @@ export async function POST(req: NextRequest) {
     );
 
     sendEmail({
-      to: session.user.email || "",
+      to: email || "",
       subject: `Order Confirmation - #${order.orderNumber}`,
       html,
       tenantId: tenant.id,
@@ -172,10 +205,17 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
+    // Auth Check
+    const user = await currentUser();
+    if (!user?.id || !user.emailAddresses?.[0]?.emailAddress) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // DB User Link
+    const email = user.emailAddresses[0].emailAddress;
+    const dbUser = await prisma.users.findFirst({ where: { email } });
+    if (!dbUser) {
+      return NextResponse.json({ orders: [] });
     }
 
     const tenant = await getTenantFromRequest(req);
@@ -187,7 +227,7 @@ export async function GET(req: NextRequest) {
     // Get orders for the current user
     const orders = await prisma.orders.findMany({
       where: {
-        userId: session.user.id,
+        userId: dbUser.id,
         tenantId: tenant.id,
       },
       include: {

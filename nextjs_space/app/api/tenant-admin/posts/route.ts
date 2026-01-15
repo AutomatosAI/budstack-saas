@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
@@ -25,22 +24,19 @@ const postSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
     if (
-      !session ||
-      (session.user.role !== "TENANT_ADMIN" &&
-        session.user.role !== "SUPER_ADMIN")
+      !user ||
+      (user.role !== "TENANT_ADMIN" &&
+        user.role !== "SUPER_ADMIN")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
-    });
+    const tenantId = user.tenantId;
 
-    if (!user?.tenants) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    if (!tenantId) {
+      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
     }
 
     const body = await req.json();
@@ -55,7 +51,7 @@ export async function POST(req: NextRequest) {
     while (
       await prisma.posts.findUnique({
         where: {
-          slug_tenantId: { slug: uniqueSlug, tenantId: user.tenants.id },
+          slug_tenantId: { slug: uniqueSlug, tenantId: tenantId },
         },
       })
     ) {
@@ -71,7 +67,7 @@ export async function POST(req: NextRequest) {
         excerpt: validatedData.excerpt,
         coverImage: validatedData.coverImage,
         published: validatedData.published,
-        tenantId: user.tenants.id,
+        tenantId: tenantId,
         authorId: user.id,
       },
     });
@@ -91,26 +87,23 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
     if (
-      !session ||
-      (session.user.role !== "TENANT_ADMIN" &&
-        session.user.role !== "SUPER_ADMIN")
+      !user ||
+      (user.role !== "TENANT_ADMIN" &&
+        user.role !== "SUPER_ADMIN")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
-    });
+    const tenantId = user.tenantId;
 
-    if (!user?.tenants) {
+    if (!tenantId) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
     const posts = await prisma.posts.findMany({
-      where: { tenantId: user.tenants.id },
+      where: { tenantId: tenantId },
       orderBy: { createdAt: "desc" },
       include: { author: { select: { name: true, email: true } } },
     });

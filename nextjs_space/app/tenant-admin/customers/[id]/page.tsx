@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CustomerEditForm from "./customer-edit-form";
@@ -12,18 +11,25 @@ export default async function CustomerDetailPage({
 }: {
   params: { id: string };
 }) {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
   if (
-    !session ||
-    !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role!)
+    !user ||
+    !["TENANT_ADMIN", "SUPER_ADMIN"].includes((user.publicMetadata.role as string) || "")
   ) {
-    redirect("/auth/login");
+    redirect("/sign-in");
   }
 
   // Tenant admins can only access their own tenant's customers
-  const tenantId =
-    session.user.role === "TENANT_ADMIN" ? session.user.tenantId : undefined;
+  let tenantId: string | undefined;
+  if (user.publicMetadata.role === "TENANT_ADMIN") {
+    const email = user.emailAddresses[0]?.emailAddress;
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
+      select: { tenantId: true },
+    });
+    tenantId = localUser?.tenantId;
+  }
 
   const customer = await prisma.users.findFirst({
     where: {
@@ -46,7 +52,7 @@ export default async function CustomerDetailPage({
   }
 
   // Verify tenant access for tenant admins
-  if (session.user.role === "TENANT_ADMIN" && customer.tenantId !== tenantId) {
+  if (user.publicMetadata.role === "TENANT_ADMIN" && customer.tenantId !== tenantId) {
     notFound();
   }
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -89,14 +89,14 @@ export function ClientOnboarding() {
     medical?: Medical;
   }>({});
   const router = useRouter();
-  const { data: session } = useSession() || {};
+  const { user, isLoaded, isSignedIn } = useUser();
 
   const personalForm = useForm<PersonalDetails>({
     resolver: zodResolver(personalDetailsSchema),
     defaultValues: formData.personal || {
       firstName: "",
       lastName: "",
-      email: session?.user?.email || "",
+      email: user?.primaryEmailAddress?.emailAddress || "",
       phone: "",
       dateOfBirth: "",
     },
@@ -135,7 +135,7 @@ export function ClientOnboarding() {
   };
 
   const handleMedicalSubmit = async (data: Medical) => {
-    if (!session?.user) {
+    if (!isSignedIn || !user) {
       toast.error("Authentication required", {
         description: "Please sign in to continue.",
       });
@@ -191,18 +191,16 @@ export function ClientOnboarding() {
           {steps.map((step, index) => (
             <div
               key={step.id}
-              className={`flex flex-col items-center ${
-                index <= currentStep ? "" : "opacity-50"
-              }`}
+              className={`flex flex-col items-center ${index <= currentStep ? "" : "opacity-50"
+                }`}
             >
               <div
-                className={`h-10 w-10 rounded-full flex items-center justify-center mb-2 ${
-                  index < currentStep
-                    ? "text-white"
-                    : index === currentStep
-                      ? "border-2"
-                      : ""
-                }`}
+                className={`h-10 w-10 rounded-full flex items-center justify-center mb-2 ${index < currentStep
+                  ? "text-white"
+                  : index === currentStep
+                    ? "border-2"
+                    : ""
+                  }`}
                 style={{
                   backgroundColor:
                     index < currentStep

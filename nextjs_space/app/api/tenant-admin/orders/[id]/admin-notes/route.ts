@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 
 /**
@@ -13,16 +12,16 @@ export async function PATCH(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
 
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (
-      session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN"
-    ) {
+    const email = user.emailAddresses[0]?.emailAddress;
+    const role = (user.publicMetadata.role as string) || "";
+
+    if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -38,12 +37,12 @@ export async function PATCH(
     }
 
     // Get user's tenant
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
       include: { tenants: true },
     });
 
-    if (!user?.tenants) {
+    if (!localUser?.tenants) {
       return NextResponse.json({ error: "No tenant found" }, { status: 404 });
     }
 
@@ -51,7 +50,7 @@ export async function PATCH(
     const order = await prisma.orders.findFirst({
       where: {
         id: orderId,
-        tenantId: user.tenants.id,
+        tenantId: localUser.tenants.id,
       },
     });
 

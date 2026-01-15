@@ -1,22 +1,13 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import PlatformBrandingForm from "./platform-branding-form";
 
 export default async function PlatformSettingsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
-  if (!session?.user?.email || !session?.user?.id) {
-    redirect("/auth/login");
-  }
-
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
-  });
-
-  if (user?.role !== "SUPER_ADMIN") {
-    redirect("/dashboard");
+  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
+    redirect("/sign-in");
   }
 
   // Get or create platform settings

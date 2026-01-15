@@ -50,7 +50,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   if (!post || !post.published) notFound();
 
   // Content is admin-created but we sanitize it to prevent XSS as per security audit
-  const cleanContent = DOMPurify.sanitize(post.content || "");
+  const cleanContent = DOMPurify.sanitize(post.content || "", {
+    SAFE_FOR_TEMPLATES: true,
+  });
 
   return (
     <div className="min-h-screen bg-background text-foreground pt-36 pb-12">

@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import { generateMockEvents } from "@/lib/mock-data";
 import {
@@ -12,10 +11,10 @@ import {
 } from "@/components/ui/card";
 
 export default async function AuditLogsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
-  if (!session || session.user.role !== "SUPER_ADMIN") {
-    redirect("/auth/login");
+  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
+    redirect("/sign-in");
   }
 
   // Generate mock events for demo (replace with real data in production)

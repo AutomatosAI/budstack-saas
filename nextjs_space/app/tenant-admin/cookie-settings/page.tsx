@@ -1,31 +1,31 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Cookie } from "lucide-react";
 import CookieSettingsForm from "./settings-form";
 
 export default async function CookieSettingsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
   if (
-    !session ||
-    (session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN")
+    !user ||
+    (user.publicMetadata.role !== "TENANT_ADMIN" &&
+      user.publicMetadata.role !== "SUPER_ADMIN")
   ) {
-    redirect("/auth/login");
+    redirect("/sign-in");
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
+  const email = user.emailAddresses[0]?.emailAddress;
+  const localUser = await prisma.users.findFirst({
+    where: { email: email },
     include: { tenants: true },
   });
 
-  if (!user?.tenants) {
+  if (!localUser?.tenants) {
     redirect("/tenant-admin");
   }
 
-  const tenant = user.tenants;
+  const tenant = localUser.tenants;
   const settings = (tenant.settings as Record<string, any>) || {};
 
   return (

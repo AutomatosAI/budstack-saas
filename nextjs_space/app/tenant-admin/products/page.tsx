@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
@@ -30,26 +29,27 @@ interface ProductsPageProps {
 export default async function ProductsPage({
   searchParams,
 }: ProductsPageProps) {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
   if (
-    !session ||
-    (session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN")
+    !user ||
+    (user.publicMetadata.role !== "TENANT_ADMIN" &&
+      user.publicMetadata.role !== "SUPER_ADMIN")
   ) {
-    redirect("/auth/login");
+    redirect("/sign-in");
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
+  const email = user.emailAddresses[0]?.emailAddress;
+  const localUser = await prisma.users.findFirst({
+    where: { email: email },
     select: { tenantId: true },
   });
 
-  if (!user?.tenantId) {
+  if (!localUser?.tenantId) {
     redirect("/tenant-admin");
   }
 
-  const tenantId = user.tenantId;
+  const tenantId = localUser.tenantId;
 
   // Await searchParams (Next.js 15+ async searchParams)
   const params = await searchParams;

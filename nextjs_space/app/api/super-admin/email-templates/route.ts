@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
-  if (!session || session.user.role !== "SUPER_ADMIN") {
+  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -29,9 +28,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
-  if (!session || session.user.role !== "SUPER_ADMIN") {
+  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

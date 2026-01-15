@@ -14,7 +14,30 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  images: { unoptimized: process.env.NEXT_IMAGE_UNOPTIMIZED === 'true' },
+  images: {
+    unoptimized: process.env.NEXT_IMAGE_UNOPTIMIZED === 'true',
+    domains: ['stage-api.drgreennft.com', 'api.drgreennft.com', 'cdn.abacus.ai'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'stage-api.drgreennft.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.drgreennft.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.abacus.ai',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
   // Skip pre-rendering for all API routes to avoid Prisma initialization during build
   async rewrites() {
     return [];

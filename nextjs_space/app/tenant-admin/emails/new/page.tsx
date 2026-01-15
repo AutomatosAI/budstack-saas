@@ -1,25 +1,25 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { TenantNewTemplateClient } from "./client";
 
 export default async function TenantNewEmailPage() {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
   if (
-    !session ||
-    !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+    !user ||
+    !["TENANT_ADMIN", "SUPER_ADMIN"].includes((user.publicMetadata.role as string) || "")
   ) {
-    redirect("/auth/login");
+    redirect("/sign-in");
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
+  const email = user.emailAddresses[0]?.emailAddress;
+  const localUser = await prisma.users.findFirst({
+    where: { email: email },
     include: { tenants: true },
   });
 
-  if (!user?.tenants) {
+  if (!localUser?.tenants) {
     redirect("/tenant-admin");
   }
 

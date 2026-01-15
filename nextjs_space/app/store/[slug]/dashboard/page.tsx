@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect } from "react";
 import {
@@ -15,20 +15,18 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
-  const sessionResult = useSession();
-  const session = sessionResult?.data;
-  const status = sessionResult?.status;
+  const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const params = useParams();
   const slug = params?.slug as string;
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (isLoaded && !isSignedIn) {
       router.push(`/store/${slug}/login`);
     }
-  }, [status, router, slug]);
+  }, [isLoaded, isSignedIn, router, slug]);
 
-  if (status === "loading") {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -39,7 +37,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!session) {
+  if (!isSignedIn || !user) {
     return null;
   }
 
@@ -50,7 +48,7 @@ export default function DashboardPage() {
         <div className="mb-8">
           <span className="saas-pill text-slate-600">Customer Dashboard</span>
           <h1 className="mt-4 text-3xl font-semibold text-slate-900">
-            Welcome back, {session?.user?.name || "User"}!
+            Welcome back, {user.fullName || user.firstName || "User"}!
           </h1>
           <p className="mt-2 text-slate-500">
             Manage your consultations, prescriptions, and account settings.
@@ -213,12 +211,12 @@ export default function DashboardPage() {
               <div className="space-y-3 text-sm">
                 <div>
                   <span className="font-medium text-slate-500">Email:</span>
-                  <p className="text-slate-900">{session?.user?.email}</p>
+                  <p className="text-slate-900">{user.primaryEmailAddress?.emailAddress}</p>
                 </div>
                 <div>
                   <span className="font-medium text-slate-500">Role:</span>
                   <p className="text-slate-900">
-                    {(session?.user as any)?.role || "PATIENT"}
+                    {(user.publicMetadata?.role as string) || "PATIENT"}
                   </p>
                 </div>
                 <div>

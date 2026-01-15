@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 
 /**
@@ -11,14 +10,20 @@ import { prisma } from "@/lib/db";
 export async function GET(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const clerkUser = await currentUser();
+    if (!clerkUser?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user profile
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    // Get user profile - try to find by Clerk ID (if stored in externalId or id if synced) or email
+    // Assuming migration maps Clerk ID to User ID or we look up by email
+    const email = clerkUser.emailAddresses[0]?.emailAddress;
+    if (!email) {
+      return NextResponse.json({ error: "Email required" }, { status: 400 });
+    }
+
+    const user = await prisma.users.findFirst({
+      where: { email: email }, // Lookup by email for now as reliable link
       select: {
         id: true,
         email: true,
@@ -60,17 +65,28 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const clerkUser = await currentUser();
+    if (!clerkUser?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const email = clerkUser.emailAddresses[0]?.emailAddress;
 
     const body = await request.json();
     const { firstName, lastName, phone, address } = body;
 
+    // Find user by email first to get ID
+    const existingUser = await prisma.users.findFirst({
+      where: { email: email }
+    });
+
+    if (!existingUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Update user profile
     const updatedUser = await prisma.users.update({
-      where: { id: session.user.id },
+      where: { id: existingUser.id },
       data: {
         ...(firstName !== undefined && { firstName }),
         ...(lastName !== undefined && { lastName }),

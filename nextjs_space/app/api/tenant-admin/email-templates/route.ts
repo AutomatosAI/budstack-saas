@@ -1,31 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
     if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+      !user ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
-    });
+    const tenantId = user.tenantId;
 
-    if (!user?.tenants) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    if (!tenantId) {
+      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
     }
 
     const templates = await prisma.email_templates.findMany({
       where: {
-        OR: [{ tenantId: user.tenants.id }, { isSystem: true }],
+        OR: [{ tenantId: tenantId }, { isSystem: true }],
       },
       orderBy: [
         { isSystem: "desc" }, // Group System templates together? Or maybe by Category?
@@ -47,22 +43,19 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
     if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+      !user ||
+      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
-    });
+    const tenantId = user.tenantId;
 
-    if (!user?.tenants) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    if (!tenantId) {
+      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
     }
 
     const body = await req.json();
@@ -82,7 +75,7 @@ export async function POST(req: NextRequest) {
       description,
       category: category || "Transactional",
       isSystem: false,
-      tenantId: user.tenants.id,
+      tenantId: tenantId,
     };
 
     if (sourceTemplateId) {

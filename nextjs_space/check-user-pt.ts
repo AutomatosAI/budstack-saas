@@ -1,0 +1,1 @@
+import { prisma } from './lib/db'; async function checkUser() { const user = await prisma.users.findUnique({ where: { email: 'admin@healingbuds.pt' }, include: { tenants: true } }); console.log(JSON.stringify(user, null, 2)); } checkUser();

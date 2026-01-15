@@ -19,7 +19,7 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { useClerk } from "@clerk/nextjs";
 
 interface TenantDashboardSidebarProps {
   userName: string;
@@ -101,12 +101,13 @@ export function TenantDashboardSidebar({
   userEmail,
   tenantName,
 }: TenantDashboardSidebarProps) {
+  const { signOut } = useClerk();
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
   const handleLogout = async () => {
     if (confirm("Are you sure you want to logout?")) {
-      await signOut({ callbackUrl: "/auth/login" });
+      await signOut({ redirectUrl: "/sign-in" });
     }
   };
 
@@ -119,9 +120,8 @@ export function TenantDashboardSidebar({
 
   return (
     <div
-      className={`${
-        collapsed ? "w-20" : "w-64"
-      } bg-gradient-to-b from-cyan-600 via-blue-600 to-indigo-700 text-white flex flex-col transition-all duration-300 ease-in-out relative`}
+      className={`${collapsed ? "w-20" : "w-64"
+        } bg-gradient-to-b from-cyan-600 via-blue-600 to-indigo-700 text-white flex flex-col transition-all duration-300 ease-in-out relative`}
     >
       {/* Header */}
       <div className="p-6 flex items-center justify-between">
@@ -165,11 +165,10 @@ export function TenantDashboardSidebar({
             <Link
               key={item.id}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all group relative ${
-                active
-                  ? "bg-cyan-500/30 text-white border-l-4 border-cyan-300"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
-              }`}
+              className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all group relative ${active
+                ? "bg-cyan-500/30 text-white border-l-4 border-cyan-300"
+                : "text-white/80 hover:bg-white/10 hover:text-white"
+                }`}
               title={collapsed ? item.label : ""}
             >
               <Icon
@@ -207,6 +206,12 @@ export function TenantDashboardSidebar({
                 <p className="text-xs text-white/70 truncate">{userEmail}</p>
               </div>
             </div>
+            <Link
+              href="/tenant-admin/profile"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm font-medium mb-2"
+            >
+              Your Profile
+            </Link>
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm font-medium"

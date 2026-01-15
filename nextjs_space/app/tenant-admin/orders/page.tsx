@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -85,9 +85,7 @@ interface OrdersResponse {
 }
 
 export default function TenantOrdersPage() {
-  const sessionResult = useSession();
-  const session = sessionResult?.data;
-  const status = sessionResult?.status;
+  const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -108,17 +106,18 @@ export default function TenantOrdersPage() {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (isLoaded && !isSignedIn) {
       router.push("/auth/login");
     }
     if (
-      status === "authenticated" &&
-      session?.user?.role !== "TENANT_ADMIN" &&
-      session?.user?.role !== "SUPER_ADMIN"
+      isLoaded &&
+      isSignedIn &&
+      user?.publicMetadata?.role !== "TENANT_ADMIN" &&
+      user?.publicMetadata?.role !== "SUPER_ADMIN"
     ) {
       router.push("/auth/login");
     }
-  }, [status, session, router]);
+  }, [isLoaded, isSignedIn, user, router]);
 
   // Build API URL with query params
   const buildApiUrl = useCallback(() => {
@@ -177,10 +176,10 @@ export default function TenantOrdersPage() {
   }, [buildApiUrl]);
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (user?.id) {
       fetchOrders();
     }
-  }, [session, fetchOrders]);
+  }, [user, fetchOrders]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(true);
@@ -302,7 +301,7 @@ export default function TenantOrdersPage() {
     };
   }, []);
 
-  if (status === "loading" || loading) {
+  if (!isLoaded || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -313,7 +312,7 @@ export default function TenantOrdersPage() {
     );
   }
 
-  if (!session) {
+  if (!isSignedIn || !user) {
     return null;
   }
 

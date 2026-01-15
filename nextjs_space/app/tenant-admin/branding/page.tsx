@@ -1,20 +1,20 @@
-import { getServerSession } from 'next-auth';
+import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import BrandingForm from './branding-form';
 import { Breadcrumbs } from '@/components/admin/shared';
 import { Sparkles } from 'lucide-react';
 
 export default async function BrandingPage() {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
-  if (!session || (session.user.role !== 'TENANT_ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
-    redirect('/auth/login');
+  if (!user || (user.publicMetadata.role !== 'TENANT_ADMIN' && user.publicMetadata.role !== 'SUPER_ADMIN')) {
+    redirect('/sign-in');
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
+  const email = user.emailAddresses[0]?.emailAddress;
+  const localUser = await prisma.users.findFirst({
+    where: { email: email },
     include: {
       tenants: {
         include: {
@@ -24,7 +24,7 @@ export default async function BrandingPage() {
     },
   });
 
-  if (!user?.tenants) {
+  if (!localUser?.tenants) {
     redirect("/dashboard");
   }
 
@@ -35,9 +35,9 @@ export default async function BrandingPage() {
   });
 
   // Fetch active tenant template
-  const activeTemplate = user.tenants.activeTenantTemplateId
+  const activeTemplate = localUser.tenants.activeTenantTemplateId
     ? await prisma.tenant_templates.findUnique({
-      where: { id: user.tenants.activeTenantTemplateId },
+      where: { id: localUser.tenants.activeTenantTemplateId },
     })
     : null;
 
@@ -59,7 +59,7 @@ export default async function BrandingPage() {
       </div>
 
       {/* Branding Form */}
-      <BrandingForm tenant={user.tenants} activeTemplate={activeTemplate} />
+      <BrandingForm tenant={localUser.tenants} activeTemplate={activeTemplate} />
     </div>
   );
 }

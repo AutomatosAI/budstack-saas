@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 
@@ -14,13 +13,29 @@ export async function PATCH(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
 
-    if (!session || (session.user as any)?.role !== "TENANT_ADMIN") {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const tenantId = (session.user as any)?.tenantId;
+    const email = user.emailAddresses[0]?.emailAddress;
+    const role = (user.publicMetadata.role as string) || "";
+
+    if (!email) {
+      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
+
+    if (role !== "TENANT_ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
+      select: { tenantId: true },
+    });
+
+    const tenantId = localUser?.tenantId;
     if (!tenantId) {
       return NextResponse.json(
         { error: "No tenant associated with user" },
@@ -69,8 +84,8 @@ export async function PATCH(
       action: AUDIT_ACTIONS.WEBHOOK_UPDATED,
       entityType: "Webhook",
       entityId: webhook.id,
-      userId: (session.user as any)?.id,
-      userEmail: session.user?.email || undefined,
+      userId: user.id,
+      userEmail: email!,
       tenantId,
       metadata: { url, events, description, isActive },
       ...clientInfo,
@@ -96,13 +111,25 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
 
-    if (!session || (session.user as any)?.role !== "TENANT_ADMIN") {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const tenantId = (session.user as any)?.tenantId;
+    const email = user.emailAddresses[0]?.emailAddress;
+    const role = (user.publicMetadata.role as string) || "";
+
+    if (role !== "TENANT_ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
+      select: { tenantId: true },
+    });
+
+    const tenantId = localUser?.tenantId;
     if (!tenantId) {
       return NextResponse.json(
         { error: "No tenant associated with user" },
@@ -131,8 +158,8 @@ export async function DELETE(
       action: AUDIT_ACTIONS.WEBHOOK_DELETED,
       entityType: "Webhook",
       entityId: id,
-      userId: (session.user as any)?.id,
-      userEmail: session.user?.email || undefined,
+      userId: user.id,
+      userEmail: email!,
       tenantId,
       metadata: { webhookUrl: existingWebhook.url },
       ...clientInfo,

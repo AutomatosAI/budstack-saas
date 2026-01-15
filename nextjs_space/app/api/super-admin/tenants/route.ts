@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 // Force rebuild: 1
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -14,12 +13,12 @@ import crypto from "crypto";
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "SUPER_ADMIN") {
+    const user = await currentUser();
+    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const rateLimitResult = await checkRateLimit(session.user.id);
+    const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }
@@ -109,12 +108,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "SUPER_ADMIN") {
+    const user = await currentUser();
+    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const rateLimitResult = await checkRateLimit(session.user.id);
+    const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }
@@ -159,8 +158,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const bcrypt = await import("bcryptjs");
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    // Use placeholder password as auth is handled by Clerk
+    const placeholderPassword = `clerk_managed_${crypto.randomUUID()}`;
 
     const tenant = await prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
@@ -179,7 +178,7 @@ export async function POST(request: NextRequest) {
           data: {
             id: crypto.randomUUID(),
             email: adminEmail,
-            password: hashedPassword,
+            password: placeholderPassword,
             name:
               `${adminFirstName || ""} ${adminLastName || ""}`.trim() ||
               adminEmail,
@@ -210,8 +209,8 @@ export async function POST(request: NextRequest) {
         action: "TENANT_CREATED",
         entityType: "Tenant",
         entityId: tenant.id,
-        userId: session.user.id,
-        userEmail: session.user.email,
+        userId: user.id,
+        userEmail: user.emailAddresses[0]?.emailAddress,
         metadata: {
           businessName,
           subdomain,

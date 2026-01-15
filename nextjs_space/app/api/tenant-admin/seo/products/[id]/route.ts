@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 
 interface RouteParams {
@@ -9,29 +8,25 @@ interface RouteParams {
 
 // GET - Fetch product SEO
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
   if (
-    !session ||
-    (session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN")
+    !user ||
+    (user.role !== "TENANT_ADMIN" &&
+      user.role !== "SUPER_ADMIN")
   ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
+  const tenantId = user.tenantId;
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
-    select: { tenantId: true },
-  });
-
-  if (!user?.tenantId) {
+  if (!tenantId) {
     return NextResponse.json({ error: "No tenant" }, { status: 400 });
   }
 
   const product = await prisma.products.findFirst({
-    where: { id, tenantId: user.tenantId },
+    where: { id, tenantId: tenantId },
     select: { id: true, name: true, slug: true, seo: true },
   });
 
@@ -44,30 +39,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // PUT - Update product SEO
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
   if (
-    !session ||
-    (session.user.role !== "TENANT_ADMIN" &&
-      session.user.role !== "SUPER_ADMIN")
+    !user ||
+    (user.role !== "TENANT_ADMIN" &&
+      user.role !== "SUPER_ADMIN")
   ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
+  const tenantId = user.tenantId;
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
-    select: { tenantId: true },
-  });
-
-  if (!user?.tenantId) {
+  if (!tenantId) {
     return NextResponse.json({ error: "No tenant" }, { status: 400 });
   }
 
   // Verify product belongs to tenant
   const existingProduct = await prisma.products.findFirst({
-    where: { id, tenantId: user.tenantId },
+    where: { id, tenantId: tenantId },
   });
 
   if (!existingProduct) {

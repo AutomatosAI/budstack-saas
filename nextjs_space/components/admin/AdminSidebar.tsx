@@ -6,12 +6,10 @@ import { usePathname } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
-  LogOut,
   Menu,
   Popcorn,
   type LucideIcon,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -54,12 +52,6 @@ export function AdminSidebar({
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
-
-  const handleLogout = async () => {
-    if (confirm("Are you sure you want to logout?")) {
-      await signOut({ callbackUrl: "/auth/login" });
-    }
-  };
 
   const isActive = (href: string) => {
     const basePath = theme === "super-admin" ? "/super-admin" : "/tenant-admin";
@@ -193,47 +185,28 @@ export function AdminSidebar({
           })}
         </nav>
 
-        {/* User Profile */}
+        {/* User Profile Footer - Simplified without buttons */}
         <div className="p-4 border-t border-slate-100">
-          {!collapsed ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white text-sm"
-                  style={{
-                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
-                  }}
-                >
-                  {userName.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {userName}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {userEmail}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-medium text-muted-foreground hover:text-foreground"
+          {!collapsed && (
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white text-sm"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
+                }}
               >
-                <LogOut className="h-4 w-4" />
-                Logout
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleLogout}
-              className="w-full p-2 hover:bg-slate-100 rounded-xl transition-colors group relative"
-              title="Logout"
-            >
-              <LogOut className="h-5 w-5 mx-auto text-muted-foreground" />
-              <div className="absolute left-full ml-2 px-2 py-1 bg-foreground text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                Logout
+                {userName.charAt(0).toUpperCase()}
               </div>
-            </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {userName}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {userEmail}
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </div>

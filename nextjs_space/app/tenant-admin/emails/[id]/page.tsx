@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { TenantEditTemplateClient } from "./client";
 
@@ -9,29 +8,30 @@ export default async function TenantEditEmailPage({
 }: {
   params: { id: string };
 }) {
-  const session = await getServerSession(authOptions);
+  const user = await currentUser();
 
   if (
-    !session ||
-    !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
+    !user ||
+    !["TENANT_ADMIN", "SUPER_ADMIN"].includes((user.publicMetadata.role as string) || "")
   ) {
-    redirect("/auth/login");
+    redirect("/sign-in");
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: session.user.id },
+  const email = user.emailAddresses[0]?.emailAddress;
+  const localUser = await prisma.users.findFirst({
+    where: { email: email },
     include: { tenants: true },
   });
 
-  if (!user?.tenants) {
+  if (!localUser?.tenants) {
     redirect("/tenant-admin");
   }
 
   const template = await prisma.email_templates.findFirst({
     where: {
       id: params.id,
-      tenantId: user.tenants.id, // Strict ownership
-    },
+      tenantId: localUser.tenants.id, // Strict ownership
+    }, // Strict ownership
   });
 
   if (!template) {

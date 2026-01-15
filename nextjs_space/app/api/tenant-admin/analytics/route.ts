@@ -1,38 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { subDays, startOfDay, format, eachDayOfInterval } from "date-fns";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user || user.role !== "TENANT_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Rate limiting
-    const rateLimitResult = await checkRateLimit(session.user.id);
+    const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }
 
-    // Get user's tenant
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
-      include: { tenants: true },
-    });
+    const tenantId = user.tenantId;
 
-    if (!user?.tenantId || user.role !== "TENANT_ADMIN") {
+    if (!tenantId) {
       return NextResponse.json(
-        { error: "Not a tenant admin" },
+        { error: "No tenant associated with user" },
         { status: 403 },
       );
     }
-
-    const tenantId = user.tenantId;
 
     // Get time range from query params
     const searchParams = req.nextUrl.searchParams;

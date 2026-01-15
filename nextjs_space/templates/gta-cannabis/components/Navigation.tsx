@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ShoppingCart, User } from 'lucide-react';
-import { useSession, signOut } from 'next-auth/react';
+import { useUser, useClerk } from "@clerk/nextjs";
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { CartDropdown } from '@/components/cart-dropdown';
@@ -20,7 +20,8 @@ export function Navigation({ businessName, subdomain, logoUrl }: NavigationProps
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { data: session } = useSession() || {};
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerk();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -101,7 +102,7 @@ export function Navigation({ businessName, subdomain, logoUrl }: NavigationProps
             <CartDropdown />
 
             {/* User Menu */}
-            {session?.user ? (
+            {isLoaded && isSignedIn ? (
               <div className="relative">
                 <Button
                   variant="ghost"
@@ -133,7 +134,7 @@ export function Navigation({ businessName, subdomain, logoUrl }: NavigationProps
                       <button
                         onClick={() => {
                           setIsUserMenuOpen(false);
-                          signOut();
+                          signOut({ redirectUrl: `/store/${subdomain}` });
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-[#FF6B9D] hover:bg-[#FF6B9D]/20 rounded-b-lg"
                       >

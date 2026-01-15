@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -255,9 +255,7 @@ const getInitials = (name: string) => {
 };
 
 export default function TenantAnalyticsPage() {
-  const sessionResult = useSession();
-  const session = sessionResult?.data;
-  const status = sessionResult?.status;
+  const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -268,19 +266,21 @@ export default function TenantAnalyticsPage() {
   const [pendingConsultations] = useState(7);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (isLoaded && !isSignedIn) {
       router.push("/auth/login");
     }
-    if (status === "authenticated" && session?.user?.role !== "TENANT_ADMIN") {
+    // Check for Tenant Admin role or Org Admin
+    // For now we check publicMetadata role or assume safe if they can access data
+    if (isLoaded && isSignedIn && user?.publicMetadata?.role !== "TENANT_ADMIN") {
       router.push("/");
     }
-  }, [status, session, router]);
+  }, [isLoaded, isSignedIn, user, router]);
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (user?.id) {
       fetchAnalytics();
     }
-  }, [session, timeRange]);
+  }, [user, timeRange]);
 
   useEffect(() => {
     // Generate Living Garden data
@@ -395,7 +395,7 @@ export default function TenantAnalyticsPage() {
 
   const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
 
-  if (status === "loading" || loading) {
+  if (!isLoaded || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-cyan-50">
         <div className="text-center">
@@ -411,7 +411,7 @@ export default function TenantAnalyticsPage() {
     );
   }
 
-  if (!session || !analytics) {
+  if (!isSignedIn || !user || !analytics) {
     return null;
   }
 

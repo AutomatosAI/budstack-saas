@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import crypto from "crypto";
@@ -21,34 +20,38 @@ import crypto from "crypto";
 export async function POST(request: NextRequest) {
   try {
     // Check authentication and authorization
-    const session = await getServerSession(authOptions);
-    if (
-      !session ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(session.user.role || "")
-    ) {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = user.emailAddresses[0]?.emailAddress;
+    const role = (user.publicMetadata.role as string) || "";
+
+    if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Rate limiting
-    const rateLimitResult = await checkRateLimit(session.user.id);
+    const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }
 
     // Get user's tenant ID
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    const localUser = await prisma.users.findFirst({
+      where: { email: email },
       select: { tenantId: true },
     });
 
-    if (!user?.tenantId) {
+    if (!localUser?.tenantId) {
       return NextResponse.json(
         { error: "No tenant associated with user" },
         { status: 403 },
       );
     }
 
-    const tenantId = user.tenantId;
+    const tenantId = localUser.tenantId;
 
     const body = await request.json();
     const { action, orderIds } = body;
@@ -117,8 +120,8 @@ export async function POST(request: NextRequest) {
         action: auditAction,
         entityType: "Order",
         entityId: order.id,
-        userId: session.user.id,
-        userEmail: session.user.email,
+        userId: user.id,
+        userEmail: email!,
         tenantId: tenantId,
         metadata: {
           orderNumber: order.orderNumber,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import {
   Card,
   CardContent,
@@ -49,7 +49,7 @@ interface PaginationInfo {
 }
 
 export default function TenantAuditLogsPage() {
-  const { data: session } = useSession() || {};
+  const { user } = useUser();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,

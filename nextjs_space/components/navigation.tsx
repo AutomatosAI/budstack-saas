@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSession, signOut } from "next-auth/react";
+
+import { useUser, useClerk } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -51,9 +52,10 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
   const secondaryColor = tenantSettings.secondaryColor || "#10b981";
 
   const { language, t } = useLanguage();
-  const sessionResult = useSession();
-  const session = sessionResult?.data;
-  const status = sessionResult?.status;
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerk();
+
+  const status = isLoaded ? (isSignedIn ? "authenticated" : "unauthenticated") : "loading";
   const pathname = usePathname();
   const router = useRouter();
 
@@ -81,18 +83,17 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
   ];
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
+    await signOut({ redirectUrl: "/" });
   };
 
   return (
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-white/95 backdrop-blur-md shadow-lg border-b"
-          : "bg-transparent"
-      }`}
+      className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled
+        ? "bg-white/95 backdrop-blur-md shadow-lg border-b"
+        : "bg-transparent"
+        }`}
       style={
         isScrolled ? { borderBottomColor: `${primaryColor}20` } : undefined
       }
@@ -121,13 +122,12 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`text-sm font-medium transition-colors ${
-                  pathname === item.href
-                    ? "border-b-2"
-                    : isScrolled
-                      ? "text-gray-700"
-                      : "text-gray-800"
-                }`}
+                className={`text-sm font-medium transition-colors ${pathname === item.href
+                  ? "border-b-2"
+                  : isScrolled
+                    ? "text-gray-700"
+                    : "text-gray-800"
+                  }`}
                 style={
                   pathname === item.href
                     ? { color: primaryColor, borderBottomColor: primaryColor }
@@ -162,7 +162,7 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
             {/* Authentication */}
             {status === "loading" ? (
               <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
-            ) : session ? (
+            ) : isSignedIn ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -173,43 +173,44 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
                       className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
                       style={{ backgroundColor: primaryColor }}
                     >
-                      {session?.user?.name?.[0] ||
-                        session?.user?.email?.[0]?.toUpperCase() ||
+                      {user?.firstName?.[0] ||
+                        user?.primaryEmailAddress?.emailAddress?.[0]?.toUpperCase() ||
                         "U"}
                     </div>
-                    {session?.user?.isVerified && (
+                    {/* Verification badge removed for now or check user.publicMetadata.isVerified */}
+                    {/* {user?.publicMetadata?.isVerified && (
                       <Badge
                         className="absolute -top-1 -right-1 w-4 h-4 p-0 text-white"
                         style={{ backgroundColor: secondaryColor }}
                       >
                         ✓
                       </Badge>
-                    )}
+                    )} */}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-2 py-1.5">
                     <p className="text-sm font-medium">
-                      {session?.user?.name || "User"}
+                      {user?.fullName || "User"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {session?.user?.email}
+                      {user?.primaryEmailAddress?.emailAddress}
                     </p>
                   </div>
                   <DropdownMenuSeparator />
-                  {((session?.user as any)?.role === "TENANT_ADMIN" ||
-                    (session?.user as any)?.role === "SUPER_ADMIN") && (
-                    <>
-                      <DropdownMenuItem
-                        onClick={() => router.push("/tenant-admin")}
-                        className="cursor-pointer"
-                      >
-                        <Shield className="w-4 h-4 mr-2" />
-                        Tenant Admin
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
+                  {((user?.publicMetadata?.role === "TENANT_ADMIN" ||
+                    user?.publicMetadata?.role === "SUPER_ADMIN")) && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => router.push("/tenant-admin")}
+                          className="cursor-pointer"
+                        >
+                          <Shield className="w-4 h-4 mr-2" />
+                          Tenant Admin
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
                   <DropdownMenuItem
                     onClick={() => router.push("/dashboard")}
                     className="cursor-pointer"
@@ -313,9 +314,9 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
                     style={
                       pathname === item.href
                         ? {
-                            backgroundColor: `${primaryColor}10`,
-                            color: primaryColor,
-                          }
+                          backgroundColor: `${primaryColor}10`,
+                          color: primaryColor,
+                        }
                         : { color: "#374151" }
                     }
                     onMouseEnter={(e) => {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { removeFromCart } from "@/lib/drgreen-cart";
@@ -10,10 +9,18 @@ export async function DELETE(
   { params }: { params: { slug: string } },
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
 
-    if (!session?.user?.id) {
+    if (!user?.emailAddresses?.[0]?.emailAddress) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = user.emailAddresses[0].emailAddress;
+
+    // Find linked DB user
+    const dbUser = await prisma.users.findFirst({ where: { email } });
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -41,7 +48,7 @@ export async function DELETE(
 
     // Remove from cart
     const cart = await removeFromCart({
-      userId: session.user.id,
+      userId: dbUser.id,
       tenantId: tenant.id,
       strainId,
       apiKey: drGreenConfig.apiKey,

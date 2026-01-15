@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 
 /**
@@ -11,40 +10,35 @@ import { prisma } from "@/lib/db";
  */
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user || !user.tenantId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch user's tenant
-    const user = await prisma.users.findUnique({
-      where: { id: session.user.id },
+    // Fetch tenant details
+    const tenant = await prisma.tenants.findUnique({
+      where: { id: user.tenantId },
       select: {
-        tenantId: true,
-        tenants: {
-          select: {
-            id: true,
-            businessName: true,
-            subdomain: true,
-            customDomain: true,
-          },
-        },
+        id: true,
+        businessName: true,
+        subdomain: true,
+        customDomain: true,
       },
     });
 
-    if (!user?.tenants) {
+    if (!tenant) {
       return NextResponse.json(
-        { error: "No tenant associated with user" },
-        { status: 403 },
+        { error: "Tenant not found" },
+        { status: 404 },
       );
     }
 
     return NextResponse.json({
-      id: user.tenants.id,
-      businessName: user.tenants.businessName,
-      subdomain: user.tenants.subdomain,
-      customDomain: user.tenants.customDomain,
+      id: tenant.id,
+      businessName: tenant.businessName,
+      subdomain: tenant.subdomain,
+      customDomain: tenant.customDomain,
     });
   } catch (error) {
     console.error("Error fetching tenant:", error);
