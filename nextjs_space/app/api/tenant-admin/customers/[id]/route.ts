@@ -19,7 +19,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const email = user.emailAddresses[0]?.emailAddress;
+    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
+    const email = primaryEmail || user.emailAddresses[0]?.emailAddress;
     const role = (user.publicMetadata.role as string) || "";
 
     if (!email) {

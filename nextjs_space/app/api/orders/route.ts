@@ -24,16 +24,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const dbUser = await prisma.users.findFirst({ where: { email } });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     const tenant = await getTenantFromRequest(req);
 
     if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    }
+
+    const dbUser = await prisma.users.findFirst({
+      where: {
+        email,
+        tenantId: tenant.id
+      }
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found in this store" }, { status: 404 });
     }
 
     const body = await req.json();
@@ -83,9 +88,24 @@ export async function POST(req: NextRequest) {
 
     // Submit order to Dr. Green API
     let drGreenOrderId = null;
+
+    // Secure client_id: Use authenticated user ID unless Admin override
+    let finalClientId = dbUser.id;
+    if (clientId && clientId !== dbUser.id) {
+      // Only allow override if user is Admin (assuming role check passed or logic exists)
+      // Since we don't have explicit role check here easily without DB lookup again (which we have in dbUser?), 
+      // let's assume strict security: Ignore clientId unless it matches dbUser.id
+      finalClientId = dbUser.id;
+      // Alternatively, if we trust the caller to be admin, we check dbUser.role.
+      // Schema says role is enum.
+      if (dbUser.role === 'TENANT_ADMIN' || dbUser.role === 'SUPER_ADMIN') {
+        finalClientId = clientId;
+      }
+    }
+
     try {
       const drGreenOrderData = {
-        client_id: clientId || dbUser.id,
+        client_id: finalClientId,
         items: items.map((item: any) => ({
           product_id: item.productId,
           product_name: item.name || `Product ${item.productId}`,
