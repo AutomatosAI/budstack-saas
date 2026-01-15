@@ -175,9 +175,44 @@ export interface DoctorGreenOrder {
 const COUNTRY_CODE_MAP: Record<string, string> = {
   PT: 'PRT',
   GB: 'GBR',
+  UK: 'GBR',
   ZA: 'ZAF',
   TH: 'THA',
   US: 'USA',
+  DE: 'DEU',
+  FR: 'FRA',
+  ES: 'ESP',
+  IT: 'ITA',
+  NL: 'NLD',
+  BE: 'BEL',
+  IE: 'IRL',
+  GR: 'GRC',
+  CA: 'CAN',
+  AU: 'AUS',
+  NZ: 'NZL',
+  CH: 'CHE',
+  SE: 'SWE',
+  NO: 'NOR',
+  DK: 'DNK',
+  PL: 'POL',
+  CZ: 'CZE',
+  IL: 'ISR',
+  BR: 'BRA',
+  MX: 'MEX',
+  AR: 'ARG',
+  CL: 'CHL',
+  CO: 'COL',
+  MY: 'MYS',
+  SG: 'SGP',
+  IN: 'IND',
+  PK: 'PAK',
+  PH: 'PHL',
+  ID: 'IDN',
+  JP: 'JPN',
+  KR: 'KOR',
+  CN: 'CHN',
+  HK: 'HKG',
+  TW: 'TWN',
 };
 
 function toAlpha3(code: string): string {
@@ -375,61 +410,94 @@ export async function addToCart(
     config,
   });
 }
+
 /**
  * Create a new patient/client record in Dr. Green system
+ * Payload must match the specialized structure:
+ * - camelCase keys
+ * - nested 'medicalRecord' with specific booleans (medicalHistory0..16)
  */
 export async function createClient(
   clientData: {
     firstName: string;
     lastName: string;
     email: string;
-    phone: string;
-    dateOfBirth: string;
-    address: {
-      street: string;
+    phoneCode: string;
+    phoneCountryCode: string;
+    contactNumber: string;
+    shipping: {
+      address1: string;
+      address2?: string;
+      landmark?: string;
       city: string;
-      postalCode: string;
+      state: string;
       country: string;
+      countryCode: string;
+      postalCode: string;
     };
-    medicalRecord?: {
-      conditions: string;
-      currentMedications?: string;
-      allergies?: string;
-      previousCannabisUse?: boolean;
-      doctorApproval?: boolean;
+    medicalRecord: {
+      dob: string;
+      gender: string;
+      medicalConditions: string[];
+      otherMedicalCondition?: string;
+      medicinesTreatments?: string[];
+      otherMedicalTreatments?: string;
+      medicalHistory0: boolean;
+      medicalHistory1: boolean;
+      medicalHistory2: boolean;
+      medicalHistory3: boolean;
+      medicalHistory4: boolean;
+      medicalHistory5: string[];
+      medicalHistory6?: boolean;
+      medicalHistory7?: string[];
+      medicalHistory7Relation?: string;
+      medicalHistory8: boolean;
+      medicalHistory9: boolean;
+      medicalHistory10: boolean;
+      medicalHistory11?: string;
+      medicalHistory12: boolean;
+      medicalHistory13: string;
+      medicalHistory14: string[];
+      medicalHistory15?: string;
+      medicalHistory16?: boolean;
+      prescriptionsSupplements?: string;
     };
   },
   config: DoctorGreenConfig,
 ): Promise<{ clientId: string; kycLink?: string }> {
-  const response = await doctorGreenRequest<{
-    clientId: string;
-    kycLink?: string;
-  }>("/clients", {
+
+  // The API expects this exact structure
+  const payload = {
+    firstName: clientData.firstName,
+    lastName: clientData.lastName,
+    email: clientData.email,
+    phoneCode: clientData.phoneCode,
+    phoneCountryCode: clientData.phoneCountryCode,
+    contactNumber: clientData.contactNumber,
+    shipping: clientData.shipping,
+    medicalRecord: clientData.medicalRecord
+  };
+
+  // Response is nested: { success: true, data: { data: { clientId, kycLink } } }
+  // OR sometimes: { success: true, data: { clientId, kycLink } } depending on proxy version
+  // We type it as 'any' to handle the normalization manually
+  const response = await doctorGreenRequest<any>("/client", { // Endpoint is /client singular? Findings say POST /client
     method: "POST",
-    body: JSON.stringify({
-      first_name: clientData.firstName,
-      last_name: clientData.lastName,
-      email: clientData.email,
-      phone: clientData.phone,
-      date_of_birth: clientData.dateOfBirth,
-      address: {
-        street: clientData.address.street,
-        city: clientData.address.city,
-        postal_code: clientData.address.postalCode,
-        country: clientData.address.country,
-      },
-      medical_record: clientData.medicalRecord
-        ? {
-          conditions: clientData.medicalRecord.conditions,
-          current_medications: clientData.medicalRecord.currentMedications,
-          allergies: clientData.medicalRecord.allergies,
-          previous_cannabis_use: clientData.medicalRecord.previousCannabisUse,
-          doctor_approval: clientData.medicalRecord.doctorApproval,
-        }
-        : undefined,
-    }),
+    body: payload,
     config,
   });
 
-  return response;
+  // Normalize response
+  const rawData = response.data || {};
+  const nestedData = rawData.data || rawData;
+
+  const clientId = nestedData.clientId || rawData.clientId;
+  const kycLink = nestedData.kycLink || rawData.kycLink;
+
+  if (!clientId) {
+    console.error("DrGreen createClient failed to return clientId", response);
+    throw new Error("Failed to create client: No ID returned");
+  }
+
+  return { clientId, kycLink };
 }
