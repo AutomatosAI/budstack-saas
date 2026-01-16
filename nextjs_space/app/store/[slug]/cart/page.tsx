@@ -67,7 +67,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pt-24 pb-20">
+    <div className="min-h-screen bg-gray-50/50 pt-36 pb-20">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="mb-8 flex items-center gap-4">
           <Button
@@ -122,7 +122,7 @@ export default function CartPage() {
                             {item.name}
                           </h3>
                           <p className="text-sm text-gray-500 font-medium">
-                            €{item.price.toFixed(2)} / unit
+                            {item.currency || '€'}{item.price.toFixed(2)} / unit
                           </p>
                           {/* Add THC/CBD badges here if available in item data */}
                         </div>
@@ -169,7 +169,7 @@ export default function CartPage() {
 
                         <div className="text-right">
                           <p className="text-lg font-bold text-gray-900">
-                            €{(item.price * item.quantity).toFixed(2)}
+                            {item.currency || '€'}{(item.price * item.quantity).toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -194,7 +194,7 @@ export default function CartPage() {
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>Subtotal ({items.length} items)</span>
                     <span className="font-medium text-gray-900">
-                      €{subtotal.toFixed(2)}
+                      {items[0]?.currency || '€'}{subtotal.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-gray-600">
@@ -212,7 +212,7 @@ export default function CartPage() {
                     Total
                   </span>
                   <span className="text-2xl font-bold text-green-600">
-                    €{cartTotal.toFixed(2)}
+                    {items[0]?.currency || '€'}{cartTotal.toFixed(2)}
                   </span>
                 </div>
 
@@ -224,7 +224,7 @@ export default function CartPage() {
                     onClick={() => router.push(`/store/${slug}/checkout`)}
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
-                    Proceed to Checkout
+                    Place Order
                   </Button>
 
                   <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 flex gap-3 items-start">

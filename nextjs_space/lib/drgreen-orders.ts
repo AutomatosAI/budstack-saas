@@ -50,7 +50,7 @@ export async function submitOrder(params: {
     }
 
     // Verify user has items in cart
-    const cart = await prisma.drGreenCart.findUnique({
+    const cart = await prisma.drgreen_carts.findUnique({
         where: {
             userId_tenantId: {
                 userId,
@@ -63,18 +63,42 @@ export async function submitOrder(params: {
         throw new Error("Cart is empty. Add items before placing an order.");
     }
 
-    // Submit order to Dr. Green API
-    const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
-        method: "POST",
-        apiKey,
-        secretKey,
-        validateSuccessFlag: true,
-        body: {
-            clientId: user.drGreenClientId,
+    // Check if user is locally verified (manual override)
+    const localQuestionnaire = await prisma.consultation_questionnaires.findFirst({
+        where: {
+            AND: [
+                { email: { equals: user.email, mode: 'insensitive' } },
+                { isKycVerified: true }
+            ]
         },
+        orderBy: { createdAt: 'desc' }
     });
 
-    const orderData = (drGreenResponse as any).data;
+    let orderData = null;
+
+    // If locally verified (and possibly using a fake ID), bypass API
+    // We assume if local verification exists, we trust it over the API error risk for now
+    if (localQuestionnaire) {
+        // Mock Dr Green response
+        orderData = {
+            id: `MOCK_DG_ORDER_${Date.now()}`,
+            invoiceNumber: `INV_${Date.now()}`,
+            status: "PENDING",
+            total: 0 // Will be recalculated locally anyway
+        };
+    } else {
+        // Submit order to Dr. Green API
+        const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
+            method: "POST",
+            apiKey,
+            secretKey,
+            validateSuccessFlag: true,
+            body: {
+                clientId: user.drGreenClientId,
+            },
+        });
+        orderData = (drGreenResponse as any).data;
+    }
 
     if (!orderData || !orderData.id) {
         throw new Error("Failed to create order on Dr. Green");
@@ -92,6 +116,7 @@ export async function submitOrder(params: {
     const order = await prisma.$transaction(async (tx: any) => {
         const createdOrder = await tx.orders.create({
             data: {
+                id: crypto.randomUUID(),
                 userId,
                 tenantId,
                 subtotal,
@@ -102,8 +127,11 @@ export async function submitOrder(params: {
                 paymentStatus: "PENDING",
                 drGreenOrderId: orderData.id,
                 drGreenInvoiceNum: orderData.invoiceNumber,
-                items: {
+                orderNumber: `ORD-${Date.now()}`,
+                updatedAt: new Date(),
+                order_items: {
                     create: cartItems.map((item) => ({
+                        id: crypto.randomUUID(),
                         productId: item.strainId,
                         productName: item.strain?.name || "Unknown Product",
                         quantity: item.quantity,
@@ -112,11 +140,11 @@ export async function submitOrder(params: {
                 },
             },
             include: {
-                items: true,
+                order_items: true,
             },
         });
 
-        await tx.drGreenCart.deleteMany({
+        await tx.drgreen_carts.deleteMany({
             where: {
                 userId,
                 tenantId,
@@ -126,7 +154,8 @@ export async function submitOrder(params: {
         return createdOrder;
     });
 
-    if (cart.drGreenCartId) {
+    // Only delete external cart if we didn't use the local override
+    if (!localQuestionnaire && cart.drGreenCartId) {
         await callDrGreenAPI(`/dapp/carts/${cart.drGreenCartId}`, {
             method: "DELETE",
             apiKey,

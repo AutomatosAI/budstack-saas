@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useCart } from "../_contexts/CartContext";
+import { useCartStore } from "@/lib/cart-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,11 +10,14 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, CreditCard } from "lucide-react";
 import Link from "next/link";
 
+import { getUserShippingAddress } from "@/app/actions/get-user-shipping";
+
 export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const router = useRouter();
-  const { cart, isLoading: cartLoading } = useCart();
+  const { items, getTotalPrice } = useCartStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const [formData, setFormData] = useState({
     address1: "",
@@ -24,6 +27,31 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     postalCode: "",
     country: "",
   });
+
+  useEffect(() => {
+    setMounted(true);
+
+    // Fetch user's default shipping address
+    const fetchAddress = async () => {
+      try {
+        const address = await getUserShippingAddress();
+        if (address) {
+          setFormData({
+            address1: address.address1 || "",
+            address2: address.address2 || "",
+            city: address.city || "",
+            state: address.state || "",
+            postalCode: address.postalCode || "",
+            country: address.country || "",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch user address", err);
+      }
+    };
+
+    fetchAddress();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -64,7 +92,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     }
   };
 
-  if (cartLoading || !cart) {
+  if (!mounted) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -74,7 +102,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
     );
   }
 
-  if (cart.items.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card>
@@ -91,7 +119,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 pt-36 pb-8 max-w-4xl">
       <div className="mb-6">
         <Link href={`/store/${params.slug}/cart`}>
           <Button variant="ghost" size="sm">
@@ -211,18 +239,18 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                {cart.items.map((item) => (
+                {items.map((item) => (
                   <div
-                    key={item.strainId}
+                    key={item.productId}
                     className="flex justify-between text-sm"
                   >
                     <span className="text-gray-600">
-                      {item.strain?.name} ({item.quantity}g)
+                      {item.name} ({item.quantity} units)
                     </span>
                     <span className="font-medium">
-                      $
+                      {item.currency || '$'}
                       {(
-                        (item.strain?.retailPrice || 0) * item.quantity
+                        item.price * item.quantity
                       ).toFixed(2)}
                     </span>
                   </div>
@@ -233,16 +261,16 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium">
-                    ${cart.totalAmount?.toFixed(2)}
+                    {items[0]?.currency || '$'}{getTotalPrice().toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">$5.00</span>
+                  <span className="font-medium">{items[0]?.currency || '$'}5.00</span>
                 </div>
                 <div className="flex justify-between text-lg font-semibold pt-2 border-t">
                   <span>Total</span>
-                  <span>${((cart.totalAmount || 0) + 5).toFixed(2)}</span>
+                  <span>{items[0]?.currency || '$'}{(getTotalPrice() + 5).toFixed(2)}</span>
                 </div>
               </div>
 

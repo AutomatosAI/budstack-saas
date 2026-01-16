@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Calendar,
   Pill,
@@ -13,12 +13,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
 
 export default function DashboardPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const params = useParams();
   const slug = params?.slug as string;
+  const [kycStatus, setKycStatus] = useState<KycStatus | null>(null);
+
+  useEffect(() => {
+    checkUserKycStatus().then(setKycStatus);
+  }, []);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -55,19 +61,35 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Verification Status - Show for all new users */}
-        <div className="mb-8 flex items-start gap-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-6">
-          <AlertCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-amber-600" />
-          <div className="flex-1">
-            <h3 className="mb-2 font-semibold text-amber-900">
-              Account Verification Pending
-            </h3>
-            <p className="mb-4 text-sm text-amber-800">
-              Your consultation is being reviewed. You'll receive an email once
-              your account is verified.
-            </p>
+        {/* Dynamic Verification Status */}
+        {kycStatus?.kycVerified ? (
+          <div className="mb-8 flex items-start gap-4 rounded-2xl border border-green-200 bg-green-50/70 p-6">
+            <CheckCircle2 className="mt-0.5 h-6 w-6 flex-shrink-0 text-green-600" />
+            <div className="flex-1">
+              <h3 className="mb-2 font-semibold text-green-900">
+                Account Verified
+              </h3>
+              <p className="mb-4 text-sm text-green-800">
+                Your account is approved. You can now purchase medical cannabis products.
+              </p>
+              <Link href={`/store/${slug}/products`}>
+                <Button size="sm" className="bg-green-700 hover:bg-green-800 text-white border-0">Start Shopping</Button>
+              </Link>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="mb-8 flex items-start gap-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-6">
+            <AlertCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-amber-600" />
+            <div className="flex-1">
+              <h3 className="mb-2 font-semibold text-amber-900">
+                Account Verification Pending
+              </h3>
+              <p className="mb-4 text-sm text-amber-800">
+                {kycStatus?.status === 'API_ERROR' ? 'We are having trouble contacting the verification server, but your details are saved.' : 'Your consultation is being reviewed. You\'ll receive an email once your account is verified.'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Quick Stats */}
         <div className="mb-8 grid gap-6 md:grid-cols-4">
@@ -221,7 +243,9 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <span className="font-medium text-slate-500">Status:</span>
-                  <p className="text-slate-900">Pending Verification</p>
+                  <p className={`self-start ${kycStatus?.kycVerified ? "text-green-600 font-medium" : "text-slate-900"}`}>
+                    {kycStatus?.kycVerified ? "Verified" : "Pending Verification"}
+                  </p>
                 </div>
               </div>
             </div>

@@ -71,7 +71,9 @@ export function CartDropdown() {
                   )}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm truncate">{item.name}</h4>
-                    <p className="text-sm text-gray-600 mt-1">€{item.price.toFixed(2)}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {item.currency || '€'}{item.price.toFixed(2)}
+                    </p>
                     {(item.thcContent || item.cbdContent) && (
                       <p className="text-xs text-gray-500 mt-1">
                         {item.thcContent && `THC: ${item.thcContent}%`}
@@ -116,7 +118,7 @@ export function CartDropdown() {
             <div className="space-y-4">
               <div className="flex justify-between items-center text-lg font-bold">
                 <span>Total:</span>
-                <span>€{getTotalPrice().toFixed(2)}</span>
+                <span>{items[0]?.currency || '€'}{getTotalPrice().toFixed(2)}</span>
               </div>
 
               <Link href="/checkout" className="block">

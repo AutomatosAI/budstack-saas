@@ -10,6 +10,7 @@ export interface CartItem {
   image?: string;
   thcContent?: number;
   cbdContent?: number;
+  currency?: string;
 }
 
 interface CartStore {

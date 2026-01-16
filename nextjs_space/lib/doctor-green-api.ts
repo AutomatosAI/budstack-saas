@@ -59,6 +59,7 @@ export function getCurrencyByCountry(countryCode: string): string {
 export interface DoctorGreenConfig {
   apiKey: string;
   secretKey: string;
+  apiUrl?: string; // Optional - if not provided, falls back to env var
 }
 
 interface DoctorGreenAPIOptions {
@@ -80,6 +81,8 @@ export async function doctorGreenRequest<T>(
   // Use config (mandatory)
   const apiKey = config?.apiKey;
   const secretKey = config?.secretKey;
+  // Use apiUrl from config (database), fall back to env var only as last resort
+  const baseUrl = config?.apiUrl || API_URL;
 
   if (!apiKey || !secretKey) {
     throw new Error("MISSING_CREDENTIALS");
@@ -93,7 +96,7 @@ export async function doctorGreenRequest<T>(
     secretKey,
     body,
     headers,
-    baseUrl: API_URL,
+    baseUrl,
   });
 }
 
@@ -134,8 +137,17 @@ export interface DoctorGreenProduct {
   image_url?: string;
   images?: string[];
   category?: string;
-  manufacturer?: string;
-  certifications?: string[];
+  prices?: Array<{
+    currency: string;
+    retailPrice: number;
+    wholeSalePrice?: number;
+  }>;
+  expiryDate?: string;
+  discount?: number;
+  strainImages?: Array<{
+    strainImageUrl?: string;
+    altText?: string;
+  }>;
 }
 
 export interface DoctorGreenClient {
@@ -177,6 +189,7 @@ const COUNTRY_CODE_MAP: Record<string, string> = {
   GB: 'GBR',
   UK: 'GBR',
   ZA: 'ZAF',
+  SA: 'ZAF', // Common alias for South Africa used in this project
   TH: 'THA',
   US: 'USA',
   DE: 'DEU',
@@ -267,8 +280,17 @@ export async function fetchProducts(
     );
 
     // Verify Currency
-    const resolvedCurrency = product.currency || defaultCurrency;
-    console.log(`[DrGreen Debug] ID: ${product.id} | Raw Currency: ${product.currency} | Default: ${defaultCurrency} | Resolved: ${resolvedCurrency} | Image: ${fullImageUrl}`);
+    // Try to find price matching the local currency
+    const localCurrencyPrice = product.prices?.find(
+      (p: any) => p.currency?.toLowerCase() === defaultCurrency.toLowerCase()
+    );
+
+    const price = localCurrencyPrice?.retailPrice || product.retailPrice || 0;
+    const currency = localCurrencyPrice?.currency
+      ? localCurrencyPrice.currency.toUpperCase()
+      : (product.currency || defaultCurrency);
+
+    console.log(`[DrGreen Debug] ID: ${product.id} | Default: ${defaultCurrency} | Selected: ${currency} ${price}`);
 
     return {
       ...product,
@@ -277,8 +299,8 @@ export async function fetchProducts(
         "HYBRID",
       thc_content: product.thc || 0,
       cbd_content: product.cbd || 0,
-      price: product.retailPrice || 0,
-      currency: product.currency || defaultCurrency, // Use API currency if available, else fallback
+      price: price,
+      currency: currency, // Use API currency if available, else fallback
       in_stock: isAvailableAtAnyLocation && totalStock > 0, // Available if any location has stock
       stock_quantity: totalStock, // Sum of all location stock
       image_url: fullImageUrl,
@@ -330,7 +352,17 @@ export async function fetchProduct(
     (loc: any) => loc.isAvailable === true,
   );
 
-  // Normalize fields for backwards compatibility
+  // Verify Currency
+  // Try to find price matching the local currency
+  const localCurrencyPrice = product.prices?.find(
+    (p: any) => p.currency?.toLowerCase() === defaultCurrency.toLowerCase()
+  );
+
+  const price = localCurrencyPrice?.retailPrice || product.retailPrice || 0;
+  const currency = localCurrencyPrice?.currency
+    ? localCurrencyPrice.currency.toUpperCase()
+    : (product.currency || defaultCurrency);
+
   return {
     ...product,
     strain_type:
@@ -338,8 +370,8 @@ export async function fetchProduct(
       "HYBRID",
     thc_content: product.thc || 0,
     cbd_content: product.cbd || 0,
-    price: product.retailPrice || 0,
-    currency: product.currency || defaultCurrency,
+    price: price,
+    currency: currency,
     in_stock: isAvailableAtAnyLocation && totalStock > 0,
     stock_quantity: totalStock,
     image_url: fullImageUrl,
@@ -365,6 +397,18 @@ export async function getClientByNFT(
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenClient> {
   return doctorGreenRequest<DoctorGreenClient>(`/clients/nft/${tokenId}`, {
+    config,
+  });
+}
+
+/**
+ * Get client information by Client ID
+ */
+export async function fetchClient(
+  clientId: string,
+  config: DoctorGreenConfig,
+): Promise<DoctorGreenClient> {
+  return doctorGreenRequest<DoctorGreenClient>(`/clients/${clientId}`, {
     config,
   });
 }

@@ -81,7 +81,7 @@ export default async function OrderConfirmationPage({
   const status = getStatusMessage(order.paymentStatus);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="container mx-auto px-4 pt-36 pb-8 max-w-3xl">
       {/* Success Header */}
       <Card className="mb-6">
         <CardContent className="flex flex-col items-center text-center py-12">
@@ -127,22 +127,22 @@ export default async function OrderConfirmationPage({
             {order.order_items?.map((item: order_items) => (
               <div key={item.id} className="flex justify-between text-sm">
                 <span>{item.productName} × {item.quantity}</span>
-                <span>${(item.price * item.quantity).toFixed(2)}</span>
+                <span>ZAR {(item.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
 
             <div className="pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Subtotal</span>
-                <span>${order.subtotal.toFixed(2)}</span>
+                <span>ZAR {order.subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Shipping</span>
-                <span>${order.shippingCost.toFixed(2)}</span>
+                <span>ZAR {order.shippingCost.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t pt-2">
                 <span>Total</span>
-                <span>${order.total.toFixed(2)}</span>
+                <span>ZAR {order.total.toFixed(2)}</span>
               </div>
             </div>
           </div>

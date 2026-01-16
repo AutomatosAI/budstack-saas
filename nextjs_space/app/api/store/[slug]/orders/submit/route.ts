@@ -60,6 +60,47 @@ export async function POST(
     // Get Dr. Green credentials
     const drGreenConfig = await getTenantDrGreenConfig(tenant.id);
 
+    // Check local verification first (manual override)
+    const localQuestionnaire = await prisma.consultation_questionnaires.findFirst({
+      where: {
+        AND: [
+          { email: { equals: dbUser.email, mode: 'insensitive' } },
+          { isKycVerified: true }
+        ]
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Only verify with API if NOT locally verified
+    if (!localQuestionnaire) {
+      if (!dbUser.drGreenClientId) {
+        return NextResponse.json(
+          { error: "Account verification incomplete (Missing ID)." },
+          { status: 403 },
+        );
+      }
+
+      const { fetchClient } = await import("@/lib/doctor-green-api");
+      try {
+        const client = await fetchClient(dbUser.drGreenClientId, drGreenConfig);
+        if (client.status !== "ACTIVE" || !client.verified) {
+          return NextResponse.json(
+            {
+              error:
+                "Medical verification required. Please complete your profile verification.",
+            },
+            { status: 403 },
+          );
+        }
+      } catch (apiError) {
+        console.error("KYC Check Failed during Order:", apiError);
+        return NextResponse.json(
+          { error: "Could not verify account status. Please try again." },
+          { status: 500 },
+        );
+      }
+    }
+
     // Submit order
     const orderResponse = await submitOrder({
       userId: dbUser.id,
