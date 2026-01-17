@@ -125,8 +125,8 @@ export default async function OrderConfirmationPage({
         <CardContent>
           <div className="space-y-4">
             {order.order_items?.map((item: order_items) => {
-              // Derive currency from order or item
-              const currency = (order as any).currency || item.currency || (order.order_items?.[0] as any)?.currency || 'ZAR';
+              // Derive currency from order or item (cast to any since currency may not be in type)
+              const currency = (order as any).currency || (item as any).currency || (order.order_items?.[0] as any)?.currency || 'ZAR';
               return (
                 <div key={item.id} className="flex justify-between text-sm">
                   <span>{item.productName} × {item.quantity}</span>
