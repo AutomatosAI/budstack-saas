@@ -250,7 +250,7 @@ export default function Navigation({ businessName, logoUrl, tenant }: Navigation
                 </Link>
 
                 {/* Profile Icon / Dropdown */}
-                {status === 'authenticated' ? (
+                {isSignedIn ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className={cn(
@@ -396,7 +396,7 @@ export default function Navigation({ businessName, logoUrl, tenant }: Navigation
                   </div>
                 </Link>
 
-                {status === 'authenticated' ? (
+                {isSignedIn ? (
                   <>
                     <Link
                       href={`/store/${tenant.subdomain}/profile`}

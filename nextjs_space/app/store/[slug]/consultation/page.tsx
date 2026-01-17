@@ -1,24 +1,18 @@
 import { ConsultationForm } from "@/components/consultation/consultation-form";
 import { notFound } from "next/navigation";
+import { getTenantBySlug } from "@/lib/tenant";
 
 export default async function ConsultationPage({
   params,
 }: {
   params: { slug: string };
 }) {
-  // Validate tenant exists
-  const response = await fetch(
-    `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/tenant/${params.slug}`,
-    {
-      cache: "no-store",
-    },
-  );
+  // Validate tenant exists directly from DB helper
+  const tenant = await getTenantBySlug(params.slug);
 
-  if (!response.ok) {
+  if (!tenant) {
     notFound();
   }
-
-  const { tenant } = await response.json();
 
   return (
     <div

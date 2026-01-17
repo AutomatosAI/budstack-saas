@@ -72,7 +72,7 @@ export async function addToCart(params: {
   const clientId = await ensureClientId(userId, tenantId, apiKey, secretKey);
 
   // Get user's cart
-  let cart = await prisma.drGreenCart.findUnique({
+  let cart = await prisma.drgreen_carts.findUnique({
     where: {
       userId_tenantId: {
         userId,
@@ -118,7 +118,7 @@ export async function addToCart(params: {
 
     if (cart) {
       // Update existing cart
-      cart = await prisma.drGreenCart.update({
+      cart = await prisma.drgreen_carts.update({
         where: { id: cart.id },
         data: {
           drGreenCartId: cartData.id,
@@ -128,12 +128,14 @@ export async function addToCart(params: {
       });
     } else {
       // Create new cart
-      cart = await prisma.drGreenCart.create({
+      cart = await prisma.drgreen_carts.create({
         data: {
+          id: crypto.randomUUID(),
           userId,
           tenantId,
           drGreenCartId: cartData.id,
           items: items,
+          updatedAt: new Date(),
         },
       });
     }
@@ -188,7 +190,7 @@ export async function getCart(params: {
       }));
 
       // Update local cart
-      await prisma.drGreenCart.upsert({
+      await prisma.drgreen_carts.upsert({
         where: {
           userId_tenantId: {
             userId,
@@ -196,10 +198,12 @@ export async function getCart(params: {
           },
         },
         create: {
+          id: crypto.randomUUID(),
           userId,
           tenantId,
           drGreenCartId: cartData.id,
           items,
+          updatedAt: new Date(),
         },
         update: {
           drGreenCartId: cartData.id,
@@ -251,7 +255,7 @@ export async function removeFromCart(params: {
   const clientId = await ensureClientId(userId, tenantId, apiKey, secretKey);
 
   // Get user's cart
-  const cart = await prisma.drGreenCart.findUnique({
+  const cart = await prisma.drgreen_carts.findUnique({
     where: {
       userId_tenantId: {
         userId,
@@ -291,7 +295,7 @@ export async function clearCart(params: {
 }): Promise<void> {
   const { userId, tenantId, apiKey, secretKey } = params;
 
-  const cart = await prisma.drGreenCart.findUnique({
+  const cart = await prisma.drgreen_carts.findUnique({
     where: {
       userId_tenantId: {
         userId,
@@ -312,7 +316,7 @@ export async function clearCart(params: {
   }
 
   // Delete local cart record
-  await prisma.drGreenCart.deleteMany({
+  await prisma.drgreen_carts.deleteMany({
     where: {
       userId,
       tenantId,

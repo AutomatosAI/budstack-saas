@@ -59,27 +59,52 @@ export async function POST(req: NextRequest) {
       // We'll let it proceed and fail inside if needed, or handle it here.
     }
 
+    // Parse phone number - default to tenant's country
+    const phone = personal.phone || "";
+    let phoneCode = "+27"; // Default fallback
+    let contactNumber = phone;
+
+    if (phone) {
+      if (phone.startsWith("+")) {
+        // Extract country code (could be 2-4 digits)
+        const match = phone.match(/^\+(\d{1,4})(\d+)$/);
+        if (match) {
+          phoneCode = `+${match[1]}`;
+          contactNumber = match[2];
+        }
+      } else {
+        // No + prefix, use tenant's country code as default
+        contactNumber = phone;
+      }
+    }
+
     // Create client in Dr. Green system
     const result = await createClient(
       {
         firstName: personal.firstName,
         lastName: personal.lastName,
         email: personal.email,
-        phone: personal.phone,
-        dateOfBirth: personal.dateOfBirth,
-        address: {
-          street: address.street,
+        phoneCode: phoneCode,
+        phoneCountryCode: tenant?.countryCode || "ZA",
+        contactNumber: contactNumber,
+        shipping: {
+          address1: address.street,
           city: address.city,
+          state: address.province || address.city,
+          country: address.country, // Full name like "South Africa"
+          countryCode: tenant?.countryCode || address.countryCode || "ZA",
           postalCode: address.postalCode,
-          country: address.country,
         },
+        // Cast medicalRecord to any because the internal type is extremely strict (20+ boolean flags)
+        // and we only have partial data from the simple registration form.
+        // Spread first, then override with our explicit mappings
         medicalRecord: {
-          conditions: medicalRecord.conditions,
-          currentMedications: medicalRecord.currentMedications,
-          allergies: medicalRecord.allergies,
-          previousCannabisUse: medicalRecord.previousCannabisUse,
-          doctorApproval: medicalRecord.doctorApproval,
-        },
+          ...medicalRecord,
+          dob: personal.dateOfBirth,
+          gender: "Not Specified",
+          medicalConditions: medicalRecord.conditions || [],
+          medicinesTreatments: medicalRecord.currentMedications || [],
+        } as any,
       },
       config,
     );

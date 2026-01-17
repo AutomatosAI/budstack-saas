@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 // Import template registry
 import { TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/template-registry";
+import { CartProvider } from "./_contexts/CartContext";
 
 export default async function TenantStoreLayout({
   children,
@@ -163,18 +164,20 @@ export default async function TenantStoreLayout({
       tenantTemplate={
         activeTemplate
           ? {
-              designSystem: activeTemplate.designSystem,
-              customCss: activeTemplate.customCss,
-            }
+            designSystem: activeTemplate.designSystem,
+            customCss: activeTemplate.customCss,
+          }
           : undefined
       }
     >
-      <div className={`min-h-screen ${getTemplateClass()}`}>
-        {renderNavigation()}
-        <main>{children}</main>
-        {renderFooter()}
-        <CookieConsent tenant={tenantWithTemplate} />
-      </div>
+      <CartProvider storeSlug={params.slug}>
+        <div className={`min-h-screen ${getTemplateClass()}`}>
+          {renderNavigation()}
+          <main>{children}</main>
+          {renderFooter()}
+          <CookieConsent tenant={tenantWithTemplate} />
+        </div>
+      </CartProvider>
     </TenantThemeProvider>
   );
 }

@@ -340,7 +340,7 @@ export default function ProductsPage() {
                                 fontFamily: "var(--tenant-font-heading)",
                               }}
                             >
-                              €{product.price.toFixed(2)}
+                              {product.currency || '€'} {product.price.toFixed(2)}
                             </p>
                           )}
 
@@ -364,7 +364,7 @@ export default function ProductsPage() {
             )}
           </RestrictedRegionGate>
         </div>
-      </section>
-    </div>
+      </section >
+    </div >
   );
 }

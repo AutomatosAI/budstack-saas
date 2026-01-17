@@ -85,10 +85,10 @@ export async function callDrGreenAPI<T>(
   // Let's assume we sign if there is a payload OR if it is a query string interaction.
   // Actually, easiest is: Always add signature if we have a payload string (which includes query string now).
 
+  // For POST even with empty body, we sign empty string? 
+  // Legacy code said: `if (method !== 'GET' && payload)`. 
+  // Let's stick to signing whatever our payload target is.
   if (signaturePayload || method !== 'GET') {
-    // For POST even with empty body, we sign empty string? 
-    // Legacy code said: `if (method !== 'GET' && payload)`. 
-    // Let's stick to signing whatever our payload target is.
     requestHeaders['x-auth-signature'] = generateDrGreenSignature(signaturePayload, secretKey);
   }
 

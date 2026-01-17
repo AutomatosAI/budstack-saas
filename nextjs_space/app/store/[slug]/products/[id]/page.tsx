@@ -22,6 +22,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { toast } from "@/components/ui/sonner";
 import { useCartStore } from "@/lib/cart-store";
+import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
 
 interface Product {
   id: string;
@@ -47,6 +48,12 @@ interface Product {
   in_stock?: boolean;
   stock_quantity?: number;
   image_url?: string;
+  expiryDate?: string;
+  discount?: number;
+  strainImages?: Array<{
+    strainImageUrl?: string;
+    altText?: string;
+  }>;
 }
 
 interface ApiResponse {
@@ -67,7 +74,13 @@ export default function ProductDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+
   const addItem = useCartStore((state) => state.addItem);
+  const [kycStatus, setKycStatus] = useState<KycStatus | null>(null);
+
+  useEffect(() => {
+    checkUserKycStatus().then(setKycStatus);
+  }, []);
 
   useEffect(() => {
     if (slug && productId) {
@@ -152,6 +165,7 @@ export default function ProductDetailPage() {
         image: product.image_url || product.imageUrl,
         thcContent: product.thc_content || product.thc || 0,
         cbdContent: product.cbd_content || product.cbd || 0,
+        currency: product.currency || "EUR",
       });
 
       toast.success(`Added ${quantity} ${product.name} to cart!`);
@@ -256,23 +270,43 @@ export default function ProductDetailPage() {
           {/* Product Image Gallery */}
           <div className="space-y-4">
             <div
-              className={`rounded-2xl overflow-hidden bg-gradient-to-br ${strainColors.bg} relative`}
+              className="rounded-lg overflow-hidden bg-card relative"
               style={{
                 boxShadow:
                   "var(--tenant-shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1))",
                 paddingBottom: "100%", // Square aspect ratio
               }}
             >
-              {imageUrl ? (
-                <div className="absolute inset-0">
-                  <Image
-                    src={imageUrl}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    priority
-                  />
+              {/* Discount Badge */}
+              {product.discount && product.discount > 0 && (
+                <div
+                  className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full text-sm font-bold shadow-md"
+                  style={{
+                    backgroundColor: "var(--tenant-color-destructive, #ef4444)",
+                    color: "white"
+                  }}
+                >
+                  -{product.discount}% OFF
+                </div>
+              )}
+
+              {/* Main Image - Gallery Aware */}
+              {((product.strainImages && product.strainImages.length > 0) || imageUrl) ? (
+                <div className="absolute inset-0 p-8 flex items-center justify-center">
+                  <div className="relative w-full h-full transition-transform duration-500 hover:scale-110">
+                    <Image
+                      src={
+                        (product.strainImages && product.strainImages.length > 0)
+                          ? (product.strainImages[selectedImage]?.strainImageUrl || "")
+                          : (imageUrl || "")
+                      }
+                      alt={product.name}
+                      fill
+                      className="object-contain drop-shadow-2xl"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      priority
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -288,14 +322,15 @@ export default function ProductDetailPage() {
               )}
 
               {/* Stock Badge */}
-              {product.isAvailable && (
-                <div className="absolute top-4 right-4">
+              {/* Stock Badge - Bottom Left */}
+              {product.isAvailable ? (
+                <div className="absolute bottom-4 left-4 z-10">
                   <Badge className="bg-green-500 text-white">
                     <Check className="w-3 h-3 mr-1" />
                     In Stock
                   </Badge>
                 </div>
-              )}
+              ) : null}
 
               {!product.isAvailable && (
                 <div className="absolute top-4 right-4">
@@ -313,6 +348,38 @@ export default function ProductDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* Thumbnail Gallery (Only if multiple images) */}
+            {product.strainImages && product.strainImages.length > 1 && (
+              <div className="flex gap-4 overflow-x-auto pb-2">
+                {product.strainImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImage(idx)}
+                    className={`relative w-24 h-24 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${selectedImage === idx ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"
+                      }`}
+                    style={{
+                      borderColor: selectedImage === idx ? "var(--tenant-color-primary, #059669)" : "transparent"
+                    }}
+                  >
+                    <Image
+                      src={img.strainImageUrl || ""}
+                      alt={img.altText || `View ${idx + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Expiry Date */}
+            {product.expiryDate && (
+              <div className="flex items-center gap-2 text-sm" style={{ color: "var(--tenant-color-text-muted, #6b7280)" }}>
+                <AlertCircle className="w-4 h-4" />
+                <span>Expires: {new Date(product.expiryDate).toLocaleDateString()}</span>
+              </div>
+            )}
           </div>
 
           {/* Product Details */}
@@ -505,65 +572,95 @@ export default function ProductDetailPage() {
                 </p>
               </div>
 
-              {/* Quantity Selector */}
-              <div className="flex items-center gap-4 mb-6">
-                <p
-                  className="text-sm font-medium"
-                  style={{ color: "var(--tenant-color-text, #1f2937)" }}
-                >
-                  Quantity:
-                </p>
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    disabled={quantity <= 1}
-                  >
-                    <Minus className="w-4 h-4" />
-                  </Button>
-                  <span
-                    className="text-xl font-semibold w-12 text-center"
-                    style={{ color: "var(--tenant-color-text, #1f2937)" }}
-                  >
-                    {quantity}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setQuantity(quantity + 1)}
-                    disabled={!product.isAvailable}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
+              {/* Quantity and Cart Controls - KYC Guarded */}
+              {kycStatus === null ? (
+                <div className="w-full h-20 flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                 </div>
-              </div>
+              ) : !kycStatus.isLoggedIn ? (
+                <div className="bg-muted/30 p-6 rounded-lg text-center border border-border">
+                  <AlertCircle className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
+                  <h3 className="font-semibold mb-2">Login Required</h3>
+                  <p className="text-sm text-muted-foreground mb-4">You must be logged in to purchase products.</p>
+                  <Link href={`/store/${slug}/login`}>
+                    <Button className="w-full">Login / Register</Button>
+                  </Link>
+                </div>
+              ) : !kycStatus.kycVerified ? (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg text-center border border-yellow-200 dark:border-yellow-800">
+                  <div className="text-yellow-600 dark:text-yellow-500 font-bold mb-2 flex items-center justify-center gap-2">
+                    <AlertCircle className="w-5 h-5" /> Verification Required
+                  </div>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400 mb-4">
+                    Your account ({kycStatus.status}) needs medical verification before you can purchase cannabis products.
+                  </p>
+                  <Link href={`/store/${slug}/dashboard`}>
+                    <Button variant="outline" className="w-full border-yellow-600 text-yellow-600 hover:bg-yellow-50">Go to Dashboard</Button>
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  {/* Quantity Selector */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: "var(--tenant-color-text, #1f2937)" }}
+                    >
+                      Quantity:
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        disabled={quantity <= 1}
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                      <span
+                        className="text-xl font-semibold w-12 text-center"
+                        style={{ color: "var(--tenant-color-text, #1f2937)" }}
+                      >
+                        {quantity}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setQuantity(quantity + 1)}
+                        disabled={!product.isAvailable}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
 
-              {/* Stock Info */}
-              {product.stockQuantity > 0 && product.isAvailable && (
-                <p
-                  className="text-sm mb-4"
-                  style={{ color: "var(--tenant-color-success, #10b981)" }}
-                >
-                  ✓ {product.stockQuantity} units available
-                </p>
+                  {/* Stock Info */}
+                  {product.stockQuantity > 0 && product.isAvailable && (
+                    <p
+                      className="text-sm mb-4"
+                      style={{ color: "var(--tenant-color-success, #10b981)" }}
+                    >
+                      ✓ {product.stockQuantity} units available
+                    </p>
+                  )}
+
+                  {/* Add to Cart Button */}
+                  <Button
+                    onClick={handleAddToCart}
+                    disabled={!product.isAvailable}
+                    className="w-full text-lg py-6"
+                    style={{
+                      backgroundColor: product.isAvailable
+                        ? "var(--tenant-color-primary, #059669)"
+                        : "#9ca3af",
+                      color: "#ffffff",
+                    }}
+                  >
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    {product.isAvailable ? "Add to Cart" : "Out of Stock"}
+                  </Button>
+                </>
               )}
-
-              {/* Add to Cart Button */}
-              <Button
-                onClick={handleAddToCart}
-                disabled={!product.isAvailable}
-                className="w-full text-lg py-6"
-                style={{
-                  backgroundColor: product.isAvailable
-                    ? "var(--tenant-color-primary, #059669)"
-                    : "#9ca3af",
-                  color: "#ffffff",
-                }}
-              >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                {product.isAvailable ? "Add to Cart" : "Out of Stock"}
-              </Button>
             </div>
           </div>
         </div>
@@ -666,7 +763,7 @@ export default function ProductDetailPage() {
                             color: "var(--tenant-color-heading, #111827)",
                           }}
                         >
-                          {displayCurrency}{" "}
+                          {similarProduct.currency || displayCurrency}{" "}
                           {(
                             similarProduct.price ||
                             similarProduct.retailPrice ||

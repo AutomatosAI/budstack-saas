@@ -13,7 +13,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/auth(.*)", // Legacy NextAuth routes
   "/api/store(.*)", // Storefront APIs
   "/onboarding", // Customer onboarding wizard
-  "/api/onboarding" // Public onboarding validation/submission
+  "/api/onboarding", // Public onboarding validation/submission
+  "/api/consultation(.*)" // Public consultation submission
 ]);
 
 // Define routes that require Tenant Context but might be public (like Storefront)
