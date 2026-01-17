@@ -14,8 +14,13 @@ async function main() {
     });
 
     if (!user || !user.tenantId) {
-        console.log("User or tenant not found");
-        return;
+        console.error("ERROR: User or tenant not found for email:", email);
+        if (!user) {
+            console.error("  - User does not exist in database");
+        } else if (!user.tenantId) {
+            console.error("  - User exists but has no tenantId");
+        }
+        process.exit(1);
     }
 
     console.log(`Populating cart with user's requested items...`);

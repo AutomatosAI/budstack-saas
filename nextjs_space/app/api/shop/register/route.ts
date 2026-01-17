@@ -59,11 +59,24 @@ export async function POST(req: NextRequest) {
       // We'll let it proceed and fail inside if needed, or handle it here.
     }
 
-    // Parse phone number
+    // Parse phone number - default to tenant's country
     const phone = personal.phone || "";
-    // Simple parsing assumption: +27... or 0...
-    const phoneCode = phone.startsWith("+") ? phone.slice(0, 3) : "+27"; // Default to ZA
-    const contactNumber = phone.startsWith("+") ? phone.slice(3) : phone;
+    let phoneCode = "+27"; // Default fallback
+    let contactNumber = phone;
+
+    if (phone) {
+      if (phone.startsWith("+")) {
+        // Extract country code (could be 2-4 digits)
+        const match = phone.match(/^\+(\d{1,4})(\d+)$/);
+        if (match) {
+          phoneCode = `+${match[1]}`;
+          contactNumber = match[2];
+        }
+      } else {
+        // No + prefix, use tenant's country code as default
+        contactNumber = phone;
+      }
+    }
 
     // Create client in Dr. Green system
     const result = await createClient(
@@ -72,26 +85,25 @@ export async function POST(req: NextRequest) {
         lastName: personal.lastName,
         email: personal.email,
         phoneCode: phoneCode,
-        phoneCountryCode: "ZA", // Defaulting to ZA
+        phoneCountryCode: tenant?.countryCode || "ZA",
         contactNumber: contactNumber,
         shipping: {
           address1: address.street,
           city: address.city,
           state: address.province || address.city,
           country: address.country, // Full name like "South Africa"
-          countryCode: "ZA", // Provide code
+          countryCode: tenant?.countryCode || address.countryCode || "ZA",
           postalCode: address.postalCode,
         },
         // Cast medicalRecord to any because the internal type is extremely strict (20+ boolean flags)
-        // and we only have partial date from the simple registration form.
-        // We map what we can.
+        // and we only have partial data from the simple registration form.
+        // Spread first, then override with our explicit mappings
         medicalRecord: {
+          ...medicalRecord,
           dob: personal.dateOfBirth,
           gender: "Not Specified",
           medicalConditions: medicalRecord.conditions || [],
           medicinesTreatments: medicalRecord.currentMedications || [],
-          // Pass the rest as-is in case the API is more lenient than the TS type
-          ...medicalRecord
         } as any,
       },
       config,

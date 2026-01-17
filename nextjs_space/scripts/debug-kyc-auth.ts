@@ -52,19 +52,27 @@ function generateSignature(payload: string, secretKey: string): string {
 
 async function main() {
     try {
-        // 1. Get Tenant Keys (healingbuds)
+        // Get tenant and user from environment variables
+        const tenantSubdomain = process.env.TENANT_SUBDOMAIN;
+        const userEmail = process.env.KYC_USER_EMAIL;
+
+        if (!tenantSubdomain || !userEmail) {
+            throw new Error("Required environment variables missing: TENANT_SUBDOMAIN, KYC_USER_EMAIL");
+        }
+
+        // 1. Get Tenant Keys
         const tenant = await prisma.tenants.findUnique({
-            where: { subdomain: 'healingbuds' }
+            where: { subdomain: tenantSubdomain }
         });
 
-        if (!tenant) throw new Error("Tenant not found");
+        if (!tenant) throw new Error(`Tenant not found: ${tenantSubdomain}`);
 
         const apiKey = decryptText(tenant.drGreenApiKey);
         const secretKey = decryptText(tenant.drGreenSecretKey);
 
-        // 2. Get User ID (gerard161+buds@gmail.com)
+        // 2. Get User ID
         const user = await prisma.users.findFirst({
-            where: { email: 'gerard161+buds@gmail.com' }
+            where: { email: userEmail }
         });
 
         if (!user || !user.drGreenClientId) {
