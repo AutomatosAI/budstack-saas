@@ -12,6 +12,9 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono' });
 
+// Force dynamic rendering to avoid Clerk key requirement during build
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'BudStack - Medical Cannabis SaaS Platform',
   description: 'Multi-tenant SaaS platform for medical cannabis dispensaries. Launch and manage your dispensary with ease.',
