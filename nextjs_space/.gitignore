@@ -1,0 +1,8 @@
+# Debug Files
+debug*.txt
+debug-*.txt
+**/debug-output.txt
+**/debug-deep-output.txt
+
+# Redacted debug sample (non-sensitive structure only)
+# This file shows the structure without PII/PHI
