@@ -6,6 +6,15 @@ import { CheckCircle, Clock, Package, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
+// Extended types for orders with currency field (not in Prisma schema)
+interface OrderWithCurrency {
+  currency?: string;
+}
+
+interface OrderItemWithCurrency extends order_items {
+  currency?: string;
+}
+
 async function getOrder(orderId: string, slug: string) {
   const tenant = await prisma.tenants.findUnique({
     where: { subdomain: slug },
@@ -125,8 +134,10 @@ export default async function OrderConfirmationPage({
         <CardContent>
           <div className="space-y-4">
             {order.order_items?.map((item: order_items) => {
-              // Derive currency from order or item (cast to any since currency may not be in type)
-              const currency = (order as any).currency || (item as any).currency || (order.order_items?.[0] as any)?.currency || 'ZAR';
+              // Type-safe currency preference: item > order > default
+              const itemWithCurrency = item as OrderItemWithCurrency;
+              const orderWithCurrency = order as unknown as OrderWithCurrency;
+              const currency = itemWithCurrency.currency || orderWithCurrency.currency || 'ZAR';
               return (
                 <div key={item.id} className="flex justify-between text-sm">
                   <span>{item.productName} × {item.quantity}</span>
@@ -137,7 +148,9 @@ export default async function OrderConfirmationPage({
 
             <div className="pt-4 space-y-2">
               {(() => {
-                const currency = (order as any).currency || (order.order_items?.[0] as any)?.currency || 'ZAR';
+                // Type-safe currency from order with fallback
+                const orderWithCurrency = order as unknown as OrderWithCurrency;
+                const currency = orderWithCurrency.currency || 'ZAR';
                 return (
                   <>
                     <div className="flex justify-between text-sm">
