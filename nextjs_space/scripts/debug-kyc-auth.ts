@@ -77,7 +77,7 @@ async function main() {
 
         if (!user || !user.drGreenClientId) {
             console.error("User or DrGreenClientId not found:", user);
-            return;
+            process.exit(1);
         }
 
         const clientId = user.drGreenClientId;

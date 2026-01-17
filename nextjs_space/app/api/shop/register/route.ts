@@ -59,22 +59,59 @@ export async function POST(req: NextRequest) {
       // We'll let it proceed and fail inside if needed, or handle it here.
     }
 
-    // Parse phone number - default to tenant's country
-    const phone = personal.phone || "";
-    let phoneCode = "+27"; // Default fallback
-    let contactNumber = phone;
+    // Robust phone number parsing and validation
+    const rawPhone = personal.phone || "";
 
-    if (phone) {
-      if (phone.startsWith("+")) {
-        // Extract country code (could be 2-4 digits)
-        const match = phone.match(/^\+(\d{1,4})(\d+)$/);
-        if (match) {
-          phoneCode = `+${match[1]}`;
-          contactNumber = match[2];
-        }
-      } else {
-        // No + prefix, use tenant's country code as default
-        contactNumber = phone;
+    // Country code to dial code mapping
+    const countryToDialCode: Record<string, string> = {
+      'ZA': '+27', 'US': '+1', 'GB': '+44', 'NG': '+234', 'KE': '+254',
+      'GH': '+233', 'UG': '+256', 'TZ': '+255', 'ZW': '+263', 'BW': '+267',
+      'MW': '+265', 'ZM': '+260', 'MZ': '+258', 'NA': '+264', 'AO': '+244',
+      'CA': '+1', 'AU': '+61', 'NZ': '+64', 'IN': '+91', 'PK': '+92'
+    };
+
+    let phoneCode = "";
+    let contactNumber = "";
+
+    if (!rawPhone.trim()) {
+      return NextResponse.json(
+        { error: "Phone number is required" },
+        { status: 400 }
+      );
+    }
+
+    // Strip all non-digit characters except leading +
+    const cleanPhone = rawPhone.replace(/[^\d+]/g, '');
+
+    if (cleanPhone.startsWith('+')) {
+      // E.164 format validation and parsing
+      const e164Match = cleanPhone.match(/^\+(\d{1,4})(\d{4,})$/);
+      if (!e164Match) {
+        return NextResponse.json(
+          { error: "Invalid international phone number format. Expected format: +[country code][number]" },
+          { status: 400 }
+        );
+      }
+      phoneCode = `+${e164Match[1]}`;
+      contactNumber = e164Match[2];
+    } else {
+      // No + prefix - use tenant's country code
+      const tenantDialCode = countryToDialCode[tenant?.countryCode || ''];
+      if (!tenantDialCode) {
+        return NextResponse.json(
+          { error: `Cannot determine dial code for tenant country: ${tenant?.countryCode}. Please provide phone number with country code (e.g., +27...)` },
+          { status: 400 }
+        );
+      }
+      phoneCode = tenantDialCode;
+      // Remove leading zeros from national number
+      contactNumber = cleanPhone.replace(/^0+/, '');
+
+      if (contactNumber.length < 4) {
+        return NextResponse.json(
+          { error: "Phone number is too short" },
+          { status: 400 }
+        );
       }
     }
 
