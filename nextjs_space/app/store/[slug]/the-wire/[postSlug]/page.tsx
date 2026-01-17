@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, User } from "lucide-react";
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtml from "sanitize-html";
 
 interface ArticlePageProps {
   params: {
@@ -49,9 +49,35 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   if (!post || !post.published) notFound();
 
-  // Content is admin-created but we sanitize it to prevent XSS as per security audit
-  const cleanContent = DOMPurify.sanitize(post.content || "", {
-    SAFE_FOR_TEMPLATES: true,
+  // Server-side HTML sanitization for XSS protection
+  // Using sanitize-html (Node.js compatible) instead of isomorphic-dompurify (ESM issues)
+  const cleanContent = sanitizeHtml(post.content || "", {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'iframe', 'video']),
+    allowedAttributes: {
+      ...sanitizeHtml.defaults.allowedAttributes,
+      '*': ['class', 'id'], // Removed 'style' from global allowlist
+      img: ['src', 'alt', 'title', 'width', 'height'],
+      iframe: ['src', 'width', 'height', 'frameborder', 'allowfullscreen'],
+      video: ['src', 'width', 'height', 'controls', 'autoplay', 'loop', 'muted'],
+    },
+    allowedIframeHostnames: ['www.youtube.com', 'player.vimeo.com'],
+    // Controlled whitelist of safe CSS properties
+    allowedStyles: {
+      '*': {
+        // Typography
+        'color': [/^#[0-9a-fA-F]{3,6}$/, /^rgb\(/, /^rgba\(/],
+        'text-align': [/^left$/, /^right$/, /^center$/, /^justify$/],
+        'font-size': [/^\d+(?:px|em|rem|%)$/],
+        'font-weight': [/^(?:normal|bold|[1-9]00)$/],
+        // Layout
+        'width': [/^\d+(?:px|em|rem|%)$/],
+        'height': [/^\d+(?:px|em|rem|%)$/],
+        'margin': [/^\d+(?:px|em|rem|%)(?: \d+(?:px|em|rem|%))*$/],
+        'padding': [/^\d+(?:px|em|rem|%)(?: \d+(?:px|em|rem|%))*$/],
+        // Background
+        'background-color': [/^#[0-9a-fA-F]{3,6}$/, /^rgb\(/, /^rgba\(/],
+      }
+    }
   });
 
   return (
