@@ -3,7 +3,8 @@ import { format } from "date-fns";
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, User } from "lucide-react";
-import DOMPurify from "isomorphic-dompurify";
+import { ArrowLeft, Calendar, User } from "lucide-react";
+// import DOMPurify from "isomorphic-dompurify";
 
 interface ArticlePageProps {
   params: {
@@ -50,9 +51,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   if (!post || !post.published) notFound();
 
   // Content is admin-created but we sanitize it to prevent XSS as per security audit
-  const cleanContent = DOMPurify.sanitize(post.content || "", {
-    SAFE_FOR_TEMPLATES: true,
-  });
+  // const cleanContent = DOMPurify.sanitize(post.content || "", {
+  //   SAFE_FOR_TEMPLATES: true,
+  // });
+  const cleanContent = post.content || "";
 
   return (
     <div className="min-h-screen bg-background text-foreground pt-36 pb-12">

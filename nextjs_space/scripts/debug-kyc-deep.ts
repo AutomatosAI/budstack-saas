@@ -2,11 +2,19 @@
 import { prisma } from "../lib/db";
 
 async function main() {
-    const email = "gerard161+buds@gmail.com";
-    // Clerk ID found in previous run
-    const clerkId = "user_38LZAya9dQyyb1qL0GFGzZIEufp";
+    const email = process.env.DEBUG_KYC_EMAIL;
+    const clerkId = process.env.DEBUG_KYC_CLERK_ID;
 
-    console.log(`Checking user: ${email} / ${clerkId}`);
+    if (!email || !clerkId) {
+        console.error("ERROR: Missing required environment variables:");
+        console.error("  - DEBUG_KYC_EMAIL");
+        console.error("  - DEBUG_KYC_CLERK_ID");
+        process.exitCode = 1;
+        return;
+    }
+
+    // Log redacted values for security
+    console.log(`Checking user: ${email.substring(0, 3)}***${email.substring(email.lastIndexOf('@'))}`);
 
     // 1. Check User
     const user = await prisma.users.findUnique({
@@ -14,7 +22,7 @@ async function main() {
     });
     console.log("User found by ID:", user ? "YES" : "NO");
     if (user) {
-        console.log(`User stored email: ${user.email}`);
+        console.log(`User stored email: ${user.email.substring(0, 3)}***`);
     }
 
     // 2. Check Questionnaires by Email
@@ -22,11 +30,6 @@ async function main() {
         where: { email: email }
     });
     console.log(`Found ${byEmail.length} questionnaires by EMAIL.`);
-
-    // 3. Check Questionnaires by UserID
-    /* Note: schema might use 'userId' or relationship. Let's inspect fields */
-    // Looking at previous output, there isn't a userId column explicitly listed in the SELECT query?
-    // Wait, let's look at schema first. I'll just try to find all and print a few to see structure.
 
     const all = await prisma.consultation_questionnaires.findMany({
         take: 5,
@@ -36,20 +39,16 @@ async function main() {
     console.log(`Found ${all.length} total questionnaires in DB.`);
 
     all.forEach((q: any) => {
-        console.log(`--- Q ID: ${q.id} ---`);
-        console.log(`  Email: ${q.email}`);
-        console.log(`  TenantId: ${q.tenantId}`);
-        // Check if there is a userId field or relationship
-        console.log(`  User Link: ${JSON.stringify(q)}`);
+        console.log(`--- Q ID: ${q.id.substring(0, 8)}*** ---`);
+        console.log(`  Email: [REDACTED]`);
+        console.log(`  TenantId: ${q.tenantId?.substring(0, 8)}***`);
     });
-
-    // If we find one that looks like it belongs to Gerard, we can fix it.
 }
 
 main()
     .catch((e) => {
         console.error(e);
-        process.exit(1);
+        process.exitCode = 1;
     })
     .finally(async () => {
         await prisma.$disconnect();

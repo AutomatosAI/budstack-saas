@@ -2,7 +2,13 @@
 import { prisma } from "../lib/db";
 
 async function main() {
-    const email = "gerard161+buds@gmail.com";
+    const email = process.env.POPULATE_CART_EMAIL;
+
+    if (!email) {
+        console.error("ERROR: POPULATE_CART_EMAIL environment variable is required");
+        process.exit(1);
+    }
+
     const user = await prisma.users.findUnique({
         where: { email }
     });

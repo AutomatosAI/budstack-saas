@@ -64,9 +64,11 @@ export async function submitOrder(params: {
     }
 
     // Check if user is locally verified (manual override)
+    // Filter by tenantId to prevent cross-tenant leaks
     const localQuestionnaire = await prisma.consultation_questionnaires.findFirst({
         where: {
             AND: [
+                { tenantId: tenantId },
                 { email: { equals: user.email, mode: 'insensitive' } },
                 { isKycVerified: true }
             ]
@@ -74,7 +76,8 @@ export async function submitOrder(params: {
         orderBy: { createdAt: 'desc' }
     });
 
-    let orderData = null;
+    // Initialize orderData
+    let orderData: any = null;
 
     // If locally verified (and possibly using a fake ID), bypass API
     // We assume if local verification exists, we trust it over the API error risk for now
@@ -87,6 +90,11 @@ export async function submitOrder(params: {
             total: 0 // Will be recalculated locally anyway
         };
     } else {
+        // Only require drGreenClientId if we're calling the API
+        if (!user.drGreenClientId) {
+            throw new Error("User must complete consultation before placing orders");
+        }
+
         // Submit order to Dr. Green API
         const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
             method: "POST",

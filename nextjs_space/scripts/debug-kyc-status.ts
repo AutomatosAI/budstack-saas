@@ -2,7 +2,12 @@
 import { prisma } from "../lib/db";
 
 async function main() {
-    const email = "gerard161+buds@gmail.com";
+    const email = process.env.DEBUG_EMAIL;
+
+    if (!email) {
+        console.error("ERROR: DEBUG_EMAIL environment variable is required");
+        process.exit(1);
+    }
 
     console.log(`Checking user: ${email}`);
 

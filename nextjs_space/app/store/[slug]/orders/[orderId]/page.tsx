@@ -124,26 +124,37 @@ export default async function OrderConfirmationPage({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {order.order_items?.map((item: order_items) => (
-              <div key={item.id} className="flex justify-between text-sm">
-                <span>{item.productName} × {item.quantity}</span>
-                <span>ZAR {(item.price * item.quantity).toFixed(2)}</span>
-              </div>
-            ))}
+            {order.order_items?.map((item: order_items) => {
+              // Derive currency from order or item
+              const currency = (order as any).currency || item.currency || (order.order_items?.[0] as any)?.currency || 'ZAR';
+              return (
+                <div key={item.id} className="flex justify-between text-sm">
+                  <span>{item.productName} × {item.quantity}</span>
+                  <span>{currency} {(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+              );
+            })}
 
             <div className="pt-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal</span>
-                <span>ZAR {order.subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Shipping</span>
-                <span>ZAR {order.shippingCost.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total</span>
-                <span>ZAR {order.total.toFixed(2)}</span>
-              </div>
+              {(() => {
+                const currency = (order as any).currency || (order.order_items?.[0] as any)?.currency || 'ZAR';
+                return (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Subtotal</span>
+                      <span>{currency} {order.subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Shipping</span>
+                      <span>{currency} {order.shippingCost.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-lg font-bold border-t pt-2">
+                      <span>Total</span>
+                      <span>{currency} {order.total.toFixed(2)}</span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </CardContent>

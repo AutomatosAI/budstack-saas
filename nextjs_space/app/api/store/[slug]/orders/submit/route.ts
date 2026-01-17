@@ -64,6 +64,7 @@ export async function POST(
     const localQuestionnaire = await prisma.consultation_questionnaires.findFirst({
       where: {
         AND: [
+          { tenantId: tenant.id },
           { email: { equals: dbUser.email, mode: 'insensitive' } },
           { isKycVerified: true }
         ]

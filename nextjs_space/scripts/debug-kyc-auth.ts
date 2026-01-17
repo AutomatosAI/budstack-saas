@@ -6,7 +6,12 @@ const https = require("https"); // or fetch if node 18+
 const prisma = new PrismaClient();
 
 const ALGORITHM = "aes-256-gcm";
-const KEY = '90ee117817fbf467d2c1aaf636ea3a1757ba1cb67d432290a3ba2f6847c218cd';
+const KEY = process.env.KYC_ENCRYPTION_KEY;
+
+if (!KEY) {
+    throw new Error("KYC_ENCRYPTION_KEY environment variable is required");
+}
+
 const URL_BASE = 'https://budstack-backend-main-development.up.railway.app/api/v1';
 
 function getKeyId() {

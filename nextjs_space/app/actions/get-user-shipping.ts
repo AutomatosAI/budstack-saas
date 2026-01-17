@@ -36,15 +36,16 @@ export async function getUserShippingAddress(): Promise<ShippingAddress | null> 
         return null;
     }
 
-    // 2. Try to find the latest consultation questionnaire for this user
-    // This usually contains the most verified address
-    // We need to match by email since questionnaires might not always have the linked user ID or might be linked differently
-    // But ideally we check by User relation if we had it, but schema says 'tenantId' and fields. 
-    // Wait, schema for `consultation_questionnaires` does NOT have a relation to `users`? 
-    // It has `email`. Let's use email.
+    // Guard: Ensure tenantId and email exist before querying
+    if (!dbUser.tenantId || !dbUser.email) {
+        return null;
+    }
 
+    // 2. Try to find the latest consultation questionnaire for this user
+    // Filter by BOTH email AND tenantId to prevent cross-tenant data leaks
     const questionnaire = await prisma.consultation_questionnaires.findFirst({
         where: {
+            tenantId: dbUser.tenantId,
             email: dbUser.email,
         },
         orderBy: {

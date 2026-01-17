@@ -59,27 +59,40 @@ export async function POST(req: NextRequest) {
       // We'll let it proceed and fail inside if needed, or handle it here.
     }
 
+    // Parse phone number
+    const phone = personal.phone || "";
+    // Simple parsing assumption: +27... or 0...
+    const phoneCode = phone.startsWith("+") ? phone.slice(0, 3) : "+27"; // Default to ZA
+    const contactNumber = phone.startsWith("+") ? phone.slice(3) : phone;
+
     // Create client in Dr. Green system
     const result = await createClient(
       {
         firstName: personal.firstName,
         lastName: personal.lastName,
         email: personal.email,
-        phone: personal.phone,
-        dateOfBirth: personal.dateOfBirth,
-        address: {
-          street: address.street,
+        phoneCode: phoneCode,
+        phoneCountryCode: "ZA", // Defaulting to ZA
+        contactNumber: contactNumber,
+        shipping: {
+          address1: address.street,
           city: address.city,
+          state: address.province || address.city,
+          country: address.country, // Full name like "South Africa"
+          countryCode: "ZA", // Provide code
           postalCode: address.postalCode,
-          country: address.country,
         },
+        // Cast medicalRecord to any because the internal type is extremely strict (20+ boolean flags)
+        // and we only have partial date from the simple registration form.
+        // We map what we can.
         medicalRecord: {
-          conditions: medicalRecord.conditions,
-          currentMedications: medicalRecord.currentMedications,
-          allergies: medicalRecord.allergies,
-          previousCannabisUse: medicalRecord.previousCannabisUse,
-          doctorApproval: medicalRecord.doctorApproval,
-        },
+          dob: personal.dateOfBirth,
+          gender: "Not Specified",
+          medicalConditions: medicalRecord.conditions || [],
+          medicinesTreatments: medicalRecord.currentMedications || [],
+          // Pass the rest as-is in case the API is more lenient than the TS type
+          ...medicalRecord
+        } as any,
       },
       config,
     );

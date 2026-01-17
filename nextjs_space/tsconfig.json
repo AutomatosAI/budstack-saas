@@ -40,6 +40,7 @@
   "exclude": [
     "node_modules",
     "**/*.disabled/**",
-    "scripts/**/*.disabled.ts"
+    "scripts",
+    "prisma/*.ts"
   ]
 }

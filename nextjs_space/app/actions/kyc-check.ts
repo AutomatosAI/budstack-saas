@@ -34,11 +34,17 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
         }
 
         if (!dbUser || !dbUser.drGreenClientId) {
+            // Guard: Ensure we have both tenantId and email before querying
+            const tenantId = dbUser?.tenantId;
+            if (!tenantId || !clerkUser.email) {
+                return { isLoggedIn: true, kycVerified: false, status: "NO_ID" };
+            }
+
             // If no Client ID, check if they at least have a pending questionnaire
             // This avoids the confusing "NO_ID" error for users awaiting verification
             const questionnaire = await prisma.consultation_questionnaires.findFirst({
                 where: {
-                    tenantId: dbUser?.tenantId,
+                    tenantId: tenantId,
                     email: { equals: clerkUser.email, mode: 'insensitive' }
                 },
                 select: { id: true }
