@@ -19,36 +19,30 @@ export function SessionExpirationChecker() {
   useEffect(() => {
     if (!session) return;
 
-    const checkExpiration = () => {
-      const expireAt = session.expireAt;
-      if (!expireAt) return;
+    const expireAt = session.expireAt;
+    if (!expireAt) return;
 
-      const now = new Date();
-      const expirationTime = new Date(expireAt);
-      const timeUntilExpiration = expirationTime.getTime() - now.getTime();
+    const now = new Date();
+    const expirationTime = new Date(expireAt);
+    const timeUntilExpiration = expirationTime.getTime() - now.getTime();
 
-      // If session has already expired, sign out immediately
-      if (timeUntilExpiration <= 0) {
-        console.log("Session expired, signing out...");
-        signOut({ redirectUrl: "/auth/login" });
-        return;
-      }
+    // If session has already expired, sign out immediately
+    if (timeUntilExpiration <= 0) {
+      console.log("Session expired, signing out...");
+      signOut({ redirectUrl: "/auth/login" });
+      return;
+    }
 
-      // Set a timeout to sign out when the session expires
-      // Add a small buffer (5 seconds) to ensure we catch the expiration
-      const timeoutId = setTimeout(() => {
-        console.log("Session expired, signing out...");
-        signOut({ redirectUrl: "/auth/login" });
-      }, timeUntilExpiration + 5000);
+    // Set a timeout to sign out when the session expires
+    // Add a small buffer (5 seconds) to ensure we catch the expiration
+    const timeoutId: NodeJS.Timeout = setTimeout(() => {
+      console.log("Session expired, signing out...");
+      signOut({ redirectUrl: "/auth/login" });
+    }, timeUntilExpiration + 5000);
 
-      return () => clearTimeout(timeoutId);
-    };
-
-    const timeoutId = checkExpiration();
-
-    // Re-check when session changes
+    // Cleanup function
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
     };
   }, [session, signOut]);
 
