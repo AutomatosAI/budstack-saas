@@ -26,11 +26,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Verify Tenant
+    // 2. Get Tenant ID
+    // getCurrentUser() now automatically resolves Clerk Org ID to database tenant UUID
     const tenantId = user.tenantId;
 
     if (!tenantId) {
-      return NextResponse.json({ error: "No tenant found" }, { status: 400 });
+      return NextResponse.json(
+        { 
+          error: "No tenant found. Please ensure you are associated with a tenant.",
+          details: "The Clerk organization ID could not be matched to a database tenant."
+        },
+        { status: 400 }
+      );
     }
 
     // 3. Fetch Base Template

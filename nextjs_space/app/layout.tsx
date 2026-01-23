@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { ClerkProvider } from '@clerk/nextjs';
 import { LanguageProvider } from '@/lib/i18n';
 import { QueryProvider } from '@/components/query-provider';
+import { SessionExpirationChecker } from '@/components/session-expiration-checker';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
@@ -56,7 +57,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
-        <ClerkProvider>
+        <ClerkProvider
+          appearance={{
+            elements: {
+              // Ensure consistent styling
+            },
+          }}
+        >
           <QueryProvider>
             <LanguageProvider>
               <ThemeProvider
@@ -65,6 +72,7 @@ export default function RootLayout({
                 enableSystem
                 disableTransitionOnChange
               >
+                <SessionExpirationChecker />
                 {children}
                 <Toaster />
               </ThemeProvider>
