@@ -23,7 +23,7 @@ export default function Navbar() {
                             <Popcorn className="h-5 w-5 text-accent-foreground" />
                         </div>
                         <span className="font-sans-heading text-lg font-bold text-foreground">
-                            Popcorn Media
+                            BudStack
                         </span>
                     </Link>
 

@@ -61,7 +61,7 @@ export default function Footer() {
                                     <Popcorn className="h-5 w-5 text-accent-foreground" />
                                 </div>
                                 <span className="font-sans-heading text-lg font-bold text-foreground">
-                                    Popcorn Media
+                                    BudStack
                                 </span>
                             </Link>
                             <p className="mt-4 max-w-xs text-sm text-muted-foreground">
@@ -107,7 +107,7 @@ export default function Footer() {
                     {/* Bottom row */}
                     <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 sm:flex-row">
                         <p className="text-sm text-muted-foreground">
-                            © 2026 Popcorn Media. All rights reserved.
+                            © 2026 BudStack. All rights reserved.
                         </p>
                         <button
                             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}

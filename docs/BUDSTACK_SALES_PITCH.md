@@ -162,7 +162,7 @@ Sell in Europe and beyond:
 *Passive income model — we run everything*
 
 - ✅ Complete operational management
-- ✅ Popcorn Media handles all decisions
+- ✅ BudStack handles all decisions
 - ✅ Full compliance oversight
 - ✅ You collect revenue, we do the work
 
@@ -174,7 +174,7 @@ Sell in Europe and beyond:
 *Balanced approach — you're involved, but supported*
 
 - ✅ You manage daily operations
-- ✅ Popcorn Media provides technical support
+- ✅ BudStack provides technical support
 - ✅ Shared decision-making
 - ✅ Full infrastructure access
 
