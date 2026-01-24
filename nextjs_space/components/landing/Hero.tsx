@@ -52,7 +52,7 @@ export default function Hero() {
 
                 {/* Subtitle */}
                 <p className="mx-auto mt-8 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-                    Popcorn Media provides{" "}
+                    BudStack provides{" "}
                     <strong className="font-semibold text-foreground">
                         proprietary infrastructure exclusively for franchisees
                     </strong>{" "}
