@@ -82,6 +82,9 @@ COPY --from=builder /app/node_modules ./node_modules
 # Also copy to the standalone app folder for correctly resolving dependencies in maintenance tasks
 COPY --from=builder /app/node_modules ./app/node_modules
 
+# Create templates directory for S3 sync with correct permissions
+RUN mkdir -p /app/templates && chown nextjs:nodejs /app/templates
+
 USER nextjs
 
 # Copy and set up entrypoint script
