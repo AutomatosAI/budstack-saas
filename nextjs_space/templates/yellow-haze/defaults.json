@@ -1,0 +1,200 @@
+{
+  "template": "yellow-haze",
+  "slug": "yellow-haze",
+  "logoPath": null,
+  "heroImagePath": "/templates/yellow-haze/hero.jpg",
+  "heroVideoPath": null,
+  "primaryColor": "45 100% 50%",
+  "fontFamily": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  "designSystem": {
+    "colors": {
+      "primary-scale": {
+        "50": "45 100% 97%",
+        "100": "45 100% 92%",
+        "200": "45 100% 82%",
+        "300": "45 100% 72%",
+        "400": "45 100% 62%",
+        "500": "45 100% 50%",
+        "600": "40 100% 45%",
+        "700": "35 100% 38%",
+        "800": "30 100% 28%",
+        "900": "25 100% 18%"
+      },
+      "primary": "45 100% 50%",
+      "secondary": "35 100% 38%",
+      "accent": "38 100% 60%",
+      "background": "40 20% 98%",
+      "surface": "40 30% 99%",
+      "text": "30 20% 12%",
+      "heading": "30 20% 12%",
+      "border": "40 20% 88%",
+      "success": "142 76% 36%",
+      "warning": "38 92% 50%",
+      "error": "0 72% 51%",
+      "info": "199 89% 48%"
+    },
+    "typography": {
+      "fontFamily": {
+        "base": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        "heading": "'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        "decorative": "'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        "mono": "'Courier New', 'Courier', monospace"
+      },
+      "fontSize": {
+        "xs": "0.75rem",
+        "sm": "0.875rem",
+        "base": "1rem",
+        "lg": "1.125rem",
+        "xl": "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.875rem",
+        "4xl": "2.25rem",
+        "5xl": "3rem",
+        "6xl": "3.75rem",
+        "7xl": "4.5rem",
+        "8xl": "6rem"
+      },
+      "lineHeight": {
+        "tight": "1.25",
+        "snug": "1.375",
+        "normal": "1.5",
+        "relaxed": "1.625",
+        "loose": "2"
+      },
+      "letterSpacing": {
+        "tighter": "-0.05em",
+        "tight": "-0.025em",
+        "normal": "0",
+        "wide": "0.025em",
+        "wider": "0.05em",
+        "widest": "0.1em"
+      },
+      "fontWeight": {
+        "normal": "400",
+        "medium": "500",
+        "semibold": "600",
+        "bold": "700",
+        "extrabold": "800"
+      }
+    },
+    "shadows": {
+      "theme-sm": "0 2px 8px rgba(255, 193, 7, 0.10)",
+      "theme-md": "0 4px 16px rgba(255, 193, 7, 0.14)",
+      "theme-lg": "0 8px 32px rgba(255, 193, 7, 0.18)",
+      "theme-xl": "0 12px 48px rgba(255, 193, 7, 0.22)",
+      "theme-2xl": "0 20px 64px rgba(255, 193, 7, 0.26)"
+    },
+    "gradients": {
+      "primary": "linear-gradient(135deg, hsl(45 100% 50%) 0%, hsl(35 100% 38%) 100%)",
+      "secondary": "linear-gradient(135deg, hsl(35 100% 38%) 0%, hsl(25 100% 18%) 100%)",
+      "hero-overlay": "linear-gradient(180deg, rgba(255, 193, 7, 0.5) 0%, rgba(245, 158, 11, 0.7) 100%)",
+      "card-hover": "linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0.05) 100%)"
+    },
+    "spacing": {
+      "section": "5rem",
+      "container": "1.5rem",
+      "card": "2rem"
+    },
+    "borderRadius": {
+      "none": "0",
+      "sm": "0.375rem",
+      "md": "0.75rem",
+      "lg": "1rem",
+      "xl": "1.5rem",
+      "2xl": "2rem",
+      "full": "9999px"
+    }
+  },
+  "valueProps": [
+    {
+      "title": "Premium Quality",
+      "description": "Curated selection of top-tier medical cannabis products",
+      "icon": "Star"
+    },
+    {
+      "title": "Expert Guidance",
+      "description": "Professional support throughout your wellness journey",
+      "icon": "Shield"
+    },
+    {
+      "title": "Trusted Care",
+      "description": "Compassionate service in a welcoming environment",
+      "icon": "Heart"
+    },
+    {
+      "title": "Easy Access",
+      "description": "Simple consultation and prescription process",
+      "icon": "Check"
+    }
+  ],
+  "pageContent": {
+    "homeHeroTitle": "Elevate Your Wellness",
+    "homeHeroSubtitle": "Premium medical cannabis, elevated experience",
+    "homeHeroDescription": "Discover a new standard of care with curated products and expert guidance tailored to your unique wellness needs.",
+    "aboutMission": "We believe in the transformative power of medical cannabis to improve lives and elevate wellbeing."
+  },
+  "navigation": {
+    "links": [
+      {
+        "label": "Products",
+        "href": "/products"
+      },
+      {
+        "label": "Consultation",
+        "href": "/consultation"
+      },
+      {
+        "label": "About",
+        "href": "/about"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact"
+      }
+    ],
+    "cta": {
+      "label": "Book Consultation",
+      "href": "/consultation"
+    }
+  },
+  "footer": {
+    "copyright": "© {year} {businessName}. All rights reserved.",
+    "disclaimer": "Medical cannabis should only be used under the guidance of a qualified healthcare professional.",
+    "sections": [
+      {
+        "title": "Quick Links",
+        "links": [
+          {
+            "label": "Products",
+            "href": "/products"
+          },
+          {
+            "label": "How It Works",
+            "href": "/how-it-works"
+          },
+          {
+            "label": "FAQ",
+            "href": "/faq"
+          }
+        ]
+      },
+      {
+        "title": "Legal",
+        "links": [
+          {
+            "label": "Privacy Policy",
+            "href": "/privacy"
+          },
+          {
+            "label": "Terms of Service",
+            "href": "/terms"
+          },
+          {
+            "label": "Compliance",
+            "href": "/regulatory"
+          }
+        ]
+      }
+    ]
+  }
+}
