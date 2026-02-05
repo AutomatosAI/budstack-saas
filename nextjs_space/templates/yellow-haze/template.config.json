@@ -1,0 +1,91 @@
+{
+  "id": "yellow-haze",
+  "slug": "yellow-haze",
+  "name": "Yellow Haze",
+  "description": "A warm, vibrant golden amber template with retro-funk energy. Bold typography meets sun-drenched haze aesthetics for brands that want to stand out with warmth and personality.",
+  "version": "1.0.0",
+  "author": "BudStack Platform",
+  "category": "modern",
+  "tags": ["bold", "vibrant", "golden", "warm", "retro", "energetic", "amber"],
+  "features": [
+    "Vibrant golden amber color palette",
+    "Bold Sora headings with Inter body text",
+    "Warm gradient overlays",
+    "Golden glow shadow effects",
+    "Smooth rounded buttons with depth"
+  ],
+  "previewUrl": "/templates/yellow-haze/hero.jpg",
+  "thumbnailUrl": "/templates/yellow-haze/hero.jpg",
+  "screenshots": [
+    "/templates/yellow-haze/hero.jpg"
+  ],
+  "demoUrl": null,
+  "price": 0,
+  "isPremium": false,
+  "isActive": true,
+  "components": [
+    {
+      "name": "Hero",
+      "path": "components/Hero.tsx",
+      "required": true,
+      "description": "Full-screen hero with warm gradient overlay"
+    },
+    {
+      "name": "ConsultationCTA",
+      "path": "components/ConsultationCTA.tsx",
+      "required": true,
+      "description": "Golden call-to-action section"
+    }
+  ],
+  "customization": {
+    "colors": {
+      "primary": "#FFC107",
+      "secondary": "#C27803",
+      "accent": "#FBBF24"
+    },
+    "fonts": {
+      "base": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "heading": "'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    },
+    "shadows": {
+      "sm": "0 2px 8px rgba(255, 193, 7, 0.10)",
+      "md": "0 4px 16px rgba(255, 193, 7, 0.14)",
+      "lg": "0 8px 32px rgba(255, 193, 7, 0.18)"
+    }
+  },
+  "performance": {
+    "bundleSize": "~125KB gzip",
+    "lighthouseScore": "90+",
+    "optimizations": [
+      "Lazy loading images",
+      "Optimized animations",
+      "CSS optimization"
+    ]
+  },
+  "compatibility": {
+    "nextjs": "14.x",
+    "react": "18.x",
+    "browsers": [
+      "Chrome 90+",
+      "Firefox 88+",
+      "Safari 14+",
+      "Edge 90+"
+    ],
+    "platform_version": "2.0+",
+    "requires_features": [
+      "hero-image",
+      "consultation-booking",
+      "product-catalog"
+    ]
+  },
+  "dependencies": [
+    "framer-motion",
+    "lucide-react"
+  ],
+  "accessibility": {
+    "wcag_level": "AA",
+    "screen_reader_tested": true,
+    "keyboard_navigable": true,
+    "color_contrast_ratio": "4.5:1+"
+  }
+}
