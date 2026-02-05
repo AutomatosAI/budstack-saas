@@ -7,6 +7,7 @@ import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import fetch from "node-fetch";
 import AdmZip from "adm-zip";
 import { convertLovableTemplate } from "@/lib/lovable-converter";
+import { randomUUID } from "crypto";
 
 interface TemplateConfig {
   id: string;
@@ -235,6 +236,7 @@ export async function POST(req: NextRequest) {
       // Create database record
       const template = await prisma.templates.create({
         data: {
+          id: randomUUID(),
           slug: config.id,
           name: config.name,
           description: config.description,
