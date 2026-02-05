@@ -12,7 +12,7 @@ import React from "react";
  * 2. Add template files to /templates/{slug}/ directory
  * 3. Run: npm run sync-templates
  *
- * Last generated: 2026-02-05T18:08:59.666Z
+ * Last generated: 2026-02-05T18:18:07.408Z
  */
 
 export const TEMPLATE_COMPONENTS: Record<string, any> = {
@@ -27,9 +27,9 @@ export const TEMPLATE_COMPONENTS: Record<string, any> = {
  * Templates without a specific navigation will use the default platform navigation.
  */
 export const TEMPLATE_NAVIGATION: Record<string, any> = {
-  "gta-cannabis": dynamic(() => import("@/templates/gta-cannabis/components/Navigation")),
-  "healingbuds": dynamic(() => import("@/templates/healingbuds/components/Navigation")),
-  "wellness-nature": dynamic(() => import("@/templates/wellness-nature/components/Navigation")),
+  "gta-cannabis": dynamic(() => import("@/templates/gta-cannabis/components/Navigation").then((m) => m.default || m)),
+  "healingbuds": dynamic(() => import("@/templates/healingbuds/components/Navigation").then((m) => m.default || m)),
+  "wellness-nature": dynamic(() => import("@/templates/wellness-nature/components/Navigation").then((m) => m.default || m)),
 };
 
 /**
@@ -37,7 +37,7 @@ export const TEMPLATE_NAVIGATION: Record<string, any> = {
  * Templates without a specific footer will use the default platform footer.
  */
 export const TEMPLATE_FOOTER: Record<string, any> = {
-  "gta-cannabis": dynamic(() => import("@/templates/gta-cannabis/components/Footer")),
-  "healingbuds": dynamic(() => import("@/templates/healingbuds/components/Footer")),
-  "wellness-nature": dynamic(() => import("@/templates/wellness-nature/components/Footer")),
+  "gta-cannabis": dynamic(() => import("@/templates/gta-cannabis/components/Footer").then((m) => m.default || m)),
+  "healingbuds": dynamic(() => import("@/templates/healingbuds/components/Footer").then((m) => m.default || m)),
+  "wellness-nature": dynamic(() => import("@/templates/wellness-nature/components/Footer").then((m) => m.default || m)),
 };

@@ -75,12 +75,12 @@ function generateRegistryContent(templates: TemplateInfo[]): string {
 
   const navigationImports = templates
     .filter(t => t.hasNavigation)
-    .map(t => `  "${t.slug}": dynamic(() => import("@/templates/${t.slug}/components/Navigation")),`)
+    .map(t => `  "${t.slug}": dynamic(() => import("@/templates/${t.slug}/components/Navigation").then((m) => m.default || m)),`)
     .join('\n');
 
   const footerImports = templates
     .filter(t => t.hasFooter)
-    .map(t => `  "${t.slug}": dynamic(() => import("@/templates/${t.slug}/components/Footer")),`)
+    .map(t => `  "${t.slug}": dynamic(() => import("@/templates/${t.slug}/components/Footer").then((m) => m.default || m)),`)
     .join('\n');
 
   return `import dynamic from "next/dynamic";
