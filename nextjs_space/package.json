@@ -11,7 +11,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "postinstall": "prisma generate",
-    "email:worker": "tsx scripts/email-worker.ts"
+    "email:worker": "tsx scripts/email-worker.ts",
+    "sync-templates": "tsx scripts/sync-template-registry.ts"
   },
   "prisma": {
     "seed": "npx tsx scripts/seed.ts"

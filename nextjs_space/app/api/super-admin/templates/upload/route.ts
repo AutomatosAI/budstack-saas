@@ -291,14 +291,35 @@ export async function POST(req: NextRequest) {
       console.log("[Template Upload] Cleaning up temporary files...");
       await fs.rm(tempDir, { recursive: true, force: true });
 
+      // Auto-sync template registry
+      console.log("[Template Upload] Syncing template registry...");
+      try {
+        const { exec } = await import("child_process");
+        const { promisify } = await import("util");
+        const execAsync = promisify(exec);
+
+        await execAsync("npm run sync-templates", {
+          cwd: process.cwd(),
+        });
+        console.log("[Template Upload] Template registry synced successfully");
+      } catch (syncError: any) {
+        console.error(
+          "[Template Upload] Registry sync failed (non-fatal):",
+          syncError.message,
+        );
+        // Continue even if sync fails - template is uploaded, just needs manual registry update
+      }
+
       return NextResponse.json({
         success: true,
-        message: "Template uploaded successfully",
+        message:
+          "Template uploaded successfully. Registry updated - rebuild required to activate.",
         template: {
           id: template.id,
           slug: template.slug,
           name: template.name,
         },
+        requiresRebuild: true,
       });
     } catch (uploadError: any) {
       console.error("[Template Upload] Upload error:", uploadError.message);
