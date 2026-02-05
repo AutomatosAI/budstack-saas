@@ -1,42 +1,56 @@
 {
   "template": "wellness-nature",
+  "slug": "wellness-nature",
   "logoPath": null,
   "heroImagePath": "/templates/wellness-nature/wellness-hero.jpg",
-  "primaryColor": "#6B8E23",
-  "fontFamily": "Lora, serif",
-  "pageContent": {
-    "homeHeroTitle": "Natural Wellness, Naturally Delivered",
-    "homeHeroSubtitle": "Discover the healing power of nature with our premium organic wellness products",
-    "aboutTitle": "About Our Wellness Mission",
-    "aboutContent": "We believe in the transformative power of nature. Our carefully curated selection of organic wellness products is designed to support your journey to holistic health and natural healing."
-  },
+  "heroVideoPath": null,
+  "primaryColor": "79 51% 52%",
+  "fontFamily": "'Lora', serif",
   "designSystem": {
     "colors": {
-      "primary": "#6B8E23",
-      "primaryHover": "#5a7a1d",
-      "primaryLight": "#E8F5D6",
-      "secondary": "#3C2F24",
-      "secondaryHover": "#2d231b",
-      "secondaryLight": "#E8DCC8",
-      "accent": "#8B7355",
-      "accentHover": "#73604a",
-      "accentLight": "#F0E8DD",
-      "background": "#F5F1E8",
-      "surface": "#ffffff",
-      "text": "#3C2F24",
-      "textSecondary": "#7A6A5A",
-      "heading": "#3C2F24",
-      "border": "#E8DCC8",
-      "success": "#6B8E23",
-      "warning": "#D97706",
-      "error": "#DC2626",
-      "info": "#2563EB"
+      "wellness": {
+        "50": "79 55% 97%",
+        "100": "79 50% 92%",
+        "200": "79 48% 82%",
+        "300": "79 47% 70%",
+        "400": "79 49% 58%",
+        "500": "79 51% 52%",
+        "600": "79 48% 42%",
+        "700": "79 45% 32%",
+        "800": "79 42% 22%",
+        "900": "79 40% 14%"
+      },
+      "earth": {
+        "50": "30 40% 97%",
+        "100": "30 35% 92%",
+        "200": "30 32% 82%",
+        "300": "30 30% 70%",
+        "400": "30 28% 58%",
+        "500": "30 26% 30%",
+        "600": "30 28% 25%",
+        "700": "30 30% 20%",
+        "800": "30 32% 15%",
+        "900": "30 35% 10%"
+      },
+      "primary": "79 51% 52%",
+      "secondary": "30 26% 30%",
+      "accent": "36 30% 55%",
+      "background": "39 30% 96%",
+      "surface": "0 0% 100%",
+      "text": "30 26% 30%",
+      "heading": "30 26% 30%",
+      "border": "30 20% 90%",
+      "success": "142 76% 36%",
+      "warning": "38 92% 50%",
+      "error": "0 72% 51%",
+      "info": "199 89% 48%"
     },
     "typography": {
       "fontFamily": {
-        "base": "Montserrat, sans-serif",
-        "heading": "Lora, serif",
-        "mono": "'Courier New', monospace"
+        "base": "'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        "heading": "'Lora', Georgia, serif",
+        "decorative": "'Lora', Georgia, serif",
+        "mono": "'Courier New', 'Courier', monospace"
       },
       "fontSize": {
         "xs": "0.75rem",
@@ -48,44 +62,173 @@
         "3xl": "1.875rem",
         "4xl": "2.25rem",
         "5xl": "3rem",
-        "6xl": "3.75rem"
+        "6xl": "3.75rem",
+        "7xl": "4.5rem",
+        "8xl": "6rem"
+      },
+      "lineHeight": {
+        "tight": "1.25",
+        "snug": "1.375",
+        "normal": "1.5",
+        "relaxed": "1.625",
+        "loose": "2"
+      },
+      "letterSpacing": {
+        "tighter": "-0.05em",
+        "tight": "-0.025em",
+        "normal": "0",
+        "wide": "0.025em",
+        "wider": "0.05em",
+        "widest": "0.1em"
       },
       "fontWeight": {
         "normal": "400",
         "medium": "500",
         "semibold": "600",
-        "bold": "700"
-      },
-      "lineHeight": {
-        "tight": "1.25",
-        "normal": "1.5",
-        "relaxed": "1.75"
+        "bold": "700",
+        "extrabold": "800"
       }
     },
+    "shadows": {
+      "wellness-sm": "0 2px 8px rgba(107, 142, 35, 0.08)",
+      "wellness-md": "0 4px 16px rgba(107, 142, 35, 0.12)",
+      "wellness-lg": "0 8px 32px rgba(107, 142, 35, 0.16)",
+      "wellness-xl": "0 12px 48px rgba(107, 142, 35, 0.20)",
+      "wellness-2xl": "0 20px 64px rgba(107, 142, 35, 0.24)",
+      "organic-sm": "0 2px 6px rgba(60, 47, 36, 0.06)",
+      "organic-md": "0 4px 12px rgba(60, 47, 36, 0.10)",
+      "organic-lg": "0 8px 24px rgba(60, 47, 36, 0.14)"
+    },
+    "gradients": {
+      "wellness-primary": "linear-gradient(135deg, #6B8E23 0%, #8B7355 100%)",
+      "wellness-secondary": "linear-gradient(135deg, #8B7355 0%, #3C2F24 100%)",
+      "earth": "linear-gradient(180deg, rgba(107, 142, 35, 0.05) 0%, rgba(139, 115, 85, 0.05) 100%)",
+      "hero-overlay": "linear-gradient(180deg, rgba(60, 47, 36, 0.6) 0%, rgba(60, 47, 36, 0.8) 100%)",
+      "card-hover": "linear-gradient(135deg, rgba(107, 142, 35, 0.1) 0%, rgba(139, 115, 85, 0.1) 100%)",
+      "organic-radial": "radial-gradient(ellipse at center, rgba(107, 142, 35, 0.1) 0%, rgba(139, 115, 85, 0.05) 50%, transparent 100%)"
+    },
     "spacing": {
-      "xs": "0.25rem",
-      "sm": "0.5rem",
-      "md": "1rem",
-      "lg": "1.5rem",
-      "xl": "2rem",
-      "2xl": "3rem",
-      "3xl": "4rem"
+      "section": "5rem",
+      "container": "1.5rem",
+      "card": "2rem"
     },
     "borderRadius": {
       "none": "0",
-      "sm": "0.25rem",
-      "md": "0.5rem",
+      "sm": "0.375rem",
+      "md": "0.75rem",
       "lg": "1rem",
       "xl": "1.5rem",
       "2xl": "2rem",
       "full": "9999px"
-    },
-    "shadows": {
-      "sm": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-      "md": "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-      "lg": "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-      "xl": "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-      "2xl": "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
     }
+  },
+  "valueProps": [
+    {
+      "title": "100% Organic",
+      "description": "Sourced from certified organic farms with sustainable practices",
+      "icon": "Leaf"
+    },
+    {
+      "title": "Natural Ingredients",
+      "description": "Pure botanical extracts with no artificial additives",
+      "icon": "Flower2"
+    },
+    {
+      "title": "Wellness Experts",
+      "description": "Guided by naturopaths and holistic health professionals",
+      "icon": "Heart"
+    },
+    {
+      "title": "Eco-Friendly",
+      "description": "Sustainable packaging and carbon-neutral delivery",
+      "icon": "Recycle"
+    }
+  ],
+  "pageContent": {
+    "homeHeroTitle": "Natural Wellness, Naturally Delivered",
+    "homeHeroSubtitle": "Your trusted source for organic wellness",
+    "homeHeroDescription": "Discover the healing power of nature with our premium organic wellness products, expertly curated for your holistic health journey.",
+    "aboutMission": "We believe in the transformative power of nature. Our carefully curated selection of organic wellness products is designed to support your journey to holistic health and natural healing, backed by science and rooted in tradition."
+  },
+  "navigation": {
+    "links": [
+      {
+        "label": "Products",
+        "href": "/products"
+      },
+      {
+        "label": "Consultation",
+        "href": "/consultation"
+      },
+      {
+        "label": "About",
+        "href": "/about"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact"
+      }
+    ],
+    "cta": {
+      "label": "Book Consultation",
+      "href": "/consultation"
+    }
+  },
+  "footer": {
+    "copyright": "© {year} {businessName}. All rights reserved.",
+    "disclaimer": "These statements have not been evaluated by the FDA. Products are not intended to diagnose, treat, cure, or prevent any disease. Consult with a healthcare professional before use.",
+    "sections": [
+      {
+        "title": "Shop",
+        "links": [
+          {
+            "label": "All Products",
+            "href": "/products"
+          },
+          {
+            "label": "Bestsellers",
+            "href": "/products?filter=bestsellers"
+          },
+          {
+            "label": "New Arrivals",
+            "href": "/products?filter=new"
+          }
+        ]
+      },
+      {
+        "title": "Resources",
+        "links": [
+          {
+            "label": "Wellness Guide",
+            "href": "/how-it-works"
+          },
+          {
+            "label": "Health Conditions",
+            "href": "/conditions"
+          },
+          {
+            "label": "FAQ",
+            "href": "/faq"
+          }
+        ]
+      },
+      {
+        "title": "Legal",
+        "links": [
+          {
+            "label": "Privacy Policy",
+            "href": "/privacy"
+          },
+          {
+            "label": "Terms of Service",
+            "href": "/terms"
+          },
+          {
+            "label": "Compliance",
+            "href": "/regulatory"
+          }
+        ]
+      }
+    ]
   }
 }

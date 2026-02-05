@@ -1,35 +1,156 @@
 {
   "id": "gta-cannabis",
+  "slug": "gta-cannabis",
   "name": "Vice City Cannabis",
-  "version": "1.0.0",
-  "author": "BudStack Design Team",
-  "description": "Bold retro-inspired template with vibrant comic-style aesthetics, perfect for modern medical cannabis brands that want to stand out with street-style flair.",
+  "description": "Bold retro-inspired template with vibrant comic-style aesthetics and neon glow effects. Perfect for modern medical cannabis brands that want to stand out with street-style flair while maintaining professional credibility and trust.",
+  "version": "2.0.0",
+  "author": "BudStack Platform",
   "category": "medical",
-  "tags": ["retro", "comic", "vibrant", "urban", "modern"],
-  "created_at": "2025-11-25",
-  "updated_at": "2025-11-25",
-  "preview_image": "/templates/gta-cannabis/preview.jpg",
-  "compatibility": {
-    "platform_version": "2.0+",
-    "nextjs_version": "14.x",
-    "react_version": "18.x",
-    "requires_features": ["consultation-booking", "product-catalog"]
-  },
-  "features": {
-    "retro_styling": true,
-    "bold_colors": true,
-    "comic_aesthetic": true,
-    "scroll_animations": true,
-    "dark_mode": false,
-    "multi_language": false
+  "tags": [
+    "retro",
+    "comic",
+    "vibrant",
+    "urban",
+    "modern",
+    "neon",
+    "bold",
+    "street-style",
+    "edgy",
+    "contemporary"
+  ],
+  "features": [
+    "Vibrant retro color palette with neon accents",
+    "Comic-style text shadows and effects",
+    "Inter/Montserrat typography for modern readability",
+    "Neon glow effects and animations",
+    "Bold, urban design aesthetic",
+    "Street-smart style meets medical professionalism",
+    "Responsive mobile-first design",
+    "Scroll-triggered animations",
+    "Product showcase with style",
+    "Lifestyle-focused sections",
+    "Consultation CTAs with impact",
+    "WCAG AA accessibility compliant"
+  ],
+  "previewUrl": "/templates/gta-cannabis/preview.jpg",
+  "thumbnailUrl": "/templates/gta-cannabis/preview.jpg",
+  "screenshots": [
+    "/templates/gta-cannabis/preview.jpg"
+  ],
+  "demoUrl": null,
+  "price": 0,
+  "isPremium": false,
+  "isActive": true,
+  "components": [
+    {
+      "name": "Hero",
+      "path": "components/Hero.tsx",
+      "required": true,
+      "description": "Bold retro hero with vibrant overlay and neon CTA"
+    },
+    {
+      "name": "ProductShowcase",
+      "path": "components/ProductShowcase.tsx",
+      "required": true,
+      "description": "Product display with comic-style cards"
+    },
+    {
+      "name": "LifestyleSection",
+      "path": "components/LifestyleSection.tsx",
+      "required": true,
+      "description": "Lifestyle-focused content with urban vibe"
+    },
+    {
+      "name": "ConsultationCTA",
+      "path": "components/ConsultationCTA.tsx",
+      "required": true,
+      "description": "High-impact call-to-action with neon effects"
+    },
+    {
+      "name": "Navigation",
+      "path": "components/Navigation.tsx",
+      "required": true,
+      "description": "Bold navigation with retro styling"
+    },
+    {
+      "name": "Footer",
+      "path": "components/Footer.tsx",
+      "required": true,
+      "description": "Comprehensive footer with retro aesthetic"
+    },
+    {
+      "name": "About",
+      "path": "components/About.tsx",
+      "required": false,
+      "description": "About section with bold design"
+    },
+    {
+      "name": "Features",
+      "path": "components/Features.tsx",
+      "required": false,
+      "description": "Feature cards with neon accents"
+    }
+  ],
+  "customization": {
+    "colors": {
+      "primary": "#FF6B6B",
+      "secondary": "#4ECDC4",
+      "accent": "#FFE66D",
+      "background": "#1A1A2E",
+      "surface": "#16213E",
+      "text": "#E8E8E8"
+    },
+    "fonts": {
+      "base": "'Inter', 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "heading": "'Inter', 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "decorative": "'Bebas Neue', 'Impact', sans-serif"
+    },
+    "shadows": {
+      "neon-coral": "0 0 20px rgba(255, 107, 107, 0.5)",
+      "neon-teal": "0 0 20px rgba(78, 205, 196, 0.5)",
+      "comic": "3px 3px 0px rgba(26, 26, 46, 0.3)"
+    },
+    "effects": {
+      "neon_glow": true,
+      "comic_shadows": true,
+      "retro_gradients": true
+    }
   },
   "performance": {
-    "lighthouse_score": 90,
-    "bundle_size_kb": 120
+    "bundleSize": "~130KB gzip",
+    "lighthouseScore": "90+",
+    "optimizations": [
+      "Lazy loading images",
+      "Optimized animations",
+      "CSS-in-JS minimal overhead",
+      "Font display optimization"
+    ]
   },
+  "compatibility": {
+    "nextjs": "14.x",
+    "react": "18.x",
+    "browsers": [
+      "Chrome 90+",
+      "Firefox 88+",
+      "Safari 14+",
+      "Edge 90+"
+    ],
+    "platform_version": "2.0+",
+    "requires_features": [
+      "hero-image",
+      "consultation-booking",
+      "product-catalog"
+    ]
+  },
+  "dependencies": [
+    "framer-motion",
+    "lucide-react"
+  ],
   "accessibility": {
     "wcag_level": "AA",
     "screen_reader_tested": true,
-    "keyboard_navigable": true
+    "keyboard_navigable": true,
+    "color_contrast_ratio": "4.5:1+",
+    "notes": "High contrast maintained despite bold colors"
   }
 }
