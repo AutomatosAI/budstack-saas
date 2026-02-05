@@ -253,6 +253,7 @@ export async function POST(req: NextRequest) {
           packagePath: `/templates/${config.id}/package.json`,
           previewUrl: config.preview_image || "",
           thumbnailUrl: config.preview_image || "",
+          updatedAt: new Date(),
           metadata: {
             features: config.features || [],
             performance: config.performance || {},
