@@ -64,7 +64,7 @@ export async function DELETE(
       }
       if (activeTenantTemplates.length > 0) {
         const tenantNames = activeTenantTemplates
-          .map((tt) => tt.activeForTenant?.businessName)
+          .map((tt: any) => tt.activeForTenant?.businessName)
           .join(", ");
         usageDetails.push(
           `${activeTenantTemplates.length} active tenant(s): ${tenantNames}`,
