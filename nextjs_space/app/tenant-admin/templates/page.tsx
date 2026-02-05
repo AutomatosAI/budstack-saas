@@ -8,6 +8,7 @@ import { Palette, Layout } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import TemplateCloneButton from "./clone-button";
 import ActivateButton from "./activate-button";
+import DeleteButton from "./delete-button";
 import { templates } from "@prisma/client";
 
 type ClonedTemplate = any;
@@ -155,6 +156,11 @@ export default async function TemplatesPage() {
                                         </Button>
                                     </Link>
                                     <ActivateButton
+                                        templateId={item.id}
+                                        templateName={item.templateName}
+                                        isActive={item.isActive}
+                                    />
+                                    <DeleteButton
                                         templateId={item.id}
                                         templateName={item.templateName}
                                         isActive={item.isActive}
