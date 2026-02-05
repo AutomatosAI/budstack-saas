@@ -1,53 +1,401 @@
 /* Wellness & Nature Template Styles */
 
-@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap');
 
-.wellness-template {
-  /* CSS Variables */
-  --wellness-primary: #6B8E23;
-  --wellness-secondary: #3C2F24;
-  --wellness-accent: #8B7355;
-  --wellness-background: #F5F1E8;
-  --wellness-surface: #ffffff;
-  --wellness-text: #3C2F24;
-  --wellness-text-light: #7A6A5A;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  /* Standard variables for shared pages */
-  --tenant-color-primary: var(--wellness-primary);
-  --tenant-color-secondary: var(--wellness-secondary);
-  --tenant-color-accent: var(--wellness-accent);
-  --tenant-color-background: var(--wellness-background);
-  --tenant-color-surface: var(--wellness-surface);
-  --tenant-color-text: var(--wellness-text);
-  --tenant-color-heading: var(--wellness-secondary);
-  --tenant-color-border: rgba(60, 47, 36, 0.2);
-  --tenant-color-primary-rgb: 107, 142, 35;
-  --tenant-color-secondary-rgb: 60, 47, 36;
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
+All colors MUST be HSL format for consistency with platform.
+*/
 
-  /* Fonts */
-  --tenant-font-heading: 'Lora', serif;
-  --tenant-font-base: 'Montserrat', sans-serif;
+@layer base {
+  :root {
+    /* Wellness Color Palette - HSL Format */
+    --wellness-50: 79 55% 97%;
+    --wellness-100: 79 50% 92%;
+    --wellness-200: 79 48% 82%;
+    --wellness-300: 79 47% 70%;
+    --wellness-400: 79 49% 58%;
+    --wellness-500: 79 51% 52%;    /* Primary wellness green */
+    --wellness-600: 79 48% 42%;
+    --wellness-700: 79 45% 32%;
+    --wellness-800: 79 42% 22%;
+    --wellness-900: 79 40% 14%;
 
-  /* Smooth transitions */
-  --transition-speed: 0.3s;
+    /* Earth Tone Palette */
+    --earth-50: 30 40% 97%;
+    --earth-100: 30 35% 92%;
+    --earth-200: 30 32% 82%;
+    --earth-300: 30 30% 70%;
+    --earth-400: 30 28% 58%;
+    --earth-500: 30 26% 30%;       /* Deep earth brown */
+    --earth-600: 30 28% 25%;
+    --earth-700: 30 30% 20%;
+    --earth-800: 30 32% 15%;
+    --earth-900: 30 35% 10%;
 
-  /* Smooth scrolling */
-  scroll-behavior: smooth;
+    /* Application Colors */
+    --background: 39 30% 96%;      /* Warm off-white */
+    --foreground: 30 26% 30%;      /* Deep earth brown */
+    --surface: 0 0% 100%;          /* Pure white */
+
+    --card: 0 0% 100%;
+    --card-foreground: 30 26% 30%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 26% 30%;
+
+    /* Primary & Secondary using wellness colors */
+    --primary: 79 51% 52%;         /* Wellness green */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 26% 30%;       /* Earth brown */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 30 20% 94%;
+    --muted-foreground: 30 20% 50%;
+
+    --accent: 36 30% 55%;          /* Accent tan */
+    --accent-foreground: 30 26% 30%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 30 20% 90%;
+    --input: 30 20% 96%;
+    --ring: 79 51% 52%;
+
+    --radius: 1rem;
+
+    /* Semantic tokens for sections */
+    --wellness-primary: 79 51% 52%;
+    --wellness-secondary: 30 26% 30%;
+    --wellness-accent: 36 30% 55%;
+
+    /* Brand Gradients */
+    --gradient-wellness: linear-gradient(135deg, hsl(79 51% 52%), hsl(36 30% 55%));
+    --gradient-earth: linear-gradient(135deg, hsl(36 30% 55%), hsl(30 26% 30%));
+    --gradient-hero: linear-gradient(180deg, rgba(60, 47, 36, 0.6), rgba(60, 47, 36, 0.8));
+    --gradient-organic: radial-gradient(ellipse at center, rgba(107, 142, 35, 0.1) 0%, rgba(139, 115, 85, 0.05) 50%, transparent 100%);
+    --gradient-card: linear-gradient(135deg, rgba(107, 142, 35, 0.05) 0%, rgba(139, 115, 85, 0.05) 100%);
+
+    /* Wellness Shadows - Soft and organic */
+    --shadow-xs: 0 1px 2px 0 rgba(60, 47, 36, 0.03);
+    --shadow-sm: 0 2px 4px 0 rgba(60, 47, 36, 0.05);
+    --shadow-md: 0 4px 8px -1px rgba(60, 47, 36, 0.08);
+    --shadow-lg: 0 8px 16px -2px rgba(60, 47, 36, 0.10);
+    --shadow-xl: 0 12px 24px -4px rgba(60, 47, 36, 0.12);
+    --shadow-2xl: 0 24px 48px -8px rgba(60, 47, 36, 0.15);
+    --shadow-wellness: 0 4px 12px rgba(107, 142, 35, 0.12);
+    --shadow-organic: 0 8px 24px rgba(60, 47, 36, 0.08);
+
+    /* Smooth transitions */
+    --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.4s cubic-bezier(0.34, 1.15, 0.64, 1);
+
+    /* Typography scale */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
+    --font-size-5xl: 3rem;
+    --font-size-6xl: 3.75rem;
+
+    /* Spacing scale */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 0.75rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    --spacing-3xl: 4rem;
+    --spacing-4xl: 5rem;
+  }
+
+  /* Dark mode support (optional for wellness) */
+  .wellness-template.dark,
+  .wellness-template .dark {
+    --background: 30 35% 10%;
+    --foreground: 39 30% 95%;
+    --card: 30 30% 12%;
+    --card-foreground: 39 30% 95%;
+    --primary: 79 51% 60%;
+    --primary-foreground: 30 35% 10%;
+    --secondary: 30 20% 20%;
+    --secondary-foreground: 39 30% 95%;
+    --muted: 30 25% 18%;
+    --muted-foreground: 30 20% 60%;
+    --accent: 36 30% 45%;
+    --accent-foreground: 0 0% 100%;
+    --border: 30 25% 22%;
+    --input: 30 25% 18%;
+    --ring: 79 51% 60%;
+  }
 }
 
-/* Global Typography */
-.wellness-template h1,
-.wellness-template h2,
-.wellness-template h3,
-.wellness-template h4 {
-  font-family: 'Lora', serif;
-  font-weight: 700;
+@layer base {
+  .wellness-template {
+    /* Standard variables for shared pages integration */
+    --tenant-color-primary: hsl(var(--wellness-primary));
+    --tenant-color-secondary: hsl(var(--wellness-secondary));
+    --tenant-color-accent: hsl(var(--wellness-accent));
+    --tenant-color-background: hsl(var(--background));
+    --tenant-color-surface: hsl(var(--surface));
+    --tenant-color-text: hsl(var(--foreground));
+    --tenant-color-heading: hsl(var(--foreground));
+    --tenant-color-border: hsl(var(--border));
+    --tenant-color-primary-rgb: 107, 142, 35;
+    --tenant-color-secondary-rgb: 60, 47, 36;
+
+    /* Fonts */
+    --tenant-font-heading: 'Lora', Georgia, serif;
+    --tenant-font-base: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--tenant-font-base);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Typography */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--tenant-font-heading);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: hsl(var(--foreground));
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+    line-height: 1.1;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl lg:text-5xl;
+    line-height: 1.15;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl;
+    line-height: 1.25;
+  }
+
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+
+  p {
+    line-height: 1.7;
+    @apply text-base md:text-lg;
+    font-family: var(--tenant-font-base);
+  }
+
+  /* Form elements */
+  label {
+    @apply font-medium text-sm;
+    font-family: var(--tenant-font-base);
+  }
+
+  input, textarea, select {
+    font-family: var(--tenant-font-base);
+  }
+
+  button, .btn {
+    font-family: var(--tenant-font-base);
+    font-weight: 500;
+  }
 }
 
-.wellness-template p,
-.wellness-template span,
-.wellness-template a {
-  font-family: 'Montserrat', sans-serif;
+/* Wellness-specific utilities */
+@layer utilities {
+  /* Hover effects */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-300 ease-out hover:scale-[1.02];
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .hover-glow:hover {
+    box-shadow: var(--shadow-wellness);
+  }
+
+  /* Card styles */
+  .wellness-card {
+    @apply bg-card rounded-xl border border-border/50 transition-all duration-300;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .wellness-card:hover {
+    @apply border-border/80 -translate-y-1;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .organic-card {
+    @apply bg-card rounded-2xl transition-all duration-300;
+    box-shadow: var(--shadow-organic);
+  }
+
+  .organic-card:hover {
+    @apply -translate-y-0.5;
+    box-shadow: var(--shadow-xl);
+  }
+
+  /* Button styles */
+  .btn-wellness {
+    @apply px-6 py-3 rounded-xl font-medium transition-all duration-300;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  .btn-wellness:hover {
+    @apply shadow-lg -translate-y-0.5;
+    background: hsl(var(--primary) / 0.9);
+  }
+
+  .btn-wellness-outline {
+    @apply px-6 py-3 rounded-xl font-medium transition-all duration-300;
+    @apply border-2 text-primary hover:bg-primary/10;
+    border-color: hsl(var(--primary) / 0.4);
+  }
+
+  .btn-wellness-outline:hover {
+    border-color: hsl(var(--primary) / 0.6);
+  }
+
+  .btn-earth {
+    @apply px-6 py-3 rounded-xl font-medium transition-all duration-300;
+    background: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+  }
+
+  .btn-earth:hover {
+    @apply shadow-md -translate-y-0.5;
+    background: hsl(var(--secondary) / 0.9);
+  }
+
+  /* Gradient backgrounds */
+  .bg-wellness-gradient {
+    background: var(--gradient-wellness);
+  }
+
+  .bg-earth-gradient {
+    background: var(--gradient-earth);
+  }
+
+  .bg-organic-gradient {
+    background: var(--gradient-organic);
+  }
+
+  /* Shadow utilities */
+  .shadow-wellness {
+    box-shadow: var(--shadow-wellness);
+  }
+
+  .shadow-organic {
+    box-shadow: var(--shadow-organic);
+  }
+
+  /* Focus states for accessibility */
+  .focus-wellness {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+    --tw-ring-color: hsl(var(--primary) / 0.5);
+    --tw-ring-offset-color: hsl(var(--background));
+  }
+
+  /* Interactive elements */
+  .interactive-wellness {
+    @apply transition-transform duration-200 ease-out hover:scale-[1.01] active:scale-[0.99];
+  }
+
+  /* Typography utilities */
+  .heading-wellness {
+    @apply text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight;
+    font-family: var(--tenant-font-heading);
+    line-height: 1.1;
+  }
+
+  .heading-secondary {
+    @apply text-3xl md:text-4xl font-semibold tracking-tight;
+    font-family: var(--tenant-font-heading);
+    line-height: 1.15;
+  }
+
+  .heading-tertiary {
+    @apply text-2xl md:text-3xl font-semibold tracking-tight;
+    font-family: var(--tenant-font-heading);
+    line-height: 1.2;
+  }
+
+  .body-large {
+    @apply text-lg md:text-xl;
+    line-height: 1.7;
+  }
+
+  .body-base {
+    @apply text-base md:text-lg;
+    line-height: 1.7;
+  }
+
+  /* Section spacing */
+  .section-padding {
+    @apply py-16 md:py-20 lg:py-24;
+  }
+
+  .section-padding-sm {
+    @apply py-12 md:py-16 lg:py-20;
+  }
+
+  /* Card spacing */
+  .card-spacing {
+    @apply p-6 md:p-8;
+  }
+
+  .card-spacing-sm {
+    @apply p-4 md:p-6;
+  }
+
+  /* Organic shapes and patterns */
+  .organic-border {
+    @apply rounded-3xl;
+  }
+
+  .organic-pattern {
+    background-image: radial-gradient(circle at 25px 25px, rgba(107, 142, 35, 0.03) 2%, transparent 0%),
+                      radial-gradient(circle at 75px 75px, rgba(107, 142, 35, 0.03) 2%, transparent 0%);
+    background-size: 100px 100px;
+  }
+
+  /* Safe areas for mobile */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
 }
 
 /* Animations */
@@ -56,7 +404,6 @@
     opacity: 0;
     transform: translateY(30px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
@@ -64,76 +411,110 @@
 }
 
 @keyframes float {
-
-  0%,
-  100% {
+  0%, 100% {
     transform: translateY(0px);
   }
-
   50% {
     transform: translateY(-10px);
   }
 }
 
-.float-animation {
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 4px 16px rgba(107, 142, 35, 0.1);
+  }
+  50% {
+    box-shadow: 0 8px 24px rgba(107, 142, 35, 0.2);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-float {
   animation: float 3s ease-in-out infinite;
 }
 
-/* Button Styles */
-.wellness-button {
-  transition: all var(--transition-speed) ease;
-  font-family: 'Montserrat', sans-serif;
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
 }
 
-.wellness-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(107, 142, 35, 0.3);
-}
+/* Component-specific styles */
 
-/* Card Hover Effects */
-.wellness-card {
-  transition: all var(--transition-speed) ease;
-}
-
-.wellness-card:hover {
-  transform: translateY(-5px);
-}
-
-/* Responsive Typography */
-@media (max-width: 768px) {
-  .wellness-template h1 {
-    font-size: 2.5rem;
-  }
-
-  .wellness-template h2 {
-    font-size: 2rem;
-  }
-}
-
-/* Organic Shapes Background */
-.organic-background {
+/* Hero section */
+.wellness-hero {
   position: relative;
   overflow: hidden;
 }
 
-.organic-background::before {
+.wellness-hero::before {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(107, 142, 35, 0.05) 1px, transparent 1px);
-  background-size: 50px 50px;
-  opacity: 0.5;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--gradient-hero);
+  z-index: 1;
 }
 
-/* Natural Gradient */
-.wellness-gradient {
-  background: linear-gradient(135deg, #6B8E23 0%, #8B7355 100%);
+.wellness-hero > * {
+  position: relative;
+  z-index: 2;
 }
 
-/* Leaf Pattern */
+/* Organic overlay effect */
+.organic-overlay {
+  position: relative;
+}
+
+.organic-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--gradient-hero);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* Leaf pattern decoration */
 .leaf-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='https://www.shutterstock.com/image-vector/seamless-geometric-tile-pattern-featuring-260nw-2689788323.jpg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236B8E23' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%236B8E23' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Responsive typography */
+@media (max-width: 768px) {
+  .heading-wellness {
+    font-size: clamp(2rem, 8vw, 3rem);
+  }
+
+  .heading-secondary {
+    font-size: clamp(1.75rem, 6vw, 2.5rem);
+  }
+}
+
+/* Print styles */
+@media print {
+  .wellness-template {
+    background: white;
+    color: black;
+  }
+
+  .btn-wellness,
+  .btn-earth {
+    border: 1px solid black;
+  }
 }
