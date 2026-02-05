@@ -25,7 +25,10 @@ export async function DELETE(
       where: { id: templateId },
       include: {
         _count: {
-          select: { tenants: true },
+          select: {
+            tenants: true,
+            tenant_templates: true,
+          },
         },
       },
     });
@@ -37,12 +40,22 @@ export async function DELETE(
       );
     }
 
-    // Check if template is in use
-    if (template._count.tenants > 0) {
+    // Check if template is in use by tenants or tenant_templates
+    const totalUsage = template._count.tenants + template._count.tenant_templates;
+    if (totalUsage > 0) {
+      const usageDetails = [];
+      if (template._count.tenants > 0) {
+        usageDetails.push(`${template._count.tenants} tenant(s) directly`);
+      }
+      if (template._count.tenant_templates > 0) {
+        usageDetails.push(`${template._count.tenant_templates} tenant template(s)`);
+      }
+
       return NextResponse.json(
         {
-          error: `Cannot delete template: ${template._count.tenants} tenant(s) are currently using this template. Please reassign those tenants to a different template first.`,
+          error: `Cannot delete template: It is currently used by ${usageDetails.join(' and ')}. Please reassign or delete those references first.`,
           tenantsCount: template._count.tenants,
+          tenantTemplatesCount: template._count.tenant_templates,
         },
         { status: 409 },
       );
