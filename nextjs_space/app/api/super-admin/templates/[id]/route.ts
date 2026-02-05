@@ -20,7 +20,7 @@ export async function DELETE(
 
     const templateId = params.id;
 
-    // Find template
+    // Find template and check for active usage
     const template = await prisma.templates.findUnique({
       where: { id: templateId },
       include: {
@@ -28,6 +28,18 @@ export async function DELETE(
           select: {
             tenants: true,
             tenant_templates: true,
+          },
+        },
+        tenant_templates: {
+          select: {
+            id: true,
+            templateName: true,
+            activeForTenant: {
+              select: {
+                id: true,
+                businessName: true,
+              },
+            },
           },
         },
       },
@@ -40,22 +52,30 @@ export async function DELETE(
       );
     }
 
-    // Check if template is in use by tenants or tenant_templates
-    const totalUsage = template._count.tenants + template._count.tenant_templates;
-    if (totalUsage > 0) {
+    // Check if template is in active use
+    const activeTenantTemplates = template.tenant_templates.filter(
+      (tt) => tt.activeForTenant !== null,
+    );
+
+    if (template._count.tenants > 0 || activeTenantTemplates.length > 0) {
       const usageDetails = [];
       if (template._count.tenants > 0) {
         usageDetails.push(`${template._count.tenants} tenant(s) directly`);
       }
-      if (template._count.tenant_templates > 0) {
-        usageDetails.push(`${template._count.tenant_templates} tenant template(s)`);
+      if (activeTenantTemplates.length > 0) {
+        const tenantNames = activeTenantTemplates
+          .map((tt) => tt.activeForTenant?.businessName)
+          .join(", ");
+        usageDetails.push(
+          `${activeTenantTemplates.length} active tenant(s): ${tenantNames}`,
+        );
       }
 
       return NextResponse.json(
         {
-          error: `Cannot delete template: It is currently used by ${usageDetails.join(' and ')}. Please reassign or delete those references first.`,
+          error: `Cannot delete template: It is currently in active use by ${usageDetails.join(' and ')}. Please deactivate or reassign those tenants first.`,
           tenantsCount: template._count.tenants,
-          tenantTemplatesCount: template._count.tenant_templates,
+          activeTenantTemplatesCount: activeTenantTemplates.length,
         },
         { status: 409 },
       );
@@ -64,6 +84,16 @@ export async function DELETE(
     console.log(
       `[Template Delete] Deleting template: ${template.name} (${template.slug})`,
     );
+
+    // Delete tenant_templates that reference this base template first
+    if (template._count.tenant_templates > 0) {
+      console.log(
+        `[Template Delete] Deleting ${template._count.tenant_templates} tenant_templates that reference this base template`,
+      );
+      await prisma.tenant_templates.deleteMany({
+        where: { baseTemplateId: templateId },
+      });
+    }
 
     // Delete template directory
     const templateDir = path.join(
