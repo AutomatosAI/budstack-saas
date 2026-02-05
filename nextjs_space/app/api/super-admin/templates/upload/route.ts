@@ -8,6 +8,7 @@ import fetch from "node-fetch";
 import AdmZip from "adm-zip";
 import { convertLovableTemplate } from "@/lib/lovable-converter";
 import { randomUUID } from "crypto";
+import { uploadDirectoryToS3 } from "@/lib/s3";
 
 interface TemplateConfig {
   id: string;
@@ -232,6 +233,19 @@ export async function POST(req: NextRequest) {
 
       console.log(`[Template Upload] Copying files to: ${targetDir}`);
       await fs.cp(extractPath, targetDir, { recursive: true });
+
+      // Upload template files to S3 for persistence
+      console.log(`[Template Upload] Uploading template to S3...`);
+      try {
+        const s3Prefix = `templates/${config.id}/`;
+        await uploadDirectoryToS3(targetDir, s3Prefix);
+        console.log(`[Template Upload] Template uploaded to S3: ${s3Prefix}`);
+      } catch (s3Error: any) {
+        console.error(
+          `[Template Upload] S3 upload failed (non-fatal): ${s3Error.message}`,
+        );
+        // Continue - template is in local filesystem, S3 is for persistence only
+      }
 
       // Create database record
       const template = await prisma.templates.create({
