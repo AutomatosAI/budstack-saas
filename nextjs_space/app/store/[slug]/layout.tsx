@@ -153,6 +153,8 @@ export default async function TenantStoreLayout({
         return "gta-template";
       case "healingbuds":
         return "template-healingbuds";
+      case "yellow-haze":
+        return "template-yellow-haze";
       default:
         return "";
     }

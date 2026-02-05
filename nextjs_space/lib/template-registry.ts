@@ -10,6 +10,7 @@ export const TEMPLATE_COMPONENTS: Record<string, any> = {
   healingbuds: dynamic(() => import("@/templates/healingbuds/index")),
   "wellness-nature": dynamic(() => import("@/templates/wellness-nature/index")),
   "gta-cannabis": dynamic(() => import("@/templates/gta-cannabis/index")),
+  "yellow-haze": dynamic(() => import("@/templates/yellow-haze/index")),
 };
 
 /**
