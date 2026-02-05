@@ -54,7 +54,7 @@ export async function DELETE(
 
     // Check if template is in active use
     const activeTenantTemplates = template.tenant_templates.filter(
-      (tt) => tt.activeForTenant !== null,
+      (tt: any) => tt.activeForTenant !== null,
     );
 
     if (template._count.tenants > 0 || activeTenantTemplates.length > 0) {
