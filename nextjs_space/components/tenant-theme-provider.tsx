@@ -10,6 +10,7 @@ interface TenantThemeProviderProps {
     designSystem?: any;
     customCss?: string | null;
   };
+  googleFontsUrl?: string | null;
   children: React.ReactNode;
 }
 
@@ -27,6 +28,7 @@ interface TenantThemeProviderProps {
 export function TenantThemeProvider({
   tenant,
   tenantTemplate,
+  googleFontsUrl,
   children,
 }: TenantThemeProviderProps) {
   /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
@@ -50,9 +52,14 @@ export function TenantThemeProvider({
 
   return (
     <>
+      {/* Load Google Fonts at runtime */}
+      {googleFontsUrl && (
+        <link href={googleFontsUrl} rel="stylesheet" />
+      )}
+
       {/* Inject custom CSS if provided */}
       {sanitizedCustomCss && (
-        <style dangerouslySetInnerHTML={{ __html: sanitizedCustomCss }} />
+        <style>{sanitizedCustomCss}</style>
       )}
 
       {/* Apply theme class to scoped container */}

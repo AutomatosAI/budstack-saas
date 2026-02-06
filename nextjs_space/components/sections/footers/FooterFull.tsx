@@ -1,0 +1,120 @@
+'use client';
+
+import React from 'react';
+import Image from 'next/image';
+import { SectionProps } from '@/lib/types/section-props';
+
+interface FooterSection {
+  title: string;
+  links: { label: string; href: string }[];
+}
+
+const defaultSections: FooterSection[] = [
+  {
+    title: 'Quick Links',
+    links: [
+      { label: 'Products', href: '/products' },
+      { label: 'About Us', href: '/about' },
+      { label: 'Blog', href: '/the-wire' },
+      { label: 'Contact', href: '/contact' },
+    ],
+  },
+  {
+    title: 'Support',
+    links: [
+      { label: 'FAQ', href: '/faq' },
+      { label: 'Consultation', href: '/consultation' },
+      { label: 'Conditions', href: '/conditions' },
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      { label: 'Privacy Policy', href: '/privacy' },
+      { label: 'Terms of Service', href: '/terms' },
+      { label: 'Regulatory', href: '/regulatory' },
+    ],
+  },
+];
+
+export function FooterFull(props: SectionProps) {
+  const { tenant, logoUrl, footer, sectionConfig } = props;
+
+  const businessName = tenant.businessName;
+  const tagline = sectionConfig?.tagline || footer?.tagline || 'Premium medical cannabis, delivered with care.';
+  const sections: FooterSection[] = sectionConfig?.sections || footer?.sections || defaultSections;
+  const disclaimer = sectionConfig?.disclaimer || footer?.disclaimer || 'Medical cannabis should only be used under the guidance of a licensed healthcare professional.';
+
+  const year = new Date().getFullYear();
+
+  return (
+    <footer
+      className="pt-16 pb-8"
+      style={{
+        backgroundColor: 'hsl(var(--tenant-color-heading))',
+        color: 'white',
+      }}
+    >
+      <div className="container mx-auto px-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
+          {/* Brand Column */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center gap-3 mb-4">
+              {logoUrl && (
+                <div className="relative w-10 h-10">
+                  <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+                </div>
+              )}
+              <span
+                className="text-xl font-bold"
+                style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
+              >
+                {businessName}
+              </span>
+            </div>
+            <p className="text-white/70 text-sm leading-relaxed max-w-sm">{tagline}</p>
+          </div>
+
+          {/* Link Columns */}
+          {sections.map((section) => (
+            <div key={section.title}>
+              <h4 className="font-bold text-sm uppercase tracking-wider mb-4 text-white/90">
+                {section.title}
+              </h4>
+              <ul className="space-y-2">
+                {section.links.map((link) => (
+                  <li key={link.href}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-white/60 hover:text-white transition-colors"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Disclaimer */}
+        {disclaimer && (
+          <p className="text-xs text-white/40 mb-8 max-w-3xl">{disclaimer}</p>
+        )}
+
+        {/* Bottom Bar */}
+        <div
+          className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}
+        >
+          <p className="text-sm text-white/50">
+            &copy; {year} {businessName}. All rights reserved.
+          </p>
+          <p className="text-xs text-white/30">
+            Powered by BudStack
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}

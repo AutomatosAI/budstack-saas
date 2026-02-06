@@ -12,8 +12,7 @@
     "test:e2e:debug": "playwright test --debug",
     "postinstall": "prisma generate",
     "email:worker": "tsx scripts/email-worker.ts",
-    "sync-templates": "tsx scripts/sync-template-registry.ts",
-    "sync-s3-templates": "tsx scripts/sync-templates-from-s3.ts"
+    "sync-templates": "echo 'Templates are now loaded from S3 at runtime'"
   },
   "prisma": {
     "seed": "npx tsx scripts/seed.ts"

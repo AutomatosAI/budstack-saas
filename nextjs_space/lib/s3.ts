@@ -2,6 +2,8 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  ListObjectsV2Command,
+  CopyObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createS3Client, getBucketConfig } from "./aws-config";
@@ -111,4 +113,78 @@ export async function uploadDirectoryToS3(
 
   await uploadDir(localPath, s3Prefix);
   return uploadCount;
+}
+
+/**
+ * Get and parse a JSON file from S3
+ */
+export async function getJsonFromS3<T = any>(key: string): Promise<T> {
+  const s3Client = await createS3Client();
+  const { bucketName } = await getBucketConfig();
+  const response = await s3Client.send(
+    new GetObjectCommand({ Bucket: bucketName, Key: key }),
+  );
+  const bodyStr = await response.Body?.transformToString("utf-8");
+  if (!bodyStr) throw new Error(`Empty response for S3 key: ${key}`);
+  return JSON.parse(bodyStr);
+}
+
+/**
+ * Get a text file from S3 (e.g. CSS)
+ */
+export async function getTextFromS3(key: string): Promise<string | null> {
+  const s3Client = await createS3Client();
+  const { bucketName } = await getBucketConfig();
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({ Bucket: bucketName, Key: key }),
+    );
+    return (await response.Body?.transformToString("utf-8")) || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Copy all objects from one S3 prefix to another
+ * Used for cloning base templates to tenant-specific paths
+ */
+export async function copyS3Directory(
+  sourcePrefix: string,
+  destPrefix: string,
+): Promise<number> {
+  const s3Client = await createS3Client();
+  const { bucketName } = await getBucketConfig();
+
+  let copyCount = 0;
+  let continuationToken: string | undefined;
+
+  do {
+    const listResponse = await s3Client.send(
+      new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: sourcePrefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    for (const obj of listResponse.Contents || []) {
+      if (!obj.Key) continue;
+      const relativePath = obj.Key.slice(sourcePrefix.length);
+      const destKey = destPrefix + relativePath;
+
+      await s3Client.send(
+        new CopyObjectCommand({
+          Bucket: bucketName,
+          CopySource: `${bucketName}/${obj.Key}`,
+          Key: destKey,
+        }),
+      );
+      copyCount++;
+    }
+
+    continuationToken = listResponse.NextContinuationToken;
+  } while (continuationToken);
+
+  return copyCount;
 }
