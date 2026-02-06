@@ -16,7 +16,7 @@ const nextConfig = {
   },
   images: {
     unoptimized: process.env.NEXT_IMAGE_UNOPTIMIZED === 'true',
-    domains: ['stage-api.drgreennft.com', 'api.drgreennft.com', 'cdn.abacus.ai', 'prod-profiles-backend.s3.amazonaws.com', 'img.clerk.com'],
+    domains: ['stage-api.drgreennft.com', 'api.drgreennft.com', 'cdn.abacus.ai', 'prod-profiles-backend.s3.amazonaws.com', 'img.clerk.com', 'budstack-uploads.s3.eu-west-1.amazonaws.com'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -45,6 +45,12 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'img.clerk.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'budstack-uploads.s3.eu-west-1.amazonaws.com',
         port: '',
         pathname: '/**',
       },
