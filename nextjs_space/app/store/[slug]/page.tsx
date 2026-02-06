@@ -145,20 +145,9 @@ export default async function TenantStorePage() {
       logoUrl,
     };
 
-    // PATH 1: Legacy React template (bundled at build time)
-    // Always prefer bundled templates — they have custom components not in the section registry
-    const TemplateComponent = templateSlug ? TEMPLATE_COMPONENTS[templateSlug] : undefined;
-
-    if (TemplateComponent) {
-      return (
-        <TenantThemeProvider tenantTemplate={signedTenantTemplate}>
-          <TemplateComponent {...templateProps} />
-        </TenantThemeProvider>
-      );
-    }
-
-    // PATH 2: Data-driven template (layout.json in S3)
-    // Only reached when no legacy React component exists for this template
+    // PATH 1: Data-driven template (layout.json in S3)
+    // Templates with layout.json in S3 are data-driven (cannabizz, wellness-nature, gta-cannabis)
+    // Templates WITHOUT layout.json fall through to PATH 2 (healingbuds)
     const tenantS3Path = tenantTemplate.s3Path;
     const baseS3Path = `templates/${templateSlug}`;
     let layout: TemplateLayout | null = null;
@@ -200,6 +189,18 @@ export default async function TenantStorePage() {
             customCss={customCss}
             renderChrome={false}
           />
+        </TenantThemeProvider>
+      );
+    }
+
+    // PATH 2: Legacy React template (bundled at build time)
+    // Only reached when no layout.json exists in S3 (e.g. healingbuds)
+    const TemplateComponent = templateSlug ? TEMPLATE_COMPONENTS[templateSlug] : undefined;
+
+    if (TemplateComponent) {
+      return (
+        <TenantThemeProvider tenantTemplate={signedTenantTemplate}>
+          <TemplateComponent {...templateProps} />
         </TenantThemeProvider>
       );
     }

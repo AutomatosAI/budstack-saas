@@ -70,37 +70,7 @@ export default async function TemplatePreviewPage({
 }) {
   const { templateSlug } = params;
 
-  // PATH 1: Legacy React template (bundled at build time) — always preferred
-  const TemplateComponent = TEMPLATE_COMPONENTS[templateSlug];
-
-  if (TemplateComponent) {
-    const localDefaults = loadLocalDefaults(templateSlug);
-
-    const templateProps = {
-      tenant: mockTenant,
-      consultationUrl: "#consultation",
-      productsUrl: "#products",
-      contactUrl: "#contact",
-      aboutUrl: "#about",
-      heroImageUrl: resolvePublicAsset(localDefaults?.heroImagePath),
-      logoUrl: resolvePublicAsset(localDefaults?.logoPath),
-      designSystem: localDefaults?.designSystem || null,
-      pageContent: localDefaults?.pageContent || null,
-      navigation: localDefaults?.navigation || null,
-      footer: localDefaults?.footer || null,
-      posts: [],
-    };
-
-    return (
-      <>
-        <PreviewToolbar templateName={localDefaults?.template || templateSlug} />
-        <TemplateComponent {...templateProps} />
-      </>
-    );
-  }
-
-  // PATH 2: Data-driven template (layout.json in S3)
-  // Only reached when no legacy React component exists
+  // PATH 1: Try data-driven template (layout.json in S3)
   let layout: TemplateLayout | null = null;
   let customCss: string | null = null;
   let defaults: any = null;
@@ -143,8 +113,35 @@ export default async function TemplatePreviewPage({
     );
   }
 
-  // No template found at all
-  notFound();
+  // PATH 2: Legacy React template (bundled at build time)
+  const TemplateComponent = TEMPLATE_COMPONENTS[templateSlug];
+  if (!TemplateComponent) {
+    notFound();
+  }
+
+  const localDefaults = loadLocalDefaults(templateSlug);
+
+  const templateProps = {
+    tenant: mockTenant,
+    consultationUrl: "#consultation",
+    productsUrl: "#products",
+    contactUrl: "#contact",
+    aboutUrl: "#about",
+    heroImageUrl: resolvePublicAsset(localDefaults?.heroImagePath),
+    logoUrl: resolvePublicAsset(localDefaults?.logoPath),
+    designSystem: localDefaults?.designSystem || null,
+    pageContent: localDefaults?.pageContent || null,
+    navigation: localDefaults?.navigation || null,
+    footer: localDefaults?.footer || null,
+    posts: [],
+  };
+
+  return (
+    <>
+      <PreviewToolbar templateName={localDefaults?.template || templateSlug} />
+      <TemplateComponent {...templateProps} />
+    </>
+  );
 }
 
 export function generateMetadata({
