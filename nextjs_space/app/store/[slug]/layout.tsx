@@ -235,9 +235,11 @@ export default async function TenantStoreLayout({
         <div className={`min-h-screen ${wrapperClass}`}>
           {/* Inject template custom CSS from S3 (sanitized) */}
           {customCss && <style>{sanitizeCss(customCss)}</style>}
-          {renderNavigation()}
+          {/* Data-driven templates render nav/footer via TemplateRenderer in page.tsx */}
+          {/* Only render layout nav/footer for legacy templates (no layout.json) */}
+          {!layout && renderNavigation()}
           <main>{children}</main>
-          {renderFooter()}
+          {!layout && renderFooter()}
           <CookieConsent tenant={tenantWithTemplate} />
         </div>
       </CartProvider>

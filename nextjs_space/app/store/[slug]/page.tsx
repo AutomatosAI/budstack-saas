@@ -182,14 +182,12 @@ export default async function TenantStorePage() {
       };
 
       return (
-        <TenantThemeProvider tenantTemplate={mergedTenantTemplate}>
-          <TemplateRenderer
-            layout={layout}
-            sectionProps={mergedProps}
-            customCss={customCss}
-            renderChrome={false}
-          />
-        </TenantThemeProvider>
+        <TemplateRenderer
+          layout={layout}
+          sectionProps={mergedProps}
+          customCss={customCss}
+          renderChrome={true}
+        />
       );
     }
 
