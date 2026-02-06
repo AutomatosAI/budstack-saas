@@ -48,6 +48,10 @@ export default function CannabizzTemplate({
       <Navigation
         businessName={tenant.businessName}
         logoUrl={logoUrl || settings.logoPath}
+        subdomain={tenant.subdomain}
+        consultationUrl={consultationUrl}
+        productsUrl={productsUrl}
+        contactUrl={contactUrl}
       />
       <main>
         <Hero
@@ -76,6 +80,10 @@ export default function CannabizzTemplate({
       <Footer
         businessName={tenant.businessName}
         logoUrl={logoUrl || settings.logoPath}
+        subdomain={tenant.subdomain}
+        consultationUrl={consultationUrl}
+        productsUrl={productsUrl}
+        contactUrl={contactUrl}
       />
     </div>
   );

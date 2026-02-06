@@ -3,16 +3,18 @@
 import React from 'react';
 import { SectionProps } from '@/lib/types/section-props';
 
-const defaultLinks = [
-  { label: 'Privacy', href: '/privacy' },
-  { label: 'Terms', href: '/terms' },
-  { label: 'Contact', href: '/contact' },
-];
-
 export function FooterSimple(props: SectionProps) {
-  const { tenant, footer, sectionConfig } = props;
+  const { tenant, footer, sectionConfig, contactUrl } = props;
 
   const businessName = tenant.businessName;
+  const basePath = `/store/${tenant.subdomain}`;
+
+  const defaultLinks = [
+    { label: 'Privacy', href: `${basePath}/privacy` },
+    { label: 'Terms', href: `${basePath}/terms` },
+    { label: 'Contact', href: contactUrl || `${basePath}/contact` },
+  ];
+
   const links = sectionConfig?.links || footer?.links || defaultLinks;
 
   const year = new Date().getFullYear();

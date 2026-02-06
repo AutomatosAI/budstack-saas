@@ -85,6 +85,7 @@ export default async function TenantStorePage() {
     });
 
     const templateSlug = baseTemplate.slug;
+    console.log("[page] templateSlug:", templateSlug, "baseTemplate:", baseTemplate.name);
 
     // Process hero image URL (sign if S3 path)
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
@@ -154,19 +155,23 @@ export default async function TenantStorePage() {
     let customCss: string | null = null;
     let defaults: any = null;
 
+    console.log("[page] S3 paths:", [tenantS3Path, baseS3Path].filter(Boolean));
     for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
       try {
+        console.log("[page] Trying S3:", `${s3Prefix}/layout.json`);
         layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
         if (layout) {
+          console.log("[page] FOUND layout.json, using data-driven PATH 1");
           customCss = await getTextFromS3(`${s3Prefix}/styles.css`);
           defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null);
           break;
         }
       } catch {
-        // No layout.json at this path, try next
+        console.log("[page] No layout.json at:", s3Prefix);
       }
     }
 
+    console.log("[page] layout found:", !!layout, "falling to legacy:", !layout);
     if (layout) {
       const mergedProps = {
         ...templateProps,

@@ -14,43 +14,51 @@ interface FooterProps {
   tagline?: string;
   sections?: FooterSection[];
   disclaimer?: string;
+  subdomain?: string;
+  consultationUrl?: string;
+  productsUrl?: string;
+  contactUrl?: string;
 }
-
-const defaultSections: FooterSection[] = [
-  {
-    title: 'Shop',
-    links: [
-      { label: 'All Products', href: '/products' },
-      { label: 'Popular Picks', href: '/products?filter=popular' },
-      { label: 'New Drops', href: '/products?filter=new' },
-    ],
-  },
-  {
-    title: 'Learn',
-    links: [
-      { label: 'About Us', href: '/about' },
-      { label: 'The Wire', href: '/the-wire' },
-      { label: 'FAQ', href: '/faq' },
-      { label: 'Contact', href: '/contact' },
-    ],
-  },
-  {
-    title: 'Legal',
-    links: [
-      { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Terms of Service', href: '/terms' },
-      { label: 'Compliance', href: '/regulatory' },
-    ],
-  },
-];
 
 export default function Footer({
   businessName,
   logoUrl,
   tagline = 'Your vibe. Your bud. Delivered with care.',
-  sections = defaultSections,
+  sections,
   disclaimer = 'Cannabis should only be used under the guidance of a licensed healthcare professional. Must be of legal age.',
+  subdomain,
+  productsUrl,
+  contactUrl,
 }: FooterProps) {
+  const basePath = subdomain ? `/store/${subdomain}` : '';
+
+  const resolvedSections = sections || [
+    {
+      title: 'Shop',
+      links: [
+        { label: 'All Products', href: productsUrl || `${basePath}/products` },
+        { label: 'Popular Picks', href: `${productsUrl || `${basePath}/products`}?filter=popular` },
+        { label: 'New Drops', href: `${productsUrl || `${basePath}/products`}?filter=new` },
+      ],
+    },
+    {
+      title: 'Learn',
+      links: [
+        { label: 'About Us', href: `${basePath}/about` },
+        { label: 'The Wire', href: `${basePath}/the-wire` },
+        { label: 'FAQ', href: `${basePath}/faq` },
+        { label: 'Contact', href: contactUrl || `${basePath}/contact` },
+      ],
+    },
+    {
+      title: 'Legal',
+      links: [
+        { label: 'Privacy Policy', href: `${basePath}/privacy` },
+        { label: 'Terms of Service', href: `${basePath}/terms` },
+        { label: 'Compliance', href: `${basePath}/regulatory` },
+      ],
+    },
+  ];
   const year = new Date().getFullYear();
 
   return (
@@ -82,7 +90,7 @@ export default function Footer({
           </div>
 
           {/* Link Columns */}
-          {sections.map((section) => (
+          {resolvedSections.map((section) => (
             <div key={section.title}>
               <h4 className="font-bold text-sm uppercase tracking-wider mb-4 text-white/90">
                 {section.title}

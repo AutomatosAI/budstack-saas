@@ -5,16 +5,18 @@ import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
 
-const defaultLinks = [
-  { label: 'Products', href: '/products' },
-  { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
-];
-
 export function NavTransparent(props: SectionProps) {
-  const { tenant, logoUrl, consultationUrl, navigation, sectionConfig } = props;
+  const { tenant, logoUrl, consultationUrl, productsUrl, aboutUrl, contactUrl, navigation, sectionConfig } = props;
 
   const businessName = tenant.businessName;
+  const basePath = `/store/${tenant.subdomain}`;
+
+  const defaultLinks = [
+    { label: 'Products', href: productsUrl || `${basePath}/products` },
+    { label: 'About', href: aboutUrl || `${basePath}/about` },
+    { label: 'Contact', href: contactUrl || `${basePath}/contact` },
+  ];
+
   const links = sectionConfig?.links || navigation?.links || defaultLinks;
   const ctaLabel = sectionConfig?.ctaLabel || navigation?.ctaLabel || 'Book Consultation';
   const ctaHref = sectionConfig?.ctaHref || consultationUrl;
@@ -38,7 +40,7 @@ export function NavTransparent(props: SectionProps) {
       }}
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-3">
+        <a href={basePath} className="flex items-center gap-3">
           {logoUrl && (
             <div className="relative w-10 h-10">
               <Image src={logoUrl} alt={businessName} fill className="object-contain" />

@@ -16,23 +16,34 @@ interface NavigationProps {
   ctaLabel?: string;
   ctaHref?: string;
   tenant?: any;
+  subdomain?: string;
+  consultationUrl?: string;
+  productsUrl?: string;
+  contactUrl?: string;
 }
-
-const defaultLinks: NavLink[] = [
-  { label: 'Products', href: '/products' },
-  { label: 'About', href: '/about' },
-  { label: 'The Wire', href: '/the-wire' },
-  { label: 'FAQ', href: '/faq' },
-  { label: 'Contact', href: '/contact' },
-];
 
 export default function Navigation({
   businessName,
   logoUrl,
-  links = defaultLinks,
+  links,
   ctaLabel = 'Get Started',
-  ctaHref = '/consultation',
+  ctaHref,
+  subdomain,
+  consultationUrl,
+  productsUrl,
+  contactUrl,
 }: NavigationProps) {
+  const basePath = subdomain ? `/store/${subdomain}` : '';
+
+  const resolvedLinks = links || [
+    { label: 'Products', href: productsUrl || `${basePath}/products` },
+    { label: 'About', href: `${basePath}/about` },
+    { label: 'The Wire', href: `${basePath}/the-wire` },
+    { label: 'FAQ', href: `${basePath}/faq` },
+    { label: 'Contact', href: contactUrl || `${basePath}/contact` },
+  ];
+
+  const resolvedCtaHref = ctaHref || consultationUrl || `${basePath}/consultation`;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -54,7 +65,7 @@ export default function Navigation({
       }}
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-3">
+        <a href={basePath || '/'} className="flex items-center gap-3">
           {logoUrl && (
             <div className="relative w-10 h-10">
               <Image src={logoUrl} alt={businessName} fill className="object-contain" />
@@ -73,7 +84,7 @@ export default function Navigation({
 
         {/* Desktop Links */}
         <div className="hidden lg:flex items-center gap-8">
-          {links.map((link) => (
+          {resolvedLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
@@ -87,11 +98,11 @@ export default function Navigation({
 
         {/* Desktop CTA + Cart */}
         <div className="hidden lg:flex items-center gap-4">
-          <a href="/cart" aria-label="Cart">
+          <a href={`${basePath}/cart`} aria-label="Cart">
             <ShoppingCart size={20} style={{ color: 'hsl(var(--tenant-color-text))' }} />
           </a>
           <a
-            href={ctaHref}
+            href={resolvedCtaHref}
             className="px-6 py-2 text-sm font-bold text-white rounded-full transition-all hover:scale-105"
             style={{
               backgroundColor: 'hsl(var(--tenant-color-primary))',
@@ -125,7 +136,7 @@ export default function Navigation({
             borderColor: 'hsl(var(--tenant-color-border))',
           }}
         >
-          {links.map((link) => (
+          {resolvedLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
@@ -138,7 +149,7 @@ export default function Navigation({
           ))}
           <div className="pt-3 flex items-center gap-4">
             <a
-              href={ctaHref}
+              href={resolvedCtaHref}
               className="flex-1 text-center px-6 py-3 text-sm font-bold text-white rounded-full"
               style={{
                 backgroundColor: 'hsl(var(--tenant-color-primary))',

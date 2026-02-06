@@ -5,18 +5,20 @@ import Image from 'next/image';
 import { Menu, X, ShoppingCart } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
 
-const defaultLinks = [
-  { label: 'Products', href: '/products' },
-  { label: 'About', href: '/about' },
-  { label: 'The Wire', href: '/the-wire' },
-  { label: 'FAQ', href: '/faq' },
-  { label: 'Contact', href: '/contact' },
-];
-
 export function NavFull(props: SectionProps) {
-  const { tenant, logoUrl, consultationUrl, navigation, sectionConfig } = props;
+  const { tenant, logoUrl, consultationUrl, productsUrl, aboutUrl, contactUrl, navigation, sectionConfig } = props;
 
   const businessName = tenant.businessName;
+  const basePath = `/store/${tenant.subdomain}`;
+
+  const defaultLinks = [
+    { label: 'Products', href: productsUrl || `${basePath}/products` },
+    { label: 'About', href: aboutUrl || `${basePath}/about` },
+    { label: 'The Wire', href: `${basePath}/the-wire` },
+    { label: 'FAQ', href: `${basePath}/faq` },
+    { label: 'Contact', href: contactUrl || `${basePath}/contact` },
+  ];
+
   const links = sectionConfig?.links || navigation?.links || defaultLinks;
   const ctaLabel = sectionConfig?.ctaLabel || navigation?.ctaLabel || 'Book Consultation';
   const ctaHref = sectionConfig?.ctaHref || consultationUrl;
@@ -42,7 +44,7 @@ export function NavFull(props: SectionProps) {
       }}
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-3">
+        <a href={basePath} className="flex items-center gap-3">
           {logoUrl && (
             <div className="relative w-10 h-10">
               <Image src={logoUrl} alt={businessName} fill className="object-contain" />
@@ -75,7 +77,7 @@ export function NavFull(props: SectionProps) {
 
         {/* Desktop CTA + Cart */}
         <div className="hidden lg:flex items-center gap-4">
-          <a href="/cart" aria-label="Cart">
+          <a href={`${basePath}/cart`} aria-label="Cart">
             <ShoppingCart size={20} style={{ color: 'hsl(var(--tenant-color-text))' }} />
           </a>
           <a

@@ -9,36 +9,38 @@ interface FooterSection {
   links: { label: string; href: string }[];
 }
 
-const defaultSections: FooterSection[] = [
-  {
-    title: 'Quick Links',
-    links: [
-      { label: 'Products', href: '/products' },
-      { label: 'About Us', href: '/about' },
-      { label: 'Blog', href: '/the-wire' },
-      { label: 'Contact', href: '/contact' },
-    ],
-  },
-  {
-    title: 'Support',
-    links: [
-      { label: 'FAQ', href: '/faq' },
-      { label: 'Consultation', href: '/consultation' },
-      { label: 'Conditions', href: '/conditions' },
-    ],
-  },
-  {
-    title: 'Legal',
-    links: [
-      { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Terms of Service', href: '/terms' },
-      { label: 'Regulatory', href: '/regulatory' },
-    ],
-  },
-];
-
 export function FooterFull(props: SectionProps) {
-  const { tenant, logoUrl, footer, sectionConfig } = props;
+  const { tenant, logoUrl, footer, sectionConfig, productsUrl, aboutUrl, contactUrl, consultationUrl } = props;
+
+  const basePath = `/store/${tenant.subdomain}`;
+
+  const defaultSections: FooterSection[] = [
+    {
+      title: 'Quick Links',
+      links: [
+        { label: 'Products', href: productsUrl || `${basePath}/products` },
+        { label: 'About Us', href: aboutUrl || `${basePath}/about` },
+        { label: 'Blog', href: `${basePath}/the-wire` },
+        { label: 'Contact', href: contactUrl || `${basePath}/contact` },
+      ],
+    },
+    {
+      title: 'Support',
+      links: [
+        { label: 'FAQ', href: `${basePath}/faq` },
+        { label: 'Consultation', href: consultationUrl || `${basePath}/consultation` },
+        { label: 'Conditions', href: `${basePath}/conditions` },
+      ],
+    },
+    {
+      title: 'Legal',
+      links: [
+        { label: 'Privacy Policy', href: `${basePath}/privacy` },
+        { label: 'Terms of Service', href: `${basePath}/terms` },
+        { label: 'Regulatory', href: `${basePath}/regulatory` },
+      ],
+    },
+  ];
 
   const businessName = tenant.businessName;
   const tagline = sectionConfig?.tagline || footer?.tagline || 'Premium medical cannabis, delivered with care.';

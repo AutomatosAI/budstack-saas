@@ -7,7 +7,7 @@ import { getFileUrl, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 // Import template registries (legacy + section-based)
-import { TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/template-registry";
+import { TEMPLATE_COMPONENTS, TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/template-registry";
 import { getSectionComponent } from "@/lib/section-registry";
 import type { TemplateLayout } from "@/lib/types/template-layout";
 import { CartProvider } from "./_contexts/CartContext";
@@ -122,18 +122,27 @@ export default async function TenantStoreLayout({
   let customCss: string | null = null;
   let defaults: any = null;
 
+  console.log("[layout] templateSlug:", templateSlug, "tenantS3Path:", tenantS3Path, "baseS3Path:", baseS3Path);
   for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
     try {
+      console.log("[layout] Trying S3:", `${s3Prefix}/layout.json`);
       layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
       if (layout) {
+        console.log("[layout] FOUND layout.json at:", s3Prefix, "nav:", layout.navigation, "footer:", layout.footer);
         customCss = await getTextFromS3(`${s3Prefix}/styles.css`);
         defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null);
         break;
       }
     } catch {
-      // No layout.json at this path
+      console.log("[layout] No layout.json at:", s3Prefix);
     }
   }
+  // Legacy templates (in TEMPLATE_COMPONENTS) bundle their own nav/footer in index.tsx
+  // Data-driven templates (layout.json found) render nav/footer via TemplateRenderer
+  // Layout only renders nav/footer when NEITHER applies (bare fallback)
+  const legacyTemplateExists = !!(templateSlug && TEMPLATE_COMPONENTS[templateSlug]);
+  const skipLayoutChrome = !!layout || legacyTemplateExists;
+  console.log("[layout] Final: layout found:", !!layout, "legacyTemplate:", legacyTemplateExists, "skipLayoutChrome:", skipLayoutChrome);
 
   // Build section props for data-driven nav/footer
   const sectionProps = {
@@ -235,11 +244,10 @@ export default async function TenantStoreLayout({
         <div className={`min-h-screen ${wrapperClass}`}>
           {/* Inject template custom CSS from S3 (sanitized) */}
           {customCss && <style>{sanitizeCss(customCss)}</style>}
-          {/* Data-driven templates render nav/footer via TemplateRenderer in page.tsx */}
-          {/* Only render layout nav/footer for legacy templates (no layout.json) */}
-          {!layout && renderNavigation()}
+          {/* Skip nav/footer when: data-driven (TemplateRenderer handles it) or legacy (template bundles its own) */}
+          {!skipLayoutChrome && renderNavigation()}
           <main>{children}</main>
-          {!layout && renderFooter()}
+          {!skipLayoutChrome && renderFooter()}
           <CookieConsent tenant={tenantWithTemplate} />
         </div>
       </CartProvider>

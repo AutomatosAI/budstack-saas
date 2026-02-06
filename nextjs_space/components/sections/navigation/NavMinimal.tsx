@@ -5,16 +5,18 @@ import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
 
-const defaultLinks = [
-  { label: 'Products', href: '/products' },
-  { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
-];
-
 export function NavMinimal(props: SectionProps) {
-  const { tenant, logoUrl, navigation, sectionConfig } = props;
+  const { tenant, logoUrl, productsUrl, aboutUrl, contactUrl, navigation, sectionConfig } = props;
 
   const businessName = tenant.businessName;
+  const basePath = `/store/${tenant.subdomain}`;
+
+  const defaultLinks = [
+    { label: 'Products', href: productsUrl || `${basePath}/products` },
+    { label: 'About', href: aboutUrl || `${basePath}/about` },
+    { label: 'Contact', href: contactUrl || `${basePath}/contact` },
+  ];
+
   const links = sectionConfig?.links || navigation?.links || defaultLinks;
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -28,7 +30,7 @@ export function NavMinimal(props: SectionProps) {
       }}
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-3">
+        <a href={basePath} className="flex items-center gap-3">
           {logoUrl && (
             <div className="relative w-8 h-8">
               <Image src={logoUrl} alt={businessName} fill className="object-contain" />
