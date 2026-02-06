@@ -15,7 +15,7 @@ interface NavigationProps {
   logoUrl?: string | null;
 }
 
-export function Navigation({ businessName, subdomain, logoUrl }: NavigationProps) {
+export default function Navigation({ businessName, subdomain, logoUrl }: NavigationProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
