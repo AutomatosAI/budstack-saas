@@ -145,8 +145,20 @@ export default async function TenantStorePage() {
       logoUrl,
     };
 
-    // PATH 1: Data-driven template (layout.json in S3)
-    // Try tenant's clone first, then base template
+    // PATH 1: Legacy React template (bundled at build time)
+    // Always prefer bundled templates — they have custom components not in the section registry
+    const TemplateComponent = templateSlug ? TEMPLATE_COMPONENTS[templateSlug] : undefined;
+
+    if (TemplateComponent) {
+      return (
+        <TenantThemeProvider tenantTemplate={signedTenantTemplate}>
+          <TemplateComponent {...templateProps} />
+        </TenantThemeProvider>
+      );
+    }
+
+    // PATH 2: Data-driven template (layout.json in S3)
+    // Only reached when no legacy React component exists for this template
     const tenantS3Path = tenantTemplate.s3Path;
     const baseS3Path = `templates/${templateSlug}`;
     let layout: TemplateLayout | null = null;
@@ -157,7 +169,6 @@ export default async function TenantStorePage() {
       try {
         layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
         if (layout) {
-          // Load custom CSS and defaults from same path
           customCss = await getTextFromS3(`${s3Prefix}/styles.css`);
           defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null);
           break;
@@ -168,7 +179,6 @@ export default async function TenantStorePage() {
     }
 
     if (layout) {
-      // Merge defaults into props (DB overrides > defaults)
       const mergedProps = {
         ...templateProps,
         pageContent: templateProps.pageContent || defaults?.pageContent || {},
@@ -177,7 +187,6 @@ export default async function TenantStorePage() {
         valueProps: defaults?.valueProps || [],
       };
 
-      // Build designSystem for TenantThemeProvider from defaults fallback
       const mergedTenantTemplate = {
         ...signedTenantTemplate,
         designSystem: signedTenantTemplate.designSystem || defaults?.designSystem || null,
@@ -191,17 +200,6 @@ export default async function TenantStorePage() {
             customCss={customCss}
             renderChrome={false}
           />
-        </TenantThemeProvider>
-      );
-    }
-
-    // PATH 2: Legacy React template (bundled at build time)
-    const TemplateComponent = templateSlug ? TEMPLATE_COMPONENTS[templateSlug] : undefined;
-
-    if (TemplateComponent) {
-      return (
-        <TenantThemeProvider tenantTemplate={signedTenantTemplate}>
-          <TemplateComponent {...templateProps} />
         </TenantThemeProvider>
       );
     }

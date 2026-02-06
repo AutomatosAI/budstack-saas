@@ -7,7 +7,7 @@ import { getFileUrl, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 // Import template registries (legacy + section-based)
-import { TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/template-registry";
+import { TEMPLATE_COMPONENTS, TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/template-registry";
 import { getSectionComponent } from "@/lib/section-registry";
 import type { TemplateLayout } from "@/lib/types/template-layout";
 import { CartProvider } from "./_contexts/CartContext";
@@ -114,22 +114,26 @@ export default async function TenantStoreLayout({
   const socialLinks = settings.socialMedia || {};
 
   // Check if this template has a layout.json (data-driven)
+  // ONLY try S3 if no legacy React template is bundled — legacy templates take priority
+  const hasLegacyTemplate = templateSlug ? !!TEMPLATE_COMPONENTS[templateSlug] : false;
   const tenantS3Path = activeTemplate?.s3Path;
   const baseS3Path = templateSlug ? `templates/${templateSlug}` : null;
   let layout: TemplateLayout | null = null;
   let customCss: string | null = null;
   let defaults: any = null;
 
-  for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
-    try {
-      layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
-      if (layout) {
-        customCss = await getTextFromS3(`${s3Prefix}/styles.css`);
-        defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null);
-        break;
+  if (!hasLegacyTemplate) {
+    for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
+      try {
+        layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
+        if (layout) {
+          customCss = await getTextFromS3(`${s3Prefix}/styles.css`);
+          defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null);
+          break;
+        }
+      } catch {
+        // No layout.json at this path
       }
-    } catch {
-      // No layout.json at this path
     }
   }
 
@@ -148,15 +152,7 @@ export default async function TenantStoreLayout({
 
   // Render navigation
   const renderNavigation = () => {
-    // Data-driven: use section component from layout.json
-    if (layout?.navigation) {
-      const NavComponent = getSectionComponent(layout.navigation);
-      if (NavComponent) {
-        return <NavComponent {...sectionProps} />;
-      }
-    }
-
-    // Legacy: use template-specific React component
+    // Legacy first: use template-specific React component
     const SpecificNavigation = templateSlug
       ? TEMPLATE_NAVIGATION[templateSlug]
       : null;
@@ -172,20 +168,20 @@ export default async function TenantStoreLayout({
       );
     }
 
+    // Data-driven: use section component from layout.json
+    if (layout?.navigation) {
+      const NavComponent = getSectionComponent(layout.navigation);
+      if (NavComponent) {
+        return <NavComponent {...sectionProps} />;
+      }
+    }
+
     return <Navigation tenant={tenantWithTemplate} logoUrl={logoUrl} />;
   };
 
   // Render footer
   const renderFooter = () => {
-    // Data-driven: use section component from layout.json
-    if (layout?.footer) {
-      const FooterComponent = getSectionComponent(layout.footer);
-      if (FooterComponent) {
-        return <FooterComponent {...sectionProps} />;
-      }
-    }
-
-    // Legacy: use template-specific React component
+    // Legacy first: use template-specific React component
     const SpecificFooter = templateSlug ? TEMPLATE_FOOTER[templateSlug] : null;
 
     if (SpecificFooter) {
@@ -199,6 +195,14 @@ export default async function TenantStoreLayout({
           contactUrl={contactUrl}
         />
       );
+    }
+
+    // Data-driven: use section component from layout.json
+    if (layout?.footer) {
+      const FooterComponent = getSectionComponent(layout.footer);
+      if (FooterComponent) {
+        return <FooterComponent {...sectionProps} />;
+      }
     }
 
     return <Footer tenant={tenantWithTemplate} logoUrl={logoUrl} />;
