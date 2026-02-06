@@ -12,10 +12,11 @@ import React from "react";
  * 2. Add template files to /templates/{slug}/ directory
  * 3. Run: npm run sync-templates
  *
- * Last generated: 2026-02-05T19:08:53.314Z
+ * Last generated: 2026-02-05T22:35:54.043Z
  */
 
 export const TEMPLATE_COMPONENTS: Record<string, any> = {
+  "cannabizz": dynamic(() => import("@/templates/cannabizz/index")),
   "gta-cannabis": dynamic(() => import("@/templates/gta-cannabis/index")),
   "healingbuds": dynamic(() => import("@/templates/healingbuds/index")),
   "wellness-nature": dynamic(() => import("@/templates/wellness-nature/index")),
@@ -27,6 +28,7 @@ export const TEMPLATE_COMPONENTS: Record<string, any> = {
  * Templates without a specific navigation will use the default platform navigation.
  */
 export const TEMPLATE_NAVIGATION: Record<string, any> = {
+  "cannabizz": dynamic(() => import("@/templates/cannabizz/components/Navigation").then((m: any) => m.default || m)),
   "gta-cannabis": dynamic(() => import("@/templates/gta-cannabis/components/Navigation").then((m: any) => m.default || m)),
   "healingbuds": dynamic(() => import("@/templates/healingbuds/components/Navigation").then((m: any) => m.default || m)),
   "wellness-nature": dynamic(() => import("@/templates/wellness-nature/components/Navigation").then((m: any) => m.default || m)),
@@ -37,6 +39,7 @@ export const TEMPLATE_NAVIGATION: Record<string, any> = {
  * Templates without a specific footer will use the default platform footer.
  */
 export const TEMPLATE_FOOTER: Record<string, any> = {
+  "cannabizz": dynamic(() => import("@/templates/cannabizz/components/Footer").then((m: any) => m.default || m)),
   "gta-cannabis": dynamic(() => import("@/templates/gta-cannabis/components/Footer").then((m: any) => m.default || m)),
   "healingbuds": dynamic(() => import("@/templates/healingbuds/components/Footer").then((m: any) => m.default || m)),
   "wellness-nature": dynamic(() => import("@/templates/wellness-nature/components/Footer").then((m: any) => m.default || m)),

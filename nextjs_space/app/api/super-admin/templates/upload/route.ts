@@ -212,7 +212,11 @@ export async function POST(req: NextRequest) {
       }
 
       // Copy template files to project
-      const templatesDir = path.join(process.cwd(), "templates");
+      // In production standalone mode, process.cwd() = /app/app/ but templates live at /app/templates/
+      // Use /app/templates in production, process.cwd()/templates in development
+      const templatesDir = process.env.NODE_ENV === "production"
+        ? "/app/templates"
+        : path.join(process.cwd(), "templates");
       const targetDir = path.join(templatesDir, config.id);
 
       // Check if target directory exists
@@ -312,8 +316,10 @@ export async function POST(req: NextRequest) {
         const { promisify } = await import("util");
         const execAsync = promisify(exec);
 
-        await execAsync("npm run sync-templates", {
-          cwd: process.cwd(),
+        // In production, scripts live at /app/scripts/ (not /app/app/scripts/)
+        const scriptsBase = process.env.NODE_ENV === "production" ? "/app" : process.cwd();
+        await execAsync("npx tsx scripts/sync-template-registry.ts", {
+          cwd: scriptsBase,
         });
         console.log("[Template Upload] Template registry synced successfully");
       } catch (syncError: any) {

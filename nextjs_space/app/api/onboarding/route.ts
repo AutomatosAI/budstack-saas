@@ -153,10 +153,17 @@ export async function POST(req: NextRequest) {
     });
 
     // 5. Create Local Tenant (mirroring Clerk Org)
-    // Get actual template from database or fallback to healingbuds
-    let dbTemplate = await prisma.templates.findFirst({
-      where: { slug: templateId || "healingbuds" },
-    });
+    // Get actual template from database — templateId could be a slug OR a UUID
+    let dbTemplate = templateId
+      ? await prisma.templates.findFirst({
+          where: {
+            OR: [
+              { slug: templateId },
+              { id: templateId },
+            ],
+          },
+        })
+      : null;
 
     if (!dbTemplate) {
       dbTemplate = await prisma.templates.findFirst({
@@ -227,6 +234,26 @@ export async function POST(req: NextRequest) {
         fontFamily: template.fontFamily,
         updatedAt: new Date(),
       },
+    });
+
+    // Create tenant_templates record so the new template system works
+    // This links the tenant to the base template with customizable overrides
+    const tenantTemplateId = crypto.randomUUID();
+    await prisma.tenant_templates.create({
+      data: {
+        id: tenantTemplateId,
+        tenantId: tenant.id,
+        baseTemplateId: dbTemplate.id,
+        templateName: dbTemplate.name,
+        isActive: true,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Set as active template on tenant
+    await prisma.tenants.update({
+      where: { id: tenant.id },
+      data: { activeTenantTemplateId: tenantTemplateId },
     });
 
     // 6. Create Local User (mirroring Clerk User)
