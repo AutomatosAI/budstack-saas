@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Nunito:wght@400;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== CannaBiZZ Template Styles ===== */
+
+:root {
+  --tenant-color-primary: 275 70% 55%;
+  --tenant-color-secondary: 145 80% 55%;
+  --tenant-color-accent: 210 100% 65%;
+  --tenant-color-background: 270 15% 8%;
+  --tenant-color-surface: 270 12% 12%;
+  --tenant-color-text: 270 10% 80%;
+  --tenant-color-heading: 0 0% 100%;
+  --tenant-color-border: 270 15% 22%;
+  --tenant-font-base: 'Nunito', sans-serif;
+  --tenant-font-heading: 'Outfit', sans-serif;
+}
+
+.template-cannabizz {
+  font-family: var(--tenant-font-base);
+  background-color: hsl(var(--tenant-color-background));
+  color: hsl(var(--tenant-color-text));
+}
+
+.template-cannabizz h1,
+.template-cannabizz h2,
+.template-cannabizz h3,
+.template-cannabizz h4 {
+  font-family: var(--tenant-font-heading);
+  color: hsl(var(--tenant-color-heading));
+}
+
+/* Utility Classes */
+.template-cannabizz .btn-primary {
+  background-color: hsl(var(--tenant-color-primary));
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  transition: all 0.2s;
+  box-shadow: 0 0 15px hsl(var(--tenant-color-primary) / 0.3);
+}
+
+.template-cannabizz .btn-primary:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px hsl(var(--tenant-color-primary) / 0.5);
+}
+
+.template-cannabizz .section-padding {
+  padding: 5rem 0;
+}
+
+/* Neon glow utility */
+.template-cannabizz .neon-glow {
+  box-shadow:
+    0 0 10px hsl(var(--tenant-color-primary) / 0.3),
+    0 0 30px hsl(var(--tenant-color-primary) / 0.15);
+}
+
+.template-cannabizz .neon-glow-green {
+  box-shadow:
+    0 0 10px hsl(var(--tenant-color-secondary) / 0.3),
+    0 0 30px hsl(var(--tenant-color-secondary) / 0.15);
+}
+
+.template-cannabizz .neon-glow-blue {
+  box-shadow:
+    0 0 10px hsl(var(--tenant-color-accent) / 0.3),
+    0 0 30px hsl(var(--tenant-color-accent) / 0.15);
+}
+
+/* Scrollbar styling */
+.template-cannabizz ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.template-cannabizz ::-webkit-scrollbar-track {
+  background: hsl(var(--tenant-color-background));
+}
+
+.template-cannabizz ::-webkit-scrollbar-thumb {
+  background: hsl(var(--tenant-color-border));
+  border-radius: 4px;
+}
+
+.template-cannabizz ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--tenant-color-primary) / 0.5);
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes neonPulse {
+  0%, 100% { box-shadow: 0 0 10px hsl(var(--tenant-color-primary) / 0.3); }
+  50% { box-shadow: 0 0 25px hsl(var(--tenant-color-primary) / 0.5); }
+}

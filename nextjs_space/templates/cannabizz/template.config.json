@@ -1,0 +1,44 @@
+{
+  "id": "cannabizz",
+  "slug": "cannabizz",
+  "name": "CannaBiZZ",
+  "description": "A playful, neon-drenched dark template for millennial cannabis consumers. Miami neon meets street art — vibrant purples, electric greens, and bold blues on a dark canvas.",
+  "version": "1.0.0",
+  "author": "BudStack Platform",
+  "category": "modern",
+  "tags": ["playful", "dark", "neon", "miami", "millennial", "street", "graffiti", "vibrant"],
+  "features": [
+    "Immersive fullscreen hero with neon glow effects",
+    "Animated stat counters",
+    "Spring-based framer-motion animations",
+    "Dark theme with neon accent colors",
+    "Responsive mobile navigation",
+    "FAQ accordion with AnimatePresence",
+    "6-feature grid showcase",
+    "Full multi-column footer"
+  ],
+  "previewUrl": "/templates/cannabizz/hero.jpg",
+  "thumbnailUrl": "/templates/cannabizz/hero.jpg",
+  "screenshots": [],
+  "demoUrl": null,
+  "price": 0,
+  "isPremium": false,
+  "isActive": true,
+  "components": [
+    { "name": "Navigation", "path": "components/Navigation.tsx", "required": true, "description": "Full sticky nav with mobile menu and neon CTA" },
+    { "name": "Hero", "path": "components/Hero.tsx", "required": true, "description": "Fullscreen hero with neon gradient overlay and ambient glow" },
+    { "name": "ValueProps", "path": "components/ValueProps.tsx", "required": false, "description": "4-card value propositions with neon icon backgrounds" },
+    { "name": "About", "path": "components/About.tsx", "required": false, "description": "Brand story with image, stats, and neon accents" },
+    { "name": "Features", "path": "components/Features.tsx", "required": false, "description": "6-item feature grid with icon cards" },
+    { "name": "Stats", "path": "components/Stats.tsx", "required": false, "description": "Animated counter section with gradient background" },
+    { "name": "FAQ", "path": "components/FAQ.tsx", "required": false, "description": "Accordion FAQ with spring animations" },
+    { "name": "ConsultationCTA", "path": "components/ConsultationCTA.tsx", "required": true, "description": "CTA with gradient background and neon ambient glow" },
+    { "name": "Footer", "path": "components/Footer.tsx", "required": true, "description": "Full multi-column footer with brand column" }
+  ],
+  "customization": {
+    "colors": { "primary": "#A333E6", "secondary": "#2ECC71", "accent": "#4D94FF" },
+    "fonts": { "base": "'Nunito', sans-serif", "heading": "'Outfit', sans-serif" }
+  },
+  "dependencies": ["framer-motion", "lucide-react", "react-intersection-observer"],
+  "accessibility": { "wcag_level": "AA", "screen_reader_tested": true }
+}
