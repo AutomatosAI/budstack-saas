@@ -152,156 +152,150 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // 5. Create Local Tenant (mirroring Clerk Org)
-    // Get actual template from database — templateId could be a slug OR a UUID
-    let dbTemplate = templateId
-      ? await prisma.templates.findFirst({
-          where: {
-            OR: [
-              { slug: templateId },
-              { id: templateId },
-            ],
+    // 5. Create Local DB Records (tenant, branding, template, user)
+    // Wrapped in try/catch to rollback Clerk records if DB fails
+    try {
+      // Get actual template from database — templateId could be a slug OR a UUID
+      let dbTemplate = templateId
+        ? await prisma.templates.findFirst({
+            where: {
+              OR: [
+                { slug: templateId },
+                { id: templateId },
+              ],
+            },
+          })
+        : null;
+
+      if (!dbTemplate) {
+        dbTemplate = await prisma.templates.findFirst({
+          where: { slug: "healingbuds" },
+        });
+      }
+
+      if (!dbTemplate) {
+        dbTemplate = await prisma.templates.create({
+          data: {
+            name: "HealingBuds Default",
+            slug: "healingbuds",
+            description: "Default medical cannabis template",
+            category: "medical",
+            version: "1.0.0",
+            author: "BudStack",
+            isActive: true,
           },
-        })
-      : null;
+        });
+      }
 
-    if (!dbTemplate) {
-      dbTemplate = await prisma.templates.findFirst({
-        where: { slug: "healingbuds" },
-      });
-    }
+      const template =
+        TEMPLATE_PRESETS[templateId as keyof typeof TEMPLATE_PRESETS] ||
+        TEMPLATE_PRESETS.modern;
 
-    if (!dbTemplate) {
-      // Safety fallback creation
-      dbTemplate = await prisma.templates.create({
+      const tenantId = crypto.randomUUID();
+
+      const tenant = await prisma.tenants.create({
         data: {
-          name: "HealingBuds Default",
-          slug: "healingbuds",
-          description: "Default medical cannabis template",
-          category: "medical",
-          version: "1.0.0",
-          author: "BudStack",
+          id: tenantId,
+          businessName,
+          subdomain,
+          nftTokenId,
+          countryCode: countryCode || "PT",
           isActive: true,
+          templateId: dbTemplate.id,
+          updatedAt: new Date(),
+          settings: {
+            contactInfo,
+            templatePreset: templateId || "modern",
+            clerkOrgId: clerkOrg.id,
+          },
         },
       });
-    }
 
-    const template =
-      TEMPLATE_PRESETS[templateId as keyof typeof TEMPLATE_PRESETS] ||
-      TEMPLATE_PRESETS.modern;
+      await prisma.tenant_branding.create({
+        data: {
+          id: crypto.randomUUID(),
+          tenantId: tenant.id,
+          primaryColor: template.primaryColor,
+          secondaryColor: template.secondaryColor,
+          accentColor: template.accentColor,
+          fontFamily: template.fontFamily,
+          updatedAt: new Date(),
+        },
+      });
 
-    // We use Clerk Org ID as our Tenant ID to keep them in sync? 
-    // Wait, the Clerk Org ID is like `org_2...`. Our DB uses UUIDs.
-    // We can't easily force Clerk IDs into UUID columns if our schema enforces UUID.
-    // Let's check schema.
+      const tenantTemplateId = crypto.randomUUID();
+      await prisma.tenant_templates.create({
+        data: {
+          id: tenantTemplateId,
+          tenantId: tenant.id,
+          baseTemplateId: dbTemplate.id,
+          templateName: dbTemplate.name,
+          isActive: true,
+          updatedAt: new Date(),
+        },
+      });
 
-    // Assuming schema is UUID based on previous code `crypto.randomUUID()`.
-    // So we will generate a UUID for our local Tenant, and store the Clerk Org ID in `settings` or a new column?
-    // Or we just rely on the link.
-    // For now, let's generate a UUID for local tenant, but usually we want to map them.
-    // If the schema `tenants.id` is a UUID, we can't use `org_...`.
-    // Solution: Keep local UUID, but store `clerkOrgId` in `tenants` table if possible, or matches by subdomain?
-    // The previous code verified subdomain uniqueness.
+      await prisma.tenants.update({
+        where: { id: tenant.id },
+        data: { activeTenantTemplateId: tenantTemplateId },
+      });
 
-    const tenantId = crypto.randomUUID();
+      // 6. Create Local User (mirroring Clerk User)
+      await prisma.users.upsert({
+        where: { email },
+        update: {
+          name: businessName,
+          role: "TENANT_ADMIN",
+          tenantId: tenant.id,
+          updatedAt: new Date(),
+        },
+        create: {
+          id: crypto.randomUUID(),
+          email,
+          password: "CLERK_MANAGED_ACCOUNT",
+          name: businessName,
+          role: "TENANT_ADMIN",
+          tenantId: tenant.id,
+          updatedAt: new Date(),
+        }
+      });
 
-    const tenant = await prisma.tenants.create({
-      data: {
-        id: tenantId,
+      // 7. Send Welcome Email (fire-and-forget)
+      const html = await emailTemplates.tenantWelcome(
+        businessName,
         businessName,
         subdomain,
-        nftTokenId,
-        countryCode: countryCode || "PT",
-        isActive: true, // Auto-activate for now since we have Clerk auth? Or keep false? User said "register the NEW Org".
-        templateId: dbTemplate.id,
-        updatedAt: new Date(),
-        settings: {
-          contactInfo,
-          templatePreset: templateId || "modern",
-          clerkOrgId: clerkOrg.id // Store Clerk Org ID in settings
-        },
-      },
-    });
-
-    // Create tenant branding
-    await prisma.tenant_branding.create({
-      data: {
-        id: crypto.randomUUID(),
+      );
+      sendEmail({
+        to: email,
+        subject: "Welcome to BudStack - Your Store is Ready!",
+        html,
         tenantId: tenant.id,
-        primaryColor: template.primaryColor,
-        secondaryColor: template.secondaryColor,
-        accentColor: template.accentColor,
-        fontFamily: template.fontFamily,
-        updatedAt: new Date(),
-      },
-    });
+        templateName: "tenantWelcome",
+      }).catch((error) => {
+        console.error("Failed to send tenant welcome email:", error);
+      });
 
-    // Create tenant_templates record so the new template system works
-    // This links the tenant to the base template with customizable overrides
-    const tenantTemplateId = crypto.randomUUID();
-    await prisma.tenant_templates.create({
-      data: {
-        id: tenantTemplateId,
+      return NextResponse.json({
+        message: "Application submitted successfully",
         tenantId: tenant.id,
-        baseTemplateId: dbTemplate.id,
-        templateName: dbTemplate.name,
-        isActive: true,
-        updatedAt: new Date(),
-      },
-    });
+        clerkUserId: clerkUser.id,
+        clerkOrgId: clerkOrg.id,
+      });
 
-    // Set as active template on tenant
-    await prisma.tenants.update({
-      where: { id: tenant.id },
-      data: { activeTenantTemplateId: tenantTemplateId },
-    });
-
-    // 6. Create Local User (mirroring Clerk User)
-    // Upsert to handle potential webhook race condition
-    await prisma.users.upsert({
-      where: { email },
-      update: {
-        name: businessName,
-        role: "TENANT_ADMIN",
-        tenantId: tenant.id,
-        updatedAt: new Date(),
-        // Store Clerk User ID if possible?
-        // We lack a `clerkId` column in standard schema usually, but let's check.
-        // If not, we rely on email. 
-      },
-      create: {
-        id: crypto.randomUUID(), // Local UUID
-        email,
-        password: "CLERK_MANAGED_ACCOUNT",
-        name: businessName,
-        role: "TENANT_ADMIN",
-        tenantId: tenant.id,
-        updatedAt: new Date(),
+    } catch (dbError: any) {
+      // DB operations failed — rollback Clerk records to prevent orphans
+      console.error("DB creation failed, rolling back Clerk records:", dbError);
+      try {
+        const rollbackClient = await clerkClient();
+        await rollbackClient.organizations.deleteOrganization(clerkOrg.id);
+        await rollbackClient.users.deleteUser(clerkUser.id);
+        console.log("Clerk rollback successful");
+      } catch (rollbackError) {
+        console.error("Clerk rollback failed (orphaned records):", rollbackError);
       }
-    });
-
-    // 7. Send Welcome Email
-    const html = await emailTemplates.tenantWelcome(
-      businessName,
-      businessName,
-      subdomain,
-    );
-    sendEmail({
-      to: email,
-      subject: "Welcome to BudStack - Your Store is Ready!",
-      html,
-      tenantId: tenant.id,
-      templateName: "tenantWelcome",
-    }).catch((error) => {
-      console.error("Failed to send tenant welcome email:", error);
-    });
-
-    return NextResponse.json({
-      message: "Application submitted successfully",
-      tenantId: tenant.id,
-      clerkUserId: clerkUser.id,
-      clerkOrgId: clerkOrg.id
-    });
+      throw dbError; // Re-throw so outer catch returns 500
+    }
 
   } catch (error: any) {
     console.error("Onboarding error:", error);

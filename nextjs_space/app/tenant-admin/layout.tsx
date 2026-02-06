@@ -24,7 +24,10 @@ export default async function TenantAdminLayout({
   }
 
   const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
+  console.log("[tenant-admin] Clerk user:", user.id, "email:", email, "role:", user.publicMetadata.role, "tenantId:", user.publicMetadata.tenantId);
+
+  // Try email-based lookup first
+  let localUser = await prisma.users.findFirst({
     where: { email: email },
     include: {
       tenants: {
@@ -36,7 +39,42 @@ export default async function TenantAdminLayout({
     },
   });
 
+  console.log("[tenant-admin] DB user lookup by email:", email, "found:", !!localUser, "tenantId:", localUser?.tenantId, "tenant:", localUser?.tenants?.businessName);
+
+  // Fallback: if no DB user found by email, try resolving via Clerk org ID
+  if (!localUser?.tenants && user.publicMetadata.tenantId) {
+    const clerkOrgId = user.publicMetadata.tenantId as string;
+    console.log("[tenant-admin] Trying Clerk org ID fallback:", clerkOrgId);
+    try {
+      const tenantByOrg = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM tenants WHERE settings->>'clerkOrgId' = ${clerkOrgId} LIMIT 1
+      `;
+      if (tenantByOrg?.length > 0) {
+        console.log("[tenant-admin] Found tenant by org ID:", tenantByOrg[0].id);
+        // Create or update the DB user to link them
+        localUser = await prisma.users.upsert({
+          where: { email: email! },
+          update: { tenantId: tenantByOrg[0].id, role: "TENANT_ADMIN", updatedAt: new Date() },
+          create: {
+            id: require("crypto").randomUUID(),
+            email: email!,
+            password: "CLERK_MANAGED_ACCOUNT",
+            name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Admin",
+            role: "TENANT_ADMIN",
+            tenantId: tenantByOrg[0].id,
+            updatedAt: new Date(),
+          },
+          include: { tenants: { select: { id: true, businessName: true } } },
+        });
+        console.log("[tenant-admin] Self-healed DB user for:", email);
+      }
+    } catch (err) {
+      console.error("[tenant-admin] Org ID fallback failed:", err);
+    }
+  }
+
   if (!localUser?.tenants) {
+    console.error("[tenant-admin] No tenant found for user:", email, "Clerk ID:", user.id);
     return (
       <div className="min-h-screen canvas-bg flex items-center justify-center">
         <div className="card-floating p-10 text-center max-w-md">
@@ -44,7 +82,7 @@ export default async function TenantAdminLayout({
             No Tenant Associated
           </h1>
           <p className="text-muted-foreground">
-            Your account is not associated with any tenant.
+            Your account ({email}) is not associated with any tenant. Please contact support.
           </p>
         </div>
       </div>

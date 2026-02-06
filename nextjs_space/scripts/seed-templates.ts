@@ -46,6 +46,19 @@ export async function seedTemplates() {
       isActive: true,
       isPremium: false,
     },
+    {
+      name: 'CannaBiZZ',
+      slug: 'cannabizz',
+      description: 'Playful neon-drenched dark template for millennial cannabis consumers. Miami neon meets street art.',
+      category: 'modern',
+      version: '1.0.0',
+      author: 'BudStack Team',
+      tags: ['playful', 'dark', 'neon', 'modern'],
+      layoutFilePath: 'templates/cannabizz/layout.json',
+      metadata: {},
+      isActive: true,
+      isPremium: false,
+    },
   ];
 
 
