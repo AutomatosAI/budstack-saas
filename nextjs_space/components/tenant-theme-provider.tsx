@@ -91,9 +91,9 @@ function applyThemeToContainer(
       // 1. Set specific tenant variables using formatColorValue
       // Skip nested objects (color scales like sage.50, teal.100, etc.)
       Object.entries(designSystem.colors).forEach(([key, value]) => {
-        if (value && typeof value === 'string') {
+        if (value && typeof value === 'string' && value.trim() !== '') {
           const colorValue = formatColorValue(value);
-          if (colorValue) {
+          if (colorValue && colorValue.trim() !== '') {
             root.style.setProperty(
               `--tenant-color-${camelToKebab(key)}`,
               colorValue,
@@ -117,19 +117,19 @@ function applyThemeToContainer(
         return val;
       };
 
-      if (primary)
+      if (primary && (primary as string).trim())
         root.style.setProperty("--primary", toChannels(primary as string));
-      if (secondary)
+      if (secondary && (secondary as string).trim())
         root.style.setProperty("--secondary", toChannels(secondary as string));
-      if (accent)
+      if (accent && (accent as string).trim())
         root.style.setProperty("--accent", toChannels(accent as string));
-      if (background)
+      if (background && (background as string).trim())
         root.style.setProperty(
           "--background",
           toChannels(background as string),
         );
       // Map text color to foreground
-      if (text)
+      if (text && (text as string).trim())
         root.style.setProperty("--foreground", toChannels(text as string));
     }
 

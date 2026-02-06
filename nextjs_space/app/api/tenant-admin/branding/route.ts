@@ -78,42 +78,58 @@ export async function PUT(req: NextRequest) {
 
       const currentDS = currentTemplate?.designSystem || {};
 
+      // Helper: only include defined, non-empty values (prevents overriding template CSS vars with empty strings)
+      const defined = (obj: Record<string, any>) =>
+        Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+
       // Merge new settings into Design System structure
       const newDesignSystem = {
         ...currentDS,
         colors: {
           ...currentDS.colors,
-          primary: settings.primaryColor,
-          secondary: settings.secondaryColor,
-          accent: settings.accentColor,
-          background: settings.backgroundColor,
-          text: settings.textColor,
-          heading: settings.headingColor,
+          ...defined({
+            primary: settings.primaryColor,
+            secondary: settings.secondaryColor,
+            accent: settings.accentColor,
+            background: settings.backgroundColor,
+            text: settings.textColor,
+            heading: settings.headingColor,
+          }),
         },
         typography: {
           ...currentDS.typography,
           fontFamily: {
             ...currentDS.typography?.fontFamily,
-            body: settings.fontFamily,
-            heading: settings.headingFontFamily,
+            ...defined({
+              body: settings.fontFamily,
+              heading: settings.headingFontFamily,
+            }),
           },
           fontSize: {
             ...currentDS.typography?.fontSize,
-            base: settings.fontSize,
+            ...defined({
+              base: settings.fontSize,
+            }),
           },
         },
         borderRadius: {
           ...currentDS.borderRadius,
-          container: settings.borderRadius,
-          button: settings.buttonStyle,
+          ...defined({
+            container: settings.borderRadius,
+            button: settings.buttonStyle,
+          }),
         },
         spacing: {
           ...currentDS.spacing,
-          scale: settings.spacing,
+          ...defined({
+            scale: settings.spacing,
+          }),
         },
         shadows: {
           ...currentDS.shadows,
-          card: settings.shadowStyle,
+          ...defined({
+            card: settings.shadowStyle,
+          }),
         },
       };
 
