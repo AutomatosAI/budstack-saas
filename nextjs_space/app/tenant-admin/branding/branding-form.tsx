@@ -89,12 +89,16 @@ export default function BrandingForm({
   const templateContent = (activeTemplate?.pageContent as any) || {};
   const settingsContent = (settings.pageContent as any) || {};
 
+  // Track which color fields the user explicitly modified
+  // Only modified colors get sent to the API — prevents overwriting template theme with form defaults
+  const [dirtyColors, setDirtyColors] = useState<Set<string>>(new Set());
+
   const [formData, setFormData] = useState({
     // Business
     businessName: tenant.businessName,
     tagline: settings.tagline || "",
 
-    // Colors
+    // Colors — show existing values from designSystem/settings, or placeholders
     primaryColor: getVal(
       ["colors", "primary"],
       settings.primaryColor || "#059669",
@@ -207,11 +211,24 @@ export default function BrandingForm({
       // Append business name
       formDataToSend.append("businessName", businessName);
 
+      // Only include colors that the user explicitly changed (prevents overwriting template theme with defaults)
+      const colorFields: Record<string, string> = {};
+      if (dirtyColors.has("primaryColor")) colorFields.primaryColor = settings.primaryColor;
+      if (dirtyColors.has("secondaryColor")) colorFields.secondaryColor = settings.secondaryColor;
+      if (dirtyColors.has("accentColor")) colorFields.accentColor = settings.accentColor;
+      if (dirtyColors.has("backgroundColor")) colorFields.backgroundColor = settings.backgroundColor;
+      if (dirtyColors.has("textColor")) colorFields.textColor = settings.textColor;
+      if (dirtyColors.has("headingColor")) colorFields.headingColor = settings.headingColor;
+
+      // Strip unmodified color fields from settings to prevent overwriting template CSS vars
+      const { primaryColor, secondaryColor, accentColor, backgroundColor, textColor, headingColor, ...settingsWithoutColors } = settings;
+
       // Append settings as JSON string
       formDataToSend.append(
         "settings",
         JSON.stringify({
-          ...settings,
+          ...settingsWithoutColors,
+          ...colorFields,
           pageContent: {
             home: {
               heroTitle: formData.homeHeroTitle,
@@ -453,49 +470,55 @@ export default function BrandingForm({
                   label="Primary Color"
                   description="Main brand color (buttons, headers)"
                   value={formData.primaryColor}
-                  onChange={(value) =>
-                    setFormData({ ...formData, primaryColor: value })
-                  }
+                  onChange={(value) => {
+                    setFormData({ ...formData, primaryColor: value });
+                    setDirtyColors((prev) => new Set(prev).add("primaryColor"));
+                  }}
                 />
                 <ColorPicker
                   label="Secondary Color"
                   description="Secondary elements, links"
                   value={formData.secondaryColor}
-                  onChange={(value) =>
-                    setFormData({ ...formData, secondaryColor: value })
-                  }
+                  onChange={(value) => {
+                    setFormData({ ...formData, secondaryColor: value });
+                    setDirtyColors((prev) => new Set(prev).add("secondaryColor"));
+                  }}
                 />
                 <ColorPicker
                   label="Accent Color"
                   description="Call-to-action highlights"
                   value={formData.accentColor}
-                  onChange={(value) =>
-                    setFormData({ ...formData, accentColor: value })
-                  }
+                  onChange={(value) => {
+                    setFormData({ ...formData, accentColor: value });
+                    setDirtyColors((prev) => new Set(prev).add("accentColor"));
+                  }}
                 />
                 <ColorPicker
                   label="Background Color"
                   description="Page background"
                   value={formData.backgroundColor}
-                  onChange={(value) =>
-                    setFormData({ ...formData, backgroundColor: value })
-                  }
+                  onChange={(value) => {
+                    setFormData({ ...formData, backgroundColor: value });
+                    setDirtyColors((prev) => new Set(prev).add("backgroundColor"));
+                  }}
                 />
                 <ColorPicker
                   label="Text Color"
                   description="Body text"
                   value={formData.textColor}
-                  onChange={(value) =>
-                    setFormData({ ...formData, textColor: value })
-                  }
+                  onChange={(value) => {
+                    setFormData({ ...formData, textColor: value });
+                    setDirtyColors((prev) => new Set(prev).add("textColor"));
+                  }}
                 />
                 <ColorPicker
                   label="Heading Color"
                   description="Heading text"
                   value={formData.headingColor}
-                  onChange={(value) =>
-                    setFormData({ ...formData, headingColor: value })
-                  }
+                  onChange={(value) => {
+                    setFormData({ ...formData, headingColor: value });
+                    setDirtyColors((prev) => new Set(prev).add("headingColor"));
+                  }}
                 />
               </div>
             </CardContent>

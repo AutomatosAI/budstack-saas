@@ -65,7 +65,7 @@ export function TenantThemeProvider({
       {/* Apply theme class to scoped container */}
       <div
         ref={containerRef}
-        className={`tenant-theme-container theme-force-light ${getTenantThemeClasses(settings)}`}
+        className={`tenant-theme-container ${getTenantThemeClasses(settings)}`}
         style={{ minHeight: "100vh" }}
       >
         {children}
@@ -233,6 +233,7 @@ function camelToKebab(str: string): string {
  * Components wrap with hsl(): `hsl(var(--tenant-color-primary))`
  * So variables MUST store raw channels: `178 48% 21%`
  * If we stored `hsl(178 48% 21%)`, components would produce `hsl(hsl(...))` = INVALID.
+ * If we stored `#ffffff`, components would produce `hsl(#ffffff)` = INVALID.
  */
 function formatColorValue(value: string | null | undefined): string {
   if (!value || typeof value !== "string") {
@@ -249,8 +250,47 @@ function formatColorValue(value: string | null | undefined): string {
     return value;
   }
 
-  // Hex or other format — return as-is (components will need to handle)
+  // Convert hex to HSL channels (prevents invalid `hsl(#hex)` in templates)
+  if (value.startsWith("#")) {
+    return hexToHslChannels(value);
+  }
+
   return value;
+}
+
+/**
+ * Convert hex color (#rrggbb or #rgb) to raw HSL channel string "H S% L%"
+ */
+function hexToHslChannels(hex: string): string {
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.slice(1, 3), 16);
+    g = parseInt(hex.slice(3, 5), 16);
+    b = parseInt(hex.slice(5, 7), 16);
+  } else {
+    return "";
+  }
+
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
 /**
