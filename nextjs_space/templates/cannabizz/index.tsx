@@ -22,6 +22,7 @@ interface TemplateProps {
   heroImageUrl?: string | null;
   logoUrl?: string | null;
   posts?: any[];
+  renderChrome?: boolean;
 }
 
 export default function CannabizzTemplate({
@@ -32,6 +33,7 @@ export default function CannabizzTemplate({
   heroImageUrl,
   logoUrl,
   posts,
+  renderChrome = true,
 }: TemplateProps) {
   const settings = (tenant.settings as any) || {};
   const pageContent = settings.pageContent || {};
@@ -45,14 +47,16 @@ export default function CannabizzTemplate({
         color: 'hsl(var(--tenant-color-text))',
       }}
     >
-      <Navigation
-        businessName={tenant.businessName}
-        logoUrl={logoUrl || settings.logoPath}
-        subdomain={tenant.subdomain}
-        consultationUrl={consultationUrl}
-        productsUrl={productsUrl}
-        contactUrl={contactUrl}
-      />
+      {renderChrome && (
+        <Navigation
+          businessName={tenant.businessName}
+          logoUrl={logoUrl || settings.logoPath}
+          subdomain={tenant.subdomain}
+          consultationUrl={consultationUrl}
+          productsUrl={productsUrl}
+          contactUrl={contactUrl}
+        />
+      )}
       <main>
         <Hero
           businessName={tenant.businessName}
@@ -77,14 +81,16 @@ export default function CannabizzTemplate({
           consultationUrl={consultationUrl}
         />
       </main>
-      <Footer
-        businessName={tenant.businessName}
-        logoUrl={logoUrl || settings.logoPath}
-        subdomain={tenant.subdomain}
-        consultationUrl={consultationUrl}
-        productsUrl={productsUrl}
-        contactUrl={contactUrl}
-      />
+      {renderChrome && (
+        <Footer
+          businessName={tenant.businessName}
+          logoUrl={logoUrl || settings.logoPath}
+          subdomain={tenant.subdomain}
+          consultationUrl={consultationUrl}
+          productsUrl={productsUrl}
+          contactUrl={contactUrl}
+        />
+      )}
     </div>
   );
 }

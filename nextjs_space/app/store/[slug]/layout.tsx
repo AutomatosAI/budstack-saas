@@ -6,6 +6,8 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { getFileUrl, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { readFileSync } from "fs";
+import { join } from "path";
 // Import template registries (legacy + section-based)
 import { TEMPLATE_COMPONENTS, TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/template-registry";
 import { getSectionComponent } from "@/lib/section-registry";
@@ -19,6 +21,63 @@ function sanitizeCss(css: string | null): string {
     .replace(/@import[^;]+;/gi, '')
     .replace(/url\([^)]+\)/gi, '')
     .replace(/expression\([^)]+\)/gi, '');
+}
+
+// Extract runtime-safe CSS from a template's styles.css on disk
+// Keeps :root vars, class rules, @keyframes — strips @tailwind/@layer/@apply/body/* selectors
+function extractTemplateCss(templateSlug: string): { css: string; fontUrl: string | null } {
+  try {
+    const cssPath = join(process.cwd(), 'templates', templateSlug, 'styles.css');
+    const raw = readFileSync(cssPath, 'utf-8');
+
+    // Extract Google Fonts URL from @import
+    const fontMatch = raw.match(/@import\s+url\(['"]?(https:\/\/fonts\.googleapis\.com[^'")\s]+)['"]?\)/);
+    const fontUrl = fontMatch?.[1] || null;
+
+    // Remove directives that can't run at runtime
+    let cleaned = raw
+      .replace(/@import[^;]+;/g, '')
+      .replace(/@tailwind[^;]+;/g, '');
+
+    // Remove @layer wrappers but keep inner content
+    // Match @layer ... { ... } and unwrap
+    cleaned = cleaned.replace(/@layer\s+\w+\s*\{/g, '');
+    // Remove matching closing braces (one per @layer removed)
+    // Simple approach: process block by block
+    const blocks: string[] = [];
+    let depth = 0;
+    let current = '';
+    for (const char of cleaned) {
+      if (char === '{') depth++;
+      if (char === '}') {
+        depth--;
+        if (depth < 0) {
+          // This is the closing brace of an @layer we removed
+          depth = 0;
+          continue;
+        }
+      }
+      current += char;
+      if (depth === 0 && current.trim()) {
+        blocks.push(current);
+        current = '';
+      }
+    }
+    if (current.trim()) blocks.push(current);
+    cleaned = blocks.join('\n');
+
+    // Remove rules that use @apply (can't run at runtime)
+    cleaned = cleaned.replace(/[^{}]*@apply[^}]*\}/g, '}');
+    // Remove empty rule bodies
+    cleaned = cleaned.replace(/[^{}]+\{\s*\}/g, '');
+
+    // Remove global selectors that would bleed: body, *, h1-h6, p, label, input, etc.
+    cleaned = cleaned.replace(/^\s*(?:body|html|\*|h[1-6]|p|label|input|textarea|select|button)\s*(?:,\s*(?:body|html|\*|h[1-6]|p|label|input|textarea|select|button)\s*)*\{[^}]*\}/gm, '');
+
+    return { css: cleaned, fontUrl };
+  } catch {
+    return { css: '', fontUrl: null };
+  }
 }
 
 export default async function TenantStoreLayout({
@@ -141,8 +200,19 @@ export default async function TenantStoreLayout({
   // Data-driven templates (layout.json found) render nav/footer via TemplateRenderer
   // Layout only renders nav/footer when NEITHER applies (bare fallback)
   const legacyTemplateExists = !!(templateSlug && TEMPLATE_COMPONENTS[templateSlug]);
-  const skipLayoutChrome = !!layout || legacyTemplateExists;
+  // Only skip layout chrome for data-driven templates (layout.json in S3)
+  // Legacy templates now get nav/footer from layout; their home page passes renderChrome={false}
+  const skipLayoutChrome = !!layout;
   console.log("[layout] Final: layout found:", !!layout, "legacyTemplate:", legacyTemplateExists, "skipLayoutChrome:", skipLayoutChrome);
+
+  // For legacy templates, load CSS from filesystem so sub-pages get design tokens
+  let legacyCss = '';
+  let legacyFontUrl: string | null = null;
+  if (legacyTemplateExists && !layout && templateSlug) {
+    const extracted = extractTemplateCss(templateSlug);
+    legacyCss = extracted.css;
+    legacyFontUrl = extracted.fontUrl;
+  }
 
   // Build section props for data-driven nav/footer
   const sectionProps = {
@@ -205,6 +275,7 @@ export default async function TenantStoreLayout({
           businessName={tenantWithTemplate.businessName}
           logoUrl={logoUrl}
           tenant={tenantWithTemplate}
+          subdomain={subdomain}
           consultationUrl={consultationUrl}
           productsUrl={productsUrl}
           contactUrl={contactUrl}
@@ -218,6 +289,7 @@ export default async function TenantStoreLayout({
   // Wrapper class from layout settings or legacy mapping
   const wrapperClass = layout?.settings?.wrapperClass || (() => {
     switch (templateSlug) {
+      case "cannabizz": return "template-cannabizz";
       case "wellness-nature": return "wellness-template";
       case "gta-cannabis": return "gta-template";
       case "healingbuds": return "template-healingbuds";
@@ -244,6 +316,9 @@ export default async function TenantStoreLayout({
         <div className={`min-h-screen ${wrapperClass}`}>
           {/* Inject template custom CSS from S3 (sanitized) */}
           {customCss && <style>{sanitizeCss(customCss)}</style>}
+          {/* Inject legacy template CSS (from filesystem) for sub-page styling */}
+          {legacyCss && <style>{legacyCss}</style>}
+          {legacyFontUrl && <link rel="stylesheet" href={legacyFontUrl} />}
           {/* Skip nav/footer when: data-driven (TemplateRenderer handles it) or legacy (template bundles its own) */}
           {!skipLayoutChrome && renderNavigation()}
           <main>{children}</main>

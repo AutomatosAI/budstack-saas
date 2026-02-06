@@ -10,9 +10,6 @@ import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
 import { TemplateRenderer } from "@/components/template-renderer";
 import type { TemplateLayout } from "@/lib/types/template-layout";
 
-// Import theme provider
-import { TenantThemeProvider } from "@/components/tenant-theme-provider";
-
 // Import existing homepage components (fallback)
 import { HeroSection } from "@/components/home/hero-section";
 import { TrustBadges } from "@/components/home/trust-badges";
@@ -198,14 +195,11 @@ export default async function TenantStorePage() {
 
     // PATH 2: Legacy React template (bundled at build time)
     // Only reached when no layout.json exists in S3 (e.g. healingbuds)
+    // Layout now renders nav/footer + TenantThemeProvider, so pass renderChrome={false}
     const TemplateComponent = templateSlug ? TEMPLATE_COMPONENTS[templateSlug] : undefined;
 
     if (TemplateComponent) {
-      return (
-        <TenantThemeProvider tenantTemplate={signedTenantTemplate}>
-          <TemplateComponent {...templateProps} />
-        </TenantThemeProvider>
-      );
+      return <TemplateComponent {...templateProps} renderChrome={false} />;
     }
 
     console.warn('[StorePage] No layout.json or legacy template found.', {

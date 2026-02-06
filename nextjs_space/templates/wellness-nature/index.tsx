@@ -18,6 +18,7 @@ interface TemplateProps {
   contactUrl: string;
   heroImageUrl?: string | null;
   logoUrl?: string | null;
+  renderChrome?: boolean;
 }
 
 export default function WellnessNatureTemplate({
@@ -26,7 +27,8 @@ export default function WellnessNatureTemplate({
   productsUrl,
   contactUrl,
   heroImageUrl,
-  logoUrl
+  logoUrl,
+  renderChrome = true,
 }: TemplateProps) {
   const settings = (tenant.settings as any) || {};
   const pageContent = settings.pageContent || {};
@@ -34,11 +36,13 @@ export default function WellnessNatureTemplate({
   return (
     <div className="wellness-template overflow-x-hidden" style={{ fontFamily: 'var(--tenant-font-base, "Lora", serif)' }}>
       {/* Custom Wellness Navigation */}
-      <Navigation
-        businessName={tenant.businessName}
-        logoUrl={logoUrl}
-        tenant={tenant}
-      />
+      {renderChrome && (
+        <Navigation
+          businessName={tenant.businessName}
+          logoUrl={logoUrl}
+          tenant={tenant}
+        />
+      )}
 
       <Hero
         businessName={tenant.businessName}
