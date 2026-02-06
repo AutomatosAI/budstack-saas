@@ -65,8 +65,8 @@ export default function Footer({
     <footer
       className="pt-16 pb-8"
       style={{
-        backgroundColor: 'hsl(var(--tenant-color-heading))',
-        color: 'white',
+        backgroundColor: 'hsl(var(--tenant-color-surface, var(--tenant-color-background)))',
+        color: 'hsl(var(--tenant-color-text))',
       }}
     >
       <div className="container mx-auto px-6">
@@ -80,7 +80,7 @@ export default function Footer({
                 </div>
               )}
               <span
-                className="text-xl font-extrabold"
+                className="text-xl font-extrabold text-white"
                 style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
               >
                 {businessName}
