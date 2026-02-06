@@ -64,6 +64,14 @@ export default async function TenantStorePage() {
     const baseTemplate = tenantTemplate.templates;
     const templateSlug = baseTemplate.slug;
 
+    console.log("[StorePage] Active template:", {
+      tenantId: tenant.id,
+      templateSlug,
+      tenantTemplateId: tenantTemplate.id,
+      s3Path: (tenantTemplate as any).s3Path || "none",
+      hasDesignSystem: !!tenantTemplate.designSystem,
+    });
+
     // Fetch latest posts
     const latestPosts = await prisma.posts.findMany({
       where: { tenantId: tenant.id, published: true },
@@ -116,6 +124,16 @@ export default async function TenantStorePage() {
     if (!customCss && templateSlug) {
       customCss = await getTextFromS3(`templates/${templateSlug}/styles.css`);
     }
+
+    console.log("[StorePage] S3 load results:", {
+      templateSlug,
+      hasLayout: !!layout,
+      hasDefaults: !!defaults,
+      hasCss: !!customCss,
+      layoutSections: layout?.sections?.map(s => s.type) || "none",
+      layoutNav: layout?.navigation || "none",
+      layoutFooter: layout?.footer || "none",
+    });
 
     if (layout) {
       // Merge: DB overrides take precedence over defaults.json
