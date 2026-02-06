@@ -89,9 +89,10 @@ function applyThemeToContainer(
     // Apply colors
     if (designSystem.colors) {
       // 1. Set specific tenant variables using formatColorValue
+      // Skip nested objects (color scales like sage.50, teal.100, etc.)
       Object.entries(designSystem.colors).forEach(([key, value]) => {
-        if (value) {
-          const colorValue = formatColorValue(value as string);
+        if (value && typeof value === 'string') {
+          const colorValue = formatColorValue(value);
           if (colorValue) {
             root.style.setProperty(
               `--tenant-color-${camelToKebab(key)}`,
@@ -142,18 +143,13 @@ function applyThemeToContainer(
       poppins: "'Poppins', sans-serif",
     };
 
-    root.style.setProperty(
-      "--tenant-font-body",
-      fontMap[settings.fontFamily || "inter"] ||
-      settings.fontFamily ||
-      "'Inter', sans-serif",
-    );
-    root.style.setProperty(
-      "--tenant-font-heading",
-      fontMap[settings.headingFontFamily || settings.fontFamily || "inter"] ||
-      settings.headingFontFamily ||
-      "'Inter', sans-serif",
-    );
+    // Prefer designSystem.typography.fontFamily (new system) over settings (legacy)
+    const dsTypo = designSystem.typography?.fontFamily;
+    const bodyFont = dsTypo?.base || fontMap[settings.fontFamily || "inter"] || settings.fontFamily || "'Inter', sans-serif";
+    const headingFont = dsTypo?.heading || fontMap[settings.headingFontFamily || settings.fontFamily || "inter"] || settings.headingFontFamily || "'Inter', sans-serif";
+
+    root.style.setProperty("--tenant-font-body", bodyFont);
+    root.style.setProperty("--tenant-font-heading", headingFont);
 
     // Font size scale
     const fontSizeMap: Record<string, string> = {
@@ -233,23 +229,27 @@ function camelToKebab(str: string): string {
 }
 
 /**
- * Format color value to proper CSS format
- * Converts HSL values like "178 48% 21%" to "hsl(178 48% 21%)"
- * Passes through hex colors and other formats unchanged
+ * Format color value to RAW HSL channels for CSS variables.
+ * Components wrap with hsl(): `hsl(var(--tenant-color-primary))`
+ * So variables MUST store raw channels: `178 48% 21%`
+ * If we stored `hsl(178 48% 21%)`, components would produce `hsl(hsl(...))` = INVALID.
  */
 function formatColorValue(value: string | null | undefined): string {
-  // Handle null/undefined values
   if (!value || typeof value !== "string") {
     return "";
   }
 
-  // Check if it's an HSL value without the hsl() wrapper
-  // HSL values typically contain % and spaces but no parentheses
-  if (value.includes("%") && !value.includes("(") && !value.includes("#")) {
-    // Assume it's in "H S% L%" format used by Tailwind
-    return `hsl(${value})`;
+  // Strip hsl() wrapper if present — we need raw channels only
+  if (value.startsWith("hsl(") && value.endsWith(")")) {
+    return value.slice(4, -1).trim();
   }
-  // Return as-is for hex colors, rgb(), hsl(), etc.
+
+  // Raw HSL channels like "178 48% 21%" — pass through
+  if (value.includes("%") && !value.includes("(") && !value.includes("#")) {
+    return value;
+  }
+
+  // Hex or other format — return as-is (components will need to handle)
   return value;
 }
 
