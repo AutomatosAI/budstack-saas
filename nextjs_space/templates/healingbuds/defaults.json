@@ -1,0 +1,202 @@
+{
+  "template": "healing-buds-modern-updated",
+  "logoPath": null,
+  "heroImagePath": null,
+  "heroVideoPath": null,
+  "primaryColor": "178 48% 21%",
+  "fontFamily": "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  "designSystem": {
+    "colors": {
+      "sage": {
+        "50": "164 40% 97%",
+        "100": "164 35% 92%",
+        "200": "164 30% 82%",
+        "300": "164 28% 70%",
+        "400": "164 26% 58%",
+        "500": "164 24% 46%",
+        "600": "164 28% 38%",
+        "700": "164 32% 30%",
+        "800": "164 36% 22%",
+        "900": "164 40% 14%"
+      },
+      "teal": {
+        "50": "178 40% 96%",
+        "100": "178 36% 90%",
+        "200": "178 32% 80%",
+        "300": "178 30% 68%",
+        "400": "178 28% 56%",
+        "500": "178 48% 21%",
+        "600": "178 48% 33%",
+        "700": "178 50% 28%",
+        "800": "178 54% 23%",
+        "900": "178 58% 18%"
+      },
+      "primary": "178 48% 21%",
+      "secondary": "178 48% 33%",
+      "accent": "164 48% 53%",
+      "background": "0 0% 100%",
+      "surface": "164 20% 98%",
+      "text": "0 0% 17%",
+      "heading": "178 48% 21%",
+      "border": "164 20% 90%",
+      "success": "142 76% 36%",
+      "warning": "38 92% 50%",
+      "error": "0 72% 51%",
+      "info": "199 89% 48%"
+    },
+    "typography": {
+      "fontFamily": {
+        "base": "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        "heading": "'Archivo Narrow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        "decorative": "'Cinzel', Georgia, serif",
+        "mono": "'Fira Code', 'JetBrains Mono', monospace"
+      },
+      "fontSize": {
+        "xs": "0.75rem",
+        "sm": "0.875rem",
+        "base": "1rem",
+        "lg": "1.125rem",
+        "xl": "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.875rem",
+        "4xl": "2.25rem",
+        "5xl": "3rem",
+        "6xl": "3.75rem",
+        "7xl": "4.5rem",
+        "8xl": "6rem"
+      },
+      "lineHeight": {
+        "tight": "1.25",
+        "snug": "1.375",
+        "normal": "1.5",
+        "relaxed": "1.625",
+        "loose": "2"
+      },
+      "letterSpacing": {
+        "tighter": "-0.05em",
+        "tight": "-0.025em",
+        "normal": "0",
+        "wide": "0.025em",
+        "wider": "0.05em",
+        "widest": "0.1em"
+      }
+    },
+    "shadows": {
+      "medical-sm": "0 2px 8px rgba(28, 79, 77, 0.06)",
+      "medical-md": "0 4px 16px rgba(28, 79, 77, 0.08)",
+      "medical-lg": "0 8px 32px rgba(28, 79, 77, 0.12)",
+      "medical-xl": "0 12px 48px rgba(28, 79, 77, 0.16)",
+      "medical-2xl": "0 20px 64px rgba(28, 79, 77, 0.20)",
+      "glow-sm": "0 0 16px rgba(77, 191, 161, 0.3)",
+      "glow-md": "0 0 32px rgba(77, 191, 161, 0.4)",
+      "glow-lg": "0 0 48px rgba(77, 191, 161, 0.5)",
+      "inner-glow": "inset 0 0 20px rgba(77, 191, 161, 0.15)"
+    },
+    "gradients": {
+      "sage-teal": "linear-gradient(135deg, #4DBFA1 0%, #1C4F4D 100%)",
+      "sage-dark": "linear-gradient(135deg, #2C7D7A 0%, #0F2E2C 100%)",
+      "medical": "linear-gradient(180deg, rgba(28, 79, 77, 0.05) 0%, rgba(77, 191, 161, 0.05) 100%)",
+      "hero-overlay": "linear-gradient(180deg, rgba(28, 79, 77, 0.7) 0%, rgba(15, 46, 44, 0.85) 100%)",
+      "card-hover": "linear-gradient(135deg, rgba(77, 191, 161, 0.1) 0%, rgba(28, 79, 77, 0.1) 100%)",
+      "text-shine": "linear-gradient(90deg, #4DBFA1 0%, #84CC16 50%, #4DBFA1 100%)",
+      "premium-gold": "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)"
+    },
+    "spacing": {
+      "section": "5rem",
+      "container": "1.5rem",
+      "card": "2rem"
+    }
+  },
+  "valueProps": [
+    {
+      "title": "Medical Excellence",
+      "description": "Premium-grade products backed by rigorous quality standards",
+      "icon": "Shield"
+    },
+    {
+      "title": "Expert Guidance",
+      "description": "Professional consultations with certified specialists",
+      "icon": "UserCheck"
+    },
+    {
+      "title": "Secure & Private",
+      "description": "GDPR-compliant with end-to-end encryption",
+      "icon": "Lock"
+    },
+    {
+      "title": "Fast Delivery",
+      "description": "Discreet shipping with real-time tracking",
+      "icon": "Truck"
+    }
+  ],
+  "pageContent": {
+    "homeHeroTitle": "Premium Medical Cannabis",
+    "homeHeroSubtitle": "Your trusted partner in medical cannabis wellness",
+    "homeHeroDescription": "Experience the highest quality medical-grade cannabis products, backed by science and delivered with care.",
+    "aboutMission": "Our mission is to provide safe, legal access to premium medical cannabis products while maintaining the highest standards of quality, compliance, and patient care."
+  },
+  "navigation": {
+    "links": [
+      {
+        "label": "Products",
+        "href": "/products"
+      },
+      {
+        "label": "Consultation",
+        "href": "/consultation"
+      },
+      {
+        "label": "About",
+        "href": "/about"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact"
+      }
+    ],
+    "cta": {
+      "label": "Book Consultation",
+      "href": "/consultation"
+    }
+  },
+  "footer": {
+    "copyright": "© {year} {businessName}. All rights reserved.",
+    "disclaimer": "Medical cannabis should only be used under the guidance of a qualified healthcare professional.",
+    "sections": [
+      {
+        "title": "Quick Links",
+        "links": [
+          {
+            "label": "Products",
+            "href": "/products"
+          },
+          {
+            "label": "How It Works",
+            "href": "/how-it-works"
+          },
+          {
+            "label": "FAQ",
+            "href": "/faq"
+          }
+        ]
+      },
+      {
+        "title": "Legal",
+        "links": [
+          {
+            "label": "Privacy Policy",
+            "href": "/privacy"
+          },
+          {
+            "label": "Terms of Service",
+            "href": "/terms"
+          },
+          {
+            "label": "Regulatory",
+            "href": "/regulatory"
+          }
+        ]
+      }
+    ]
+  }
+}

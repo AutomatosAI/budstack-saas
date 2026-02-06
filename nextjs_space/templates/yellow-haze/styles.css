@@ -1,0 +1,288 @@
+/* BudStack Yellow-Haze Template Styles */
+/* A warm, vibrant golden amber theme inspired by sun-drenched haze */
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* All colors MUST be HSL format for platform consistency */
+
+@layer base {
+  :root {
+    /* Color Palette - Golden Amber HSL */
+    --primary-50: 45 100% 97%;
+    --primary-100: 45 100% 92%;
+    --primary-200: 45 100% 82%;
+    --primary-300: 45 100% 72%;
+    --primary-400: 45 100% 62%;
+    --primary-500: 45 100% 50%;
+    --primary-600: 40 100% 45%;
+    --primary-700: 35 100% 38%;
+    --primary-800: 30 100% 28%;
+    --primary-900: 25 100% 18%;
+
+    /* Application Colors */
+    --background: 40 20% 98%;
+    --foreground: 30 20% 12%;
+    --surface: 40 30% 99%;
+
+    --card: 40 30% 99%;
+    --card-foreground: 30 20% 12%;
+
+    --popover: 40 30% 99%;
+    --popover-foreground: 30 20% 12%;
+
+    --primary: 45 100% 50%;
+    --primary-foreground: 30 20% 10%;
+
+    --secondary: 35 100% 38%;
+    --secondary-foreground: 40 30% 98%;
+
+    --muted: 40 15% 94%;
+    --muted-foreground: 30 10% 46%;
+
+    --accent: 38 100% 60%;
+    --accent-foreground: 30 20% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 20% 88%;
+    --input: 40 20% 95%;
+    --ring: 45 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* Brand Gradients - Golden Amber */
+    --gradient-primary: linear-gradient(135deg, hsl(45 100% 50%) 0%, hsl(35 100% 38%) 100%);
+    --gradient-hero: linear-gradient(180deg, rgba(255, 193, 7, 0.5) 0%, rgba(245, 158, 11, 0.7) 100%);
+
+    /* Shadows with golden tint */
+    --shadow-sm: 0 2px 8px rgba(245, 158, 11, 0.10);
+    --shadow-md: 0 4px 16px rgba(245, 158, 11, 0.14);
+    --shadow-lg: 0 8px 32px rgba(245, 158, 11, 0.18);
+
+    /* Transitions */
+    --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Typography scale */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
+    --font-size-5xl: 3rem;
+    --font-size-6xl: 3.75rem;
+
+    /* Spacing scale */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 0.75rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    --spacing-3xl: 4rem;
+  }
+}
+
+@layer base {
+  .template-yellow-haze {
+    /* REQUIRED: Platform integration variables */
+    --tenant-color-primary: hsl(var(--primary));
+    --tenant-color-secondary: hsl(var(--secondary));
+    --tenant-color-accent: hsl(var(--accent));
+    --tenant-color-background: hsl(var(--background));
+    --tenant-color-surface: hsl(var(--surface));
+    --tenant-color-text: hsl(var(--foreground));
+    --tenant-color-heading: hsl(var(--foreground));
+    --tenant-color-border: hsl(var(--border));
+    --tenant-color-primary-rgb: 255, 193, 7;
+    --tenant-color-secondary-rgb: 194, 120, 3;
+
+    /* Fonts - Sora for headings, Inter for body */
+    --tenant-font-heading: 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --tenant-font-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    scroll-behavior: smooth;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--tenant-font-base);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Typography */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--tenant-font-heading);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: hsl(var(--foreground));
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+    line-height: 1.05;
+    font-weight: 800;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl lg:text-5xl;
+    line-height: 1.1;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl;
+    line-height: 1.2;
+  }
+
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+
+  p {
+    line-height: 1.7;
+    @apply text-base md:text-lg;
+    font-family: var(--tenant-font-base);
+  }
+
+  /* Form elements */
+  label {
+    @apply font-medium text-sm;
+    font-family: var(--tenant-font-base);
+  }
+
+  input, textarea, select {
+    font-family: var(--tenant-font-base);
+  }
+
+  button, .btn {
+    font-family: var(--tenant-font-base);
+    font-weight: 600;
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  /* Button styles - warm golden aesthetic */
+  .btn-primary {
+    @apply px-8 py-4 rounded-full font-semibold transition-all duration-300;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 4px 20px rgba(255, 193, 7, 0.35);
+  }
+
+  .btn-primary:hover {
+    @apply -translate-y-1;
+    box-shadow: 0 8px 30px rgba(255, 193, 7, 0.45);
+    background: hsl(var(--primary) / 0.95);
+  }
+
+  .btn-secondary {
+    @apply px-8 py-4 rounded-full font-semibold transition-all duration-300;
+    background: hsl(var(--background));
+    color: hsl(var(--primary));
+    border: 2px solid hsl(var(--primary));
+  }
+
+  .btn-secondary:hover {
+    @apply -translate-y-1;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 6px 24px rgba(255, 193, 7, 0.35);
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-card rounded-2xl border border-border/50 transition-all duration-300;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card:hover {
+    @apply border-border/80 -translate-y-1;
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Section spacing */
+  .section-padding {
+    @apply py-16 md:py-20 lg:py-24;
+  }
+
+  .section-padding-sm {
+    @apply py-12 md:py-16 lg:py-20;
+  }
+
+  /* Card spacing */
+  .card-spacing {
+    @apply p-6 md:p-8;
+  }
+
+  /* Focus states */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+    --tw-ring-color: hsl(var(--primary) / 0.5);
+    --tw-ring-offset-color: hsl(var(--background));
+  }
+
+  /* Safe areas for mobile */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Golden glow effect */
+  .golden-glow {
+    box-shadow: 0 0 40px rgba(255, 193, 7, 0.3);
+  }
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary) / 0) 0%,
+    hsl(var(--primary) / 0.3) 50%,
+    hsl(var(--primary) / 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}

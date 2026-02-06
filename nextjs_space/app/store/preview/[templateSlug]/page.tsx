@@ -1,24 +1,27 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { getJsonFromS3, getTextFromS3 } from "@/lib/s3";
-import { TemplateRenderer } from "@/components/template-renderer";
-import type { TemplateLayout } from "@/lib/types/template-layout";
-import type { SectionProps } from "@/lib/types/section-props";
+import fs from "fs";
+import path from "path";
+import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
+import { Tenant } from "@/types/client";
 import PreviewToolbar from "./preview-toolbar";
 
-// Mock tenant for preview mode — no real tenant needed
-const mockTenant = {
+// Mock tenant for preview mode — no database needed
+const mockTenant: Tenant = {
   id: "preview-000",
   businessName: "Your Business Name",
-  subdomain: "preview",
   slug: "preview",
   domain: null,
   isActive: true,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
+  subdomain: "preview",
   settings: {
     tagline: "Your Cannabis Tagline Here",
     pageContent: {
+      home: {
+        heroTitle: "Welcome to Your Store",
+        heroSubtitle: "Premium Cannabis, Delivered to Your Door",
+      },
       homeHeroTitle: "Welcome to Your Store",
       homeHeroSubtitle: "Premium Cannabis, Delivered to Your Door",
       homeHeroDescription:
@@ -29,12 +32,32 @@ const mockTenant = {
   },
 };
 
-async function tryLoadJson<T>(key: string): Promise<T | null> {
+function loadDefaults(templateSlug: string): any | null {
   try {
-    return await getJsonFromS3<T>(key);
+    const defaultsPath = path.join(
+      process.cwd(),
+      "templates",
+      templateSlug,
+      "defaults.json"
+    );
+    if (fs.existsSync(defaultsPath)) {
+      const raw = fs.readFileSync(defaultsPath, "utf-8");
+      return JSON.parse(raw);
+    }
   } catch {
-    return null;
+    // defaults.json is optional
   }
+  return null;
+}
+
+/** Only return the path if the file actually exists in /public */
+function resolvePublicAsset(
+  assetPath: string | null | undefined
+): string | null {
+  if (!assetPath) return null;
+  if (!assetPath.startsWith("/")) return null;
+  const fullPath = path.join(process.cwd(), "public", assetPath);
+  return fs.existsSync(fullPath) ? assetPath : null;
 }
 
 export default async function TemplatePreviewPage({
@@ -44,48 +67,41 @@ export default async function TemplatePreviewPage({
 }) {
   const { templateSlug } = params;
 
-  // Verify template exists in DB
-  const dbTemplate = await prisma.templates.findFirst({
-    where: { slug: templateSlug },
-  });
-
-  if (!dbTemplate) {
+  // Check if template exists in registry
+  const TemplateComponent = TEMPLATE_COMPONENTS[templateSlug];
+  if (!TemplateComponent) {
     notFound();
   }
 
-  // Load layout.json from S3
-  const layout = await tryLoadJson<TemplateLayout>(`templates/${templateSlug}/layout.json`);
-  if (!layout) {
-    notFound();
-  }
+  // Load template defaults for design system
+  const defaults = loadDefaults(templateSlug);
 
-  const defaults = await tryLoadJson<any>(`templates/${templateSlug}/defaults.json`);
-  const customCss = await getTextFromS3(`templates/${templateSlug}/styles.css`);
-  const googleFontsUrl = layout.settings?.googleFontsUrl || null;
-
-  const sectionProps: SectionProps = {
+  // Build template props matching what the real store provides
+  const templateProps = {
     tenant: mockTenant,
     consultationUrl: "#consultation",
     productsUrl: "#products",
     contactUrl: "#contact",
     aboutUrl: "#about",
-    heroImageUrl: null,
-    logoUrl: null,
+    heroImageUrl: resolvePublicAsset(defaults?.heroImagePath),
+    logoUrl: resolvePublicAsset(defaults?.logoPath),
     designSystem: defaults?.designSystem || null,
     pageContent: defaults?.pageContent || null,
     navigation: defaults?.navigation || null,
     footer: defaults?.footer || null,
-    valueProps: defaults?.valueProps || null,
     posts: [],
   };
 
-  // No TenantThemeProvider for preview — the custom CSS from S3 provides
-  // the :root CSS variables directly. TemplateRenderer injects the CSS.
+  // NO TenantThemeProvider here — templates bring their own styles.css
+  // which defines :root CSS variables with raw HSL values.
+  // TenantThemeProvider would double-wrap HSL in hsl() causing
+  // hsl(hsl(270 15% 8%)) which is invalid CSS.
+  // Templates use hsl(var(--tenant-color-*)) in their components,
+  // which resolves correctly against the raw :root values.
   return (
     <>
-      {googleFontsUrl && <link href={googleFontsUrl} rel="stylesheet" />}
-      <PreviewToolbar templateName={dbTemplate.name || templateSlug} />
-      <TemplateRenderer layout={layout} sectionProps={sectionProps} customCss={customCss} />
+      <PreviewToolbar templateName={defaults?.template || templateSlug} />
+      <TemplateComponent {...templateProps} />
     </>
   );
 }

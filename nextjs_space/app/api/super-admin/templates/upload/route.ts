@@ -6,9 +6,9 @@ import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import fetch from "node-fetch";
 import AdmZip from "adm-zip";
+import { convertLovableTemplate } from "@/lib/lovable-converter";
 import { randomUUID } from "crypto";
 import { uploadDirectoryToS3 } from "@/lib/s3";
-import { SECTION_REGISTRY } from "@/lib/section-registry";
 
 interface TemplateConfig {
   id: string;
@@ -19,21 +19,26 @@ interface TemplateConfig {
   version: string;
   author?: string;
   preview_image?: string;
+  compatibility?: {
+    platform?: string;
+    nextjs?: string;
+    features?: string[];
+  };
   features?: string[];
-  performance?: { lighthouse_score?: number };
-  accessibility?: { wcag_level?: string };
-}
-
-interface LayoutJson {
-  version: string;
-  navigation: string;
-  sections: Array<{ type: string; id?: string; config?: any; visible?: boolean }>;
-  footer: string;
-  settings?: { wrapperClass?: string; googleFontsUrl?: string };
+  performance?: {
+    lighthouse_score?: number;
+  };
+  accessibility?: {
+    wcag_level?: string;
+  };
+  installation?: {
+    steps?: string[];
+  };
 }
 
 export async function POST(req: NextRequest) {
   try {
+    // Check authentication
     const user = await currentUser();
     if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
       return NextResponse.json(
@@ -43,15 +48,34 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { templateName, githubUrl } = body;
+    const { templateName, githubUrl, structureType = "default" } = body;
 
-    if (!templateName || typeof templateName !== "string" || !templateName.trim()) {
-      return NextResponse.json({ error: "Template name is required" }, { status: 400 });
+    if (
+      !templateName ||
+      typeof templateName !== "string" ||
+      !templateName.trim()
+    ) {
+      return NextResponse.json(
+        { error: "Template name is required" },
+        { status: 400 },
+      );
     }
 
     if (!githubUrl || typeof githubUrl !== "string") {
-      return NextResponse.json({ error: "GitHub URL is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "GitHub URL is required" },
+        { status: 400 },
+      );
     }
+
+    if (structureType !== "default" && structureType !== "lovable") {
+      return NextResponse.json(
+        { error: 'Invalid structure type. Must be "default" or "lovable"' },
+        { status: 400 },
+      );
+    }
+
+    console.log(`[Template Upload] Structure type: ${structureType}`);
 
     // Validate GitHub URL format
     const githubPattern = /^https:\/\/github\.com\/([\w-]+)\/([\w-]+)(\.git)?$/;
@@ -59,7 +83,10 @@ export async function POST(req: NextRequest) {
 
     if (!match) {
       return NextResponse.json(
-        { error: "Invalid GitHub URL format. Expected: https://github.com/username/repo" },
+        {
+          error:
+            "Invalid GitHub URL format. Expected: https://github.com/username/repo",
+        },
         { status: 400 },
       );
     }
@@ -67,19 +94,25 @@ export async function POST(req: NextRequest) {
     const [, owner, repo] = match;
     console.log(`[Template Upload] Downloading from GitHub: ${owner}/${repo}`);
 
+    // Create temporary directory for download
     const tempDir = path.join("/tmp", `template-${Date.now()}`);
     const zipPath = path.join(tempDir, "repo.zip");
     await fs.mkdir(tempDir, { recursive: true });
 
     try {
       // Download repository as ZIP
+      console.log("[Template Upload] Downloading ZIP archive...");
       const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/main.zip`;
+
       const response = await fetch(zipUrl);
       if (!response.ok) {
+        // Try 'master' branch if 'main' doesn't exist
         const masterUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/master.zip`;
         const masterResponse = await fetch(masterUrl);
         if (!masterResponse.ok) {
-          throw new Error(`Failed to download repository. Status: ${response.status}`);
+          throw new Error(
+            `Failed to download repository. Status: ${response.status}`,
+          );
         }
         const buffer = await masterResponse.buffer();
         await fs.writeFile(zipPath, buffer);
@@ -88,73 +121,56 @@ export async function POST(req: NextRequest) {
         await fs.writeFile(zipPath, buffer);
       }
 
+      console.log("[Template Upload] ZIP downloaded successfully");
+
       // Extract ZIP
+      console.log("[Template Upload] Extracting ZIP...");
       const zip = new AdmZip(zipPath);
       zip.extractAllTo(tempDir, true);
 
+      // Find the extracted folder (GitHub adds repo-name-branch format)
       const extractedDirs = await fs.readdir(tempDir);
       const repoDir = extractedDirs.find((dir) => dir.startsWith(`${repo}-`));
+
       if (!repoDir) {
         throw new Error("Could not find extracted repository directory");
       }
 
       const extractPath = path.join(tempDir, repoDir);
+      console.log(`[Template Upload] Extracted to: ${extractPath}`);
 
-      // Validate required files: layout.json, template.config.json, defaults.json
-      const layoutPath = path.join(extractPath, "layout.json");
-      const configPath = path.join(extractPath, "template.config.json");
-      const defaultsPath = path.join(extractPath, "defaults.json");
+      // Convert Lovable template if needed
+      if (structureType === "lovable") {
+        console.log(
+          "[Template Upload] Converting Lovable template to BudStack format...",
+        );
+        const conversionResult = await convertLovableTemplate(extractPath);
 
-      try {
-        await fs.access(layoutPath);
-      } catch {
-        throw new Error("layout.json not found in repository root. Schema-driven templates require a layout.json file.");
-      }
-
-      try {
-        await fs.access(configPath);
-      } catch {
-        throw new Error("template.config.json not found in repository root");
-      }
-
-      try {
-        await fs.access(defaultsPath);
-      } catch {
-        throw new Error("defaults.json not found in repository root");
-      }
-
-      // Parse and validate layout.json against section registry
-      const layoutContent = await fs.readFile(layoutPath, "utf-8");
-      const layout: LayoutJson = JSON.parse(layoutContent);
-
-      const validSectionTypes = Object.keys(SECTION_REGISTRY);
-      const invalidTypes: string[] = [];
-
-      // Validate navigation type
-      if (!validSectionTypes.includes(layout.navigation)) {
-        invalidTypes.push(`navigation: "${layout.navigation}"`);
-      }
-
-      // Validate footer type
-      if (!validSectionTypes.includes(layout.footer)) {
-        invalidTypes.push(`footer: "${layout.footer}"`);
-      }
-
-      // Validate section types
-      for (const section of layout.sections) {
-        if (!validSectionTypes.includes(section.type)) {
-          invalidTypes.push(`section: "${section.type}"`);
+        if (!conversionResult.success) {
+          throw new Error(
+            `Lovable conversion failed: ${conversionResult.error}`,
+          );
         }
-      }
 
-      if (invalidTypes.length > 0) {
-        throw new Error(
-          `Invalid section types in layout.json: ${invalidTypes.join(", ")}. ` +
-          `Valid types are: ${validSectionTypes.join(", ")}`,
+        console.log(
+          `[Template Upload] Conversion successful: ${conversionResult.message}`,
         );
       }
 
-      // Parse config
+      // Read and validate template.config.json
+      const configPath = path.join(extractPath, "template.config.json");
+      let configExists = false;
+      try {
+        await fs.access(configPath);
+        configExists = true;
+      } catch {
+        console.log("[Template Upload] template.config.json not found");
+      }
+
+      if (!configExists) {
+        throw new Error("template.config.json not found in repository root");
+      }
+
       const configContent = await fs.readFile(configPath, "utf-8");
       const config: TemplateConfig = JSON.parse(configContent);
 
@@ -163,19 +179,26 @@ export async function POST(req: NextRequest) {
         return name
           .toLowerCase()
           .trim()
-          .replace(/[^a-z0-9\s-]/g, "")
-          .replace(/\s+/g, "-")
-          .replace(/-+/g, "-")
-          .replace(/^-|-$/g, "");
+          .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+          .replace(/\s+/g, "-") // Replace spaces with hyphens
+          .replace(/-+/g, "-") // Remove consecutive hyphens
+          .replace(/^-|-$/g, ""); // Remove leading/trailing hyphens
       };
 
-      const slug = generateSlug(templateName.trim());
-      config.name = templateName.trim();
-      config.id = slug;
+      const userProvidedSlug = generateSlug(templateName.trim());
 
+      // Override config with user-provided values
+      config.name = templateName.trim();
+      config.id = userProvidedSlug;
+
+      // Validate generated slug
       if (!config.id) {
-        throw new Error("Generated slug is empty. Please provide a valid template name.");
+        throw new Error(
+          "Generated slug is empty. Please provide a valid template name.",
+        );
       }
+
+      console.log(`[Template Upload] Template: ${config.name} (${config.id})`);
 
       // Check if template already exists
       const existingTemplate = await prisma.templates.findUnique({
@@ -188,11 +211,45 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Upload to S3 only (no local filesystem copy)
+      // Copy template files to project
+      // In production standalone mode, process.cwd() = /app/app/ but templates live at /app/templates/
+      // Use /app/templates in production, process.cwd()/templates in development
+      const templatesDir = process.env.NODE_ENV === "production"
+        ? "/app/templates"
+        : path.join(process.cwd(), "templates");
+      const targetDir = path.join(templatesDir, config.id);
+
+      // Check if target directory exists
+      let targetExists = false;
+      try {
+        await fs.access(targetDir);
+        targetExists = true;
+      } catch {
+        // Directory doesn't exist, which is fine
+      }
+
+      if (targetExists) {
+        console.log(
+          `[Template Upload] Removing existing directory: ${targetDir}`,
+        );
+        await fs.rm(targetDir, { recursive: true, force: true });
+      }
+
+      console.log(`[Template Upload] Copying files to: ${targetDir}`);
+      await fs.cp(extractPath, targetDir, { recursive: true });
+
+      // Upload template files to S3 for persistence
       console.log(`[Template Upload] Uploading template to S3...`);
-      const s3Prefix = `templates/${config.id}/`;
-      await uploadDirectoryToS3(extractPath, s3Prefix);
-      console.log(`[Template Upload] Template uploaded to S3: ${s3Prefix}`);
+      try {
+        const s3Prefix = `templates/${config.id}/`;
+        await uploadDirectoryToS3(targetDir, s3Prefix);
+        console.log(`[Template Upload] Template uploaded to S3: ${s3Prefix}`);
+      } catch (s3Error: any) {
+        console.error(
+          `[Template Upload] S3 upload failed (non-fatal): ${s3Error.message}`,
+        );
+        // Continue - template is in local filesystem, S3 is for persistence only
+      }
 
       // Create database record
       const template = await prisma.templates.create({
@@ -208,8 +265,10 @@ export async function POST(req: NextRequest) {
           isActive: true,
           isPremium: false,
           price: 0,
-          layoutFilePath: `templates/${config.id}/layout.json`,
-          stylesPath: `templates/${config.id}/styles.css`,
+          layoutFilePath: `/templates/${config.id}/index.tsx`,
+          componentsPath: `/templates/${config.id}/components`,
+          stylesPath: `/templates/${config.id}/styles.css`,
+          packagePath: `/templates/${config.id}/package.json`,
           previewUrl: config.preview_image || "",
           thumbnailUrl: config.preview_image || "",
           updatedAt: new Date(),
@@ -217,12 +276,15 @@ export async function POST(req: NextRequest) {
             features: config.features || [],
             performance: config.performance || {},
             accessibility: config.accessibility || {},
-            schemaVersion: layout.version,
+            compatibility: config.compatibility || {},
+            installation: config.installation || {},
           },
         },
       });
 
-      console.log(`[Template Upload] Template created in database: ID ${template.id}`);
+      console.log(
+        `[Template Upload] Template created in database: ID ${template.id}`,
+      );
 
       // Create audit log
       const clientInfo = getClientInfo(req.headers);
@@ -236,32 +298,59 @@ export async function POST(req: NextRequest) {
           templateSlug: config.id,
           templateName: config.name,
           githubUrl,
-          sectionCount: layout.sections.length,
+          structureType,
+          converted: structureType === "lovable",
         },
         ipAddress: clientInfo.ipAddress,
         userAgent: clientInfo.userAgent,
       });
 
       // Clean up temp directory
+      console.log("[Template Upload] Cleaning up temporary files...");
       await fs.rm(tempDir, { recursive: true, force: true });
+
+      // Auto-sync template registry
+      console.log("[Template Upload] Syncing template registry...");
+      try {
+        const { exec } = await import("child_process");
+        const { promisify } = await import("util");
+        const execAsync = promisify(exec);
+
+        // In production, scripts live at /app/scripts/ (not /app/app/scripts/)
+        const scriptsBase = process.env.NODE_ENV === "production" ? "/app" : process.cwd();
+        await execAsync("npx tsx scripts/sync-template-registry.ts", {
+          cwd: scriptsBase,
+        });
+        console.log("[Template Upload] Template registry synced successfully");
+      } catch (syncError: any) {
+        console.error(
+          "[Template Upload] Registry sync failed (non-fatal):",
+          syncError.message,
+        );
+        // Continue even if sync fails - template is uploaded, just needs manual registry update
+      }
 
       return NextResponse.json({
         success: true,
-        message: "Template uploaded successfully. No rebuild required — templates are loaded at runtime.",
+        message:
+          "Template uploaded successfully. Registry updated - rebuild required to activate.",
         template: {
           id: template.id,
           slug: template.slug,
           name: template.name,
         },
-        requiresRebuild: false,
+        requiresRebuild: true,
       });
     } catch (uploadError: any) {
       console.error("[Template Upload] Upload error:", uploadError.message);
+
+      // Clean up on error
       try {
         await fs.rm(tempDir, { recursive: true, force: true });
       } catch {
         // Ignore cleanup errors
       }
+
       throw uploadError;
     }
   } catch (error: any) {

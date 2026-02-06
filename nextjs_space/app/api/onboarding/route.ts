@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db";
 import { clerkClient } from "@clerk/nextjs/server";
 import { sendEmail, emailTemplates } from "@/lib/email";
 import crypto from "crypto";
-import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
 
 const TEMPLATE_PRESETS = {
   modern: {
@@ -237,26 +236,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Clone base template files from S3 to tenant-specific S3 path
-    const sourceS3Prefix = `templates/${dbTemplate.slug}/`;
-    const tenantS3Path = `tenants/${tenant.id}/templates/${Date.now()}/`;
-
-    let defaults: any = null;
-    try {
-      await copyS3Directory(sourceS3Prefix, tenantS3Path);
-      console.log(`[Onboarding] Cloned template to S3: ${tenantS3Path}`);
-    } catch (s3Error: any) {
-      console.error(`[Onboarding] S3 clone failed (non-fatal): ${s3Error.message}`);
-    }
-
-    // Load defaults.json from S3 to populate initial tenant template fields
-    try {
-      defaults = await getJsonFromS3(`${sourceS3Prefix}defaults.json`);
-    } catch {
-      console.log("[Onboarding] No defaults.json found in S3 for template");
-    }
-
-    // Create tenant_templates record with S3 path and defaults
+    // Create tenant_templates record so the new template system works
+    // This links the tenant to the base template with customizable overrides
     const tenantTemplateId = crypto.randomUUID();
     await prisma.tenant_templates.create({
       data: {
@@ -265,11 +246,6 @@ export async function POST(req: NextRequest) {
         baseTemplateId: dbTemplate.id,
         templateName: dbTemplate.name,
         isActive: true,
-        s3Path: tenantS3Path,
-        designSystem: defaults?.designSystem || undefined,
-        pageContent: defaults?.pageContent || undefined,
-        navigation: defaults?.navigation || undefined,
-        footer: defaults?.footer || undefined,
         updatedAt: new Date(),
       },
     });

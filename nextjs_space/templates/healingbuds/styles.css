@@ -1,0 +1,573 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Archivo+Narrow:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Brand Color Palette */
+    --primary-green: 178 48% 21%;
+    /* #1C4F4D - Primary Green */
+    --secondary-green: 178 48% 33%;
+    /* #2C7D7A - Secondary Green */
+    --accent-green: 164 48% 53%;
+    /* #4DBFA1 - Accent Light Green */
+    --lime-green: 84 81% 44%;
+    /* #84CC16 - Lime Green */
+    --deep-teal: 180 84% 32%;
+    /* #0D9488 - Deep Teal */
+    --text-light: 0 0% 98%;
+    /* #F9F9F9 - Text Color */
+    --light-gray: 171 12% 66%;
+    /* #A0B3B0 - Light Gray */
+    --subtle-dark: 176 39% 17%;
+    /* #1A3C3A - Subtle Dark */
+
+    /* Application Colors */
+    --background: 0 0% 100%;
+    /* Light background */
+    --foreground: 176 39% 17%;
+    /* Dark text */
+    --off-white: 160 20% 99%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 176 39% 17%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 176 39% 17%;
+
+    /* Primary & Secondary using brand colors - sage teal matching nav */
+    --primary: 175 42% 35%;
+    /* Sage-teal matching navbar tone */
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 178 48% 33%;
+    /* Secondary Green */
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 171 12% 94%;
+    --muted-foreground: 171 12% 46%;
+
+    --accent: 164 48% 88%;
+    --accent-foreground: 176 39% 17%;
+
+    --destructive: 0 70% 65%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 171 12% 88%;
+    --input: 171 12% 96%;
+    --ring: 164 48% 53%;
+
+    --radius: 0.75rem;
+
+    /* Semantic tokens for sections */
+    --navbar-teal: 178 48% 21%;
+    /* Primary Green for navbar */
+    --section-color: 178 48% 21%;
+    /* Primary Green for colored sections */
+
+    /* Legacy teal tokens (mapped to new palette) */
+    --teal-midnight: 178 48% 21%;
+    --teal-deep: 178 48% 33%;
+    --teal-deeper: 176 39% 17%;
+    --teal-primary: 164 48% 53%;
+    --teal-darker: 176 39% 17%;
+
+    /* Sage tokens (mapped to grays) */
+    --sage-dark: 171 12% 66%;
+    --sage-deeper: 171 12% 60%;
+    --sage-medium: 171 12% 75%;
+    --sage-forest: 171 12% 50%;
+
+    /* Pharma colors (mapped to brand) */
+    --pharma-charcoal: 176 39% 25%;
+    --pharma-grey: 171 12% 60%;
+    --pharma-grey-light: 171 12% 92%;
+    --pharma-green: 164 48% 53%;
+    --pharma-green-dark: 178 48% 33%;
+    --pharma-blue: 178 48% 33%;
+    --pharma-blue-light: 171 12% 94%;
+
+    /* Map-specific sage colors */
+    --map-sage: 79 51% 52%;
+    /* #a2b756 - Primary sage green */
+    --map-sage-light: 79 55% 70%;
+    /* Lighter sage for hover states */
+    --map-sage-dark: 79 45% 40%;
+    /* Darker sage for active states */
+
+    /* Custom design tokens - Brand Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(164 48% 53%), hsl(178 48% 33%));
+    --gradient-sage-teal: linear-gradient(135deg, hsl(171 12% 75%), hsl(164 48% 53%));
+    --gradient-teal-midnight: linear-gradient(135deg, hsl(178 48% 33%), hsl(178 48% 21%));
+    --gradient-sage-forest: linear-gradient(135deg, hsl(171 12% 75%), hsl(171 12% 50%));
+    --gradient-hero: linear-gradient(180deg, rgba(77, 191, 161, 0.2), rgba(44, 125, 122, 0.15));
+    --gradient-accent: linear-gradient(135deg, hsl(164 48% 75%), hsl(178 48% 45%));
+    --gradient-warm: linear-gradient(135deg, hsl(164 48% 80%), hsl(171 12% 75%));
+
+    /* Radial Gradient */
+    --gradient-sage-radial: radial-gradient(ellipse at center top, hsl(171 12% 92%) 0%, hsl(171 12% 85%) 25%, hsl(178 48% 40%) 60%, hsl(178 48% 33%) 100%);
+
+    /* Linear-inspired ultra-clean shadows */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+    --shadow-md: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 4px 6px -1px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.06);
+    --shadow-xl: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
+    --shadow-2xl: 0 20px 40px -12px rgba(0, 0, 0, 0.12);
+    --shadow-card: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.05), 0 12px 24px rgba(0, 0, 0, 0.05);
+    --shadow-elegant: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 8px 24px -4px rgba(0, 0, 0, 0.08);
+
+    /* Linear-inspired ultra-smooth transitions */
+    --transition-base: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.35s cubic-bezier(0.34, 1.15, 0.64, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.3, 0.265, 1.3);
+
+    /* Typography scale */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
+    --font-size-5xl: 3rem;
+
+    /* Spacing scale for consistency */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 0.75rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    --spacing-3xl: 4rem;
+  }
+
+  .template-healingbuds.dark,
+  .template-healingbuds .dark {
+    /* MEDICAL DARK THEME - Clean, professional, high readability */
+    /* Forced light background for medical template even if system is dark */
+    --background: 0 0% 100% !important;
+    --foreground: 176 39% 17% !important;
+    --card: 0 0% 100% !important;
+    --card-foreground: 176 39% 17% !important;
+    --popover: 0 0% 100% !important;
+    --popover-foreground: 176 39% 17% !important;
+
+    /* Primary - softer sage-teal, calmer for medical */
+    --primary: 172 32% 42%;
+    /* Soft sage-teal, professional */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - neutral warm for balance */
+    --secondary: 210 6% 20%;
+    /* Neutral secondary surface */
+    --secondary-foreground: 0 0% 92%;
+
+    /* Muted surfaces - improved contrast */
+    --muted: 210 6% 16%;
+    --muted-foreground: 210 8% 65%;
+    /* Higher contrast muted text */
+
+    /* Accent - subtle sage for highlights only */
+    --accent: 172 18% 20%;
+    --accent-foreground: 172 25% 70%;
+
+    --destructive: 0 55% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs - softer */
+    --border: 210 6% 22%;
+    --input: 210 6% 16%;
+    --ring: 172 32% 42%;
+
+    /* Status colors for medical UX */
+    --success: 152 45% 45%;
+    /* Cleaner green for verified states */
+    --warning: 38 75% 55%;
+    /* Warm amber for attention */
+    --info: 200 60% 50%;
+    /* Calm blue for info */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased font-jakarta;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-jakarta;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+    line-height: 1.1;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl lg:text-5xl;
+    line-height: 1.15;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl;
+    line-height: 1.25;
+  }
+
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+
+  p {
+    line-height: 1.7;
+    @apply font-jakarta text-base md:text-lg;
+    letter-spacing: 0.01em;
+  }
+
+  /* Cards use Jakarta for modern, clean look */
+  .card,
+  [class*="card-"] {
+    @apply font-jakarta;
+  }
+
+  /* Buttons and interactive elements */
+  button,
+  .btn {
+    @apply font-jakarta font-medium;
+    letter-spacing: 0em;
+  }
+
+  /* Form elements */
+  label {
+    @apply font-jakarta font-medium text-sm;
+    letter-spacing: 0.01em;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply font-jakarta;
+    letter-spacing: 0em;
+  }
+}
+
+/* Linear-inspired ultra-clean utilities */
+@layer utilities {
+  .hover-lift {
+    @apply transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200 ease-out hover:scale-[1.01];
+  }
+
+  .hover-border {
+    @apply transition-colors duration-200 ease-out hover:border-foreground/20;
+  }
+
+  .smooth-transition {
+    transition: var(--transition-smooth);
+  }
+
+  .spring-transition {
+    transition: var(--transition-spring);
+  }
+
+  /* Linear-style card */
+  .card-linear {
+    @apply bg-card rounded-xl border border-border/50 transition-all duration-200;
+  }
+
+  .card-linear:hover {
+    box-shadow: var(--shadow-card);
+    @apply border-border/70 translate-y-[-1px];
+  }
+
+  /* Themed card for dark mode support */
+  .card-themed {
+    @apply bg-card rounded-xl border border-border/60 shadow-sm transition-all duration-200;
+  }
+
+  .dark .card-themed {
+    @apply border-border/40 bg-card/95 shadow-lg;
+  }
+
+  .card-themed:hover {
+    @apply shadow-md border-border/80 -translate-y-0.5;
+  }
+
+  .dark .card-themed:hover {
+    @apply border-border/50 shadow-xl;
+  }
+
+  /* Clean button styles with accent green */
+  .btn-primary {
+    @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-300 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25 hover:scale-[1.02] active:scale-[0.97];
+  }
+
+  .btn-secondary {
+    @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-300 bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-md active:scale-[0.97];
+  }
+
+  .btn-outline {
+    @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-300 border-2 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 hover:shadow-md active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-300 text-primary hover:bg-primary/10 active:bg-primary/20;
+  }
+
+  /* Glass button utility */
+  .btn-glass {
+    @apply px-5 py-2.5 rounded-2xl font-semibold transition-all duration-300 backdrop-blur-2xl bg-gradient-to-br from-white/30 via-white/20 to-white/10 border border-white/40 text-white hover:border-white/60 hover:from-white/40 hover:via-white/30 hover:to-white/20 hover:shadow-xl active:scale-[0.97] shadow-lg;
+  }
+
+  .btn-glass-secondary {
+    @apply px-5 py-2.5 rounded-2xl font-semibold transition-all duration-300 backdrop-blur-2xl bg-gradient-to-br from-white/20 via-white/15 to-white/10 border border-white/30 text-white hover:border-white/50 hover:from-white/30 hover:via-white/25 hover:to-white/20 hover:shadow-lg active:scale-[0.97] shadow-lg;
+  }
+
+  /* Subtle shadow utilities */
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+
+  /* Linear-style surface */
+  .surface {
+    @apply bg-background/50 backdrop-blur-sm border border-border/30 rounded-xl;
+  }
+
+  /* Softened glow effects - medical restraint */
+  .glow-accent {
+    @apply shadow-lg;
+    box-shadow: 0 0 12px rgba(77, 170, 140, 0.15);
+  }
+
+  .glow-accent-strong {
+    @apply shadow-xl;
+    box-shadow: 0 0 20px rgba(77, 170, 140, 0.25);
+  }
+
+  /* Medical status indicators - green only for success */
+  .status-verified {
+    @apply text-primary bg-primary/10 border border-primary/20;
+  }
+
+  .status-pending {
+    @apply text-muted-foreground bg-muted border border-border;
+  }
+
+  .status-attention {
+    @apply text-amber-400 bg-amber-400/10 border border-amber-400/20;
+  }
+
+  /* Safe area for iOS devices */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Uniform CTA width utility */
+  .cta-uniform {
+    @apply min-w-[140px] sm:min-w-[160px];
+  }
+
+  /* Focus visible states for accessibility */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  /* Premium micro-interaction */
+  .interactive-scale {
+    @apply transition-transform duration-200 ease-out hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  /* Typography consistency utilities */
+  .heading-primary {
+    @apply text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight;
+    line-height: 1.1;
+  }
+
+  .heading-secondary {
+    @apply text-3xl md:text-4xl font-semibold tracking-tight;
+    line-height: 1.15;
+  }
+
+  .heading-tertiary {
+    @apply text-2xl md:text-3xl font-semibold tracking-tight;
+    line-height: 1.2;
+  }
+
+  .body-large {
+    @apply text-lg md:text-xl;
+    line-height: 1.7;
+  }
+
+  .body-base {
+    @apply text-base md:text-lg;
+    line-height: 1.7;
+  }
+
+  /* Consistent section spacing */
+  .section-padding {
+    @apply py-16 md:py-20 lg:py-24;
+  }
+
+  .section-padding-sm {
+    @apply py-12 md:py-16 lg:py-20;
+  }
+
+  /* Card spacing consistency */
+  .card-spacing {
+    @apply p-6 md:p-8;
+  }
+
+  .card-spacing-sm {
+    @apply p-4 md:p-6;
+  }
+}
+
+/* Mapbox custom styles with warmer feel */
+.mapboxgl-popup-content {
+  background: linear-gradient(135deg, hsl(var(--sage-dark)), hsl(var(--teal-primary)));
+  color: white;
+  padding: 16px 20px;
+  border-radius: 16px;
+  font-weight: 500;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.mapboxgl-popup-tip {
+  border-top-color: hsl(var(--teal-primary)) !important;
+}
+
+.mapboxgl-popup-close-button {
+  color: white;
+  font-size: 20px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.mapboxgl-popup-close-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.1);
+}
+
+/* Quick tooltip styles - improved visibility */
+.map-quick-tooltip .maplibregl-popup-content {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  padding: 0;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(77, 191, 161, 0.15);
+  border: 1px solid rgba(77, 191, 161, 0.2);
+}
+
+.map-quick-tooltip .maplibregl-popup-tip {
+  border-top-color: rgba(255, 255, 255, 0.98) !important;
+}
+
+/* Shimmer animation for glass effects */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(30deg);
+  }
+
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(30deg);
+  }
+}
+
+/* Subtle pulse animation - medical restraint, no harsh glow */
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.2), 0 1px 4px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  50% {
+    box-shadow: 0 6px 24px 0 rgba(0, 0, 0, 0.25), 0 2px 6px 0 rgba(0, 0, 0, 0.12);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+/* NProgress customization to match brand */
+#nprogress {
+  pointer-events: none;
+}
+
+#nprogress .bar {
+  background: linear-gradient(90deg, hsl(164 48% 53%), hsl(178 48% 33%));
+  position: fixed;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  box-shadow: 0 0 10px hsl(164 48% 53% / 0.5), 0 0 5px hsl(164 48% 53% / 0.3);
+}
+
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0px;
+  width: 100px;
+  height: 100%;
+  box-shadow: 0 0 10px hsl(164 48% 53%), 0 0 5px hsl(164 48% 53%);
+  opacity: 1;
+  transform: rotate(3deg) translate(0px, -4px);
+}
+
+.dark #nprogress .bar {
+  background: linear-gradient(90deg, hsl(155 38% 45%), hsl(200 50% 50%));
+  box-shadow: 0 0 6px hsl(155 38% 45% / 0.3);
+}
+
+.dark #nprogress .peg {
+  box-shadow: 0 0 6px hsl(155 38% 45% / 0.4);
+}
+
+/* Shimmer animation for loading skeletons */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}

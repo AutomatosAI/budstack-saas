@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
 import { getCurrentTenant } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
-import { getFileUrl, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
+import { getFileUrl } from "@/lib/s3";
 
-// Import renderer
-import { TemplateRenderer } from "@/components/template-renderer";
-import type { TemplateLayout } from "@/lib/types/template-layout";
-import type { SectionProps } from "@/lib/types/section-props";
+// Import template registry
+import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
+
+// Import theme provider
+import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 
 // Import existing homepage components (fallback)
 import { HeroSection } from "@/components/home/hero-section";
@@ -17,21 +18,15 @@ import { EducationalContent } from "@/components/home/educational-content";
 import { TestimonialsSlider } from "@/components/home/testimonials-slider";
 import { CallToAction } from "@/components/home/call-to-action";
 
-/**
- * Try to load a JSON file from S3, returning null on failure
- */
-async function tryLoadJson<T>(key: string): Promise<T | null> {
-  try {
-    return await getJsonFromS3<T>(key);
-  } catch {
-    return null;
-  }
-}
-
 export default async function TenantStorePage() {
   const tenant = await getCurrentTenant();
+  console.log(
+    "[DEBUG] TenantStorePage: Resolved tenant:",
+    tenant ? tenant.subdomain : "null",
+  );
 
   if (!tenant) {
+    console.error("[DEBUG] TenantStorePage: Tenant not found, returning 404");
     notFound();
   }
 
@@ -39,7 +34,7 @@ export default async function TenantStorePage() {
   const tenantWithTemplate = await prisma.tenants.findUnique({
     where: { id: tenant.id },
     include: {
-      template: true,
+      template: true, // Base template (legacy)
       activeTenantTemplate: {
         include: {
           templates: true,
@@ -49,7 +44,18 @@ export default async function TenantStorePage() {
   });
 
   if (!tenantWithTemplate) {
+    console.error(
+      "[DEBUG] TenantStorePage: tenantWithTemplate not found for id:",
+      tenant.id,
+    );
     notFound();
+  } else {
+    console.log(
+      "[DEBUG] TenantStorePage: Found tenantWithTemplate. activeTenantTemplate:",
+      !!tenantWithTemplate.activeTenantTemplate,
+      "Legacy template:",
+      !!tenantWithTemplate.template,
+    );
   }
 
   // URLs for template props
@@ -58,35 +64,43 @@ export default async function TenantStorePage() {
   const contactUrl = `/store/${tenantWithTemplate.subdomain}/contact`;
   const aboutUrl = `/store/${tenantWithTemplate.subdomain}/about`;
 
-  // Check if tenant has an active TenantTemplate
+  // NEW: Check if tenant has an active TenantTemplate
   if (tenantWithTemplate.activeTenantTemplate) {
     const tenantTemplate = tenantWithTemplate.activeTenantTemplate;
     const baseTemplate = tenantTemplate.templates;
-    const templateSlug = baseTemplate.slug;
 
-    console.log("[StorePage] Active template:", {
-      tenantId: tenant.id,
-      templateSlug,
-      tenantTemplateId: tenantTemplate.id,
-      s3Path: (tenantTemplate as any).s3Path || "none",
-      hasDesignSystem: !!tenantTemplate.designSystem,
-    });
-
-    // Fetch latest posts
+    // Fetch latest posts for the template
     const latestPosts = await prisma.posts.findMany({
-      where: { tenantId: tenant.id, published: true },
+      where: {
+        tenantId: tenant.id,
+        published: true,
+      },
       take: 3,
       orderBy: { createdAt: "desc" },
       include: { users: true },
     });
 
+    const templateSlug = baseTemplate.slug;
+    const TemplateComponent = templateSlug ? TEMPLATE_COMPONENTS[templateSlug] : undefined;
+
     // Process hero image URL (sign if S3 path)
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
-    if (heroImageUrl && !heroImageUrl.startsWith("/") && !heroImageUrl.startsWith("http")) {
+    if (
+      heroImageUrl &&
+      !heroImageUrl.startsWith("/") &&
+      !heroImageUrl.startsWith("http")
+    ) {
       try {
-        heroImageUrl = await getFileUrl(heroImageUrl);
+        console.log("[DEBUG] StorePage: Signing heroImageUrl:", heroImageUrl);
+        const signedUrl = await getFileUrl(heroImageUrl);
+        console.log(
+          "[DEBUG] StorePage: Signed hero URL result:",
+          signedUrl ? signedUrl.substring(0, 50) + "..." : "null",
+        );
+        heroImageUrl = signedUrl;
       } catch (error) {
         console.error("Error fetching hero image from S3:", error);
+        // Fallback to original, though likely broken if private S3
       }
     }
 
@@ -94,91 +108,70 @@ export default async function TenantStorePage() {
     let logoUrl = tenantTemplate.logoUrl || null;
     if (logoUrl && !logoUrl.startsWith("/") && !logoUrl.startsWith("http")) {
       try {
-        logoUrl = await getFileUrl(logoUrl);
+        console.log("[DEBUG] StorePage: Signing logoUrl:", logoUrl);
+        const signedUrl = await getFileUrl(logoUrl);
+        console.log(
+          "[DEBUG] StorePage: Signed logo URL result:",
+          signedUrl ? signedUrl.substring(0, 50) + "..." : "null",
+        );
+        logoUrl = signedUrl;
       } catch (error) {
         console.error("Error fetching logo from S3:", error);
       }
     }
 
-    // Try to load layout.json from S3
-    // Priority: tenant clone → base template
-    const tenantS3Path = (tenantTemplate as any).s3Path;
-    let layout: TemplateLayout | null = null;
-    let defaults: any = null;
-    let customCss: string | null = null;
-
-    // Try tenant-specific S3 path first
-    if (tenantS3Path) {
-      layout = await tryLoadJson<TemplateLayout>(`${tenantS3Path}layout.json`);
-      defaults = await tryLoadJson(`${tenantS3Path}defaults.json`);
-      customCss = await getTextFromS3(`${tenantS3Path}styles.css`);
-    }
-
-    // Fallback to base template S3 path
-    if (!layout && templateSlug) {
-      layout = await tryLoadJson<TemplateLayout>(`templates/${templateSlug}/layout.json`);
-    }
-    if (!defaults && templateSlug) {
-      defaults = await tryLoadJson(`templates/${templateSlug}/defaults.json`);
-    }
-    if (!customCss && templateSlug) {
-      customCss = await getTextFromS3(`templates/${templateSlug}/styles.css`);
-    }
-
-    console.log("[StorePage] S3 load results:", {
-      templateSlug,
-      hasLayout: !!layout,
-      hasDefaults: !!defaults,
-      hasCss: !!customCss,
-      layoutSections: layout?.sections?.map(s => s.type) || "none",
-      layoutNav: layout?.navigation || "none",
-      layoutFooter: layout?.footer || "none",
-    });
-
-    if (layout) {
-      // Merge: DB overrides take precedence over defaults.json
-      const designSystem = tenantTemplate.designSystem || defaults?.designSystem || null;
-      const pageContent = tenantTemplate.pageContent || defaults?.pageContent || null;
-      const navigation = tenantTemplate.navigation || defaults?.navigation || null;
-      const footer = tenantTemplate.footer || defaults?.footer || null;
-      const valueProps = defaults?.valueProps || null;
-
-      const sectionProps: SectionProps = {
+    if (TemplateComponent) {
+      // Build template props with tenant customizations
+      const templateProps = {
         tenant: tenantWithTemplate,
         consultationUrl,
         productsUrl,
         contactUrl,
         aboutUrl,
+        // Pass tenant template customizations
         heroImageUrl,
         logoUrl,
-        designSystem,
-        pageContent,
-        navigation,
-        footer,
-        valueProps,
+        // Pass design system and content customizations
+        designSystem: tenantTemplate.designSystem,
+        pageContent: tenantTemplate.pageContent,
+        navigation: tenantTemplate.navigation,
+        footer: tenantTemplate.footer,
+        // Pass dynamic content
         posts: latestPosts,
       };
 
+      // Wrap in theme provider to inject CSS variables
+      // Create a shallow copy with the signed URLs to ensure the provider sees the updated values
+      const signedTenantTemplate = {
+        ...tenantTemplate,
+        heroImageUrl, // This is the SIGNED url
+        logoUrl, // This is the SIGNED url
+      };
+
       return (
-        <TemplateRenderer layout={layout} sectionProps={sectionProps} customCss={customCss} renderChrome={false} />
+        <TenantThemeProvider tenantTemplate={signedTenantTemplate}>
+          <TemplateComponent {...templateProps} />
+        </TenantThemeProvider>
       );
     }
-
-    // No layout.json found — log warning
-    console.warn("[StorePage] No layout.json found for template, falling back.", {
+    console.warn('[StorePage] Missing template component, falling back to legacy template.', {
       templateSlug,
       tenantId: tenant.id,
     });
   }
 
-  // LEGACY: Fallback to old system if no TenantTemplate or no layout.json
+  // LEGACY: Fallback to old system if no TenantTemplate
+  // (For existing tenants not yet migrated)
   const settings = (tenantWithTemplate.settings as any) || {};
   let heroImageUrl = null;
   let logoUrl = null;
 
   if (settings.heroImagePath) {
     try {
-      if (settings.heroImagePath.startsWith("/templates/") || settings.heroImagePath.startsWith("/public/")) {
+      if (
+        settings.heroImagePath.startsWith("/templates/") ||
+        settings.heroImagePath.startsWith("/public/")
+      ) {
         heroImageUrl = settings.heroImagePath;
       } else {
         heroImageUrl = await getFileUrl(settings.heroImagePath);
@@ -190,7 +183,10 @@ export default async function TenantStorePage() {
 
   if (settings.logoPath) {
     try {
-      if (settings.logoPath.startsWith("/templates/") || settings.logoPath.startsWith("/public/")) {
+      if (
+        settings.logoPath.startsWith("/templates/") ||
+        settings.logoPath.startsWith("/public/")
+      ) {
         logoUrl = settings.logoPath;
       } else {
         logoUrl = await getFileUrl(settings.logoPath);
@@ -200,19 +196,51 @@ export default async function TenantStorePage() {
     }
   }
 
+  // Check if there's a template assigned (legacy)
+  if (tenantWithTemplate.template?.slug) {
+    const templateSlug = tenantWithTemplate.template.slug;
+    const TemplateComponent = TEMPLATE_COMPONENTS[templateSlug];
+
+    if (TemplateComponent) {
+      const templateProps = {
+        tenant: tenantWithTemplate,
+        consultationUrl,
+        productsUrl,
+        contactUrl,
+        heroImageUrl,
+        logoUrl,
+      };
+
+      return <TemplateComponent {...templateProps} />;
+    }
+  }
+
   // Default/Fallback template (original design)
   return (
     <div className="min-h-screen">
+      {/* Hero Section */}
       <HeroSection
         tenant={tenantWithTemplate}
         heroImageUrl={heroImageUrl}
         consultationUrl={consultationUrl}
       />
+
+      {/* Trust Badges */}
       <TrustBadges />
+
+      {/* Featured Conditions */}
       <FeaturedConditions consultationUrl={consultationUrl} />
+
+      {/* Process Steps */}
       <ProcessSteps consultationUrl={consultationUrl} />
+
+      {/* Educational Content */}
       <EducationalContent />
+
+      {/* Testimonials */}
       <TestimonialsSlider />
+
+      {/* Call to Action */}
       <CallToAction
         tenant={tenantWithTemplate}
         consultationUrl={consultationUrl}
@@ -226,9 +254,12 @@ export async function generateMetadata() {
   const tenant = await getCurrentTenant();
 
   if (!tenant) {
-    return { title: "Store Not Found" };
+    return {
+      title: "Store Not Found",
+    };
   }
 
+  // Fetch tenant's pageSeo for custom metadata
   const tenantWithSeo = await prisma.tenants.findUnique({
     where: { id: tenant.id },
     select: {
@@ -239,14 +270,19 @@ export async function generateMetadata() {
     },
   });
 
+  // Get SEO config with cascade: custom → default
   const pageSeo = tenantWithSeo?.pageSeo as {
     home?: { title?: string; description?: string; ogImage?: string };
   } | null;
   const homeSeo = pageSeo?.home;
 
-  const title = homeSeo?.title || `${tenant.businessName} - Medical Cannabis Solutions`;
-  const description = homeSeo?.description || `Premium medical cannabis products and consultations from ${tenant.businessName}`;
+  const title =
+    homeSeo?.title || `${tenant.businessName} - Medical Cannabis Solutions`;
+  const description =
+    homeSeo?.description ||
+    `Premium medical cannabis products and consultations from ${tenant.businessName}`;
 
+  // Build base URL for OG images
   const baseUrl = tenantWithSeo?.customDomain
     ? `https://${tenantWithSeo.customDomain}`
     : `https://${tenantWithSeo?.subdomain || tenant.subdomain}.budstack.to`;
@@ -270,6 +306,8 @@ export async function generateMetadata() {
       description,
       ...(homeSeo?.ogImage && { images: [homeSeo.ogImage] }),
     },
-    alternates: { canonical: baseUrl },
+    alternates: {
+      canonical: baseUrl,
+    },
   };
 }
