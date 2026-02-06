@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import fs from "fs";
 import path from "path";
 import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
+import { TemplateRenderer } from "@/components/template-renderer";
+import { getJsonFromS3, getTextFromS3 } from "@/lib/s3";
+import type { TemplateLayout } from "@/lib/types/template-layout";
 import { Tenant } from "@/types/client";
 import PreviewToolbar from "./preview-toolbar";
 
@@ -32,7 +35,7 @@ const mockTenant: Tenant = {
   },
 };
 
-function loadDefaults(templateSlug: string): any | null {
+function loadLocalDefaults(templateSlug: string): any | null {
   try {
     const defaultsPath = path.join(
       process.cwd(),
@@ -67,40 +70,76 @@ export default async function TemplatePreviewPage({
 }) {
   const { templateSlug } = params;
 
-  // Check if template exists in registry
+  // PATH 1: Try data-driven template (layout.json in S3)
+  let layout: TemplateLayout | null = null;
+  let customCss: string | null = null;
+  let defaults: any = null;
+
+  try {
+    layout = await getJsonFromS3<TemplateLayout>(`templates/${templateSlug}/layout.json`);
+    if (layout) {
+      customCss = await getTextFromS3(`templates/${templateSlug}/styles.css`);
+      defaults = await getJsonFromS3(`templates/${templateSlug}/defaults.json`).catch(() => null);
+    }
+  } catch {
+    // No layout.json in S3
+  }
+
+  if (layout) {
+    const sectionProps = {
+      tenant: { ...mockTenant, subdomain: mockTenant.slug },
+      consultationUrl: "#consultation",
+      productsUrl: "#products",
+      contactUrl: "#contact",
+      aboutUrl: "#about",
+      heroImageUrl: null,
+      logoUrl: null,
+      pageContent: defaults?.pageContent || {},
+      navigation: defaults?.navigation || {},
+      footer: defaults?.footer || {},
+      valueProps: defaults?.valueProps || [],
+    };
+
+    return (
+      <>
+        <PreviewToolbar templateName={defaults?.template || templateSlug} />
+        <TemplateRenderer
+          layout={layout}
+          sectionProps={sectionProps}
+          customCss={customCss}
+          renderChrome={true}
+        />
+      </>
+    );
+  }
+
+  // PATH 2: Legacy React template (bundled at build time)
   const TemplateComponent = TEMPLATE_COMPONENTS[templateSlug];
   if (!TemplateComponent) {
     notFound();
   }
 
-  // Load template defaults for design system
-  const defaults = loadDefaults(templateSlug);
+  // Load template defaults from local filesystem
+  const localDefaults = loadLocalDefaults(templateSlug);
 
-  // Build template props matching what the real store provides
   const templateProps = {
     tenant: mockTenant,
     consultationUrl: "#consultation",
     productsUrl: "#products",
     contactUrl: "#contact",
     aboutUrl: "#about",
-    heroImageUrl: resolvePublicAsset(defaults?.heroImagePath),
-    logoUrl: resolvePublicAsset(defaults?.logoPath),
-    designSystem: defaults?.designSystem || null,
-    pageContent: defaults?.pageContent || null,
-    navigation: defaults?.navigation || null,
-    footer: defaults?.footer || null,
+    heroImageUrl: resolvePublicAsset(localDefaults?.heroImagePath),
+    logoUrl: resolvePublicAsset(localDefaults?.logoPath),
+    designSystem: localDefaults?.designSystem || null,
+    pageContent: localDefaults?.pageContent || null,
+    navigation: localDefaults?.navigation || null,
+    footer: localDefaults?.footer || null,
     posts: [],
   };
 
-  // NO TenantThemeProvider here — templates bring their own styles.css
-  // which defines :root CSS variables with raw HSL values.
-  // TenantThemeProvider would double-wrap HSL in hsl() causing
-  // hsl(hsl(270 15% 8%)) which is invalid CSS.
-  // Templates use hsl(var(--tenant-color-*)) in their components,
-  // which resolves correctly against the raw :root values.
   return (
     <>
-      <PreviewToolbar templateName={defaults?.template || templateSlug} />
+      <PreviewToolbar templateName={localDefaults?.template || templateSlug} />
       <TemplateComponent {...templateProps} />
     </>
   );

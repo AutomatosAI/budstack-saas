@@ -3,12 +3,23 @@ import { Footer } from "@/components/footer";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
 import { getCurrentTenant } from "@/lib/tenant";
-import { getFileUrl } from "@/lib/s3";
+import { getFileUrl, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-// Import template registry
+// Import template registries (legacy + section-based)
 import { TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/template-registry";
+import { getSectionComponent } from "@/lib/section-registry";
+import type { TemplateLayout } from "@/lib/types/template-layout";
 import { CartProvider } from "./_contexts/CartContext";
+
+// Sanitize CSS from S3 - strip dangerous patterns
+function sanitizeCss(css: string | null): string {
+  if (!css) return '';
+  return css
+    .replace(/@import[^;]+;/gi, '')
+    .replace(/url\([^)]+\)/gi, '')
+    .replace(/expression\([^)]+\)/gi, '');
+}
 
 export default async function TenantStoreLayout({
   children,
@@ -102,8 +113,50 @@ export default async function TenantStoreLayout({
   const address = settings.address || "Your Business Address";
   const socialLinks = settings.socialMedia || {};
 
-  // Render template-specific navigation function
+  // Check if this template has a layout.json (data-driven)
+  const tenantS3Path = activeTemplate?.s3Path;
+  const baseS3Path = templateSlug ? `templates/${templateSlug}` : null;
+  let layout: TemplateLayout | null = null;
+  let customCss: string | null = null;
+  let defaults: any = null;
+
+  for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
+    try {
+      layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
+      if (layout) {
+        customCss = await getTextFromS3(`${s3Prefix}/styles.css`);
+        defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null);
+        break;
+      }
+    } catch {
+      // No layout.json at this path
+    }
+  }
+
+  // Build section props for data-driven nav/footer
+  const sectionProps = {
+    tenant: tenantWithTemplate,
+    consultationUrl,
+    productsUrl,
+    contactUrl,
+    aboutUrl,
+    logoUrl,
+    navigation: (activeTemplate?.navigation as any) || defaults?.navigation || {},
+    footer: (activeTemplate?.footer as any) || defaults?.footer || {},
+    pageContent: (activeTemplate?.pageContent as any) || defaults?.pageContent || {},
+  };
+
+  // Render navigation
   const renderNavigation = () => {
+    // Data-driven: use section component from layout.json
+    if (layout?.navigation) {
+      const NavComponent = getSectionComponent(layout.navigation);
+      if (NavComponent) {
+        return <NavComponent {...sectionProps} />;
+      }
+    }
+
+    // Legacy: use template-specific React component
     const SpecificNavigation = templateSlug
       ? TEMPLATE_NAVIGATION[templateSlug]
       : null;
@@ -119,12 +172,20 @@ export default async function TenantStoreLayout({
       );
     }
 
-    // Default platform navigation for other templates or if no specific navigation exists
     return <Navigation tenant={tenantWithTemplate} logoUrl={logoUrl} />;
   };
 
-  // Render template-specific footer function
+  // Render footer
   const renderFooter = () => {
+    // Data-driven: use section component from layout.json
+    if (layout?.footer) {
+      const FooterComponent = getSectionComponent(layout.footer);
+      if (FooterComponent) {
+        return <FooterComponent {...sectionProps} />;
+      }
+    }
+
+    // Legacy: use template-specific React component
     const SpecificFooter = templateSlug ? TEMPLATE_FOOTER[templateSlug] : null;
 
     if (SpecificFooter) {
@@ -140,38 +201,38 @@ export default async function TenantStoreLayout({
       );
     }
 
-    // Default platform footer for other templates or if no specific footer exists
     return <Footer tenant={tenantWithTemplate} logoUrl={logoUrl} />;
   };
 
-  // Determine template class for CSS variable inheritance
-  const getTemplateClass = () => {
+  // Wrapper class from layout settings or legacy mapping
+  const wrapperClass = layout?.settings?.wrapperClass || (() => {
     switch (templateSlug) {
-      case "wellness-nature":
-        return "wellness-template";
-      case "gta-cannabis":
-        return "gta-template";
-      case "healingbuds":
-        return "template-healingbuds";
-      default:
-        return "";
+      case "wellness-nature": return "wellness-template";
+      case "gta-cannabis": return "gta-template";
+      case "healingbuds": return "template-healingbuds";
+      default: return "";
     }
-  };
+  })();
+
+  // Merge designSystem: DB > defaults > null
+  const mergedDesignSystem = activeTemplate?.designSystem || defaults?.designSystem || null;
 
   return (
     <TenantThemeProvider
       tenant={tenantWithTemplate}
       tenantTemplate={
-        activeTemplate
+        activeTemplate || mergedDesignSystem
           ? {
-            designSystem: activeTemplate.designSystem,
-            customCss: activeTemplate.customCss,
+            designSystem: mergedDesignSystem,
+            customCss: activeTemplate?.customCss || null,
           }
           : undefined
       }
     >
       <CartProvider storeSlug={params.slug}>
-        <div className={`min-h-screen ${getTemplateClass()}`}>
+        <div className={`min-h-screen ${wrapperClass}`}>
+          {/* Inject template custom CSS from S3 (sanitized) */}
+          {customCss && <style>{sanitizeCss(customCss)}</style>}
           {renderNavigation()}
           <main>{children}</main>
           {renderFooter()}

@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
 import { getCurrentTenant } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
-import { getFileUrl } from "@/lib/s3";
+import { getFileUrl, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
 
-// Import template registry
+// Import template registry (legacy React templates)
 import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
+
+// Import section-based renderer (data-driven templates)
+import { TemplateRenderer } from "@/components/template-renderer";
+import type { TemplateLayout } from "@/lib/types/template-layout";
 
 // Import theme provider
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
@@ -81,7 +85,6 @@ export default async function TenantStorePage() {
     });
 
     const templateSlug = baseTemplate.slug;
-    const TemplateComponent = templateSlug ? TEMPLATE_COMPONENTS[templateSlug] : undefined;
 
     // Process hero image URL (sign if S3 path)
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
@@ -120,41 +123,90 @@ export default async function TenantStorePage() {
       }
     }
 
+    // Build common template props
+    const templateProps = {
+      tenant: tenantWithTemplate,
+      consultationUrl,
+      productsUrl,
+      contactUrl,
+      aboutUrl,
+      heroImageUrl,
+      logoUrl,
+      designSystem: tenantTemplate.designSystem,
+      pageContent: tenantTemplate.pageContent,
+      navigation: tenantTemplate.navigation,
+      footer: tenantTemplate.footer,
+      posts: latestPosts,
+    };
+
+    const signedTenantTemplate = {
+      ...tenantTemplate,
+      heroImageUrl,
+      logoUrl,
+    };
+
+    // PATH 1: Data-driven template (layout.json in S3)
+    // Try tenant's clone first, then base template
+    const tenantS3Path = tenantTemplate.s3Path;
+    const baseS3Path = `templates/${templateSlug}`;
+    let layout: TemplateLayout | null = null;
+    let customCss: string | null = null;
+    let defaults: any = null;
+
+    for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
+      try {
+        layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
+        if (layout) {
+          // Load custom CSS and defaults from same path
+          customCss = await getTextFromS3(`${s3Prefix}/styles.css`);
+          defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null);
+          break;
+        }
+      } catch {
+        // No layout.json at this path, try next
+      }
+    }
+
+    if (layout) {
+      // Merge defaults into props (DB overrides > defaults)
+      const mergedProps = {
+        ...templateProps,
+        pageContent: templateProps.pageContent || defaults?.pageContent || {},
+        navigation: templateProps.navigation || defaults?.navigation || {},
+        footer: templateProps.footer || defaults?.footer || {},
+        valueProps: defaults?.valueProps || [],
+      };
+
+      // Build designSystem for TenantThemeProvider from defaults fallback
+      const mergedTenantTemplate = {
+        ...signedTenantTemplate,
+        designSystem: signedTenantTemplate.designSystem || defaults?.designSystem || null,
+      };
+
+      return (
+        <TenantThemeProvider tenantTemplate={mergedTenantTemplate}>
+          <TemplateRenderer
+            layout={layout}
+            sectionProps={mergedProps}
+            customCss={customCss}
+            renderChrome={false}
+          />
+        </TenantThemeProvider>
+      );
+    }
+
+    // PATH 2: Legacy React template (bundled at build time)
+    const TemplateComponent = templateSlug ? TEMPLATE_COMPONENTS[templateSlug] : undefined;
+
     if (TemplateComponent) {
-      // Build template props with tenant customizations
-      const templateProps = {
-        tenant: tenantWithTemplate,
-        consultationUrl,
-        productsUrl,
-        contactUrl,
-        aboutUrl,
-        // Pass tenant template customizations
-        heroImageUrl,
-        logoUrl,
-        // Pass design system and content customizations
-        designSystem: tenantTemplate.designSystem,
-        pageContent: tenantTemplate.pageContent,
-        navigation: tenantTemplate.navigation,
-        footer: tenantTemplate.footer,
-        // Pass dynamic content
-        posts: latestPosts,
-      };
-
-      // Wrap in theme provider to inject CSS variables
-      // Create a shallow copy with the signed URLs to ensure the provider sees the updated values
-      const signedTenantTemplate = {
-        ...tenantTemplate,
-        heroImageUrl, // This is the SIGNED url
-        logoUrl, // This is the SIGNED url
-      };
-
       return (
         <TenantThemeProvider tenantTemplate={signedTenantTemplate}>
           <TemplateComponent {...templateProps} />
         </TenantThemeProvider>
       );
     }
-    console.warn('[StorePage] Missing template component, falling back to legacy template.', {
+
+    console.warn('[StorePage] No layout.json or legacy template found.', {
       templateSlug,
       tenantId: tenant.id,
     });

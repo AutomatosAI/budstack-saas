@@ -28,6 +28,11 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
 
   return (
     <div className={showChrome ? `min-h-screen ${layout.settings?.wrapperClass || ''}` : ''}>
+      {/* Load Google Fonts if specified */}
+      {layout.settings?.googleFontsUrl && (
+        // eslint-disable-next-line @next/next/no-page-custom-font
+        <link href={layout.settings.googleFontsUrl} rel="stylesheet" />
+      )}
       {sanitizedCss && (
         <style>{sanitizedCss}</style>
       )}
