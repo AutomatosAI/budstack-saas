@@ -3,7 +3,7 @@ import { Footer } from "@/components/footer";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
 import { getCurrentTenant } from "@/lib/tenant";
-import { getFileUrl, getJsonFromS3 } from "@/lib/s3";
+import { getFileUrl, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSectionComponent } from "@/lib/section-registry";
@@ -84,16 +84,26 @@ export default async function TenantStoreLayout({
   const contactUrl = `/store/${subdomain}/contact`;
   const aboutUrl = `/store/${subdomain}/about`;
 
-  // Try to load layout.json from S3 to get nav/footer component types
+  // Try to load layout.json + defaults.json + styles.css from S3
   let layout: TemplateLayout | null = null;
+  let defaults: any = null;
+  let templateCss: string | null = null;
   let googleFontsUrl: string | null = null;
   const tenantS3Path = (activeTemplate as any)?.s3Path;
 
   if (tenantS3Path) {
     layout = await tryLoadJson<TemplateLayout>(`${tenantS3Path}layout.json`);
+    defaults = await tryLoadJson(`${tenantS3Path}defaults.json`);
+    templateCss = await getTextFromS3(`${tenantS3Path}styles.css`);
   }
   if (!layout && templateSlug) {
     layout = await tryLoadJson<TemplateLayout>(`templates/${templateSlug}/layout.json`);
+  }
+  if (!defaults && templateSlug) {
+    defaults = await tryLoadJson(`templates/${templateSlug}/defaults.json`);
+  }
+  if (!templateCss && templateSlug) {
+    templateCss = await getTextFromS3(`templates/${templateSlug}/styles.css`);
   }
   if (layout) {
     googleFontsUrl = layout.settings?.googleFontsUrl || null;
@@ -108,8 +118,9 @@ export default async function TenantStoreLayout({
     aboutUrl,
     logoUrl,
     heroImageUrl: null,
-    navigation: (activeTemplate?.navigation as any) || null,
-    footer: (activeTemplate?.footer as any) || null,
+    designSystem: activeTemplate?.designSystem || defaults?.designSystem || null,
+    navigation: (activeTemplate?.navigation as any) || defaults?.navigation || null,
+    footer: (activeTemplate?.footer as any) || defaults?.footer || null,
   };
 
   // Render navigation using section registry or default
@@ -142,8 +153,8 @@ export default async function TenantStoreLayout({
       tenantTemplate={
         activeTemplate
           ? {
-            designSystem: activeTemplate.designSystem,
-            customCss: activeTemplate.customCss,
+            designSystem: activeTemplate.designSystem || defaults?.designSystem || null,
+            customCss: activeTemplate.customCss || templateCss || null,
           }
           : undefined
       }
