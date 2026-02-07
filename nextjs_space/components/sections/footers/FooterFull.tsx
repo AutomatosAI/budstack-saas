@@ -42,9 +42,16 @@ export function FooterFull(props: SectionProps) {
     },
   ];
 
+  const prefixHref = (href: string) =>
+    href.startsWith('/') && !href.startsWith('/store/') ? `${basePath}${href}` : href;
+
   const businessName = tenant.businessName;
   const tagline = sectionConfig?.tagline || footer?.tagline || 'Premium medical cannabis, delivered with care.';
-  const sections: FooterSection[] = sectionConfig?.sections || footer?.sections || defaultSections;
+  const rawSections: FooterSection[] = sectionConfig?.sections || footer?.sections || defaultSections;
+  const sections = rawSections.map((s) => ({
+    ...s,
+    links: s.links.map((l) => ({ ...l, href: prefixHref(l.href) })),
+  }));
   const disclaimer = sectionConfig?.disclaimer || footer?.disclaimer || 'Medical cannabis should only be used under the guidance of a licensed healthcare professional.';
 
   const year = new Date().getFullYear();

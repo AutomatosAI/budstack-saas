@@ -15,7 +15,10 @@ export function FooterSimple(props: SectionProps) {
     { label: 'Contact', href: contactUrl || `${basePath}/contact` },
   ];
 
-  const links = sectionConfig?.links || footer?.links || defaultLinks;
+  const prefixHref = (href: string) =>
+    href.startsWith('/') && !href.startsWith('/store/') ? `${basePath}${href}` : href;
+  const rawLinks = sectionConfig?.links || footer?.links || defaultLinks;
+  const links = rawLinks.map((l: any) => ({ ...l, href: prefixHref(l.href) }));
 
   const year = new Date().getFullYear();
 

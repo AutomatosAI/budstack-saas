@@ -20,10 +20,14 @@ const defaultCategories: Category[] = [
 ];
 
 export function ProductShowcase(props: SectionProps) {
-  const { productsUrl, sectionConfig } = props;
+  const { productsUrl, sectionConfig, tenant } = props;
+  const basePath = `/store/${tenant.subdomain}`;
+  const prefixHref = (href: string) =>
+    href.startsWith('/') && !href.startsWith('/store/') ? `${basePath}${href}` : href;
   const heading = sectionConfig?.heading || 'Our Products';
   const subtitle = sectionConfig?.subtitle || 'Explore our carefully curated selection of premium cannabis products';
-  const categories: Category[] = sectionConfig?.categories || defaultCategories;
+  const rawCategories: Category[] = sectionConfig?.categories || defaultCategories;
+  const categories = rawCategories.map((c) => ({ ...c, href: prefixHref(c.href) }));
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 

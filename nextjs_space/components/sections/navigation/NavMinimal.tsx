@@ -17,7 +17,10 @@ export function NavMinimal(props: SectionProps) {
     { label: 'Contact', href: contactUrl || `${basePath}/contact` },
   ];
 
-  const links = sectionConfig?.links || navigation?.links || defaultLinks;
+  const prefixHref = (href: string) =>
+    href.startsWith('/') && !href.startsWith('/store/') ? `${basePath}${href}` : href;
+  const rawLinks = sectionConfig?.links || navigation?.links || defaultLinks;
+  const links = rawLinks.map((l: any) => ({ ...l, href: prefixHref(l.href) }));
 
   const [mobileOpen, setMobileOpen] = useState(false);
 

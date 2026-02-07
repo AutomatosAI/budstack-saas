@@ -19,9 +19,14 @@ export function NavFull(props: SectionProps) {
     { label: 'Contact', href: contactUrl || `${basePath}/contact` },
   ];
 
-  const links = sectionConfig?.links || navigation?.links || defaultLinks;
-  const ctaLabel = sectionConfig?.ctaLabel || navigation?.ctaLabel || 'Book Consultation';
-  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
+  // Prefix bare paths (e.g. "/about") with basePath — defaults.json stores relative hrefs
+  const prefixHref = (href: string) =>
+    href.startsWith('/') && !href.startsWith('/store/') ? `${basePath}${href}` : href;
+
+  const rawLinks = sectionConfig?.links || navigation?.links || defaultLinks;
+  const links = rawLinks.map((l: any) => ({ ...l, href: prefixHref(l.href) }));
+  const ctaLabel = sectionConfig?.ctaLabel || navigation?.cta?.label || navigation?.ctaLabel || 'Book Consultation';
+  const ctaHref = prefixHref(sectionConfig?.ctaHref || navigation?.cta?.href || consultationUrl || `${basePath}/consultation`);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
