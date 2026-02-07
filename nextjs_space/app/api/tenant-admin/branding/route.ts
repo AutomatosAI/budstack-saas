@@ -136,7 +136,6 @@ export async function PUT(req: NextRequest) {
       // Handle file uploads for template
       const updateData: any = {
         designSystem: newDesignSystem,
-        pageContent: settings.pageContent,
         customCss: settings.customCSS,
       };
 
@@ -145,6 +144,15 @@ export async function PUT(req: NextRequest) {
       if (settings.heroImagePath)
         updateData.heroImageUrl = settings.heroImagePath;
       if (settings.faviconPath) updateData.faviconUrl = settings.faviconPath;
+
+      // Merge pageContent instead of replacing — preserve template defaults
+      if (settings.pageContent) {
+        const currentPageContent = (currentTemplate?.pageContent as any) || {};
+        updateData.pageContent = deepMerge(currentPageContent, settings.pageContent);
+      }
+
+      console.log("[branding] Saving designSystem colors:", JSON.stringify(newDesignSystem.colors, null, 2));
+      console.log("[branding] Saving pageContent keys:", Object.keys(updateData.pageContent || {}));
 
       // Update TenantTemplate
       await prisma.tenant_templates.update({
@@ -190,4 +198,21 @@ export async function PUT(req: NextRequest) {
 // Keep POST for backwards compatibility
 export async function POST(req: NextRequest) {
   return PUT(req);
+}
+
+/** Deep merge objects — target values win over source, but only if non-empty */
+function deepMerge(source: any, target: any): any {
+  if (!source) return target;
+  if (!target) return source;
+  const result = { ...source };
+  for (const key of Object.keys(target)) {
+    const val = target[key];
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      result[key] = deepMerge(source[key], val);
+    } else if (val !== undefined && val !== null && val !== '') {
+      result[key] = val;
+    }
+    // Skip empty/undefined values — keeps source intact
+  }
+  return result;
 }
