@@ -187,9 +187,11 @@ export default async function TenantStoreLayout({
       console.log("[layout] Trying S3:", `${s3Prefix}/layout.json`);
       layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
       if (layout) {
-        console.log("[layout] FOUND layout.json at:", s3Prefix, "nav:", layout.navigation, "footer:", layout.footer);
-        customCss = await getTextFromS3(`${s3Prefix}/styles.css`);
+        console.log("[layout] FOUND layout.json at:", s3Prefix, "nav:", layout.navigation, "footer:", layout.footer, "settings:", JSON.stringify(layout.settings));
+        customCss = await getTextFromS3(`${s3Prefix}/styles.css`).catch(() => null);
+        console.log("[layout] styles.css loaded:", customCss ? `${customCss.length} chars` : "NULL/EMPTY");
         defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null);
+        console.log("[layout] defaults.json loaded:", defaults ? Object.keys(defaults) : "NULL");
         break;
       }
     } catch {
@@ -296,6 +298,8 @@ export default async function TenantStoreLayout({
 
   // Merge designSystem: DB > defaults > null
   const mergedDesignSystem = activeTemplate?.designSystem || defaults?.designSystem || null;
+  console.log("[layout] designSystem source:", activeTemplate?.designSystem ? "DB" : defaults?.designSystem ? "defaults.json" : "NONE",
+    "colors.background:", (mergedDesignSystem as any)?.colors?.background || "NOT SET");
 
   return (
     <TenantThemeProvider
@@ -313,6 +317,8 @@ export default async function TenantStoreLayout({
         <div className={`min-h-screen ${wrapperClass}`}>
           {/* Inject template custom CSS from S3 (sanitized) */}
           {customCss && <style>{sanitizeCss(customCss)}</style>}
+          {/* Load Google Fonts from layout.json settings */}
+          {layout?.settings?.googleFontsUrl && <link rel="stylesheet" href={layout.settings.googleFontsUrl} />}
           {/* Inject legacy template CSS (from filesystem) for sub-page styling */}
           {legacyCss && <style>{legacyCss}</style>}
           {legacyFontUrl && <link rel="stylesheet" href={legacyFontUrl} />}
