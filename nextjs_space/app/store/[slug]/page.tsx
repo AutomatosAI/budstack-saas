@@ -188,7 +188,7 @@ export default async function TenantStorePage() {
           layout={layout}
           sectionProps={mergedProps}
           customCss={customCss}
-          renderChrome={true}
+          renderChrome={false}
         />
       );
     }

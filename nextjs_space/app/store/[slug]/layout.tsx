@@ -197,12 +197,10 @@ export default async function TenantStoreLayout({
     }
   }
   // Legacy templates (in TEMPLATE_COMPONENTS) bundle their own nav/footer in index.tsx
-  // Data-driven templates (layout.json found) render nav/footer via TemplateRenderer
-  // Layout only renders nav/footer when NEITHER applies (bare fallback)
+  // Data-driven templates get nav/footer from layout via renderNavigation/renderFooter
   const legacyTemplateExists = !!(templateSlug && TEMPLATE_COMPONENTS[templateSlug]);
-  // Only skip layout chrome for data-driven templates (layout.json in S3)
-  // Legacy templates now get nav/footer from layout; their home page passes renderChrome={false}
-  const skipLayoutChrome = !!layout;
+  // Skip layout chrome ONLY for legacy templates (they bundle their own nav/footer)
+  const skipLayoutChrome = legacyTemplateExists && !layout;
   console.log("[layout] Final: layout found:", !!layout, "legacyTemplate:", legacyTemplateExists, "skipLayoutChrome:", skipLayoutChrome);
 
   // For legacy templates, load CSS from filesystem so sub-pages get design tokens
@@ -289,7 +287,6 @@ export default async function TenantStoreLayout({
   // Wrapper class from layout settings or legacy mapping
   const wrapperClass = layout?.settings?.wrapperClass || (() => {
     switch (templateSlug) {
-      case "cannabizz": return "template-cannabizz";
       case "wellness-nature": return "wellness-template";
       case "gta-cannabis": return "gta-template";
       case "healingbuds": return "template-healingbuds";
