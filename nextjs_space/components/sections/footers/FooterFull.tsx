@@ -53,8 +53,8 @@ export function FooterFull(props: SectionProps) {
     <footer
       className="pt-16 pb-8"
       style={{
-        backgroundColor: 'hsl(var(--tenant-color-heading))',
-        color: 'white',
+        backgroundColor: 'hsl(var(--tenant-color-surface, var(--tenant-color-background, 220 15% 10%)))',
+        color: 'hsl(var(--tenant-color-heading, 0 0% 100%))',
       }}
     >
       <div className="container mx-auto px-6">
