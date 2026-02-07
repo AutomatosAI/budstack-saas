@@ -15,20 +15,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EditTemplateDialog } from "./edit-template-dialog";
 
 interface TemplateActionsProps {
   templateId: string;
   templateName: string;
   usageCount: number;
+  previewUrl: string | null;
 }
 
 export function TemplateActions({
   templateId,
   templateName,
   usageCount,
+  previewUrl,
 }: TemplateActionsProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const router = useRouter();
 
   const handleDelete = async () => {
@@ -62,8 +66,8 @@ export function TemplateActions({
         <Button
           variant="outline"
           size="sm"
-          disabled
-          title="Preview coming soon"
+          onClick={() => setShowEditDialog(true)}
+          title="Edit template"
           className="rounded-full"
         >
           <Edit className="h-4 w-4" />
@@ -83,6 +87,14 @@ export function TemplateActions({
         </Button>
       </div>
 
+      <EditTemplateDialog
+        templateId={templateId}
+        templateName={templateName}
+        currentPreviewUrl={previewUrl}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+      />
+
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -92,7 +104,7 @@ export function TemplateActions({
               <strong>"{templateName}"</strong>?
               {usageCount > 0 && (
                 <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-900">
-                  ⚠️ This template is currently used by{" "}
+                  Warning: This template is currently used by{" "}
                   <strong>{usageCount}</strong> tenant(s). You must reassign
                   those tenants to a different template before deletion.
                 </div>

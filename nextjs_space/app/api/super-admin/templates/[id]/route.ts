@@ -1,9 +1,77 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { uploadFile, getFileUrl } from "@/lib/s3";
 import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  try {
+    const user = await currentUser();
+    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const template = await prisma.templates.findUnique({
+      where: { id: params.id },
+    });
+    if (!template) {
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    }
+
+    const formData = await req.formData();
+    const updateData: Record<string, any> = {};
+
+    // Handle preview image upload
+    const previewImage = formData.get("previewImage") as File;
+    if (previewImage && previewImage.size > 0) {
+      const buffer = Buffer.from(await previewImage.arrayBuffer());
+      const fileName = `template-preview-${template.slug}-${Date.now()}-${previewImage.name}`;
+      const s3Key = await uploadFile(buffer, fileName);
+      updateData.previewUrl = s3Key;
+      updateData.thumbnailUrl = s3Key;
+    }
+
+    // Handle optional text fields
+    const name = formData.get("name") as string;
+    const description = formData.get("description") as string;
+    if (name) updateData.name = name;
+    if (description) updateData.description = description;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    }
+
+    updateData.updatedAt = new Date();
+
+    await prisma.templates.update({
+      where: { id: params.id },
+      data: updateData,
+    });
+
+    // Return signed URL for immediate display
+    let signedPreviewUrl = null;
+    if (updateData.previewUrl) {
+      signedPreviewUrl = await getFileUrl(updateData.previewUrl);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Template "${template.name}" updated`,
+      previewUrl: signedPreviewUrl,
+    });
+  } catch (error: any) {
+    console.error("[Template Update] Error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to update template" },
+      { status: 500 },
+    );
+  }
+}
 
 export async function DELETE(
   req: NextRequest,

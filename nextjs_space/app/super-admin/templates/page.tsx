@@ -1,11 +1,13 @@
 import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
+import { getFileUrl } from '@/lib/s3';
 import { Button } from '@/components/ui/button';
 import { Eye, Layout } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { UploadTemplateDialog } from './upload-dialog';
 import { TemplateActions } from './template-actions';
+import Image from 'next/image';
 
 export default async function TemplatesManagementPage() {
   const user = await currentUser();
@@ -18,6 +20,21 @@ export default async function TemplatesManagementPage() {
   const templates = await prisma.templates.findMany({
     orderBy: { createdAt: "desc" },
   });
+
+  // Sign preview URLs for display
+  const templatesWithSignedUrls = await Promise.all(
+    templates.map(async (t: any) => {
+      let signedPreviewUrl: string | null = null;
+      if (t.previewUrl && !t.previewUrl.startsWith('http')) {
+        try {
+          signedPreviewUrl = await getFileUrl(t.previewUrl);
+        } catch { /* ignore */ }
+      } else if (t.previewUrl) {
+        signedPreviewUrl = t.previewUrl;
+      }
+      return { ...t, signedPreviewUrl };
+    })
+  );
 
   return (
     <div className="space-y-8">
@@ -40,11 +57,23 @@ export default async function TemplatesManagementPage() {
 
       {/* Templates Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {templates.map((template: any) => (
+        {templatesWithSignedUrls.map((template: any) => (
           <div
             key={template.id}
             className="card-floating overflow-hidden group"
           >
+            {/* Preview Image */}
+            {template.signedPreviewUrl && (
+              <div className="relative w-full aspect-video bg-slate-100">
+                <Image
+                  src={template.signedPreviewUrl}
+                  alt={`${template.name} preview`}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+            )}
             <div className="border-b border-slate-100 p-5">
               <div className="flex justify-between items-start mb-3">
                 <Badge
@@ -126,6 +155,7 @@ export default async function TemplatesManagementPage() {
                     templateId={template.id}
                     templateName={template.name}
                     usageCount={template.usageCount}
+                    previewUrl={template.signedPreviewUrl}
                   />
                 </div>
               </div>
