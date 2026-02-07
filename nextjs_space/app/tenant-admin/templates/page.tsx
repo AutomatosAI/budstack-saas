@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getFileUrl } from "@/lib/s3";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,9 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import TemplateCloneButton from "./clone-button";
 import ActivateButton from "./activate-button";
 import DeleteButton from "./delete-button";
-import { templates } from "@prisma/client";
-
 type ClonedTemplate = any;
+
+/** Sign an S3 key to a URL, or pass through if already a URL */
+async function signUrl(key: string | null | undefined): Promise<string | null> {
+    if (!key) return null;
+    if (key.startsWith("http")) return key;
+    try { return await getFileUrl(key); } catch { return null; }
+}
 
 export default async function TemplatesPage() {
     const user = await currentUser();
@@ -37,7 +43,7 @@ export default async function TemplatesPage() {
     const tenant = localUser.tenants;
 
     // 1. Fetch Tenant's Templates
-    const myTemplates = await prisma.tenant_templates.findMany({
+    const myTemplatesRaw = await prisma.tenant_templates.findMany({
         where: { tenantId: tenant.id },
         include: {
             templates: {
@@ -50,10 +56,26 @@ export default async function TemplatesPage() {
         orderBy: { createdAt: "desc" },
     });
 
+    // Sign preview URLs for my templates
+    const myTemplates = await Promise.all(
+        myTemplatesRaw.map(async (t: any) => ({
+            ...t,
+            signedPreviewUrl: await signUrl(t.templates?.previewUrl || t.templates?.thumbnailUrl),
+        }))
+    );
+
     // 2. Fetch Available Base Templates (Marketplace)
-    const baseTemplates = await prisma.templates.findMany({
+    const baseTemplatesRaw = await prisma.templates.findMany({
         where: { isActive: true, isPublic: true },
     });
+
+    // Sign preview URLs for marketplace templates
+    const baseTemplates = await Promise.all(
+        baseTemplatesRaw.map(async (t: any) => ({
+            ...t,
+            signedPreviewUrl: await signUrl(t.previewUrl || t.thumbnailUrl),
+        }))
+    );
 
     return (
         <div className="space-y-8">
@@ -114,9 +136,9 @@ export default async function TemplatesPage() {
                                     }`}
                             >
                                 <div className="aspect-video bg-slate-100 relative">
-                                    {item.templates?.thumbnailUrl ? (
+                                    {item.signedPreviewUrl ? (
                                         <img
-                                            src={item.templates.thumbnailUrl}
+                                            src={item.signedPreviewUrl}
                                             alt={`${item.templateName} preview`}
                                             className="w-full h-full object-cover"
                                         />
@@ -174,15 +196,15 @@ export default async function TemplatesPage() {
                 {/* MARKETPLACE TAB */}
                 <TabsContent value="marketplace">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {baseTemplates.map((template: templates) => (
+                        {baseTemplates.map((template: any) => (
                             <div
                                 key={template.id}
                                 className="card-floating overflow-hidden hover:scale-[1.01] transition-all duration-300"
                             >
                                 <div className="aspect-video bg-slate-100 relative group">
-                                    {template.thumbnailUrl ? (
+                                    {template.signedPreviewUrl ? (
                                         <img
-                                            src={template.thumbnailUrl}
+                                            src={template.signedPreviewUrl}
                                             alt={`${template.name} template preview`}
                                             className="w-full h-full object-cover"
                                         />
