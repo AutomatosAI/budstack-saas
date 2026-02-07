@@ -141,25 +141,41 @@ function applyThemeToContainer(
       montserrat: "'Montserrat', sans-serif",
       lato: "'Lato', sans-serif",
       poppins: "'Poppins', sans-serif",
+      outfit: "'Outfit', sans-serif",
+      nunito: "'Nunito', sans-serif",
     };
 
-    // Prefer designSystem.typography.fontFamily (new system) over settings (legacy)
+    // === TYPOGRAPHY ===
+    // Read from designSystem first (branding form saves here), fall back to legacy settings
     const dsTypo = designSystem.typography?.fontFamily;
-    const bodyFont = dsTypo?.base || fontMap[settings.fontFamily || "inter"] || settings.fontFamily || "'Inter', sans-serif";
-    const headingFont = dsTypo?.heading || fontMap[settings.headingFontFamily || settings.fontFamily || "inter"] || settings.headingFontFamily || "'Inter', sans-serif";
+    const dsFontBody = dsTypo?.body || dsTypo?.base;
+    const dsFontHeading = dsTypo?.heading;
+
+    // Resolve: full CSS string passes through, short IDs get mapped
+    const resolveFont = (val: string | undefined, fallbackId: string) => {
+      if (!val) return fontMap[fallbackId] || "'Inter', sans-serif";
+      // Already a full CSS font-family string (contains comma or quote)
+      if (val.includes(",") || val.includes("'")) return val;
+      // Short ID — look up in map
+      return fontMap[val] || val;
+    };
+
+    const bodyFont = resolveFont(dsFontBody, settings.fontFamily || "inter");
+    const headingFont = resolveFont(dsFontHeading, settings.headingFontFamily || settings.fontFamily || "inter");
 
     root.style.setProperty("--tenant-font-body", bodyFont);
     root.style.setProperty("--tenant-font-heading", headingFont);
 
-    // Font size scale
+    // Font size scale — designSystem.typography.fontSize.base OR settings.fontSize
     const fontSizeMap: Record<string, string> = {
       small: "0.875rem",
       medium: "1rem",
       large: "1.125rem",
     };
+    const dsFontSize = designSystem.typography?.fontSize?.base;
     root.style.setProperty(
       "--tenant-font-size-base",
-      fontSizeMap[settings.fontSize || "medium"],
+      fontSizeMap[dsFontSize] || fontSizeMap[settings.fontSize || "medium"] || "1rem",
     );
 
     // === BORDER RADIUS ===
@@ -169,9 +185,10 @@ function applyThemeToContainer(
       medium: "0.5rem",
       large: "1rem",
     };
+    const dsBorderRadius = designSystem.borderRadius?.container;
     root.style.setProperty(
       "--tenant-border-radius",
-      borderRadiusMap[settings.borderRadius || "medium"],
+      borderRadiusMap[dsBorderRadius] || borderRadiusMap[settings.borderRadius || "medium"] || "0.5rem",
     );
 
     // Button-specific border radius
@@ -180,9 +197,10 @@ function applyThemeToContainer(
       square: "0.25rem",
       pill: "9999px",
     };
+    const dsButtonStyle = designSystem.borderRadius?.button;
     root.style.setProperty(
       "--tenant-button-radius",
-      buttonStyleMap[settings.buttonStyle || "rounded"],
+      buttonStyleMap[dsButtonStyle] || buttonStyleMap[settings.buttonStyle || "rounded"] || "0.5rem",
     );
 
     // === SPACING ===
@@ -191,9 +209,10 @@ function applyThemeToContainer(
       normal: "1",
       comfortable: "1.5",
     };
+    const dsSpacing = designSystem.spacing?.scale;
     root.style.setProperty(
       "--tenant-spacing-scale",
-      spacingMap[settings.spacing || "normal"],
+      spacingMap[dsSpacing] || spacingMap[settings.spacing || "normal"] || "1",
     );
 
     // === SHADOWS ===
@@ -203,9 +222,10 @@ function applyThemeToContainer(
       medium: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
       bold: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
     };
+    const dsShadow = designSystem.shadows?.card;
     root.style.setProperty(
       "--tenant-shadow",
-      shadowMap[settings.shadowStyle || "soft"],
+      shadowMap[dsShadow] || shadowMap[settings.shadowStyle || "soft"] || "0 1px 3px 0 rgb(0 0 0 / 0.1)",
     );
 
     // === BUTTON SIZE ===
