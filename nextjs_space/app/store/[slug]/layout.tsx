@@ -14,6 +14,22 @@ import { getSectionComponent } from "@/lib/section-registry";
 import type { TemplateLayout } from "@/lib/types/template-layout";
 import { CartProvider } from "./_contexts/CartContext";
 
+// Deep merge two objects — overrides win for leaf values, objects are recursed
+function deepMergeObjects(base: any, overrides: any): any {
+  if (!base) return overrides;
+  if (!overrides) return base;
+  const result = { ...base };
+  for (const key of Object.keys(overrides)) {
+    const val = overrides[key];
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      result[key] = deepMergeObjects(base[key], val);
+    } else if (val !== undefined && val !== null && val !== '') {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
 // Sanitize CSS from S3 - strip dangerous patterns
 function sanitizeCss(css: string | null): string {
   if (!css) return '';
@@ -296,10 +312,10 @@ export default async function TenantStoreLayout({
     }
   })();
 
-  // Merge designSystem: DB > defaults > null
-  const mergedDesignSystem = activeTemplate?.designSystem || defaults?.designSystem || null;
-  console.log("[layout] designSystem source:", activeTemplate?.designSystem ? "DB" : defaults?.designSystem ? "defaults.json" : "NONE",
-    "colors.background:", (mergedDesignSystem as any)?.colors?.background || "NOT SET");
+  // Deep merge designSystem: defaults (base) ← DB overrides (tenant customizations win)
+  const mergedDesignSystem = deepMergeObjects(defaults?.designSystem || null, activeTemplate?.designSystem || null);
+  console.log("[layout] designSystem: defaults?", !!defaults?.designSystem, "db?", !!activeTemplate?.designSystem,
+    "merged colors.background:", (mergedDesignSystem as any)?.colors?.background || "NOT SET");
 
   return (
     <TenantThemeProvider
