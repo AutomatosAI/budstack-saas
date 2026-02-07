@@ -711,6 +711,44 @@
   }
 
   /* ============================================
+     AUTO-APPLY: Override hardcoded Tailwind button
+     border-radius inside tenant theme containers.
+     Targets <a> and <button> with Tailwind rounded-*
+     classes, replacing with the tenant's chosen style.
+     ============================================ */
+
+  .tenant-theme-container a[class*="rounded-full"],
+  .tenant-theme-container button[class*="rounded-full"],
+  .tenant-theme-container a[class*="rounded-lg"],
+  .tenant-theme-container button[class*="rounded-lg"],
+  .tenant-theme-container a[class*="rounded-xl"],
+  .tenant-theme-container button[class*="rounded-xl"],
+  .tenant-theme-container a[class*="rounded-md"],
+  .tenant-theme-container button[class*="rounded-md"] {
+    border-radius: var(--tenant-button-radius) !important;
+  }
+
+  /* Auto-apply card border-radius to card-like containers */
+  .tenant-theme-container [class*="rounded-lg"][class*="border"],
+  .tenant-theme-container [class*="rounded-xl"][class*="border"],
+  .tenant-theme-container [class*="rounded-2xl"][class*="border"] {
+    border-radius: var(--tenant-border-radius) !important;
+  }
+
+  /* Auto-apply shadow style to elements with Tailwind shadows */
+  .tenant-theme-container [class*="shadow-lg"],
+  .tenant-theme-container [class*="shadow-xl"],
+  .tenant-theme-container [class*="shadow-md"] {
+    box-shadow: var(--tenant-shadow) !important;
+  }
+
+  /* Auto-apply section spacing */
+  .tenant-theme-container section {
+    padding-top: calc(4rem * var(--tenant-spacing-scale));
+    padding-bottom: calc(4rem * var(--tenant-spacing-scale));
+  }
+
+  /* ============================================
      TENANT-AWARE LINK STYLES
      ============================================ */
 
