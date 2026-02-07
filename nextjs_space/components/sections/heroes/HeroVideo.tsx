@@ -15,8 +15,8 @@ export function HeroVideo({
   consultationUrl,
 }: SectionProps) {
   const businessName = tenant.businessName;
-  const title = sectionConfig?.title || pageContent?.homeHeroTitle || `Welcome to ${businessName}`;
-  const subtitle = sectionConfig?.subtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Elevated Experience';
+  const title = sectionConfig?.title || pageContent?.home?.heroTitle || pageContent?.homeHeroTitle || `Welcome to ${businessName}`;
+  const subtitle = sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Elevated Experience';
   const ctaText = sectionConfig?.ctaText || 'Book Consultation';
   const videoUrl = sectionConfig?.videoUrl;
 

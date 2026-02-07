@@ -15,9 +15,9 @@ export function HeroFullScreen({
   consultationUrl,
 }: SectionProps) {
   const businessName = tenant.businessName;
-  const title = sectionConfig?.title || pageContent?.homeHeroTitle || `Welcome to ${businessName}`;
-  const subtitle = sectionConfig?.subtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Elevated Experience';
-  const description = sectionConfig?.description || pageContent?.homeHeroDescription;
+  const title = sectionConfig?.title || pageContent?.home?.heroTitle || pageContent?.homeHeroTitle || `Welcome to ${businessName}`;
+  const subtitle = sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Elevated Experience';
+  const description = sectionConfig?.description || pageContent?.home?.heroDescription || pageContent?.homeHeroDescription;
   const ctaText = sectionConfig?.ctaText || 'Book Consultation';
   const secondaryCtaText = sectionConfig?.secondaryCtaText || 'Learn More';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '#about';

@@ -78,6 +78,21 @@ function resolveFontId(cssValue: string | undefined): string | undefined {
   return FONTS.find((f) => f.name.toLowerCase() === first.toLowerCase())?.id;
 }
 
+/** Check if a value matches one of the allowed Select option values.
+ *  Returns the value if it matches, undefined otherwise.
+ */
+function matchOption(value: any, options: string[]): string | undefined {
+  if (!value || typeof value !== "string") return undefined;
+  return options.includes(value) ? value : undefined;
+}
+
+// Valid dropdown values for layout fields
+const FONT_SIZES = ["small", "medium", "large"];
+const BUTTON_STYLES = ["rounded", "square", "pill"];
+const BORDER_RADII = ["none", "small", "medium", "large"];
+const SPACINGS = ["compact", "normal", "comfortable"];
+const SHADOW_STYLES = ["none", "soft", "medium", "bold"];
+
 export default function BrandingForm({
   tenant,
   activeTemplate,
@@ -149,24 +164,25 @@ export default function BrandingForm({
     headingFontFamily:
       resolveFontId(getVal(["typography", "fontFamily", "heading"], undefined)) ||
       settings.headingFontFamily || settings.fontFamily || "inter",
-    fontSize: getVal(
-      ["typography", "fontSize", "base"],
+    fontSize:
+      matchOption(getVal(["typography", "fontSize", "base"], undefined), FONT_SIZES) ||
       settings.fontSize || "medium",
-    ),
 
-    // Layout
-    template: settings.template || "modern", // Template styling preference
-    buttonStyle: getVal(
-      ["borderRadius", "button"],
+    // Layout — designSystem may have full tokens (sm/md/lg) or dropdown IDs; validate before using
+    template: settings.template || "modern",
+    buttonStyle:
+      matchOption(getVal(["borderRadius", "button"], undefined), BUTTON_STYLES) ||
       settings.buttonStyle || "rounded",
-    ),
-    buttonSize: settings.buttonSize || "medium", // Not strictly part of new DS yet
-    borderRadius: getVal(
-      ["borderRadius", "container"],
+    buttonSize: settings.buttonSize || "medium",
+    borderRadius:
+      matchOption(getVal(["borderRadius", "container"], undefined), BORDER_RADII) ||
       settings.borderRadius || "medium",
-    ),
-    spacing: getVal(["spacing", "scale"], settings.spacing || "normal"),
-    shadowStyle: getVal(["shadows", "card"], settings.shadowStyle || "soft"),
+    spacing:
+      matchOption(getVal(["spacing", "scale"], undefined), SPACINGS) ||
+      settings.spacing || "normal",
+    shadowStyle:
+      matchOption(getVal(["shadows", "card"], undefined), SHADOW_STYLES) ||
+      settings.shadowStyle || "soft",
 
     // Hero
     heroType: settings.heroType || "gradient",

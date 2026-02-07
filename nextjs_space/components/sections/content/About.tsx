@@ -23,6 +23,7 @@ export function About(props: SectionProps) {
   const heading = sectionConfig?.heading || `About ${businessName}`;
   const content =
     sectionConfig?.content ||
+    pageContent?.about?.content ||
     pageContent?.aboutMission ||
     `We are dedicated to providing the highest quality medical cannabis products and personalized care. Our team of licensed professionals is committed to helping you find the right wellness solutions for your unique needs.`;
   const imageUrl = sectionConfig?.imageUrl || null;
