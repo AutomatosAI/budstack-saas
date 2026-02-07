@@ -94,6 +94,13 @@ export async function uploadDirectoryToS3(
           ".md": "text/markdown",
           ".txt": "text/plain",
           ".html": "text/html",
+          ".jpg": "image/jpeg",
+          ".jpeg": "image/jpeg",
+          ".png": "image/png",
+          ".webp": "image/webp",
+          ".svg": "image/svg+xml",
+          ".gif": "image/gif",
+          ".ico": "image/x-icon",
         };
         contentType = contentTypes[ext] || contentType;
 

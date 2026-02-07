@@ -84,8 +84,24 @@ export default async function TenantStorePage() {
     const templateSlug = baseTemplate.slug;
     console.log("[page] templateSlug:", templateSlug, "baseTemplate:", baseTemplate.name);
 
-    // Process hero image URL (sign if S3 path)
+    // Fetch defaults.json early — needed for hero image fallback and later merging
+    const baseS3Path = `templates/${templateSlug}`;
+    let defaults: any = null;
+    for (const s3Prefix of [tenantTemplate.s3Path, baseS3Path].filter(Boolean)) {
+      try {
+        defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`);
+        if (defaults) break;
+      } catch {
+        // continue
+      }
+    }
+
+    // Process hero image URL — DB value, or fallback to defaults.json heroImagePath
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
+    if (!heroImageUrl && defaults?.heroImagePath && tenantTemplate.s3Path) {
+      heroImageUrl = `${tenantTemplate.s3Path}${defaults.heroImagePath}`;
+      console.log("[page] Using defaults.json heroImagePath fallback:", heroImageUrl);
+    }
     if (
       heroImageUrl &&
       !heroImageUrl.startsWith("/") &&
@@ -101,7 +117,6 @@ export default async function TenantStorePage() {
         heroImageUrl = signedUrl;
       } catch (error) {
         console.error("Error fetching hero image from S3:", error);
-        // Fallback to original, though likely broken if private S3
       }
     }
 
@@ -147,10 +162,8 @@ export default async function TenantStorePage() {
     // Templates with layout.json in S3 are data-driven (cannabizz, wellness-nature, gta-cannabis)
     // Templates WITHOUT layout.json fall through to PATH 2 (healingbuds)
     const tenantS3Path = tenantTemplate.s3Path;
-    const baseS3Path = `templates/${templateSlug}`;
     let layout: TemplateLayout | null = null;
     let customCss: string | null = null;
-    let defaults: any = null;
 
     console.log("[page] S3 paths:", [tenantS3Path, baseS3Path].filter(Boolean));
     for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
@@ -160,7 +173,6 @@ export default async function TenantStorePage() {
         if (layout) {
           console.log("[page] FOUND layout.json, using data-driven PATH 1");
           customCss = await getTextFromS3(`${s3Prefix}/styles.css`);
-          defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null);
           break;
         }
       } catch {

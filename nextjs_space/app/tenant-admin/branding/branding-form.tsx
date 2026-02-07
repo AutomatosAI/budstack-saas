@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { TenantSettings } from "@/lib/types";
 import { tenant_templates } from "@prisma/client";
+import { hslToHex } from "@/lib/color-utils";
 
 interface BrandingFormProps {
   tenant: {
@@ -59,7 +60,23 @@ const FONTS = [
   { id: "montserrat", name: "Montserrat", description: "Geometric sans-serif" },
   { id: "poppins", name: "Poppins", description: "Rounded sans-serif" },
   { id: "playfair", name: "Playfair Display", description: "Elegant serif" },
+  { id: "outfit", name: "Outfit", description: "Modern geometric sans-serif" },
+  { id: "nunito", name: "Nunito", description: "Rounded friendly sans-serif" },
 ];
+
+/** Extract the primary font name from a CSS font-family string and return the matching FONTS id.
+ *  e.g. "'Outfit', -apple-system, ..." → "outfit"
+ */
+function resolveFontId(cssValue: string | undefined): string | undefined {
+  if (!cssValue) return undefined;
+  // Already a short id (no quotes, no commas)
+  if (!cssValue.includes(",") && !cssValue.includes("'")) {
+    return FONTS.find((f) => f.id === cssValue) ? cssValue : undefined;
+  }
+  // Extract first font name from CSS string
+  const first = cssValue.split(",")[0].trim().replace(/^['"]|['"]$/g, "");
+  return FONTS.find((f) => f.name.toLowerCase() === first.toLowerCase())?.id;
+}
 
 export default function BrandingForm({
   tenant,
@@ -98,38 +115,40 @@ export default function BrandingForm({
     businessName: tenant.businessName,
     tagline: settings.tagline || "",
 
-    // Colors — show existing values from designSystem/settings, or placeholders
-    primaryColor: getVal(
-      ["colors", "primary"],
+    // Colors — convert HSL channels from designSystem to hex for <input type="color">
+    primaryColor: hslToHex(
+      getVal(["colors", "primary"], null),
       settings.primaryColor || "#059669",
     ),
-    secondaryColor: getVal(
-      ["colors", "secondary"],
+    secondaryColor: hslToHex(
+      getVal(["colors", "secondary"], null),
       settings.secondaryColor || "#34d399",
     ),
-    accentColor: getVal(
-      ["colors", "accent"],
+    accentColor: hslToHex(
+      getVal(["colors", "accent"], null),
       settings.accentColor || "#10b981",
     ),
-    backgroundColor: getVal(
-      ["colors", "background"],
+    backgroundColor: hslToHex(
+      getVal(["colors", "background"], null),
       settings.backgroundColor || "#ffffff",
     ),
-    textColor: getVal(["colors", "text"], settings.textColor || "#1f2937"),
-    headingColor: getVal(
-      ["colors", "heading"],
+    textColor: hslToHex(
+      getVal(["colors", "text"], null),
+      settings.textColor || "#1f2937",
+    ),
+    headingColor: hslToHex(
+      getVal(["colors", "heading"], null),
       settings.headingColor || "#111827",
     ),
 
-    // Typography
-    fontFamily: getVal(
-      ["typography", "fontFamily", "body"],
+    // Typography — resolve CSS font-family strings to dropdown IDs
+    fontFamily:
+      resolveFontId(getVal(["typography", "fontFamily", "base"], undefined)) ||
+      resolveFontId(getVal(["typography", "fontFamily", "body"], undefined)) ||
       settings.fontFamily || "inter",
-    ),
-    headingFontFamily: getVal(
-      ["typography", "fontFamily", "heading"],
+    headingFontFamily:
+      resolveFontId(getVal(["typography", "fontFamily", "heading"], undefined)) ||
       settings.headingFontFamily || settings.fontFamily || "inter",
-    ),
     fontSize: getVal(
       ["typography", "fontSize", "base"],
       settings.fontSize || "medium",
@@ -152,27 +171,33 @@ export default function BrandingForm({
     // Hero
     heroType: settings.heroType || "gradient",
 
-    // Page Content - Home
+    // Page Content - Home (supports nested home.heroTitle AND flat homeHeroTitle from defaults.json)
     homeHeroTitle:
       templateContent.home?.heroTitle ||
+      templateContent.homeHeroTitle ||
       settingsContent.home?.heroTitle ||
       "Welcome to Your Medical Cannabis Journey",
     homeHeroSubtitle:
       templateContent.home?.heroSubtitle ||
+      templateContent.homeHeroSubtitle ||
       settingsContent.home?.heroSubtitle ||
       "Premium medical cannabis products delivered with care",
     homeHeroCtaText:
       templateContent.home?.heroCtaText ||
+      templateContent.homeHeroCtaText ||
       settingsContent.home?.heroCtaText ||
       "Get Started",
 
     // Page Content - About
     aboutTitle:
       templateContent.about?.title ||
+      templateContent.aboutTitle ||
       settingsContent.about?.title ||
       "About Us",
     aboutContent:
       templateContent.about?.content ||
+      templateContent.aboutContent ||
+      templateContent.aboutMission ||
       settingsContent.about?.content ||
       "We are dedicated to providing high-quality medical cannabis products...",
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { copyDirectory } from "@/lib/s3-copy";
+import { getJsonFromS3 } from "@/lib/s3";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import crypto from "crypto";
 
@@ -63,6 +64,24 @@ export async function POST(request: NextRequest) {
     const filesCopied = await copyDirectory(sourceS3Prefix, destS3Prefix);
     console.log(`Copied ${filesCopied} files`);
 
+    // 5b. Read defaults.json from base template to seed DB fields
+    let seedData: Record<string, any> = {};
+    try {
+      const defaults = await getJsonFromS3<any>(`${sourceS3Prefix}defaults.json`);
+      if (defaults) {
+        if (defaults.designSystem) seedData.designSystem = defaults.designSystem;
+        if (defaults.pageContent) seedData.pageContent = defaults.pageContent;
+        if (defaults.navigation) seedData.navigation = defaults.navigation;
+        if (defaults.footer) seedData.footer = defaults.footer;
+        if (defaults.heroImagePath) {
+          seedData.heroImageUrl = `${destS3Prefix}${defaults.heroImagePath}`;
+        }
+        console.log(`[Clone] Seeded from defaults.json: ${Object.keys(seedData).join(", ")}`);
+      }
+    } catch (err) {
+      console.log("[Clone] No defaults.json found, skipping seed:", err);
+    }
+
     // 6. Create TenantTemplate Record with correct schema fields
     const tenantTemplate = await prisma.tenant_templates.create({
       data: {
@@ -74,6 +93,7 @@ export async function POST(request: NextRequest) {
         isActive: false, // Not active by default - user needs to activate
         isDraft: true,
         updatedAt: new Date(),
+        ...seedData,
       },
     });
 
