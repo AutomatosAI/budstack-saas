@@ -31,7 +31,7 @@ export function FooterSimple(props: SectionProps) {
       }}
     >
       <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-        <p className="text-sm" style={{ color: 'hsl(var(--tenant-color-text))' }}>
+        <p className="text-sm" style={{ color: 'hsl(var(--tenant-color-text))' }} suppressHydrationWarning>
           &copy; {year} {businessName}. All rights reserved.
         </p>
         <div className="flex items-center gap-6">

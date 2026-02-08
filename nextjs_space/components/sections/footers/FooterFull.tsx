@@ -116,7 +116,7 @@ export function FooterFull(props: SectionProps) {
           className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4"
           style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}
         >
-          <p className="text-sm text-white/50">
+          <p className="text-sm text-white/50" suppressHydrationWarning>
             &copy; {year} {businessName}. All rights reserved.
           </p>
           <p className="text-xs text-white/30">

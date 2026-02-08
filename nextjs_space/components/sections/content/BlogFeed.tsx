@@ -99,7 +99,7 @@ export function BlogFeed(props: SectionProps) {
               <div className="p-6">
                 <div className="flex items-center gap-2 mb-3 text-sm" style={{ color: 'hsl(var(--tenant-color-text))' }}>
                   <Clock size={14} />
-                  <time>{new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</time>
+                  <time suppressHydrationWarning>{new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</time>
                 </div>
                 <h3
                   className="text-lg font-bold mb-2 group-hover:underline"
