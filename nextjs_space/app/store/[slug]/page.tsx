@@ -181,6 +181,29 @@ export default async function TenantStorePage() {
     }
 
     console.log("[page] layout found:", !!layout, "falling to legacy:", !layout);
+
+    // Sign section-level imageUrl values in layout.json configs
+    // Templates can reference images by relative filename (e.g. "about-photo.jpg")
+    // which need to be resolved to signed S3 URLs before rendering
+    if (layout?.sections && tenantS3Path) {
+      for (const section of layout.sections) {
+        if (section.config?.imageUrl && typeof section.config.imageUrl === 'string') {
+          const imgPath = section.config.imageUrl;
+          // Only sign relative filenames — skip full URLs and absolute paths
+          if (!imgPath.startsWith('http') && !imgPath.startsWith('/')) {
+            try {
+              const s3Key = `${tenantS3Path}${imgPath}`;
+              console.log(`[page] Signing section imageUrl for ${section.type}:`, s3Key);
+              section.config.imageUrl = await getFileUrl(s3Key);
+            } catch (err) {
+              console.error(`[page] Failed to sign section imageUrl for ${section.type}:`, err);
+              // Leave as-is — component will show gradient fallback
+            }
+          }
+        }
+      }
+    }
+
     if (layout) {
       const mergedProps = {
         ...templateProps,
