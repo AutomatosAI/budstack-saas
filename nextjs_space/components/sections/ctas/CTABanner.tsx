@@ -17,7 +17,7 @@ export function CTABanner(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-10 sm:py-20"
+      className="py-8 sm:py-12"
       style={{
         background: `linear-gradient(135deg,
           hsl(var(--tenant-color-primary)) 0%,

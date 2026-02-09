@@ -56,7 +56,7 @@ export function Stats(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-20"
+      className="py-12 sm:py-16"
       style={{
         background: `linear-gradient(135deg,
           hsl(var(--tenant-color-primary)) 0%,

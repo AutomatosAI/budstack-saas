@@ -34,7 +34,7 @@ export function ProductShowcase(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-20"
+      className="py-12 sm:py-16"
       style={{ backgroundColor: 'hsl(var(--tenant-color-background))' }}
     >
       <div className="container mx-auto px-6">
