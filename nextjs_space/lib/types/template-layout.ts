@@ -13,5 +13,6 @@ export interface TemplateLayout {
   settings?: {
     wrapperClass?: string;
     googleFontsUrl?: string;
+    sectionPadding?: string; // e.g. "2rem" or "2rem/3rem/3.5rem" (mobile/sm/md)
   };
 }
