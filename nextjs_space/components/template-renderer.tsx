@@ -55,11 +55,12 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
         // eslint-disable-next-line @next/next/no-page-custom-font
         <link href={layout.settings.googleFontsUrl} rel="stylesheet" />
       )}
+      {/* Must use dangerouslySetInnerHTML — React escapes > to \u003e in JSX children, breaking CSS child combinators */}
       {sanitizedCss && (
-        <style>{sanitizedCss}</style>
+        <style dangerouslySetInnerHTML={{ __html: sanitizedCss }} />
       )}
       {sectionPaddingCss && (
-        <style>{sectionPaddingCss}</style>
+        <style dangerouslySetInnerHTML={{ __html: sectionPaddingCss }} />
       )}
       {NavComponent && <NavComponent {...sectionProps} />}
       {layout.sections

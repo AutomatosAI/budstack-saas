@@ -332,11 +332,12 @@ export default async function TenantStoreLayout({
       <CartProvider storeSlug={params.slug}>
         <div className={`min-h-screen ${wrapperClass}`}>
           {/* Inject template custom CSS from S3 (sanitized) */}
-          {customCss && <style>{sanitizeCss(customCss)}</style>}
+          {/* Must use dangerouslySetInnerHTML — React escapes > to \u003e in JSX children, breaking CSS child combinators like #id > section */}
+          {customCss && <style dangerouslySetInnerHTML={{ __html: sanitizeCss(customCss) }} />}
           {/* Load Google Fonts from layout.json settings */}
           {layout?.settings?.googleFontsUrl && <link rel="stylesheet" href={layout.settings.googleFontsUrl} />}
           {/* Inject legacy template CSS (from filesystem) for sub-page styling */}
-          {legacyCss && <style>{legacyCss}</style>}
+          {legacyCss && <style dangerouslySetInnerHTML={{ __html: legacyCss }} />}
           {legacyFontUrl && <link rel="stylesheet" href={legacyFontUrl} />}
           {/* Skip nav/footer when: data-driven (TemplateRenderer handles it) or legacy (template bundles its own) */}
           {!skipLayoutChrome && renderNavigation()}
