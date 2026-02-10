@@ -58,8 +58,9 @@ export function TenantThemeProvider({
       )}
 
       {/* Inject custom CSS if provided */}
+      {/* Must use dangerouslySetInnerHTML — React escapes > to \u003e breaking CSS child combinators */}
       {sanitizedCustomCss && (
-        <style>{sanitizedCustomCss}</style>
+        <style dangerouslySetInnerHTML={{ __html: sanitizedCustomCss }} />
       )}
 
       {/* Apply theme class to scoped container */}
