@@ -742,11 +742,7 @@
     box-shadow: var(--tenant-shadow) !important;
   }
 
-  /* Auto-apply section spacing */
-  .tenant-theme-container section {
-    padding-top: calc(4rem * var(--tenant-spacing-scale));
-    padding-bottom: calc(4rem * var(--tenant-spacing-scale));
-  }
+  /* Section spacing is controlled by individual component classes (py-8 sm:py-10) */
 
   /* ============================================
      TENANT-AWARE LINK STYLES
