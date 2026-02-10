@@ -26,7 +26,7 @@ export function CTASplit(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-12 sm:py-16"
+      className="py-8 sm:py-10"
       style={{ backgroundColor: 'hsl(var(--tenant-color-surface))' }}
     >
       <div className="container mx-auto px-6">
@@ -46,11 +46,11 @@ export function CTASplit(props: SectionProps) {
             >
               {heading}
             </h2>
-            <p className="text-base sm:text-lg mb-10" style={{ color: 'hsl(var(--tenant-color-text))' }}>
+            <p className="text-base sm:text-lg mb-6" style={{ color: 'hsl(var(--tenant-color-text))' }}>
               {subtitle}
             </p>
 
-            <div className="space-y-6 mb-10">
+            <div className="space-y-6 mb-6">
               {steps.map((step, index) => {
                 const Icon = step.icon;
                 return (

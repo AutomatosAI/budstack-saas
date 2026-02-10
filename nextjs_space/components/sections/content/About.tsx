@@ -35,7 +35,7 @@ export function About(props: SectionProps) {
     <section
       ref={ref}
       id="about"
-      className="py-12 sm:py-16"
+      className="py-8 sm:py-10"
       style={{ backgroundColor: 'hsl(var(--tenant-color-background))' }}
     >
       <div className="container mx-auto px-6">

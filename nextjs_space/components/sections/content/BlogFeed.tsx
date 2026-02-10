@@ -48,7 +48,7 @@ export function BlogFeed(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-12 sm:py-16"
+      className="py-8 sm:py-10"
       style={{ backgroundColor: 'hsl(var(--tenant-color-surface))' }}
     >
       <div className="container mx-auto px-6">
@@ -56,7 +56,7 @@ export function BlogFeed(props: SectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center max-w-3xl mx-auto mb-16"
+          className="text-center max-w-3xl mx-auto mb-8"
         >
           <h2
             className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6"

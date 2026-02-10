@@ -17,7 +17,7 @@ export function CTAWithImage(props: SectionProps) {
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.2 });
 
   return (
-    <section ref={ref} className="relative py-12 sm:py-16 overflow-hidden">
+    <section ref={ref} className="relative py-8 sm:py-10 overflow-hidden">
       {/* Background Image */}
       {imageUrl ? (
         <div className="absolute inset-0 z-0">
@@ -61,7 +61,7 @@ export function CTAWithImage(props: SectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.7, delay: 0.15 }}
-          className="text-base sm:text-xl text-white/90 mb-10 max-w-2xl mx-auto"
+          className="text-base sm:text-xl text-white/90 mb-6 max-w-2xl mx-auto"
         >
           {subtitle}
         </motion.p>

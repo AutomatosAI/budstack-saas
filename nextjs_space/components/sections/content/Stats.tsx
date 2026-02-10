@@ -56,7 +56,7 @@ export function Stats(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-12 sm:py-16"
+      className="py-8 sm:py-10"
       style={{
         background: `linear-gradient(135deg,
           hsl(var(--tenant-color-primary)) 0%,
@@ -69,7 +69,7 @@ export function Stats(props: SectionProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6 }}
-            className="text-3xl sm:text-4xl md:text-5xl font-bold text-white text-center mb-16"
+            className="text-3xl sm:text-4xl md:text-5xl font-bold text-white text-center mb-8"
             style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
           >
             {heading}

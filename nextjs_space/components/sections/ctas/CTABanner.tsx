@@ -17,7 +17,7 @@ export function CTABanner(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-8 sm:py-12"
+      className="py-6 sm:py-8"
       style={{
         background: `linear-gradient(135deg,
           hsl(var(--tenant-color-primary)) 0%,
@@ -39,7 +39,7 @@ export function CTABanner(props: SectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-base sm:text-xl text-white/90 mb-10 max-w-2xl mx-auto"
+          className="text-base sm:text-xl text-white/90 mb-6 max-w-2xl mx-auto"
         >
           {subtitle}
         </motion.p>
