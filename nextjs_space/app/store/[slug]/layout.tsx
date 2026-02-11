@@ -191,7 +191,7 @@ export default async function TenantStoreLayout({
   // Check if this template has a layout.json (data-driven)
   // Templates with layout.json in S3 get data-driven nav/footer
   // Templates without (healingbuds) fall through to legacy nav/footer
-  const tenantS3Path = activeTemplate?.s3Path;
+  const tenantS3Path = activeTemplate?.s3Path?.replace(/\/+$/, '') || null;
   const baseS3Path = templateSlug ? `templates/${templateSlug}` : null;
   let layout: TemplateLayout | null = null;
   let customCss: string | null = null;

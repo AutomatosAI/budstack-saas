@@ -86,8 +86,9 @@ export default async function TenantStorePage() {
 
     // Fetch defaults.json early — needed for hero image fallback and later merging
     const baseS3Path = `templates/${templateSlug}`;
+    const normalizedS3Path = tenantTemplate.s3Path?.replace(/\/+$/, '') || null;
     let defaults: any = null;
-    for (const s3Prefix of [tenantTemplate.s3Path, baseS3Path].filter(Boolean)) {
+    for (const s3Prefix of [normalizedS3Path, baseS3Path].filter(Boolean)) {
       try {
         defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`);
         if (defaults) break;
@@ -98,8 +99,8 @@ export default async function TenantStorePage() {
 
     // Process hero image URL — DB value, or fallback to defaults.json heroImagePath
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
-    if (!heroImageUrl && defaults?.heroImagePath && tenantTemplate.s3Path) {
-      heroImageUrl = `${tenantTemplate.s3Path}${defaults.heroImagePath}`;
+    if (!heroImageUrl && defaults?.heroImagePath && normalizedS3Path) {
+      heroImageUrl = `${normalizedS3Path}/${defaults.heroImagePath}`;
       console.log("[page] Using defaults.json heroImagePath fallback:", heroImageUrl);
     }
     if (
@@ -161,7 +162,7 @@ export default async function TenantStorePage() {
     // PATH 1: Data-driven template (layout.json in S3)
     // Templates with layout.json in S3 are data-driven (cannabizz, wellness-nature, gta-cannabis)
     // Templates WITHOUT layout.json fall through to PATH 2 (healingbuds)
-    const tenantS3Path = tenantTemplate.s3Path;
+    const tenantS3Path = normalizedS3Path;
     let layout: TemplateLayout | null = null;
     let customCss: string | null = null;
 

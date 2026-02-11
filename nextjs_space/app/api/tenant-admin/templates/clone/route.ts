@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     if (!tenantId) {
       return NextResponse.json(
-        { 
+        {
           error: "No tenant found. Please ensure you are associated with a tenant.",
           details: "The Clerk organization ID could not be matched to a database tenant."
         },
@@ -56,12 +56,13 @@ export async function POST(request: NextRequest) {
     // 4. Define S3 paths
     const sourceS3Prefix = `templates/${baseTemplate.slug || baseTemplateId}/`;
     const timestamp = Date.now();
-    const destS3Prefix = `tenants/${tenantId}/templates/${timestamp}/`;
+    const destS3Prefix = `tenants/${tenantId}/templates/${timestamp}`;
+    const destS3Dir = `${destS3Prefix}/`; // trailing slash needed for S3 copy operations
 
-    console.log(`Cloning template from ${sourceS3Prefix} to ${destS3Prefix}`);
+    console.log(`Cloning template from ${sourceS3Prefix} to ${destS3Dir}`);
 
     // 5. Copy S3 Assets
-    const filesCopied = await copyDirectory(sourceS3Prefix, destS3Prefix);
+    const filesCopied = await copyDirectory(sourceS3Prefix, destS3Dir);
     console.log(`Copied ${filesCopied} files`);
 
     // 5b. Read defaults.json from base template to seed DB fields
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
         if (defaults.navigation) seedData.navigation = defaults.navigation;
         if (defaults.footer) seedData.footer = defaults.footer;
         if (defaults.heroImagePath) {
-          seedData.heroImageUrl = `${destS3Prefix}${defaults.heroImagePath}`;
+          seedData.heroImageUrl = `${destS3Dir}${defaults.heroImagePath}`;
         }
         console.log(`[Clone] Seeded from defaults.json: ${Object.keys(seedData).join(", ")}`);
       }
