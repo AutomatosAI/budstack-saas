@@ -351,6 +351,7 @@ All pre-built components live in `components/sections/` in the SaaS codebase. Th
 | `FAQ` | Accordion with expand/collapse | No |
 | `BlogFeed` | Blog post cards | No (gradient placeholders) |
 | `Features` | Icon + text feature grid | No |
+| `ImageShowcase` | Full-width image bg + dark overlay + content card | No (gradient fallback) |
 
 ### CTAs
 
@@ -377,6 +378,22 @@ All pre-built components live in `components/sections/` in the SaaS codebase. Th
 
 > [!WARNING]
 > `NavTransparent` and `HeroFullScreen` render **white text**. Light-themed templates (background lightness > 50%) should use `NavFull`/`NavMinimal` instead, or add dark overlay CSS in `styles.css`.
+
+### Section Config Reference
+
+Per-section `config` overrides from `layout.json` are passed as `sectionConfig`. These flags customize behavior without React changes:
+
+| Component | Config Flags |
+|---|---|
+| `HeroFullScreen` | `textAlign` (`center`/`left`), `heroType` (`gradient`/`gradient-image`/`image`) |
+| `HeroVideo` | `textAlign`, `videoUrl`, `title`, `subtitle`, `ctaText` |
+| `HeroSplit` / `HeroMinimal` | `title`, `subtitle`, `ctaText` |
+| `About` | `heading`, `content`, `imageUrl`, `stats` (`[{value, label}]`) |
+| `ValueProps` | `heading` |
+| `ImageShowcase` | `imageUrl`, `heading`, `content`, `ctaText`, `ctaHref`, `overlayStyle` (`gradient-left`/`gradient-center`/`dark`) |
+| `BlogFeed` | `heading`, `subtitle`, `blogUrl` |
+| `Features` / `Stats` / `FAQ` / `Testimonials` / `ProductShowcase` | `heading`, `subtitle` |
+| `CTABanner` / `CTAWithImage` / `CTASplit` | `heading`, `content`, `ctaText`, `ctaHref` |
 
 ---
 
@@ -501,9 +518,9 @@ Pre-built components assume **dark backgrounds** (white text). Light-themed temp
 |----------|--------|----------|-------|
 | **HighMan** | ✅ Data-only (layout.json) | ✅ Yes | Created by subagent |
 | **CannaBizz** | ✅ Data-only (layout.json) | ✅ Yes | Created by subagent |
-| **HealingBuds** | ❌ Legacy React | ✅ Yes (needs rebuild) | Pilot for migration |
+| **HealingBuds** | ✅ Data-only (layout.json) | ⏳ Needs upload & verify | Migrated from legacy |
 | **GTA** | ❌ Legacy React | ⚠️ Possibly broken | Needs conversion |
-| **Wellness** | ❌ Legacy React | ⚠️ Possibly broken | Needs conversion |
+| **Wellness** | ✅ Data-only (layout.json) | ✅ Yes | Migrated from legacy |
 | **Yellow-Haze** | ❌ Legacy React (NOT registered) | ❌ Broken | Created by subagent but old format |
 
 ---

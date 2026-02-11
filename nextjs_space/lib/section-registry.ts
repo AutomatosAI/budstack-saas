@@ -17,6 +17,7 @@ import { Stats } from '@/components/sections/content/Stats';
 import { FAQ } from '@/components/sections/content/FAQ';
 import { BlogFeed } from '@/components/sections/content/BlogFeed';
 import { Features } from '@/components/sections/content/Features';
+import { ImageShowcase } from '@/components/sections/content/ImageShowcase';
 
 // CTAs
 import { CTABanner } from '@/components/sections/ctas/CTABanner';
@@ -46,6 +47,7 @@ export const SECTION_REGISTRY: Record<string, ComponentType<SectionProps>> = {
   FAQ,
   BlogFeed,
   Features,
+  ImageShowcase,
   CTABanner,
   CTAWithImage,
   CTASplit,
