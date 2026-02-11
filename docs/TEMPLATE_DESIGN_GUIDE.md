@@ -1,10 +1,18 @@
 # BudStack Template Design Guide
 
-## Overview
+> [!CAUTION]
+> **DEPRECATED** — This document describes the old React-component template format, which is being replaced by the data-only format.
+>
+> **Use these instead:**
+> - [TEMPLATE_ARCHITECTURE.md](./TEMPLATE_ARCHITECTURE.md) — Master reference (architecture, rendering pipeline, components)
+> - [TEMPLATE_BASELINE.md](./TEMPLATE_BASELINE.md) — Template format standard (required files, validation)
+> - [TEMPLATE_MIGRATION_EXAMPLE.md](./TEMPLATE_MIGRATION_EXAMPLE.md) — Converting legacy templates to the new format
 
-This guide defines the standard architecture for building multi-tenant templates in BudStack using the **TenantTemplate** system. Templates are cloned per-tenant with assets stored in S3, enabling complete customization isolation.
+---
 
-> **Updated for TenantTemplate System**: This guide reflects the new architecture where templates are cloned instead of shared.
+## Overview (Legacy — for reference only)
+
+This guide previously defined the React-component architecture for building templates. Templates no longer contain `index.tsx` or `components/` directories. The new system uses 4 data files (`layout.json`, `defaults.json`, `styles.css`, `template.config.json`) rendered by pre-built section components at runtime.
 
 ---
 
