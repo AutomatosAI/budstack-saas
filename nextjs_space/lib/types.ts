@@ -47,19 +47,19 @@ export interface TenantSettings {
 
   // === TYPOGRAPHY ===
   fontFamily?:
-    | "inter"
-    | "playfair"
-    | "roboto"
-    | "montserrat"
-    | "lato"
-    | "poppins";
+  | "inter"
+  | "playfair"
+  | "roboto"
+  | "montserrat"
+  | "lato"
+  | "poppins";
   headingFontFamily?:
-    | "inter"
-    | "playfair"
-    | "roboto"
-    | "montserrat"
-    | "lato"
-    | "poppins";
+  | "inter"
+  | "playfair"
+  | "roboto"
+  | "montserrat"
+  | "lato"
+  | "poppins";
   fontSize?: "small" | "medium" | "large";
 
   // === BUTTONS ===
@@ -77,7 +77,7 @@ export interface TenantSettings {
   faviconPath?: string;
 
   // === HERO SECTION ===
-  heroType?: "gradient" | "image" | "video";
+  heroType?: "gradient" | "gradient-image" | "image" | "video";
 
   // === CONTACT ===
   contactInfo?: string;

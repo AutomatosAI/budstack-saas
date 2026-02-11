@@ -156,7 +156,7 @@ export default function ComprehensiveBrandingForm({
     borderRadius: settings.borderRadius || "medium",
     spacing: settings.spacing || "normal",
     shadowStyle: settings.shadowStyle || "soft",
-    heroType: settings.heroType || "gradient",
+    heroType: settings.heroType || "gradient-image",
 
     // Home Page
     homeHeroTitle:
@@ -695,7 +695,7 @@ export default function ComprehensiveBrandingForm({
                           type="time"
                           value={
                             formData[
-                              `${day}Open` as keyof typeof formData
+                            `${day}Open` as keyof typeof formData
                             ] as string
                           }
                           onChange={(e) =>
@@ -711,7 +711,7 @@ export default function ComprehensiveBrandingForm({
                           type="time"
                           value={
                             formData[
-                              `${day}Close` as keyof typeof formData
+                            `${day}Close` as keyof typeof formData
                             ] as string
                           }
                           onChange={(e) =>
@@ -1288,7 +1288,7 @@ export default function ComprehensiveBrandingForm({
                       id={`howItWorksStep${num}Title`}
                       value={
                         formData[
-                          `howItWorksStep${num}Title` as keyof typeof formData
+                        `howItWorksStep${num}Title` as keyof typeof formData
                         ] as string
                       }
                       onChange={(e) =>
@@ -1308,7 +1308,7 @@ export default function ComprehensiveBrandingForm({
                       rows={2}
                       value={
                         formData[
-                          `howItWorksStep${num}Desc` as keyof typeof formData
+                        `howItWorksStep${num}Desc` as keyof typeof formData
                         ] as string
                       }
                       onChange={(e) =>

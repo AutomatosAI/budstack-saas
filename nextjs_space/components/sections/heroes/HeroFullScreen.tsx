@@ -22,13 +22,22 @@ export function HeroFullScreen({
   const secondaryCtaText = sectionConfig?.secondaryCtaText || 'Learn More';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '#about';
 
+  // Text alignment — defaults to center, templates can set "left" via layout.json sectionConfig
+  const textAlign = sectionConfig?.textAlign || 'center';
+  const isLeft = textAlign === 'left';
+
+  // Hero display mode — from tenant settings or sectionConfig, defaults to gradient-image for backward compat
+  const heroType = sectionConfig?.heroType || (tenant as any).settings?.heroType || 'gradient-image';
+  const showImage = heroImageUrl && (heroType === 'image' || heroType === 'gradient-image');
+  const showGradientOverlay = heroType === 'gradient' || heroType === 'gradient-image';
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background: Image if available, otherwise rich gradient */}
-      {heroImageUrl ? (
+      {/* Background: Image if available and heroType allows, otherwise rich gradient */}
+      {showImage ? (
         <div className="absolute inset-0 z-0">
           <Image
-            src={heroImageUrl}
+            src={heroImageUrl!}
             alt="Hero Background"
             fill
             className="object-cover"
@@ -47,15 +56,22 @@ export function HeroFullScreen({
         />
       )}
 
-      {/* Gradient Overlay — works on both image and gradient backgrounds */}
-      <div
-        className="absolute inset-0 z-[1]"
-        style={{
-          background: `linear-gradient(180deg,
-            hsl(var(--tenant-color-primary) / 0.6) 0%,
-            hsl(var(--tenant-color-background) / 0.95) 100%)`,
-        }}
-      />
+      {/* Gradient Overlay — only shown for gradient and gradient-image modes */}
+      {showGradientOverlay && (
+        <div
+          className="absolute inset-0 z-[1]"
+          style={{
+            background: `linear-gradient(180deg,
+              hsl(var(--tenant-color-primary) / 0.6) 0%,
+              hsl(var(--tenant-color-background) / 0.95) 100%)`,
+          }}
+        />
+      )}
+
+      {/* For image-only mode, add a subtle dark scrim so white text stays readable */}
+      {heroType === 'image' && showImage && (
+        <div className="absolute inset-0 z-[1] bg-black/30" />
+      )}
 
       {/* Ambient glow effects — adds depth without needing images */}
       <div className="absolute inset-0 z-[2] pointer-events-none overflow-hidden">
@@ -74,13 +90,13 @@ export function HeroFullScreen({
       </div>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-6 text-center">
+      <div className={`relative z-10 container mx-auto px-6 ${isLeft ? 'text-left' : 'text-center'}`}>
         {logoUrl && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6 }}
-            className="mb-6 sm:mb-8 flex justify-center"
+            className={`mb-6 sm:mb-8 flex ${isLeft ? 'justify-start' : 'justify-center'}`}
           >
             <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl">
               <Image src={logoUrl} alt={`${businessName} Logo`} fill className="object-cover" />
@@ -92,7 +108,7 @@ export function HeroFullScreen({
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-3xl sm:text-5xl md:text-7xl font-bold text-white mb-4 sm:mb-6"
+          className={`text-3xl sm:text-5xl md:text-7xl font-bold text-white mb-4 sm:mb-6 ${isLeft ? 'max-w-3xl' : ''}`}
           style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
         >
           {title}
@@ -102,7 +118,7 @@ export function HeroFullScreen({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="text-base sm:text-xl md:text-2xl text-white/90 mb-4 max-w-2xl mx-auto"
+          className={`text-base sm:text-xl md:text-2xl text-white/90 mb-4 max-w-2xl ${isLeft ? '' : 'mx-auto'}`}
         >
           {subtitle}
         </motion.p>
@@ -112,7 +128,7 @@ export function HeroFullScreen({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className="text-sm sm:text-lg text-white/75 mb-6 sm:mb-10 max-w-xl mx-auto"
+            className={`text-sm sm:text-lg text-white/75 mb-6 sm:mb-10 max-w-xl ${isLeft ? '' : 'mx-auto'}`}
           >
             {description}
           </motion.p>
@@ -122,7 +138,7 @@ export function HeroFullScreen({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8"
+          className={`flex flex-col sm:flex-row gap-4 ${isLeft ? 'justify-start items-start' : 'justify-center items-center'} mt-8`}
         >
           <a
             href={consultationUrl}

@@ -185,7 +185,7 @@ export default function BrandingForm({
       settings.shadowStyle || "soft",
 
     // Hero
-    heroType: settings.heroType || "gradient",
+    heroType: settings.heroType || "gradient-image",
 
     // Page Content - Home (supports nested home.heroTitle AND flat homeHeroTitle from defaults.json)
     homeHeroTitle:
@@ -419,11 +419,10 @@ export default function BrandingForm({
                     onClick={() =>
                       setFormData({ ...formData, template: template.id as any })
                     }
-                    className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      formData.template === template.id
+                    className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.template === template.id
                         ? "border-green-500 bg-green-50"
                         : "border-gray-200 hover:border-gray-300"
-                    }`}
+                      }`}
                   >
                     {formData.template === template.id && (
                       <Check className="absolute top-2 right-2 w-5 h-5 text-green-500" />
@@ -469,13 +468,16 @@ export default function BrandingForm({
                     <SelectItem value="gradient">
                       Gradient Background
                     </SelectItem>
+                    <SelectItem value="gradient-image">
+                      Gradient Image Background
+                    </SelectItem>
                     <SelectItem value="image">Image Background</SelectItem>
                     <SelectItem value="video">Video Background</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {formData.heroType === "image" && (
+              {(formData.heroType === "image" || formData.heroType === "gradient-image") && (
                 <FileUpload
                   label="Hero Image"
                   description="Recommended: 1920x1080px, JPG/PNG"
