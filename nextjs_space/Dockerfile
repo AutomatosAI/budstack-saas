@@ -24,8 +24,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Set environment variables for build
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
 # Provide a dummy DATABASE_URL for build time (Prisma needs it to initialize)
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 
@@ -44,8 +44,8 @@ WORKDIR /app
 # Install dependencies needed for production (OpenSSL for Prisma)
 RUN apt-get update -y && apt-get install -y openssl ca-certificates
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
@@ -96,8 +96,8 @@ RUN chmod +x ./entrypoint.sh
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
