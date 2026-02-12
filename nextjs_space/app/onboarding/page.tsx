@@ -27,7 +27,13 @@ export default async function OnboardingPage() {
 
   // Sign URLs for private assets
   const signedTemplates = await Promise.all(
-    templates.map(async (t) => {
+    templates.map(async (t: {
+      id: string;
+      name: string;
+      description: string | null;
+      thumbnailUrl: string | null;
+      previewUrl: string | null;
+    }) => {
       let thumb = t.thumbnailUrl;
       let prev = t.previewUrl;
 
