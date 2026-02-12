@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { templateName, githubUrl, structureType = "default" } = body;
+    const { templateName, githubUrl, structureType = "default", branch } = body;
 
     if (
       !templateName ||
@@ -100,28 +100,37 @@ export async function POST(req: NextRequest) {
     await fs.mkdir(tempDir, { recursive: true });
 
     try {
-      // Download repository as ZIP
-      console.log("[Template Upload] Downloading ZIP archive...");
-      const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/main.zip`;
+      // Download repository as ZIP — try branches in order of priority
+      const branchesToTry = [
+        ...(branch ? [branch] : []),
+        "main",
+        "master",
+      ];
 
-      const response = await fetch(zipUrl);
-      if (!response.ok) {
-        // Try 'master' branch if 'main' doesn't exist
-        const masterUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/master.zip`;
-        const masterResponse = await fetch(masterUrl);
-        if (!masterResponse.ok) {
-          throw new Error(
-            `Failed to download repository. Status: ${response.status}`,
-          );
+      let downloaded = false;
+      let usedBranch = "";
+
+      for (const branchName of branchesToTry) {
+        const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${branchName}.zip`;
+        console.log(`[Template Upload] Trying branch '${branchName}': ${zipUrl}`);
+
+        const response = await fetch(zipUrl);
+        if (response.ok) {
+          const buffer = await response.buffer();
+          await fs.writeFile(zipPath, buffer);
+          downloaded = true;
+          usedBranch = branchName;
+          break;
         }
-        const buffer = await masterResponse.buffer();
-        await fs.writeFile(zipPath, buffer);
-      } else {
-        const buffer = await response.buffer();
-        await fs.writeFile(zipPath, buffer);
       }
 
-      console.log("[Template Upload] ZIP downloaded successfully");
+      if (!downloaded) {
+        throw new Error(
+          `Failed to download repository. Tried branches: ${branchesToTry.join(", ")}`,
+        );
+      }
+
+      console.log(`[Template Upload] ZIP downloaded from branch '${usedBranch}'`);
 
       // Extract ZIP
       console.log("[Template Upload] Extracting ZIP...");
