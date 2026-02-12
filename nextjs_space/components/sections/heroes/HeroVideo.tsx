@@ -56,9 +56,9 @@ export function HeroVideo({
         style={{
           background: videoUrl
             ? `linear-gradient(180deg,
-                rgba(15, 46, 44, 0.5) 0%,
-                rgba(28, 79, 77, 0.4) 50%,
-                rgba(10, 30, 28, 0.85) 100%)`
+                rgba(0, 0, 0, 0.2) 0%,
+                rgba(0, 0, 0, 0.3) 50%,
+                rgba(0, 0, 0, 0.6) 100%)`
             : `linear-gradient(180deg,
                 hsl(var(--tenant-color-background) / 0.5) 0%,
                 hsl(var(--tenant-color-primary) / 0.4) 50%,
