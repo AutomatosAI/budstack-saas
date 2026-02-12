@@ -125,7 +125,11 @@ export async function DELETE(
       (tt: any) => tt.activeForTenant !== null,
     );
 
-    if (template._count.tenants > 0 || activeTenantTemplates.length > 0) {
+    // Support force deletion via query param
+    const { searchParams } = new URL(req.url);
+    const force = searchParams.get("force") === "true";
+
+    if ((template._count.tenants > 0 || activeTenantTemplates.length > 0) && !force) {
       const usageDetails = [];
       if (template._count.tenants > 0) {
         usageDetails.push(`${template._count.tenants} tenant(s) directly`);
@@ -141,7 +145,7 @@ export async function DELETE(
 
       return NextResponse.json(
         {
-          error: `Cannot delete template: It is currently in active use by ${usageDetails.join(' and ')}. Please deactivate or reassign those tenants first.`,
+          error: `Cannot delete template: It is currently in active use by ${usageDetails.join(' and ')}. Please deactivate or reassign those tenants first, or use force=true.`,
           tenantsCount: template._count.tenants,
           activeTenantTemplatesCount: activeTenantTemplates.length,
         },
@@ -150,10 +154,29 @@ export async function DELETE(
     }
 
     console.log(
-      `[Template Delete] Deleting template: ${template.name} (${template.slug})`,
+      `[Template Delete] Deleting template: ${template.name} (${template.slug})${force ? ' (FORCE)' : ''}`,
     );
 
-    // Delete tenant_templates that reference this base template first
+    // Clear activeTenantTemplateId on any tenants using this template's tenant_templates
+    const tenantTemplateIds = template.tenant_templates.map((tt: any) => tt.id);
+    if (tenantTemplateIds.length > 0) {
+      await prisma.tenants.updateMany({
+        where: { activeTenantTemplateId: { in: tenantTemplateIds } },
+        data: { activeTenantTemplateId: null },
+      });
+      console.log(`[Template Delete] Cleared activeTenantTemplateId on tenants`);
+    }
+
+    // Clear direct templateId references on tenants
+    if (template._count.tenants > 0) {
+      await prisma.tenants.updateMany({
+        where: { templateId: templateId },
+        data: { templateId: null },
+      });
+      console.log(`[Template Delete] Cleared templateId on ${template._count.tenants} tenant(s)`);
+    }
+
+    // Delete tenant_templates that reference this base template
     if (template._count.tenant_templates > 0) {
       console.log(
         `[Template Delete] Deleting ${template._count.tenant_templates} tenant_templates that reference this base template`,
