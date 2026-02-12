@@ -193,7 +193,7 @@ export default async function TenantStorePage() {
           // Only sign relative filenames — skip full URLs and absolute paths
           if (!imgPath.startsWith('http') && !imgPath.startsWith('/')) {
             try {
-              const s3Key = `${tenantS3Path}${imgPath}`;
+              const s3Key = `${tenantS3Path}/${imgPath}`;
               console.log(`[page] Signing section imageUrl for ${section.type}:`, s3Key);
               section.config.imageUrl = await getFileUrl(s3Key);
             } catch (err) {
