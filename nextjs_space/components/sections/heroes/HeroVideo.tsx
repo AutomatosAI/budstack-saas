@@ -64,15 +64,10 @@ export function HeroVideo({
       <div
         className="absolute inset-0 z-[1]"
         style={{
-          background: videoUrl
-            ? `linear-gradient(90deg,
-                rgba(0, 0, 0, 0.55) 0%,
-                rgba(0, 0, 0, 0.35) 40%,
-                rgba(0, 0, 0, 0.15) 100%)`
-            : `linear-gradient(180deg,
-                hsl(var(--tenant-color-background) / 0.5) 0%,
-                hsl(var(--tenant-color-primary) / 0.4) 50%,
-                hsl(var(--tenant-color-background) / 0.9) 100%)`,
+          background: `linear-gradient(90deg,
+            rgba(0, 0, 0, 0.55) 0%,
+            rgba(0, 0, 0, 0.35) 40%,
+            rgba(0, 0, 0, 0.15) 100%)`,
         }}
       />
 
