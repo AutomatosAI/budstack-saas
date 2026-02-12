@@ -19,9 +19,19 @@ export function HeroVideo({
   const subtitle = sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Elevated Experience';
   const ctaText = sectionConfig?.ctaText || 'Book Consultation';
   const videoUrl = sectionConfig?.videoUrl;
+  const textAlign = sectionConfig?.textAlign || 'center';
+  const watermarkUrl = sectionConfig?.watermarkUrl;
+
+  // Alignment classes based on config
+  const isLeft = textAlign === 'left';
+  const alignClasses = isLeft
+    ? 'text-left items-start'
+    : textAlign === 'right'
+      ? 'text-right items-end'
+      : 'text-center items-center';
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background: Video → Image → Gradient fallback */}
       {videoUrl ? (
         <video
@@ -50,15 +60,15 @@ export function HeroVideo({
         />
       )}
 
-      {/* Gradient Overlay — dark cinematic overlay for video, theme-aware for static */}
+      {/* Gradient Overlay — dark cinematic for video, theme-aware for static */}
       <div
         className="absolute inset-0 z-[1]"
         style={{
           background: videoUrl
-            ? `linear-gradient(180deg,
-                rgba(0, 0, 0, 0.2) 0%,
-                rgba(0, 0, 0, 0.3) 50%,
-                rgba(0, 0, 0, 0.6) 100%)`
+            ? `linear-gradient(90deg,
+                rgba(0, 0, 0, 0.55) 0%,
+                rgba(0, 0, 0, 0.35) 40%,
+                rgba(0, 0, 0, 0.15) 100%)`
             : `linear-gradient(180deg,
                 hsl(var(--tenant-color-background) / 0.5) 0%,
                 hsl(var(--tenant-color-primary) / 0.4) 50%,
@@ -66,21 +76,37 @@ export function HeroVideo({
         }}
       />
 
-      {/* Ambient glow effects */}
-      <div className="absolute inset-0 z-[2] pointer-events-none overflow-hidden">
-        <div
-          className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 rounded-full blur-[120px] opacity-15"
-          style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
-        />
-        <div
-          className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 rounded-full blur-[100px] opacity-10"
-          style={{ backgroundColor: 'hsl(var(--tenant-color-secondary))' }}
-        />
-      </div>
+      {/* Logo Watermark Overlay — large semi-transparent logo */}
+      {watermarkUrl && (
+        <div className="absolute inset-0 z-[2] pointer-events-none flex items-center justify-center">
+          <div className="relative w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] opacity-[0.12] translate-x-[15%]">
+            <Image
+              src={watermarkUrl}
+              alt=""
+              fill
+              className="object-contain"
+              aria-hidden="true"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-6 text-center">
-        {logoUrl && (
+      <div className={`relative z-10 container mx-auto px-6 sm:px-10 lg:px-16 flex flex-col ${alignClasses}`}>
+        {logoUrl && isLeft && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+            className="mb-6"
+          >
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20">
+              <Image src={logoUrl} alt={`${businessName} Logo`} fill className="object-contain" />
+            </div>
+          </motion.div>
+        )}
+
+        {!isLeft && logoUrl && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -97,8 +123,8 @@ export function HeroVideo({
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.3 }}
-          className="text-3xl sm:text-5xl md:text-7xl font-bold text-white mb-4 sm:mb-6"
-          style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
+          className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 sm:mb-6 ${isLeft ? 'max-w-2xl' : ''}`}
+          style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', lineHeight: 1.1 }}
         >
           {title}
         </motion.h1>
@@ -107,7 +133,7 @@ export function HeroVideo({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.5 }}
-          className="text-base sm:text-xl md:text-2xl text-white/90 mb-8 sm:mb-12 max-w-2xl mx-auto"
+          className={`text-base sm:text-lg md:text-xl text-white/80 mb-8 sm:mb-10 ${isLeft ? 'max-w-lg' : 'max-w-2xl mx-auto'}`}
         >
           {subtitle}
         </motion.p>
@@ -116,11 +142,11 @@ export function HeroVideo({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.7 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center"
+          className={`flex flex-col sm:flex-row gap-4 ${isLeft ? 'justify-start' : 'justify-center'}`}
         >
           <a
             href={consultationUrl}
-            className="px-10 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-105"
+            className="px-10 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-105 inline-block"
             style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
           >
             {ctaText}
@@ -133,7 +159,7 @@ export function HeroVideo({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1, delay: 1.2 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white z-10"
       >
         <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
           <ChevronDown size={36} />

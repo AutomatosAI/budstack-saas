@@ -216,6 +216,19 @@ export default async function TenantStorePage() {
             }
           }
         }
+        // Sign watermarkUrl (logo watermark overlay)
+        if (section.config?.watermarkUrl && typeof section.config.watermarkUrl === 'string') {
+          const wmPath = section.config.watermarkUrl;
+          if (!wmPath.startsWith('http') && !wmPath.startsWith('/')) {
+            try {
+              const s3Key = `${tenantS3Path}/${wmPath}`;
+              console.log(`[page] Signing section watermarkUrl for ${section.type}:`, s3Key);
+              section.config.watermarkUrl = await getFileUrl(s3Key);
+            } catch (err) {
+              console.error(`[page] Failed to sign section watermarkUrl for ${section.type}:`, err);
+            }
+          }
+        }
       }
     }
 
