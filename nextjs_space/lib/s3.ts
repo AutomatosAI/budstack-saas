@@ -101,6 +101,11 @@ export async function uploadDirectoryToS3(
           ".svg": "image/svg+xml",
           ".gif": "image/gif",
           ".ico": "image/x-icon",
+          ".mp4": "video/mp4",
+          ".webm": "video/webm",
+          ".ogg": "video/ogg",
+          ".mp3": "audio/mpeg",
+          ".pdf": "application/pdf",
         };
         contentType = contentTypes[ext] || contentType;
 
