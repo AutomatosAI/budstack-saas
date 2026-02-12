@@ -50,14 +50,19 @@ export function HeroVideo({
         />
       )}
 
-      {/* Gradient Overlay */}
+      {/* Gradient Overlay — dark cinematic overlay for video, theme-aware for static */}
       <div
         className="absolute inset-0 z-[1]"
         style={{
-          background: `linear-gradient(180deg,
-            hsl(var(--tenant-color-background) / 0.5) 0%,
-            hsl(var(--tenant-color-primary) / 0.4) 50%,
-            hsl(var(--tenant-color-background) / 0.9) 100%)`,
+          background: videoUrl
+            ? `linear-gradient(180deg,
+                rgba(15, 46, 44, 0.5) 0%,
+                rgba(28, 79, 77, 0.4) 50%,
+                rgba(10, 30, 28, 0.85) 100%)`
+            : `linear-gradient(180deg,
+                hsl(var(--tenant-color-background) / 0.5) 0%,
+                hsl(var(--tenant-color-primary) / 0.4) 50%,
+                hsl(var(--tenant-color-background) / 0.9) 100%)`,
         }}
       />
 
