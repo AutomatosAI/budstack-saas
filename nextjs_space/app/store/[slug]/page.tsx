@@ -183,11 +183,12 @@ export default async function TenantStorePage() {
 
     console.log("[page] layout found:", !!layout, "falling to legacy:", !layout);
 
-    // Sign section-level imageUrl values in layout.json configs
-    // Templates can reference images by relative filename (e.g. "about-photo.jpg")
+    // Sign section-level asset URLs in layout.json configs
+    // Templates can reference assets by relative filename (e.g. "assets/about-photo.jpg")
     // which need to be resolved to signed S3 URLs before rendering
     if (layout?.sections && tenantS3Path) {
       for (const section of layout.sections) {
+        // Sign imageUrl
         if (section.config?.imageUrl && typeof section.config.imageUrl === 'string') {
           const imgPath = section.config.imageUrl;
           // Only sign relative filenames — skip full URLs and absolute paths
@@ -199,6 +200,19 @@ export default async function TenantStorePage() {
             } catch (err) {
               console.error(`[page] Failed to sign section imageUrl for ${section.type}:`, err);
               // Leave as-is — component will show gradient fallback
+            }
+          }
+        }
+        // Sign videoUrl
+        if (section.config?.videoUrl && typeof section.config.videoUrl === 'string') {
+          const vidPath = section.config.videoUrl;
+          if (!vidPath.startsWith('http') && !vidPath.startsWith('/')) {
+            try {
+              const s3Key = `${tenantS3Path}/${vidPath}`;
+              console.log(`[page] Signing section videoUrl for ${section.type}:`, s3Key);
+              section.config.videoUrl = await getFileUrl(s3Key);
+            } catch (err) {
+              console.error(`[page] Failed to sign section videoUrl for ${section.type}:`, err);
             }
           }
         }
