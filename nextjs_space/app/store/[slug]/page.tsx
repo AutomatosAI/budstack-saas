@@ -183,6 +183,9 @@ export default async function TenantStorePage() {
 
     console.log("[page] layout found:", !!layout, "falling to legacy:", !layout);
 
+    // Verify deployment version
+    console.log("[DEPLOY_CHECK] Loading Store Page - Version: Watermark_V2");
+
     // Sign section-level asset URLs in layout.json configs
     // Templates can reference assets by relative filename (e.g. "assets/about-photo.jpg")
     // which need to be resolved to signed S3 URLs before rendering
