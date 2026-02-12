@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { getNamecheapClient } from "@/lib/namecheap-api";
+import { clerkClient } from "@clerk/nextjs/server";
 import crypto from "crypto";
 
 export async function GET(
@@ -230,12 +231,82 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Delete tenant (cascade will handle related records)
+    // Fetch tenant with related data needed for cleanup
+    const tenant = await prisma.tenants.findUnique({
+      where: { id: params.id },
+      include: {
+        users: {
+          select: { id: true, email: true },
+        },
+      },
+    });
+
+    if (!tenant) {
+      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    }
+
+    // Clean up Clerk Organization and Users (best-effort — don't block DB delete)
+    const clerkOrgId = (tenant.settings as any)?.clerkOrgId;
+    const cleanupErrors: string[] = [];
+
+    if (clerkOrgId) {
+      try {
+        const client = await clerkClient();
+        await client.organizations.deleteOrganization(clerkOrgId);
+        console.log(`🗑️ Deleted Clerk org: ${clerkOrgId}`);
+      } catch (error: any) {
+        const msg = `Failed to delete Clerk org ${clerkOrgId}: ${error.message}`;
+        console.error(msg);
+        cleanupErrors.push(msg);
+      }
+    }
+
+    // Delete Clerk users associated with this tenant
+    for (const tenantUser of tenant.users) {
+      try {
+        const client = await clerkClient();
+        // Find Clerk user by email
+        const clerkUsers = await client.users.getUserList({
+          emailAddress: [tenantUser.email],
+        });
+        for (const cu of clerkUsers.data) {
+          await client.users.deleteUser(cu.id);
+          console.log(`🗑️ Deleted Clerk user: ${cu.id} (${tenantUser.email})`);
+        }
+      } catch (error: any) {
+        const msg = `Failed to delete Clerk user ${tenantUser.email}: ${error.message}`;
+        console.error(msg);
+        cleanupErrors.push(msg);
+      }
+    }
+
+    // Delete tenant from DB (cascade handles related records)
     await prisma.tenants.delete({
       where: { id: params.id },
     });
 
-    return NextResponse.json({ success: true });
+    // Create audit log
+    await prisma.audit_logs.create({
+      data: {
+        id: crypto.randomUUID(),
+        action: "TENANT_DELETED",
+        entityType: "Tenant",
+        entityId: params.id,
+        userId: user.id,
+        userEmail: user.email,
+        metadata: {
+          businessName: tenant.businessName,
+          subdomain: tenant.subdomain,
+          clerkOrgId: clerkOrgId || null,
+          cleanupErrors: cleanupErrors.length > 0 ? cleanupErrors : undefined,
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      cleanupErrors: cleanupErrors.length > 0 ? cleanupErrors : undefined,
+    });
   } catch (error) {
     console.error("Error deleting tenant:", error);
     return NextResponse.json(
