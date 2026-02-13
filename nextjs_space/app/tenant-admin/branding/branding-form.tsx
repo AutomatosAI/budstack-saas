@@ -343,7 +343,7 @@ export default function BrandingForm({
   return (
     <form onSubmit={handleSubmit}>
       <Tabs defaultValue="design" className="space-y-6">
-        <TabsList className="grid grid-cols-6 w-full">
+        <TabsList className="grid w-full h-auto grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6 md:gap-0">
           <TabsTrigger value="design">
             <Layout className="w-4 h-4 mr-2" />
             Design
@@ -420,8 +420,8 @@ export default function BrandingForm({
                       setFormData({ ...formData, template: template.id as any })
                     }
                     className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.template === template.id
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 hover:border-gray-300"
+                      ? "border-green-500 bg-green-50"
+                      : "border-gray-200 hover:border-gray-300"
                       }`}
                   >
                     {formData.template === template.id && (

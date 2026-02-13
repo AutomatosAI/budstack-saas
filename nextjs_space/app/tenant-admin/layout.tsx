@@ -101,7 +101,7 @@ export default async function TenantAdminLayout({
       />
       <AccessibleAdminLayout theme="tenant-admin">
         {/* Notification bar - compact */}
-        <div className="sticky top-0 z-30 flex items-center justify-end px-8 py-2">
+        <div className="sticky top-0 z-30 flex items-center justify-end px-4 py-2 md:px-8">
           <NotificationCenter
             theme="tenant-admin"
             notifications={mockNotifications}
@@ -110,7 +110,7 @@ export default async function TenantAdminLayout({
           <HeaderProfile theme="tenant-admin" />
         </div>
         {/* Main content */}
-        <div className="flex-1 overflow-auto px-8 py-6">{children}</div>
+        <div className="flex-1 overflow-auto px-4 py-4 md:px-8 md:py-6">{children}</div>
       </AccessibleAdminLayout>
     </div>
   );
