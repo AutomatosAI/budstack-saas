@@ -12,6 +12,8 @@ import ActivateButton from "./activate-button";
 import DeleteButton from "./delete-button";
 import { UploadTemplateDialog } from "./upload-dialog";
 import UpdateGitHubButton from "./update-github-button";
+import { ShareMarketplaceDialog } from "./share-marketplace-dialog";
+import WithdrawButton from "./withdraw-button";
 type ClonedTemplate = any;
 
 /** Sign an S3 key to a URL, or pass through if already a URL */
@@ -78,6 +80,20 @@ export default async function TemplatesPage() {
             signedPreviewUrl: await signUrl(t.previewUrl || t.thumbnailUrl),
         }))
     );
+
+    // 3. Fetch marketplace submissions for this tenant (match to templates)
+    const submissions = await prisma.marketplace_submissions.findMany({
+        where: { tenantId: tenant.id },
+        orderBy: { createdAt: "desc" },
+    });
+
+    // Build a map of tenantTemplateId -> latest active submission
+    const submissionMap = new Map<string, typeof submissions[number]>();
+    for (const sub of submissions) {
+        if (!submissionMap.has(sub.tenantTemplateId)) {
+            submissionMap.set(sub.tenantTemplateId, sub);
+        }
+    }
 
     return (
         <div className="space-y-8">
@@ -174,11 +190,32 @@ export default async function TemplatesPage() {
                                         {item.templateName}
                                     </h3>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Cloned {new Date(item.createdAt).toLocaleDateString()}
+                                        {item.source === "custom" ? "Uploaded" : "Cloned"} {new Date(item.createdAt).toLocaleDateString()}
                                     </p>
-                                    <p className="text-xs text-muted-foreground mt-2">
-                                        Based on: {item.templatesId}
-                                    </p>
+                                    {(() => {
+                                        const sub = submissionMap.get(item.id);
+                                        if (!sub || sub.status === "withdrawn") return null;
+                                        const statusConfig: Record<string, { label: string; className: string }> = {
+                                            pending: { label: "Pending Review", className: "bg-yellow-100 text-yellow-800" },
+                                            approved: { label: "Approved", className: "bg-green-100 text-green-800" },
+                                            rejected: { label: "Rejected", className: "bg-red-100 text-red-800" },
+                                            changes_requested: { label: "Changes Requested", className: "bg-orange-100 text-orange-800" },
+                                        };
+                                        const config = statusConfig[sub.status];
+                                        if (!config) return null;
+                                        return (
+                                            <div className="mt-2">
+                                                <Badge variant="secondary" className={config.className}>
+                                                    {config.label}
+                                                </Badge>
+                                                {(sub.status === "rejected" || sub.status === "changes_requested") && sub.reviewerFeedback && (
+                                                    <p className="text-xs text-muted-foreground mt-1 italic">
+                                                        &ldquo;{sub.reviewerFeedback}&rdquo;
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                                 <div className="flex flex-wrap gap-2 p-4 border-t border-slate-100 bg-slate-50/50">
                                     <Link href="/tenant-admin/branding" className="flex-1">
@@ -207,6 +244,29 @@ export default async function TemplatesPage() {
                                             templateName={item.templateName}
                                         />
                                     )}
+                                    {/* Marketplace submission actions */}
+                                    {item.source === "custom" && (() => {
+                                        const sub = submissionMap.get(item.id);
+                                        const hasActiveSub = sub && ["pending", "changes_requested"].includes(sub.status);
+                                        if (hasActiveSub) {
+                                            return (
+                                                <WithdrawButton
+                                                    templateId={item.id}
+                                                    templateName={item.templateName}
+                                                />
+                                            );
+                                        }
+                                        if (!sub || sub.status === "withdrawn" || sub.status === "rejected") {
+                                            return (
+                                                <ShareMarketplaceDialog
+                                                    templateId={item.id}
+                                                    templateName={item.templateName}
+                                                    tenantBusinessName={tenant.businessName}
+                                                />
+                                            );
+                                        }
+                                        return null;
+                                    })()}
                                 </div>
                             </div>
                         ))}
