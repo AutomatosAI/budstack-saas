@@ -43,7 +43,7 @@ export const OrderConfirmationEmail = ({
     ],
     total = 130,
     shippingAddress = '123 Main St, Anytown, AT',
-    tenantName = 'BudStack',
+    tenantName = 'BudStacks',
     logoUrl,
     primaryColor = '#10b981',
 }: OrderConfirmationEmailProps) => {
@@ -96,7 +96,7 @@ export const OrderConfirmationEmail = ({
                             <Link
                                 className="p-3 rounded text-white text-[12px] font-semibold no-underline text-center"
                                 style={{ backgroundColor: primaryColor }}
-                                href={`https://${tenantName.toLowerCase()}.budstack.to/orders/${orderNumber}`}
+                                href={`https://${tenantName.toLowerCase()}.budstacks.io/orders/${orderNumber}`}
                             >
                                 Track Order
                             </Link>

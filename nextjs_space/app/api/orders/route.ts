@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       ? getCurrencyByCountry(shippingInfo.country)
       : "ZAR";
 
-    // Create order in BudStack database first
+    // Create order in BudStacks database first
     const order = await prisma.orders.create({
       data: {
         userId: dbUser.id,
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
         currency: currency,
         shipping_address: shippingInfo,
         notes: shippingInfo?.notes || "",
-        platform_order_number: order.orderNumber, // Reference to BudStack order
+        platform_order_number: order.orderNumber, // Reference to BudStacks order
       };
 
       // Fetch tenant-specific Dr Green Config
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Don't fail the entire order - just log the error
-      // The order is created in BudStack, tenant can manually process it
+      // The order is created in BudStacks, tenant can manually process it
     }
 
     // Send order confirmation email

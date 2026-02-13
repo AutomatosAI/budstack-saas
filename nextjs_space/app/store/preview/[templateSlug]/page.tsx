@@ -150,7 +150,7 @@ export function generateMetadata({
   params: { templateSlug: string };
 }) {
   return {
-    title: `Preview: ${params.templateSlug} | BudStack Templates`,
+    title: `Preview: ${params.templateSlug} | BudStacks Templates`,
     description: `Template preview for ${params.templateSlug}`,
   };
 }

@@ -5,7 +5,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 
 export const metadata: Metadata = {
-    title: "Terms of Service | Popcorn Media",
+    title: "Terms of Service | BudStacks",
     description: "Terms and conditions for using our services",
 };
 
@@ -40,7 +40,7 @@ export default function TermsPage() {
                                     1. Acceptance of Terms
                                 </h2>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    By accessing and using Popcorn Media services, you accept and agree to be bound
+                                    By accessing and using BudStacks services, you accept and agree to be bound
                                     by these Terms of Service and all applicable laws and regulations.
                                 </p>
                             </section>
@@ -71,7 +71,7 @@ export default function TermsPage() {
                                     4. Franchise Obligations
                                 </h2>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    Franchise operators must comply with all Popcorn Media guidelines, maintain regulatory
+                                    Franchise operators must comply with all BudStacks guidelines, maintain regulatory
                                     compliance, and operate within the bounds of their license agreement.
                                 </p>
                             </section>

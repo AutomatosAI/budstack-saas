@@ -104,7 +104,7 @@ export default function InfrastructureSection() {
                         <span className="text-gradient">For Franchise Operations</span>
                     </h2>
                     <p className="mx-auto mt-4 max-w-3xl text-lg text-muted-foreground">
-                        Dr. Green manages product catalog and supply chain. Popcorn Media
+                        Dr. Green manages product catalog and supply chain. BudStacks
                         provides the complete franchise infrastructure — technology,
                         operations management, and compliance frameworks exclusively for
                         franchisees.

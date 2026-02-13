@@ -35,6 +35,7 @@ import {
 import { TenantSettings } from "@/lib/types";
 import { tenant_templates } from "@prisma/client";
 import { hslToHex } from "@/lib/color-utils";
+import { getTenantUrl } from "@/lib/tenant-utils";
 
 interface BrandingFormProps {
   tenant: {
@@ -343,7 +344,7 @@ export default function BrandingForm({
   return (
     <form onSubmit={handleSubmit}>
       <Tabs defaultValue="design" className="space-y-6">
-        <TabsList className="grid grid-cols-6 w-full">
+        <TabsList className="grid w-full h-auto grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6 md:gap-0">
           <TabsTrigger value="design">
             <Layout className="w-4 h-4 mr-2" />
             Design
@@ -420,8 +421,8 @@ export default function BrandingForm({
                       setFormData({ ...formData, template: template.id as any })
                     }
                     className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.template === template.id
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 hover:border-gray-300"
+                      ? "border-green-500 bg-green-50"
+                      : "border-gray-200 hover:border-gray-300"
                       }`}
                   >
                     {formData.template === template.id && (
@@ -972,7 +973,7 @@ export default function BrandingForm({
             </CardHeader>
             <CardContent>
               <a
-                href={`https://healingbuds.abacusai.app/store/${tenant.subdomain}`}
+                href={getTenantUrl(tenant)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

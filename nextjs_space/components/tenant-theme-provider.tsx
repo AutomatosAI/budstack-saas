@@ -19,7 +19,7 @@ interface TenantThemeProviderProps {
  *
  * This component injects CSS variables into a SCOPED container
  * (not document root) based on tenant branding settings or TenantTemplate.
- * This ensures BudStack.io core pages are NOT affected by tenant themes.
+ * This ensures BudStacks.io core pages are NOT affected by tenant themes.
  *
  * Supports BOTH:
  * - NEW: tenantTemplate with designSystem (TenantTemplate)

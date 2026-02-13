@@ -145,7 +145,7 @@ export async function PATCH(
         }
 
         console.log(
-          `✅ Created subdomain: ${existingTenant.subdomain}.budstack.to`,
+          `✅ Created subdomain: ${existingTenant.subdomain}.budstacks.io`,
         );
       } catch (error) {
         console.error("Namecheap API error:", error);
@@ -171,7 +171,7 @@ export async function PATCH(
         const namecheap = getNamecheapClient(namecheapUsername);
         await namecheap.deleteTenantSubdomain(existingTenant.subdomain);
         console.log(
-          `🗑️ Deleted subdomain: ${existingTenant.subdomain}.budstack.to`,
+          `🗑️ Deleted subdomain: ${existingTenant.subdomain}.budstacks.io`,
         );
       } catch (error) {
         console.error("Error deleting subdomain:", error);

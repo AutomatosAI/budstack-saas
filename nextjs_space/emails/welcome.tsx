@@ -23,8 +23,8 @@ interface WelcomeEmailProps {
 
 export const WelcomeEmail = ({
     userName = 'User',
-    tenantName = 'BudStack',
-    loginUrl = 'https://budstack.to/login',
+    tenantName = 'BudStacks',
+    loginUrl = 'https://budstacks.io/login',
     logoUrl,
     primaryColor = '#10b981',
 }: WelcomeEmailProps) => {

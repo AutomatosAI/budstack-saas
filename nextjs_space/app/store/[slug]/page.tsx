@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant, getTenantUrl } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
 import { getFileUrl, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
 
@@ -60,10 +60,12 @@ export default async function TenantStorePage() {
   }
 
   // URLs for template props
-  const consultationUrl = `/store/${tenantWithTemplate.subdomain}/consultation`;
-  const productsUrl = `/store/${tenantWithTemplate.subdomain}/products`;
-  const contactUrl = `/store/${tenantWithTemplate.subdomain}/contact`;
-  const aboutUrl = `/store/${tenantWithTemplate.subdomain}/about`;
+  // URLs for template props
+  const baseUrl = getTenantUrl(tenantWithTemplate);
+  const consultationUrl = `${baseUrl}/consultation`;
+  const productsUrl = `${baseUrl}/products`;
+  const contactUrl = `${baseUrl}/contact`;
+  const aboutUrl = `${baseUrl}/about`;
 
   // NEW: Check if tenant has an active TenantTemplate
   if (tenantWithTemplate.activeTenantTemplate) {
@@ -182,6 +184,9 @@ export default async function TenantStorePage() {
     }
 
     console.log("[page] layout found:", !!layout, "falling to legacy:", !layout);
+
+    // Verify deployment version
+    console.log("[DEPLOY_CHECK] Loading Store Page - Version: Watermark_V2");
 
     // Sign section-level asset URLs in layout.json configs
     // Templates can reference assets by relative filename (e.g. "assets/about-photo.jpg")
@@ -394,9 +399,10 @@ export async function generateMetadata() {
     `Premium medical cannabis products and consultations from ${tenant.businessName}`;
 
   // Build base URL for OG images
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
   const baseUrl = tenantWithSeo?.customDomain
     ? `https://${tenantWithSeo.customDomain}`
-    : `https://${tenantWithSeo?.subdomain || tenant.subdomain}.budstack.to`;
+    : `https://${tenantWithSeo?.subdomain || tenant.subdomain}.${baseDomain}`;
 
   return {
     title,

@@ -15,12 +15,19 @@ export interface TenantUrlData {
 
 /**
  * Get tenant URL for display purposes
- * Uses path-based routing: budstack.to/store/{slug}
+ * Uses subdomain routing in production: {subdomain}.budstacks.io
+ * Uses path-based routing in development: /store/{subdomain}
  *
  * @example
  * ```tsx
- * const url = getTenantUrl({ subdomain: 'healing-buds', customDomain: null });
- * // Returns: https://budstack.to/store/healing-buds
+ * // Development:
+ * getTenantUrl({ subdomain: 'healing-buds', customDomain: null }) // -> /store/healing-buds
+ *
+ * // Production:
+ * getTenantUrl({ subdomain: 'healing-buds', customDomain: null }) // -> https://healing-buds.budstacks.io
+ *
+ * // Custom Domain:
+ * getTenantUrl({ subdomain: 'healing-buds', customDomain: 'example.com' }) // -> https://example.com
  * ```
  */
 export function getTenantUrl(tenant: TenantUrlData): string {
@@ -29,7 +36,12 @@ export function getTenantUrl(tenant: TenantUrlData): string {
     return `https://${tenant.customDomain}`;
   }
 
-  // Use path-based routing (primary method until subdomain DNS is configured)
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstack.to";
-  return `https://${baseDomain}/store/${tenant.subdomain}`;
+  // Use path-based routing for development to avoid local DNS issues
+  if (process.env.NODE_ENV === 'development') {
+    return `/store/${tenant.subdomain}`;
+  }
+
+  // Use subdomain-based routing for production
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
+  return `https://${tenant.subdomain}.${baseDomain}`;
 }

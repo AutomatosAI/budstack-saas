@@ -71,7 +71,7 @@ interface PackingSlipProps {
  */
 export function PackingSlip({
   order,
-  businessName = "BudStack",
+  businessName = "BudStacks",
   logoUrl,
   autoPrint = false,
 }: PackingSlipProps) {

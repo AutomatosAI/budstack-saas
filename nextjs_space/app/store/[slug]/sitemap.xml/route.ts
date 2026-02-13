@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Build base URL - use custom domain if set, otherwise subdomain
     const baseUrl = tenant.customDomain
         ? `https://${tenant.customDomain}`
-        : `https://${tenant.subdomain}.budstack.to`;
+        : `https://${tenant.subdomain}.budstacks.io`;
 
     // Format date for sitemap
     const formatDate = (date: Date) => date.toISOString().split('T')[0];

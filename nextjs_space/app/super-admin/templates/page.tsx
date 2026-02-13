@@ -116,7 +116,7 @@ export default async function TemplatesManagementPage() {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-amber-500"></div>
                     <span className="text-muted-foreground">
-                      {template.author || "BudStack"}
+                      {template.author || "BudStacks"}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">

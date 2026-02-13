@@ -12,13 +12,13 @@ const blogPosts = [
         title: "Getting Started with Your Medical Cannabis Franchise",
         date: "Jan 10, 2026",
         author: "Jordan Miller",
-        role: "Head of Operations, Popcorn Media",
+        role: "Head of Operations, BudStacks",
         excerpt:
-            "A comprehensive guide to launching your dispensary franchise with Popcorn Media infrastructure.",
+            "A comprehensive guide to launching your dispensary franchise with BudStacks infrastructure.",
         image:
             "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=1200&h=700&fit=crop",
         content: `
-      <p>Launching a medical cannabis franchise has never been easier. With Popcorn Media's proprietary infrastructure, you can go from application to live store in under 10 minutes.</p>
+      <p>Launching a medical cannabis franchise has never been easier. With BudStacks's proprietary infrastructure, you can go from application to live store in under 10 minutes.</p>
       
       <h2>Understanding the Franchise Model</h2>
       <p>Our franchise model is designed to give you complete operational flexibility while providing enterprise-grade infrastructure. Whether you choose fully managed, semi-managed, or independent operation, you get access to the same powerful tools.</p>
@@ -42,7 +42,7 @@ const blogPosts = [
         <li>Blockchain traceability for compliance</li>
       </ul>
       
-      <p>Ready to get started? Apply for your franchise today and join the growing network of medical cannabis dispensaries powered by Popcorn Media.</p>
+      <p>Ready to get started? Apply for your franchise today and join the growing network of medical cannabis dispensaries powered by BudStacks.</p>
     `,
         category: "Getting Started",
     },
@@ -52,13 +52,13 @@ const blogPosts = [
         title: "Understanding Dr. Green API Integration",
         date: "Jan 5, 2026",
         author: "Stefan Klein",
-        role: "Technical Lead, Popcorn Media",
+        role: "Technical Lead, BudStacks",
         excerpt:
             "How to leverage the Dr. Green API for seamless product catalog and order management.",
         image:
             "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=700&fit=crop",
         content: `
-      <p>The Dr. Green API is at the heart of every Popcorn Media franchise. This integration provides real-time product synchronization, automated inventory management, and seamless order fulfillment.</p>
+      <p>The Dr. Green API is at the heart of every BudStacks franchise. This integration provides real-time product synchronization, automated inventory management, and seamless order fulfillment.</p>
       
       <h2>Real-Time Product Sync</h2>
       <p>Your product catalog is automatically synchronized with Dr. Green's database. When new products are added or prices change, your store updates instantly. No manual updates required.</p>
@@ -80,7 +80,7 @@ const blogPosts = [
         title: "Blockchain Traceability & Compliance",
         date: "Dec 28, 2025",
         author: "Emma Williams",
-        role: "Compliance Officer, Popcorn Media",
+        role: "Compliance Officer, BudStacks",
         excerpt:
             "Ensuring regulatory compliance with integrated blockchain tracking for your dispensary.",
         image:
@@ -105,7 +105,7 @@ const blogPosts = [
         title: "Scaling Multi-Tenant Operations",
         date: "Dec 20, 2025",
         author: "João Mendes",
-        role: "Solutions Architect, Popcorn Media",
+        role: "Solutions Architect, BudStacks",
         excerpt:
             "Best practices for managing multiple storefronts with isolated data and custom branding.",
         image:
@@ -130,7 +130,7 @@ const blogPosts = [
         title: "Customer Management Best Practices",
         date: "Dec 15, 2025",
         author: "Maria Santos",
-        role: "Customer Success, Popcorn Media",
+        role: "Customer Success, BudStacks",
         excerpt:
             "Building lasting patient relationships through effective CRM and consultation tracking.",
         image:
@@ -155,7 +155,7 @@ const blogPosts = [
         title: "Maximizing Revenue with Analytics",
         date: "Dec 10, 2025",
         author: "Stefan Klein",
-        role: "Technical Lead, Popcorn Media",
+        role: "Technical Lead, BudStacks",
         excerpt:
             "Using data-driven insights to optimize your dispensary's performance and growth.",
         image:

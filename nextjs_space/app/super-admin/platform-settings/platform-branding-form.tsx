@@ -144,7 +144,7 @@ export default function PlatformBrandingForm({
             <CardHeader className="border-b border-slate-100">
               <CardTitle>Platform Information</CardTitle>
               <CardDescription>
-                Basic information about BudStack
+                Basic information about BudStacks
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-6">

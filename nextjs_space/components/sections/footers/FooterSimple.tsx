@@ -2,12 +2,16 @@
 
 import React from 'react';
 import { SectionProps } from '@/lib/types/section-props';
+import { getTenantUrl } from '@/lib/tenant-utils';
 
 export function FooterSimple(props: SectionProps) {
   const { tenant, footer, sectionConfig, contactUrl } = props;
 
   const businessName = tenant.businessName;
-  const basePath = `/store/${tenant.subdomain}`;
+  const basePath = getTenantUrl({
+    subdomain: tenant.subdomain,
+    customDomain: tenant.customDomain,
+  });
 
   const defaultLinks = [
     { label: 'Privacy', href: `${basePath}/privacy` },

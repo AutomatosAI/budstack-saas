@@ -2,7 +2,7 @@
  * Dr. Green Cart Management
  *
  * Helper functions for managing shopping carts via the Dr. Green API.
- * Handles cart synchronization between BudStack database and Dr. Green backend.
+ * Handles cart synchronization between BudStacks database and Dr. Green backend.
  */
 
 import { prisma } from "@/lib/db";

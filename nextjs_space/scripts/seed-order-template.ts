@@ -62,7 +62,7 @@ async function seedOrderTemplate() {
       <p><strong>Shipping Address:</strong><br/>{{shippingAddress}}</p>
 
       <div class="center" style="margin: 30px 0;">
-        <a href="https://{{tenantName}}.budstack.to/orders/{{orderNumber}}" class="btn">
+        <a href="https://{{tenantName}}.budstacks.io/orders/{{orderNumber}}" class="btn">
            Track Order
         </a>
       </div>

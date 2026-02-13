@@ -149,11 +149,11 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                   onChange={(e) => setSubdomain(e.target.value.toLowerCase())}
                 />
                 <span className="text-sm text-gray-500 whitespace-nowrap">
-                  .budstack.to
+                  .budstacks.io
                 </span>
               </div>
             ) : (
-              <p className="text-base">{tenant.subdomain}.budstack.to</p>
+              <p className="text-base">{tenant.subdomain}.budstacks.io</p>
             )}
           </div>
 

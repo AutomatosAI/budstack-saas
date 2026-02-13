@@ -103,7 +103,7 @@ export default function ContactPage() {
                             </div>
                         </div>
                         <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-                            Get in touch with Popcorn Media
+                            Get in touch with BudStacks
                         </h1>
                         <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
                             Questions about setup, integrations or enterprise plans? We are

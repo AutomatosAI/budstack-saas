@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
+import { getTenantUrl } from '@/lib/tenant-utils';
 
 interface FooterSection {
   title: string;
@@ -12,7 +13,10 @@ interface FooterSection {
 export function FooterFull(props: SectionProps) {
   const { tenant, logoUrl, footer, sectionConfig, productsUrl, aboutUrl, contactUrl, consultationUrl } = props;
 
-  const basePath = `/store/${tenant.subdomain}`;
+  const basePath = getTenantUrl({
+    subdomain: tenant.subdomain,
+    customDomain: tenant.customDomain,
+  });
 
   const defaultSections: FooterSection[] = [
     {
@@ -120,7 +124,7 @@ export function FooterFull(props: SectionProps) {
             &copy; {year} {businessName}. All rights reserved.
           </p>
           <p className="text-xs text-white/30">
-            Powered by BudStack
+            Powered by BudStacks
           </p>
         </div>
       </div>

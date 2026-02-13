@@ -5,7 +5,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 
 export const metadata: Metadata = {
-    title: "Cookie Policy | Popcorn Media",
+    title: "Cookie Policy | BudStacks",
     description: "Information about cookies and how we use them",
 };
 

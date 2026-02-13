@@ -121,7 +121,7 @@ export default function PackingSlipPage() {
   return (
     <PackingSlip
       order={order}
-      businessName={tenant?.businessName || "BudStack"}
+      businessName={tenant?.businessName || "BudStacks"}
       autoPrint={true}
     />
   );

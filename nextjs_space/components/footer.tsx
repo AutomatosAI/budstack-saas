@@ -20,6 +20,7 @@ import {
 import { Tenant } from "@/types/client";
 import { TenantSettings } from "@/lib/types";
 import { useLanguage } from "@/lib/i18n";
+import { getTenantUrl } from "@/lib/tenant-utils";
 
 interface FooterProps {
   tenant?: Tenant | null;
@@ -34,7 +35,13 @@ export function Footer({ tenant, logoUrl: logoUrlProp }: FooterProps = {}) {
   const settings = (tenant?.settings as TenantSettings) || {};
   const logoUrl = logoUrlProp || "/healingbuds-logo-white.jpeg";
   const brandName = tenant?.businessName || "HealingBuds";
-  const tenantSlug = tenant?.subdomain || "healingbuds";
+  // const tenantSlug = tenant?.subdomain || "healingbuds"; // Removed in favor of baseUrl
+  const baseUrl = tenant
+    ? getTenantUrl({
+      subdomain: tenant.subdomain,
+      customDomain: tenant.customDomain,
+    })
+    : "/store/healingbuds";
 
   // Business Info
   const businessInfo = settings?.businessInfo || {};
@@ -71,11 +78,11 @@ export function Footer({ tenant, logoUrl: logoUrlProp }: FooterProps = {}) {
   // Dynamic footer styles using tenant theme colors
   const footerStyle = tenant
     ? {
-        background: `linear-gradient(to bottom right, ${settings.primaryColor || "#1f2937"}, ${settings.secondaryColor || "#10b981"})`,
-      }
+      background: `linear-gradient(to bottom right, ${settings.primaryColor || "#1f2937"}, ${settings.secondaryColor || "#10b981"})`,
+    }
     : {
-        background: "linear-gradient(to bottom right, #1f2937, #10b981)",
-      };
+      background: "linear-gradient(to bottom right, #1f2937, #10b981)",
+    };
 
   return (
     <footer className="text-white" style={footerStyle}>
@@ -138,31 +145,31 @@ export function Footer({ tenant, logoUrl: logoUrlProp }: FooterProps = {}) {
               </h4>
               <nav className="space-y-3">
                 <Link
-                  href={`/store/${tenantSlug}/how-it-works`}
+                  href={`${baseUrl}/how-it-works`}
                   className="block text-gray-300 hover:text-white hover:translate-x-1 transition-all duration-200"
                 >
                   {t("nav.howItWorks")}
                 </Link>
                 <Link
-                  href={`/store/${tenantSlug}/conditions`}
+                  href={`${baseUrl}/conditions`}
                   className="block text-gray-300 hover:text-white hover:translate-x-1 transition-all duration-200"
                 >
                   {t("conditions.title")}
                 </Link>
                 <Link
-                  href={`/store/${tenantSlug}/products`}
+                  href={`${baseUrl}/products`}
                   className="block text-gray-300 hover:text-white hover:translate-x-1 transition-all duration-200"
                 >
                   {t("products.title")}
                 </Link>
                 <Link
-                  href={`/store/${tenantSlug}/consultation`}
+                  href={`${baseUrl}/consultation`}
                   className="block text-gray-300 hover:text-white hover:translate-x-1 transition-all duration-200"
                 >
                   {t("nav.consultation")}
                 </Link>
                 <Link
-                  href={`/store/${tenantSlug}/blog`}
+                  href={`${baseUrl}/blog`}
                   className="block text-gray-300 hover:text-white hover:translate-x-1 transition-all duration-200"
                 >
                   {t("blog.title")}
@@ -185,13 +192,13 @@ export function Footer({ tenant, logoUrl: logoUrlProp }: FooterProps = {}) {
               </h4>
               <nav className="space-y-3">
                 <Link
-                  href={`/store/${tenantSlug}/faq`}
+                  href={`${baseUrl}/faq`}
                   className="block text-gray-300 hover:text-white hover:translate-x-1 transition-all duration-200"
                 >
                   {t("faq.title")}
                 </Link>
                 <Link
-                  href={`/store/${tenantSlug}/contact`}
+                  href={`${baseUrl}/contact`}
                   className="block text-gray-300 hover:text-white hover:translate-x-1 transition-all duration-200"
                 >
                   {t("contact.title")}
@@ -269,52 +276,52 @@ export function Footer({ tenant, logoUrl: logoUrlProp }: FooterProps = {}) {
                 socialMedia.instagram ||
                 socialMedia.twitter ||
                 socialMedia.linkedin) && (
-                <div className="pt-4">
-                  <p className="text-sm text-gray-300 mb-3">Follow Us</p>
-                  <div className="flex space-x-3">
-                    {socialMedia.facebook && (
-                      <a
-                        href={socialMedia.facebook}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-gray-400 hover:text-white transition-colors"
-                      >
-                        <Facebook className="w-5 h-5" />
-                      </a>
-                    )}
-                    {socialMedia.instagram && (
-                      <a
-                        href={socialMedia.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-gray-400 hover:text-white transition-colors"
-                      >
-                        <Instagram className="w-5 h-5" />
-                      </a>
-                    )}
-                    {socialMedia.twitter && (
-                      <a
-                        href={socialMedia.twitter}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-gray-400 hover:text-white transition-colors"
-                      >
-                        <Twitter className="w-5 h-5" />
-                      </a>
-                    )}
-                    {socialMedia.linkedin && (
-                      <a
-                        href={socialMedia.linkedin}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-gray-400 hover:text-white transition-colors"
-                      >
-                        <Linkedin className="w-5 h-5" />
-                      </a>
-                    )}
+                  <div className="pt-4">
+                    <p className="text-sm text-gray-300 mb-3">Follow Us</p>
+                    <div className="flex space-x-3">
+                      {socialMedia.facebook && (
+                        <a
+                          href={socialMedia.facebook}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          <Facebook className="w-5 h-5" />
+                        </a>
+                      )}
+                      {socialMedia.instagram && (
+                        <a
+                          href={socialMedia.instagram}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          <Instagram className="w-5 h-5" />
+                        </a>
+                      )}
+                      {socialMedia.twitter && (
+                        <a
+                          href={socialMedia.twitter}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          <Twitter className="w-5 h-5" />
+                        </a>
+                      )}
+                      {socialMedia.linkedin && (
+                        <a
+                          href={socialMedia.linkedin}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          <Linkedin className="w-5 h-5" />
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </motion.div>
           </div>
         </div>
@@ -333,19 +340,19 @@ export function Footer({ tenant, logoUrl: logoUrlProp }: FooterProps = {}) {
 
             <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-400">
               <Link
-                href={`/store/${tenantSlug}/privacy`}
+                href={`${baseUrl}/privacy`}
                 className="hover:text-white transition-colors"
               >
                 {t("footer.privacyPolicy")}
               </Link>
               <Link
-                href={`/store/${tenantSlug}/terms`}
+                href={`${baseUrl}/terms`}
                 className="hover:text-white transition-colors"
               >
                 {t("footer.termsOfService")}
               </Link>
               <Link
-                href={`/store/${tenantSlug}/cookies`}
+                href={`${baseUrl}/cookies`}
                 className="hover:text-white transition-colors"
               >
                 {t("footer.cookiePolicy")}

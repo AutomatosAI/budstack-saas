@@ -22,6 +22,11 @@ export function HeroVideo({
   const textAlign = sectionConfig?.textAlign || 'center';
   const watermarkUrl = sectionConfig?.watermarkUrl;
 
+  // Resolve hero type and overlay settings
+  const settings = (tenant.settings as any) || {};
+  const heroType = settings.heroType || sectionConfig?.heroType || (videoUrl ? 'video' : 'gradient-image');
+  const overlayOpacity = settings.heroOverlayOpacity || sectionConfig?.overlayOpacity || 0.55;
+
   // Alignment classes based on config
   const isLeft = textAlign === 'left';
   const alignClasses = isLeft
@@ -33,7 +38,7 @@ export function HeroVideo({
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background: Video → Image → Gradient fallback */}
-      {videoUrl ? (
+      {heroType === 'video' && videoUrl ? (
         <video
           autoPlay
           muted
@@ -44,7 +49,7 @@ export function HeroVideo({
         >
           <source src={videoUrl} type="video/mp4" />
         </video>
-      ) : heroImageUrl ? (
+      ) : (heroType === 'image' || heroType === 'gradient-image') && heroImageUrl ? (
         <div className="absolute inset-0 z-0">
           <Image src={heroImageUrl} alt="Hero Background" fill className="object-cover" priority />
         </div>
@@ -64,15 +69,10 @@ export function HeroVideo({
       <div
         className="absolute inset-0 z-[1]"
         style={{
-          background: videoUrl
-            ? `linear-gradient(90deg,
-                rgba(0, 0, 0, 0.55) 0%,
-                rgba(0, 0, 0, 0.35) 40%,
-                rgba(0, 0, 0, 0.15) 100%)`
-            : `linear-gradient(180deg,
-                hsl(var(--tenant-color-background) / 0.5) 0%,
-                hsl(var(--tenant-color-primary) / 0.4) 50%,
-                hsl(var(--tenant-color-background) / 0.9) 100%)`,
+          background: `linear-gradient(90deg,
+            rgba(0, 0, 0, ${overlayOpacity}) 0%,
+            rgba(0, 0, 0, ${Math.max(0, overlayOpacity - 0.2)}) 40%,
+            rgba(0, 0, 0, ${Math.max(0, overlayOpacity - 0.4)}) 100%)`,
         }}
       />
 

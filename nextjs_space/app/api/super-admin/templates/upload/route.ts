@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
       // Convert Lovable template if needed
       if (structureType === "lovable") {
         console.log(
-          "[Template Upload] Converting Lovable template to BudStack format...",
+          "[Template Upload] Converting Lovable template to BudStacks format...",
         );
         const conversionResult = await convertLovableTemplate(extractPath);
 

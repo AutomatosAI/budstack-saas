@@ -93,13 +93,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Send test email
-    const fromAddress = config.emailFrom || "noreply@budstack.to";
+    const fromAddress = config.emailFrom || "noreply@budstacks.io";
     try {
       console.log(`[SMTP Test] Sending test email to ${testEmail}...`);
       const info = await transporter.sendMail({
         from: fromAddress,
         to: testEmail,
-        subject: "🧪 BudStack SMTP Test - Connection Successful!",
+        subject: "🧪 BudStacks SMTP Test - Connection Successful!",
         html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                         <div style="background: linear-gradient(135deg, #059669, #047857); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
                             </p>
                             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
                             <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-                                This is an automated test email from BudStack Platform
+                                This is an automated test email from BudStacks Platform
                             </p>
                         </div>
                     </div>

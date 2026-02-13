@@ -245,13 +245,13 @@ export default function OnboardingForm({
                   className="flex-1 h-12 rounded-xl border-border bg-muted/30"
                 />
                 <span className="ml-3 text-muted-foreground font-medium">
-                  .budstack.to
+                  .budstacks.io
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 Your unique store address:{" "}
                 <span className="font-mono text-accent">
-                  {formData.subdomain || "yourstore"}.budstack.to
+                  {formData.subdomain || "yourstore"}.budstacks.io
                 </span>
               </p>
             </div>
@@ -485,7 +485,7 @@ export default function OnboardingForm({
             <div className="mb-4 flex justify-center">
               <div className="badge-pill">
                 <Rocket className="h-4 w-4 text-accent" />
-                <span>Join the Popcorn Media Ecosystem</span>
+                <span>Join the BudStacks Ecosystem</span>
               </div>
             </div>
             <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">

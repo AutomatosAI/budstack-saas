@@ -132,7 +132,7 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
                 transporter = nodemailer.createTransport(smtpUrl);
 
                 if (!fromAddress) {
-                    fromAddress = platformConfig.emailFrom || 'noreply@budstack.to';
+                    fromAddress = platformConfig.emailFrom || 'noreply@budstacks.io';
                 }
             } else if (process.env.EMAIL_SERVER) {
                 // 3. Fallback to environment variable
@@ -140,7 +140,7 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
                 transporter = nodemailer.createTransport(process.env.EMAIL_SERVER);
 
                 if (!fromAddress) {
-                    fromAddress = process.env.EMAIL_FROM || 'noreply@budstack.to';
+                    fromAddress = process.env.EMAIL_FROM || 'noreply@budstacks.io';
                 }
             } else {
                 throw new Error('No system email configuration found. Please configure SMTP in platform settings.');
