@@ -38,7 +38,7 @@ async function seedEmailTemplates() {
         {
             key: 'tenantWelcome',
             name: 'Default New Tenant Welcome',
-            subject: 'Welcome to your new BudStack workspace',
+            subject: 'Welcome to your new BudStacks workspace',
             category: 'system',
             component: TenantWelcomeEmail({
                 adminName: '{{name}}',

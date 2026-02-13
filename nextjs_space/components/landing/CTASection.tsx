@@ -41,7 +41,7 @@ export default function CTASection() {
                     Ready to launch your store?
                 </h2>
                 <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-                    Join the Popcorn Media ecosystem. Professional infrastructure, Dr.
+                    Join the BudStacks ecosystem. Professional infrastructure, Dr.
                     Green partnership, and launch in 5 minutes.
                 </p>
 

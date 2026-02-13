@@ -113,7 +113,7 @@ export const EmailEditor = ({
                             id="subject"
                             value={formData.subject}
                             onChange={(e) => handleChange("subject", e.target.value)}
-                            placeholder="Welcome to BudStack, {{name}}!"
+                            placeholder="Welcome to BudStacks, {{name}}!"
                         />
                     </div>
                     <div className="flex justify-end pb-0.5">

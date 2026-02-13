@@ -29,7 +29,7 @@ export default async function PlatformSettingsPage() {
           Platform Branding
         </h1>
         <p className="mt-2 max-w-2xl text-slate-500">
-          Customize the look and feel of the main BudStack platform
+          Customize the look and feel of the main BudStacks platform
         </p>
       </div>
 

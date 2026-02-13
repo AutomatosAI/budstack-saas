@@ -254,7 +254,7 @@ model platform_config {
 
 model platform_settings {
   id                String   @id @default("platform")
-  businessName      String   @default("BudStack")
+  businessName      String   @default("BudStacks")
   tagline           String?
   logoUrl           String?
   faviconUrl        String?

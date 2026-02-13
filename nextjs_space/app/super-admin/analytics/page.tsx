@@ -726,7 +726,7 @@ export default function ComprehensiveAnalyticsPage() {
                         {tenant.businessName}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {tenant.subdomain}.budstack.to
+                        {tenant.subdomain}.budstacks.io
                       </p>
                     </div>
                   </div>

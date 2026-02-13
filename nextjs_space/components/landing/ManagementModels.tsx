@@ -5,10 +5,10 @@ const models = [
         icon: HandCoins,
         title: "Fully Managed",
         description:
-            "Popcorn Media operates the entire franchise on your behalf. Perfect for hands-off ownership.",
+            "BudStacks operates the entire franchise on your behalf. Perfect for hands-off ownership.",
         features: [
             "Complete operational management",
-            "Popcorn Media handles all decisions",
+            "BudStacks handles all decisions",
             "Passive income model",
             "Full compliance oversight",
         ],
@@ -18,10 +18,10 @@ const models = [
         icon: Settings,
         title: "Semi-Managed",
         description:
-            "You run day-to-day operations with Popcorn Media support. A balanced approach for part-time entrepreneurs.",
+            "You run day-to-day operations with BudStacks support. A balanced approach for part-time entrepreneurs.",
         features: [
             "You manage daily operations",
-            "Popcorn Media technical support",
+            "BudStacks technical support",
             "Shared decision-making",
             "Full infrastructure access",
         ],
@@ -32,7 +32,7 @@ const models = [
         icon: Wrench,
         title: "Independent Operator",
         description:
-            "Full operational responsibility within Popcorn Media infrastructure. Maximum flexibility for experienced operators.",
+            "Full operational responsibility within BudStacks infrastructure. Maximum flexibility for experienced operators.",
         features: [
             "Complete operational control",
             "You make all decisions",
@@ -134,7 +134,7 @@ export default function ManagementModels() {
 
                 {/* Footer note */}
                 <p className="mt-12 text-center text-sm text-muted-foreground">
-                    All models include access to Popcorn Media&apos;s proprietary
+                    All models include access to BudStacks&apos;s proprietary
                     infrastructure and Dr. Green partnership benefits.
                 </p>
             </div>

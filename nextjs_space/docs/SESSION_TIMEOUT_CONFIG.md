@@ -1,6 +1,6 @@
 # Session Timeout Configuration
 
-This document explains how to configure session timeouts for the BudStack application using Clerk.
+This document explains how to configure session timeouts for the BudStacks application using Clerk.
 
 ## Problem
 

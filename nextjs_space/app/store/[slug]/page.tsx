@@ -399,7 +399,7 @@ export async function generateMetadata() {
   // Build base URL for OG images
   const baseUrl = tenantWithSeo?.customDomain
     ? `https://${tenantWithSeo.customDomain}`
-    : `https://${tenantWithSeo?.subdomain || tenant.subdomain}.budstack.to`;
+    : `https://${tenantWithSeo?.subdomain || tenant.subdomain}.budstacks.io`;
 
   return {
     title,

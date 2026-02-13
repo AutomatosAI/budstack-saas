@@ -52,7 +52,7 @@ export default function EcosystemSection() {
                         </div>
                     </div>
                     <h2 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-                        The Popcorn Media{" "}
+                        The BudStacks{" "}
                         <span className="text-gradient">Ecosystem</span>
                     </h2>
                     <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">

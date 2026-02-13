@@ -75,7 +75,7 @@ export default async function SeoPage() {
   // Build base URL for previews
   const baseUrl = tenant.customDomain
     ? `https://${tenant.customDomain}`
-    : `https://${tenant.subdomain}.budstack.to`;
+    : `https://${tenant.subdomain}.budstacks.io`;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">

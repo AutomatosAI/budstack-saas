@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Trigger BudStack webhook
+    // Trigger BudStacks webhook
     if (paymentStatus === "PAID") {
       await triggerWebhook({
         event: WEBHOOK_EVENTS.ORDER_CONFIRMED,

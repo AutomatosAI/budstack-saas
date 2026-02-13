@@ -96,7 +96,7 @@ export function AdminSidebar({
               </div>
               <div>
                 <h1 className="font-sans-heading text-base font-bold text-foreground">
-                  Popcorn Media
+                  BudStacks
                 </h1>
                 {headerBadge && (
                   <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">

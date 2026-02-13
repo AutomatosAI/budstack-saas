@@ -98,7 +98,7 @@ async function deliverWebhook(
         "Content-Type": "application/json",
         "X-Webhook-Signature": signature,
         "X-Webhook-Event": payload.event,
-        "User-Agent": "BudStack-Webhooks/1.0",
+        "User-Agent": "BudStacks-Webhooks/1.0",
       },
       body: JSON.stringify(payload),
     });
@@ -156,7 +156,7 @@ async function deliverWebhook(
 /**
  * Generate HMAC SHA256 signature for webhook payload
  *
- * Recipients can verify the webhook came from BudStack by computing
+ * Recipients can verify the webhook came from BudStacks by computing
  * the same signature and comparing with the X-Webhook-Signature header.
  */
 function generateWebhookSignature(

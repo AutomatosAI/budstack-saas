@@ -99,7 +99,7 @@ export async function seedCore() {
   const superAdminPassword = await bcrypt.hash('admin123', 10);
 
   let superAdmin = await prisma.users.findFirst({
-    where: { email: 'admin@budstack.to' }
+    where: { email: 'admin@budstacks.io' }
   });
 
   if (!superAdmin) {
@@ -107,7 +107,7 @@ export async function seedCore() {
       data: {
         id: crypto.randomUUID(),
         updatedAt: new Date(),
-        email: 'admin@budstack.to',
+        email: 'admin@budstacks.io',
         password: superAdminPassword,
         name: 'Super Admin',
         firstName: 'Super',
@@ -131,8 +131,8 @@ export async function seedCore() {
         updatedAt: new Date(),
         email: 'admin@budstack.io',
         password: superAdminPassword,
-        name: 'BudStack Super Admin',
-        firstName: 'BudStack',
+        name: 'BudStacks Super Admin',
+        firstName: 'BudStacks',
         lastName: 'Admin',
         isActive: true,
         role: 'SUPER_ADMIN',
@@ -346,7 +346,7 @@ export async function seedCore() {
   console.log('Database seeded successfully!');
   console.log('\n=== Login Credentials ===');
   console.log('Super Admin:');
-  console.log('  Email: admin@budstack.to / admin@budstack.io');
+  console.log('  Email: admin@budstacks.io / admin@budstack.io');
   console.log('  Password: admin123');
   console.log('\nTenant Admin (HealingBuds):');
   console.log('  Email: admin@healingbuds.pt');

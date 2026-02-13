@@ -24,26 +24,26 @@ export const TenantWelcomeEmail = ({
     adminName = 'Admin',
     tenantName = 'My Store',
     subdomain = 'mystore',
-    loginUrl = 'https://budstack.to/login',
+    loginUrl = 'https://budstacks.io/login',
 }: TenantWelcomeEmailProps) => {
-    const storeUrl = `https://${subdomain}.budstack.to`;
-    const dashboardUrl = `https://${subdomain}.budstack.to/tenant-admin`;
+    const storeUrl = `https://${subdomain}.budstacks.io`;
+    const dashboardUrl = `https://${subdomain}.budstacks.io/tenant-admin`;
 
     return (
         <Html>
             <Head />
-            <Preview>Welcome to BudStack!</Preview>
+            <Preview>Welcome to BudStacks!</Preview>
             <Tailwind>
                 <Body className="bg-white my-auto mx-auto font-sans">
                     <Container className="border border-solid border-[#eaeaea] rounded my-[40px] mx-auto p-[20px] max-w-[465px]">
                         <Heading className="text-black text-[24px] font-normal text-center p-0 my-[30px] mx-0">
-                            🎉 Welcome to BudStack!
+                            🎉 Welcome to BudStacks!
                         </Heading>
                         <Text className="text-black text-[14px] leading-[24px]">
                             Hi {adminName},
                         </Text>
                         <Text className="text-black text-[14px] leading-[24px]">
-                            Congratulations! Your store <strong>{tenantName}</strong> is now live on BudStack.
+                            Congratulations! Your store <strong>{tenantName}</strong> is now live on BudStacks.
                         </Text>
 
                         <Section className="mt-4 mb-4 border-l-4 border-purple-500 bg-gray-50 p-4 rounded">
@@ -72,7 +72,7 @@ export const TenantWelcomeEmail = ({
                             </Link>
                         </Section>
                         <Text className="text-[#666666] text-[12px] leading-[24px]">
-                            Best regards,<br />The BudStack Team
+                            Best regards,<br />The BudStacks Team
                         </Text>
                     </Container>
                 </Body>

@@ -23,8 +23,8 @@ interface PasswordResetEmailProps {
 
 export const PasswordResetEmail = ({
     userName = 'User',
-    resetLink = 'https://budstack.to/reset-password',
-    tenantName = 'BudStack',
+    resetLink = 'https://budstacks.io/reset-password',
+    tenantName = 'BudStacks',
     logoUrl,
     primaryColor = '#3b82f6',
 }: PasswordResetEmailProps) => {

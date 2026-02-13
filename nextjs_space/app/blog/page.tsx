@@ -10,7 +10,7 @@ const blogPosts = [
         title: "Getting Started with Your Medical Cannabis Franchise",
         date: "Jan 10, 2026",
         excerpt:
-            "A comprehensive guide to launching your dispensary franchise with Popcorn Media infrastructure.",
+            "A comprehensive guide to launching your dispensary franchise with BudStacks infrastructure.",
         image:
             "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800&h=500&fit=crop",
     },

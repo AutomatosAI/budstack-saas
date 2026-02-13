@@ -2,7 +2,7 @@
 
 ## Overview
 
-The BudStack SaaS admin panels (Super Admin and Tenant Admin) implement a comprehensive accessibility system that ensures keyboard users can navigate efficiently with clear visual feedback.
+The BudStacks SaaS admin panels (Super Admin and Tenant Admin) implement a comprehensive accessibility system that ensures keyboard users can navigate efficiently with clear visual feedback.
 
 ## Focus States
 

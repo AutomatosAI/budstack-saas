@@ -58,7 +58,7 @@ export default function DashboardPreview() {
                         </div>
                         <div className="flex-1 text-center">
                             <span className="text-sm text-muted-foreground">
-                                your-brand.budstack.to - Dashboard
+                                your-brand.budstacks.io - Dashboard
                             </span>
                         </div>
                     </div>

@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     const html = await emailTemplates.passwordReset(
       user.name || "User",
       resetLink,
-      "BudStack",
+      "BudStacks",
     );
     await sendEmail({
       to: email,

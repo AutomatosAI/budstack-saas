@@ -17,21 +17,21 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jet
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'BudStack - Medical Cannabis SaaS Platform',
+  title: 'BudStacks - Medical Cannabis SaaS Platform',
   description: 'Multi-tenant SaaS platform for medical cannabis dispensaries. Launch and manage your dispensary with ease.',
   keywords: 'medical cannabis, dispensary platform, SaaS, multi-tenant, cannabis business',
-  authors: [{ name: 'BudStack' }],
+  authors: [{ name: 'BudStacks' }],
   openGraph: {
-    title: 'BudStack - Medical Cannabis SaaS Platform',
+    title: 'BudStacks - Medical Cannabis SaaS Platform',
     description: 'Multi-tenant SaaS platform for medical cannabis dispensaries',
-    url: 'https://budstack.to',
-    siteName: 'BudStack',
+    url: 'https://budstacks.io',
+    siteName: 'BudStacks',
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'BudStack - Medical Cannabis SaaS',
+    title: 'BudStacks - Medical Cannabis SaaS',
     description: 'Launch and manage your medical cannabis dispensary',
   },
   robots: {

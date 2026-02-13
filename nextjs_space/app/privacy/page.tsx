@@ -5,7 +5,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 
 export const metadata: Metadata = {
-    title: "Privacy Policy | Popcorn Media",
+    title: "Privacy Policy | BudStacks",
     description: "Our privacy policy and data protection practices",
 };
 
@@ -97,8 +97,8 @@ export default function PrivacyPage() {
                                 </h2>
                                 <p className="text-muted-foreground leading-relaxed">
                                     If you have questions about this Privacy Policy, please contact us at{" "}
-                                    <a href="mailto:privacy@popcornmedia.eu" className="text-accent hover:underline">
-                                        privacy@popcornmedia.eu
+                                    <a href="mailto:privacy@budstacks.io" className="text-accent hover:underline">
+                                        privacy@budstacks.io
                                     </a>
                                 </p>
                             </section>

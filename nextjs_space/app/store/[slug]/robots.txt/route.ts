@@ -25,11 +25,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Build base URL - use custom domain if set, otherwise subdomain
     const baseUrl = tenant.customDomain
         ? `https://${tenant.customDomain}`
-        : `https://${tenant.subdomain}.budstack.to`;
+        : `https://${tenant.subdomain}.budstacks.io`;
 
     // Build robots.txt content
-    const robotsTxt = `# Robots.txt for ${tenant.customDomain || tenant.subdomain + '.budstack.to'}
-# Generated dynamically by BudStack
+    const robotsTxt = `# Robots.txt for ${tenant.customDomain || tenant.subdomain + '.budstacks.io'}
+# Generated dynamically by BudStacks
 
 User-agent: *
 Allow: /

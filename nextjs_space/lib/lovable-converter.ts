@@ -8,16 +8,16 @@ interface ConversionResult {
 }
 
 /**
- * Lovable to BudStack Template Converter
+ * Lovable to BudStacks Template Converter
  *
- * Converts a Lovable.dev project structure to BudStack multi-tenant template format.
+ * Converts a Lovable.dev project structure to BudStacks multi-tenant template format.
  *
  * Lovable Structure:
  * - src/pages/Index.tsx (homepage)
  * - src/components/ (all components including Header, Footer)
  * - src/App.tsx (React Router setup)
  *
- * BudStack Structure:
+ * BudStacks Structure:
  * - index.tsx (main template entry)
  * - components/ (extracted homepage components, NO Header/Footer)
  * - defaults.json (design system configuration)
@@ -53,7 +53,7 @@ export async function convertLovableTemplate(
     await transformFileStructure(sourcePath, components);
     console.log("[Lovable Converter] File structure transformed");
 
-    // Step 4: Generate BudStack template files
+    // Step 4: Generate BudStacks template files
     await generateTemplateFiles(sourcePath, components);
     console.log("[Lovable Converter] Template files generated");
 
@@ -128,7 +128,7 @@ async function extractHomepageComponents(
 }
 
 /**
- * Transform Lovable file structure to BudStack structure
+ * Transform Lovable file structure to BudStacks structure
  */
 async function transformFileStructure(
   sourcePath: string,
@@ -184,7 +184,7 @@ async function transformFileStructure(
 }
 
 /**
- * Generate BudStack template files (index.tsx, defaults.json, template.config.json)
+ * Generate BudStacks template files (index.tsx, defaults.json, template.config.json)
  */
 async function generateTemplateFiles(
   sourcePath: string,
@@ -383,7 +383,7 @@ function generateTemplateConfig(components: string[]): any {
 }
 
 /**
- * Refactor components to be BudStack-compliant
+ * Refactor components to be BudStacks-compliant
  */
 async function refactorComponents(sourcePath: string): Promise<void> {
   const componentsDir = path.join(sourcePath, "components");
@@ -461,7 +461,7 @@ async function refactorComponentFile(filePath: string): Promise<void> {
 }
 
 /**
- * Refactor Header component to BudStack Navigation format
+ * Refactor Header component to BudStacks Navigation format
  */
 async function refactorHeaderComponent(filePath: string): Promise<void> {
   let content = await fs.readFile(filePath, "utf-8");
@@ -542,7 +542,7 @@ async function refactorHeaderComponent(filePath: string): Promise<void> {
 }
 
 /**
- * Refactor Footer component to BudStack format
+ * Refactor Footer component to BudStacks format
  */
 async function refactorFooterComponent(filePath: string): Promise<void> {
   let content = await fs.readFile(filePath, "utf-8");

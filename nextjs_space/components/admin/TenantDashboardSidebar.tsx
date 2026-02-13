@@ -130,7 +130,7 @@ export function TenantDashboardSidebar({
             <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
               <span className="text-indigo-600 font-bold text-lg">B</span>
             </div>
-            <h1 className="text-xl font-bold">BudStack</h1>
+            <h1 className="text-xl font-bold">BudStacks</h1>
           </div>
         )}
         <button

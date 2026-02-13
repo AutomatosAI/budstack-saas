@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
             description: "Default medical cannabis template",
             category: "medical",
             version: "1.0.0",
-            author: "BudStack",
+            author: "BudStacks",
             isActive: true,
           },
         });
@@ -268,7 +268,7 @@ export async function POST(req: NextRequest) {
       );
       sendEmail({
         to: email,
-        subject: "Welcome to BudStack - Your Store is Ready!",
+        subject: "Welcome to BudStacks - Your Store is Ready!",
         html,
         tenantId: tenant.id,
         templateName: "tenantWelcome",

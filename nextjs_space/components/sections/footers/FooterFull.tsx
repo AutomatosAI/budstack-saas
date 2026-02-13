@@ -120,7 +120,7 @@ export function FooterFull(props: SectionProps) {
             &copy; {year} {businessName}. All rights reserved.
           </p>
           <p className="text-xs text-white/30">
-            Powered by BudStack
+            Powered by BudStacks
           </p>
         </div>
       </div>

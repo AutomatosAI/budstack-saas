@@ -6,7 +6,7 @@ const testimonials = [
         name: "João Mendes",
         role: "NFT Holder, Portugal",
         quote:
-            "I went from buying my NFT to having a live store in under 10 minutes. Popcorn Media saved me months.",
+            "I went from buying my NFT to having a live store in under 10 minutes. BudStacks saved me months.",
     },
     {
         initials: "SK",
@@ -20,7 +20,7 @@ const testimonials = [
         name: "Emma Williams",
         role: "Independent Operator, UK",
         quote:
-            "€20,000 on developers couldn't integrate Dr. Green properly. Popcorn Media just works.",
+            "€20,000 on developers couldn't integrate Dr. Green properly. BudStacks just works.",
     },
 ];
 
@@ -39,7 +39,7 @@ export default function TestimonialsSection() {
                     <h2 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
                         Teams ship better with
                         <br />
-                        <span className="text-gradient">Popcorn Media</span>
+                        <span className="text-gradient">BudStacks</span>
                     </h2>
                     <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
                         Loved by product, engineering, and design teams.

@@ -6,7 +6,7 @@ const steps = [
         number: "01",
         title: "Franchise Application",
         description:
-            "Submit your franchise application with business details and ownership verification for Popcorn Media review",
+            "Submit your franchise application with business details and ownership verification for BudStacks review",
     },
     {
         number: "02",

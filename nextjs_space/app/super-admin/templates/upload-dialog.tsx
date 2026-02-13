@@ -151,7 +151,7 @@ export function UploadTemplateDialog() {
             )}
             {structureType === "lovable" && (
               <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-                <li>Will be automatically converted to BudStack format</li>
+                <li>Will be automatically converted to BudStacks format</li>
                 <li>Supports full Lovable.dev project structure</li>
                 <li>Converts React Router to Next.js</li>
                 <li>Extracts homepage components</li>
@@ -174,9 +174,9 @@ export function UploadTemplateDialog() {
               <SelectContent>
                 <SelectItem value="default">
                   <div className="flex flex-col items-start">
-                    <span className="font-medium">Default (BudStack)</span>
+                    <span className="font-medium">Default (BudStacks)</span>
                     <span className="text-xs text-gray-500">
-                      Already follows BudStack structure
+                      Already follows BudStacks structure
                     </span>
                   </div>
                 </SelectItem>

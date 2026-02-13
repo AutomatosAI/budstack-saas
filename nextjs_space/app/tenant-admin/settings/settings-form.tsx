@@ -114,7 +114,7 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                 disabled
                 className="flex-1 rounded-xl bg-slate-50"
               />
-              <span className="ml-3 font-medium text-muted-foreground">.budstack.to</span>
+              <span className="ml-3 font-medium text-muted-foreground">.budstacks.io</span>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               This is your permanent subdomain
@@ -163,7 +163,7 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
             className="mt-2 rounded-xl bg-slate-50"
           />
           <p className="text-xs text-muted-foreground mt-2">
-            This NFT verifies your license to operate on BudStack.io
+            This NFT verifies your license to operate on BudStacks.io
           </p>
         </div>
       </div>

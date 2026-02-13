@@ -84,7 +84,7 @@ export default function Navbar() {
                                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
                                             <Popcorn className="h-4 w-4 text-accent-foreground" />
                                         </div>
-                                        BudStack
+                                        BudStacks
                                     </SheetTitle>
                                 </SheetHeader>
                                 <div className="flex flex-col gap-4 mt-8">
@@ -107,7 +107,7 @@ export default function Navbar() {
                                 <Popcorn className="h-5 w-5 text-accent-foreground" />
                             </div>
                             <span className="font-sans-heading text-lg font-bold text-foreground hidden sm:inline-block">
-                                BudStack
+                                BudStacks
                             </span>
                         </Link>
                     </div>

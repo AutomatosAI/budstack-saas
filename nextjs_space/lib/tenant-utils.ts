@@ -15,12 +15,12 @@ export interface TenantUrlData {
 
 /**
  * Get tenant URL for display purposes
- * Uses path-based routing: budstack.to/store/{slug}
+ * Uses path-based routing: budstacks.io/store/{slug}
  *
  * @example
  * ```tsx
  * const url = getTenantUrl({ subdomain: 'healing-buds', customDomain: null });
- * // Returns: https://budstack.to/store/healing-buds
+ * // Returns: https://budstacks.io/store/healing-buds
  * ```
  */
 export function getTenantUrl(tenant: TenantUrlData): string {
@@ -30,6 +30,6 @@ export function getTenantUrl(tenant: TenantUrlData): string {
   }
 
   // Use path-based routing (primary method until subdomain DNS is configured)
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstack.to";
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
   return `https://${baseDomain}/store/${tenant.subdomain}`;
 }

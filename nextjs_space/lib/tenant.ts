@@ -148,7 +148,7 @@ export async function getTenantFromRequest(
     }
 
     // Extract subdomain from host
-    const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstack.to";
+    const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
     const subdomain = host.split(".")[0];
 
     // Check if it's a subdomain request
@@ -182,7 +182,7 @@ export async function getTenantFromRequest(
 
 /**
  * Get tenant URL for display purposes
- * Uses path-based routing: budstack.to/store/{slug}
+ * Uses path-based routing: budstacks.io/store/{slug}
  */
 export function getTenantUrl(tenant: Tenant): string {
   // If custom domain is configured, use it
@@ -191,6 +191,6 @@ export function getTenantUrl(tenant: Tenant): string {
   }
 
   // Use path-based routing (primary method until subdomain DNS is configured)
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstack.to";
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
   return `https://${baseDomain}/store/${tenant.subdomain}`;
 }

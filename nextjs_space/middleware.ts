@@ -57,8 +57,8 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // PRIORITY 2: Subdomain-based routing
-  if (!tenantFound && currentHost.endsWith('.budstack.to')) {
-    const subdomain = currentHost.replace('.budstack.to', '');
+  if (!tenantFound && currentHost.endsWith('.budstacks.io')) {
+    const subdomain = currentHost.replace('.budstacks.io', '');
     if (subdomain && subdomain !== 'www') {
       requestHeaders.set('x-tenant-subdomain', subdomain);
       tenantFound = true;
@@ -70,7 +70,7 @@ export default clerkMiddleware(async (auth, req) => {
     !tenantFound &&
     !currentHost.includes('localhost') &&
     !currentHost.includes('.abacusai.app') &&
-    !currentHost.includes('budstack.to') &&
+    !currentHost.includes('budstacks.io') &&
     !currentHost.startsWith('www.')
   ) {
     requestHeaders.set('x-tenant-custom-domain', currentHost);
