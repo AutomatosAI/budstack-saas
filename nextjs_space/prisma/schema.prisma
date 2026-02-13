@@ -377,6 +377,8 @@ model tenant_templates {
   isActive        Boolean   @default(true)
   isDraft         Boolean   @default(false)
   expiresAt       DateTime?
+  source          String    @default("cloned")
+  githubUrl       String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime
   templates       templates @relation(fields: [baseTemplateId], references: [id])
