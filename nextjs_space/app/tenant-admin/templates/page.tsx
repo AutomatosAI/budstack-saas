@@ -14,6 +14,7 @@ import { UploadTemplateDialog } from "./upload-dialog";
 import UpdateGitHubButton from "./update-github-button";
 import { ShareMarketplaceDialog } from "./share-marketplace-dialog";
 import WithdrawButton from "./withdraw-button";
+import ResubmitButton from "./resubmit-button";
 type ClonedTemplate = any;
 
 /** Sign an S3 key to a URL, or pass through if already a URL */
@@ -248,6 +249,20 @@ export default async function TemplatesPage() {
                                     {item.source === "custom" && (() => {
                                         const sub = submissionMap.get(item.id);
                                         const hasActiveSub = sub && ["pending", "changes_requested"].includes(sub.status);
+                                        if (sub?.status === "changes_requested") {
+                                            return (
+                                                <>
+                                                    <ResubmitButton
+                                                        templateId={item.id}
+                                                        templateName={item.templateName}
+                                                    />
+                                                    <WithdrawButton
+                                                        templateId={item.id}
+                                                        templateName={item.templateName}
+                                                    />
+                                                </>
+                                            );
+                                        }
                                         if (hasActiveSub) {
                                             return (
                                                 <WithdrawButton
@@ -318,19 +333,31 @@ export default async function TemplatesPage() {
                                             <h3 className="font-display font-bold text-foreground">
                                                 {template.name}
                                             </h3>
+                                            {template.sourceType === "COMMUNITY" && template.authorName && (
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    By {template.authorName}
+                                                </p>
+                                            )}
                                             <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
                                                 {template.description ||
                                                     "A professional template for your store."}
                                             </p>
                                         </div>
-                                        {template.isPremium && (
-                                            <Badge
-                                                variant="secondary"
-                                                className="bg-amber-100 text-amber-800 hover:bg-amber-200"
-                                            >
-                                                Premium
-                                            </Badge>
-                                        )}
+                                        <div className="flex gap-1 flex-shrink-0">
+                                            {template.sourceType === "COMMUNITY" ? (
+                                                <Badge className="bg-teal-500 hover:bg-teal-600 border-none">
+                                                    Community
+                                                </Badge>
+                                            ) : null}
+                                            {template.isPremium && (
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="bg-amber-100 text-amber-800 hover:bg-amber-200"
+                                                >
+                                                    Premium
+                                                </Badge>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="p-4 border-t border-slate-100 bg-slate-50/50">
