@@ -4,37 +4,15 @@ import { prisma } from "@/lib/db";
 import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import fetch from "node-fetch";
-import AdmZip from "adm-zip";
 import { convertLovableTemplate } from "@/lib/lovable-converter";
 import { randomUUID } from "crypto";
 import { uploadDirectoryToS3 } from "@/lib/s3";
-
-interface TemplateConfig {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  tags: string[];
-  version: string;
-  author?: string;
-  preview_image?: string;
-  compatibility?: {
-    platform?: string;
-    nextjs?: string;
-    features?: string[];
-  };
-  features?: string[];
-  performance?: {
-    lighthouse_score?: number;
-  };
-  accessibility?: {
-    wcag_level?: string;
-  };
-  installation?: {
-    steps?: string[];
-  };
-}
+import {
+  downloadGitHubRepo,
+  generateSlug,
+  cleanupTempDir,
+  type TemplateConfig,
+} from "@/lib/template-utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -77,76 +55,18 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Template Upload] Structure type: ${structureType}`);
 
-    // Validate GitHub URL format
-    const githubPattern = /^https:\/\/github\.com\/([\w-]+)\/([\w-]+)(\.git)?$/;
-    const match = githubUrl.replace(/\.git$/, "").match(githubPattern);
-
-    if (!match) {
+    // Download and extract repository using shared utility
+    let extractPath: string;
+    try {
+      extractPath = await downloadGitHubRepo(githubUrl, branch);
+    } catch (dlError: any) {
       return NextResponse.json(
-        {
-          error:
-            "Invalid GitHub URL format. Expected: https://github.com/username/repo",
-        },
+        { error: dlError.message },
         { status: 400 },
       );
     }
 
-    const [, owner, repo] = match;
-    console.log(`[Template Upload] Downloading from GitHub: ${owner}/${repo}`);
-
-    // Create temporary directory for download
-    const tempDir = path.join("/tmp", `template-${Date.now()}`);
-    const zipPath = path.join(tempDir, "repo.zip");
-    await fs.mkdir(tempDir, { recursive: true });
-
     try {
-      // Download repository as ZIP — try branches in order of priority
-      const branchesToTry = [
-        ...(branch ? [branch] : []),
-        "main",
-        "master",
-      ];
-
-      let downloaded = false;
-      let usedBranch = "";
-
-      for (const branchName of branchesToTry) {
-        const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${branchName}.zip`;
-        console.log(`[Template Upload] Trying branch '${branchName}': ${zipUrl}`);
-
-        const response = await fetch(zipUrl);
-        if (response.ok) {
-          const buffer = await response.buffer();
-          await fs.writeFile(zipPath, buffer);
-          downloaded = true;
-          usedBranch = branchName;
-          break;
-        }
-      }
-
-      if (!downloaded) {
-        throw new Error(
-          `Failed to download repository. Tried branches: ${branchesToTry.join(", ")}`,
-        );
-      }
-
-      console.log(`[Template Upload] ZIP downloaded from branch '${usedBranch}'`);
-
-      // Extract ZIP
-      console.log("[Template Upload] Extracting ZIP...");
-      const zip = new AdmZip(zipPath);
-      zip.extractAllTo(tempDir, true);
-
-      // Find the extracted folder (GitHub adds repo-name-branch format)
-      const extractedDirs = await fs.readdir(tempDir);
-      const repoDir = extractedDirs.find((dir) => dir.startsWith(`${repo}-`));
-
-      if (!repoDir) {
-        throw new Error("Could not find extracted repository directory");
-      }
-
-      const extractPath = path.join(tempDir, repoDir);
-      console.log(`[Template Upload] Extracted to: ${extractPath}`);
 
       // Convert Lovable template if needed
       if (structureType === "lovable") {
@@ -182,17 +102,6 @@ export async function POST(req: NextRequest) {
 
       const configContent = await fs.readFile(configPath, "utf-8");
       const config: TemplateConfig = JSON.parse(configContent);
-
-      // Generate slug from user-provided template name
-      const generateSlug = (name: string): string => {
-        return name
-          .toLowerCase()
-          .trim()
-          .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
-          .replace(/\s+/g, "-") // Replace spaces with hyphens
-          .replace(/-+/g, "-") // Remove consecutive hyphens
-          .replace(/^-|-$/g, ""); // Remove leading/trailing hyphens
-      };
 
       const userProvidedSlug = generateSlug(templateName.trim());
 
@@ -316,7 +225,7 @@ export async function POST(req: NextRequest) {
 
       // Clean up temp directory
       console.log("[Template Upload] Cleaning up temporary files...");
-      await fs.rm(tempDir, { recursive: true, force: true });
+      await cleanupTempDir(extractPath);
 
       // Auto-sync template registry
       console.log("[Template Upload] Syncing template registry...");
@@ -352,14 +261,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (uploadError: any) {
       console.error("[Template Upload] Upload error:", uploadError.message);
-
-      // Clean up on error
-      try {
-        await fs.rm(tempDir, { recursive: true, force: true });
-      } catch {
-        // Ignore cleanup errors
-      }
-
+      await cleanupTempDir(extractPath);
       throw uploadError;
     }
   } catch (error: any) {
