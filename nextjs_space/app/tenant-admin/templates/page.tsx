@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import TemplateCloneButton from "./clone-button";
 import ActivateButton from "./activate-button";
 import DeleteButton from "./delete-button";
+import { UploadTemplateDialog } from "./upload-dialog";
+import UpdateGitHubButton from "./update-github-button";
 type ClonedTemplate = any;
 
 /** Sign an S3 key to a URL, or pass through if already a URL */
@@ -42,7 +44,7 @@ export default async function TemplatesPage() {
 
     const tenant = localUser.tenants;
 
-    // 1. Fetch Tenant's Templates
+    // 1. Fetch Tenant's Templates (include source for Custom/Cloned badges)
     const myTemplatesRaw = await prisma.tenant_templates.findMany({
         where: { tenantId: tenant.id },
         include: {
@@ -111,6 +113,9 @@ export default async function TemplatesPage() {
 
                 {/* MY TEMPLATES TAB */}
                 <TabsContent value="my-templates">
+                    <div className="flex justify-end mb-6">
+                        <UploadTemplateDialog />
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {myTemplates.length === 0 && (
                             <div className="col-span-full card-floating p-12 text-center">
@@ -147,13 +152,22 @@ export default async function TemplatesPage() {
                                             <Layout className="h-12 w-12 opacity-20" />
                                         </div>
                                     )}
-                                    {item.isActive && (
-                                        <div className="absolute top-3 right-3">
+                                    <div className="absolute top-3 right-3 flex gap-1">
+                                        {item.isActive && (
                                             <Badge className="bg-emerald-500 hover:bg-emerald-600 border-none">
                                                 Active
                                             </Badge>
-                                        </div>
-                                    )}
+                                        )}
+                                        {item.source === "custom" ? (
+                                            <Badge className="bg-purple-500 hover:bg-purple-600 border-none">
+                                                Custom
+                                            </Badge>
+                                        ) : (
+                                            <Badge className="bg-blue-500 hover:bg-blue-600 border-none">
+                                                Cloned
+                                            </Badge>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="p-5">
                                     <h3 className="font-display font-bold text-foreground">
@@ -166,7 +180,7 @@ export default async function TemplatesPage() {
                                         Based on: {item.templatesId}
                                     </p>
                                 </div>
-                                <div className="flex gap-2 p-4 border-t border-slate-100 bg-slate-50/50">
+                                <div className="flex flex-wrap gap-2 p-4 border-t border-slate-100 bg-slate-50/50">
                                     <Link href="/tenant-admin/branding" className="flex-1">
                                         <Button
                                             variant="outline"
@@ -187,6 +201,12 @@ export default async function TemplatesPage() {
                                         templateName={item.templateName}
                                         isActive={item.isActive}
                                     />
+                                    {item.source === "custom" && (
+                                        <UpdateGitHubButton
+                                            templateId={item.id}
+                                            templateName={item.templateName}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         ))}
