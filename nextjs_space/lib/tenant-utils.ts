@@ -15,12 +15,19 @@ export interface TenantUrlData {
 
 /**
  * Get tenant URL for display purposes
- * Uses path-based routing: budstacks.io/store/{slug}
+ * Uses subdomain routing in production: {subdomain}.budstacks.io
+ * Uses path-based routing in development: /store/{subdomain}
  *
  * @example
  * ```tsx
- * const url = getTenantUrl({ subdomain: 'healing-buds', customDomain: null });
- * // Returns: https://budstacks.io/store/healing-buds
+ * // Development:
+ * getTenantUrl({ subdomain: 'healing-buds', customDomain: null }) // -> /store/healing-buds
+ *
+ * // Production:
+ * getTenantUrl({ subdomain: 'healing-buds', customDomain: null }) // -> https://healing-buds.budstacks.io
+ *
+ * // Custom Domain:
+ * getTenantUrl({ subdomain: 'healing-buds', customDomain: 'example.com' }) // -> https://example.com
  * ```
  */
 export function getTenantUrl(tenant: TenantUrlData): string {

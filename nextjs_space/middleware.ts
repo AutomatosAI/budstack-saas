@@ -47,7 +47,7 @@ export default clerkMiddleware(async (auth, req) => {
   const currentHost = hostname.replace(/(:\d+)/, '');
   const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
   const isLocalhost = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-  const isPreview = pathname.startsWith('/store/preview');
+  const isLocalhost = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
 
   let tenantFound = false;
 

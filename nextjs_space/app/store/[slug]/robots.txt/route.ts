@@ -23,12 +23,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Build base URL - use custom domain if set, otherwise subdomain
+    // Build base URL - use custom domain if set, otherwise subdomain
+    const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
     const baseUrl = tenant.customDomain
         ? `https://${tenant.customDomain}`
-        : `https://${tenant.subdomain}.budstacks.io`;
+        : `https://${tenant.subdomain}.${baseDomain}`;
 
     // Build robots.txt content
-    const robotsTxt = `# Robots.txt for ${tenant.customDomain || tenant.subdomain + '.budstacks.io'}
+    const robotsTxt = `# Robots.txt for ${tenant.customDomain || tenant.subdomain + '.' + baseDomain}
 # Generated dynamically by BudStacks
 
 User-agent: *

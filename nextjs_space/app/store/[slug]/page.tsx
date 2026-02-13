@@ -399,9 +399,10 @@ export async function generateMetadata() {
     `Premium medical cannabis products and consultations from ${tenant.businessName}`;
 
   // Build base URL for OG images
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
   const baseUrl = tenantWithSeo?.customDomain
     ? `https://${tenantWithSeo.customDomain}`
-    : `https://${tenantWithSeo?.subdomain || tenant.subdomain}.budstacks.io`;
+    : `https://${tenantWithSeo?.subdomain || tenant.subdomain}.${baseDomain}`;
 
   return {
     title,

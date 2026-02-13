@@ -67,10 +67,27 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
 
   let baseStorePath = "/store/healingbuds";
   if (tenant) {
-    baseStorePath = getTenantUrl({
+    const url = getTenantUrl({
       subdomain: tenant.subdomain,
       customDomain: tenant.customDomain,
     });
+    // If it's a full URL (prod/custom domain), parse it
+    try {
+      if (url.startsWith('http')) {
+        const urlObj = new URL(url);
+        // Only use pathname if we are on the same domain (SPA nav),
+        // otherwise keep full URL for cross-domain nav
+        if (typeof window !== 'undefined' && window.location.hostname === urlObj.hostname) {
+          baseStorePath = urlObj.pathname + urlObj.search + urlObj.hash;
+        } else {
+          baseStorePath = url;
+        }
+      } else {
+        baseStorePath = url;
+      }
+    } catch (e) {
+      baseStorePath = url;
+    }
   } else if (storeMatch) {
     baseStorePath = `/store/${storeMatch[1]}`;
   }
