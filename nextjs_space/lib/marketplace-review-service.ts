@@ -5,6 +5,7 @@
  * marketplace submissions.
  */
 
+import { randomUUID } from "crypto";
 import { prisma } from "./db";
 import { copyS3Directory, getJsonFromS3, getTextFromS3 } from "./s3";
 import { deleteS3Directory } from "./s3";
@@ -140,6 +141,7 @@ export async function approveSubmission(
   // Create the marketplace template record
   const template = await prisma.templates.create({
     data: {
+      id: randomUUID(),
       name: submission.templateName,
       slug,
       description: submission.description,

@@ -14,6 +14,7 @@ import {
   generateSlug,
   cleanupTempDir,
 } from "./template-utils";
+import { randomUUID } from "crypto";
 import fs from "fs/promises";
 import path from "path";
 
@@ -54,6 +55,7 @@ export async function uploadFromGitHub(
   if (!customBase) {
     customBase = await prisma.templates.create({
       data: {
+        id: randomUUID(),
         name: "Custom Base",
         slug: "custom-base",
         description: "Placeholder base template for custom tenant uploads",
