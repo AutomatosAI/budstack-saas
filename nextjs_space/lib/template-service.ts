@@ -13,6 +13,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import { deleteS3Directory } from "./s3";
 import * as fs from "fs/promises";
 import * as path from "path";
 
@@ -279,25 +280,36 @@ export async function deleteTenantTemplate(tenantTemplateId: string) {
       );
     }
 
-    // Delete S3 assets (optional - for cleanup)
+    // Delete S3 assets
     if (template.s3Path) {
-      const assetsToDelete = [
-        template.logoUrl,
-        template.heroImageUrl,
-        template.faviconUrl,
-      ].filter(Boolean);
-
-      for (const url of assetsToDelete) {
+      if (template.source === "custom") {
+        // Custom templates: delete entire S3 directory
         try {
-          const key = url!.split(".amazonaws.com/")[1];
-          await s3Client.send(
-            new DeleteObjectCommand({
-              Bucket: BUCKET_NAME,
-              Key: key,
-            }),
-          );
+          const deleted = await deleteS3Directory(`${template.s3Path}/`);
+          console.log(`Deleted ${deleted} S3 objects for custom template`);
         } catch (error) {
-          console.warn(`Failed to delete S3 asset: ${url}`, error);
+          console.warn(`Failed to delete S3 directory: ${template.s3Path}`, error);
+        }
+      } else {
+        // Cloned templates: delete individual asset files
+        const assetsToDelete = [
+          template.logoUrl,
+          template.heroImageUrl,
+          template.faviconUrl,
+        ].filter(Boolean);
+
+        for (const url of assetsToDelete) {
+          try {
+            const key = url!.split(".amazonaws.com/")[1];
+            await s3Client.send(
+              new DeleteObjectCommand({
+                Bucket: BUCKET_NAME,
+                Key: key,
+              }),
+            );
+          } catch (error) {
+            console.warn(`Failed to delete S3 asset: ${url}`, error);
+          }
         }
       }
     }

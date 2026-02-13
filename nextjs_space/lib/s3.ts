@@ -2,6 +2,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   ListObjectsV2Command,
   CopyObjectCommand,
 } from "@aws-sdk/client-s3";
@@ -199,4 +200,42 @@ export async function copyS3Directory(
   } while (continuationToken);
 
   return copyCount;
+}
+
+/**
+ * Delete all objects under an S3 prefix (directory-level delete)
+ */
+export async function deleteS3Directory(prefix: string): Promise<number> {
+  const s3Client = await createS3Client();
+  const { bucketName } = await getBucketConfig();
+
+  let deleteCount = 0;
+  let continuationToken: string | undefined;
+
+  do {
+    const listResponse = await s3Client.send(
+      new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    const objects = listResponse.Contents || [];
+    if (objects.length > 0) {
+      await s3Client.send(
+        new DeleteObjectsCommand({
+          Bucket: bucketName,
+          Delete: {
+            Objects: objects.map((obj) => ({ Key: obj.Key! })),
+          },
+        }),
+      );
+      deleteCount += objects.length;
+    }
+
+    continuationToken = listResponse.NextContinuationToken;
+  } while (continuationToken);
+
+  return deleteCount;
 }
