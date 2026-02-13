@@ -5,7 +5,7 @@ import { getFileUrl } from "@/lib/s3";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, Layout } from "lucide-react";
+import { Palette, Layout, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import TemplateCloneButton from "./clone-button";
 import ActivateButton from "./activate-button";
@@ -229,6 +229,14 @@ export default async function TemplatesPage() {
                                             Customize
                                         </Button>
                                     </Link>
+                                    {item.source === "custom" && (
+                                        <Link href={`/store/${tenant.subdomain}?preview=${item.id}`} target="_blank">
+                                            <Button variant="outline" size="sm" className="rounded-xl">
+                                                <Eye className="mr-2 h-4 w-4" />
+                                                Preview
+                                            </Button>
+                                        </Link>
+                                    )}
                                     <ActivateButton
                                         templateId={item.id}
                                         templateName={item.templateName}

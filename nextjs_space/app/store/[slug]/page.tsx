@@ -19,11 +19,18 @@ import { EducationalContent } from "@/components/home/educational-content";
 import { TestimonialsSlider } from "@/components/home/testimonials-slider";
 import { CallToAction } from "@/components/home/call-to-action";
 
-export default async function TenantStorePage() {
+export default async function TenantStorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string }>;
+}) {
   const tenant = await getCurrentTenant();
+  const resolvedSearchParams = await searchParams;
+  const previewTemplateId = resolvedSearchParams?.preview || null;
   console.log(
     "[DEBUG] TenantStorePage: Resolved tenant:",
     tenant ? tenant.subdomain : "null",
+    previewTemplateId ? `(preview: ${previewTemplateId})` : "",
   );
 
   if (!tenant) {
@@ -43,6 +50,18 @@ export default async function TenantStorePage() {
       },
     },
   });
+
+  // If preview mode, load the specified template instead
+  let previewTenantTemplate: any = null;
+  if (previewTemplateId && tenantWithTemplate) {
+    previewTenantTemplate = await prisma.tenant_templates.findFirst({
+      where: {
+        id: previewTemplateId,
+        tenantId: tenant.id, // Security: verify it belongs to this tenant
+      },
+      include: { templates: true },
+    });
+  }
 
   if (!tenantWithTemplate) {
     console.error(
@@ -67,9 +86,12 @@ export default async function TenantStorePage() {
   const contactUrl = `${baseUrl}/contact`;
   const aboutUrl = `${baseUrl}/about`;
 
-  // NEW: Check if tenant has an active TenantTemplate
-  if (tenantWithTemplate.activeTenantTemplate) {
-    const tenantTemplate = tenantWithTemplate.activeTenantTemplate;
+  // Determine which template to use: preview template or active template
+  const effectiveTemplate = previewTenantTemplate || tenantWithTemplate.activeTenantTemplate;
+  const isPreview = !!previewTenantTemplate;
+
+  if (effectiveTemplate) {
+    const tenantTemplate = effectiveTemplate;
     const baseTemplate = tenantTemplate.templates;
 
     // Fetch latest posts for the template
@@ -252,12 +274,19 @@ export default async function TenantStorePage() {
       };
 
       return (
-        <TemplateRenderer
-          layout={layout}
-          sectionProps={mergedProps}
-          customCss={customCss}
-          renderChrome={false}
-        />
+        <>
+          {isPreview && (
+            <div className="bg-amber-500 text-white text-center py-2 px-4 text-sm font-medium sticky top-0 z-50">
+              Template Preview — Not yet active
+            </div>
+          )}
+          <TemplateRenderer
+            layout={layout}
+            sectionProps={mergedProps}
+            customCss={customCss}
+            renderChrome={false}
+          />
+        </>
       );
     }
 
@@ -267,7 +296,16 @@ export default async function TenantStorePage() {
     const TemplateComponent = templateSlug ? TEMPLATE_COMPONENTS[templateSlug] : undefined;
 
     if (TemplateComponent) {
-      return <TemplateComponent {...templateProps} renderChrome={false} />;
+      return (
+        <>
+          {isPreview && (
+            <div className="bg-amber-500 text-white text-center py-2 px-4 text-sm font-medium sticky top-0 z-50">
+              Template Preview — Not yet active
+            </div>
+          )}
+          <TemplateComponent {...templateProps} renderChrome={false} />
+        </>
+      );
     }
 
     console.warn('[StorePage] No layout.json or legacy template found.', {

@@ -19,6 +19,9 @@ export default async function SuperAdminDashboard() {
     where: { isActive: false },
   });
   const totalUsers = await prisma.users.count();
+  const pendingSubmissions = await prisma.marketplace_submissions.count({
+    where: { status: "pending" },
+  });
 
   return (
     <OverviewPanel
@@ -26,6 +29,7 @@ export default async function SuperAdminDashboard() {
       activeTenants={activeTenants}
       pendingOnboarding={pendingOnboarding}
       totalUsers={totalUsers}
+      pendingSubmissions={pendingSubmissions}
     />
   );
 }

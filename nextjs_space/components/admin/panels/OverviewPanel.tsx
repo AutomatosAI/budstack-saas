@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, TrendingUp, UserPlus, Users, Activity, ArrowRight, LayoutDashboard } from "lucide-react";
+import { Building2, TrendingUp, UserPlus, Users, Activity, ArrowRight, LayoutDashboard, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -9,6 +9,7 @@ interface OverviewPanelProps {
   activeTenants: number;
   pendingOnboarding: number;
   totalUsers: number;
+  pendingSubmissions?: number;
 }
 
 /**
@@ -114,6 +115,7 @@ export function OverviewPanel({
   activeTenants,
   pendingOnboarding,
   totalUsers,
+  pendingSubmissions,
 }: OverviewPanelProps) {
   return (
     <div className="space-y-8">
@@ -169,6 +171,17 @@ export function OverviewPanel({
           icon={Users}
           iconBg="bg-purple-600"
         />
+        {pendingSubmissions !== undefined && (
+          <StatCard
+            title="Template Submissions"
+            value={pendingSubmissions}
+            description="Awaiting marketplace review"
+            icon={FileCheck}
+            iconBg="bg-amber-500"
+            accentValue={pendingSubmissions > 0 ? "Review" : undefined}
+            accentColor="text-amber-500"
+          />
+        )}
       </div>
 
       {/* Activity Stream Card */}
@@ -247,6 +260,14 @@ export function OverviewPanel({
             View All Tenants
           </Button>
         </Link>
+        {pendingSubmissions !== undefined && pendingSubmissions > 0 && (
+          <Link href="/super-admin/templates">
+            <Button variant="outline" size="lg" className="rounded-xl">
+              <FileCheck className="mr-2 h-4 w-4" />
+              Review Submissions ({pendingSubmissions})
+            </Button>
+          </Link>
+        )}
       </div>
     </div>
   );
