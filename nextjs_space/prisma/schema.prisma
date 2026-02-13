@@ -341,8 +341,11 @@ model templates {
   thumbnailUrl     String?
   usageCount       Int                @default(0)
   version          String             @default("1.0.0")
+  authorTenantId   String?
+  authorName       String?
   tenant_templates tenant_templates[]
   tenants          tenants[]
+  authorTenant     tenants?           @relation("AuthoredTemplates", fields: [authorTenantId], references: [id])
 }
 
 model tenant_branding {
@@ -420,6 +423,7 @@ model tenants {
   tenantTemplates        tenant_templates[]     @relation("tenant_templates_tenantIdTotenants")
   activeTenantTemplate   tenant_templates?      @relation("tenants_activeTenantTemplateIdTotenant_templates", fields: [activeTenantTemplateId], references: [id])
   template               templates?             @relation(fields: [templateId], references: [id])
+  authoredTemplates      templates[]            @relation("AuthoredTemplates")
   users                  users[]
 }
 
