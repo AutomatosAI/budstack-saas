@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant, getTenantUrl } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
 import { getFileUrl, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
 
@@ -60,10 +60,12 @@ export default async function TenantStorePage() {
   }
 
   // URLs for template props
-  const consultationUrl = `/store/${tenantWithTemplate.subdomain}/consultation`;
-  const productsUrl = `/store/${tenantWithTemplate.subdomain}/products`;
-  const contactUrl = `/store/${tenantWithTemplate.subdomain}/contact`;
-  const aboutUrl = `/store/${tenantWithTemplate.subdomain}/about`;
+  // URLs for template props
+  const baseUrl = getTenantUrl(tenantWithTemplate);
+  const consultationUrl = `${baseUrl}/consultation`;
+  const productsUrl = `${baseUrl}/products`;
+  const contactUrl = `${baseUrl}/contact`;
+  const aboutUrl = `${baseUrl}/about`;
 
   // NEW: Check if tenant has an active TenantTemplate
   if (tenantWithTemplate.activeTenantTemplate) {

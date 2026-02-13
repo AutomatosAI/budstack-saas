@@ -20,6 +20,7 @@ import {
 import { CartDropdown } from "./cart-dropdown";
 // import { LanguageSwitcher } from './language-switcher';
 import { useLanguage } from "@/lib/i18n";
+import { getTenantUrl } from "@/lib/tenant-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,8 +62,18 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
 
   // Detect if we're in a tenant store
   const storeMatch = pathname.match(/^\/store\/([^\/]+)/);
-  const tenantSlug = storeMatch ? storeMatch[1] : "healingbuds";
-  const baseStorePath = `/store/${tenantSlug}`;
+  // const tenantSlug = storeMatch ? storeMatch[1] : "healingbuds";
+  // const baseStorePath = `/store/${tenantSlug}`;
+
+  let baseStorePath = "/store/healingbuds";
+  if (tenant) {
+    baseStorePath = getTenantUrl({
+      subdomain: tenant.subdomain,
+      customDomain: tenant.customDomain,
+    });
+  } else if (storeMatch) {
+    baseStorePath = `/store/${storeMatch[1]}`;
+  }
 
   useEffect(() => {
     const handleScroll = () => {

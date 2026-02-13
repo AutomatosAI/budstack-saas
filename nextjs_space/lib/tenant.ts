@@ -190,7 +190,12 @@ export function getTenantUrl(tenant: Tenant): string {
     return `https://${tenant.customDomain}`;
   }
 
-  // Use path-based routing (primary method until subdomain DNS is configured)
+  // Use path-based routing for development
+  if (process.env.NODE_ENV === 'development') {
+    return `/store/${tenant.subdomain}`;
+  }
+
+  // Use subdomain-based routing for production
   const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
-  return `https://${baseDomain}/store/${tenant.subdomain}`;
+  return `https://${tenant.subdomain}.${baseDomain}`;
 }
