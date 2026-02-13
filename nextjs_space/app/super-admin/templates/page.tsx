@@ -3,11 +3,13 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { getFileUrl } from '@/lib/s3';
 import { Button } from '@/components/ui/button';
-import { Eye, Layout } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Eye, Layout, ClipboardList } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { UploadTemplateDialog } from './upload-dialog';
 import { TemplateActions } from './template-actions';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default async function TemplatesManagementPage() {
   const user = await currentUser();
@@ -36,6 +38,15 @@ export default async function TemplatesManagementPage() {
     })
   );
 
+  // Fetch community submissions for the tab
+  const pendingSubmissions = await prisma.marketplace_submissions.findMany({
+    where: { status: { in: ["pending", "changes_requested"] } },
+    include: {
+      tenant: { select: { businessName: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
   return (
     <div className="space-y-8">
       {/* Centered Header */}
@@ -55,6 +66,27 @@ export default async function TemplatesManagementPage() {
         </div>
       </div>
 
+      <Tabs defaultValue="templates" className="w-full">
+        <TabsList className="mb-8 bg-white border border-slate-200 rounded-xl p-1">
+          <TabsTrigger
+            value="templates"
+            className="rounded-lg data-[state=active]:bg-accent data-[state=active]:text-white"
+          >
+            All Templates
+          </TabsTrigger>
+          <TabsTrigger
+            value="submissions"
+            className="rounded-lg data-[state=active]:bg-accent data-[state=active]:text-white"
+          >
+            Community Submissions {pendingSubmissions.length > 0 && (
+              <Badge className="ml-2 bg-yellow-500 hover:bg-yellow-600 border-none text-xs">
+                {pendingSubmissions.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="templates">
       {/* Templates Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {templatesWithSignedUrls.map((template: any) => (
@@ -177,6 +209,82 @@ export default async function TemplatesManagementPage() {
           </p>
         </div>
       )}
+        </TabsContent>
+
+        {/* Community Submissions Tab */}
+        <TabsContent value="submissions">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pendingSubmissions.map((sub: any) => {
+              const statusConfig: Record<string, { label: string; className: string }> = {
+                pending: { label: "Pending Review", className: "bg-yellow-500 hover:bg-yellow-600" },
+                changes_requested: { label: "Changes Requested", className: "bg-orange-500 hover:bg-orange-600" },
+              };
+              const config = statusConfig[sub.status] || { label: sub.status, className: "bg-slate-400" };
+              return (
+                <div key={sub.id} className="card-floating overflow-hidden">
+                  <div className="p-5 border-b border-slate-100">
+                    <div className="flex justify-between items-start mb-3">
+                      <Badge className={config.className}>
+                        {config.label}
+                      </Badge>
+                      {sub.category && (
+                        <Badge variant="outline" className="bg-white border-slate-300 text-slate-700">
+                          {sub.category}
+                        </Badge>
+                      )}
+                    </div>
+                    <h3 className="font-display text-lg font-bold text-foreground">
+                      {sub.templateName}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      By {sub.tenant.businessName}
+                    </p>
+                    {sub.description && (
+                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                        {sub.description}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Submitted {new Date(sub.createdAt).toLocaleDateString()}
+                    </p>
+                    {sub.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {sub.tags.slice(0, 4).map((tag: string) => (
+                          <Badge key={tag} variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <Link href={`/super-admin/templates/submissions/${sub.id}`}>
+                      <Button size="sm" className="w-full rounded-xl bg-blue-600 hover:bg-blue-700">
+                        <ClipboardList className="mr-2 h-4 w-4" />
+                        Review
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+
+            {pendingSubmissions.length === 0 && (
+              <div className="col-span-full card-floating p-12 text-center">
+                <div className="icon-badge mx-auto mb-4">
+                  <ClipboardList className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="font-display text-lg font-bold text-foreground mb-2">
+                  No Submissions to Review
+                </h3>
+                <p className="text-muted-foreground">
+                  When tenants share their custom templates, they will appear here for review.
+                </p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Info Box */}
       <div className="card-floating p-8">
