@@ -67,36 +67,34 @@ export function TemplateActions({
 
   return (
     <>
-      <div className="flex gap-2 pt-2 border-t">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowEditDialog(true)}
-          title="Edit template"
-          className="rounded-full"
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-        {metadata?.githubUrl && (
-          <UpdateGitHubButton
-            templateId={templateId}
-            templateName={templateName}
-          />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setShowEditDialog(true)}
+        title="Upload preview image"
+        className="rounded-full"
+      >
+        <Edit className="h-4 w-4" />
+      </Button>
+      {metadata?.githubUrl && (
+        <UpdateGitHubButton
+          templateId={templateId}
+          templateName={templateName}
+        />
+      )}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setShowDeleteDialog(true)}
+        disabled={isDeleting}
+        className="text-red-600 hover:text-red-700 rounded-full"
+      >
+        {isDeleting ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Trash2 className="h-4 w-4" />
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowDeleteDialog(true)}
-          disabled={isDeleting}
-          className="text-red-600 hover:text-red-700 rounded-full"
-        >
-          {isDeleting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Trash2 className="h-4 w-4" />
-          )}
-        </Button>
-      </div>
+      </Button>
 
       <EditTemplateDialog
         templateId={templateId}

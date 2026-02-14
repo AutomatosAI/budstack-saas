@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { getFileUrl } from '@/lib/s3';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, Layout, ClipboardList } from 'lucide-react';
+import { Eye, Layout, ClipboardList, ImageIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { UploadTemplateDialog } from './upload-dialog';
 import { TemplateActions } from './template-actions';
@@ -95,8 +95,8 @@ export default async function TemplatesManagementPage() {
             className="card-floating overflow-hidden group"
           >
             {/* Preview Image */}
-            {template.signedPreviewUrl && (
-              <div className="relative w-full aspect-video bg-slate-100">
+            <div className="relative w-full aspect-video bg-slate-100">
+              {template.signedPreviewUrl ? (
                 <Image
                   src={template.signedPreviewUrl}
                   alt={`${template.name} preview`}
@@ -104,108 +104,98 @@ export default async function TemplatesManagementPage() {
                   className="object-cover"
                   unoptimized
                 />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                  <ImageIcon className="h-12 w-12 opacity-20" />
+                </div>
+              )}
+              {/* Top-left overlay icons: Preview, Edit photo */}
+              <div className="absolute top-3 left-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {template.slug && (
+                  <Link href={`/store/preview/${template.slug}`} target="_blank">
+                    <button
+                      className="h-8 w-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+                      title="Preview"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                  </Link>
+                )}
               </div>
-            )}
-            <div className="border-b border-slate-100 p-5">
-              <div className="flex justify-between items-start mb-3">
+              {/* Top-right badges */}
+              <div className="absolute top-3 right-3 flex gap-1">
                 <Badge
                   className={
                     template.isActive
-                      ? "bg-emerald-500 hover:bg-emerald-600"
-                      : "bg-slate-400"
+                      ? "bg-emerald-500 hover:bg-emerald-600 border-none"
+                      : "bg-slate-400 border-none"
                   }
                 >
                   {template.isActive ? "Active" : "Inactive"}
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="bg-white border-slate-300 text-slate-700"
+                  className="bg-white/90 border-slate-300 text-slate-700"
                 >
                   {template.category}
                 </Badge>
               </div>
+            </div>
+            <div className="p-5">
               <h3 className="font-display text-xl font-bold text-foreground group-hover:text-accent transition-colors">
                 {template.name}
               </h3>
               <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
                 {template.description}
               </p>
-            </div>
-            <div className="p-5">
-              <div className="space-y-4">
-                {/* Metadata */}
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-accent"></div>
-                    <span className="text-muted-foreground">v{template.version}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                    <span className="text-muted-foreground">
-                      {template.usageCount} tenant(s)
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                    <span className="text-muted-foreground">
-                      {template.author || "BudStacks"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                    <span className="text-muted-foreground">
-                      {template.downloadCount} downloads
-                    </span>
-                  </div>
+              {/* Metadata */}
+              <div className="grid grid-cols-2 gap-3 text-sm mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-accent"></div>
+                  <span className="text-muted-foreground">v{template.version}</span>
                 </div>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2">
-                  {template.tags.slice(0, 4).map((tag: string) => (
-                    <Badge
-                      key={tag}
-                      variant="outline"
-                      className="text-xs bg-blue-50 border-blue-200 text-blue-700"
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  <span className="text-muted-foreground">
+                    {template.usageCount} tenant(s)
+                  </span>
                 </div>
-
-                {/* Actions */}
-                <div className="space-y-2 pt-2">
-                  {template.slug ? (
-                    <Link href={`/store/preview/${template.slug}`} target="_blank">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full rounded-xl"
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Preview
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full rounded-xl"
-                      disabled
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Preview
-                    </Button>
-                  )}
-                  <TemplateActions
-                    templateId={template.id}
-                    templateName={template.name}
-                    usageCount={template.usageCount}
-                    previewUrl={template.signedPreviewUrl}
-                    slug={template.slug}
-                    metadata={template.metadata as Record<string, any> | null}
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                  <span className="text-muted-foreground">
+                    {template.author || "BudStacks"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  <span className="text-muted-foreground">
+                    {template.downloadCount} downloads
+                  </span>
                 </div>
               </div>
+              {/* Tags */}
+              <div className="flex flex-wrap gap-2 mt-3">
+                {template.tags.slice(0, 4).map((tag: string) => (
+                  <Badge
+                    key={tag}
+                    variant="outline"
+                    className="text-xs bg-blue-50 border-blue-200 text-blue-700"
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            {/* Actions — single row */}
+            <div className="flex flex-wrap gap-2 p-4 border-t border-slate-100 bg-slate-50/50">
+              <TemplateActions
+                templateId={template.id}
+                templateName={template.name}
+                usageCount={template.usageCount}
+                previewUrl={template.signedPreviewUrl}
+                slug={template.slug}
+                metadata={template.metadata as Record<string, any> | null}
+              />
             </div>
           </div>
         ))}
