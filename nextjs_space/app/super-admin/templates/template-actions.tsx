@@ -76,12 +76,10 @@ export function TemplateActions({
       >
         <Edit className="h-4 w-4" />
       </Button>
-      {metadata?.githubUrl && (
-        <UpdateGitHubButton
-          templateId={templateId}
-          templateName={templateName}
-        />
-      )}
+      <UpdateGitHubButton
+        templateId={templateId}
+        templateName={templateName}
+      />
       <Button
         variant="outline"
         size="sm"
