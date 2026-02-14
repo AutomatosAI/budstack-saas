@@ -34,20 +34,12 @@ export async function POST(
       );
     }
 
-    // Accept githubUrl from request body, or fall back to stored metadata
-    let body: { githubUrl?: string } = {};
-    try {
-      body = await req.json();
-    } catch {
-      // No body provided
-    }
-
     const metadata = template.metadata as Record<string, any> | null;
-    const githubUrl = body.githubUrl?.trim() || metadata?.githubUrl;
+    const githubUrl = metadata?.githubUrl;
 
     if (!githubUrl) {
       return NextResponse.json(
-        { error: "No GitHub URL provided or stored for this template" },
+        { error: "No GitHub URL stored for this template. Re-upload to set one." },
         { status: 400 },
       );
     }
@@ -95,14 +87,12 @@ export async function POST(
         );
       }
 
-      // Update database record — persist githubUrl in metadata for future updates
-      const updatedMetadata = { ...(metadata || {}), githubUrl };
+      // Update database record
       await prisma.templates.update({
         where: { id },
         data: {
           version: config.version || template.version,
           description: config.description || template.description,
-          metadata: updatedMetadata,
           updatedAt: new Date(),
         },
       });

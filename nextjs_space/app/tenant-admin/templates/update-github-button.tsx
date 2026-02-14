@@ -58,15 +58,15 @@ export default function UpdateGitHubButton({
         <Button
           variant="outline"
           size="sm"
-          className="rounded-xl"
+          className="rounded-full"
           disabled={isUpdating}
+          title="Update from GitHub"
         >
           {isUpdating ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="h-4 w-4" />
           )}
-          Update from GitHub
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
