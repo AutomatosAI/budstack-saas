@@ -118,16 +118,10 @@ export async function POST(req: NextRequest) {
 
       console.log(`[Template Upload] Template: ${config.name} (${config.id})`);
 
-      // Check if template already exists
+      // Check if template already exists — update instead of failing
       const existingTemplate = await prisma.templates.findUnique({
         where: { slug: config.id },
       });
-
-      if (existingTemplate) {
-        throw new Error(
-          `Template with slug '${config.id}' already exists. Please delete it first or use a different slug.`,
-        );
-      }
 
       // Copy template files to project
       // In production standalone mode, process.cwd() = /app/app/ but templates live at /app/templates/
@@ -169,41 +163,66 @@ export async function POST(req: NextRequest) {
         // Continue - template is in local filesystem, S3 is for persistence only
       }
 
-      // Create database record
-      const template = await prisma.templates.create({
-        data: {
-          id: randomUUID(),
-          slug: config.id,
-          name: config.name,
-          description: config.description,
-          category: config.category || "general",
-          tags: config.tags || [],
-          version: config.version || "1.0.0",
-          author: config.author || "Unknown",
-          isActive: true,
-          isPremium: false,
-          price: 0,
-          layoutFilePath: `/templates/${config.id}/index.tsx`,
-          componentsPath: `/templates/${config.id}/components`,
-          stylesPath: `/templates/${config.id}/styles.css`,
-          packagePath: `/templates/${config.id}/package.json`,
-          previewUrl: config.preview_image || "",
-          thumbnailUrl: config.preview_image || "",
-          updatedAt: new Date(),
-          metadata: {
-            features: config.features || [],
-            performance: config.performance || {},
-            accessibility: config.accessibility || {},
-            compatibility: config.compatibility || {},
-            installation: config.installation || {},
-            githubUrl,
-          },
-        },
-      });
+      const metadataPayload = {
+        features: config.features || [],
+        performance: config.performance || {},
+        accessibility: config.accessibility || {},
+        compatibility: config.compatibility || {},
+        installation: config.installation || {},
+        githubUrl,
+      };
 
-      console.log(
-        `[Template Upload] Template created in database: ID ${template.id}`,
-      );
+      let template;
+      if (existingTemplate) {
+        // Update existing template — re-upload overwrites files + stores githubUrl
+        console.log(`[Template Upload] Template '${config.id}' exists, updating...`);
+        template = await prisma.templates.update({
+          where: { id: existingTemplate.id },
+          data: {
+            name: config.name,
+            description: config.description,
+            category: config.category || existingTemplate.category,
+            tags: config.tags || existingTemplate.tags,
+            version: config.version || existingTemplate.version,
+            author: config.author || existingTemplate.author,
+            layoutFilePath: `/templates/${config.id}/index.tsx`,
+            componentsPath: `/templates/${config.id}/components`,
+            stylesPath: `/templates/${config.id}/styles.css`,
+            packagePath: `/templates/${config.id}/package.json`,
+            previewUrl: config.preview_image || existingTemplate.previewUrl,
+            thumbnailUrl: config.preview_image || existingTemplate.thumbnailUrl,
+            metadata: metadataPayload,
+            updatedAt: new Date(),
+          },
+        });
+        console.log(`[Template Upload] Template updated: ID ${template.id}`);
+      } else {
+        // Create new template
+        template = await prisma.templates.create({
+          data: {
+            id: randomUUID(),
+            slug: config.id,
+            name: config.name,
+            description: config.description,
+            category: config.category || "general",
+            tags: config.tags || [],
+            version: config.version || "1.0.0",
+            author: config.author || "Unknown",
+            isActive: true,
+            isPremium: false,
+            price: 0,
+            layoutFilePath: `/templates/${config.id}/index.tsx`,
+            componentsPath: `/templates/${config.id}/components`,
+            stylesPath: `/templates/${config.id}/styles.css`,
+            packagePath: `/templates/${config.id}/package.json`,
+            previewUrl: config.preview_image || "",
+            thumbnailUrl: config.preview_image || "",
+            updatedAt: new Date(),
+            metadata: metadataPayload,
+          },
+        });
+        console.log(`[Template Upload] Template created: ID ${template.id}`);
+      }
 
       // Create audit log
       const clientInfo = getClientInfo(req.headers);
