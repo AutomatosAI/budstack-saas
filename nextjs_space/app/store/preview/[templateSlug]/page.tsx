@@ -3,9 +3,10 @@ import fs from "fs";
 import path from "path";
 import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
 import { TemplateRenderer } from "@/components/template-renderer";
-import { getJsonFromS3, getTextFromS3 } from "@/lib/s3";
+import { getJsonFromS3, getTextFromS3, getFileUrl } from "@/lib/s3";
 import type { TemplateLayout } from "@/lib/types/template-layout";
 import { Tenant } from "@/types/client";
+import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import PreviewToolbar from "./preview-toolbar";
 
 // Mock tenant for preview mode — no database needed
@@ -86,14 +87,57 @@ export default async function TemplatePreviewPage({
   }
 
   if (layout) {
+    const s3Prefix = `templates/${templateSlug}`;
+
+    // Sign hero image from defaults
+    let heroImageUrl: string | null = null;
+    if (defaults?.heroImagePath) {
+      const heroPath = defaults.heroImagePath;
+      if (!heroPath.startsWith("http") && !heroPath.startsWith("/")) {
+        try {
+          heroImageUrl = await getFileUrl(`${s3Prefix}/${heroPath}`);
+        } catch { /* fallback to null */ }
+      } else {
+        heroImageUrl = heroPath;
+      }
+    }
+
+    // Sign logo from defaults
+    let logoUrl: string | null = null;
+    if (defaults?.logoPath) {
+      const logoPath = defaults.logoPath;
+      if (!logoPath.startsWith("http") && !logoPath.startsWith("/")) {
+        try {
+          logoUrl = await getFileUrl(`${s3Prefix}/${logoPath}`);
+        } catch { /* fallback to null */ }
+      } else {
+        logoUrl = logoPath;
+      }
+    }
+
+    // Sign section-level asset URLs (imageUrl, videoUrl, watermarkUrl)
+    if (layout.sections) {
+      for (const section of layout.sections) {
+        for (const key of ["imageUrl", "videoUrl", "watermarkUrl"] as const) {
+          const val = section.config?.[key];
+          if (val && typeof val === "string" && !val.startsWith("http") && !val.startsWith("/")) {
+            try {
+              (section.config as any)[key] = await getFileUrl(`${s3Prefix}/${val}`);
+            } catch { /* leave as-is */ }
+          }
+        }
+      }
+    }
+
     const sectionProps = {
       tenant: { ...mockTenant, subdomain: mockTenant.slug },
       consultationUrl: "#consultation",
       productsUrl: "#products",
       contactUrl: "#contact",
       aboutUrl: "#about",
-      heroImageUrl: null,
-      logoUrl: null,
+      heroImageUrl,
+      logoUrl,
+      designSystem: defaults?.designSystem || null,
       pageContent: defaults?.pageContent || {},
       navigation: defaults?.navigation || {},
       footer: defaults?.footer || {},
@@ -101,7 +145,14 @@ export default async function TemplatePreviewPage({
     };
 
     return (
-      <>
+      <TenantThemeProvider
+        tenant={mockTenant}
+        tenantTemplate={
+          defaults?.designSystem
+            ? { designSystem: defaults.designSystem, customCss: null }
+            : undefined
+        }
+      >
         <PreviewToolbar templateName={defaults?.template || templateSlug} />
         <TemplateRenderer
           layout={layout}
@@ -109,7 +160,7 @@ export default async function TemplatePreviewPage({
           customCss={customCss}
           renderChrome={true}
         />
-      </>
+      </TenantThemeProvider>
     );
   }
 
@@ -137,10 +188,17 @@ export default async function TemplatePreviewPage({
   };
 
   return (
-    <>
+    <TenantThemeProvider
+      tenant={mockTenant}
+      tenantTemplate={
+        localDefaults?.designSystem
+          ? { designSystem: localDefaults.designSystem, customCss: null }
+          : undefined
+      }
+    >
       <PreviewToolbar templateName={localDefaults?.template || templateSlug} />
       <TemplateComponent {...templateProps} />
-    </>
+    </TenantThemeProvider>
   );
 }
 
