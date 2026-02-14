@@ -118,6 +118,7 @@ export async function uploadFromGitHub(
         githubUrl,
         isDraft: true,
         isActive: false,
+        updatedAt: new Date(),
       },
     });
 

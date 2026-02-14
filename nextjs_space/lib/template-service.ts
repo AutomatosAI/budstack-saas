@@ -97,6 +97,7 @@ export async function cloneTemplateForTenant(
           ? new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
           : null,
         isActive: !options?.isDraft, // Active immediately if not a draft
+        updatedAt: new Date(),
       },
     });
 
