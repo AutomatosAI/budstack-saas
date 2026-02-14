@@ -5,7 +5,7 @@ import { getFileUrl } from "@/lib/s3";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, Layout, Eye } from "lucide-react";
+import { Palette, Layout, Eye, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import TemplateCloneButton from "./clone-button";
 import ActivateButton from "./activate-button";
@@ -15,6 +15,7 @@ import UpdateGitHubButton from "./update-github-button";
 import { ShareMarketplaceDialog } from "./share-marketplace-dialog";
 import WithdrawButton from "./withdraw-button";
 import ResubmitButton from "./resubmit-button";
+import { PreviewUploadDialog } from "./preview-upload-dialog";
 type ClonedTemplate = any;
 
 /** Sign an S3 key to a URL, or pass through if already a URL */
@@ -65,7 +66,7 @@ export default async function TemplatesPage() {
     const myTemplates = await Promise.all(
         myTemplatesRaw.map(async (t: any) => ({
             ...t,
-            signedPreviewUrl: await signUrl(t.templates?.previewUrl || t.templates?.thumbnailUrl),
+            signedPreviewUrl: await signUrl(t.previewUrl || t.templates?.previewUrl || t.templates?.thumbnailUrl),
         }))
     );
 
@@ -151,13 +152,17 @@ export default async function TemplatesPage() {
                             </div>
                         )}
 
-                        {myTemplates.map((item: ClonedTemplate) => (
+                        {myTemplates.map((item: ClonedTemplate) => {
+                            const sub = submissionMap.get(item.id);
+                            const hasActiveSub = sub && ["pending", "changes_requested"].includes(sub.status);
+                            const canShare = item.source === "custom" && (!sub || sub.status === "withdrawn" || sub.status === "rejected");
+                            return (
                             <div
                                 key={item.id}
                                 className={`card-floating overflow-hidden transition-all ${item.isActive ? "ring-2 ring-accent border-accent" : ""
                                     }`}
                             >
-                                <div className="aspect-video bg-slate-100 relative">
+                                <div className="aspect-video bg-slate-100 relative group">
                                     {item.signedPreviewUrl ? (
                                         <img
                                             src={item.signedPreviewUrl}
@@ -167,6 +172,39 @@ export default async function TemplatesPage() {
                                     ) : (
                                         <div className="absolute inset-0 flex items-center justify-center text-slate-400">
                                             <Layout className="h-12 w-12 opacity-20" />
+                                        </div>
+                                    )}
+                                    {/* Top-left overlay icons: Preview, Share, Upload Preview Image */}
+                                    {item.source === "custom" && (
+                                        <div className="absolute top-3 left-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Link href={`/store/${tenant.subdomain}?preview=${item.id}`} target="_blank">
+                                                <button
+                                                    className="h-8 w-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+                                                    title="Preview"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+                                            </Link>
+                                            {canShare && (
+                                                <ShareMarketplaceDialog
+                                                    templateId={item.id}
+                                                    templateName={item.templateName}
+                                                    tenantBusinessName={tenant.businessName}
+                                                    triggerElement={
+                                                        <button
+                                                            className="h-8 w-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+                                                            title="Share to Marketplace"
+                                                        >
+                                                            <Share2 className="h-4 w-4" />
+                                                        </button>
+                                                    }
+                                                />
+                                            )}
+                                            <PreviewUploadDialog
+                                                templateId={item.id}
+                                                templateName={item.templateName}
+                                                currentPreviewUrl={item.signedPreviewUrl}
+                                            />
                                         </div>
                                     )}
                                     <div className="absolute top-3 right-3 flex gap-1">
@@ -194,7 +232,6 @@ export default async function TemplatesPage() {
                                         {item.source === "custom" ? "Uploaded" : "Cloned"} {new Date(item.createdAt).toLocaleDateString()}
                                     </p>
                                     {(() => {
-                                        const sub = submissionMap.get(item.id);
                                         if (!sub || sub.status === "withdrawn") return null;
                                         const statusConfig: Record<string, { label: string; className: string }> = {
                                             pending: { label: "Pending Review", className: "bg-yellow-100 text-yellow-800" },
@@ -229,14 +266,6 @@ export default async function TemplatesPage() {
                                             Customize
                                         </Button>
                                     </Link>
-                                    {item.source === "custom" && (
-                                        <Link href={`/store/${tenant.subdomain}?preview=${item.id}`} target="_blank">
-                                            <Button variant="outline" size="sm" className="rounded-xl">
-                                                <Eye className="mr-2 h-4 w-4" />
-                                                Preview
-                                            </Button>
-                                        </Link>
-                                    )}
                                     <ActivateButton
                                         templateId={item.id}
                                         templateName={item.templateName}
@@ -253,10 +282,8 @@ export default async function TemplatesPage() {
                                             templateName={item.templateName}
                                         />
                                     )}
-                                    {/* Marketplace submission actions */}
+                                    {/* Marketplace submission actions (bottom row) */}
                                     {item.source === "custom" && (() => {
-                                        const sub = submissionMap.get(item.id);
-                                        const hasActiveSub = sub && ["pending", "changes_requested"].includes(sub.status);
                                         if (sub?.status === "changes_requested") {
                                             return (
                                                 <>
@@ -279,20 +306,12 @@ export default async function TemplatesPage() {
                                                 />
                                             );
                                         }
-                                        if (!sub || sub.status === "withdrawn" || sub.status === "rejected") {
-                                            return (
-                                                <ShareMarketplaceDialog
-                                                    templateId={item.id}
-                                                    templateName={item.templateName}
-                                                    tenantBusinessName={tenant.businessName}
-                                                />
-                                            );
-                                        }
                                         return null;
                                     })()}
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </TabsContent>
 

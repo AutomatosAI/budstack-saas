@@ -16,12 +16,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EditTemplateDialog } from "./edit-template-dialog";
+import UpdateGitHubButton from "./update-github-button";
 
 interface TemplateActionsProps {
   templateId: string;
   templateName: string;
   usageCount: number;
   previewUrl: string | null;
+  slug: string | null;
+  metadata: Record<string, any> | null;
 }
 
 export function TemplateActions({
@@ -29,6 +32,8 @@ export function TemplateActions({
   templateName,
   usageCount,
   previewUrl,
+  slug,
+  metadata,
 }: TemplateActionsProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -72,6 +77,12 @@ export function TemplateActions({
         >
           <Edit className="h-4 w-4" />
         </Button>
+        {metadata?.githubUrl && (
+          <UpdateGitHubButton
+            templateId={templateId}
+            templateName={templateName}
+          />
+        )}
         <Button
           variant="outline"
           size="sm"

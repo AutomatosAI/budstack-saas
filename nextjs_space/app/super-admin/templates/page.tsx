@@ -174,20 +174,35 @@ export default async function TemplatesManagementPage() {
 
                 {/* Actions */}
                 <div className="space-y-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full rounded-xl"
-                    disabled
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Preview
-                  </Button>
+                  {template.slug ? (
+                    <Link href={`/store/preview/${template.slug}`} target="_blank">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full rounded-xl"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Preview
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full rounded-xl"
+                      disabled
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Preview
+                    </Button>
+                  )}
                   <TemplateActions
                     templateId={template.id}
                     templateName={template.name}
                     usageCount={template.usageCount}
                     previewUrl={template.signedPreviewUrl}
+                    slug={template.slug}
+                    metadata={template.metadata as Record<string, any> | null}
                   />
                 </div>
               </div>

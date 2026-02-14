@@ -196,6 +196,7 @@ export async function POST(req: NextRequest) {
             accessibility: config.accessibility || {},
             compatibility: config.compatibility || {},
             installation: config.installation || {},
+            githubUrl,
           },
         },
       });

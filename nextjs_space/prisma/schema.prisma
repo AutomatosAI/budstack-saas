@@ -378,6 +378,7 @@ model tenant_templates {
   faviconUrl      String?
   customCss       String?
   customJs        String?
+  previewUrl      String?
   isActive        Boolean   @default(true)
   isDraft         Boolean   @default(false)
   expiresAt       DateTime?

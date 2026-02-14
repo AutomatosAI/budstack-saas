@@ -30,7 +30,21 @@ async function main() {
       END IF;
     END $$;
   `);
-  console.log("  [1/3] tenant_templates: source + githubUrl columns OK");
+  console.log("  [1/4] tenant_templates: source + githubUrl columns OK");
+
+  // Migration 1b: Add previewUrl to tenant_templates
+  await prisma.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'tenant_templates' AND column_name = 'previewUrl'
+      ) THEN
+        ALTER TABLE "tenant_templates" ADD COLUMN "previewUrl" TEXT;
+      END IF;
+    END $$;
+  `);
+  console.log("  [2/4] tenant_templates: previewUrl column OK");
 
   // Migration 2: Add community attribution fields to templates
   await prisma.$executeRawUnsafe(`
@@ -58,7 +72,7 @@ async function main() {
       END IF;
     END $$;
   `);
-  console.log("  [2/3] templates: authorTenantId + authorName columns OK");
+  console.log("  [3/4] templates: authorTenantId + authorName columns OK");
 
   // Migration 3: Create marketplace_submissions table
   await prisma.$executeRawUnsafe(`
@@ -116,7 +130,7 @@ async function main() {
       END IF;
     END $$;
   `);
-  console.log("  [3/3] marketplace_submissions table + indexes + FKs OK");
+  console.log("  [4/4] marketplace_submissions table + indexes + FKs OK");
 
   console.log("All marketplace schema changes applied successfully.");
 }

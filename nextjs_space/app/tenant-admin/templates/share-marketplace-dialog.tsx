@@ -30,6 +30,7 @@ interface ShareMarketplaceDialogProps {
   templateName: string;
   initialDescription?: string;
   tenantBusinessName: string;
+  triggerElement?: React.ReactNode;
 }
 
 const CATEGORIES = [
@@ -47,6 +48,7 @@ export function ShareMarketplaceDialog({
   templateName,
   initialDescription,
   tenantBusinessName,
+  triggerElement,
 }: ShareMarketplaceDialogProps) {
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState(initialDescription || "");
@@ -91,14 +93,16 @@ export function ShareMarketplaceDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-xl text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-        >
-          <Share2 className="mr-2 h-4 w-4" />
-          Share to Marketplace
-        </Button>
+        {triggerElement || (
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-xl text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+          >
+            <Share2 className="mr-2 h-4 w-4" />
+            Share to Marketplace
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
