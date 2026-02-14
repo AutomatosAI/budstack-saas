@@ -105,6 +105,7 @@ export async function uploadFromGitHub(
     // Create TenantTemplate record
     const tenantTemplate = await prisma.tenant_templates.create({
       data: {
+        id: randomUUID(),
         tenantId,
         baseTemplateId: customBase.id,
         templateName: templateName.trim(),

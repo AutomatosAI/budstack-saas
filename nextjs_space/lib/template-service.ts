@@ -7,6 +7,7 @@
  * - Manage template activation and switching
  */
 
+import { randomUUID } from "crypto";
 import { prisma } from "./db";
 import {
   S3Client,
@@ -82,6 +83,7 @@ export async function cloneTemplateForTenant(
     // 5. Create TenantTemplate record
     const tenantTemplate = await prisma.tenant_templates.create({
       data: {
+        id: randomUUID(),
         tenantId,
         baseTemplateId: baseTemplate.id,
         templateName,
