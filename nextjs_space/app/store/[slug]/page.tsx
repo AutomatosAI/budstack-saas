@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCurrentTenant, getTenantUrl } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
-import { getFileUrl, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
+import { getFileUrl, getFileUrlWithFallback, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
 
 // Import template registry (legacy React templates)
 import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
@@ -135,7 +135,13 @@ export default async function TenantStorePage({
     ) {
       try {
         console.log("[DEBUG] StorePage: Signing heroImageUrl:", heroImageUrl);
-        const signedUrl = await getFileUrl(heroImageUrl);
+        // If the hero image is at the tenant path, fall back to base template path
+        const heroFallbackKey = normalizedS3Path && defaults?.heroImagePath
+          ? `${baseS3Path}/${defaults.heroImagePath}`
+          : null;
+        const signedUrl = heroFallbackKey
+          ? await getFileUrlWithFallback(heroImageUrl, heroFallbackKey)
+          : await getFileUrl(heroImageUrl);
         console.log(
           "[DEBUG] StorePage: Signed hero URL result:",
           signedUrl ? signedUrl.substring(0, 50) + "..." : "null",
@@ -215,48 +221,25 @@ export default async function TenantStorePage({
 
     // Sign section-level asset URLs in layout.json configs
     // Templates can reference assets by relative filename (e.g. "assets/about-photo.jpg")
-    // which need to be resolved to signed S3 URLs before rendering
+    // which need to be resolved to signed S3 URLs before rendering.
+    // Cloned tenants have layout.json at their S3 path but assets may only exist
+    // in the base template path, so we fall back to baseS3Path when needed.
     const assetS3Path = layoutS3Path || tenantS3Path;
+    const needsFallback = assetS3Path && assetS3Path !== baseS3Path;
     if (layout?.sections && assetS3Path) {
       for (const section of layout.sections) {
-        // Sign imageUrl
-        if (section.config?.imageUrl && typeof section.config.imageUrl === 'string') {
-          const imgPath = section.config.imageUrl;
-          // Only sign relative filenames — skip full URLs and absolute paths
-          if (!imgPath.startsWith('http') && !imgPath.startsWith('/')) {
+        for (const key of ['imageUrl', 'videoUrl', 'watermarkUrl'] as const) {
+          const val = section.config?.[key];
+          if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
             try {
-              const s3Key = `${assetS3Path}/${imgPath}`;
-              console.log(`[page] Signing section imageUrl for ${section.type}:`, s3Key);
-              section.config.imageUrl = await getFileUrl(s3Key);
+              const primaryKey = `${assetS3Path}/${val}`;
+              const fallbackKey = `${baseS3Path}/${val}`;
+              console.log(`[page] Signing section ${key} for ${section.type}:`, primaryKey, needsFallback ? `(fallback: ${fallbackKey})` : '');
+              (section.config as any)[key] = needsFallback
+                ? await getFileUrlWithFallback(primaryKey, fallbackKey)
+                : await getFileUrl(primaryKey);
             } catch (err) {
-              console.error(`[page] Failed to sign section imageUrl for ${section.type}:`, err);
-              // Leave as-is — component will show gradient fallback
-            }
-          }
-        }
-        // Sign videoUrl
-        if (section.config?.videoUrl && typeof section.config.videoUrl === 'string') {
-          const vidPath = section.config.videoUrl;
-          if (!vidPath.startsWith('http') && !vidPath.startsWith('/')) {
-            try {
-              const s3Key = `${assetS3Path}/${vidPath}`;
-              console.log(`[page] Signing section videoUrl for ${section.type}:`, s3Key);
-              section.config.videoUrl = await getFileUrl(s3Key);
-            } catch (err) {
-              console.error(`[page] Failed to sign section videoUrl for ${section.type}:`, err);
-            }
-          }
-        }
-        // Sign watermarkUrl (logo watermark overlay)
-        if (section.config?.watermarkUrl && typeof section.config.watermarkUrl === 'string') {
-          const wmPath = section.config.watermarkUrl;
-          if (!wmPath.startsWith('http') && !wmPath.startsWith('/')) {
-            try {
-              const s3Key = `${assetS3Path}/${wmPath}`;
-              console.log(`[page] Signing section watermarkUrl for ${section.type}:`, s3Key);
-              section.config.watermarkUrl = await getFileUrl(s3Key);
-            } catch (err) {
-              console.error(`[page] Failed to sign section watermarkUrl for ${section.type}:`, err);
+              console.error(`[page] Failed to sign section ${key} for ${section.type}:`, err);
             }
           }
         }

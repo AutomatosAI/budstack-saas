@@ -56,7 +56,7 @@ export function ValueProps(props: SectionProps) {
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className={`grid md:grid-cols-2 ${items.length === 3 ? 'lg:grid-cols-3 max-w-5xl mx-auto' : 'lg:grid-cols-4'} gap-8`}>
           {items.map((item, index) => {
             const Icon = iconMap[item.icon] || Star;
             return (

@@ -1,6 +1,7 @@
 import {
   PutObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
   ListObjectsV2Command,
@@ -41,6 +42,30 @@ export async function getFileUrl(key: string): Promise<string> {
   });
 
   return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+}
+
+/** Check if an object exists in S3 without downloading it. */
+export async function fileExistsInS3(key: string): Promise<boolean> {
+  const s3Client = await createS3Client();
+  const { bucketName } = await getBucketConfig();
+  try {
+    await s3Client.send(new HeadObjectCommand({ Bucket: bucketName, Key: key }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get a signed URL for an S3 key, trying a primary path first and falling back
+ * to an alternative path if the primary doesn't exist. Useful for tenant assets
+ * that may live in the base template path rather than the tenant's clone path.
+ */
+export async function getFileUrlWithFallback(primaryKey: string, fallbackKey: string): Promise<string> {
+  if (await fileExistsInS3(primaryKey)) {
+    return getFileUrl(primaryKey);
+  }
+  return getFileUrl(fallbackKey);
 }
 
 export async function deleteFile(key: string): Promise<void> {
