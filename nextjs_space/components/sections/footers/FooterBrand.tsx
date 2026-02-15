@@ -1,0 +1,168 @@
+'use client';
+
+import React from 'react';
+import Image from 'next/image';
+import { Leaf, MapPin, Mail } from 'lucide-react';
+import { SectionProps } from '@/lib/types/section-props';
+import { getTenantUrl } from '@/lib/tenant-utils';
+
+interface FooterSection {
+  title: string;
+  links: { label: string; href: string }[];
+}
+
+/**
+ * FooterBrand — Premium branded footer with contact info and icon headers.
+ *
+ * Features: Brand column with address + email, Leaf icon section headers,
+ * configurable link columns, dark background, copyright bar.
+ *
+ * Config (via sectionConfig or defaults.json footer):
+ *   tagline:    string
+ *   address:    string (business address)
+ *   email:      string (contact email)
+ *   sections:   [{ title, links: [{ label, href }] }]
+ *   disclaimer: string
+ */
+export function FooterBrand(props: SectionProps) {
+  const { tenant, logoUrl, footer, sectionConfig, productsUrl, aboutUrl, contactUrl, consultationUrl } = props;
+
+  const basePath = getTenantUrl({
+    subdomain: tenant.subdomain,
+    customDomain: tenant.customDomain,
+  });
+
+  const defaultSections: FooterSection[] = [
+    {
+      title: 'Company',
+      links: [
+        { label: 'About Us', href: aboutUrl || `${basePath}/about` },
+        { label: 'Our Products', href: productsUrl || `${basePath}/products` },
+        { label: 'The Wire', href: `${basePath}/the-wire` },
+        { label: 'Contact', href: contactUrl || `${basePath}/contact` },
+      ],
+    },
+    {
+      title: 'Resources',
+      links: [
+        { label: 'Patient Access', href: consultationUrl || `${basePath}/consultation` },
+        { label: 'Conditions Treated', href: `${basePath}/conditions` },
+        { label: 'FAQ', href: `${basePath}/faq` },
+      ],
+    },
+    {
+      title: 'Legal',
+      links: [
+        { label: 'Privacy Policy', href: `${basePath}/privacy` },
+        { label: 'Terms of Service', href: `${basePath}/terms` },
+        { label: 'Regulatory', href: `${basePath}/regulatory` },
+      ],
+    },
+  ];
+
+  const prefixHref = (href: string) =>
+    href.startsWith('/') && !href.startsWith('/store/') ? `${basePath}${href}` : href;
+
+  const businessName = tenant.businessName;
+  const tagline = sectionConfig?.tagline || footer?.tagline || 'Pioneering tomorrow\'s medical cannabis solutions';
+  const address = sectionConfig?.address || footer?.address || tenant.businessAddress || '';
+  const email = sectionConfig?.email || footer?.email || tenant.contactEmail || '';
+  const rawSections: FooterSection[] = sectionConfig?.sections || footer?.sections || defaultSections;
+  const sections = rawSections.map((s) => ({
+    ...s,
+    links: s.links.map((l) => ({ ...l, href: prefixHref(l.href) })),
+  }));
+  const disclaimer = sectionConfig?.disclaimer || footer?.disclaimer || '';
+
+  const year = new Date().getFullYear();
+
+  return (
+    <footer
+      className="pt-16 pb-8"
+      style={{
+        backgroundColor: 'hsl(var(--tenant-color-surface, var(--tenant-color-background, 220 15% 10%)))',
+        color: 'hsl(var(--tenant-color-heading, 0 0% 100%))',
+      }}
+    >
+      <div className="container mx-auto px-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-12 gap-12 mb-12">
+          {/* Brand Column */}
+          <div className="lg:col-span-4">
+            <div className="flex items-center gap-3 mb-4">
+              {logoUrl && (
+                <div className="relative w-10 h-10">
+                  <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+                </div>
+              )}
+              <span
+                className="text-xl font-bold"
+                style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
+              >
+                {businessName}
+              </span>
+            </div>
+            <p className="text-white/70 text-sm leading-relaxed max-w-sm mb-6">{tagline}</p>
+
+            {/* Contact Info */}
+            {address && (
+              <div className="flex items-start gap-2.5 mb-3 group">
+                <MapPin size={16} className="text-white/40 group-hover:text-white/70 transition-colors mt-0.5 shrink-0" />
+                <span className="text-sm text-white/60">{address}</span>
+              </div>
+            )}
+            {email && (
+              <div className="flex items-center gap-2.5 group">
+                <Mail size={16} className="text-white/40 group-hover:text-white/70 transition-colors shrink-0" />
+                <a href={`mailto:${email}`} className="text-sm text-white/60 hover:text-white transition-colors">
+                  {email}
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Link Columns */}
+          <div className="lg:col-span-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {sections.map((section) => (
+              <div key={section.title}>
+                <h4 className="flex items-center gap-2 font-semibold text-sm uppercase tracking-wider text-white/90 mb-4">
+                  <Leaf size={14} style={{ color: 'hsl(var(--tenant-color-accent, 164 48% 53%))' }} />
+                  {section.title}
+                </h4>
+                <ul className="space-y-2.5">
+                  {section.links.map((link) => (
+                    <li key={link.href}>
+                      <a
+                        href={link.href}
+                        className="text-sm text-white/60 hover:text-white hover:translate-x-1 transform transition-all duration-200 inline-block"
+                      >
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Disclaimer */}
+        {disclaimer && (
+          <p className="text-xs text-white/40 mb-8 max-w-3xl">{disclaimer}</p>
+        )}
+
+        {/* Bottom Bar */}
+        <div
+          className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}
+        >
+          <p className="text-sm text-white/50" suppressHydrationWarning>
+            &copy; {year} {businessName}. All rights reserved.
+          </p>
+          <p className="text-xs text-white/30">
+            Powered by BudStacks
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}

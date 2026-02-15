@@ -28,10 +28,12 @@ import { CTASplit } from '@/components/sections/ctas/CTASplit';
 import { NavMinimal } from '@/components/sections/navigation/NavMinimal';
 import { NavFull } from '@/components/sections/navigation/NavFull';
 import { NavTransparent } from '@/components/sections/navigation/NavTransparent';
+import { NavDark } from '@/components/sections/navigation/NavDark';
 
 // Footers
 import { FooterSimple } from '@/components/sections/footers/FooterSimple';
 import { FooterFull } from '@/components/sections/footers/FooterFull';
+import { FooterBrand } from '@/components/sections/footers/FooterBrand';
 
 export const SECTION_REGISTRY: Record<string, ComponentType<SectionProps>> = {
   HeroFullScreen,
@@ -54,8 +56,10 @@ export const SECTION_REGISTRY: Record<string, ComponentType<SectionProps>> = {
   NavMinimal,
   NavFull,
   NavTransparent,
+  NavDark,
   FooterSimple,
   FooterFull,
+  FooterBrand,
 };
 
 export function getSectionComponent(type: string): ComponentType<SectionProps> | null {

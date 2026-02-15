@@ -123,8 +123,9 @@ export default async function TenantStorePage({
 
     // Process hero image URL — DB value, or fallback to defaults.json heroImagePath
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
-    if (!heroImageUrl && defaults?.heroImagePath && normalizedS3Path) {
-      heroImageUrl = `${normalizedS3Path}/${defaults.heroImagePath}`;
+    const fallbackS3Path = normalizedS3Path || baseS3Path;
+    if (!heroImageUrl && defaults?.heroImagePath && fallbackS3Path) {
+      heroImageUrl = `${fallbackS3Path}/${defaults.heroImagePath}`;
       console.log("[page] Using defaults.json heroImagePath fallback:", heroImageUrl);
     }
     if (
@@ -189,6 +190,7 @@ export default async function TenantStorePage({
     const tenantS3Path = normalizedS3Path;
     let layout: TemplateLayout | null = null;
     let customCss: string | null = null;
+    let layoutS3Path: string | null = null;
 
     console.log("[page] S3 paths:", [tenantS3Path, baseS3Path].filter(Boolean));
     for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
@@ -197,6 +199,7 @@ export default async function TenantStorePage({
         layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
         if (layout) {
           console.log("[page] FOUND layout.json, using data-driven PATH 1");
+          layoutS3Path = s3Prefix;
           customCss = await getTextFromS3(`${s3Prefix}/styles.css`);
           break;
         }
@@ -213,7 +216,8 @@ export default async function TenantStorePage({
     // Sign section-level asset URLs in layout.json configs
     // Templates can reference assets by relative filename (e.g. "assets/about-photo.jpg")
     // which need to be resolved to signed S3 URLs before rendering
-    if (layout?.sections && tenantS3Path) {
+    const assetS3Path = layoutS3Path || tenantS3Path;
+    if (layout?.sections && assetS3Path) {
       for (const section of layout.sections) {
         // Sign imageUrl
         if (section.config?.imageUrl && typeof section.config.imageUrl === 'string') {
@@ -221,7 +225,7 @@ export default async function TenantStorePage({
           // Only sign relative filenames — skip full URLs and absolute paths
           if (!imgPath.startsWith('http') && !imgPath.startsWith('/')) {
             try {
-              const s3Key = `${tenantS3Path}/${imgPath}`;
+              const s3Key = `${assetS3Path}/${imgPath}`;
               console.log(`[page] Signing section imageUrl for ${section.type}:`, s3Key);
               section.config.imageUrl = await getFileUrl(s3Key);
             } catch (err) {
@@ -235,7 +239,7 @@ export default async function TenantStorePage({
           const vidPath = section.config.videoUrl;
           if (!vidPath.startsWith('http') && !vidPath.startsWith('/')) {
             try {
-              const s3Key = `${tenantS3Path}/${vidPath}`;
+              const s3Key = `${assetS3Path}/${vidPath}`;
               console.log(`[page] Signing section videoUrl for ${section.type}:`, s3Key);
               section.config.videoUrl = await getFileUrl(s3Key);
             } catch (err) {
@@ -248,7 +252,7 @@ export default async function TenantStorePage({
           const wmPath = section.config.watermarkUrl;
           if (!wmPath.startsWith('http') && !wmPath.startsWith('/')) {
             try {
-              const s3Key = `${tenantS3Path}/${wmPath}`;
+              const s3Key = `${assetS3Path}/${wmPath}`;
               console.log(`[page] Signing section watermarkUrl for ${section.type}:`, s3Key);
               section.config.watermarkUrl = await getFileUrl(s3Key);
             } catch (err) {
