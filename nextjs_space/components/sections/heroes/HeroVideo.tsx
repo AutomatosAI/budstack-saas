@@ -23,8 +23,11 @@ export function HeroVideo({
   const watermarkUrl = sectionConfig?.watermarkUrl;
 
   // Resolve hero type and overlay settings
+  // Priority: sectionConfig (template-level) > auto-detect (videoUrl) > tenant settings > fallback
+  // This ensures templates with a videoUrl actually play video, even if the tenant's
+  // branding settings have heroType defaulted to "gradient-image".
   const settings = (tenant.settings as any) || {};
-  const heroType = settings.heroType || sectionConfig?.heroType || (videoUrl ? 'video' : 'gradient-image');
+  const heroType = sectionConfig?.heroType || (videoUrl ? 'video' : null) || settings.heroType || 'gradient-image';
   const overlayOpacity = settings.heroOverlayOpacity || sectionConfig?.overlayOpacity || 0.55;
 
   // Alignment classes based on config
