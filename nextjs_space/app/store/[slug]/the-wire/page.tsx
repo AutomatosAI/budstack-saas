@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { posts } from "@prisma/client";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 export const revalidate = 60;
 
@@ -17,6 +18,7 @@ interface TheWirePageProps {
 
 export default async function TheWirePage({ params }: TheWirePageProps) {
   const { slug } = params;
+  const basePath = getTenantBasePath(slug);
 
   const tenant = await prisma.tenants.findUnique({
     where: { subdomain: slug },
@@ -67,7 +69,7 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
                 </div>
 
                 <h2 className="text-xl font-bold mb-2 line-clamp-2">
-                  <Link href={`/store/${slug}/the-wire/${post.slug}`} className="hover:underline">
+                  <Link href={`${basePath}/the-wire/${post.slug}`} className="hover:underline">
                     {post.title}
                   </Link>
                 </h2>
@@ -80,7 +82,7 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
 
                 <div className="mt-auto pt-4">
                   <Button asChild variant="link" className="px-0">
-                    <Link href={`/store/${slug}/the-wire/${post.slug}`}>
+                    <Link href={`${basePath}/the-wire/${post.slug}`}>
                       Read Article <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>

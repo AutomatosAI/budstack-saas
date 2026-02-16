@@ -20,7 +20,7 @@ import {
 import { Tenant } from "@/types/client";
 import { TenantSettings } from "@/lib/types";
 import { useLanguage } from "@/lib/i18n";
-import { getTenantUrl } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 interface FooterProps {
   tenant?: Tenant | null;
@@ -37,10 +37,7 @@ export function Footer({ tenant, logoUrl: logoUrlProp }: FooterProps = {}) {
   const brandName = tenant?.businessName || "HealingBuds";
   // const tenantSlug = tenant?.subdomain || "healingbuds"; // Removed in favor of baseUrl
   const baseUrl = tenant
-    ? getTenantUrl({
-      subdomain: tenant.subdomain,
-      customDomain: tenant.customDomain,
-    })
+    ? getTenantBasePath(tenant.subdomain)
     : "/store/healingbuds";
 
   // Business Info

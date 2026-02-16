@@ -23,6 +23,7 @@ import Link from "next/link";
 import { toast } from "@/components/ui/sonner";
 import { useCartStore } from "@/lib/cart-store";
 import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 interface Product {
   id: string;
@@ -67,6 +68,7 @@ export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug as string;
+  const basePath = getTenantBasePath(slug);
   const productId = params?.id as string;
   const [product, setProduct] = useState<Product | null>(null);
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
@@ -224,7 +226,7 @@ export default function ProductDetailPage() {
             <AlertDescription>{error || "Product not found"}</AlertDescription>
           </Alert>
           <div className="text-center mt-8">
-            <Link href={`/store/${slug}/products`}>
+            <Link href={`${basePath}/products`}>
               <Button variant="outline">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Products
@@ -254,7 +256,7 @@ export default function ProductDetailPage() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
-        <Link href={`/store/${slug}/products`}>
+        <Link href={`${basePath}/products`}>
           <Button
             variant="ghost"
             className="mb-6 hover:bg-transparent"
@@ -582,7 +584,7 @@ export default function ProductDetailPage() {
                   <AlertCircle className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
                   <h3 className="font-semibold mb-2">Login Required</h3>
                   <p className="text-sm text-muted-foreground mb-4">You must be logged in to purchase products.</p>
-                  <Link href={`/store/${slug}/login`}>
+                  <Link href={`${basePath}/login`}>
                     <Button className="w-full">Login / Register</Button>
                   </Link>
                 </div>
@@ -594,7 +596,7 @@ export default function ProductDetailPage() {
                   <p className="text-sm text-yellow-700 dark:text-yellow-400 mb-4">
                     Your account ({kycStatus.status}) needs medical verification before you can purchase cannabis products.
                   </p>
-                  <Link href={`/store/${slug}/dashboard`}>
+                  <Link href={`${basePath}/dashboard`}>
                     <Button variant="outline" className="w-full border-yellow-600 text-yellow-600 hover:bg-yellow-50">Go to Dashboard</Button>
                   </Link>
                 </div>
@@ -690,7 +692,7 @@ export default function ProductDetailPage() {
                 return (
                   <Link
                     key={similarProduct.id}
-                    href={`/store/${slug}/products/${similarProduct.id}`}
+                    href={`${basePath}/products/${similarProduct.id}`}
                     className="group"
                   >
                     <div

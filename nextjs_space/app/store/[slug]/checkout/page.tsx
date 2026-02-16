@@ -9,11 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, CreditCard } from "lucide-react";
 import Link from "next/link";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 import { getUserShippingAddress } from "@/app/actions/get-user-shipping";
 
 export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const router = useRouter();
+  const basePath = getTenantBasePath(params.slug);
   const { items, getTotalPrice } = useCartStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +85,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       }
 
       // Redirect to order confirmation
-      router.push(`/store/${params.slug}/orders/${data.order.orderId}`);
+      router.push(`${basePath}/orders/${data.order.orderId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit order");
       console.error("[Checkout] Error:", err);
@@ -109,7 +111,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           <CardContent className="flex flex-col items-center justify-center min-h-[400px] text-center">
             <h2 className="text-2xl font-semibold mb-2">Your cart is empty</h2>
             <p className="text-gray-600 mb-6">Add items before checking out</p>
-            <Link href={`/store/${params.slug}/products`}>
+            <Link href={`${basePath}/products`}>
               <Button>Browse Products</Button>
             </Link>
           </CardContent>
@@ -121,7 +123,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   return (
     <div className="container mx-auto px-4 pt-36 pb-8 max-w-4xl">
       <div className="mb-6">
-        <Link href={`/store/${params.slug}/cart`}>
+        <Link href={`${basePath}/cart`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Cart

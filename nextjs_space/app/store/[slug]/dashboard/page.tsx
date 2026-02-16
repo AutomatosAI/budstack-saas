@@ -14,12 +14,14 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 export default function DashboardPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const params = useParams();
   const slug = params?.slug as string;
+  const basePath = getTenantBasePath(slug);
   const [kycStatus, setKycStatus] = useState<KycStatus | null>(null);
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
-      router.push(`/store/${slug}/login`);
+      router.push(`${basePath}/login`);
     }
   }, [isLoaded, isSignedIn, router, slug]);
 
@@ -72,7 +74,7 @@ export default function DashboardPage() {
               <p className="mb-4 text-sm text-green-800">
                 Your account is approved. You can now purchase medical cannabis products.
               </p>
-              <Link href={`/store/${slug}/products`}>
+              <Link href={`${basePath}/products`}>
                 <Button size="sm" className="bg-green-700 hover:bg-green-800 text-white border-0">Start Shopping</Button>
               </Link>
             </div>
@@ -159,7 +161,7 @@ export default function DashboardPage() {
               <div className="py-12 text-center">
                 <Calendar className="mx-auto mb-4 h-16 w-16 text-slate-200" />
                 <p className="mb-4 text-slate-500">No consultations yet</p>
-                <Link href={`/store/${slug}/consultation`}>
+                <Link href={`${basePath}/consultation`}>
                   <Button className="bg-slate-900 text-white hover:bg-slate-800">
                     Schedule Consultation
                   </Button>
@@ -173,7 +175,7 @@ export default function DashboardPage() {
                 <h2 className="text-xl font-semibold text-slate-900">
                   Active Prescriptions
                 </h2>
-                <Link href={`/store/${slug}/products`}>
+                <Link href={`${basePath}/products`}>
                   <Button variant="outline" size="sm">
                     Browse Products
                   </Button>
@@ -198,25 +200,25 @@ export default function DashboardPage() {
                 Quick Actions
               </h2>
               <div className="space-y-3">
-                <Link href={`/store/${slug}/consultation`} className="block">
+                <Link href={`${basePath}/consultation`} className="block">
                   <Button className="w-full justify-start bg-slate-900 text-white hover:bg-slate-800">
                     <Calendar className="mr-2 h-4 w-4" />
                     Book Consultation
                   </Button>
                 </Link>
-                <Link href={`/store/${slug}/products`} className="block">
+                <Link href={`${basePath}/products`} className="block">
                   <Button variant="outline" className="w-full justify-start">
                     <Pill className="mr-2 h-4 w-4" />
                     View Products
                   </Button>
                 </Link>
-                <Link href={`/store/${slug}/settings`} className="block">
+                <Link href={`${basePath}/settings`} className="block">
                   <Button variant="outline" className="w-full justify-start">
                     <User className="mr-2 h-4 w-4" />
                     Account Settings
                   </Button>
                 </Link>
-                <Link href={`/store/${slug}/contact`} className="block">
+                <Link href={`${basePath}/contact`} className="block">
                   <Button variant="outline" className="w-full justify-start">
                     <FileText className="mr-2 h-4 w-4" />
                     Contact Support
@@ -257,25 +259,25 @@ export default function DashboardPage() {
               </h3>
               <div className="space-y-2 text-sm">
                 <Link
-                  href={`/store/${slug}/how-it-works`}
+                  href={`${basePath}/how-it-works`}
                   className="block text-slate-600 hover:text-slate-900 hover:underline"
                 >
                   → How It Works
                 </Link>
                 <Link
-                  href={`/store/${slug}/conditions`}
+                  href={`${basePath}/conditions`}
                   className="block text-slate-600 hover:text-slate-900 hover:underline"
                 >
                   → Treatable Conditions
                 </Link>
                 <Link
-                  href={`/store/${slug}/faq`}
+                  href={`${basePath}/faq`}
                   className="block text-slate-600 hover:text-slate-900 hover:underline"
                 >
                   → FAQ
                 </Link>
                 <Link
-                  href={`/store/${slug}/the-wire`}
+                  href={`${basePath}/the-wire`}
                   className="block text-slate-600 hover:text-slate-900 hover:underline"
                 >
                   → Blog & Articles

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { ArrowRight } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
+import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
 
 interface Category {
   title: string;
@@ -21,9 +22,8 @@ const defaultCategories: Category[] = [
 
 export function ProductShowcase(props: SectionProps) {
   const { productsUrl, sectionConfig, tenant } = props;
-  const basePath = `/store/${tenant.subdomain}`;
-  const prefixHref = (href: string) =>
-    href.startsWith('/') && !href.startsWith('/store/') ? `${basePath}${href}` : href;
+  const basePath = getTenantBasePath(tenant.subdomain);
+  const prefixHref = (href: string) => prefixTenantHref(href, basePath);
   const heading = sectionConfig?.heading || 'Our Products';
   const subtitle = sectionConfig?.subtitle || 'Explore our carefully curated selection of premium cannabis products';
   const rawCategories: Category[] = sectionConfig?.categories || defaultCategories;

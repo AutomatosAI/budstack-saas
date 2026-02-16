@@ -6,6 +6,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search } from "lucide-react";
 import { Tenant } from "@/types/client";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 interface Condition {
   id: string;
@@ -285,7 +286,7 @@ export default function ConditionsClient({
                   discuss personalized treatment plans.
                 </p>
                 <Link
-                  href={`/store/${tenant.subdomain}/contact`}
+                  href={`${getTenantBasePath(tenant.subdomain)}/contact`}
                   className="inline-block px-8 py-3 text-lg rounded-lg font-semibold border transition-all duration-200 hover:shadow-lg"
                   style={{
                     backgroundColor: "white",

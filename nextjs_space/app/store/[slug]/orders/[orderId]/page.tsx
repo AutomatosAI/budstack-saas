@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Clock, Package, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 // Extended types for orders with currency field (not in Prisma schema)
 interface OrderWithCurrency {
@@ -201,12 +202,12 @@ export default async function OrderConfirmationPage({
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <Link href={`/store/${params.slug}/products`} className="flex-1">
+        <Link href={`${getTenantBasePath(params.slug)}/products`} className="flex-1">
           <Button variant="outline" className="w-full">
             Continue Shopping
           </Button>
         </Link>
-        <Link href={`/store/${params.slug}`} className="flex-1">
+        <Link href={getTenantBasePath(params.slug) || '/'} className="flex-1">
           <Button className="w-full">Return to Store</Button>
         </Link>
       </div>

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Menu, X, ShoppingCart } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
+import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
 
 /**
  * NavDark — Premium dark glassmorphic floating navigation bar.
@@ -21,7 +22,7 @@ export function NavDark(props: SectionProps) {
   const { tenant, logoUrl, consultationUrl, productsUrl, aboutUrl, contactUrl, navigation, sectionConfig } = props;
 
   const businessName = tenant.businessName;
-  const basePath = `/store/${tenant.subdomain}`;
+  const basePath = getTenantBasePath(tenant.subdomain);
 
   const defaultLinks = [
     { label: 'Products', href: productsUrl || `${basePath}/products` },
@@ -31,8 +32,7 @@ export function NavDark(props: SectionProps) {
     { label: 'Contact', href: contactUrl || `${basePath}/contact` },
   ];
 
-  const prefixHref = (href: string) =>
-    href.startsWith('/') && !href.startsWith('/store/') ? `${basePath}${href}` : href;
+  const prefixHref = (href: string) => prefixTenantHref(href, basePath);
 
   const rawLinks = sectionConfig?.links || navigation?.links || defaultLinks;
   const links = rawLinks.map((l: any) => ({ ...l, href: prefixHref(l.href) }));
@@ -85,7 +85,7 @@ export function NavDark(props: SectionProps) {
           style={{ height: scrolled ? '60px' : '72px' }}
         >
           {/* Logo + Brand */}
-          <a href={basePath} className="flex items-center gap-3 shrink-0">
+          <a href={basePath || '/'} className="flex items-center gap-3 shrink-0">
             {logoUrl && (
               <div
                 className="relative transition-all duration-300"

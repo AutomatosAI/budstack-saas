@@ -21,11 +21,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/components/ui/sonner";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 export default function CartPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug as string;
+  const basePath = getTenantBasePath(slug);
   const { items, updateQuantity, removeItem, getTotalPrice } = useCartStore();
   const [mounted, setMounted] = useState(false);
 
@@ -55,7 +57,7 @@ export default function CartPage() {
           <p className="text-gray-500 mb-8">
             Looks like you haven't added any medicine to your cart yet.
           </p>
-          <Link href={`/store/${slug}`}>
+          <Link href={basePath || '/'}>
             <Button className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Return to Shop
@@ -221,7 +223,7 @@ export default function CartPage() {
                   <Button
                     className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400"
                     size="lg"
-                    onClick={() => router.push(`/store/${slug}/checkout`)}
+                    onClick={() => router.push(`${basePath}/checkout`)}
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
                     Place Order

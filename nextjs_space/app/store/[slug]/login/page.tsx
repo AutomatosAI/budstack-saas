@@ -10,15 +10,14 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function TenantLoginForm() {
   const params = useParams();
   const slug = params?.slug as string;
-
-  // Fetch tenant data for branding (optional, Clerk handles some of this if Org based, usually)
-  // For now, we just want to show the SignIn component.
+  const basePath = getTenantBasePath(slug);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -29,8 +28,8 @@ function TenantLoginForm() {
             card: "shadow-xl border border-gray-200 rounded-2xl"
           }
         }}
-        fallbackRedirectUrl={`/store/${slug}/dashboard`}
-        signUpUrl={`/store/${slug}/register`}
+        fallbackRedirectUrl={`${basePath}/dashboard`}
+        signUpUrl={`${basePath}/register`}
       />
     </div>
   );

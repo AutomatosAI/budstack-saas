@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 /**
  * Registration Redirect
@@ -17,8 +18,8 @@ export default function RegisterRedirectPage() {
 
   useEffect(() => {
     if (slug) {
-      // Redirect to consultation page
-      router.replace(`/store/${slug}/consultation`);
+      const basePath = getTenantBasePath(slug);
+      router.replace(`${basePath}/consultation`);
     }
   }, [slug, router]);
 

@@ -23,6 +23,30 @@ export interface TenantUrlData {
  * // Returns: https://budstacks.io/store/healing-buds
  * ```
  */
+/**
+ * Get the base path prefix for tenant navigation links.
+ * In dev: /store/{slug} (path-based routing)
+ * In prod: '' (subdomain routing, middleware handles it)
+ */
+export function getTenantBasePath(slugOrTenant: string | TenantUrlData): string {
+  if (process.env.NODE_ENV === 'development') {
+    const slug = typeof slugOrTenant === 'string' ? slugOrTenant : slugOrTenant.subdomain;
+    return `/store/${slug}`;
+  }
+  return '';
+}
+
+/**
+ * Prefix a relative href with the tenant base path.
+ * Skips hrefs that already have /store/ prefix or are absolute URLs.
+ */
+export function prefixTenantHref(href: string, basePath: string): string {
+  if (href.startsWith('/store/') || href.startsWith('http')) return href;
+  if (href === '/' || href === '') return basePath || '/';
+  if (href.startsWith('/')) return `${basePath}${href}`;
+  return href;
+}
+
 export function getTenantUrl(tenant: TenantUrlData): string {
   // If custom domain is configured, use it
   if (tenant.customDomain) {

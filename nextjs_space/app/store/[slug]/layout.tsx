@@ -13,6 +13,7 @@ import { TEMPLATE_COMPONENTS, TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib
 import { getSectionComponent } from "@/lib/section-registry";
 import type { TemplateLayout } from "@/lib/types/template-layout";
 import { CartProvider } from "./_contexts/CartContext";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 // Deep merge two objects — overrides win for leaf values, objects are recursed
 function deepMergeObjects(base: any, overrides: any): any {
@@ -177,10 +178,11 @@ export default async function TenantStoreLayout({
   const subdomain = tenantWithTemplate.subdomain;
 
   // Prepare URLs for template footers
-  const consultationUrl = `/store/${subdomain}/consultation`;
-  const productsUrl = `/store/${subdomain}/products`;
-  const contactUrl = `/store/${subdomain}/contact`;
-  const aboutUrl = `/store/${subdomain}/about`;
+  const basePath = getTenantBasePath(subdomain);
+  const consultationUrl = `${basePath}/consultation`;
+  const productsUrl = `${basePath}/products`;
+  const contactUrl = `${basePath}/contact`;
+  const aboutUrl = `${basePath}/about`;
 
   // Extract contact info from settings
   const contactEmail = settings.contactEmail || "info@example.com";

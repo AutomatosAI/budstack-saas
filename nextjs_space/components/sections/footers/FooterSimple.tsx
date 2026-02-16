@@ -2,16 +2,13 @@
 
 import React from 'react';
 import { SectionProps } from '@/lib/types/section-props';
-import { getTenantUrl } from '@/lib/tenant-utils';
+import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
 
 export function FooterSimple(props: SectionProps) {
   const { tenant, footer, sectionConfig, contactUrl } = props;
 
   const businessName = tenant.businessName;
-  const basePath = getTenantUrl({
-    subdomain: tenant.subdomain,
-    customDomain: tenant.customDomain,
-  });
+  const basePath = getTenantBasePath(tenant.subdomain);
 
   const defaultLinks = [
     { label: 'Privacy', href: `${basePath}/privacy` },
@@ -19,8 +16,7 @@ export function FooterSimple(props: SectionProps) {
     { label: 'Contact', href: contactUrl || `${basePath}/contact` },
   ];
 
-  const prefixHref = (href: string) =>
-    href.startsWith('/') && !href.startsWith('/store/') ? `${basePath}${href}` : href;
+  const prefixHref = (href: string) => prefixTenantHref(href, basePath);
   const rawLinks = sectionConfig?.links || footer?.links || defaultLinks;
   const links = rawLinks.map((l: any) => ({ ...l, href: prefixHref(l.href) }));
 

@@ -10,12 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { toast } from "@/components/ui/sonner";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 
 export default function SettingsPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const params = useParams();
   const slug = params?.slug as string;
+  const basePath = getTenantBasePath(slug);
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -33,7 +35,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
-      router.push(`/store/${slug}/login`);
+      router.push(`${basePath}/login`);
     }
     if (user) {
       // Load existing data
@@ -383,7 +385,7 @@ export default function SettingsPage() {
 
         {/* Back to Dashboard */}
         <div className="mt-6">
-          <Link href={`/store/${slug}/dashboard`}>
+          <Link href={`${basePath}/dashboard`}>
             <Button variant="ghost">← Back to Dashboard</Button>
           </Link>
         </div>

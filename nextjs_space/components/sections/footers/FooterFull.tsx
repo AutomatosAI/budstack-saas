@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
-import { getTenantUrl } from '@/lib/tenant-utils';
+import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
 
 interface FooterSection {
   title: string;
@@ -13,10 +13,7 @@ interface FooterSection {
 export function FooterFull(props: SectionProps) {
   const { tenant, logoUrl, footer, sectionConfig, productsUrl, aboutUrl, contactUrl, consultationUrl } = props;
 
-  const basePath = getTenantUrl({
-    subdomain: tenant.subdomain,
-    customDomain: tenant.customDomain,
-  });
+  const basePath = getTenantBasePath(tenant.subdomain);
 
   const defaultSections: FooterSection[] = [
     {
@@ -46,8 +43,7 @@ export function FooterFull(props: SectionProps) {
     },
   ];
 
-  const prefixHref = (href: string) =>
-    href.startsWith('/') && !href.startsWith('/store/') ? `${basePath}${href}` : href;
+  const prefixHref = (href: string) => prefixTenantHref(href, basePath);
 
   const businessName = tenant.businessName;
   const tagline = sectionConfig?.tagline || footer?.tagline || 'Premium medical cannabis, delivered with care.';

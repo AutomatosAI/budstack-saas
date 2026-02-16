@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { ArrowRight, Clock } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
+import { getTenantBasePath } from '@/lib/tenant-utils';
 
 interface BlogPost {
   title: string;
@@ -40,7 +41,7 @@ export function BlogFeed(props: SectionProps) {
   const heading = sectionConfig?.heading || 'Latest from The Wire';
   const subtitle = sectionConfig?.subtitle || 'Stay informed with the latest cannabis news and wellness tips';
   const posts: BlogPost[] = sectionConfig?.posts || propsPosts || defaultPosts;
-  const basePath = `/store/${props.tenant.subdomain}`;
+  const basePath = getTenantBasePath(props.tenant.subdomain);
   const blogUrl = sectionConfig?.blogUrl || `${basePath}/the-wire`;
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });

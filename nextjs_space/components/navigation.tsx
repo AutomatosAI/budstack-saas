@@ -20,7 +20,7 @@ import {
 import { CartDropdown } from "./cart-dropdown";
 // import { LanguageSwitcher } from './language-switcher';
 import { useLanguage } from "@/lib/i18n";
-import { getTenantUrl } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,12 +67,9 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
 
   let baseStorePath = "/store/healingbuds";
   if (tenant) {
-    baseStorePath = getTenantUrl({
-      subdomain: tenant.subdomain,
-      customDomain: tenant.customDomain,
-    });
+    baseStorePath = getTenantBasePath(tenant.subdomain);
   } else if (storeMatch) {
-    baseStorePath = `/store/${storeMatch[1]}`;
+    baseStorePath = getTenantBasePath(storeMatch[1]);
   }
 
   useEffect(() => {
