@@ -25,15 +25,10 @@ const isTenantRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  // 1. Authentication Check
-  if (!isPublicRoute(req)) {
-    const { userId, redirectToSignIn } = await auth();
-    if (!userId) {
-      return redirectToSignIn({ returnBackUrl: req.url });
-    }
-  }
-
-  // 2. Tenant Routing Logic
+  // 1. Tenant Routing Logic (must run BEFORE auth check)
+  // Subdomain rewrites change /products → /store/slug/products which matches
+  // the public route pattern. If auth runs first, bare paths like /products
+  // would incorrectly require login on subdomain sites.
   const url = req.nextUrl;
   const hostname = req.headers.get('host') || '';
   const pathname = url.pathname;
@@ -47,12 +42,12 @@ export default clerkMiddleware(async (auth, req) => {
   const currentHost = hostname.replace(/(:\d+)/, '');
   const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
   const isLocalhost = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-  const isPreview = pathname.startsWith('/store/preview');
 
   let tenantFound = false;
 
   // PRIORITY 1: Subdomain-based routing (REWRITE)
   // Rewrite slug.budstacks.io/foo -> /store/slug/foo
+  // Returns early — all storefront pages are public
   if (
     !isLocalhost &&
     currentHost.endsWith(`.${baseDomain}`) &&
@@ -60,28 +55,14 @@ export default clerkMiddleware(async (auth, req) => {
   ) {
     const subdomain = currentHost.replace(`.${baseDomain}`, '');
     requestHeaders.set('x-tenant-subdomain', subdomain);
-    tenantFound = true;
 
     // Rewrite path to internal store route
     url.pathname = `/store/${subdomain}${pathname}`;
     return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 
-  // PRIORITY 2: Path-based routing (REDIRECT to Subdomain if on root)
-  // Redirect budstacks.io/store/slug/foo -> slug.budstacks.io/foo
-  const storeMatch = pathname.match(/^\/store\/([^\/]+)(.*)/);
-  if (storeMatch) {
-    const tenantSlug = storeMatch[1];
-    const restPath = storeMatch[2] || '';
-
-    // Otherwise (localhost or internal rewrite processed?), allow path-based access
-    requestHeaders.set('x-tenant-slug', tenantSlug);
-    tenantFound = true;
-  }
-
-  // PRIORITY 3: Custom domain routing
+  // PRIORITY 2: Custom domain routing (also public storefront)
   if (
-    !tenantFound &&
     !isLocalhost &&
     !currentHost.includes('.abacusai.app') &&
     !currentHost.endsWith(`.${baseDomain}`) &&
@@ -89,10 +70,26 @@ export default clerkMiddleware(async (auth, req) => {
     !currentHost.startsWith('www.')
   ) {
     requestHeaders.set('x-tenant-custom-domain', currentHost);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // 2. Authentication Check (only for non-subdomain, non-custom-domain requests)
+  if (!isPublicRoute(req)) {
+    const { userId, redirectToSignIn } = await auth();
+    if (!userId) {
+      return redirectToSignIn({ returnBackUrl: req.url });
+    }
+  }
+
+  // PRIORITY 3: Path-based routing (localhost / dev)
+  const storeMatch = pathname.match(/^\/store\/([^\/]+)(.*)/);
+  if (storeMatch) {
+    const tenantSlug = storeMatch[1];
+    requestHeaders.set('x-tenant-slug', tenantSlug);
     tenantFound = true;
   }
 
-  // If we modified headers (and didn't rewrite/redirect), return response with them
+  // If we modified headers, return response with them
   if (tenantFound) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
