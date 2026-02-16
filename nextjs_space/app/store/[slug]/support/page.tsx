@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { getTenantBySlug } from "@/lib/tenant";
 import { getTenantBasePath } from "@/lib/tenant-utils";
-import AboutContent from "./about-content";
+import SupportContent from "./support-content";
 
-export default async function AboutPage({
+export default async function SupportPage({
   params,
 }: {
   params: { slug: string };
@@ -15,7 +15,7 @@ export default async function AboutPage({
   }
 
   const basePath = getTenantBasePath(params.slug);
-  const pageContent = (tenant as any).pageContent?.about;
+  const pageContent = (tenant as any).pageContent?.support;
 
   return (
     <div
@@ -23,7 +23,7 @@ export default async function AboutPage({
       style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
       <main className="pt-28 md:pt-32">
-        <AboutContent
+        <SupportContent
           basePath={basePath}
           businessName={tenant.businessName}
           pageContent={pageContent}

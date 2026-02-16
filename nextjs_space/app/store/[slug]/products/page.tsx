@@ -3,13 +3,20 @@
 import { useEffect, useState } from "react";
 import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Leaf, ShieldCheck, Truck, HeartPulse, Search } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Leaf,
+  ShieldCheck,
+  Truck,
+  HeartPulse,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import { Tenant } from "@/types/client";
-// import { fetchProducts } from '@/lib/doctor-green-api'; // Direct import removed for security
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Image from "next/image";
 import { RestrictedRegionGate } from "@/components/shop/RestrictedRegionGate";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const benefits = [
   {
@@ -34,6 +41,34 @@ const benefits = [
   },
 ];
 
+const fadeInUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+};
+
+function ProductSkeleton() {
+  return (
+    <div className="rounded-xl overflow-hidden border" style={{ borderColor: "hsl(var(--tenant-color-primary) / 0.1)" }}>
+      <Skeleton className="aspect-square w-full" />
+      <div className="p-5 space-y-3">
+        <Skeleton className="h-5 w-3/4" />
+        <Skeleton className="h-4 w-1/3" />
+        <div className="flex gap-2">
+          <Skeleton className="h-6 w-16" />
+          <Skeleton className="h-6 w-16" />
+        </div>
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    </div>
+  );
+}
+
 export default function ProductsPage() {
   const params = useParams();
   const slug = params?.slug as string;
@@ -42,14 +77,14 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState("all");
 
   useEffect(() => {
     if (slug) {
-      // Fetch products and tenant info from the slug-based API
       fetch(`/api/store/${slug}/products`)
         .then((res) => res.json())
         .then((data) => {
-          // Always try to set tenant if available, even on error
           if (data.tenant) {
             setTenant({
               ...data.tenant,
@@ -62,7 +97,6 @@ export default function ProductsPage() {
           } else {
             console.error("API Error:", data.error);
             setProductsError(data.error || "Failed to load products");
-            // Only trigger 404 if it's explicitly "Tenant not found"
             if (data.error === "Tenant not found") {
               setTenant(null);
             }
@@ -79,15 +113,52 @@ export default function ProductsPage() {
     }
   }, [slug]);
 
+  // Extract unique strain types for filter
+  const strainTypes = Array.from(
+    new Set(
+      products
+        .map((p) => p.strain_type)
+        .filter(Boolean)
+    )
+  ).sort();
+
+  // Filter products
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesType =
+      selectedType === "all" || product.strain_type === selectedType;
+    return matchesSearch && matchesType;
+  });
+
   if (loading) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: "var(--tenant-color-background)" }}
+        className="min-h-screen pb-24 lg:pb-0"
+        style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
       >
-        <p className="text-lg" style={{ color: "var(--tenant-color-text)" }}>
-          Loading...
-        </p>
+        <div className="pt-28 md:pt-32">
+          {/* Skeleton hero */}
+          <section className="py-12 md:py-16">
+            <div className="container mx-auto px-4">
+              <div className="max-w-3xl mx-auto text-center space-y-4">
+                <Skeleton className="h-12 w-80 mx-auto" />
+                <Skeleton className="h-6 w-96 mx-auto" />
+              </div>
+            </div>
+          </section>
+          {/* Skeleton grid */}
+          <section className="py-12">
+            <div className="container mx-auto px-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <ProductSkeleton key={i} />
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     );
   }
@@ -99,91 +170,96 @@ export default function ProductsPage() {
   return (
     <div
       className="min-h-screen pb-24 lg:pb-0"
-      style={{ backgroundColor: "var(--tenant-color-background)" }}
+      style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
       {/* Hero Section */}
-      <section className="relative pt-28 sm:pt-32 pb-8 sm:pb-12 overflow-hidden">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.05), transparent)",
-          }}
-        />
-        <div className="container mx-auto px-4 relative">
+      <section
+        className="relative pt-28 sm:pt-32 pb-12 sm:pb-16 overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(to bottom, hsl(var(--tenant-color-primary) / 0.08), transparent)",
+        }}
+      >
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
             className="max-w-3xl mx-auto text-center"
           >
-            <h1
-              className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4"
+            <motion.h1
+              className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4"
               style={{
-                color: "var(--tenant-color-heading)",
-                fontFamily: "var(--tenant-font-heading)",
+                color: "hsl(var(--tenant-color-heading))",
+                fontFamily: "var(--tenant-font-heading, sans-serif)",
               }}
+              variants={fadeInUp}
             >
               Premium Cultivars
-            </h1>
-            <p
-              className="text-base sm:text-lg mb-6 sm:mb-8 px-2"
+            </motion.h1>
+            <motion.p
+              className="text-base sm:text-lg mb-8 px-2"
               style={{
-                color: "var(--tenant-color-text)",
-                fontFamily: "var(--tenant-font-base)",
+                color: "hsl(var(--tenant-color-text))",
+                fontFamily: "var(--tenant-font-base, sans-serif)",
               }}
+              variants={fadeInUp}
             >
               Browse our selection of pharmaceutical-grade medical cannabis
               products, carefully curated for qualified patients.
-            </p>
+            </motion.p>
           </motion.div>
         </div>
       </section>
 
-      {/* Benefits Section */}
+      {/* Trust Badges */}
       <section
         className="py-6 sm:py-8 border-y"
         style={{
-          backgroundColor: "var(--tenant-color-surface, rgba(0,0,0,0.02))",
-          borderColor: "var(--tenant-color-border, rgba(0,0,0,0.1))",
+          backgroundColor: "hsl(var(--tenant-color-primary) / 0.03)",
+          borderColor: "hsl(var(--tenant-color-primary) / 0.1)",
         }}
       >
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-            {benefits.map((benefit, index) => (
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+          >
+            {benefits.map((benefit) => (
               <motion.div
                 key={benefit.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="flex items-start sm:items-center gap-2 sm:gap-3"
+                className="flex items-center gap-3"
+                variants={fadeInUp}
               >
                 <div
-                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center flex-shrink-0"
+                  className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{
                     backgroundColor:
-                      "rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.1)",
+                      "hsl(var(--tenant-color-primary) / 0.1)",
                   }}
                 >
                   <benefit.icon
-                    className="h-4 w-4 sm:h-5 sm:w-5"
-                    style={{ color: "var(--tenant-color-primary)" }}
+                    className="h-5 w-5"
+                    style={{ color: "hsl(var(--tenant-color-primary))" }}
                   />
                 </div>
                 <div className="min-w-0">
                   <p
-                    className="font-medium text-xs sm:text-sm"
+                    className="font-medium text-sm"
                     style={{
-                      color: "var(--tenant-color-heading)",
-                      fontFamily: "var(--tenant-font-base)",
+                      color: "hsl(var(--tenant-color-heading))",
+                      fontFamily: "var(--tenant-font-base, sans-serif)",
                     }}
                   >
                     {benefit.title}
                   </p>
                   <p
-                    className="text-[10px] sm:text-xs line-clamp-2"
+                    className="text-xs line-clamp-1 hidden sm:block"
                     style={{
-                      color: "var(--tenant-color-text)",
-                      fontFamily: "var(--tenant-font-base)",
+                      color: "hsl(var(--tenant-color-text))",
+                      fontFamily: "var(--tenant-font-base, sans-serif)",
                     }}
                   >
                     {benefit.description}
@@ -191,180 +267,303 @@ export default function ProductsPage() {
                 </div>
               </motion.div>
             ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Search & Filter Bar */}
+      <section className="py-6">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row gap-4 max-w-3xl mx-auto">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                style={{
+                  color: "hsl(var(--tenant-color-text))",
+                  opacity: 0.5,
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all"
+                style={{
+                  backgroundColor: "hsl(var(--tenant-color-background))",
+                  borderColor: "hsl(var(--tenant-color-primary) / 0.2)",
+                  color: "hsl(var(--tenant-color-text))",
+                  fontFamily: "var(--tenant-font-base, sans-serif)",
+                }}
+              />
+            </div>
+
+            {/* Type filter */}
+            {strainTypes.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <SlidersHorizontal
+                  className="w-4 h-4 hidden sm:block"
+                  style={{
+                    color: "hsl(var(--tenant-color-text))",
+                    opacity: 0.5,
+                  }}
+                />
+                <button
+                  onClick={() => setSelectedType("all")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    selectedType === "all" ? "shadow-sm" : "opacity-70 hover:opacity-100"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      selectedType === "all"
+                        ? "hsl(var(--tenant-color-primary))"
+                        : "hsl(var(--tenant-color-primary) / 0.08)",
+                    color:
+                      selectedType === "all"
+                        ? "white"
+                        : "hsl(var(--tenant-color-text))",
+                    fontFamily: "var(--tenant-font-base, sans-serif)",
+                  }}
+                >
+                  All
+                </button>
+                {strainTypes.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedType(type)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all capitalize ${
+                      selectedType === type ? "shadow-sm" : "opacity-70 hover:opacity-100"
+                    }`}
+                    style={{
+                      backgroundColor:
+                        selectedType === type
+                          ? "hsl(var(--tenant-color-primary))"
+                          : "hsl(var(--tenant-color-primary) / 0.08)",
+                      color:
+                        selectedType === type
+                          ? "white"
+                          : "hsl(var(--tenant-color-text))",
+                      fontFamily: "var(--tenant-font-base, sans-serif)",
+                    }}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
       {/* Products Section */}
-      <section className="py-12">
-        <div className="container mx-auto px-4">
+      <section className="py-8 md:py-12">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <RestrictedRegionGate countryCode={tenant?.countryCode || ""}>
             {productsLoading ? (
-              <div className="flex justify-center items-center py-20">
-                <div
-                  className="animate-spin rounded-full h-12 w-12 border-b-2"
-                  style={{ borderColor: "var(--tenant-color-primary)" }}
-                ></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <ProductSkeleton key={i} />
+                ))}
               </div>
             ) : productsError ? (
               <Alert className="max-w-2xl mx-auto">
                 <AlertDescription>{productsError}</AlertDescription>
               </Alert>
-            ) : products.length === 0 ? (
+            ) : filteredProducts.length === 0 ? (
               <div className="text-center py-20">
                 <Search
-                  className="h-16 w-16 mx-auto mb-4 opacity-30"
-                  style={{ color: "var(--tenant-color-text)" }}
+                  className="h-16 w-16 mx-auto mb-4 opacity-20"
+                  style={{ color: "hsl(var(--tenant-color-text))" }}
                 />
                 <p
-                  className="text-lg"
+                  className="text-lg mb-2"
                   style={{
-                    color: "var(--tenant-color-text)",
-                    fontFamily: "var(--tenant-font-base)",
+                    color: "hsl(var(--tenant-color-heading))",
+                    fontFamily: "var(--tenant-font-heading, sans-serif)",
                   }}
                 >
-                  No products available for your region at this time.
+                  {searchQuery || selectedType !== "all"
+                    ? "No products match your filters"
+                    : "No products available"}
+                </p>
+                <p
+                  className="text-sm"
+                  style={{
+                    color: "hsl(var(--tenant-color-text))",
+                    fontFamily: "var(--tenant-font-base, sans-serif)",
+                  }}
+                >
+                  {searchQuery || selectedType !== "all"
+                    ? "Try adjusting your search or filters."
+                    : "Check back soon for new products."}
                 </p>
               </div>
             ) : (
               <motion.div
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer}
               >
-                {products.map((product, index) => (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="group"
-                  >
-                    <Link href={`products/${product.id}`}>
-                      <div
-                        className="rounded-xl overflow-hidden border hover:shadow-lg transition-all duration-300"
-                        style={{
-                          backgroundColor: "var(--tenant-color-surface, white)",
-                          borderColor:
-                            "var(--tenant-color-border, rgba(0,0,0,0.1))",
-                        }}
-                      >
-                        {/* Product Image */}
-                        <div className="relative aspect-square bg-gray-100 overflow-hidden">
-                          {product.image_url ? (
-                            <Image
-                              src={product.image_url}
-                              alt={product.name}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
+                <AnimatePresence mode="popLayout">
+                  {filteredProducts.map((product) => (
+                    <motion.div
+                      key={product.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3 }}
+                      className="group"
+                    >
+                      <Link href={`products/${product.id}`}>
+                        <div
+                          className="rounded-xl overflow-hidden border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                          style={{
+                            backgroundColor:
+                              "hsl(var(--tenant-color-background))",
+                            borderColor:
+                              "hsl(var(--tenant-color-primary) / 0.1)",
+                          }}
+                        >
+                          {/* Product Image */}
+                          <div
+                            className="relative aspect-square overflow-hidden"
+                            style={{
+                              backgroundColor:
+                                "hsl(var(--tenant-color-primary) / 0.03)",
+                            }}
+                          >
+                            {product.image_url ? (
+                              <Image
+                                src={product.image_url}
+                                alt={product.name}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Leaf
+                                  className="h-16 w-16 opacity-15"
+                                  style={{
+                                    color:
+                                      "hsl(var(--tenant-color-primary))",
+                                  }}
+                                />
+                              </div>
+                            )}
+                            {/* Hover overlay */}
                             <div
-                              className="w-full h-full flex items-center justify-center"
+                              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                              style={{
+                                background:
+                                  "linear-gradient(to top, hsl(var(--tenant-color-primary) / 0.2), transparent 50%)",
+                              }}
+                            />
+                          </div>
+
+                          {/* Product Info */}
+                          <div className="p-5">
+                            <h3
+                              className="text-base font-semibold mb-1 group-hover:opacity-80 transition-opacity line-clamp-2"
+                              style={{
+                                color: "hsl(var(--tenant-color-heading))",
+                                fontFamily:
+                                  "var(--tenant-font-heading, sans-serif)",
+                              }}
+                            >
+                              {product.name}
+                            </h3>
+
+                            {product.strain_type && (
+                              <p
+                                className="text-xs mb-3 capitalize"
+                                style={{
+                                  color: "hsl(var(--tenant-color-primary))",
+                                  fontFamily:
+                                    "var(--tenant-font-base, sans-serif)",
+                                }}
+                              >
+                                {product.strain_type}
+                              </p>
+                            )}
+
+                            {/* THC/CBD Content */}
+                            {(product.thc_content || product.cbd_content) && (
+                              <div className="flex gap-2 mb-3">
+                                {product.thc_content && (
+                                  <span
+                                    className="text-xs px-2 py-1 rounded-md font-medium"
+                                    style={{
+                                      backgroundColor:
+                                        "hsl(var(--tenant-color-primary) / 0.1)",
+                                      color:
+                                        "hsl(var(--tenant-color-primary))",
+                                      fontFamily:
+                                        "var(--tenant-font-base, sans-serif)",
+                                    }}
+                                  >
+                                    THC: {product.thc_content}%
+                                  </span>
+                                )}
+                                {product.cbd_content && (
+                                  <span
+                                    className="text-xs px-2 py-1 rounded-md font-medium"
+                                    style={{
+                                      backgroundColor:
+                                        "hsl(var(--tenant-color-primary) / 0.1)",
+                                      color:
+                                        "hsl(var(--tenant-color-primary))",
+                                      fontFamily:
+                                        "var(--tenant-font-base, sans-serif)",
+                                    }}
+                                  >
+                                    CBD: {product.cbd_content}%
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Price */}
+                            {product.price && (
+                              <p
+                                className="text-xl font-bold mb-4"
+                                style={{
+                                  color: "hsl(var(--tenant-color-heading))",
+                                  fontFamily:
+                                    "var(--tenant-font-heading, sans-serif)",
+                                }}
+                              >
+                                {product.currency || "€"}{" "}
+                                {product.price.toFixed(2)}
+                              </p>
+                            )}
+
+                            {/* View Details Button */}
+                            <button
+                              className="w-full px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 hover:shadow-md"
                               style={{
                                 backgroundColor:
-                                  "rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.05)",
+                                  "hsl(var(--tenant-color-primary))",
+                                color: "white",
+                                fontFamily:
+                                  "var(--tenant-font-base, sans-serif)",
                               }}
                             >
-                              <Leaf
-                                className="h-16 w-16 opacity-20"
-                                style={{ color: "var(--tenant-color-primary)" }}
-                              />
-                            </div>
-                          )}
+                              View Details
+                            </button>
+                          </div>
                         </div>
-
-                        {/* Product Info */}
-                        <div className="p-4">
-                          <h3
-                            className="text-lg font-semibold mb-2 group-hover:text-opacity-80 transition-colors line-clamp-2"
-                            style={{
-                              color: "var(--tenant-color-heading)",
-                              fontFamily: "var(--tenant-font-heading)",
-                            }}
-                          >
-                            {product.name}
-                          </h3>
-
-                          {product.strain_type && (
-                            <p
-                              className="text-sm mb-3 capitalize"
-                              style={{
-                                color: "var(--tenant-color-text)",
-                                fontFamily: "var(--tenant-font-base)",
-                              }}
-                            >
-                              {product.strain_type}
-                            </p>
-                          )}
-
-                          {/* THC/CBD Content */}
-                          {(product.thc_content || product.cbd_content) && (
-                            <div className="flex gap-2 mb-3">
-                              {product.thc_content && (
-                                <span
-                                  className="text-xs px-2 py-1 rounded"
-                                  style={{
-                                    backgroundColor:
-                                      "rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.1)",
-                                    color: "var(--tenant-color-primary)",
-                                    fontFamily: "var(--tenant-font-base)",
-                                  }}
-                                >
-                                  THC: {product.thc_content}%
-                                </span>
-                              )}
-                              {product.cbd_content && (
-                                <span
-                                  className="text-xs px-2 py-1 rounded"
-                                  style={{
-                                    backgroundColor:
-                                      "rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.1)",
-                                    color: "var(--tenant-color-primary)",
-                                    fontFamily: "var(--tenant-font-base)",
-                                  }}
-                                >
-                                  CBD: {product.cbd_content}%
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Price */}
-                          {product.price && (
-                            <p
-                              className="text-xl font-bold"
-                              style={{
-                                color: "var(--tenant-color-heading)",
-                                fontFamily: "var(--tenant-font-heading)",
-                              }}
-                            >
-                              {product.currency || '€'} {product.price.toFixed(2)}
-                            </p>
-                          )}
-
-                          {/* View Details Button */}
-                          <button
-                            className="mt-4 w-full px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200"
-                            style={{
-                              backgroundColor: "var(--tenant-color-primary)",
-                              color: "white",
-                              fontFamily: "var(--tenant-font-base)",
-                            }}
-                          >
-                            <span style={{ color: "white" }}>View Details</span>
-                          </button>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
+                      </Link>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </motion.div>
             )}
           </RestrictedRegionGate>
         </div>
-      </section >
-    </div >
+      </section>
+    </div>
   );
 }
