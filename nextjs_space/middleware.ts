@@ -56,7 +56,14 @@ export default clerkMiddleware(async (auth, req) => {
     const subdomain = currentHost.replace(`.${baseDomain}`, '');
     requestHeaders.set('x-tenant-subdomain', subdomain);
 
-    // Rewrite path to internal store route
+    // API routes: don't rewrite path — APIs already include slug in their URL
+    // (e.g. /api/store/slug/products, /api/tenant/slug). Each route handles
+    // its own auth internally so skipping the middleware auth check is safe.
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+
+    // Page routes: rewrite to internal store route
     url.pathname = `/store/${subdomain}${pathname}`;
     return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
