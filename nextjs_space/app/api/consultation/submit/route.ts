@@ -398,10 +398,14 @@ export async function POST(request: NextRequest) {
       console.log("Dr. Green API Success:", drGreenResponse);
 
       // Extract KYC link and client ID from response
-      // Handle potentially different response structures
-      const clientId = drGreenResponse.data?.id || drGreenResponse.id;
+      // Dr Green API may return client data under different keys depending on version
+      const clientId = drGreenResponse.data?.id || drGreenResponse.client?.id || drGreenResponse.id;
       const kycLink =
-        drGreenResponse.data?.kycLink || drGreenResponse.kycLink || null;
+        drGreenResponse.data?.kycLink || drGreenResponse.client?.kycLink || drGreenResponse.kycLink || null;
+
+      if (!clientId) {
+        console.error("Dr. Green API response missing client ID:", JSON.stringify(drGreenResponse));
+      }
 
       // Update questionnaire with Dr. Green client ID and KYC link
       await prisma.consultation_questionnaires.update({
