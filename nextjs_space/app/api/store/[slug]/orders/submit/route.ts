@@ -109,6 +109,7 @@ export async function POST(
       shippingInfo,
       apiKey: drGreenConfig.apiKey,
       secretKey: drGreenConfig.secretKey,
+      apiUrl: drGreenConfig.apiUrl,
       clientCartItems: cartItems,
     });
 

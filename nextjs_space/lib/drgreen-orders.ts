@@ -36,9 +36,10 @@ export async function submitOrder(params: {
     shippingInfo: OrderSubmissionData["shippingInfo"];
     apiKey: string;
     secretKey: string;
+    apiUrl?: string;
     clientCartItems?: any[];
 }): Promise<DrGreenOrderResponse> {
-    const { userId, tenantId, shippingInfo, apiKey, secretKey, clientCartItems } = params;
+    const { userId, tenantId, shippingInfo, apiKey, secretKey, apiUrl, clientCartItems } = params;
 
     // Get user's Dr. Green client ID
     const user = await prisma.users.findUnique({
@@ -108,6 +109,7 @@ export async function submitOrder(params: {
                 method: "POST",
                 apiKey,
                 secretKey,
+                baseUrl: apiUrl,
                 validateSuccessFlag: true,
                 body: {
                     clientId: user.drGreenClientId,
@@ -200,6 +202,7 @@ export async function submitOrder(params: {
             method: "DELETE",
             apiKey,
             secretKey,
+            baseUrl: apiUrl,
             validateSuccessFlag: true,
             body: { cartId: cart.drGreenCartId },
         });
