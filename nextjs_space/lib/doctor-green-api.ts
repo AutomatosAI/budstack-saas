@@ -269,9 +269,9 @@ export async function fetchProducts(
       fullImageUrl = `${baseUrl}${path}`;
     }
 
-    // Calculate stock from strainLocations array
+    // Calculate stock from strainLocations array, falling back to product-level fields
     const locations = product.strainLocations || [];
-    const totalStock = locations.reduce(
+    const locationStock = locations.reduce(
       (sum: number, loc: any) => sum + (loc.stockQuantity || 0),
       0,
     );
@@ -279,7 +279,12 @@ export async function fetchProducts(
       (loc: any) => loc.isAvailable === true,
     );
 
-    // Verify Currency
+    // Use location-level data if available, otherwise fall back to product-level
+    const totalStock = locationStock > 0 ? locationStock : (product.stockQuantity || 0);
+    const isAvailable = locations.length > 0
+      ? isAvailableAtAnyLocation
+      : (product.isAvailable !== false && totalStock > 0);
+
     // Try to find price matching the local currency
     const localCurrencyPrice = product.prices?.find(
       (p: any) => p.currency?.toLowerCase() === defaultCurrency.toLowerCase()
@@ -290,8 +295,6 @@ export async function fetchProducts(
       ? localCurrencyPrice.currency.toUpperCase()
       : (product.currency || defaultCurrency);
 
-    console.log(`[DrGreen Debug] ID: ${product.id} | Default: ${defaultCurrency} | Selected: ${currency} ${price}`);
-
     return {
       ...product,
       strain_type:
@@ -300,9 +303,9 @@ export async function fetchProducts(
       thc_content: product.thc || 0,
       cbd_content: product.cbd || 0,
       price: price,
-      currency: currency, // Use API currency if available, else fallback
-      in_stock: isAvailableAtAnyLocation && totalStock > 0, // Available if any location has stock
-      stock_quantity: totalStock, // Sum of all location stock
+      currency: currency,
+      in_stock: isAvailable && totalStock > 0,
+      stock_quantity: totalStock,
       image_url: fullImageUrl,
       imageUrl: fullImageUrl,
     };
@@ -342,9 +345,9 @@ export async function fetchProduct(
     fullImageUrl = `${baseUrl}${path}`;
   }
 
-  // Calculate stock from strainLocations array
+  // Calculate stock from strainLocations array, falling back to product-level fields
   const locations = product.strainLocations || [];
-  const totalStock = locations.reduce(
+  const locationStock = locations.reduce(
     (sum: number, loc: any) => sum + (loc.stockQuantity || 0),
     0,
   );
@@ -352,7 +355,11 @@ export async function fetchProduct(
     (loc: any) => loc.isAvailable === true,
   );
 
-  // Verify Currency
+  const totalStock = locationStock > 0 ? locationStock : (product.stockQuantity || 0);
+  const isAvailable = locations.length > 0
+    ? isAvailableAtAnyLocation
+    : (product.isAvailable !== false && totalStock > 0);
+
   // Try to find price matching the local currency
   const localCurrencyPrice = product.prices?.find(
     (p: any) => p.currency?.toLowerCase() === defaultCurrency.toLowerCase()
@@ -372,7 +379,7 @@ export async function fetchProduct(
     cbd_content: product.cbd || 0,
     price: price,
     currency: currency,
-    in_stock: isAvailableAtAnyLocation && totalStock > 0,
+    in_stock: isAvailable && totalStock > 0,
     stock_quantity: totalStock,
     image_url: fullImageUrl,
     imageUrl: fullImageUrl,
