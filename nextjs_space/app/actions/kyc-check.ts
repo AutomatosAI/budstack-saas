@@ -86,7 +86,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             };
         }
 
-        // Fetch Config
+        // Fetch Config and check Dr Green API
         try {
             const config = await getTenantDrGreenConfig(dbUser.tenantId);
 
@@ -95,6 +95,22 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
 
             // STATUS must be ACTIVE and verified must be true to shop
             const isVerified = client.status === 'ACTIVE' && client.verified;
+
+            // Persist verified status locally so we never need to check again
+            if (isVerified && questionnaire && !questionnaire.isKycVerified) {
+                await prisma.consultation_questionnaires.updateMany({
+                    where: {
+                        tenantId: dbUser.tenantId,
+                        email: { equals: clerkUser.email, mode: 'insensitive' },
+                    },
+                    data: {
+                        isKycVerified: true,
+                        adminApproval: "APPROVED",
+                        updatedAt: new Date(),
+                    },
+                });
+                console.log(`✅ KYC verified for ${clerkUser.email}, cached locally`);
+            }
 
             return {
                 isLoggedIn: true,
