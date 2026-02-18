@@ -79,18 +79,8 @@ export async function callDrGreenAPI<T>(
     signaturePayload = payload;
   }
 
-  // Always generate signature if there is something to sign, or if strict mode requires it
-  // Note: Even empty GET query strings might strictly require a signature of empty string? 
-  // Findings say "Sign the query string". If empty, maybe not?
-  // Let's assume we sign if there is a payload OR if it is a query string interaction.
-  // Actually, easiest is: Always add signature if we have a payload string (which includes query string now).
-
-  // For POST even with empty body, we sign empty string? 
-  // Legacy code said: `if (method !== 'GET' && payload)`. 
-  // Let's stick to signing whatever our payload target is.
-  if (signaturePayload || method !== 'GET') {
-    requestHeaders['x-auth-signature'] = generateDrGreenSignature(signaturePayload, secretKey);
-  }
+  // Always include signature — GET requests without query params sign an empty string
+  requestHeaders['x-auth-signature'] = generateDrGreenSignature(signaturePayload, secretKey);
 
   const response = await fetch(`${baseUrl}${endpoint}`, {
     method,
