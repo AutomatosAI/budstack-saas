@@ -45,9 +45,11 @@ export async function getTenantDrGreenConfig(
   let apiUrl = tenant.drGreenApiUrl;
 
   if (!apiUrl) {
-    // Fallback to platform config
-    const platformConfig = await prisma.platform_config.findFirst();
-    apiUrl = platformConfig?.drGreenApiUrl || undefined;
+    // Fallback to platform config (must match getPlatformConfig's query)
+    const platformConfig = await prisma.platform_config.findUnique({
+      where: { id: "config" },
+    });
+    apiUrl = platformConfig?.drGreenApiUrl || process.env.DRGREEN_API_URL || undefined;
   }
 
   return {
