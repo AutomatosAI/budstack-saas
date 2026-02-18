@@ -92,45 +92,70 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists locally
-    const existingUser = await prisma.users.findFirst({
-      where: {
-        email: body.email.toLowerCase(),
-        ...(body.tenantId ? { tenantId: body.tenantId } : {}),
-      },
+    // Check if user already exists locally (email is globally unique, don't filter by tenantId)
+    const existingUser = await prisma.users.findUnique({
+      where: { email: body.email.toLowerCase() },
     });
 
     let userId: string | undefined;
 
-    // Create user account if doesn't exist (Local Mirror)
-    if (!existingUser) {
-      // Use Clerk ID if available, otherwise random UUID
-      const newId = clerkUser ? clerkUser.id : crypto.randomUUID();
-
-      const newUser = await prisma.users.create({
-        data: {
-          id: newId, // Attempt to sync IDs if possible, though schema might enforce UUID. 
-          // Clerk IDs are strings. If schema is UUID, we can't use Clerk ID.
-          // Assuming schema is UUID based on previous code.
-          // We will use randomUUID() and rely on email linking.
-          // But wait, Onboarding used crypto.randomUUID().
-          // If schema allows string ID, better to use Clerk ID.
-          // I'll stick to crypto.randomUUID() to be safe with UUID column type.
-          email: body.email.toLowerCase(), // Ensure lowercase
-          password: "CLERK_MANAGED_ACCOUNT",
-          name: `${body.firstName} ${body.lastName}`,
-          role: "PATIENT",
-          tenantId: body.tenantId,
-          updatedAt: new Date(),
-        },
-      });
-      userId = newUser.id;
-      console.log(`✅ Created local user mirror for ${body.email}`);
-    } else {
+    if (existingUser) {
       userId = existingUser.id;
+      // Update tenantId if not set (e.g. user was created by Clerk webhook without tenant)
+      if (!existingUser.tenantId && body.tenantId) {
+        await prisma.users.update({
+          where: { id: existingUser.id },
+          data: {
+            tenantId: body.tenantId,
+            role: "PATIENT",
+            name: `${body.firstName} ${body.lastName}`,
+            updatedAt: new Date(),
+          },
+        });
+      }
       console.log(
         `⚠️  User ${body.email} already exists, using existing account`,
       );
+    } else {
+      // Create user account (Local Mirror)
+      const newId = clerkUser ? clerkUser.id : crypto.randomUUID();
+
+      try {
+        const newUser = await prisma.users.create({
+          data: {
+            id: newId,
+            email: body.email.toLowerCase(),
+            password: "CLERK_MANAGED_ACCOUNT",
+            name: `${body.firstName} ${body.lastName}`,
+            role: "PATIENT",
+            tenantId: body.tenantId,
+            updatedAt: new Date(),
+          },
+        });
+        userId = newUser.id;
+        console.log(`✅ Created local user mirror for ${body.email}`);
+      } catch (prismaError: any) {
+        // Race condition: Clerk webhook may have created the user between our check and create
+        if (prismaError.code === "P2002") {
+          const raceUser = await prisma.users.findUnique({
+            where: { email: body.email.toLowerCase() },
+          });
+          if (raceUser) {
+            userId = raceUser.id;
+            if (!raceUser.tenantId && body.tenantId) {
+              await prisma.users.update({
+                where: { id: raceUser.id },
+                data: { tenantId: body.tenantId, role: "PATIENT", updatedAt: new Date() },
+              });
+            }
+            console.log(`⚠️  User ${body.email} created by webhook race, using existing account`);
+          } else {
+            throw prismaError;
+          }
+        } else {
+          throw prismaError;
+        }
+      }
     }
 
     // Save questionnaire to database

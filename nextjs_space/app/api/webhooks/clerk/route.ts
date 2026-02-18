@@ -89,25 +89,39 @@ export async function POST(req: Request) {
                 }
             });
         } else {
-            // New user from Clerk side. We create a basic record.
-            // They won't have a role or tenant yet properly assigned unless we have logic for that.
-            // For now, we create them as CONSUMER or similar defaults, but schema might require role.
-            // We'll skip creating if role is required and not nullable, but let's assume we create inactive.
-
-            // Actually, safer to just log for now if we don't have a default role strategy.
-            // But let's try to upsert with safe defaults.
-            await prisma.users.create({
-                data: {
-                    email,
-                    name: name,
-                    firstName: first_name || null,
-                    lastName: last_name || null,
-                    role: "CONSUMER", // Default role
-                    isActive: true,
-                    id: `user_${id}`, // Sync IDs if possible or just use generated
-                    updatedAt: new Date(),
+            // New user from Clerk side - create with safe defaults.
+            // Use try-catch to handle race condition with consultation submit flow.
+            try {
+                await prisma.users.create({
+                    data: {
+                        email,
+                        password: "CLERK_MANAGED_ACCOUNT",
+                        name: name,
+                        firstName: first_name || null,
+                        lastName: last_name || null,
+                        role: "CONSUMER",
+                        isActive: true,
+                        id: `user_${id}`,
+                        updatedAt: new Date(),
+                    }
+                });
+            } catch (createError: any) {
+                // P2002 = unique constraint violation - user was created by another flow
+                if (createError.code === "P2002") {
+                    console.log(`User ${email} already exists (created by another flow), updating instead.`);
+                    await prisma.users.update({
+                        where: { email },
+                        data: {
+                            name: name || undefined,
+                            firstName: first_name || null,
+                            lastName: last_name || null,
+                            updatedAt: new Date(),
+                        },
+                    });
+                } else {
+                    throw createError;
                 }
-            });
+            }
         }
     }
 
