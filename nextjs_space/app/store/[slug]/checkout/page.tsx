@@ -16,7 +16,7 @@ import { getUserShippingAddress } from "@/app/actions/get-user-shipping";
 export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const router = useRouter();
   const basePath = getTenantBasePath(params.slug);
-  const { items, getTotalPrice } = useCartStore();
+  const { items, getTotalPrice, clearCart } = useCartStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -75,6 +75,16 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         },
         body: JSON.stringify({
           shippingInfo: formData,
+          cartItems: items.map((item) => ({
+            strainId: item.productId,
+            quantity: item.quantity,
+            strain: {
+              id: item.productId,
+              name: item.name,
+              retailPrice: item.price,
+              imageUrl: item.image,
+            },
+          })),
         }),
       });
 
@@ -84,7 +94,8 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         throw new Error(data.error || "Failed to submit order");
       }
 
-      // Redirect to order confirmation
+      // Clear client-side cart and redirect to order confirmation
+      clearCart();
       router.push(`${basePath}/orders/${data.order.orderId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit order");

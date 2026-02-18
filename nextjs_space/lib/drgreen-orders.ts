@@ -36,8 +36,9 @@ export async function submitOrder(params: {
     shippingInfo: OrderSubmissionData["shippingInfo"];
     apiKey: string;
     secretKey: string;
+    clientCartItems?: any[];
 }): Promise<DrGreenOrderResponse> {
-    const { userId, tenantId, shippingInfo, apiKey, secretKey } = params;
+    const { userId, tenantId, shippingInfo, apiKey, secretKey, clientCartItems } = params;
 
     // Get user's Dr. Green client ID
     const user = await prisma.users.findUnique({
@@ -49,8 +50,8 @@ export async function submitOrder(params: {
         throw new Error("User must complete consultation before placing orders");
     }
 
-    // Verify user has items in cart
-    const cart = await prisma.drgreen_carts.findUnique({
+    // Check server-side cart first
+    let cart = await prisma.drgreen_carts.findUnique({
         where: {
             userId_tenantId: {
                 userId,
@@ -58,6 +59,26 @@ export async function submitOrder(params: {
             },
         },
     });
+
+    // If server-side cart is empty but client sent cart items, sync them to DB
+    if ((!cart || !cart.items || (cart.items as any[]).length === 0) && clientCartItems?.length) {
+        cart = await prisma.drgreen_carts.upsert({
+            where: {
+                userId_tenantId: { userId, tenantId },
+            },
+            create: {
+                id: crypto.randomUUID(),
+                userId,
+                tenantId,
+                items: clientCartItems,
+                updatedAt: new Date(),
+            },
+            update: {
+                items: clientCartItems,
+                updatedAt: new Date(),
+            },
+        });
+    }
 
     if (!cart || !cart.items || (cart.items as any[]).length === 0) {
         throw new Error("Cart is empty. Add items before placing an order.");

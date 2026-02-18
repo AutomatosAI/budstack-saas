@@ -30,7 +30,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { shippingInfo } = body;
+    const { shippingInfo, cartItems } = body;
 
     // Validate shipping info
     if (
@@ -102,13 +102,14 @@ export async function POST(
       }
     }
 
-    // Submit order
+    // Submit order (pass client-side cart items as fallback)
     const orderResponse = await submitOrder({
       userId: dbUser.id,
       tenantId: tenant.id,
       shippingInfo,
       apiKey: drGreenConfig.apiKey,
       secretKey: drGreenConfig.secretKey,
+      clientCartItems: cartItems,
     });
 
     // Trigger webhook for order creation
