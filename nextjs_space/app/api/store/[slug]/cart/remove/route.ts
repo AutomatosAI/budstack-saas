@@ -53,6 +53,7 @@ export async function DELETE(
       strainId,
       apiKey: drGreenConfig.apiKey,
       secretKey: drGreenConfig.secretKey,
+      apiUrl: drGreenConfig.apiUrl,
     });
 
     return NextResponse.json({ cart });

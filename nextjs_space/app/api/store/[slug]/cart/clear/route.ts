@@ -42,6 +42,7 @@ export async function DELETE(
       tenantId: tenant.id,
       apiKey: drGreenConfig.apiKey,
       secretKey: drGreenConfig.secretKey,
+      apiUrl: drGreenConfig.apiUrl,
     });
 
     return NextResponse.json({ success: true, message: "Cart cleared" });

@@ -64,8 +64,9 @@ export async function addToCart(params: {
   size: number;
   apiKey: string;
   secretKey: string;
+  apiUrl?: string;
 }): Promise<DrGreenCartResponse> {
-  const { userId, tenantId, strainId, quantity, size, apiKey, secretKey } =
+  const { userId, tenantId, strainId, quantity, size, apiKey, secretKey, apiUrl } =
     params;
 
   // Get/ensure client ID
@@ -89,6 +90,7 @@ export async function addToCart(params: {
     method: "POST",
     apiKey,
     secretKey,
+    baseUrl: apiUrl,
     validateSuccessFlag: true,
     body: {
       items: [
@@ -159,8 +161,9 @@ export async function getCart(params: {
   tenantId: string;
   apiKey: string;
   secretKey: string;
+  apiUrl?: string;
 }): Promise<DrGreenCartResponse> {
-  const { userId, tenantId, apiKey, secretKey } = params;
+  const { userId, tenantId, apiKey, secretKey, apiUrl } = params;
 
   try {
     // Get client ID
@@ -171,6 +174,7 @@ export async function getCart(params: {
       method: "GET",
       apiKey,
       secretKey,
+      baseUrl: apiUrl,
       validateSuccessFlag: true,
     });
 
@@ -248,8 +252,9 @@ export async function removeFromCart(params: {
   strainId: string;
   apiKey: string;
   secretKey: string;
+  apiUrl?: string;
 }): Promise<DrGreenCartResponse> {
-  const { userId, tenantId, strainId, apiKey, secretKey } = params;
+  const { userId, tenantId, strainId, apiKey, secretKey, apiUrl } = params;
 
   // Get client ID
   const clientId = await ensureClientId(userId, tenantId, apiKey, secretKey);
@@ -275,13 +280,14 @@ export async function removeFromCart(params: {
       method: "DELETE",
       apiKey,
       secretKey,
+      baseUrl: apiUrl,
       validateSuccessFlag: true,
       body: { cartId: cart.drGreenCartId },
     },
   );
 
   // Refresh cart
-  return getCart({ userId, tenantId, apiKey, secretKey });
+  return getCart({ userId, tenantId, apiKey, secretKey, apiUrl });
 }
 
 /**
@@ -292,8 +298,9 @@ export async function clearCart(params: {
   tenantId: string;
   apiKey: string;
   secretKey: string;
+  apiUrl?: string;
 }): Promise<void> {
-  const { userId, tenantId, apiKey, secretKey } = params;
+  const { userId, tenantId, apiKey, secretKey, apiUrl } = params;
 
   const cart = await prisma.drgreen_carts.findUnique({
     where: {
@@ -310,6 +317,7 @@ export async function clearCart(params: {
       method: "DELETE",
       apiKey,
       secretKey,
+      baseUrl: apiUrl,
       validateSuccessFlag: true,
       body: { cartId: cart.drGreenCartId },
     });
