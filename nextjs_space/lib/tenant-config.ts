@@ -41,16 +41,14 @@ export async function getTenantDrGreenConfig(
     throw new Error("Failed to decrypt Dr Green credentials. Please update your settings.");
   }
 
-  // Get API URL: tenant override > platform config > fallback
-  let apiUrl = tenant.drGreenApiUrl;
-
-  if (!apiUrl) {
-    // Fallback to platform config (must match getPlatformConfig's query)
-    const platformConfig = await prisma.platform_config.findUnique({
-      where: { id: "config" },
-    });
-    apiUrl = platformConfig?.drGreenApiUrl || process.env.DRGREEN_API_URL || undefined;
-  }
+  // Get API URL: platform config (source of truth) > tenant override > env fallback
+  // Platform config is managed by super-admin and should be the canonical URL.
+  // Tenant-level URL is only used as a last-resort fallback to avoid confusion
+  // when tenant has a stale/wrong URL that shadows the correct platform config.
+  const platformConfig = await prisma.platform_config.findUnique({
+    where: { id: "config" },
+  });
+  let apiUrl = platformConfig?.drGreenApiUrl || tenant.drGreenApiUrl || process.env.DRGREEN_API_URL || undefined;
 
   return {
     apiKey: decryptedApiKey,

@@ -102,15 +102,9 @@ export async function submitOrder(params: {
     let orderData: any = null;
     const hasRealClientId = user.drGreenClientId && !user.drGreenClientId.startsWith("manual_test_") && !user.drGreenClientId.startsWith("MOCK_");
 
-    console.log(`[Order Debug] apiUrl param: ${apiUrl}`);
-    console.log(`[Order Debug] hasRealClientId: ${hasRealClientId}, clientId: ${user.drGreenClientId}`);
-    console.log(`[Order Debug] apiKey starts with: ${apiKey?.substring(0, 8)}...`);
-
     // Try Dr Green API first if user has a real client ID
     if (hasRealClientId) {
         try {
-            const effectiveUrl = apiUrl || process.env.DOCTOR_GREEN_API_URL || 'https://api.drgreennft.com/api/v1';
-            console.log(`[Order Debug] Calling Dr Green at: ${effectiveUrl}/dapp/orders`);
             const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
                 method: "POST",
                 apiKey,
