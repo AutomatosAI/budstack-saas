@@ -99,34 +99,45 @@ export async function submitOrder(params: {
 
     // Initialize orderData
     let orderData: any = null;
+    const hasRealClientId = user.drGreenClientId && !user.drGreenClientId.startsWith("manual_test_") && !user.drGreenClientId.startsWith("MOCK_");
 
-    // If locally verified (and possibly using a fake ID), bypass API
-    // We assume if local verification exists, we trust it over the API error risk for now
-    if (localQuestionnaire) {
-        // Mock Dr Green response
+    // Try Dr Green API first if user has a real client ID
+    if (hasRealClientId) {
+        try {
+            const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
+                method: "POST",
+                apiKey,
+                secretKey,
+                validateSuccessFlag: true,
+                body: {
+                    clientId: user.drGreenClientId,
+                },
+            });
+            orderData = (drGreenResponse as any).data || (drGreenResponse as any).order || drGreenResponse;
+            console.log("✅ Order submitted to Dr Green:", JSON.stringify(orderData));
+        } catch (drGreenError) {
+            console.error("Dr Green order submission failed:", drGreenError);
+            // Fall through to mock if locally verified, otherwise throw
+            if (!localQuestionnaire) {
+                throw drGreenError;
+            }
+        }
+    }
+
+    // Fallback to mock only if Dr Green API failed/skipped AND user is locally verified
+    if (!orderData && localQuestionnaire) {
         orderData = {
             id: `MOCK_DG_ORDER_${Date.now()}`,
             invoiceNumber: `INV_${Date.now()}`,
             status: "PENDING",
-            total: 0 // Will be recalculated locally anyway
+            total: 0,
         };
-    } else {
-        // Only require drGreenClientId if we're calling the API
-        if (!user.drGreenClientId) {
-            throw new Error("User must complete consultation before placing orders");
-        }
+        console.log("⚠️ Using mock order (no real Dr Green client ID or API failed)");
+    }
 
-        // Submit order to Dr. Green API
-        const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
-            method: "POST",
-            apiKey,
-            secretKey,
-            validateSuccessFlag: true,
-            body: {
-                clientId: user.drGreenClientId,
-            },
-        });
-        orderData = (drGreenResponse as any).data;
+    // No local verification and no Dr Green client ID
+    if (!orderData && !hasRealClientId) {
+        throw new Error("User must complete consultation before placing orders");
     }
 
     if (!orderData || !orderData.id) {
