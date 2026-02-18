@@ -414,14 +414,17 @@ export async function getClientByNFT(
 
 /**
  * Get client information by Client ID
+ * Uses /dapp/clients/ endpoint (staging API requires /dapp/ prefix)
  */
 export async function fetchClient(
   clientId: string,
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenClient> {
-  return doctorGreenRequest<DoctorGreenClient>(`/clients/${clientId}`, {
+  const response = await doctorGreenRequest<any>(`/dapp/clients/${clientId}`, {
     config,
   });
+  // Normalize — API may nest client data under .data or .client
+  return response.data?.client || response.data || response.client || response;
 }
 
 /**
