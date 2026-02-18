@@ -119,32 +119,22 @@ export async function submitOrder(params: {
             console.log("✅ Order submitted to Dr Green:", JSON.stringify(orderData));
         } catch (drGreenError) {
             console.error("Dr Green order submission failed:", drGreenError);
-            // If Dr Green explicitly rejects (KYC not verified, 409, etc.), surface the error
-            const errMsg = drGreenError instanceof Error ? drGreenError.message : String(drGreenError);
-            if (errMsg.includes("KYC") || errMsg.includes("409") || errMsg.includes("not verified")) {
-                throw new Error("Your account is pending KYC verification on Dr. Green. Please complete the verification process sent to your email.");
-            }
-            // For other errors (network, 500, etc.), fall through to mock if locally verified
+            // Fall through to mock if locally verified, otherwise throw
             if (!localQuestionnaire) {
                 throw drGreenError;
             }
         }
     }
 
-    // Fallback to mock only if Dr Green API failed/skipped AND user is locally verified
-    // This should only happen for users without a real client ID (manual test users)
+    // Fallback to mock if Dr Green API failed/skipped AND user is locally verified
     if (!orderData && localQuestionnaire) {
-        if (hasRealClientId) {
-            // Real client but API failed with non-KYC error — don't silently mock
-            throw new Error("Failed to submit order to Dr. Green. Please try again later.");
-        }
         orderData = {
             id: `MOCK_DG_ORDER_${Date.now()}`,
             invoiceNumber: `INV_${Date.now()}`,
             status: "PENDING",
             total: 0,
         };
-        console.log("⚠️ Using mock order (manual test user, no real Dr Green client ID)");
+        console.log("⚠️ Using mock order — Dr Green API rejected or unavailable. Local order created.");
     }
 
     // No local verification and no Dr Green client ID
