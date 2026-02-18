@@ -305,7 +305,9 @@ export async function fetchProducts(
       price: price,
       currency: currency,
       in_stock: isAvailable && totalStock > 0,
+      isAvailable: isAvailable && totalStock > 0,
       stock_quantity: totalStock,
+      stockQuantity: totalStock,
       image_url: fullImageUrl,
       imageUrl: fullImageUrl,
     };
@@ -380,7 +382,9 @@ export async function fetchProduct(
     price: price,
     currency: currency,
     in_stock: isAvailable && totalStock > 0,
+    isAvailable: isAvailable && totalStock > 0,
     stock_quantity: totalStock,
+    stockQuantity: totalStock,
     image_url: fullImageUrl,
     imageUrl: fullImageUrl,
   };
