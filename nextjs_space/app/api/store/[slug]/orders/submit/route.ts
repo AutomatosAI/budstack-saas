@@ -102,6 +102,17 @@ export async function POST(
       }
     }
 
+    // Debug: Check client status on Dr Green before ordering
+    if (dbUser.drGreenClientId) {
+      try {
+        const { fetchClient } = await import("@/lib/doctor-green-api");
+        const clientStatus = await fetchClient(dbUser.drGreenClientId, drGreenConfig);
+        console.log(`[Order Debug] Dr Green client status:`, JSON.stringify(clientStatus));
+      } catch (e) {
+        console.error(`[Order Debug] Failed to fetch client status:`, e);
+      }
+    }
+
     // Submit order (pass client-side cart items as fallback)
     const orderResponse = await submitOrder({
       userId: dbUser.id,
