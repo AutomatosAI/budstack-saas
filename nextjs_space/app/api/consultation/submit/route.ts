@@ -488,19 +488,32 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Soft Fail: Return 200 OK so the user can proceed to dashboard
-      // The consultation is saved, just not synced. We can retry later.
+      // Parse Dr Green error for user-friendly messages
+      const errorMsg = drGreenError.message || "";
+      let userMessage = "Registration failed. Please try again or contact support.";
+      let statusCode = 500;
+
+      if (errorMsg.includes("Phone Number already exists") || errorMsg.includes("phone") && errorMsg.includes("exists")) {
+        userMessage = "This phone number is already registered. Please use a different phone number or contact support.";
+        statusCode = 409;
+      } else if (errorMsg.includes("email") && errorMsg.includes("exists")) {
+        userMessage = "This email address is already registered. Please use a different email or try logging in.";
+        statusCode = 409;
+      } else if (errorMsg.includes("409")) {
+        userMessage = "An account with these details already exists. Please use different details or contact support.";
+        statusCode = 409;
+      } else if (errorMsg.includes("400")) {
+        userMessage = "Invalid information provided. Please check your details and try again.";
+        statusCode = 400;
+      }
+
       return NextResponse.json(
         {
-          success: true,
-          warning: "Dr. Green API submission failed (queued for retry)",
+          success: false,
+          error: userMessage,
           questionnaireId: questionnaire.id,
-          // No client ID or KYC link yet
-          drGreenClientId: null,
-          kycLink: null,
-          adminApproval: "PENDING",
         },
-        { status: 200 },
+        { status: statusCode },
       );
     }
   } catch (error: any) {
