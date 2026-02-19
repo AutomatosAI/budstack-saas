@@ -77,22 +77,20 @@ export async function callDrGreenAPI<T>(
   };
 
   // Determine what to sign:
-  // - For GET: Sign the query string (e.g., "countryCode=GBR&page=1")
+  // - For GET: Sign empty JSON object "{}" (per Dr Green API docs)
   // - For POST/PUT/DELETE: Sign the body (JSON string)
   let signaturePayload = '';
 
   if (method === 'GET') {
-    const parts = endpoint.split('?');
-    if (parts.length > 1) {
-      signaturePayload = parts[1];
-    }
+    // Dr Green API requires GET requests to sign an empty object "{}"
+    // Reference: southhealing drGreenRequestGet() implementation
+    signaturePayload = '{}';
   } else {
     signaturePayload = payload;
   }
 
   console.log(`[DrGreen API]   signing: "${signaturePayload.slice(0, 100)}${signaturePayload.length > 100 ? '...' : ''}" (${signaturePayload.length} chars)`);
 
-  // Always include signature — GET requests without query params sign an empty string
   const signature = generateDrGreenSignature(signaturePayload, secretKey);
   requestHeaders['x-auth-signature'] = signature;
   console.log(`[DrGreen API]   signature: ${signature.slice(0, 20)}... (${signature.length} chars)`);
