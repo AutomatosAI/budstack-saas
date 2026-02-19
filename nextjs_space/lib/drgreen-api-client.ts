@@ -13,27 +13,23 @@ const DEFAULT_DOCTOR_GREEN_API_URL =
   process.env.DOCTOR_GREEN_API_URL || 'https://api.drgreennft.com/api/v1';
 
 /**
- * Generate signature for API request (matching Dr Green docs pattern exactly)
+ * Generate ECDSA signature for API request.
+ * Uses explicit SHA-256 hashing — matches the working consultation submit route
+ * and southhealing reference (which does sha256(data) then secp256k1.sign(hash)).
  *
- * From Dr Green API docs (via southhealing reference):
- *   const privateKeyBuffer = Buffer.from(secretKey, 'base64');
- *   const privateKeyObject = crypto.createPrivateKey(privateKeyBuffer);
- *   const signature = crypto.sign(null, Buffer.from(payload), privateKeyObject);
- *   const signatureBase64 = signature.toString('base64');
+ * crypto.sign(null, ...) was NOT hashing before signing, producing invalid signatures.
  */
 export function generateDrGreenSignature(payload: string, secretKey: string): string {
   const crypto = require('crypto');
 
-  // Step 1: Base64 decode the secret key to get raw bytes (PEM or DER)
-  const privateKeyBuffer = Buffer.from(secretKey, 'base64');
+  // Base64 decode the secret key to get the PEM string
+  const privateKeyPEM = Buffer.from(secretKey, 'base64').toString('utf-8');
 
-  // Step 2: Create a KeyObject from the buffer
-  // crypto.createPrivateKey auto-detects PEM vs DER format
-  const privateKeyObject = crypto.createPrivateKey(privateKeyBuffer);
-
-  // Step 3: Sign with null algorithm (let the key decide)
-  // This matches the Dr Green docs pattern exactly
-  const signature = crypto.sign(null, Buffer.from(payload), privateKeyObject);
+  // Explicitly SHA-256 hash then sign (same as consultation submit route)
+  const sign = crypto.createSign('SHA256');
+  sign.update(payload);
+  sign.end();
+  const signature = sign.sign(privateKeyPEM);
 
   return signature.toString('base64');
 }
