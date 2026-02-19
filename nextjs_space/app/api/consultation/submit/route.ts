@@ -400,10 +400,17 @@ export async function POST(request: NextRequest) {
       console.log("[Consultation] DR_GREEN_RESPONSE:", JSON.stringify(drGreenResponse).slice(0, 500));
 
       // Extract KYC link and client ID from response
-      // Dr Green API may return client data under different keys depending on version
-      const clientId = drGreenResponse.data?.id || drGreenResponse.client?.id || drGreenResponse.id;
+      // Dr Green API nests client under data.client (confirmed from live response)
+      const clientId =
+        drGreenResponse.data?.client?.id ||
+        drGreenResponse.data?.id ||
+        drGreenResponse.client?.id ||
+        drGreenResponse.id;
       const kycLink =
-        drGreenResponse.data?.kycLink || drGreenResponse.client?.kycLink || drGreenResponse.kycLink || null;
+        drGreenResponse.data?.client?.kycLink ||
+        drGreenResponse.data?.kycLink ||
+        drGreenResponse.client?.kycLink ||
+        drGreenResponse.kycLink || null;
 
       console.log(`[Consultation] RESULT: clientId=${clientId} | kycLink=${kycLink ? kycLink.slice(0, 80) + '...' : 'NONE'} | apiKeyUsed=${apiKey?.slice(0, 6)}`);
 
