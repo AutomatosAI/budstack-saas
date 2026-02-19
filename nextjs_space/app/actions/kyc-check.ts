@@ -124,9 +124,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                 isLoggedIn: true,
                 kycVerified: false,
                 status: "API_ERROR",
-                message: errMsg.includes("401")
-                    ? "Verification server rejected credentials (401). Contact support."
-                    : `Verification check failed: ${errMsg}`,
+                message: `Dr Green API error: ${errMsg}`,
             };
         }
 
