@@ -237,6 +237,8 @@ export async function POST(request: NextRequest) {
       // 2. Tenant Credentials
       const { apiKey, secretKey } = await getTenantDrGreenConfig(body.tenantId);
 
+      console.log(`[Consultation] CREDENTIALS: apiUrl=${drGreenApiUrl} | apiKeyPrefix=${apiKey?.slice(0, 6)} | hasSecret=${!!secretKey} | tenantId=${body.tenantId}`);
+
       // Format date for Dr. Green API (YYYY-MM-DD)
       const dobFormatted = body.dateOfBirth
         ? new Date(body.dateOfBirth).toISOString().split("T")[0]
@@ -395,13 +397,15 @@ export async function POST(request: NextRequest) {
       }
 
       const drGreenResponse = await response.json();
-      console.log("Dr. Green API Success:", drGreenResponse);
+      console.log("[Consultation] DR_GREEN_RESPONSE:", JSON.stringify(drGreenResponse).slice(0, 500));
 
       // Extract KYC link and client ID from response
       // Dr Green API may return client data under different keys depending on version
       const clientId = drGreenResponse.data?.id || drGreenResponse.client?.id || drGreenResponse.id;
       const kycLink =
         drGreenResponse.data?.kycLink || drGreenResponse.client?.kycLink || drGreenResponse.kycLink || null;
+
+      console.log(`[Consultation] RESULT: clientId=${clientId} | kycLink=${kycLink ? kycLink.slice(0, 80) + '...' : 'NONE'} | apiKeyUsed=${apiKey?.slice(0, 6)}`);
 
       if (!clientId) {
         console.error("Dr. Green API response missing client ID:", JSON.stringify(drGreenResponse));
