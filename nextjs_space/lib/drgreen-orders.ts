@@ -1,7 +1,11 @@
 /**
  * Dr. Green Order Management
  *
- * Functions for submitting orders to Dr. Green API
+ * 3-step atomic order flow (matching reference implementation):
+ * Step 1: PATCH /dapp/clients/{id} — update shipping address
+ * Step 2: POST /dapp/carts — add items to Dr Green server-side cart
+ * Step 3: POST /dapp/orders — create order from cart
+ * Fallback: POST /dapp/orders with items[] — direct order creation
  */
 
 import { prisma } from "@/lib/db";
@@ -15,6 +19,7 @@ export interface OrderSubmissionData {
         state: string;
         postalCode: string;
         country: string;
+        countryCode?: string;
     };
 }
 
@@ -27,8 +32,34 @@ export interface DrGreenOrderResponse {
     message: string;
 }
 
+// Country name/code to Alpha-3 ISO mapping
+const COUNTRY_TO_ALPHA3: Record<string, string> = {
+    'south africa': 'ZAF', 'za': 'ZAF',
+    'portugal': 'PRT', 'pt': 'PRT',
+    'united kingdom': 'GBR', 'uk': 'GBR', 'gb': 'GBR',
+    'thailand': 'THA', 'th': 'THA',
+    'united states': 'USA', 'usa': 'USA', 'us': 'USA',
+    'germany': 'DEU', 'de': 'DEU',
+    'france': 'FRA', 'fr': 'FRA',
+    'spain': 'ESP', 'es': 'ESP',
+    'italy': 'ITA', 'it': 'ITA',
+    'netherlands': 'NLD', 'nl': 'NLD',
+    'ireland': 'IRL', 'ie': 'IRL',
+    'brazil': 'BRA', 'br': 'BRA',
+    'canada': 'CAN', 'ca': 'CAN',
+    'australia': 'AUS', 'au': 'AUS',
+};
+
+function toAlpha3CountryCode(country: string): string {
+    return COUNTRY_TO_ALPHA3[country.toLowerCase().trim()] || country;
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 /**
- * Submit order to Dr. Green
+ * Submit order to Dr. Green using 3-step atomic flow
  */
 export async function submitOrder(params: {
     userId: string;
@@ -40,9 +71,11 @@ export async function submitOrder(params: {
     clientCartItems?: any[];
 }): Promise<DrGreenOrderResponse> {
     const { userId, tenantId, shippingInfo, apiKey, secretKey, apiUrl, clientCartItems } = params;
+    const requestId = `ord_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const log = (step: string, data?: any) => {
-        console.log(`[submitOrder] ${step}`, data !== undefined ? JSON.stringify(data) : '');
+        console.log(`[${requestId}] ${step}`, data !== undefined ? JSON.stringify(data) : '');
     };
+    const apiOpts = { apiKey, secretKey, baseUrl: apiUrl };
 
     log('START', { userId, tenantId, apiUrl, clientCartItemCount: clientCartItems?.length || 0 });
 
@@ -52,10 +85,7 @@ export async function submitOrder(params: {
         select: { drGreenClientId: true, email: true },
     });
 
-    log('DB_USER', {
-        email: user?.email,
-        drGreenClientId: user?.drGreenClientId || 'NONE',
-    });
+    log('DB_USER', { email: user?.email, drGreenClientId: user?.drGreenClientId || 'NONE' });
 
     if (!user?.drGreenClientId) {
         log('FAIL: No drGreenClientId');
@@ -64,12 +94,7 @@ export async function submitOrder(params: {
 
     // Check server-side cart first
     let cart = await prisma.drgreen_carts.findUnique({
-        where: {
-            userId_tenantId: {
-                userId,
-                tenantId,
-            },
-        },
+        where: { userId_tenantId: { userId, tenantId } },
     });
 
     log('SERVER_CART', {
@@ -82,41 +107,27 @@ export async function submitOrder(params: {
     if ((!cart || !cart.items || (cart.items as any[]).length === 0) && clientCartItems?.length) {
         log('SYNCING_CLIENT_CART_TO_DB', { itemCount: clientCartItems.length });
         cart = await prisma.drgreen_carts.upsert({
-            where: {
-                userId_tenantId: { userId, tenantId },
-            },
-            create: {
-                id: crypto.randomUUID(),
-                userId,
-                tenantId,
-                items: clientCartItems,
-                updatedAt: new Date(),
-            },
-            update: {
-                items: clientCartItems,
-                updatedAt: new Date(),
-            },
+            where: { userId_tenantId: { userId, tenantId } },
+            create: { id: crypto.randomUUID(), userId, tenantId, items: clientCartItems, updatedAt: new Date() },
+            update: { items: clientCartItems, updatedAt: new Date() },
         });
     }
 
     if (!cart || !cart.items || (cart.items as any[]).length === 0) {
-        log('FAIL: Cart empty after sync attempt');
+        log('FAIL: Cart empty');
         throw new Error("Cart is empty. Add items before placing an order.");
     }
 
     const cartItems = cart.items as any[];
     log('CART_ITEMS', cartItems.map(i => ({
-        strainId: i.strainId,
-        name: i.strain?.name,
-        qty: i.quantity,
-        price: i.strain?.retailPrice,
+        strainId: i.strainId, name: i.strain?.name, qty: i.quantity, price: i.strain?.retailPrice,
     })));
 
     // Check if user is locally verified (manual override)
     const localQuestionnaire = await prisma.consultation_questionnaires.findFirst({
         where: {
             AND: [
-                { tenantId: tenantId },
+                { tenantId },
                 { email: { equals: user.email, mode: 'insensitive' } },
                 { isKycVerified: true }
             ]
@@ -124,52 +135,133 @@ export async function submitOrder(params: {
         orderBy: { createdAt: 'desc' }
     });
 
-    log('LOCAL_KYC_CHECK', {
-        found: !!localQuestionnaire,
-        id: localQuestionnaire?.id || 'NONE',
-    });
+    log('LOCAL_KYC_CHECK', { found: !!localQuestionnaire, id: localQuestionnaire?.id || 'NONE' });
 
-    // Initialize orderData
     let orderData: any = null;
-    const hasRealClientId = user.drGreenClientId && !user.drGreenClientId.startsWith("manual_test_") && !user.drGreenClientId.startsWith("MOCK_");
+    const clientId = user.drGreenClientId;
+    const hasRealClientId = clientId && !clientId.startsWith("manual_test_") && !clientId.startsWith("MOCK_");
 
-    log('CLIENT_ID_ANALYSIS', {
-        clientId: user.drGreenClientId,
-        hasRealClientId,
-        isManualTest: user.drGreenClientId?.startsWith("manual_test_"),
-        isMock: user.drGreenClientId?.startsWith("MOCK_"),
-    });
+    log('CLIENT_ID_ANALYSIS', { clientId, hasRealClientId });
 
-    // Try Dr Green API first if user has a real client ID
+    // ========== 3-STEP ATOMIC ORDER FLOW ==========
     if (hasRealClientId) {
-        log('CALLING_DR_GREEN_ORDER_API', {
-            endpoint: '/dapp/orders',
-            clientId: user.drGreenClientId,
-            baseUrl: apiUrl,
-        });
+        let stepFailed = '';
+        let lastError = '';
+        const countryCode = shippingInfo.countryCode || toAlpha3CountryCode(shippingInfo.country);
+
+        // Step 1: Update client shipping address on Dr Green
+        log('STEP_1: Updating client shipping address');
         try {
-            const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
-                method: "POST",
-                apiKey,
-                secretKey,
-                baseUrl: apiUrl,
-                validateSuccessFlag: true,
+            await callDrGreenAPI(`/dapp/clients/${clientId}`, {
+                ...apiOpts,
+                method: "PATCH",
                 body: {
-                    clientId: user.drGreenClientId,
+                    shipping: {
+                        address1: shippingInfo.address1,
+                        address2: shippingInfo.address2 || '',
+                        landmark: '',
+                        city: shippingInfo.city,
+                        state: shippingInfo.state || shippingInfo.city,
+                        country: shippingInfo.country,
+                        countryCode: countryCode,
+                        postalCode: shippingInfo.postalCode,
+                    }
                 },
             });
-            log('DR_GREEN_RAW_RESPONSE', drGreenResponse);
-            orderData = (drGreenResponse as any).data || (drGreenResponse as any).order || drGreenResponse;
-            log('DR_GREEN_ORDER_SUCCESS', orderData);
-        } catch (drGreenError) {
-            const errMsg = drGreenError instanceof Error ? drGreenError.message : String(drGreenError);
-            log('DR_GREEN_ORDER_FAILED', {
-                error: errMsg,
-                hasLocalOverride: !!localQuestionnaire,
-                willFallbackToMock: !!localQuestionnaire,
-            });
-            if (!localQuestionnaire) {
-                throw drGreenError;
+            log('STEP_1: Shipping address updated');
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            log('STEP_1: Shipping PATCH failed (non-blocking)', { error: msg });
+            // Non-blocking — continue anyway (same as reference)
+        }
+
+        // Wait for propagation (reference uses 1500ms)
+        log('STEP_1: Waiting 1500ms for propagation');
+        await sleep(1500);
+
+        // Step 2: Add items to Dr Green server-side cart (with retry)
+        const drGreenCartItems = cartItems.map(item => ({
+            strainId: item.strainId,
+            quantity: item.quantity,
+        }));
+        const cartPayload = { clientCartId: clientId, items: drGreenCartItems };
+
+        log('STEP_2: Adding items to Dr Green cart', { itemCount: drGreenCartItems.length, payload: cartPayload });
+
+        let cartSuccess = false;
+        const maxAttempts = 3;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                await callDrGreenAPI("/dapp/carts", {
+                    ...apiOpts,
+                    method: "POST",
+                    body: cartPayload,
+                });
+                log(`STEP_2: Cart add success (attempt ${attempt})`);
+                cartSuccess = true;
+                break;
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                log(`STEP_2: Cart add failed (attempt ${attempt})`, { error: msg });
+                lastError = msg;
+
+                if (msg.includes("shipping address not found") && attempt < maxAttempts) {
+                    const delay = attempt * 1000;
+                    log(`STEP_2: Retrying in ${delay}ms (shipping propagation)`);
+                    await sleep(delay);
+                } else if (attempt < maxAttempts) {
+                    await sleep(1000);
+                }
+            }
+        }
+
+        // Step 3: Create order from cart
+        if (cartSuccess) {
+            log('STEP_3: Creating order from cart');
+            try {
+                const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
+                    ...apiOpts,
+                    method: "POST",
+                    validateSuccessFlag: true,
+                    body: { clientId },
+                });
+                orderData = (drGreenResponse as any).data || (drGreenResponse as any).order || drGreenResponse;
+                log('STEP_3: Cart-order SUCCESS', orderData);
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                log('STEP_3: Cart-order FAILED', { error: msg });
+                stepFailed = 'cart-order';
+                lastError = msg;
+            }
+        } else {
+            stepFailed = 'cart-add';
+        }
+
+        // Fallback: Direct order creation with items in payload
+        if (!orderData) {
+            log('STEP_3_FALLBACK: Attempting direct order with items', { previousStep: stepFailed });
+            const directPayload = {
+                clientId,
+                items: drGreenCartItems,
+            };
+            try {
+                const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
+                    ...apiOpts,
+                    method: "POST",
+                    validateSuccessFlag: true,
+                    body: directPayload,
+                });
+                orderData = (drGreenResponse as any).data || (drGreenResponse as any).order || drGreenResponse;
+                log('STEP_3_FALLBACK: Direct order SUCCESS', orderData);
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                log('STEP_3_FALLBACK: Direct order FAILED', { error: msg });
+                lastError = msg;
+                // Fall through to mock fallback if locally verified
+                if (!localQuestionnaire) {
+                    throw e;
+                }
             }
         }
     } else {
@@ -187,7 +279,6 @@ export async function submitOrder(params: {
         log('USING_MOCK_ORDER', orderData);
     }
 
-    // No local verification and no Dr Green client ID
     if (!orderData && !hasRealClientId) {
         log('FAIL: No order data and no real client ID');
         throw new Error("User must complete consultation before placing orders");
