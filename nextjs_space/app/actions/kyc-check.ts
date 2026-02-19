@@ -93,6 +93,17 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             // Fetch Client from API
             const client = await fetchClient(dbUser.drGreenClientId, config);
 
+            // Log actual client fields so we can see what Dr Green returns
+            console.log(`[KYC] Client fields: ${JSON.stringify({
+                id: (client as any).id,
+                status: (client as any).status,
+                isActive: (client as any).isActive,
+                verified: (client as any).verified,
+                isKYCVerified: (client as any).isKYCVerified,
+                adminApproval: (client as any).adminApproval,
+                keys: Object.keys(client as any).join(',')
+            })}`);
+
             // STATUS must be ACTIVE and verified must be true to shop
             const isVerified = client.status === 'ACTIVE' && client.verified;
 
