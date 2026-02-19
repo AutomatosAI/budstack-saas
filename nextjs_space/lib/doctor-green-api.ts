@@ -66,6 +66,7 @@ interface DoctorGreenAPIOptions {
   method?: 'GET' | 'POST' | 'DELETE' | 'PATCH';
   body?: any;
   signBody?: any; // Body to sign but NOT send (for GET requests needing body-based signatures)
+  queryParams?: Record<string, string | number>; // GET query params — appended to URL and signed
   headers?: Record<string, string>;
   config?: DoctorGreenConfig;
 }
@@ -77,7 +78,7 @@ export async function doctorGreenRequest<T>(
   endpoint: string,
   options: DoctorGreenAPIOptions = {},
 ): Promise<T> {
-  const { method = "GET", body, signBody, headers = {}, config } = options;
+  const { method = "GET", body, signBody, queryParams, headers = {}, config } = options;
 
   // Use config (mandatory)
   const apiKey = config?.apiKey;
@@ -97,6 +98,7 @@ export async function doctorGreenRequest<T>(
     secretKey,
     body,
     signBody,
+    queryParams,
     headers,
     baseUrl,
   });
@@ -416,19 +418,62 @@ export async function getClientByNFT(
 
 /**
  * Get client information by Client ID
- * Uses /dapp/clients/{id} (admin endpoint) — NOT /clients/{id} (client-facing, needs NFT auth)
- * Southhealing uses drGreenRequestQuery(`/dapp/clients/${clientId}`, {}) for admin lookups
- * Standard GET signing: sign "{}" (empty object)
+ *
+ * GET /dapp/clients/{id} returns 401 — this is a known Dr Green API limitation.
+ * Both green-go-remix (production) and southhealing confirm this.
+ * Workaround: List all clients via GET /dapp/clients and filter by ID.
+ * Signs the query string for GET requests (matches green-go-remix pattern).
  */
 export async function fetchClient(
   clientId: string,
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenClient> {
-  const response = await doctorGreenRequest<any>(`/dapp/clients/${clientId}`, {
-    config,
-  });
-  // Normalize — API may nest client data under .data or .client
-  return response.data?.client || response.data || response.client || response;
+  const PAGE_SIZE = 200;
+  const MAX_PAGES = 3;
+
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    console.log(`[fetchClient] Listing clients page ${page}/${MAX_PAGES} to find ${clientId}`);
+
+    const response = await doctorGreenRequest<any>('/dapp/clients', {
+      config,
+      queryParams: { take: PAGE_SIZE, page, orderBy: 'desc' },
+    });
+
+    // Handle all known response shapes (API returns various nestings)
+    let clients: any[] = [];
+    if (Array.isArray(response)) {
+      clients = response;
+    } else if (Array.isArray(response?.data)) {
+      clients = response.data;
+    } else if (response?.data?.items && Array.isArray(response.data.items)) {
+      clients = response.data.items;
+    } else if (Array.isArray(response?.data?.data)) {
+      clients = response.data.data;
+    } else if (Array.isArray(response?.clients)) {
+      clients = response.clients;
+    } else if (response?.data?.clients && Array.isArray(response.data.clients)) {
+      clients = response.data.clients;
+    }
+
+    if (!clients || clients.length === 0) {
+      console.log(`[fetchClient] No more clients on page ${page}`);
+      break;
+    }
+
+    const match = clients.find((c: any) => c.id === clientId);
+    if (match) {
+      console.log(`[fetchClient] Found client on page ${page} (${clients.length} clients on page)`);
+      return match;
+    }
+
+    // Stop if last page (fewer results than page size)
+    if (clients.length < PAGE_SIZE) {
+      console.log(`[fetchClient] Last page reached (page ${page}, ${clients.length} clients)`);
+      break;
+    }
+  }
+
+  throw new Error(`Client ${clientId} not found after searching ${MAX_PAGES} pages`);
 }
 
 /**

@@ -4,6 +4,7 @@ interface DrGreenApiOptions {
   secretKey: string;
   body?: any;
   signBody?: any; // Body to sign but NOT send (used for GET requests that need body-based signatures)
+  queryParams?: Record<string, string | number>; // GET query params — appended to URL and signed
   headers?: Record<string, string>;
   baseUrl?: string;
   validateSuccessFlag?: boolean;
@@ -47,12 +48,27 @@ export async function callDrGreenAPI<T>(
     secretKey,
     body,
     signBody,
+    queryParams,
     headers = {},
     baseUrl = DEFAULT_DOCTOR_GREEN_API_URL,
     validateSuccessFlag = false,
   } = options;
 
-  const fullUrl = `${baseUrl}${endpoint}`;
+  // Build query string from queryParams if provided
+  let queryString = '';
+  if (queryParams && Object.keys(queryParams).length > 0) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(queryParams)) {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, String(value));
+      }
+    }
+    queryString = params.toString();
+  }
+
+  const fullUrl = queryString
+    ? `${baseUrl}${endpoint}?${queryString}`
+    : `${baseUrl}${endpoint}`;
   const maskedKey = apiKey ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}` : 'MISSING';
   const hasSecret = !!secretKey;
 
@@ -80,18 +96,21 @@ export async function callDrGreenAPI<T>(
     ...headers,
   };
 
-  // Determine what to sign:
-  // - For GET with signBody: Sign the signBody JSON (e.g. {"clientId":"..."}) — per southhealing get-client pattern
-  // - For GET without signBody: Sign empty JSON object "{}" — per southhealing drGreenRequestGet() for list endpoints
+  // Determine what to sign (matches green-go-remix working pattern):
+  // - For GET with queryParams: Sign the query string (e.g. "take=200&page=1&orderBy=desc")
+  // - For GET with signBody: Sign the signBody JSON
+  // - For GET without either: Sign empty string ""
   // - For POST/PUT/DELETE: Sign the body (JSON string)
   let signaturePayload = '';
 
-  if (method === 'GET' && signBody) {
-    // GET with explicit sign body (e.g. fetchClient signs {"clientId":"..."} but doesn't send it)
+  if (method === 'GET' && queryString) {
+    // GET with query params — sign the query string (green-go-remix pattern)
+    signaturePayload = queryString;
+  } else if (method === 'GET' && signBody) {
     signaturePayload = typeof signBody === 'string' ? signBody : JSON.stringify(signBody);
   } else if (method === 'GET') {
-    // Standard GET — sign empty object
-    signaturePayload = '{}';
+    // Standard GET with no params — sign empty string
+    signaturePayload = '';
   } else {
     signaturePayload = payload;
   }
