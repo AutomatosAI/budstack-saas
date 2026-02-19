@@ -156,15 +156,22 @@ export interface DoctorGreenProduct {
 
 export interface DoctorGreenClient {
   id: string;
-  nft_token_id: string;
-  wallet_address: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  first_name: string;
-  last_name: string;
-  phone?: string;
-  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
-  verified: boolean;
-  created_at: string;
+  phoneCountryCode?: string;
+  phoneCode?: string;
+  contactNumber?: string;
+  isActive: boolean;
+  adminApproval: string; // "VERIFIED" | "PENDING" | "REJECTED"
+  isKYCVerified: boolean;
+  verifiedAt?: string;
+  rejectedAt?: string;
+  nft?: any;
+  shippings?: any[];
+  clientCart?: any;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DoctorGreenOrder {

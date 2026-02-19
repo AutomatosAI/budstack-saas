@@ -93,19 +93,12 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             // Fetch Client from API
             const client = await fetchClient(dbUser.drGreenClientId, config);
 
-            // Log actual client fields so we can see what Dr Green returns
-            console.log(`[KYC] Client fields: ${JSON.stringify({
-                id: (client as any).id,
-                status: (client as any).status,
-                isActive: (client as any).isActive,
-                verified: (client as any).verified,
-                isKYCVerified: (client as any).isKYCVerified,
-                adminApproval: (client as any).adminApproval,
-                keys: Object.keys(client as any).join(',')
-            })}`);
+            // Dr Green API returns: isActive (bool), isKYCVerified (bool), adminApproval (string)
+            // User can shop if active AND (KYC verified OR admin approved)
+            const isVerified = client.isActive === true &&
+                (client.isKYCVerified === true || client.adminApproval === 'VERIFIED');
 
-            // STATUS must be ACTIVE and verified must be true to shop
-            const isVerified = client.status === 'ACTIVE' && client.verified;
+            console.log(`[KYC] ${clerkUser.email}: isActive=${client.isActive} isKYCVerified=${client.isKYCVerified} adminApproval=${client.adminApproval} → verified=${isVerified}`);
 
             // Persist verified status locally so we never need to check again
             if (isVerified && questionnaire && !questionnaire.isKycVerified) {
@@ -123,10 +116,13 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                 console.log(`✅ KYC verified for ${clerkUser.email}, cached locally`);
             }
 
+            // Map Dr Green fields to our status format
+            const status = client.isActive ? 'ACTIVE' : 'INACTIVE';
+
             return {
                 isLoggedIn: true,
                 kycVerified: isVerified,
-                status: client.status
+                status,
             };
         } catch (configOrApiError) {
             const errMsg = configOrApiError instanceof Error ? configOrApiError.message : String(configOrApiError);
