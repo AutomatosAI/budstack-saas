@@ -34,25 +34,29 @@ function extractPemBody(base64EncodedKey: string): string {
 }
 
 /**
- * Generate ECDSA signature for API request (using Node.js crypto)
+ * Generate signature for API request (matching Dr Green docs pattern exactly)
+ *
+ * From Dr Green API docs (via southhealing reference):
+ *   const privateKeyBuffer = Buffer.from(secretKey, 'base64');
+ *   const privateKeyObject = crypto.createPrivateKey(privateKeyBuffer);
+ *   const signature = crypto.sign(null, Buffer.from(payload), privateKeyObject);
+ *   const signatureBase64 = signature.toString('base64');
  */
 export function generateDrGreenSignature(payload: string, secretKey: string): string {
   const crypto = require('crypto');
 
-  let privateKeyPEM = secretKey;
-  if (!secretKey.includes('BEGIN PRIVATE KEY')) {
-    try {
-      privateKeyPEM = Buffer.from(secretKey, 'base64').toString('utf-8');
-    } catch (error) {
-      // Keep original key if not base64-encoded.
-    }
-  }
+  // Step 1: Base64 decode the secret key to get raw bytes (PEM or DER)
+  const privateKeyBuffer = Buffer.from(secretKey, 'base64');
 
-  const sign = crypto.createSign('SHA256');
-  sign.update(payload);
-  sign.end();
+  // Step 2: Create a KeyObject from the buffer
+  // crypto.createPrivateKey auto-detects PEM vs DER format
+  const privateKeyObject = crypto.createPrivateKey(privateKeyBuffer);
 
-  return sign.sign(privateKeyPEM).toString('base64');
+  // Step 3: Sign with null algorithm (let the key decide)
+  // This matches the Dr Green docs pattern exactly
+  const signature = crypto.sign(null, Buffer.from(payload), privateKeyObject);
+
+  return signature.toString('base64');
 }
 
 /**
