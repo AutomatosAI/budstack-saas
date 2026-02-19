@@ -50,13 +50,26 @@ export async function callDrGreenAPI<T>(
     validateSuccessFlag = false,
   } = options;
 
+  const fullUrl = `${baseUrl}${endpoint}`;
+  const maskedKey = apiKey ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}` : 'MISSING';
+  const hasSecret = !!secretKey;
+
+  console.log(`[DrGreen API] >>> ${method} ${fullUrl}`);
+  console.log(`[DrGreen API]   apiKey: ${maskedKey} | hasSecret: ${hasSecret} | baseUrl: ${baseUrl}`);
+
   if (!apiKey || !secretKey) {
+    console.error(`[DrGreen API] MISSING_CREDENTIALS — apiKey: ${!!apiKey}, secretKey: ${!!secretKey}`);
     throw new Error('MISSING_CREDENTIALS');
   }
 
   const payload = body
     ? (typeof body === 'string' ? body : JSON.stringify(body))
     : '';
+
+  if (body) {
+    console.log(`[DrGreen API]   body: ${payload.slice(0, 200)}`);
+  }
+
   const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-auth-apikey': apiKey,
@@ -69,37 +82,62 @@ export async function callDrGreenAPI<T>(
   let signaturePayload = '';
 
   if (method === 'GET') {
-    // Extract query string from endpoint (e.g., "/strains?country=GBR" -> "country=GBR")
     const parts = endpoint.split('?');
     if (parts.length > 1) {
       signaturePayload = parts[1];
     }
   } else {
-    // For non-GET, sign the body
     signaturePayload = payload;
   }
 
-  // Always include signature — GET requests without query params sign an empty string
-  requestHeaders['x-auth-signature'] = generateDrGreenSignature(signaturePayload, secretKey);
+  console.log(`[DrGreen API]   signing: "${signaturePayload.slice(0, 100)}${signaturePayload.length > 100 ? '...' : ''}" (${signaturePayload.length} chars)`);
 
-  const response = await fetch(`${baseUrl}${endpoint}`, {
+  // Always include signature — GET requests without query params sign an empty string
+  const signature = generateDrGreenSignature(signaturePayload, secretKey);
+  requestHeaders['x-auth-signature'] = signature;
+  console.log(`[DrGreen API]   signature: ${signature.slice(0, 20)}... (${signature.length} chars)`);
+
+  const startTime = Date.now();
+  const response = await fetch(fullUrl, {
     method,
     headers: requestHeaders,
     body: payload || undefined,
     cache: 'no-store',
   });
+  const elapsed = Date.now() - startTime;
+
+  console.log(`[DrGreen API] <<< ${response.status} ${response.statusText} (${elapsed}ms)`);
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    const errorText = await response.text().catch(() => '');
+    let errorData: any = {};
+    try { errorData = JSON.parse(errorText); } catch { /* not JSON */ }
+    console.error(`[DrGreen API] ERROR response body: ${errorText.slice(0, 500)}`);
+    console.error(`[DrGreen API] ERROR response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
     throw new Error(
-      `Doctor Green API Error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`
+      `Doctor Green API Error: ${response.status} ${response.statusText} - ${errorText.slice(0, 500)}`
     );
   }
 
-  const data = await response.json();
+  const responseText = await response.text();
+  let data: any;
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    console.error(`[DrGreen API] Non-JSON response: ${responseText.slice(0, 200)}`);
+    throw new Error(`Doctor Green API returned non-JSON response: ${responseText.slice(0, 200)}`);
+  }
 
-  if (validateSuccessFlag && data?.success !== 'true') {
-    throw new Error(data?.message || 'Dr. Green API error');
+  console.log(`[DrGreen API]   response data: ${JSON.stringify(data).slice(0, 300)}`);
+
+  // Check success flag — handle both string "true" and boolean true
+  if (validateSuccessFlag) {
+    const successVal = data?.success;
+    console.log(`[DrGreen API]   validateSuccessFlag: success=${JSON.stringify(successVal)} (type: ${typeof successVal})`);
+    if (successVal !== 'true' && successVal !== true) {
+      console.error(`[DrGreen API]   FAILED success check — message: ${data?.message}`);
+      throw new Error(data?.message || 'Dr. Green API error');
+    }
   }
 
   return data as T;

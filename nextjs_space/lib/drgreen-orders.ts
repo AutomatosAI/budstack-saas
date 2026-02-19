@@ -40,6 +40,11 @@ export async function submitOrder(params: {
     clientCartItems?: any[];
 }): Promise<DrGreenOrderResponse> {
     const { userId, tenantId, shippingInfo, apiKey, secretKey, apiUrl, clientCartItems } = params;
+    const log = (step: string, data?: any) => {
+        console.log(`[submitOrder] ${step}`, data !== undefined ? JSON.stringify(data) : '');
+    };
+
+    log('START', { userId, tenantId, apiUrl, clientCartItemCount: clientCartItems?.length || 0 });
 
     // Get user's Dr. Green client ID
     const user = await prisma.users.findUnique({
@@ -47,7 +52,13 @@ export async function submitOrder(params: {
         select: { drGreenClientId: true, email: true },
     });
 
+    log('DB_USER', {
+        email: user?.email,
+        drGreenClientId: user?.drGreenClientId || 'NONE',
+    });
+
     if (!user?.drGreenClientId) {
+        log('FAIL: No drGreenClientId');
         throw new Error("User must complete consultation before placing orders");
     }
 
@@ -61,8 +72,15 @@ export async function submitOrder(params: {
         },
     });
 
+    log('SERVER_CART', {
+        found: !!cart,
+        itemCount: cart?.items ? (cart.items as any[]).length : 0,
+        drGreenCartId: cart?.drGreenCartId || 'NONE',
+    });
+
     // If server-side cart is empty but client sent cart items, sync them to DB
     if ((!cart || !cart.items || (cart.items as any[]).length === 0) && clientCartItems?.length) {
+        log('SYNCING_CLIENT_CART_TO_DB', { itemCount: clientCartItems.length });
         cart = await prisma.drgreen_carts.upsert({
             where: {
                 userId_tenantId: { userId, tenantId },
@@ -82,11 +100,19 @@ export async function submitOrder(params: {
     }
 
     if (!cart || !cart.items || (cart.items as any[]).length === 0) {
+        log('FAIL: Cart empty after sync attempt');
         throw new Error("Cart is empty. Add items before placing an order.");
     }
 
+    const cartItems = cart.items as any[];
+    log('CART_ITEMS', cartItems.map(i => ({
+        strainId: i.strainId,
+        name: i.strain?.name,
+        qty: i.quantity,
+        price: i.strain?.retailPrice,
+    })));
+
     // Check if user is locally verified (manual override)
-    // Filter by tenantId to prevent cross-tenant leaks
     const localQuestionnaire = await prisma.consultation_questionnaires.findFirst({
         where: {
             AND: [
@@ -98,12 +124,29 @@ export async function submitOrder(params: {
         orderBy: { createdAt: 'desc' }
     });
 
+    log('LOCAL_KYC_CHECK', {
+        found: !!localQuestionnaire,
+        id: localQuestionnaire?.id || 'NONE',
+    });
+
     // Initialize orderData
     let orderData: any = null;
     const hasRealClientId = user.drGreenClientId && !user.drGreenClientId.startsWith("manual_test_") && !user.drGreenClientId.startsWith("MOCK_");
 
+    log('CLIENT_ID_ANALYSIS', {
+        clientId: user.drGreenClientId,
+        hasRealClientId,
+        isManualTest: user.drGreenClientId?.startsWith("manual_test_"),
+        isMock: user.drGreenClientId?.startsWith("MOCK_"),
+    });
+
     // Try Dr Green API first if user has a real client ID
     if (hasRealClientId) {
+        log('CALLING_DR_GREEN_ORDER_API', {
+            endpoint: '/dapp/orders',
+            clientId: user.drGreenClientId,
+            baseUrl: apiUrl,
+        });
         try {
             const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
                 method: "POST",
@@ -115,15 +158,22 @@ export async function submitOrder(params: {
                     clientId: user.drGreenClientId,
                 },
             });
+            log('DR_GREEN_RAW_RESPONSE', drGreenResponse);
             orderData = (drGreenResponse as any).data || (drGreenResponse as any).order || drGreenResponse;
-            console.log("✅ Order submitted to Dr Green:", JSON.stringify(orderData));
+            log('DR_GREEN_ORDER_SUCCESS', orderData);
         } catch (drGreenError) {
-            console.error("Dr Green order submission failed:", drGreenError);
-            // Fall through to mock if locally verified, otherwise throw
+            const errMsg = drGreenError instanceof Error ? drGreenError.message : String(drGreenError);
+            log('DR_GREEN_ORDER_FAILED', {
+                error: errMsg,
+                hasLocalOverride: !!localQuestionnaire,
+                willFallbackToMock: !!localQuestionnaire,
+            });
             if (!localQuestionnaire) {
                 throw drGreenError;
             }
         }
+    } else {
+        log('SKIPPING_DR_GREEN_API: clientId is mock/manual');
     }
 
     // Fallback to mock if Dr Green API failed/skipped AND user is locally verified
@@ -134,15 +184,17 @@ export async function submitOrder(params: {
             status: "PENDING",
             total: 0,
         };
-        console.log("⚠️ Using mock order — Dr Green API rejected or unavailable. Local order created.");
+        log('USING_MOCK_ORDER', orderData);
     }
 
     // No local verification and no Dr Green client ID
     if (!orderData && !hasRealClientId) {
+        log('FAIL: No order data and no real client ID');
         throw new Error("User must complete consultation before placing orders");
     }
 
     if (!orderData || !orderData.id) {
+        log('FAIL: No order data or missing id', { orderData });
         throw new Error("Failed to create order on Dr. Green");
     }
 

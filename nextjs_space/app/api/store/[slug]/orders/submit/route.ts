@@ -9,30 +9,46 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { slug: string } },
 ) {
-  try {
-    const user = await currentUser();
+  const traceId = `order-${Date.now()}`;
+  const log = (step: string, data?: any) => {
+    console.log(`[${traceId}] ${step}`, data !== undefined ? JSON.stringify(data) : '');
+  };
 
+  try {
+    log('START', { slug: params.slug });
+
+    const user = await currentUser();
     if (!user) {
+      log('FAIL: No Clerk user');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const email = user.emailAddresses[0]?.emailAddress;
     if (!email) {
+      log('FAIL: No email on Clerk user');
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
     }
 
-    const dbUser = await prisma.users.findFirst({
-      where: { email },
-    });
-
+    const dbUser = await prisma.users.findFirst({ where: { email } });
     if (!dbUser) {
+      log('FAIL: No DB user', { email });
       return NextResponse.json({ error: "User not found in database" }, { status: 404 });
     }
 
+    log('USER', {
+      email,
+      dbUserId: dbUser.id,
+      drGreenClientId: dbUser.drGreenClientId || 'NONE',
+    });
+
     const body = await request.json();
     const { shippingInfo, cartItems } = body;
+    log('REQUEST_BODY', {
+      hasShippingInfo: !!shippingInfo,
+      cartItemCount: cartItems?.length || 0,
+      shippingCountry: shippingInfo?.country,
+    });
 
-    // Validate shipping info
     if (
       !shippingInfo ||
       !shippingInfo.address1 ||
@@ -41,26 +57,33 @@ export async function POST(
       !shippingInfo.postalCode ||
       !shippingInfo.country
     ) {
+      log('FAIL: Missing shipping info');
       return NextResponse.json(
         { error: "Missing required shipping information" },
         { status: 400 },
       );
     }
 
-    // Get tenant by slug
     const tenant = await prisma.tenants.findUnique({
       where: { subdomain: params.slug },
       select: { id: true },
     });
-
     if (!tenant) {
+      log('FAIL: Tenant not found', { slug: params.slug });
       return NextResponse.json({ error: "Store not found" }, { status: 404 });
     }
+    log('TENANT', { tenantId: tenant.id });
 
-    // Get Dr. Green credentials
     const drGreenConfig = await getTenantDrGreenConfig(tenant.id);
+    log('DR_GREEN_CONFIG', {
+      apiUrl: drGreenConfig.apiUrl || 'DEFAULT',
+      hasApiKey: !!drGreenConfig.apiKey,
+      apiKeyPrefix: drGreenConfig.apiKey?.slice(0, 6) || 'NONE',
+      hasSecretKey: !!drGreenConfig.secretKey,
+      secretKeyIsBase64: drGreenConfig.secretKey?.includes('BEGIN') ? 'PEM' : 'base64-or-raw',
+    });
 
-    // Check local verification first (manual override)
+    // Check local verification (manual admin override)
     const localQuestionnaire = await prisma.consultation_questionnaires.findFirst({
       where: {
         AND: [
@@ -72,9 +95,18 @@ export async function POST(
       orderBy: { createdAt: 'desc' }
     });
 
-    // Only verify with API if NOT locally verified
+    log('LOCAL_KYC', {
+      found: !!localQuestionnaire,
+      questionnaireId: localQuestionnaire?.id || 'NONE',
+      isKycVerified: localQuestionnaire?.isKycVerified || false,
+    });
+
+    // KYC verification step
     if (!localQuestionnaire) {
+      log('KYC_PATH: No local override, checking Dr Green API');
+
       if (!dbUser.drGreenClientId) {
+        log('FAIL: No drGreenClientId');
         return NextResponse.json(
           { error: "Account verification incomplete (Missing ID)." },
           { status: 403 },
@@ -83,37 +115,46 @@ export async function POST(
 
       const { fetchClient } = await import("@/lib/doctor-green-api");
       try {
+        log('FETCHING_CLIENT', { clientId: dbUser.drGreenClientId });
         const client = await fetchClient(dbUser.drGreenClientId, drGreenConfig);
+        log('CLIENT_RESPONSE', {
+          rawKeys: Object.keys(client),
+          status: client.status,
+          verified: client.verified,
+          verifiedType: typeof client.verified,
+          id: client.id,
+          email: client.email,
+        });
+
         if (client.status !== "ACTIVE" || !client.verified) {
+          log('FAIL: Client not verified', { status: client.status, verified: client.verified });
           return NextResponse.json(
-            {
-              error:
-                "Medical verification required. Please complete your profile verification.",
-            },
+            { error: "Medical verification required. Please complete your profile verification." },
             { status: 403 },
           );
         }
+        log('KYC_PASSED via Dr Green API');
       } catch (apiError) {
-        console.error("KYC Check Failed during Order:", apiError);
+        log('KYC_API_ERROR', {
+          message: apiError instanceof Error ? apiError.message : String(apiError),
+        });
         return NextResponse.json(
           { error: "Could not verify account status. Please try again." },
           { status: 500 },
         );
       }
+    } else {
+      log('KYC_PATH: Using local admin override — skipping Dr Green API check');
     }
 
-    // Debug: Check client status on Dr Green before ordering
-    if (dbUser.drGreenClientId) {
-      try {
-        const { fetchClient } = await import("@/lib/doctor-green-api");
-        const clientStatus = await fetchClient(dbUser.drGreenClientId, drGreenConfig);
-        console.log(`[Order Debug] Dr Green client status:`, JSON.stringify(clientStatus));
-      } catch (e) {
-        console.error(`[Order Debug] Failed to fetch client status:`, e);
-      }
-    }
+    // Submit order
+    log('SUBMITTING_ORDER', {
+      userId: dbUser.id,
+      tenantId: tenant.id,
+      apiUrl: drGreenConfig.apiUrl,
+      clientCartItems: cartItems?.length || 0,
+    });
 
-    // Submit order (pass client-side cart items as fallback)
     const orderResponse = await submitOrder({
       userId: dbUser.id,
       tenantId: tenant.id,
@@ -124,7 +165,15 @@ export async function POST(
       clientCartItems: cartItems,
     });
 
-    // Trigger webhook for order creation
+    log('ORDER_RESULT', {
+      orderId: orderResponse.orderId,
+      drGreenOrderId: orderResponse.drGreenOrderId,
+      orderNumber: orderResponse.orderNumber,
+      total: orderResponse.total,
+      isMock: orderResponse.drGreenOrderId?.startsWith('MOCK_'),
+    });
+
+    // Trigger webhook
     await triggerWebhook({
       event: WEBHOOK_EVENTS.ORDER_CREATED,
       tenantId: tenant.id,
@@ -138,29 +187,26 @@ export async function POST(
       },
     });
 
+    log('SUCCESS');
     return NextResponse.json({ order: orderResponse });
   } catch (error) {
-    console.error("[Order Submit] Error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack?.split('\n').slice(0, 3).join(' | ') : '';
+    log('UNHANDLED_ERROR', { message: msg, stack });
 
-    // User-friendly error messages
     if (error instanceof Error) {
       if (error.message.includes("consultation")) {
         return NextResponse.json(
-          {
-            error:
-              "Please complete your medical consultation before placing orders",
-          },
+          { error: "Please complete your medical consultation before placing orders" },
           { status: 400 },
         );
       }
-
       if (error.message.includes("empty")) {
         return NextResponse.json(
           { error: "Your cart is empty. Add items before placing an order." },
           { status: 400 },
         );
       }
-
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
