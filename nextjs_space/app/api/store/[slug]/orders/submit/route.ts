@@ -170,7 +170,6 @@ export async function POST(
       drGreenOrderId: orderResponse.drGreenOrderId,
       orderNumber: orderResponse.orderNumber,
       total: orderResponse.total,
-      isMock: orderResponse.drGreenOrderId?.startsWith('MOCK_'),
     });
 
     // Trigger webhook

@@ -123,20 +123,6 @@ export async function submitOrder(params: {
         strainId: i.strainId, name: i.strain?.name, qty: i.quantity, price: i.strain?.retailPrice,
     })));
 
-    // Check if user is locally verified (manual override)
-    const localQuestionnaire = await prisma.consultation_questionnaires.findFirst({
-        where: {
-            AND: [
-                { tenantId },
-                { email: { equals: user.email, mode: 'insensitive' } },
-                { isKycVerified: true }
-            ]
-        },
-        orderBy: { createdAt: 'desc' }
-    });
-
-    log('LOCAL_KYC_CHECK', { found: !!localQuestionnaire, id: localQuestionnaire?.id || 'NONE' });
-
     let orderData: any = null;
     const clientId = user.drGreenClientId;
     const hasRealClientId = clientId && !clientId.startsWith("manual_test_") && !clientId.startsWith("MOCK_");
@@ -257,30 +243,11 @@ export async function submitOrder(params: {
             } catch (e) {
                 const msg = e instanceof Error ? e.message : String(e);
                 log('STEP_3_FALLBACK: Direct order FAILED', { error: msg });
-                lastError = msg;
-                // Fall through to mock fallback if locally verified
-                if (!localQuestionnaire) {
-                    throw e;
-                }
+                throw new Error(`Dr. Green order failed: ${msg}`);
             }
         }
     } else {
-        log('SKIPPING_DR_GREEN_API: clientId is mock/manual');
-    }
-
-    // Fallback to mock if Dr Green API failed/skipped AND user is locally verified
-    if (!orderData && localQuestionnaire) {
-        orderData = {
-            id: `MOCK_DG_ORDER_${Date.now()}`,
-            invoiceNumber: `INV_${Date.now()}`,
-            status: "PENDING",
-            total: 0,
-        };
-        log('USING_MOCK_ORDER', orderData);
-    }
-
-    if (!orderData && !hasRealClientId) {
-        log('FAIL: No order data and no real client ID');
+        log('FAIL: No real Dr Green client ID');
         throw new Error("User must complete consultation before placing orders");
     }
 
@@ -338,16 +305,22 @@ export async function submitOrder(params: {
         return createdOrder;
     });
 
-    // Only delete external cart if we didn't use the local override
-    if (!localQuestionnaire && cart.drGreenCartId) {
-        await callDrGreenAPI(`/dapp/carts/${cart.drGreenCartId}`, {
-            method: "DELETE",
-            apiKey,
-            secretKey,
-            baseUrl: apiUrl,
-            validateSuccessFlag: true,
-            body: { cartId: cart.drGreenCartId },
-        });
+    // Clean up Dr Green server-side cart after successful order
+    if (cart.drGreenCartId) {
+        try {
+            await callDrGreenAPI(`/dapp/carts/${cart.drGreenCartId}`, {
+                method: "DELETE",
+                apiKey,
+                secretKey,
+                baseUrl: apiUrl,
+                body: { cartId: cart.drGreenCartId },
+            });
+        } catch (e) {
+            log('WARN: Failed to delete Dr Green cart (non-blocking)', {
+                cartId: cart.drGreenCartId,
+                error: e instanceof Error ? e.message : String(e),
+            });
+        }
     }
 
     return {
