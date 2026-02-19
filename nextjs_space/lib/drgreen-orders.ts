@@ -199,7 +199,6 @@ export async function submitOrder(params: {
     }
 
     // Calculate order totals from cart
-    const cartItems = cart.items as any[];
     const subtotal = cartItems.reduce((sum, item) => {
         return sum + (item.strain?.retailPrice || 0) * item.quantity;
     }, 0);
