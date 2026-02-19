@@ -80,15 +80,18 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="mb-8 flex items-start gap-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-6">
-            <AlertCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-amber-600" />
+          <div className={`mb-8 flex items-start gap-4 rounded-2xl border p-6 ${kycStatus?.status === 'API_ERROR' ? 'border-red-200 bg-red-50/70' : 'border-amber-200 bg-amber-50/70'}`}>
+            <AlertCircle className={`mt-0.5 h-6 w-6 flex-shrink-0 ${kycStatus?.status === 'API_ERROR' ? 'text-red-600' : 'text-amber-600'}`} />
             <div className="flex-1">
-              <h3 className="mb-2 font-semibold text-amber-900">
-                Account Verification Pending
+              <h3 className={`mb-2 font-semibold ${kycStatus?.status === 'API_ERROR' ? 'text-red-900' : 'text-amber-900'}`}>
+                {kycStatus?.status === 'API_ERROR' ? 'Verification Error' : 'Account Verification Pending'}
               </h3>
-              <p className="mb-4 text-sm text-amber-800">
-                {kycStatus?.status === 'API_ERROR' ? 'We are having trouble contacting the verification server, but your details are saved.' : 'Your consultation is being reviewed. You\'ll receive an email once your account is verified.'}
+              <p className={`mb-4 text-sm ${kycStatus?.status === 'API_ERROR' ? 'text-red-800' : 'text-amber-800'}`}>
+                {kycStatus?.message || (kycStatus?.status === 'NO_ID' ? 'Please complete your consultation to get verified.' : 'Your consultation is being reviewed. You\'ll receive an email once your account is verified.')}
               </p>
+              {kycStatus?.status === 'API_ERROR' && (
+                <p className="text-xs text-red-600 font-mono">{kycStatus.status}: {kycStatus.message}</p>
+              )}
             </div>
           </div>
         )}
