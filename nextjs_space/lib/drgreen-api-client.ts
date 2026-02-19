@@ -3,6 +3,7 @@ interface DrGreenApiOptions {
   apiKey: string;
   secretKey: string;
   body?: any;
+  signBody?: any; // Body to sign but NOT send (used for GET requests that need body-based signatures)
   headers?: Record<string, string>;
   baseUrl?: string;
   validateSuccessFlag?: boolean;
@@ -71,6 +72,7 @@ export async function callDrGreenAPI<T>(
     apiKey,
     secretKey,
     body,
+    signBody,
     headers = {},
     baseUrl = DEFAULT_DOCTOR_GREEN_API_URL,
     validateSuccessFlag = false,
@@ -107,13 +109,16 @@ export async function callDrGreenAPI<T>(
   };
 
   // Determine what to sign:
-  // - For GET: Sign empty JSON object "{}" (per Dr Green API docs)
+  // - For GET with signBody: Sign the signBody JSON (e.g. {"clientId":"..."}) — per southhealing get-client pattern
+  // - For GET without signBody: Sign empty JSON object "{}" — per southhealing drGreenRequestGet() for list endpoints
   // - For POST/PUT/DELETE: Sign the body (JSON string)
   let signaturePayload = '';
 
-  if (method === 'GET') {
-    // Dr Green API requires GET requests to sign an empty object "{}"
-    // Reference: southhealing drGreenRequestGet() implementation
+  if (method === 'GET' && signBody) {
+    // GET with explicit sign body (e.g. fetchClient signs {"clientId":"..."} but doesn't send it)
+    signaturePayload = typeof signBody === 'string' ? signBody : JSON.stringify(signBody);
+  } else if (method === 'GET') {
+    // Standard GET — sign empty object
     signaturePayload = '{}';
   } else {
     signaturePayload = payload;

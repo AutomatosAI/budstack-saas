@@ -65,6 +65,7 @@ export interface DoctorGreenConfig {
 interface DoctorGreenAPIOptions {
   method?: 'GET' | 'POST' | 'DELETE' | 'PATCH';
   body?: any;
+  signBody?: any; // Body to sign but NOT send (for GET requests needing body-based signatures)
   headers?: Record<string, string>;
   config?: DoctorGreenConfig;
 }
@@ -76,7 +77,7 @@ export async function doctorGreenRequest<T>(
   endpoint: string,
   options: DoctorGreenAPIOptions = {},
 ): Promise<T> {
-  const { method = "GET", body, headers = {}, config } = options;
+  const { method = "GET", body, signBody, headers = {}, config } = options;
 
   // Use config (mandatory)
   const apiKey = config?.apiKey;
@@ -95,6 +96,7 @@ export async function doctorGreenRequest<T>(
     apiKey,
     secretKey,
     body,
+    signBody,
     headers,
     baseUrl,
   });
@@ -414,14 +416,16 @@ export async function getClientByNFT(
 
 /**
  * Get client information by Client ID
- * Uses /dapp/clients/ endpoint (staging API requires /dapp/ prefix)
+ * Uses /clients/{id} endpoint with body-based signature (matching southhealing get-client pattern)
+ * Signs {"clientId":"..."} but sends no body (GET request)
  */
 export async function fetchClient(
   clientId: string,
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenClient> {
-  const response = await doctorGreenRequest<any>(`/dapp/clients/${clientId}`, {
+  const response = await doctorGreenRequest<any>(`/clients/${clientId}`, {
     config,
+    signBody: { clientId },
   });
   // Normalize — API may nest client data under .data or .client
   return response.data?.client || response.data || response.client || response;
