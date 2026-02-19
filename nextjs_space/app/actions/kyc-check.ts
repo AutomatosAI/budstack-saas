@@ -119,7 +119,26 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             };
         } catch (configOrApiError) {
             console.error("KYC Check API/Config Error", configOrApiError);
-            // If credentials are bad or API is down, fail safe
+
+            // API is unreachable or returns 401 — fall back to local data
+            // If user has a drGreenClientId AND admin approved their questionnaire,
+            // trust the local approval (Dr Green sends verification emails independently)
+            if (questionnaire?.adminApproval === "APPROVED") {
+                // Admin already approved — persist KYC verification locally
+                await prisma.consultation_questionnaires.updateMany({
+                    where: {
+                        tenantId: dbUser.tenantId,
+                        email: { equals: clerkUser.email, mode: 'insensitive' },
+                    },
+                    data: {
+                        isKycVerified: true,
+                        updatedAt: new Date(),
+                    },
+                });
+                console.log(`✅ KYC verified for ${clerkUser.email} via admin approval (API unavailable)`);
+                return { isLoggedIn: true, kycVerified: true, status: "ACTIVE" };
+            }
+
             return { isLoggedIn: true, kycVerified: false, status: "API_ERROR" };
         }
 

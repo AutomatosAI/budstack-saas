@@ -166,7 +166,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { firstName, lastName, phone, address, drGreenClientId } = body;
+    const { firstName, lastName, phone, address, drGreenClientId, verifyKyc } = body;
 
     // Get existing customer
     const existingCustomer = await prisma.users.findUnique({
@@ -213,11 +213,27 @@ export async function PATCH(
       },
     });
 
+    // If admin is verifying KYC, update the questionnaire too
+    if (verifyKyc && existingCustomer.email) {
+      await prisma.consultation_questionnaires.updateMany({
+        where: {
+          email: { equals: existingCustomer.email, mode: 'insensitive' },
+          ...(existingCustomer.tenantId && { tenantId: existingCustomer.tenantId }),
+        },
+        data: {
+          isKycVerified: true,
+          adminApproval: "APPROVED",
+          updatedAt: new Date(),
+        },
+      });
+      console.log(`✅ Admin verified KYC for ${existingCustomer.email}`);
+    }
+
     // Create audit log
     await prisma.audit_logs.create({
       data: {
         id: crypto.randomUUID(),
-        action: "CUSTOMER_UPDATED",
+        action: verifyKyc ? "CUSTOMER_KYC_VERIFIED" : "CUSTOMER_UPDATED",
         entityType: "User",
         entityId: params.id,
         userId: user.id,
@@ -231,7 +247,7 @@ export async function PATCH(
     });
 
     return NextResponse.json({
-      message: "Customer updated successfully",
+      message: verifyKyc ? "Customer verified successfully" : "Customer updated successfully",
       customer: updatedCustomer,
     });
   } catch (error) {
