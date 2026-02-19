@@ -119,15 +119,17 @@ export async function POST(
         const client = await fetchClient(dbUser.drGreenClientId, drGreenConfig);
         log('CLIENT_RESPONSE', {
           rawKeys: Object.keys(client),
-          status: client.status,
-          verified: client.verified,
-          verifiedType: typeof client.verified,
+          isActive: client.isActive,
+          isKYCVerified: client.isKYCVerified,
+          adminApproval: client.adminApproval,
           id: client.id,
           email: client.email,
         });
 
-        if (client.status !== "ACTIVE" || !client.verified) {
-          log('FAIL: Client not verified', { status: client.status, verified: client.verified });
+        const isVerified = client.isActive === true &&
+          (client.isKYCVerified === true || client.adminApproval === 'VERIFIED');
+        if (!isVerified) {
+          log('FAIL: Client not verified', { isActive: client.isActive, isKYCVerified: client.isKYCVerified, adminApproval: client.adminApproval });
           return NextResponse.json(
             { error: "Medical verification required. Please complete your profile verification." },
             { status: 403 },
