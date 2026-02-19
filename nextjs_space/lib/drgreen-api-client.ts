@@ -13,28 +13,6 @@ const DEFAULT_DOCTOR_GREEN_API_URL =
   process.env.DOCTOR_GREEN_API_URL || 'https://api.drgreennft.com/api/v1';
 
 /**
- * Extract inner key body from a Base64-encoded PEM string.
- * Dr Green API expects the raw key content (e.g., "MFYwEAYH...")
- * not the full PEM wrapper ("-----BEGIN PUBLIC KEY-----\nMFYw...\n-----END...")
- */
-function extractPemBody(base64EncodedKey: string): string {
-  try {
-    const decoded = Buffer.from(base64EncodedKey, 'base64').toString('utf-8');
-    if (decoded.includes('-----BEGIN')) {
-      const body = decoded
-        .replace(/-----BEGIN [A-Z0-9 ]+-----/g, '')
-        .replace(/-----END [A-Z0-9 ]+-----/g, '')
-        .replace(/[\r\n\s]/g, '')
-        .trim();
-      return body;
-    }
-  } catch {
-    // Not base64-encoded, return as-is
-  }
-  return base64EncodedKey;
-}
-
-/**
  * Generate signature for API request (matching Dr Green docs pattern exactly)
  *
  * From Dr Green API docs (via southhealing reference):
@@ -98,13 +76,11 @@ export async function callDrGreenAPI<T>(
     console.log(`[DrGreen API]   body: ${payload.slice(0, 200)}`);
   }
 
-  // Extract inner key from PEM wrapper if API key is base64-encoded PEM
-  const processedApiKey = extractPemBody(apiKey);
-  console.log(`[DrGreen API]   apiKey processed: original=${apiKey.length}chars → extracted=${processedApiKey.length}chars (prefix: ${processedApiKey.slice(0, 12)}...)`);
-
+  // Send API key as-is — the Dr Green API expects the full base64-encoded value
+  // (extractPemBody was stripping it from 232→120 chars, causing 401s)
   const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
-    'x-auth-apikey': processedApiKey,
+    'x-auth-apikey': apiKey,
     ...headers,
   };
 
