@@ -166,7 +166,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { firstName, lastName, phone, address } = body;
+    const { firstName, lastName, phone, address, drGreenClientId } = body;
 
     // Get existing customer
     const existingCustomer = await prisma.users.findUnique({
@@ -197,6 +197,7 @@ export async function PATCH(
         ...(lastName !== undefined && { lastName }),
         ...(phone !== undefined && { phone }),
         ...(address !== undefined && { address }),
+        ...(drGreenClientId !== undefined && { drGreenClientId }),
         // Update name for backward compatibility
         ...(firstName && lastName && { name: `${firstName} ${lastName}` }),
       },
