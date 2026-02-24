@@ -130,8 +130,8 @@ export default function BrandingForm({
 
   // dynamically parse the initial section configs from the layout
   const initialSectionConfigs: Record<string, Record<string, any>> = {};
-  if (activeTemplate?.layout && (activeTemplate.layout as any).sections) {
-    (activeTemplate.layout as any).sections.forEach((section: any, index: number) => {
+  if ((activeTemplate as any)?.layout && ((activeTemplate as any).layout as any).sections) {
+    ((activeTemplate as any).layout as any).sections.forEach((section: any, index: number) => {
       const sectionId = section.id || `section-${index}`;
       if (section.config) {
         initialSectionConfigs[sectionId] = { ...section.config };
@@ -433,9 +433,9 @@ export default function BrandingForm({
   };
 
   // Combine layout with the live edited sectionConfigs
-  const liveLayout = activeTemplate?.layout ? {
-    ...(activeTemplate.layout as any),
-    sections: (activeTemplate.layout as any).sections.map((section: any, index: number) => {
+  const liveLayout = (activeTemplate as any)?.layout ? {
+    ...((activeTemplate as any).layout as any),
+    sections: ((activeTemplate as any).layout as any).sections.map((section: any, index: number) => {
       const sectionId = section.id || `section-${index}`;
       if (formData.sectionConfigs[sectionId]) {
         return {
@@ -911,7 +911,7 @@ export default function BrandingForm({
                 </p>
               </div>
 
-              {(activeTemplate?.layout as any)?.sections?.map((section: any) => {
+              {((activeTemplate as any)?.layout as any)?.sections?.map((section: any) => {
                 // Skip sections without a config or ID
                 if (!section.id || !section.config) return null;
 
