@@ -54,6 +54,41 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
     if (s3Prefix) {
       try {
         const layoutJson = await getJsonFromS3(`${s3Prefix}/layout.json`);
+        let defaultsJson: any = null;
+        try {
+          defaultsJson = await getJsonFromS3(`${s3Prefix}/defaults.json`);
+        } catch {
+          // Defaults might not exist
+        }
+
+        // Convert relative asset paths to absolute S3 URLs
+        if (layoutJson && (layoutJson as any).sections) {
+          for (const section of (layoutJson as any).sections) {
+            for (const key of ["imageUrl", "videoUrl", "watermarkUrl"] as const) {
+              const val = section.config?.[key];
+              if (val && typeof val === "string" && !val.startsWith("http") && !val.startsWith("/")) {
+                try {
+                  const { getFileUrl } = await import('@/lib/s3');
+                  section.config[key] = await getFileUrl(`${s3Prefix}/${val}`);
+                } catch { /* leave as-is */ }
+              }
+            }
+          }
+        }
+
+        // Attach defaults to layout so BrandingForm can extract heroImage and logo
+        if (defaultsJson) {
+          const { getFileUrl } = await import('@/lib/s3');
+          if (defaultsJson.heroImagePath && !defaultsJson.heroImagePath.startsWith("http") && !defaultsJson.heroImagePath.startsWith("/")) {
+            try { defaultsJson.heroImagePath = await getFileUrl(`${s3Prefix}/${defaultsJson.heroImagePath}`); } catch { }
+          }
+          if (defaultsJson.logoPath && !defaultsJson.logoPath.startsWith("http") && !defaultsJson.logoPath.startsWith("/")) {
+            try { defaultsJson.logoPath = await getFileUrl(`${s3Prefix}/${defaultsJson.logoPath}`); } catch { }
+          }
+
+          (layoutJson as any).defaults = defaultsJson;
+        }
+
         (activeTemplate as any).layout = layoutJson;
       } catch (e) {
         console.error("[BrandingPage] Failed to load layout.json for template", e);

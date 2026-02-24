@@ -42,6 +42,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -158,6 +160,7 @@ export default function BrandingForm({
   const [logo, setLogo] = useState<File | null>(null);
   const [heroImage, setHeroImage] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const settings = (tenant.settings as TenantSettings) || {};
 
@@ -477,8 +480,8 @@ export default function BrandingForm({
     productsUrl: "#",
     contactUrl: "#",
     aboutUrl: "#",
-    heroImageUrl: heroImage ? URL.createObjectURL(heroImage) : undefined, // Quick local preview
-    logoUrl: logo ? URL.createObjectURL(logo) : undefined,
+    heroImageUrl: heroImage ? URL.createObjectURL(heroImage) : ((activeTemplate as any)?.layout?.defaults?.heroImagePath) || undefined,
+    logoUrl: logo ? URL.createObjectURL(logo) : ((activeTemplate as any)?.layout?.defaults?.logoPath) || undefined,
     designSystem: liveDesignSystem,
     pageContent: livePageContent,
     customCss: formData.customCSS,
@@ -513,7 +516,16 @@ export default function BrandingForm({
     })
   );
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string);
+  }
+
+  function handleDragCancel() {
+    setActiveId(null);
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null);
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
@@ -877,12 +889,27 @@ export default function BrandingForm({
                   <CardDescription>Drag and drop to reorder sections. Use the trash icon to remove a section.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragCancel={handleDragCancel}
+                    onDragEnd={handleDragEnd}
+                  >
                     <SortableContext items={formData.layoutSections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
                       {formData.layoutSections.map((section) => (
                         <SortableSectionItem key={section.id} id={section.id} section={section} onRemove={handleRemoveSection} />
                       ))}
                     </SortableContext>
+                    <DragOverlay>
+                      {activeId ? (
+                        <SortableSectionItem
+                          id={activeId}
+                          section={formData.layoutSections.find((s) => s.id === activeId)}
+                          onRemove={() => { }}
+                        />
+                      ) : null}
+                    </DragOverlay>
                   </DndContext>
                 </CardContent>
               </Card>
@@ -1167,7 +1194,7 @@ export default function BrandingForm({
       </div>
 
       {/* RIGHT: Live Preview Pane */}
-      <div className="flex-1 bg-muted/20 border-2 rounded-xl border-dashed overflow-hidden relative shadow-inner">
+      <div className="flex-1 bg-muted/20 border-2 rounded-xl border-dashed overflow-hidden relative shadow-inner isolate z-0">
         <div className="absolute top-0 inset-x-0 h-10 bg-muted/80 backdrop-blur-md border-b flex items-center justify-between px-4 font-mono text-xs text-muted-foreground z-50">
           <div className="flex items-center gap-4">
             <div className="flex gap-1.5 mr-4">
