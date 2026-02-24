@@ -33,7 +33,17 @@ import {
   Image as ImageIcon,
   GripVertical,
   Trash2,
+  Plus,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { SECTION_REGISTRY } from "@/lib/section-registry";
 import {
   DndContext,
   closestCenter,
@@ -161,6 +171,7 @@ export default function BrandingForm({
   const [heroImage, setHeroImage] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
 
   const settings = (tenant.settings as TenantSettings) || {};
 
@@ -541,6 +552,23 @@ export default function BrandingForm({
     }
   }
 
+  function handleAddSection(type: string) {
+    const newSection = {
+      id: `${type.toLowerCase()}-${Date.now().toString(36)}`,
+      type: type,
+      config: {}
+    };
+    setFormData((prev) => ({
+      ...prev,
+      layoutSections: [...prev.layoutSections, newSection],
+      sectionConfigs: {
+        ...prev.sectionConfigs,
+        [newSection.id]: {}
+      }
+    }));
+    setIsAddSectionOpen(false);
+  }
+
   function handleRemoveSection(id: string) {
     setFormData((prev) => ({
       ...prev,
@@ -911,6 +939,37 @@ export default function BrandingForm({
                       ) : null}
                     </DragOverlay>
                   </DndContext>
+
+                  <div className="mt-4 pt-4 border-t">
+                    <Dialog open={isAddSectionOpen} onOpenChange={setIsAddSectionOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full border-dashed">
+                          <Plus className="h-4 w-4 mr-2" /> Add Section
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Component Library</DialogTitle>
+                          <DialogDescription>
+                            Select a new section to add it to your layout.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                          {Object.keys(SECTION_REGISTRY).map((type) => (
+                            <Button
+                              key={type}
+                              variant="outline"
+                              className="h-auto py-6 flex flex-col justify-center items-center gap-2 hover:bg-slate-50 transition-colors"
+                              onClick={() => handleAddSection(type)}
+                            >
+                              <div className="font-semibold">{type.replace(/([A-Z])/g, ' $1').trim()}</div>
+                              <div className="text-xs text-muted-foreground opacity-60 font-mono">{type}</div>
+                            </Button>
+                          ))}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </CardContent>
               </Card>
 
