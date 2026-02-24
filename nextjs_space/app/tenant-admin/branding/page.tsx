@@ -42,24 +42,9 @@ export default async function BrandingPage() {
     : null;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      {/* Page Header */}
-      {/* Centered Page Header */}
-      <div className="text-center max-w-2xl mx-auto mb-8">
-        <div className="section-badge mb-4 inline-flex">
-          <Sparkles className="h-4 w-4" />
-          Branding
-        </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Store Branding
-        </h1>
-        <p className="mt-3 text-muted-foreground mx-auto">
-          Customize the look and feel of your storefront.
-        </p>
-      </div>
-
-      {/* Branding Form */}
-      <BrandingForm tenant={localUser.tenants} activeTemplate={activeTemplate} />
+    <div className="h-full w-full">
+      {/* Branding Form (now a full-screen Live Editor) */}
+      <BrandingForm tenant={localUser.tenants as any} activeTemplate={activeTemplate} />
     </div>
   );
 }
