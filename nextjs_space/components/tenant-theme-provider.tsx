@@ -236,7 +236,8 @@ function applyThemeToContainer(
       medium: { padding: "0.75rem 1.5rem", fontSize: "1rem" },
       large: { padding: "1rem 2rem", fontSize: "1.125rem" },
     };
-    const buttonSize = buttonSizeMap[settings.buttonSize || "medium"];
+    const dsButtonSize = designSystem.button?.size;
+    const buttonSize = buttonSizeMap[dsButtonSize] || buttonSizeMap[settings.buttonSize || "medium"] || buttonSizeMap["medium"];
     root.style.setProperty("--tenant-button-padding", buttonSize.padding);
     root.style.setProperty("--tenant-button-font-size", buttonSize.fontSize);
   }

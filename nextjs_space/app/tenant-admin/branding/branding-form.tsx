@@ -34,6 +34,7 @@ import {
   GripVertical,
   Trash2,
   Plus,
+  Loader2,
 } from "lucide-react";
 import {
   Dialog,
@@ -115,12 +116,6 @@ interface BrandingFormProps {
   activeTemplate?: tenant_templates | null;
 }
 
-const TEMPLATES = [
-  { id: "modern", name: "Modern", description: "Clean and professional" },
-  { id: "minimalist", name: "Minimalist", description: "Simple and elegant" },
-  { id: "bold", name: "Bold", description: "Vibrant and eye-catching" },
-];
-
 const FONTS = [
   { id: "inter", name: "Inter", description: "Modern sans-serif" },
   { id: "roboto", name: "Roboto", description: "Classic sans-serif" },
@@ -160,6 +155,62 @@ const BUTTON_STYLES = ["rounded", "square", "pill"];
 const BORDER_RADII = ["none", "small", "medium", "large"];
 const SPACINGS = ["compact", "normal", "comfortable"];
 const SHADOW_STYLES = ["none", "soft", "medium", "bold"];
+
+function SectionImageUploader({
+  value,
+  onChange
+}: {
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/tenant-admin/branding/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      if (data.url) onChange(data.url);
+    } catch (err) {
+      toast.error("Failed to upload image");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="mt-1 flex gap-2 items-center">
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="https://..."
+        className="flex-1"
+      />
+      <div className="relative border rounded-md p-1.5 flex h-10 w-10 items-center justify-center bg-muted/50 hover:bg-muted cursor-pointer shrink-0 transition-colors">
+        <input
+          type="file"
+          accept="image/*"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          onChange={handleUpload}
+          disabled={isUploading}
+        />
+        {isUploading ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> : <Upload className="w-4 h-4 text-muted-foreground" />}
+      </div>
+    </div>
+  );
+}
 
 export default function BrandingForm({
   tenant,
@@ -442,11 +493,8 @@ export default function BrandingForm({
     typography: {
       ...((activeTemplate?.designSystem as any)?.typography || {}),
       fontFamily: {
-        base: FONTS.find((f) => f.id === formData.fontFamily)?.name || "Inter",
-        heading:
-          FONTS.find((f) => f.id === formData.headingFontFamily)?.name ||
-          FONTS.find((f) => f.id === formData.fontFamily)?.name ||
-          "Inter",
+        base: formData.fontFamily || "inter",
+        heading: formData.headingFontFamily || formData.fontFamily || "inter",
       },
       fontSize: { base: formData.fontSize },
     },
@@ -458,6 +506,10 @@ export default function BrandingForm({
     spacing: {
       ...((activeTemplate?.designSystem as any)?.spacing || {}),
       scale: formData.spacing,
+    },
+    button: {
+      ...((activeTemplate?.designSystem as any)?.button || {}),
+      size: formData.buttonSize,
     },
     shadows: {
       ...((activeTemplate?.designSystem as any)?.shadows || {}),
@@ -653,39 +705,6 @@ export default function BrandingForm({
                       placeholder="Your trusted medical cannabis partner"
                       rows={2}
                     />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Template Style</CardTitle>
-                  <CardDescription>
-                    Choose the overall design aesthetic
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-4">
-                    {TEMPLATES.map((template) => (
-                      <div
-                        key={template.id}
-                        onClick={() =>
-                          setFormData({ ...formData, template: template.id as any })
-                        }
-                        className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.template === template.id
-                          ? "border-green-500 bg-green-50"
-                          : "border-gray-200 hover:border-gray-300"
-                          }`}
-                      >
-                        {formData.template === template.id && (
-                          <Check className="absolute top-2 right-2 w-5 h-5 text-green-500" />
-                        )}
-                        <h3 className="font-semibold">{template.name}</h3>
-                        <p className="text-sm text-gray-600">
-                          {template.description}
-                        </p>
-                      </div>
-                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -1137,25 +1156,21 @@ export default function BrandingForm({
                             <Label className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</Label>
 
                             {isImage ? (
-                              <div className="mt-1 flex gap-2 items-center">
-                                <Input
-                                  value={value as string}
-                                  onChange={(e) => {
-                                    setFormData({
-                                      ...formData,
-                                      sectionConfigs: {
-                                        ...formData.sectionConfigs,
-                                        [section.id]: {
-                                          ...formData.sectionConfigs[section.id],
-                                          [key]: e.target.value
-                                        }
+                              <SectionImageUploader
+                                value={value as string}
+                                onChange={(url) => {
+                                  setFormData({
+                                    ...formData,
+                                    sectionConfigs: {
+                                      ...formData.sectionConfigs,
+                                      [section.id]: {
+                                        ...formData.sectionConfigs[section.id],
+                                        [key]: url
                                       }
-                                    });
-                                  }}
-                                  placeholder="assets/image.jpg"
-                                />
-                                <p className="text-xs text-muted-foreground whitespace-nowrap">Image Path</p>
-                              </div>
+                                    }
+                                  });
+                                }}
+                              />
                             ) : isLongText ? (
                               <Textarea
                                 value={value as string}
