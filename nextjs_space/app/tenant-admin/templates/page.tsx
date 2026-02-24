@@ -157,159 +157,159 @@ export default async function TemplatesPage() {
                             const hasActiveSub = sub && ["pending", "changes_requested"].includes(sub.status);
                             const canShare = item.source === "custom" && (!sub || sub.status === "withdrawn" || sub.status === "rejected");
                             return (
-                            <div
-                                key={item.id}
-                                className={`card-floating overflow-hidden transition-all ${item.isActive ? "ring-2 ring-accent border-accent" : ""
-                                    }`}
-                            >
-                                <div className="aspect-video bg-slate-100 relative group">
-                                    {item.signedPreviewUrl ? (
-                                        <img
-                                            src={item.signedPreviewUrl}
-                                            alt={`${item.templateName} preview`}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center text-slate-400">
-                                            <Layout className="h-12 w-12 opacity-20" />
-                                        </div>
-                                    )}
-                                    {/* Top-left overlay icons: Preview, Share, Upload Preview Image */}
-                                    {item.source === "custom" && (
-                                        <div className="absolute top-3 left-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Link href={`/store/${tenant.subdomain}?preview=${item.id}`} target="_blank">
-                                                <button
-                                                    className="h-8 w-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
-                                                    title="Preview"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
-                                            </Link>
-                                            {canShare && (
-                                                <ShareMarketplaceDialog
-                                                    templateId={item.id}
-                                                    templateName={item.templateName}
-                                                    tenantBusinessName={tenant.businessName}
-                                                    triggerElement={
-                                                        <button
-                                                            className="h-8 w-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
-                                                            title="Share to Marketplace"
-                                                        >
-                                                            <Share2 className="h-4 w-4" />
-                                                        </button>
-                                                    }
-                                                />
-                                            )}
-                                            <PreviewUploadDialog
-                                                templateId={item.id}
-                                                templateName={item.templateName}
-                                                currentPreviewUrl={item.signedPreviewUrl}
+                                <div
+                                    key={item.id}
+                                    className={`card-floating overflow-hidden transition-all ${item.isActive ? "ring-2 ring-accent border-accent" : ""
+                                        }`}
+                                >
+                                    <div className="aspect-video bg-slate-100 relative group">
+                                        {item.signedPreviewUrl ? (
+                                            <img
+                                                src={item.signedPreviewUrl}
+                                                alt={`${item.templateName} preview`}
+                                                className="w-full h-full object-cover"
                                             />
-                                        </div>
-                                    )}
-                                    <div className="absolute top-3 right-3 flex gap-1">
-                                        {item.isActive && (
-                                            <Badge className="bg-emerald-500 hover:bg-emerald-600 border-none">
-                                                Active
-                                            </Badge>
-                                        )}
-                                        {item.source === "custom" ? (
-                                            <Badge className="bg-purple-500 hover:bg-purple-600 border-none">
-                                                Custom
-                                            </Badge>
                                         ) : (
-                                            <Badge className="bg-blue-500 hover:bg-blue-600 border-none">
-                                                Cloned
-                                            </Badge>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="p-5">
-                                    <h3 className="font-display font-bold text-foreground">
-                                        {item.templateName}
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        {item.source === "custom" ? "Uploaded" : "Cloned"} {new Date(item.createdAt).toLocaleDateString()}
-                                    </p>
-                                    {(() => {
-                                        if (!sub || sub.status === "withdrawn") return null;
-                                        const statusConfig: Record<string, { label: string; className: string }> = {
-                                            pending: { label: "Pending Review", className: "bg-yellow-100 text-yellow-800" },
-                                            approved: { label: "Approved", className: "bg-green-100 text-green-800" },
-                                            rejected: { label: "Rejected", className: "bg-red-100 text-red-800" },
-                                            changes_requested: { label: "Changes Requested", className: "bg-orange-100 text-orange-800" },
-                                        };
-                                        const config = statusConfig[sub.status];
-                                        if (!config) return null;
-                                        return (
-                                            <div className="mt-2">
-                                                <Badge variant="secondary" className={config.className}>
-                                                    {config.label}
-                                                </Badge>
-                                                {(sub.status === "rejected" || sub.status === "changes_requested") && sub.reviewerFeedback && (
-                                                    <p className="text-xs text-muted-foreground mt-1 italic">
-                                                        &ldquo;{sub.reviewerFeedback}&rdquo;
-                                                    </p>
-                                                )}
+                                            <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                                                <Layout className="h-12 w-12 opacity-20" />
                                             </div>
-                                        );
-                                    })()}
-                                </div>
-                                <div className="flex flex-wrap gap-2 p-4 border-t border-slate-100 bg-slate-50/50">
-                                    <Link href="/tenant-admin/branding" className="flex-1">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full rounded-xl"
-                                        >
-                                            <Palette className="mr-2 h-4 w-4" />
-                                            Customize
-                                        </Button>
-                                    </Link>
-                                    <ActivateButton
-                                        templateId={item.id}
-                                        templateName={item.templateName}
-                                        isActive={item.isActive}
-                                    />
-                                    <DeleteButton
-                                        templateId={item.id}
-                                        templateName={item.templateName}
-                                        isActive={item.isActive}
-                                    />
-                                    {item.source === "custom" && (
-                                        <UpdateGitHubButton
-                                            templateId={item.id}
-                                            templateName={item.templateName}
-                                        />
-                                    )}
-                                    {/* Marketplace submission actions (bottom row) */}
-                                    {item.source === "custom" && (() => {
-                                        if (sub?.status === "changes_requested") {
-                                            return (
-                                                <>
-                                                    <ResubmitButton
+                                        )}
+                                        {/* Top-left overlay icons: Preview, Share, Upload Preview Image */}
+                                        {item.source === "custom" && (
+                                            <div className="absolute top-3 left-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Link href={`/store/${tenant.subdomain}?preview=${item.id}`} target="_blank">
+                                                    <button
+                                                        className="h-8 w-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+                                                        title="Preview"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
+                                                </Link>
+                                                {canShare && (
+                                                    <ShareMarketplaceDialog
                                                         templateId={item.id}
                                                         templateName={item.templateName}
+                                                        tenantBusinessName={tenant.businessName}
+                                                        triggerElement={
+                                                            <button
+                                                                className="h-8 w-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+                                                                title="Share to Marketplace"
+                                                            >
+                                                                <Share2 className="h-4 w-4" />
+                                                            </button>
+                                                        }
                                                     />
+                                                )}
+                                                <PreviewUploadDialog
+                                                    templateId={item.id}
+                                                    templateName={item.templateName}
+                                                    currentPreviewUrl={item.signedPreviewUrl}
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="absolute top-3 right-3 flex gap-1">
+                                            {item.isActive && (
+                                                <Badge className="bg-emerald-500 hover:bg-emerald-600 border-none">
+                                                    Active
+                                                </Badge>
+                                            )}
+                                            {item.source === "custom" ? (
+                                                <Badge className="bg-purple-500 hover:bg-purple-600 border-none">
+                                                    Custom
+                                                </Badge>
+                                            ) : (
+                                                <Badge className="bg-blue-500 hover:bg-blue-600 border-none">
+                                                    Cloned
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="p-5">
+                                        <h3 className="font-display font-bold text-foreground">
+                                            {item.templateName}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            {item.source === "custom" ? "Uploaded" : "Cloned"} {new Date(item.createdAt).toLocaleDateString()}
+                                        </p>
+                                        {(() => {
+                                            if (!sub || sub.status === "withdrawn") return null;
+                                            const statusConfig: Record<string, { label: string; className: string }> = {
+                                                pending: { label: "Pending Review", className: "bg-yellow-100 text-yellow-800" },
+                                                approved: { label: "Approved", className: "bg-green-100 text-green-800" },
+                                                rejected: { label: "Rejected", className: "bg-red-100 text-red-800" },
+                                                changes_requested: { label: "Changes Requested", className: "bg-orange-100 text-orange-800" },
+                                            };
+                                            const config = statusConfig[sub.status];
+                                            if (!config) return null;
+                                            return (
+                                                <div className="mt-2">
+                                                    <Badge variant="secondary" className={config.className}>
+                                                        {config.label}
+                                                    </Badge>
+                                                    {(sub.status === "rejected" || sub.status === "changes_requested") && sub.reviewerFeedback && (
+                                                        <p className="text-xs text-muted-foreground mt-1 italic">
+                                                            &ldquo;{sub.reviewerFeedback}&rdquo;
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 p-4 border-t border-slate-100 bg-slate-50/50">
+                                        <Link href={`/tenant-admin/branding?templateId=${item.id}`} className="flex-1">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-full rounded-xl"
+                                            >
+                                                <Palette className="mr-2 h-4 w-4" />
+                                                Customize
+                                            </Button>
+                                        </Link>
+                                        <ActivateButton
+                                            templateId={item.id}
+                                            templateName={item.templateName}
+                                            isActive={item.isActive}
+                                        />
+                                        <DeleteButton
+                                            templateId={item.id}
+                                            templateName={item.templateName}
+                                            isActive={item.isActive}
+                                        />
+                                        {item.source === "custom" && (
+                                            <UpdateGitHubButton
+                                                templateId={item.id}
+                                                templateName={item.templateName}
+                                            />
+                                        )}
+                                        {/* Marketplace submission actions (bottom row) */}
+                                        {item.source === "custom" && (() => {
+                                            if (sub?.status === "changes_requested") {
+                                                return (
+                                                    <>
+                                                        <ResubmitButton
+                                                            templateId={item.id}
+                                                            templateName={item.templateName}
+                                                        />
+                                                        <WithdrawButton
+                                                            templateId={item.id}
+                                                            templateName={item.templateName}
+                                                        />
+                                                    </>
+                                                );
+                                            }
+                                            if (hasActiveSub) {
+                                                return (
                                                     <WithdrawButton
                                                         templateId={item.id}
                                                         templateName={item.templateName}
                                                     />
-                                                </>
-                                            );
-                                        }
-                                        if (hasActiveSub) {
-                                            return (
-                                                <WithdrawButton
-                                                    templateId={item.id}
-                                                    templateName={item.templateName}
-                                                />
-                                            );
-                                        }
-                                        return null;
-                                    })()}
+                                                );
+                                            }
+                                            return null;
+                                        })()}
+                                    </div>
                                 </div>
-                            </div>
                             );
                         })}
                     </div>
