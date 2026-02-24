@@ -31,13 +31,66 @@ import {
   FileText,
   Settings,
   Image as ImageIcon,
+  GripVertical,
+  Trash2,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { TenantSettings } from "@/lib/types";
 import { tenant_templates } from "@prisma/client";
 import { hslToHex, hexToHsl } from "@/lib/color-utils";
 import { getTenantUrl } from "@/lib/tenant-utils";
 import { TemplateRenderer } from "@/components/template-renderer";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
+
+function SortableSectionItem({ id, section, onRemove }: { id: string; section: any; onRemove: (id: string) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center justify-between p-3 mb-2 bg-white border rounded-md shadow-sm">
+      <div className="flex items-center gap-3">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-100 rounded">
+          <GripVertical className="h-4 w-4 text-gray-400" />
+        </div>
+        <span className="font-medium text-sm capitalize flex items-center">
+          {section.type.replace(/([A-Z])/g, ' $1').trim()}
+          <span className="text-muted-foreground font-normal ml-2 text-xs">
+            {section.id.length > 8 ? `...${section.id.slice(-6)}` : section.id}
+          </span>
+        </span>
+      </div>
+      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => onRemove(id)}>
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
 
 interface BrandingFormProps {
   tenant: {
@@ -130,9 +183,11 @@ export default function BrandingForm({
 
   // dynamically parse the initial section configs from the layout
   const initialSectionConfigs: Record<string, Record<string, any>> = {};
+  const initialLayoutSections: any[] = [];
   if ((activeTemplate as any)?.layout && ((activeTemplate as any).layout as any).sections) {
     ((activeTemplate as any).layout as any).sections.forEach((section: any, index: number) => {
       const sectionId = section.id || `section-${index}`;
+      initialLayoutSections.push({ ...section, id: sectionId });
       if (section.config) {
         initialSectionConfigs[sectionId] = { ...section.config };
       }
@@ -140,8 +195,9 @@ export default function BrandingForm({
   }
 
   const [formData, setFormData] = useState({
-    // Dynamic Section Configuration (Replaces hardcoded Home/About/Contact)
+    // Dynamic Section Configuration
     sectionConfigs: initialSectionConfigs,
+    layoutSections: initialLayoutSections,
 
     // Business
     businessName: tenant.businessName,
@@ -432,21 +488,53 @@ export default function BrandingForm({
     valueProps: ((activeTemplate?.pageContent as any)?.valueProps) || [],
   };
 
-  // Combine layout with the live edited sectionConfigs
+  // Combine layout with the live edited sectionConfigs and drag-and-drop array order
   const liveLayout = (activeTemplate as any)?.layout ? {
     ...((activeTemplate as any).layout as any),
-    sections: ((activeTemplate as any).layout as any).sections.map((section: any, index: number) => {
-      const sectionId = section.id || `section-${index}`;
-      if (formData.sectionConfigs[sectionId]) {
+    sections: formData.layoutSections.map((section: any) => {
+      if (formData.sectionConfigs[section.id]) {
         return {
           ...section,
-          id: sectionId,
-          config: { ...section.config, ...formData.sectionConfigs[sectionId] }
+          config: { ...section.config, ...formData.sectionConfigs[section.id] }
         };
       }
-      return { ...section, id: sectionId };
+      return section;
     })
   } : null;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setFormData((prev) => {
+        const oldIndex = prev.layoutSections.findIndex((s) => s.id === active.id);
+        const newIndex = prev.layoutSections.findIndex((s) => s.id === over.id);
+
+        return {
+          ...prev,
+          layoutSections: arrayMove(prev.layoutSections, oldIndex, newIndex),
+        };
+      });
+    }
+  }
+
+  function handleRemoveSection(id: string) {
+    setFormData((prev) => ({
+      ...prev,
+      layoutSections: prev.layoutSections.filter((s) => s.id !== id),
+    }));
+  }
 
   return (
     <div className="flex flex-col xl:flex-row gap-6 h-[calc(100vh-10rem)] overflow-hidden">
@@ -785,6 +873,22 @@ export default function BrandingForm({
             <TabsContent value="layout" className="space-y-6">
               <Card>
                 <CardHeader>
+                  <CardTitle>Section Ordering</CardTitle>
+                  <CardDescription>Drag and drop to reorder sections. Use the trash icon to remove a section.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={formData.layoutSections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+                      {formData.layoutSections.map((section) => (
+                        <SortableSectionItem key={section.id} id={section.id} section={section} onRemove={handleRemoveSection} />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
                   <CardTitle>Button Styles</CardTitle>
                   <CardDescription>
                     Customize button appearance (applies to ALL pages)
@@ -911,7 +1015,7 @@ export default function BrandingForm({
                 </p>
               </div>
 
-              {((activeTemplate as any)?.layout as any)?.sections?.map((section: any) => {
+              {formData.layoutSections.map((section: any) => {
                 // Skip sections without a config or ID
                 if (!section.id || !section.config) return null;
 
