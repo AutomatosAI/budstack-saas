@@ -128,7 +128,21 @@ export default function BrandingForm({
   // Only modified colors get sent to the API — prevents overwriting template theme with form defaults
   const [dirtyColors, setDirtyColors] = useState<Set<string>>(new Set());
 
+  // dynamically parse the initial section configs from the layout
+  const initialSectionConfigs: Record<string, Record<string, any>> = {};
+  if (activeTemplate?.layout && (activeTemplate.layout as any).sections) {
+    (activeTemplate.layout as any).sections.forEach((section: any, index: number) => {
+      const sectionId = section.id || `section-${index}`;
+      if (section.config) {
+        initialSectionConfigs[sectionId] = { ...section.config };
+      }
+    });
+  }
+
   const [formData, setFormData] = useState({
+    // Dynamic Section Configuration (Replaces hardcoded Home/About/Contact)
+    sectionConfigs: initialSectionConfigs,
+
     // Business
     businessName: tenant.businessName,
     tagline: settings.tagline || "",
@@ -417,6 +431,22 @@ export default function BrandingForm({
     footer: "FooterBrand",
     valueProps: ((activeTemplate?.pageContent as any)?.valueProps) || [],
   };
+
+  // Combine layout with the live edited sectionConfigs
+  const liveLayout = activeTemplate?.layout ? {
+    ...(activeTemplate.layout as any),
+    sections: (activeTemplate.layout as any).sections.map((section: any, index: number) => {
+      const sectionId = section.id || `section-${index}`;
+      if (formData.sectionConfigs[sectionId]) {
+        return {
+          ...section,
+          id: sectionId,
+          config: { ...section.config, ...formData.sectionConfigs[sectionId] }
+        };
+      }
+      return { ...section, id: sectionId };
+    })
+  } : null;
 
   return (
     <div className="flex flex-col xl:flex-row gap-6 h-[calc(100vh-10rem)] overflow-hidden">
@@ -869,169 +899,116 @@ export default function BrandingForm({
               </Card>
             </TabsContent>
 
-            {/* CONTENT TAB */}
+            {/* DYNAMIC CONTENT TAB */}
             <TabsContent value="content" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Home Page Content</CardTitle>
-                  <CardDescription>
-                    Customize your homepage text (editable by you)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Hero Title</Label>
-                    <Input
-                      value={formData.homeHeroTitle}
-                      onChange={(e) =>
-                        setFormData({ ...formData, homeHeroTitle: e.target.value })
-                      }
-                      placeholder="Welcome to Your Medical Cannabis Journey"
-                    />
-                  </div>
-                  <div>
-                    <Label>Hero Subtitle</Label>
-                    <Textarea
-                      value={formData.homeHeroSubtitle}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          homeHeroSubtitle: e.target.value,
-                        })
-                      }
-                      placeholder="Premium medical cannabis products delivered with care"
-                      rows={2}
-                    />
-                  </div>
-                  <div>
-                    <Label>Hero Button Text</Label>
-                    <Input
-                      value={formData.homeHeroCtaText}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          homeHeroCtaText: e.target.value,
-                        })
-                      }
-                      placeholder="Get Started"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>About Page Content</CardTitle>
-                  <CardDescription>
-                    Tell your story (editable by you)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Page Title</Label>
-                    <Input
-                      value={formData.aboutTitle}
-                      onChange={(e) =>
-                        setFormData({ ...formData, aboutTitle: e.target.value })
-                      }
-                      placeholder="About Us"
-                    />
-                  </div>
-                  <div>
-                    <Label>About Content</Label>
-                    <Textarea
-                      value={formData.aboutContent}
-                      onChange={(e) =>
-                        setFormData({ ...formData, aboutContent: e.target.value })
-                      }
-                      placeholder="We are dedicated to providing high-quality medical cannabis products..."
-                      rows={6}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact Page Content</CardTitle>
-                  <CardDescription>
-                    Your contact information (editable by you)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Page Title</Label>
-                    <Input
-                      value={formData.contactTitle}
-                      onChange={(e) =>
-                        setFormData({ ...formData, contactTitle: e.target.value })
-                      }
-                      placeholder="Get in Touch"
-                    />
-                  </div>
-                  <div>
-                    <Label>Description</Label>
-                    <Textarea
-                      value={formData.contactDescription}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          contactDescription: e.target.value,
-                        })
-                      }
-                      placeholder="Have questions? We're here to help."
-                      rows={2}
-                    />
-                  </div>
-                  <div>
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      value={formData.contactEmail}
-                      onChange={(e) =>
-                        setFormData({ ...formData, contactEmail: e.target.value })
-                      }
-                      placeholder="info@yourstore.com"
-                    />
-                  </div>
-                  <div>
-                    <Label>Phone</Label>
-                    <Input
-                      value={formData.contactPhone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, contactPhone: e.target.value })
-                      }
-                      placeholder="+351 123 456 789"
-                    />
-                  </div>
-                  <div>
-                    <Label>Address</Label>
-                    <Textarea
-                      value={formData.contactAddress}
-                      onChange={(e) =>
-                        setFormData({ ...formData, contactAddress: e.target.value })
-                      }
-                      placeholder="123 Medical Lane, Lisbon, Portugal"
-                      rows={2}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <h4 className="font-semibold text-blue-900 mb-2">
-                  ℹ️ Content Management Note
+                  ℹ️ Live Store Editor
                 </h4>
                 <p className="text-sm text-blue-800">
-                  <strong>Personal Pages (You Control):</strong> Home, About,
-                  Contact - Edit text here.
-                  <br />
-                  <strong>Country-Based Pages (API Control):</strong> Products,
-                  Medical Conditions, How It Works, Consultation, Education -
-                  Content comes from your country's regulations and our CRM. You can
-                  only customize the theme/colors for these pages.
+                  The fields below are dynamically generated based on your selected template's layout.
+                  Editing them here will instantly update the preview on the right.
                 </p>
               </div>
+
+              {(activeTemplate?.layout as any)?.sections?.map((section: any) => {
+                // Skip sections without a config or ID
+                if (!section.id || !section.config) return null;
+
+                const configValues = formData.sectionConfigs[section.id] || {};
+
+                return (
+                  <Card key={section.id}>
+                    <CardHeader>
+                      <CardTitle className="capitalize">
+                        {section.type.replace(/([A-Z])/g, ' $1').trim()}
+                        <span className="text-muted-foreground text-sm font-normal ml-2">
+                          (#{section.id})
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {Object.entries(configValues).map(([key, value]) => {
+                        // Only render generic string fields for now (exclude arrays/objects directly)
+                        if (typeof value !== 'string') return null;
+
+                        // Determine if it should be a textarea (longer content)
+                        const isLongText = key.toLowerCase().includes('content') ||
+                          key.toLowerCase().includes('description') ||
+                          key.toLowerCase().includes('subtitle');
+
+                        // Determine if it looks like an image URL
+                        const isImage = key.toLowerCase().includes('image') ||
+                          key.toLowerCase().includes('logo') ||
+                          key.toLowerCase().includes('icon');
+
+                        return (
+                          <div key={`${section.id}-${key}`}>
+                            <Label className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</Label>
+
+                            {isImage ? (
+                              <div className="mt-1 flex gap-2 items-center">
+                                <Input
+                                  value={value as string}
+                                  onChange={(e) => {
+                                    setFormData({
+                                      ...formData,
+                                      sectionConfigs: {
+                                        ...formData.sectionConfigs,
+                                        [section.id]: {
+                                          ...formData.sectionConfigs[section.id],
+                                          [key]: e.target.value
+                                        }
+                                      }
+                                    });
+                                  }}
+                                  placeholder="assets/image.jpg"
+                                />
+                                <p className="text-xs text-muted-foreground whitespace-nowrap">Image Path</p>
+                              </div>
+                            ) : isLongText ? (
+                              <Textarea
+                                value={value as string}
+                                onChange={(e) => {
+                                  setFormData({
+                                    ...formData,
+                                    sectionConfigs: {
+                                      ...formData.sectionConfigs,
+                                      [section.id]: {
+                                        ...formData.sectionConfigs[section.id],
+                                        [key]: e.target.value
+                                      }
+                                    }
+                                  });
+                                }}
+                                rows={3}
+                                className="mt-1"
+                              />
+                            ) : (
+                              <Input
+                                value={value as string}
+                                onChange={(e) => {
+                                  setFormData({
+                                    ...formData,
+                                    sectionConfigs: {
+                                      ...formData.sectionConfigs,
+                                      [section.id]: {
+                                        ...formData.sectionConfigs[section.id],
+                                        [key]: e.target.value
+                                      }
+                                    }
+                                  });
+                                }}
+                                className="mt-1"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </TabsContent>
 
             {/* ADVANCED TAB */}
@@ -1099,13 +1076,13 @@ export default function BrandingForm({
         </div>
 
         <div className="w-full h-full pt-10 overflow-y-auto preview-scrollbar bg-background">
-          {activeTemplate?.layout ? (
+          {liveLayout ? (
             <TenantThemeProvider
               tenant={tenant as any}
               tenantTemplate={{ designSystem: liveDesignSystem, customCss: formData.customCSS }}
             >
               <TemplateRenderer
-                layout={activeTemplate.layout as any}
+                layout={liveLayout as any}
                 sectionProps={liveSectionProps}
                 customCss={formData.customCSS}
                 renderChrome={true}
