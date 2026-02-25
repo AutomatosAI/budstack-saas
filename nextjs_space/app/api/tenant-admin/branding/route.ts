@@ -156,13 +156,34 @@ export async function PUT(req: NextRequest) {
           return s;
         });
 
-        // Ensure navigation and footer are preserved from the base layout if missing
-        updateData.layout = {
+        const finalLayout = {
           ...baseLayout,
           navigation: baseLayout.navigation || "NavDark",
           footer: baseLayout.footer || "FooterSimple",
           sections: updatedSections,
         };
+
+        if (currentTemplate?.s3Path) {
+          try {
+            const { createS3Client, getBucketConfig } = await import("@/lib/aws-config");
+            const { PutObjectCommand } = await import("@aws-sdk/client-s3");
+            const s3Client = await createS3Client();
+            const { bucketName } = await getBucketConfig();
+
+            const layoutKey = `${currentTemplate.s3Path}/layout.json`;
+            await s3Client.send(
+              new PutObjectCommand({
+                Bucket: bucketName,
+                Key: layoutKey,
+                Body: Buffer.from(JSON.stringify(finalLayout, null, 2)),
+                ContentType: "application/json",
+              })
+            );
+            console.log(`[branding] Successfully rewrote layout.json to ${layoutKey}`);
+          } catch (s3Error) {
+            console.error("[branding] Failed to rewrite layout.json to S3:", s3Error);
+          }
+        }
       }
 
       // Handle file mapping

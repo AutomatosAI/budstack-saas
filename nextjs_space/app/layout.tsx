@@ -8,6 +8,8 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { LanguageProvider } from '@/lib/i18n';
 import { QueryProvider } from '@/components/query-provider';
 import { SessionExpirationChecker } from '@/components/session-expiration-checker';
+import { GlobalPlatformChatbot } from '@/components/landing/GlobalPlatformChatbot';
+import { prisma } from '@/lib/db';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
@@ -52,11 +54,30 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Fetch global platform settings to power the BudStacks marketing/home page Chatbot
+  let platformApiKey = undefined;
+  let platformAgentId = undefined;
+  try {
+    const settings = await prisma.platform_settings.findUnique({
+      where: { id: "platform" },
+      select: {
+        automatosApiKey: true,
+        automatosAgentId: true,
+      }
+    });
+    if (settings?.automatosApiKey) {
+      platformApiKey = settings.automatosApiKey;
+      platformAgentId = settings.automatosAgentId;
+    }
+  } catch (e) {
+    console.error("Failed to load platform settings in root layout", e);
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
@@ -77,6 +98,12 @@ export default function RootLayout({
               >
                 <SessionExpirationChecker />
                 {children}
+                {platformApiKey && (
+                  <GlobalPlatformChatbot
+                    automatosApiKey={platformApiKey}
+                    automatosAgentId={platformAgentId ?? undefined}
+                  />
+                )}
                 <Toaster />
               </ThemeProvider>
             </LanguageProvider>

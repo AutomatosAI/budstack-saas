@@ -267,6 +267,8 @@ model platform_settings {
   fontFamily        String   @default("inter")
   headingFontFamily String   @default("inter")
   template          String   @default("modern")
+  automatosApiKey   String?
+  automatosAgentId  Int?
   updatedAt         DateTime
   pageSeo           Json?
   seo               Json?
@@ -411,6 +413,8 @@ model tenants {
   drGreenApiUrl          String?
   drGreenApiKey          String?
   drGreenSecretKey       String?
+  automatosApiKey        String?
+  automatosAgentId       Int?
   pageSeo                Json?
   conditions             conditions[]
   consultations          consultations[]

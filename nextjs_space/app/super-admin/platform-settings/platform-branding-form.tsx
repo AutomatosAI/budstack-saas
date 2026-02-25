@@ -41,6 +41,8 @@ interface PlatformBrandingFormProps {
     fontFamily: string;
     headingFontFamily: string;
     template: string;
+    automatosApiKey?: string | null;
+    automatosAgentId?: number | null;
   };
 }
 
@@ -85,6 +87,10 @@ export default function PlatformBrandingForm({
 
     // Template
     template: settings.template,
+
+    // Automatos config
+    automatosApiKey: settings.automatosApiKey || "",
+    automatosAgentId: settings.automatosAgentId?.toString() || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,6 +133,10 @@ export default function PlatformBrandingForm({
           <TabsTrigger value="design">
             <Layout className="w-4 h-4 mr-2" />
             Design
+          </TabsTrigger>
+          <TabsTrigger value="ai">
+            <Layout className="w-4 h-4 mr-2" />
+            AI & Widgets
           </TabsTrigger>
           <TabsTrigger value="colors">
             <Palette className="w-4 h-4 mr-2" />
@@ -281,6 +291,47 @@ export default function PlatformBrandingForm({
                     </span>
                   )}
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* AI & WIDGETS TAB */}
+        <TabsContent value="ai" className="space-y-6">
+          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle>Automatos AI Integration</CardTitle>
+              <CardDescription>
+                Configure the Super Admin Chatbot powered by Automatos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-6">
+              <div>
+                <Label htmlFor="automatosApiKey">Automatos API Key</Label>
+                <Input
+                  id="automatosApiKey"
+                  value={formData.automatosApiKey}
+                  onChange={(e) =>
+                    setFormData({ ...formData, automatosApiKey: e.target.value })
+                  }
+                  placeholder="ak_pub_..."
+                  autoComplete="off"
+                />
+                <p className="mt-1 text-sm text-slate-500">
+                  Ensure you use a Public Key for the website widget.
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="automatosAgentId">Agent ID (Optional)</Label>
+                <Input
+                  id="automatosAgentId"
+                  type="number"
+                  value={formData.automatosAgentId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, automatosAgentId: e.target.value })
+                  }
+                  placeholder="e.g. 42"
+                />
               </div>
             </CardContent>
           </Card>

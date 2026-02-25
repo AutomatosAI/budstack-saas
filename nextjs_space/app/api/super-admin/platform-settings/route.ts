@@ -36,6 +36,9 @@ export async function POST(req: NextRequest) {
     const fontFamily = formData.get("fontFamily") as string;
     const headingFontFamily = formData.get("headingFontFamily") as string;
     const template = formData.get("template") as string;
+    const automatosApiKey = formData.get("automatosApiKey") as string | null;
+    const automatosAgentIdStr = formData.get("automatosAgentId") as string | null;
+    const automatosAgentId = automatosAgentIdStr ? parseInt(automatosAgentIdStr, 10) : null;
 
     // Handle file uploads
     const logoFile = formData.get("logo") as File | null;
@@ -75,6 +78,8 @@ export async function POST(req: NextRequest) {
       fontFamily,
       headingFontFamily,
       template,
+      automatosApiKey: automatosApiKey || null,
+      automatosAgentId: isNaN(automatosAgentId as number) ? null : automatosAgentId,
     };
 
     if (logoUrl) updateData.logoUrl = logoUrl;

@@ -18,6 +18,8 @@ interface SettingsFormProps {
     drGreenApiUrl?: string | null;
     drGreenApiKey?: string | null;
     drGreenSecretKey?: string | null;
+    automatosApiKey?: string | null;
+    automatosAgentId?: number | null;
     settings?: any;
   };
 }
@@ -31,6 +33,8 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
     drGreenApiUrl: tenant.drGreenApiUrl || "",
     drGreenApiKey: "",
     drGreenSecretKey: "",
+    automatosApiKey: tenant.automatosApiKey || "",
+    automatosAgentId: tenant.automatosAgentId?.toString() || "",
     smtpHost: tenant.settings?.smtp?.host || "",
     smtpPort: tenant.settings?.smtp?.port || "587",
     smtpUser: tenant.settings?.smtp?.user || "",
@@ -224,6 +228,54 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                 ? "Leave empty to keep existing secret."
                 : "Required for submitting consultations."}
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Automatos Integration */}
+      <div className="card-floating p-8">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="rounded-2xl bg-blue-500 p-3">
+            <Zap className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="font-display text-xl font-bold text-foreground">
+              Automatos AI Integration
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Configure your storefront Chatbot
+            </p>
+          </div>
+        </div>
+        <div className="space-y-6">
+          <div>
+            <Label htmlFor="automatosApiKey" className="text-foreground font-medium">
+              Automatos API Key (Public)
+            </Label>
+            <Input
+              id="automatosApiKey"
+              value={formData.automatosApiKey}
+              onChange={(e) =>
+                setFormData({ ...formData, automatosApiKey: e.target.value })
+              }
+              placeholder="ak_pub_..."
+              className="mt-2 rounded-xl"
+            />
+          </div>
+          <div>
+            <Label htmlFor="automatosAgentId" className="text-foreground font-medium">
+              Agent ID (Optional)
+            </Label>
+            <Input
+              id="automatosAgentId"
+              type="number"
+              value={formData.automatosAgentId}
+              onChange={(e) =>
+                setFormData({ ...formData, automatosAgentId: e.target.value })
+              }
+              placeholder="e.g. 42"
+              className="mt-2 rounded-xl"
+            />
           </div>
         </div>
       </div>

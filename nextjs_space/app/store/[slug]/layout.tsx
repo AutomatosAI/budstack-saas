@@ -14,6 +14,7 @@ import { getSectionComponent } from "@/lib/section-registry";
 import type { TemplateLayout } from "@/lib/types/template-layout";
 import { CartProvider } from "./_contexts/CartContext";
 import { getTenantBasePath } from "@/lib/tenant-utils";
+import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrapper";
 
 // Deep merge two objects — overrides win for leaf values, objects are recursed
 function deepMergeObjects(base: any, overrides: any): any {
@@ -346,6 +347,16 @@ export default async function TenantStoreLayout({
           <main>{children}</main>
           {!skipLayoutChrome && renderFooter()}
           <CookieConsent tenant={tenantWithTemplate} />
+
+          {/* Conditionally render the Tenant's Automatos Widget if configured */}
+          {tenantWithTemplate.automatosApiKey && (
+            <AutomatosWidgetWrapper
+              apiKey={tenantWithTemplate.automatosApiKey}
+              agentId={tenantWithTemplate.automatosAgentId ?? undefined}
+              position="bottom-right"
+              theme="light"
+            />
+          )}
         </div>
       </CartProvider>
     </TenantThemeProvider>

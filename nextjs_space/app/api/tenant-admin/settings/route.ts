@@ -35,6 +35,8 @@ export async function POST(req: NextRequest) {
       drGreenApiUrl,
       drGreenApiKey,
       drGreenSecretKey,
+      automatosApiKey,
+      automatosAgentId,
       // SMTP fields
       smtpHost,
       smtpPort,
@@ -47,6 +49,8 @@ export async function POST(req: NextRequest) {
     const dataToUpdate: any = {
       customDomain: customDomain || null,
       drGreenApiUrl: drGreenApiUrl || null,
+      automatosApiKey: automatosApiKey || null,
+      automatosAgentId: automatosAgentId ? parseInt(automatosAgentId, 10) : null,
     };
 
     // Update settings JSON for SMTP

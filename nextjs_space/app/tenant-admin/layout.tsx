@@ -34,6 +34,8 @@ export default async function TenantAdminLayout({
         select: {
           id: true,
           businessName: true,
+          automatosApiKey: true,
+          automatosAgentId: true,
         },
       },
     },
@@ -64,7 +66,16 @@ export default async function TenantAdminLayout({
             tenantId: tenantByOrg[0].id,
             updatedAt: new Date(),
           },
-          include: { tenants: { select: { id: true, businessName: true } } },
+          include: {
+            tenants: {
+              select: {
+                id: true,
+                businessName: true,
+                automatosApiKey: true,
+                automatosAgentId: true,
+              }
+            }
+          },
         });
         console.log("[tenant-admin] Self-healed DB user for:", email);
       }
