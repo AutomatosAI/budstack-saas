@@ -9,6 +9,7 @@ interface AutomatosChatProps {
     position?: "bottom-right" | "bottom-left";
     theme?: "light" | "dark";
     greeting?: string;
+    title?: string;
     agentId?: number;
     modelId?: string;
     themeOverrides?: Record<string, string>;
@@ -29,6 +30,7 @@ export function AutomatosWidgetWrapper(props: AutomatosChatProps) {
                 position: props.position ?? "bottom-right",
                 theme: props.theme ?? "light",
                 greeting: props.greeting,
+                title: props.title,
                 agentId: props.agentId,
                 modelId: props.modelId,
                 themeOverrides: props.themeOverrides,
