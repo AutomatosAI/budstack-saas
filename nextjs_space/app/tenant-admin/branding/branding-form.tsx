@@ -45,6 +45,28 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { SECTION_REGISTRY } from "@/lib/section-registry";
+
+// When a new section is added from the modal, it needs default config properties 
+// to ensure the left-sidebar form fields generate correctly. 
+const SECTION_DEFAULTS: Record<string, Record<string, any>> = {
+  HeroFullScreen: { heading: "Welcome", subtitle: "A full screen hero", ctaText: "Start", imageUrl: "" },
+  HeroSplit: { heading: "New Split Hero", subtitle: "Describe it here", ctaText: "Click Me", imageUrl: "" },
+  HeroVideo: { heading: "Video Hero", subtitle: "Watch this", videoUrl: "" },
+  HeroMinimal: { heading: "Clean & Simple", subtitle: "Minimalist hero block" },
+  ValueProps: { title: "Why Choose Us" }, // Does not support array editing yet
+  ProductShowcase: { heading: "Our Products", subtitle: "Explore our range" },
+  Testimonials: { heading: "What They Say", subtitle: "Customer feedback" },
+  About: { heading: "About Us", content: "Our story", imageUrl: "" },
+  Gallery: { heading: "Gallery", subtitle: "See our work" },
+  Stats: { heading: "By The Numbers" },
+  FAQ: { heading: "Frequently Asked Questions", subtitle: "Find answers here" },
+  BlogFeed: { heading: "Latest News", subtitle: "Read our blog" },
+  Features: { heading: "Features", subtitle: "What we offer", imageUrl: "" },
+  ImageShowcase: { heading: "Showcase", subtitle: "Highlight an image", imageUrl: "" },
+  CTABanner: { heading: "Ready?", subtitle: "Let's go", ctaText: "Start" },
+  CTAWithImage: { heading: "Join Us", subtitle: "Don't wait", ctaText: "Sign Up", imageUrl: "" },
+  CTASplit: { heading: "Contact Us", subtitle: "We are here help", ctaText: "Email" },
+};
 import {
   DndContext,
   closestCenter,
@@ -608,14 +630,14 @@ export default function BrandingForm({
     const newSection = {
       id: `${type.toLowerCase()}-${Date.now().toString(36)}`,
       type: type,
-      config: {}
+      config: SECTION_DEFAULTS[type] || { heading: "New Section", subtitle: "Edit me" }
     };
     setFormData((prev) => ({
       ...prev,
       layoutSections: [...prev.layoutSections, newSection],
       sectionConfigs: {
         ...prev.sectionConfigs,
-        [newSection.id]: {}
+        [newSection.id]: { ...newSection.config }
       }
     }));
     setIsAddSectionOpen(false);
