@@ -371,7 +371,7 @@ export default async function TenantStoreLayout({
               agentId={tenantWithTemplate.automatosAgentId ?? undefined}
               position="bottom-right"
               theme="light"
-              title={tenantWithTemplate.businessName}
+              title={`${tenantWithTemplate.businessName} - Support`}
               greeting={`Hi there! 👋 Welcome to ${tenantWithTemplate.businessName}. How can we help you today?`}
               themeOverrides={widgetThemeOverrides}
             />

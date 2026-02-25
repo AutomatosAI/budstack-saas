@@ -36,7 +36,7 @@ export function GlobalPlatformChatbot({ automatosApiKey, automatosAgentId, theme
             position="bottom-right"
             theme="light"
             themeOverrides={themeOverrides}
-            title={businessName || 'BudStacks Support'}
+            title={`${businessName || 'BudStacks'} - Support`}
             greeting={`Hi there! 👋 Welcome to ${businessName || 'BudStacks Support'}. How can we help you today?`}
         />
     );
