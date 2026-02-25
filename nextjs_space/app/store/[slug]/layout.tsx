@@ -327,7 +327,7 @@ export default async function TenantStoreLayout({
       "--aw-primary-hover": colors.secondary || colors.primary,
       "--aw-bg": "#ffffff",
       "--aw-text": "#1a1a1a",
-      "--aw-user-text": "#ffffff",
+      "--aw-user-text": "#1a1a1a",
     };
 
     // remove undefined/falsy values

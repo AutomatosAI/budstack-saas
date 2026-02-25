@@ -91,6 +91,7 @@ export default async function RootLayout({
         // Force a light, high-contrast background for the widget
         "--aw-bg": "#ffffff",
         "--aw-text": "#1a1a1a",
+        "--aw-user-text": "#1a1a1a",
       };
 
       // Remove any undefined or empty override values
