@@ -325,8 +325,8 @@ export default async function TenantStoreLayout({
     widgetThemeOverrides = {
       "--aw-primary": colors.primary,
       "--aw-primary-hover": colors.secondary || colors.primary,
-      "--aw-bg": colors.background || "#ffffff",
-      "--aw-text": colors.text || "#1a1a1a",
+      "--aw-bg": "#ffffff",
+      "--aw-text": "#1a1a1a",
     };
 
     // remove undefined/falsy values

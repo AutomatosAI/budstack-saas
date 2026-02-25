@@ -62,6 +62,7 @@ export default async function RootLayout({
   // Fetch global platform settings to power the BudStacks marketing/home page Chatbot
   let platformApiKey = undefined;
   let platformAgentId = undefined;
+  let platformBusinessName = undefined;
   let themeOverrides: Record<string, string> = {};
   try {
     const settings = await prisma.platform_settings.findUnique({
@@ -73,11 +74,13 @@ export default async function RootLayout({
         secondaryColor: true,
         backgroundColor: true,
         textColor: true,
+        businessName: true,
       }
     });
     if (settings?.automatosApiKey) {
       platformApiKey = settings.automatosApiKey;
       platformAgentId = settings.automatosAgentId;
+      platformBusinessName = settings.businessName;
     }
 
     // Convert DB colors to Automatos widget CSS variables
@@ -85,8 +88,9 @@ export default async function RootLayout({
       themeOverrides = {
         "--aw-primary": settings.primaryColor,
         "--aw-primary-hover": settings.secondaryColor || settings.primaryColor,
-        "--aw-bg": settings.backgroundColor,
-        "--aw-text": settings.textColor,
+        // Force a light, high-contrast background for the widget
+        "--aw-bg": "#ffffff",
+        "--aw-text": "#1a1a1a",
       };
 
       // Remove any undefined or empty override values
@@ -123,6 +127,7 @@ export default async function RootLayout({
                     automatosApiKey={platformApiKey}
                     automatosAgentId={platformAgentId ?? undefined}
                     themeOverrides={themeOverrides}
+                    businessName={platformBusinessName ?? undefined}
                   />
                 )}
                 <Toaster />

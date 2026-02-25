@@ -7,9 +7,10 @@ interface Props {
     automatosApiKey: string;
     automatosAgentId?: number;
     themeOverrides?: Record<string, string>;
+    businessName?: string;
 }
 
-export function GlobalPlatformChatbot({ automatosApiKey, automatosAgentId, themeOverrides }: Props) {
+export function GlobalPlatformChatbot({ automatosApiKey, automatosAgentId, themeOverrides, businessName }: Props) {
     const pathname = usePathname();
 
     // Exclude admin dashboards and tenant stores so they don't get the platform chatbot
@@ -35,6 +36,7 @@ export function GlobalPlatformChatbot({ automatosApiKey, automatosAgentId, theme
             position="bottom-right"
             theme="light"
             themeOverrides={themeOverrides}
+            greeting={`Hi there! 👋 Welcome to ${businessName || 'BudStacks Support'}. How can we help you today?`}
         />
     );
 }
