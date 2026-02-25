@@ -139,6 +139,32 @@ export async function PUT(req: NextRequest) {
         customCss: settings.customCSS,
       };
 
+      // Handle layout changes (sections array & config overrides)
+      // branding-form passes these implicitly within the "settings" blob
+      const incomingSettings = settings as any;
+      if (incomingSettings.layoutSections || incomingSettings.sectionConfigs) {
+        const baseLayout = (currentTemplate?.layout as any) || {};
+
+        // Merge base layout with reordered/new sections and config overrides
+        const updatedSections = (incomingSettings.layoutSections || []).map((s: any) => {
+          if (incomingSettings.sectionConfigs && incomingSettings.sectionConfigs[s.id]) {
+            return {
+              ...s,
+              config: { ...s.config, ...incomingSettings.sectionConfigs[s.id] }
+            };
+          }
+          return s;
+        });
+
+        // Ensure navigation and footer are preserved from the base layout if missing
+        updateData.layout = {
+          ...baseLayout,
+          navigation: baseLayout.navigation || "NavDark",
+          footer: baseLayout.footer || "FooterSimple",
+          sections: updatedSections,
+        };
+      }
+
       // Handle file mapping
       if (settings.logoPath) updateData.logoUrl = settings.logoPath;
       if (settings.heroImagePath)

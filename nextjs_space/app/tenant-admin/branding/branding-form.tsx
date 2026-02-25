@@ -579,6 +579,8 @@ export default function BrandingForm({
   // Combine layout with the live edited sectionConfigs and drag-and-drop array order
   const liveLayout = (activeTemplate as any)?.layout ? {
     ...((activeTemplate as any).layout as any),
+    navigation: ((activeTemplate as any).layout as any).navigation || "NavDark",
+    footer: ((activeTemplate as any).layout as any).footer || "FooterSimple",
     sections: formData.layoutSections.map((section: any) => {
       if (formData.sectionConfigs[section.id]) {
         return {
