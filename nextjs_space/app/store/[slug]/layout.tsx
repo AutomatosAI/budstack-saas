@@ -315,10 +315,25 @@ export default async function TenantStoreLayout({
     }
   })();
 
-  // Deep merge designSystem: defaults (base) ← DB overrides (tenant customizations win)
   const mergedDesignSystem = deepMergeObjects(defaults?.designSystem || null, activeTemplate?.designSystem || null);
   console.log("[layout] designSystem: defaults?", !!defaults?.designSystem, "db?", !!activeTemplate?.designSystem,
     "merged colors.background:", (mergedDesignSystem as any)?.colors?.background || "NOT SET");
+
+  let widgetThemeOverrides: Record<string, string> | undefined = undefined;
+  if ((mergedDesignSystem as any)?.colors) {
+    const colors = (mergedDesignSystem as any).colors;
+    widgetThemeOverrides = {
+      "--aw-primary": colors.primary,
+      "--aw-primary-hover": colors.secondary || colors.primary,
+      "--aw-bg": colors.background || "#ffffff",
+      "--aw-text": colors.text || "#1a1a1a",
+    };
+
+    // remove undefined/falsy values
+    Object.keys(widgetThemeOverrides).forEach(key => {
+      if (!widgetThemeOverrides![key]) delete widgetThemeOverrides![key];
+    });
+  }
 
   return (
     <TenantThemeProvider
@@ -355,6 +370,7 @@ export default async function TenantStoreLayout({
               agentId={tenantWithTemplate.automatosAgentId ?? undefined}
               position="bottom-right"
               theme="light"
+              themeOverrides={widgetThemeOverrides}
             />
           )}
         </div>

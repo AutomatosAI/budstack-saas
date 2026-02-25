@@ -129,7 +129,7 @@ export default function PlatformBrandingForm({
   return (
     <form onSubmit={handleSubmit}>
       <Tabs defaultValue="design" className="space-y-6">
-        <TabsList className="grid grid-cols-3 w-full max-w-md">
+        <TabsList className="grid grid-cols-4 w-full xl:max-w-2xl lg:max-w-xl">
           <TabsTrigger value="design">
             <Layout className="w-4 h-4 mr-2" />
             Design

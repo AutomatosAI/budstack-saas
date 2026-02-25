@@ -62,17 +62,37 @@ export default async function RootLayout({
   // Fetch global platform settings to power the BudStacks marketing/home page Chatbot
   let platformApiKey = undefined;
   let platformAgentId = undefined;
+  let themeOverrides: Record<string, string> = {};
   try {
     const settings = await prisma.platform_settings.findUnique({
       where: { id: "platform" },
       select: {
         automatosApiKey: true,
         automatosAgentId: true,
+        primaryColor: true,
+        secondaryColor: true,
+        backgroundColor: true,
+        textColor: true,
       }
     });
     if (settings?.automatosApiKey) {
       platformApiKey = settings.automatosApiKey;
       platformAgentId = settings.automatosAgentId;
+    }
+
+    // Convert DB colors to Automatos widget CSS variables
+    if (settings) {
+      themeOverrides = {
+        "--aw-primary": settings.primaryColor,
+        "--aw-primary-hover": settings.secondaryColor || settings.primaryColor,
+        "--aw-bg": settings.backgroundColor,
+        "--aw-text": settings.textColor,
+      };
+
+      // Remove any undefined or empty override values
+      Object.keys(themeOverrides).forEach(key => {
+        if (!themeOverrides[key]) delete themeOverrides[key];
+      });
     }
   } catch (e) {
     console.error("Failed to load platform settings in root layout", e);
@@ -102,6 +122,7 @@ export default async function RootLayout({
                   <GlobalPlatformChatbot
                     automatosApiKey={platformApiKey}
                     automatosAgentId={platformAgentId ?? undefined}
+                    themeOverrides={themeOverrides}
                   />
                 )}
                 <Toaster />

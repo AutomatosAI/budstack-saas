@@ -6,9 +6,10 @@ import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrappe
 interface Props {
     automatosApiKey: string;
     automatosAgentId?: number;
+    themeOverrides?: Record<string, string>;
 }
 
-export function GlobalPlatformChatbot({ automatosApiKey, automatosAgentId }: Props) {
+export function GlobalPlatformChatbot({ automatosApiKey, automatosAgentId, themeOverrides }: Props) {
     const pathname = usePathname();
 
     // Exclude admin dashboards and tenant stores so they don't get the platform chatbot
@@ -33,6 +34,7 @@ export function GlobalPlatformChatbot({ automatosApiKey, automatosAgentId }: Pro
             agentId={automatosAgentId}
             position="bottom-right"
             theme="light"
+            themeOverrides={themeOverrides}
         />
     );
 }
