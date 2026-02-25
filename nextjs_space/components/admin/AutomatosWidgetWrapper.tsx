@@ -46,7 +46,7 @@ export function AutomatosWidgetWrapper(props: AutomatosChatProps) {
 
     return (
         <Script
-            src="/automatos-widget.js?v=2"
+            src="/automatos-widget.js?v=3"
             strategy="afterInteractive"
             onLoad={initWidget}
         />
