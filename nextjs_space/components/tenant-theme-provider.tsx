@@ -229,6 +229,18 @@ function applyThemeToContainer(
       shadowMap[dsShadow] || shadowMap[settings.shadowStyle || "soft"] || "0 1px 3px 0 rgb(0 0 0 / 0.1)",
     );
 
+    // === GLASS EFFECT ===
+    const glassMap: Record<string, { blur: string, opacity: string }> = {
+      none: { blur: "0px", opacity: "1" },
+      light: { blur: "8px", opacity: "0.8" },
+      heavy: { blur: "16px", opacity: "0.6" },
+    };
+    const dsGlass = designSystem.glassEffect;
+    const glassConfig = glassMap[dsGlass] || glassMap[settings.glassEffect || "none"] || glassMap["none"];
+    root.style.setProperty("--tenant-backdrop-blur", glassConfig.blur);
+    root.style.setProperty("--tenant-card-opacity", glassConfig.opacity);
+
+
     // === BUTTON SIZE ===
     const buttonSizeMap: Record<string, { padding: string; fontSize: string }> =
     {

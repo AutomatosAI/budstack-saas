@@ -70,6 +70,10 @@ export interface TenantSettings {
   borderRadius?: "none" | "small" | "medium" | "large"; // Global border radius
   spacing?: "compact" | "normal" | "comfortable"; // Global spacing scale
   shadowStyle?: "none" | "soft" | "medium" | "bold"; // Card/button shadows
+  glassEffect?: "none" | "light" | "heavy"; // Premium frosted glass effect
+  animationType?: "none" | "fade-up" | "slide-right" | "zoom-in"; // Scroll reveal animations
+  dividerStyle?: "none" | "wave" | "slant" | "curve"; // SVG section dividers
+
 
   // === IMAGES (S3 cloud storage paths) ===
   logoPath?: string;
@@ -130,10 +134,21 @@ export interface TenantSettings {
 
   // === PAGE CONTENT (Personal Pages - Tenant Editable) ===
   pageContent?: {
+    educationHotspots?: Array<{
+      id: string;
+      x: number; // Percentage 0-100
+      y: number; // Percentage 0-100
+      title: string;
+      description: string;
+    }>;
     home?: {
       heroTitle?: string;
       heroSubtitle?: string;
       heroCtaText?: string;
+      heroAlignment?: "left" | "center" | "right";
+      heroOverlayStyle?: "dark" | "gradient-primary" | "gradient-dark" | "none";
+      heroOverlayOpacity?: number; // 0 to 100
+      heroHeight?: "medium" | "large" | "full";
       aboutSection?: string;
       featuresTitle?: string;
       features?: Array<{

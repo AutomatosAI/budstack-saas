@@ -30,16 +30,34 @@ export function HeroVideo({
   const heroType = sectionConfig?.heroType || (videoUrl ? 'video' : null) || settings.heroType || 'gradient-image';
   const overlayOpacity = settings.heroOverlayOpacity || sectionConfig?.overlayOpacity || 0.55;
 
-  // Alignment classes based on config
-  const isLeft = textAlign === 'left';
+  // Text alignment — from tenant settings or layout.json sectionConfig
+  const heroAlignment = pageContent?.home?.heroAlignment || sectionConfig?.textAlign || 'left';
+  const isLeft = heroAlignment === 'left';
+  const isRight = heroAlignment === 'right';
+  const isCenter = heroAlignment === 'center' || (!isLeft && !isRight);
+
+  // Advanced configurations from tenant settings
+  const heroOverlayStyle = pageContent?.home?.heroOverlayStyle || 'gradient-dark';
+  const heroOverlayOpacity = pageContent?.home?.heroOverlayOpacity ?? 55;
+  const heroHeight = pageContent?.home?.heroHeight || 'large';
+
+  // Map height enum to classes
+  const heightClass: Record<string, string> = {
+    medium: 'min-h-[500px] py-20',
+    large: 'min-h-[700px] py-32',
+    full: 'min-h-screen',
+  };
+
+  const selectedHeightClass = heightClass[heroHeight as string] || heightClass['large'];
+
   const alignClasses = isLeft
     ? 'text-left items-start'
-    : textAlign === 'right'
-      ? 'text-right items-end'
+    : isRight
+      ? 'text-right items-end w-full'
       : 'text-center items-center';
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden">
+    <section className={`relative ${selectedHeightClass} flex items-center overflow-hidden`}>
       {/* Background: Video → Image → Gradient fallback */}
       {/* Background: Video → Image → Gradient fallback */}
       {heroType === 'video' && videoUrl ? (
@@ -69,16 +87,24 @@ export function HeroVideo({
         />
       )}
 
-      {/* Gradient Overlay — dark cinematic for video, theme-aware for static */}
-      <div
-        className="absolute inset-0 z-[1]"
-        style={{
-          background: `linear-gradient(90deg,
-            rgba(0, 0, 0, ${overlayOpacity}) 0%,
-            rgba(0, 0, 0, ${Math.max(0, overlayOpacity - 0.2)}) 40%,
-            rgba(0, 0, 0, ${Math.max(0, overlayOpacity - 0.4)}) 100%)`,
-        }}
-      />
+      {/* Dynamic Overlay based on Advanced Configuration */}
+      {heroOverlayStyle !== 'none' && (
+        <div
+          className="absolute inset-0 z-[1]"
+          style={{
+            background:
+              heroOverlayStyle === 'dark'
+                ? `rgba(0, 0, 0, ${heroOverlayOpacity / 100})`
+                : heroOverlayStyle === 'gradient-primary'
+                  ? `linear-gradient(135deg, hsla(var(--tenant-color-primary-hsl), ${heroOverlayOpacity / 100}) 0%, transparent 100%)`
+                  : /* gradient-dark default or cinematic override */
+                  `linear-gradient(90deg,
+                    rgba(0, 0, 0, ${heroOverlayOpacity / 100}) 0%,
+                    rgba(0, 0, 0, ${Math.max(0, (heroOverlayOpacity / 100) - 0.2)}) 40%,
+                    rgba(0, 0, 0, ${Math.max(0, (heroOverlayOpacity / 100) - 0.4)}) 100%)`,
+          }}
+        />
+      )}
 
       {/* Logo Watermark Overlay — large semi-transparent logo */}
       {watermarkUrl && (
@@ -158,17 +184,20 @@ export function HeroVideo({
         </motion.div>
       </div>
 
-      {/* Scroll Indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 1.2 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white z-10"
-      >
-        <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
-          <ChevronDown size={36} />
+      {/* Scroll Indicator (Only show if Height is Full Screen) */}
+      {heroHeight === 'full' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 1.2 }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white z-10 cursor-pointer"
+          onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
+        >
+          <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
+            <ChevronDown size={36} />
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
     </section>
   );
 }

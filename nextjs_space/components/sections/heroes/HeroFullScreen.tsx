@@ -22,9 +22,25 @@ export function HeroFullScreen({
   const secondaryCtaText = sectionConfig?.secondaryCtaText || 'Learn More';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '#about';
 
-  // Text alignment — defaults to center, templates can set "left" via layout.json sectionConfig
-  const textAlign = sectionConfig?.textAlign || 'center';
-  const isLeft = textAlign === 'left';
+  // Text alignment — from tenant settings or layout.json sectionConfig
+  const heroAlignment = pageContent?.home?.heroAlignment || sectionConfig?.textAlign || 'left';
+  const isLeft = heroAlignment === 'left';
+  const isRight = heroAlignment === 'right';
+  const isCenter = heroAlignment === 'center' || (!isLeft && !isRight);
+
+  // Advanced configurations from tenant settings
+  const heroOverlayStyle = pageContent?.home?.heroOverlayStyle || 'gradient-dark';
+  const heroOverlayOpacity = pageContent?.home?.heroOverlayOpacity ?? 70;
+  const heroHeight = pageContent?.home?.heroHeight || 'large';
+
+  // Map height enum to classes
+  const heightClass: Record<string, string> = {
+    medium: 'min-h-[500px] py-20',
+    large: 'min-h-[700px] py-32',
+    full: 'min-h-screen',
+  };
+
+  const selectedHeightClass = heightClass[heroHeight as string] || heightClass['large'];
 
   // Hero display mode — from tenant settings or sectionConfig, defaults to gradient-image for backward compat
   const heroType = sectionConfig?.heroType || (tenant as any).settings?.heroType || 'gradient-image';
@@ -32,7 +48,7 @@ export function HeroFullScreen({
   const showGradientOverlay = heroType === 'gradient' || heroType === 'gradient-image';
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className={`relative ${selectedHeightClass} flex items-center justify-center overflow-hidden`}>
       {/* Background: Image if available and heroType allows, otherwise rich gradient */}
       {showImage ? (
         <div className="absolute inset-0 z-0">
@@ -56,21 +72,20 @@ export function HeroFullScreen({
         />
       )}
 
-      {/* Gradient Overlay — only shown for gradient and gradient-image modes */}
-      {showGradientOverlay && (
+      {/* Dynamic Overlay based on Advanced Configuration */}
+      {heroOverlayStyle !== 'none' && (
         <div
           className="absolute inset-0 z-[1]"
           style={{
-            background: `linear-gradient(180deg,
-              hsl(var(--tenant-color-primary) / 0.6) 0%,
-              hsl(var(--tenant-color-background) / 0.95) 100%)`,
+            opacity: heroOverlayOpacity / 100,
+            background:
+              heroOverlayStyle === 'dark'
+                ? 'black'
+                : heroOverlayStyle === 'gradient-primary'
+                  ? `linear-gradient(135deg, hsl(var(--tenant-color-primary)) 0%, transparent 100%)`
+                  : /* gradient-dark default */ `linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.8) 100%)`,
           }}
         />
-      )}
-
-      {/* For image-only mode, add a subtle dark scrim so white text stays readable */}
-      {heroType === 'image' && showImage && (
-        <div className="absolute inset-0 z-[1] bg-black/30" />
       )}
 
       {/* Ambient glow effects — adds depth without needing images */}
@@ -138,7 +153,10 @@ export function HeroFullScreen({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
-          className={`flex flex-col sm:flex-row gap-4 ${isLeft ? 'justify-start items-start' : 'justify-center items-center'} mt-8`}
+          className={`flex flex-col sm:flex-row gap-4 ${isLeft ? 'justify-start items-start' :
+            isRight ? 'justify-end items-end w-full' :
+              'justify-center items-center'
+            } mt-8`}
         >
           <a
             href={consultationUrl}
@@ -156,18 +174,20 @@ export function HeroFullScreen({
         </motion.div>
       </div>
 
-      {/* Scroll Indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 1.2 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white cursor-pointer"
-        onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
-      >
-        <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
-          <ChevronDown size={36} />
+      {/* Scroll Indicator (Only show if Height is Full Screen) */}
+      {heroHeight === 'full' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 1.2 }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white cursor-pointer"
+          onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
+        >
+          <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
+            <ChevronDown size={36} />
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
     </section>
   );
 }

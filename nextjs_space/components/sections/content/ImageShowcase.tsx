@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { ArrowRight } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
+import { InteractiveImage } from '@/components/ui/interactive-image';
 
 /**
  * ImageShowcase — full-width image-background section with dark overlay,
@@ -33,6 +34,11 @@ export function ImageShowcase(props: SectionProps) {
     const imageUrl = sectionConfig?.imageUrl || null;
     const overlayStyle = sectionConfig?.overlayStyle || 'gradient-left';
 
+    // Extract interactive hotspots if configured
+    const hotspots = pageContent?.educationHotspots || [];
+    const hasHotspots = hotspots.length > 0;
+    const glassEffect = props.tenant?.settings?.glassEffect || "none";
+
     const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.15 });
 
     // Overlay gradients based on style
@@ -56,19 +62,29 @@ export function ImageShowcase(props: SectionProps) {
     return (
         <section ref={ref} className="py-2 px-2 sm:px-2">
             <div
-                className="relative rounded-2xl sm:rounded-3xl overflow-hidden mx-auto"
+                className="relative rounded-2xl sm:rounded-3xl mx-auto"
                 style={{ minHeight: '420px' }}
             >
                 {/* Background image or gradient fallback */}
                 {imageUrl ? (
-                    <div className="absolute inset-0">
-                        <Image
-                            src={imageUrl}
-                            alt={heading}
-                            fill
-                            className="object-cover"
-                            sizes="100vw"
-                        />
+                    <div className="absolute inset-0 rounded-2xl sm:rounded-3xl overflow-hidden">
+                        {hasHotspots ? (
+                            <InteractiveImage
+                                src={imageUrl}
+                                alt={heading}
+                                hotspots={hotspots}
+                                glassEffect={glassEffect as any}
+                                className="w-full h-full object-cover min-h-[420px]"
+                            />
+                        ) : (
+                            <Image
+                                src={imageUrl}
+                                alt={heading}
+                                fill
+                                className="object-cover"
+                                sizes="100vw"
+                            />
+                        )}
                     </div>
                 ) : (
                     <div

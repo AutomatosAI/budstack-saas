@@ -49,6 +49,9 @@ import {
   MessageCircle,
   FileQuestion,
   Newspaper,
+  Plus,
+  Trash2,
+  GraduationCap
 } from "lucide-react";
 import { TenantSettings } from "@/lib/types";
 
@@ -135,10 +138,12 @@ export default function ComprehensiveBrandingForm({
     footerInstagram: settings.footer?.socialMedia?.instagram || "",
     footerLinkedin: settings.footer?.socialMedia?.linkedin || "",
 
-    // Colors
     primaryColor: settings.primaryColor || "#059669",
     secondaryColor: settings.secondaryColor || "#34d399",
     accentColor: settings.accentColor || "#10b981",
+
+    // Interactive Content
+    educationHotspots: settings.pageContent?.educationHotspots || [],
     backgroundColor: settings.backgroundColor || "#ffffff",
     textColor: settings.textColor || "#1f2937",
     headingColor: settings.headingColor || "#111827",
@@ -157,6 +162,9 @@ export default function ComprehensiveBrandingForm({
     spacing: settings.spacing || "normal",
     shadowStyle: settings.shadowStyle || "soft",
     heroType: settings.heroType || "gradient-image",
+    glassEffect: settings.glassEffect || "none",
+    animationType: settings.animationType || "none",
+    dividerStyle: settings.dividerStyle || "none",
 
     // Home Page
     homeHeroTitle:
@@ -166,6 +174,10 @@ export default function ComprehensiveBrandingForm({
       settings.pageContent?.home?.heroSubtitle ||
       "Premium medical cannabis products delivered with care",
     homeHeroCtaText: settings.pageContent?.home?.heroCtaText || "Get Started",
+    homeHeroAlignment: settings.pageContent?.home?.heroAlignment || "left",
+    homeHeroOverlayStyle: settings.pageContent?.home?.heroOverlayStyle || "gradient-dark",
+    homeHeroOverlayOpacity: settings.pageContent?.home?.heroOverlayOpacity ?? 70,
+    homeHeroHeight: settings.pageContent?.home?.heroHeight || "large",
 
     // About Page
     aboutTitle: settings.pageContent?.about?.title || "About Us",
@@ -346,13 +358,21 @@ export default function ComprehensiveBrandingForm({
         spacing: formData.spacing as any,
         shadowStyle: formData.shadowStyle as any,
         heroType: formData.heroType as any,
+        glassEffect: formData.glassEffect as any,
+        animationType: formData.animationType as any,
+        dividerStyle: formData.dividerStyle as any,
 
         // Page Content
         pageContent: {
+          educationHotspots: formData.educationHotspots,
           home: {
             heroTitle: formData.homeHeroTitle,
             heroSubtitle: formData.homeHeroSubtitle,
             heroCtaText: formData.homeHeroCtaText,
+            heroAlignment: formData.homeHeroAlignment as any,
+            heroOverlayStyle: formData.homeHeroOverlayStyle as any,
+            heroOverlayOpacity: formData.homeHeroOverlayOpacity,
+            heroHeight: formData.homeHeroHeight as any,
           },
           about: {
             title: formData.aboutTitle,
@@ -471,6 +491,10 @@ export default function ComprehensiveBrandingForm({
           <TabsTrigger value="footer" className="text-xs">
             <Globe className="w-3 h-3 mr-1" />
             Footer
+          </TabsTrigger>
+          <TabsTrigger value="education" className="text-xs">
+            <GraduationCap className="w-3 h-3 mr-1" />
+            Education
           </TabsTrigger>
           <TabsTrigger value="design" className="text-xs">
             <Palette className="w-3 h-3 mr-1" />
@@ -907,7 +931,125 @@ export default function ComprehensiveBrandingForm({
           </Card>
         </TabsContent>
 
-        {/* Continue with remaining tabs in next message due to length... */}
+        {/* EDUCATION TAB - Interactive Hotspots */}
+        <TabsContent value="education" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Interactive Education Content</CardTitle>
+              <CardDescription>Add interactive hotspots to imagery (e.g., highlighting parts of the endocannabinoid system).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-between items-center">
+                <Label>Image Hotspots</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      educationHotspots: [
+                        ...formData.educationHotspots,
+                        {
+                          id: Date.now().toString(),
+                          title: "New Hotspot",
+                          description: "",
+                          x: 50,
+                          y: 50,
+                        },
+                      ],
+                    })
+                  }
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Hotspot
+                </Button>
+              </div>
+
+              {formData.educationHotspots.length === 0 ? (
+                <div className="text-center p-6 border border-dashed rounded-lg text-muted-foreground">
+                  No hotspots configured. Add one to get started.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {formData.educationHotspots.map((hotspot: any, index: number) => (
+                    <div key={hotspot.id} className="p-4 border rounded-lg space-y-4 relative">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 text-destructive"
+                        onClick={() => {
+                          const newHotspots = [...formData.educationHotspots];
+                          newHotspots.splice(index, 1);
+                          setFormData({ ...formData, educationHotspots: newHotspots });
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Title</Label>
+                          <Input
+                            value={hotspot.title}
+                            onChange={(e) => {
+                              const newHotspots = [...formData.educationHotspots];
+                              newHotspots[index].title = e.target.value;
+                              setFormData({ ...formData, educationHotspots: newHotspots });
+                            }}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>X Position (%)</Label>
+                            <Input
+                              type="number"
+                              min="0" max="100"
+                              value={hotspot.x}
+                              onChange={(e) => {
+                                const newHotspots = [...formData.educationHotspots];
+                                newHotspots[index].x = Number(e.target.value);
+                                setFormData({ ...formData, educationHotspots: newHotspots });
+                              }}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Y Position (%)</Label>
+                            <Input
+                              type="number"
+                              min="0" max="100"
+                              value={hotspot.y}
+                              onChange={(e) => {
+                                const newHotspots = [...formData.educationHotspots];
+                                newHotspots[index].y = Number(e.target.value);
+                                setFormData({ ...formData, educationHotspots: newHotspots });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Detailed Description</Label>
+                        <Textarea
+                          rows={2}
+                          value={hotspot.description}
+                          onChange={(e) => {
+                            const newHotspots = [...formData.educationHotspots];
+                            newHotspots[index].description = e.target.value;
+                            setFormData({ ...formData, educationHotspots: newHotspots });
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* DESIGN TAB - Colors & Typography */}
         <TabsContent value="design" className="space-y-6">
           <Card>
@@ -997,6 +1139,75 @@ export default function ComprehensiveBrandingForm({
                   </Select>
                 </div>
               </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="glassEffect">Component Style (Glassmorphism)</Label>
+                  <Select
+                    value={formData.glassEffect}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, glassEffect: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Solid (Default)</SelectItem>
+                      <SelectItem value="light">Light Frosted Glass</SelectItem>
+                      <SelectItem value="heavy">Heavy Frosted Glass</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">Applies a premium blur effect to cards and navigation.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="animationType">Scroll Animations</Label>
+                  <Select
+                    value={formData.animationType}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, animationType: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None (Static)</SelectItem>
+                      <SelectItem value="fade-up">Fade Up</SelectItem>
+                      <SelectItem value="slide-right">Slide Right</SelectItem>
+                      <SelectItem value="zoom-in">Zoom In</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">How sections reveal themselves as you scroll down.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dividerStyle">Section Dividers</Label>
+                  <Select
+                    value={formData.dividerStyle}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, dividerStyle: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Straight (Default)</SelectItem>
+                      <SelectItem value="wave">Fluid Waves</SelectItem>
+                      <SelectItem value="slant">Modern Slant</SelectItem>
+                      <SelectItem value="curve">Soft Curve</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">Replaces straight horizontal lines between page sections with organic SVG shapes.</p>
+                </div>
+              </div>
+
             </CardContent>
           </Card>
         </TabsContent>
@@ -1011,46 +1222,131 @@ export default function ComprehensiveBrandingForm({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="homeHeroTitle">Hero Title</Label>
-                <Input
-                  id="homeHeroTitle"
-                  value={formData.homeHeroTitle}
-                  onChange={(e) =>
-                    setFormData({ ...formData, homeHeroTitle: e.target.value })
-                  }
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="homeHeroTitle">Hero Title</Label>
+                  <Input
+                    id="homeHeroTitle"
+                    value={formData.homeHeroTitle}
+                    onChange={(e) =>
+                      setFormData({ ...formData, homeHeroTitle: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="homeHeroSubtitle">Hero Subtitle</Label>
+                  <Textarea
+                    id="homeHeroSubtitle"
+                    rows={2}
+                    value={formData.homeHeroSubtitle}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        homeHeroSubtitle: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="homeHeroCtaText">CTA Button Text</Label>
+                  <Input
+                    id="homeHeroCtaText"
+                    value={formData.homeHeroCtaText}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        homeHeroCtaText: e.target.value,
+                      })
+                    }
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="homeHeroSubtitle">Hero Subtitle</Label>
-                <Textarea
-                  id="homeHeroSubtitle"
-                  rows={2}
-                  value={formData.homeHeroSubtitle}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      homeHeroSubtitle: e.target.value,
-                    })
-                  }
-                />
-              </div>
+              <Separator />
 
-              <div className="space-y-2">
-                <Label htmlFor="homeHeroCtaText">
-                  Call-to-Action Button Text
-                </Label>
-                <Input
-                  id="homeHeroCtaText"
-                  value={formData.homeHeroCtaText}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      homeHeroCtaText: e.target.value,
-                    })
-                  }
-                />
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm">Advanced Hero Configuration</h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="homeHeroAlignment">Alignment</Label>
+                    <Select
+                      value={formData.homeHeroAlignment}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, homeHeroAlignment: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="left">Left Aligned</SelectItem>
+                        <SelectItem value="center">Center Aligned</SelectItem>
+                        <SelectItem value="right">Right Aligned</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="homeHeroHeight">Section Height</Label>
+                    <Select
+                      value={formData.homeHeroHeight}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, homeHeroHeight: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="large">Large</SelectItem>
+                        <SelectItem value="full">Full Screen (100vh)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="homeHeroOverlayStyle">Image Overlay Style</Label>
+                    <Select
+                      value={formData.homeHeroOverlayStyle}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, homeHeroOverlayStyle: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Overlay (Image Only)</SelectItem>
+                        <SelectItem value="dark">Solid Dark Scrim</SelectItem>
+                        <SelectItem value="gradient-dark">Dark Gradient (Fade Up)</SelectItem>
+                        <SelectItem value="gradient-primary">Primary Brand Gradient</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="homeHeroOverlayOpacity">Overlay Opacity (%)</Label>
+                    <Input
+                      id="homeHeroOverlayOpacity"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.homeHeroOverlayOpacity}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          homeHeroOverlayOpacity: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
