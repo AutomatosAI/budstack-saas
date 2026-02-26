@@ -128,7 +128,7 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
 
           const sectionElement = (
             <section key={section.id || `section-${i}`} id={section.id} className="relative">
-              <Component {...sectionProps} sectionConfig={section.config || {}} />
+              <Component {...sectionProps} sectionId={section.id} sectionConfig={section.config || {}} />
             </section>
           );
 

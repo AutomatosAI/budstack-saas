@@ -1466,6 +1466,7 @@ export default function BrandingForm({
                             ...formData.educationHotspots,
                             {
                               id: Date.now().toString(),
+                              targetSectionId: "all",
                               title: "New Hotspot",
                               description: "",
                               x: 50,
@@ -1514,7 +1515,32 @@ export default function BrandingForm({
                                 }}
                               />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Target Section</Label>
+                              <Select
+                                value={hotspot.targetSectionId || "all"}
+                                onValueChange={(value) => {
+                                  const newHotspots = [...formData.educationHotspots];
+                                  newHotspots[index].targetSectionId = value;
+                                  setFormData({ ...formData, educationHotspots: newHotspots });
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="All Sections" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">All Sections (Global)</SelectItem>
+                                  {formData.layoutSections
+                                    .filter((s: any) => s.id && s.visible !== false)
+                                    .map((s: any) => (
+                                      <SelectItem key={s.id} value={s.id}>
+                                        {s.type.replace(/([A-Z])/g, ' $1').trim()} (#{s.id})
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 col-span-1 md:col-span-2">
                               <div className="space-y-2">
                                 <Label>X Position (%)</Label>
                                 <Input

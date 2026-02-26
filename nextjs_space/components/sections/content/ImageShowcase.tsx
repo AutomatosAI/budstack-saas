@@ -22,7 +22,7 @@ import { InteractiveImage } from '@/components/ui/interactive-image';
  *   overlayStyle   — "gradient-left" | "gradient-center" | "dark"
  */
 export function ImageShowcase(props: SectionProps) {
-    const { sectionConfig, pageContent } = props;
+    const { sectionConfig, pageContent, sectionId } = props;
 
     const heading = sectionConfig?.heading || 'Our Facility';
     const content =
@@ -35,7 +35,10 @@ export function ImageShowcase(props: SectionProps) {
     const overlayStyle = sectionConfig?.overlayStyle || 'gradient-left';
 
     // Extract interactive hotspots if configured
-    const hotspots = pageContent?.educationHotspots || [];
+    const allHotspots = pageContent?.educationHotspots || [];
+    const hotspots = allHotspots.filter((h: any) =>
+        !h.targetSectionId || h.targetSectionId === 'all' || h.targetSectionId === sectionId
+    );
     const hasHotspots = hotspots.length > 0;
     const glassEffect = props.tenant?.settings?.glassEffect || "none";
 

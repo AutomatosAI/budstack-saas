@@ -136,6 +136,7 @@ export interface TenantSettings {
   pageContent?: {
     educationHotspots?: Array<{
       id: string;
+      targetSectionId?: string; // e.g. 'hero' or 'imageShowcase'
       x: number; // Percentage 0-100
       y: number; // Percentage 0-100
       title: string;

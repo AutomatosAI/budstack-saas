@@ -13,6 +13,7 @@ export function HeroFullScreen({
   logoUrl,
   pageContent,
   sectionConfig,
+  sectionId,
   consultationUrl,
 }: SectionProps) {
   const businessName = tenant.businessName;
@@ -48,8 +49,12 @@ export function HeroFullScreen({
   const showImage = heroImageUrl && (heroType === 'image' || heroType === 'gradient-image');
   const showGradientOverlay = heroType === 'gradient' || heroType === 'gradient-image';
 
-  // Extract interactive hotspots if configured
-  const hotspots = pageContent?.educationHotspots || [];
+  // Extract interactive hotspots if configured and filter by target section
+  const allHotspots = pageContent?.educationHotspots || [];
+  const hotspots = allHotspots.filter((h: any) =>
+    !h.targetSectionId || h.targetSectionId === 'all' || h.targetSectionId === sectionId
+  );
+
   const hasHotspots = hotspots.length > 0;
   const glassEffect = tenant?.settings?.glassEffect || "none";
 

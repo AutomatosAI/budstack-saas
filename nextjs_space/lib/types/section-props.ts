@@ -1,5 +1,5 @@
 export interface SectionProps {
-  tenant: { businessName: string; subdomain: string; [k: string]: any };
+  tenant: { businessName: string; subdomain: string;[k: string]: any };
   consultationUrl: string;
   productsUrl: string;
   contactUrl: string;
@@ -13,4 +13,5 @@ export interface SectionProps {
   valueProps?: Array<{ title: string; description: string; icon: string }>;
   posts?: any[];
   sectionConfig?: Record<string, any>;
+  sectionId?: string;
 }
