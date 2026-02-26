@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
+import { InteractiveImage } from '@/components/ui/interactive-image';
 
 export function HeroFullScreen({
   tenant,
@@ -47,18 +48,33 @@ export function HeroFullScreen({
   const showImage = heroImageUrl && (heroType === 'image' || heroType === 'gradient-image');
   const showGradientOverlay = heroType === 'gradient' || heroType === 'gradient-image';
 
+  // Extract interactive hotspots if configured
+  const hotspots = pageContent?.educationHotspots || [];
+  const hasHotspots = hotspots.length > 0;
+  const glassEffect = tenant?.settings?.glassEffect || "none";
+
   return (
     <section className={`relative ${selectedHeightClass} flex items-center justify-center overflow-hidden`}>
       {/* Background: Image if available and heroType allows, otherwise rich gradient */}
       {showImage ? (
         <div className="absolute inset-0 z-0">
-          <Image
-            src={heroImageUrl!}
-            alt="Hero Background"
-            fill
-            className="object-cover"
-            priority
-          />
+          {hasHotspots ? (
+            <InteractiveImage
+              src={heroImageUrl!}
+              alt="Hero Background"
+              hotspots={hotspots}
+              glassEffect={glassEffect as any}
+              className="w-full h-full object-cover min-h-[500px]"
+            />
+          ) : (
+            <Image
+              src={heroImageUrl!}
+              alt="Hero Background"
+              fill
+              className="object-cover"
+              priority
+            />
+          )}
         </div>
       ) : (
         <div
