@@ -344,8 +344,16 @@ export default function BrandingForm({
       matchOption(getVal(["shadows", "card"], undefined), SHADOW_STYLES) ||
       settings.shadowStyle || "soft",
 
-    // Hero
+    // Premium Styling Features
+    glassEffect: settings.glassEffect || "none",
+    animationType: settings.animationType || "none",
+    dividerStyle: settings.dividerStyle || "none",
+
+    // Hero Customization
     heroType: settings.heroType || "gradient-image",
+
+    // Interactive
+    educationHotspots: settingsContent.educationHotspots || [],
 
     // Page Content - Home (supports nested home.heroTitle AND flat homeHeroTitle from defaults.json)
     homeHeroTitle:
@@ -363,6 +371,10 @@ export default function BrandingForm({
       templateContent.homeHeroCtaText ||
       settingsContent.home?.heroCtaText ||
       "Get Started",
+    homeHeroAlignment: templateContent.home?.heroAlignment || settingsContent.home?.heroAlignment || "left",
+    homeHeroHeight: templateContent.home?.heroHeight || settingsContent.home?.heroHeight || "large",
+    homeHeroOverlayStyle: templateContent.home?.heroOverlayStyle || settingsContent.home?.heroOverlayStyle || "gradient-dark",
+    homeHeroOverlayOpacity: templateContent.home?.heroOverlayOpacity ?? settingsContent.home?.heroOverlayOpacity ?? 70,
 
     // Page Content - About
     aboutTitle:
@@ -431,10 +443,15 @@ export default function BrandingForm({
           ...settingsWithoutColors,
           ...colorFields,
           pageContent: {
+            educationHotspots: formData.educationHotspots,
             home: {
               heroTitle: formData.homeHeroTitle,
               heroSubtitle: formData.homeHeroSubtitle,
               heroCtaText: formData.homeHeroCtaText,
+              heroAlignment: formData.homeHeroAlignment,
+              heroHeight: formData.homeHeroHeight,
+              heroOverlayStyle: formData.homeHeroOverlayStyle,
+              heroOverlayOpacity: formData.homeHeroOverlayOpacity,
             },
             about: {
               title: formData.aboutTitle,
@@ -452,6 +469,10 @@ export default function BrandingForm({
           homeHeroTitle: undefined,
           homeHeroSubtitle: undefined,
           homeHeroCtaText: undefined,
+          homeHeroAlignment: undefined,
+          homeHeroHeight: undefined,
+          homeHeroOverlayStyle: undefined,
+          homeHeroOverlayOpacity: undefined,
           aboutTitle: undefined,
           aboutContent: undefined,
           contactTitle: undefined,
@@ -537,14 +558,23 @@ export default function BrandingForm({
       ...((activeTemplate?.designSystem as any)?.shadows || {}),
       card: formData.shadowStyle,
     },
+    // Adding premium CSS root settings
+    glassEffect: formData.glassEffect,
+    animationType: formData.animationType,
+    dividerStyle: formData.dividerStyle,
   };
 
   const livePageContent = {
     ...((activeTemplate?.pageContent as any) || {}),
+    educationHotspots: formData.educationHotspots,
     home: {
       heroTitle: formData.homeHeroTitle,
       heroSubtitle: formData.homeHeroSubtitle,
       heroCtaText: formData.homeHeroCtaText,
+      heroAlignment: formData.homeHeroAlignment,
+      heroHeight: formData.homeHeroHeight,
+      heroOverlayStyle: formData.homeHeroOverlayStyle,
+      heroOverlayOpacity: formData.homeHeroOverlayOpacity,
     },
     about: {
       title: formData.aboutTitle,
@@ -693,6 +723,10 @@ export default function BrandingForm({
                 <FileText className="w-4 h-4 mr-2" />
                 Content
               </TabsTrigger>
+              <TabsTrigger value="education">
+                <FileText className="w-4 h-4 mr-2" />
+                Education
+              </TabsTrigger>
               <TabsTrigger value="advanced">
                 <Settings className="w-4 h-4 mr-2" />
                 Advanced
@@ -790,6 +824,167 @@ export default function BrandingForm({
                     onChange={(file) => handleFileChange(file, "favicon")}
                     file={favicon}
                   />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Premium Design Features</CardTitle>
+                  <CardDescription>Custom animations and modern effects</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="glassEffect">Component Style (Glassmorphism)</Label>
+                      <Select
+                        value={formData.glassEffect}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, glassEffect: value as any })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Solid (Default)</SelectItem>
+                          <SelectItem value="light">Light Frosted Glass</SelectItem>
+                          <SelectItem value="heavy">Heavy Frosted Glass</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">Applies a premium blur effect to cards and navigation.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="animationType">Scroll Animations</Label>
+                      <Select
+                        value={formData.animationType}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, animationType: value as any })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None (Static)</SelectItem>
+                          <SelectItem value="fade-up">Fade Up</SelectItem>
+                          <SelectItem value="slide-right">Slide Right</SelectItem>
+                          <SelectItem value="zoom-in">Zoom In</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">How sections reveal themselves as you scroll down.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="dividerStyle">Section Dividers</Label>
+                      <Select
+                        value={formData.dividerStyle}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, dividerStyle: value as any })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Straight (Default)</SelectItem>
+                          <SelectItem value="wave">Fluid Waves</SelectItem>
+                          <SelectItem value="slant">Modern Slant</SelectItem>
+                          <SelectItem value="curve">Soft Curve</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">Replaces straight horizontal lines between page sections with organic SVG shapes.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Advanced Hero Configuration</CardTitle>
+                  <CardDescription>Customize your homepage Hero section specifically</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="homeHeroAlignment">Alignment</Label>
+                      <Select
+                        value={formData.homeHeroAlignment}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, homeHeroAlignment: value as any })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="left">Left Aligned</SelectItem>
+                          <SelectItem value="center">Center Aligned</SelectItem>
+                          <SelectItem value="right">Right Aligned</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="homeHeroHeight">Section Height</Label>
+                      <Select
+                        value={formData.homeHeroHeight}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, homeHeroHeight: value as any })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="large">Large</SelectItem>
+                          <SelectItem value="full">Full Screen (100vh)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="homeHeroOverlayStyle">Image Overlay Style</Label>
+                      <Select
+                        value={formData.homeHeroOverlayStyle}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, homeHeroOverlayStyle: value as any })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Overlay (Image Only)</SelectItem>
+                          <SelectItem value="dark">Solid Dark Scrim</SelectItem>
+                          <SelectItem value="gradient-dark">Dark Gradient (Fade Up)</SelectItem>
+                          <SelectItem value="gradient-primary">Primary Brand Gradient</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="homeHeroOverlayOpacity">Overlay Opacity (%)</Label>
+                      <Input
+                        id="homeHeroOverlayOpacity"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={formData.homeHeroOverlayOpacity}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            homeHeroOverlayOpacity: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1238,6 +1433,125 @@ export default function BrandingForm({
                   </Card>
                 );
               })}
+            </TabsContent>
+
+            {/* EDUCATION TAB - Interactive Hotspots */}
+            <TabsContent value="education" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Interactive Education Content</CardTitle>
+                  <CardDescription>Add interactive hotspots to imagery across the site.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <Label>Image Hotspots</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          educationHotspots: [
+                            ...formData.educationHotspots,
+                            {
+                              id: Date.now().toString(),
+                              title: "New Hotspot",
+                              description: "",
+                              x: 50,
+                              y: 50,
+                            },
+                          ],
+                        })
+                      }
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Hotspot
+                    </Button>
+                  </div>
+
+                  {formData.educationHotspots.length === 0 ? (
+                    <div className="text-center p-6 border border-dashed rounded-lg text-muted-foreground">
+                      No hotspots configured. Add one to get started.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.educationHotspots.map((hotspot: any, index: number) => (
+                        <div key={hotspot.id} className="p-4 border rounded-lg space-y-4 relative bg-card">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              const newHotspots = [...formData.educationHotspots];
+                              newHotspots.splice(index, 1);
+                              setFormData({ ...formData, educationHotspots: newHotspots });
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Title</Label>
+                              <Input
+                                value={hotspot.title}
+                                onChange={(e) => {
+                                  const newHotspots = [...formData.educationHotspots];
+                                  newHotspots[index].title = e.target.value;
+                                  setFormData({ ...formData, educationHotspots: newHotspots });
+                                }}
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>X Position (%)</Label>
+                                <Input
+                                  type="number"
+                                  min="0" max="100"
+                                  value={hotspot.x}
+                                  onChange={(e) => {
+                                    const newHotspots = [...formData.educationHotspots];
+                                    newHotspots[index].x = Number(e.target.value);
+                                    setFormData({ ...formData, educationHotspots: newHotspots });
+                                  }}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Y Position (%)</Label>
+                                <Input
+                                  type="number"
+                                  min="0" max="100"
+                                  value={hotspot.y}
+                                  onChange={(e) => {
+                                    const newHotspots = [...formData.educationHotspots];
+                                    newHotspots[index].y = Number(e.target.value);
+                                    setFormData({ ...formData, educationHotspots: newHotspots });
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Detailed Description</Label>
+                            <Textarea
+                              rows={2}
+                              value={hotspot.description}
+                              onChange={(e) => {
+                                const newHotspots = [...formData.educationHotspots];
+                                newHotspots[index].description = e.target.value;
+                                setFormData({ ...formData, educationHotspots: newHotspots });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ADVANCED TAB */}
