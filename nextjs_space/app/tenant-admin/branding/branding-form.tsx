@@ -590,7 +590,17 @@ export default function BrandingForm({
   };
 
   const liveSectionProps = {
-    tenant: { ...tenant, subdomain: tenant.subdomain || "preview" } as any,
+    tenant: {
+      ...tenant,
+      subdomain: tenant.subdomain || "preview",
+      settings: {
+        ...(tenant.settings as any),
+        glassEffect: formData.glassEffect,
+        animationType: formData.animationType,
+        dividerStyle: formData.dividerStyle,
+        pageContent: livePageContent, // For interactive components that might read tenant.settings.pageContent
+      }
+    } as any,
     consultationUrl: "#",
     productsUrl: "#",
     contactUrl: "#",
