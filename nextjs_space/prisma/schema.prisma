@@ -253,25 +253,26 @@ model platform_config {
 }
 
 model platform_settings {
-  id                String   @id @default("platform")
-  businessName      String   @default("BudStacks")
-  tagline           String?
-  logoUrl           String?
-  faviconUrl        String?
-  primaryColor      String   @default("#059669")
-  secondaryColor    String   @default("#34d399")
-  accentColor       String   @default("#10b981")
-  backgroundColor   String   @default("#ffffff")
-  textColor         String   @default("#1f2937")
-  headingColor      String   @default("#111827")
-  fontFamily        String   @default("inter")
-  headingFontFamily String   @default("inter")
-  template          String   @default("modern")
-  automatosApiKey   String?
-  automatosAgentId  Int?
-  updatedAt         DateTime
-  pageSeo           Json?
-  seo               Json?
+  id                     String   @id @default("platform")
+  businessName           String   @default("BudStacks")
+  tagline                String?
+  logoUrl                String?
+  faviconUrl             String?
+  primaryColor           String   @default("#059669")
+  secondaryColor         String   @default("#34d399")
+  accentColor            String   @default("#10b981")
+  backgroundColor        String   @default("#ffffff")
+  textColor              String   @default("#1f2937")
+  headingColor           String   @default("#111827")
+  fontFamily             String   @default("inter")
+  headingFontFamily      String   @default("inter")
+  template               String   @default("modern")
+  automatosApiKey        String?
+  automatosAgentId       Int?
+  automatosHelperAgentId Int?
+  updatedAt              DateTime
+  pageSeo                Json?
+  seo                    Json?
 }
 
 model posts {
@@ -316,39 +317,39 @@ model products {
 }
 
 model templates {
-  id               String             @id
-  name             String
-  description      String?
-  isActive         Boolean            @default(true)
-  isPublic         Boolean            @default(true)
-  ownerId          String?
-  sourceType       String             @default("SYSTEM")
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime
-  assetsPath       String?
-  author           String?
-  category         String             @default("modern")
-  componentsPath   String?
-  demoUrl          String?
-  downloadCount    Int                @default(0)
-  isPremium        Boolean            @default(false)
-  layoutFilePath   String?
-  metadata         Json?
-  packagePath      String?
-  previewUrl       String?
-  price            Float?
-  slug             String?            @unique
-  stylesPath       String?
-  tags             String[]
-  thumbnailUrl     String?
-  usageCount       Int                @default(0)
-  version          String             @default("1.0.0")
-  authorTenantId          String?
-  authorName              String?
-  tenant_templates        tenant_templates[]
-  tenants                 tenants[]
-  authorTenant            tenants?                 @relation("AuthoredTemplates", fields: [authorTenantId], references: [id])
-  approvedForSubmissions  marketplace_submissions[]
+  id                     String                    @id
+  name                   String
+  description            String?
+  isActive               Boolean                   @default(true)
+  isPublic               Boolean                   @default(true)
+  ownerId                String?
+  sourceType             String                    @default("SYSTEM")
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime
+  assetsPath             String?
+  author                 String?
+  category               String                    @default("modern")
+  componentsPath         String?
+  demoUrl                String?
+  downloadCount          Int                       @default(0)
+  isPremium              Boolean                   @default(false)
+  layoutFilePath         String?
+  metadata               Json?
+  packagePath            String?
+  previewUrl             String?
+  price                  Float?
+  slug                   String?                   @unique
+  stylesPath             String?
+  tags                   String[]
+  thumbnailUrl           String?
+  usageCount             Int                       @default(0)
+  version                String                    @default("1.0.0")
+  authorTenantId         String?
+  authorName             String?
+  tenant_templates       tenant_templates[]
+  tenants                tenants[]
+  authorTenant           tenants?                  @relation("AuthoredTemplates", fields: [authorTenantId], references: [id])
+  approvedForSubmissions marketplace_submissions[]
 }
 
 model tenant_branding {
@@ -366,50 +367,50 @@ model tenant_branding {
 }
 
 model tenant_templates {
-  id              String    @id
-  tenantId        String
-  baseTemplateId  String
-  templateName    String
-  s3Path          String?
-  designSystem    Json?
-  pageContent     Json?
-  navigation      Json?
-  footer          Json?
-  logoUrl         String?
-  heroImageUrl    String?
-  faviconUrl      String?
-  customCss       String?
-  customJs        String?
-  previewUrl      String?
-  isActive        Boolean   @default(true)
-  isDraft         Boolean   @default(false)
-  expiresAt       DateTime?
-  source          String    @default("cloned")
-  githubUrl       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime
-  templates       templates @relation(fields: [baseTemplateId], references: [id])
-  tenant          tenants   @relation("tenant_templates_tenantIdTotenants", fields: [tenantId], references: [id], onDelete: Cascade)
-  activeForTenant         tenants?                 @relation("tenants_activeTenantTemplateIdTotenant_templates")
-  marketplaceSubmissions  marketplace_submissions[]
+  id                     String                    @id
+  tenantId               String
+  baseTemplateId         String
+  templateName           String
+  s3Path                 String?
+  designSystem           Json?
+  pageContent            Json?
+  navigation             Json?
+  footer                 Json?
+  logoUrl                String?
+  heroImageUrl           String?
+  faviconUrl             String?
+  customCss              String?
+  customJs               String?
+  previewUrl             String?
+  isActive               Boolean                   @default(true)
+  isDraft                Boolean                   @default(false)
+  expiresAt              DateTime?
+  source                 String                    @default("cloned")
+  githubUrl              String?
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime
+  templates              templates                 @relation(fields: [baseTemplateId], references: [id])
+  tenant                 tenants                   @relation("tenant_templates_tenantIdTotenants", fields: [tenantId], references: [id], onDelete: Cascade)
+  activeForTenant        tenants?                  @relation("tenants_activeTenantTemplateIdTotenant_templates")
+  marketplaceSubmissions marketplace_submissions[]
 
   @@unique([tenantId, templateName])
   @@index([tenantId, isActive])
 }
 
 model tenants {
-  id                     String                 @id
+  id                     String                    @id
   businessName           String
-  subdomain              String                 @unique
-  customDomain           String?                @unique
+  subdomain              String                    @unique
+  customDomain           String?                   @unique
   nftTokenId             String?
-  isActive               Boolean                @default(false)
+  isActive               Boolean                   @default(false)
   settings               Json?
-  createdAt              DateTime               @default(now())
+  createdAt              DateTime                  @default(now())
   updatedAt              DateTime
-  countryCode            String                 @default("PT")
+  countryCode            String                    @default("PT")
   templateId             String?
-  activeTenantTemplateId String?                @unique
+  activeTenantTemplateId String?                   @unique
   drGreenApiUrl          String?
   drGreenApiKey          String?
   drGreenSecretKey       String?
@@ -427,16 +428,16 @@ model tenants {
   posts                  posts[]
   products               products[]
   tenant_branding        tenant_branding?
-  tenantTemplates        tenant_templates[]     @relation("tenant_templates_tenantIdTotenants")
-  activeTenantTemplate   tenant_templates?      @relation("tenants_activeTenantTemplateIdTotenant_templates", fields: [activeTenantTemplateId], references: [id])
-  template               templates?             @relation(fields: [templateId], references: [id])
-  authoredTemplates      templates[]              @relation("AuthoredTemplates")
+  tenantTemplates        tenant_templates[]        @relation("tenant_templates_tenantIdTotenants")
+  activeTenantTemplate   tenant_templates?         @relation("tenants_activeTenantTemplateIdTotenant_templates", fields: [activeTenantTemplateId], references: [id])
+  template               templates?                @relation(fields: [templateId], references: [id])
+  authoredTemplates      templates[]               @relation("AuthoredTemplates")
   marketplaceSubmissions marketplace_submissions[]
   users                  users[]
 }
 
 model marketplace_submissions {
-  id                 String            @id @default(uuid())
+  id                 String           @id @default(uuid())
   tenantId           String
   tenantTemplateId   String
   templateName       String
@@ -444,46 +445,46 @@ model marketplace_submissions {
   category           String?
   tags               String[]
   stagingS3Path      String
-  status             String            @default("pending")
+  status             String           @default("pending")
   reviewerId         String?
   reviewerFeedback   String?
-  reviewHistory      Json              @default("[]")
+  reviewHistory      Json             @default("[]")
   approvedTemplateId String?
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
   reviewedAt         DateTime?
-  tenant             tenants           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tenantTemplate     tenant_templates  @relation(fields: [tenantTemplateId], references: [id], onDelete: Cascade)
-  reviewer           users?            @relation(fields: [reviewerId], references: [id])
-  approvedTemplate   templates?        @relation(fields: [approvedTemplateId], references: [id])
+  tenant             tenants          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantTemplate     tenant_templates @relation(fields: [tenantTemplateId], references: [id], onDelete: Cascade)
+  reviewer           users?           @relation(fields: [reviewerId], references: [id])
+  approvedTemplate   templates?       @relation(fields: [approvedTemplateId], references: [id])
 
   @@index([tenantId])
   @@index([status])
 }
 
 model users {
-  id                        String                   @id
-  email                     String                   @unique
-  password                  String
-  name                      String?
-  role                      Role                     @default(PATIENT)
-  tenantId                  String?
-  drGreenClientId           String?
-  createdAt                 DateTime                 @default(now())
-  updatedAt                 DateTime
-  resetToken                String?                  @unique
-  resetTokenExpiry          DateTime?
-  firstName                 String?
-  lastName                  String?
-  phone                     String?
-  address                   Json?
-  isActive                  Boolean                  @default(true)
-  consultations             consultations[]
-  drgreen_carts             drgreen_carts?
-  orders                    orders[]
-  posts                     posts[]
-  reviewedSubmissions       marketplace_submissions[]
-  tenants                   tenants?                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id                  String                    @id
+  email               String                    @unique
+  password            String
+  name                String?
+  role                Role                      @default(PATIENT)
+  tenantId            String?
+  drGreenClientId     String?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime
+  resetToken          String?                   @unique
+  resetTokenExpiry    DateTime?
+  firstName           String?
+  lastName            String?
+  phone               String?
+  address             Json?
+  isActive            Boolean                   @default(true)
+  consultations       consultations[]
+  drgreen_carts       drgreen_carts?
+  orders              orders[]
+  posts               posts[]
+  reviewedSubmissions marketplace_submissions[]
+  tenants             tenants?                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model webhook_deliveries {

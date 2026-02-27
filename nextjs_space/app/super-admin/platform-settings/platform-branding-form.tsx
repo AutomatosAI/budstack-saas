@@ -43,6 +43,7 @@ interface PlatformBrandingFormProps {
     template: string;
     automatosApiKey?: string | null;
     automatosAgentId?: number | null;
+    automatosHelperAgentId?: number | null;
   };
 }
 
@@ -91,6 +92,7 @@ export default function PlatformBrandingForm({
     // Automatos config
     automatosApiKey: settings.automatosApiKey || "",
     automatosAgentId: settings.automatosAgentId?.toString() || "",
+    automatosHelperAgentId: settings.automatosHelperAgentId?.toString() || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -322,7 +324,7 @@ export default function PlatformBrandingForm({
                 </p>
               </div>
               <div>
-                <Label htmlFor="automatosAgentId">Agent ID (Optional)</Label>
+                <Label htmlFor="automatosAgentId">Customer Support Agent ID (Optional)</Label>
                 <Input
                   id="automatosAgentId"
                   type="number"
@@ -331,6 +333,18 @@ export default function PlatformBrandingForm({
                     setFormData({ ...formData, automatosAgentId: e.target.value })
                   }
                   placeholder="e.g. 42"
+                />
+              </div>
+              <div>
+                <Label htmlFor="automatosHelperAgentId">Store Editor Helper Agent ID (Optional)</Label>
+                <Input
+                  id="automatosHelperAgentId"
+                  type="number"
+                  value={formData.automatosHelperAgentId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, automatosHelperAgentId: e.target.value })
+                  }
+                  placeholder="e.g. 43"
                 />
               </div>
             </CardContent>

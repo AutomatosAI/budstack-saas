@@ -47,9 +47,8 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
     : null;
 
   if (activeTemplate) {
-    const s3Prefix = activeTemplate.source === "cloned"
-      ? `templates/${activeTemplate.templates?.slug}`
-      : activeTemplate.s3Path;
+    // Prefer tenant's own s3Path (includes previous edits), fall back to base template
+    const s3Prefix = activeTemplate.s3Path || `templates/${activeTemplate.templates?.slug}`;
 
     if (s3Prefix) {
       try {

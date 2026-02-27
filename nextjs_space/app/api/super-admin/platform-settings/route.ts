@@ -39,6 +39,8 @@ export async function POST(req: NextRequest) {
     const automatosApiKey = formData.get("automatosApiKey") as string | null;
     const automatosAgentIdStr = formData.get("automatosAgentId") as string | null;
     const automatosAgentId = automatosAgentIdStr ? parseInt(automatosAgentIdStr, 10) : null;
+    const automatosHelperAgentIdStr = formData.get("automatosHelperAgentId") as string | null;
+    const automatosHelperAgentId = automatosHelperAgentIdStr ? parseInt(automatosHelperAgentIdStr, 10) : null;
 
     // Handle file uploads
     const logoFile = formData.get("logo") as File | null;
@@ -80,6 +82,7 @@ export async function POST(req: NextRequest) {
       template,
       automatosApiKey: automatosApiKey || null,
       automatosAgentId: isNaN(automatosAgentId as number) ? null : automatosAgentId,
+      automatosHelperAgentId: isNaN(automatosHelperAgentId as number) ? null : automatosHelperAgentId,
     };
 
     if (logoUrl) updateData.logoUrl = logoUrl;

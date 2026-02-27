@@ -216,6 +216,11 @@ export interface TenantSettings {
   // === ADVANCED ===
   customCSS?: string; // Custom CSS for advanced users
 
+  // === AUTOMATOS AI ===
+  automatosApiKey?: string;
+  automatosAgentId?: number;
+  automatosHelperAgentId?: number;
+
   // === DOCTOR GREEN API ===
   doctorGreenCredentials?: {
     clientId?: string;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
-import { uploadFile } from "@/lib/s3";
+import { uploadFile, getJsonFromS3 } from "@/lib/s3";
 import { TenantSettings } from "@/lib/types";
 
 export async function PUT(req: NextRequest) {
@@ -142,8 +142,16 @@ export async function PUT(req: NextRequest) {
       // Handle layout changes (sections array & config overrides)
       // branding-form passes these implicitly within the "settings" blob
       const incomingSettings = settings as any;
-      if (incomingSettings.layoutSections || incomingSettings.sectionConfigs) {
-        const baseLayout = (currentTemplate?.layout as any) || {};
+      if (Array.isArray(incomingSettings.layoutSections) && incomingSettings.layoutSections.length > 0) {
+        // Read existing layout from S3 so we preserve navigation, footer, settings keys
+        let baseLayout: any = {};
+        if (currentTemplate?.s3Path) {
+          try {
+            baseLayout = await getJsonFromS3(`${currentTemplate.s3Path}/layout.json`);
+          } catch {
+            baseLayout = {};
+          }
+        }
 
         // Merge base layout with reordered/new sections and config overrides
         const updatedSections = (incomingSettings.layoutSections || []).map((s: any) => {

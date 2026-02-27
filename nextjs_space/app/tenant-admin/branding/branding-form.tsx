@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -45,6 +45,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { SECTION_REGISTRY } from "@/lib/section-registry";
+import { StoreEditorHelperBot } from "@/components/admin/StoreEditorHelperBot";
 
 // When a new section is added from the modal, it needs default config properties 
 // to ensure the left-sidebar form fields generate correctly. 
@@ -247,6 +248,8 @@ export default function BrandingForm({
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
 
   const settings = (tenant.settings as TenantSettings) || {};
+  const automatosApiKey = settings?.automatosApiKey;
+  const automatosHelperAgentId = settings?.automatosHelperAgentId;
 
   // Helper to get value from template designSystem OR legacy settings
   const getVal = (path: string[], fallback: any) => {
@@ -410,6 +413,53 @@ export default function BrandingForm({
     // Advanced
     customCSS: activeTemplate?.customCss || settings.customCSS || "",
   });
+
+  // --- V2 Co-Pilot Action Dispatcher ---
+  const handleAutomatosAction = useCallback((actionName: string, payload: any) => {
+    try {
+      if (actionName === "UPDATE_SECTION_CONFIG") {
+        const { sectionId, key, value } = payload;
+
+        if (!sectionId || !key || value === undefined) {
+          console.warn("[Automatos] Missing fields in UPDATE_SECTION_CONFIG action payload.", payload);
+          return;
+        }
+
+        setFormData((prev) => {
+          const currentConfig = prev.sectionConfigs[sectionId] || {};
+          return {
+            ...prev,
+            sectionConfigs: {
+              ...prev.sectionConfigs,
+              [sectionId]: {
+                ...currentConfig,
+                [key]: value
+              }
+            }
+          };
+        });
+
+        toast.success(`AI Co-Pilot updated ${key} in ${sectionId}`);
+      } else {
+        console.warn(`[Automatos] Unhandled action: ${actionName}`);
+      }
+    } catch (e) {
+      console.error("[Automatos] Failed to apply action.", e);
+    }
+  }, []);
+
+  // Compute minimal context for the AI
+  const aiContext = useMemo(() => {
+    return {
+      template: formData.template,
+      businessName: formData.businessName,
+      activeSections: formData.layoutSections.map((s: any) => ({
+        id: s.id,
+        type: s.type,
+      })),
+      currentConfigs: formData.sectionConfigs,
+    };
+  }, [formData.template, formData.businessName, formData.layoutSections, formData.sectionConfigs]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1654,7 +1704,19 @@ export default function BrandingForm({
           </div>
         </div>
 
-        <div className="w-full h-full pt-10 overflow-y-auto preview-scrollbar bg-background">
+        <div className="w-full h-full pt-10 overflow-y-auto preview-scrollbar bg-background relative">
+
+          {automatosApiKey && (
+            <div className="absolute top-4 right-4 z-50">
+              <StoreEditorHelperBot
+                apiKey={automatosApiKey}
+                agentId={automatosHelperAgentId ? Number(automatosHelperAgentId) : undefined}
+                editorContext={aiContext}
+                onAction={handleAutomatosAction}
+              />
+            </div>
+          )}
+
           {liveLayout ? (
             <TenantThemeProvider
               tenant={tenant as any}
