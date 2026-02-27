@@ -11,7 +11,16 @@ import { deleteS3Directory } from "@/lib/s3";
  * Deletes all tenant_templates, clears their S3 files,
  * and resets activeTenantTemplateId so you can re-clone fresh.
  */
+// Support both GET (browser URL bar) and POST
+export async function GET(req: NextRequest) {
+  return handleReset(req);
+}
+
 export async function POST(req: NextRequest) {
+  return handleReset(req);
+}
+
+async function handleReset(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user || user.role !== "SUPER_ADMIN") {
