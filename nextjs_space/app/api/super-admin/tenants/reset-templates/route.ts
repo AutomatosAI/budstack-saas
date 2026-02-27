@@ -1,104 +1,109 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
-import { prisma } from "@/lib/db";
-import { deleteS3Directory } from "@/lib/s3";
+
+export const dynamic = "force-dynamic";
 
 /**
  * ONE-TIME CLEANUP ROUTE — DELETE AFTER USE
- *
- * POST /api/super-admin/tenants/reset-templates?subdomain=healingbuds
- *
- * Deletes all tenant_templates, clears their S3 files,
- * and resets activeTenantTemplateId so you can re-clone fresh.
+ * GET /api/super-admin/tenants/reset-templates?subdomain=healingbuds&confirm=yes
  */
-// Support both GET (browser URL bar) and POST
 export async function GET(req: NextRequest) {
-  return handleReset(req);
-}
+  const steps: string[] = [];
 
-export async function POST(req: NextRequest) {
-  return handleReset(req);
-}
-
-async function handleReset(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized — SUPER_ADMIN only" }, { status: 401 });
+    // Step 1: Auth
+    steps.push("Starting auth check...");
+    let user: any;
+    try {
+      const { getCurrentUser } = await import("@/lib/auth-helper");
+      user = await getCurrentUser();
+      steps.push(`Auth: ${user ? `${user.role} (${user.email})` : "no user"}`);
+    } catch (authErr) {
+      steps.push(`Auth FAILED: ${authErr}`);
+      return NextResponse.json({ steps }, { status: 500 });
     }
 
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "TENANT_ADMIN")) {
+      return NextResponse.json({ error: "Unauthorized", steps }, { status: 401 });
+    }
+
+    // Step 2: Parse params
     const subdomain = req.nextUrl.searchParams.get("subdomain");
+    const confirm = req.nextUrl.searchParams.get("confirm");
     if (!subdomain) {
-      return NextResponse.json({ error: "?subdomain= is required" }, { status: 400 });
+      return NextResponse.json({
+        error: "Add ?subdomain=healingbuds&confirm=yes",
+        steps,
+      }, { status: 400 });
     }
 
+    // Step 3: Find tenant
+    steps.push("Finding tenant...");
+    const { prisma } = await import("@/lib/db");
     const tenant = await prisma.tenants.findUnique({
       where: { subdomain },
-      include: {
-        tenantTemplates: true,
-      },
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: `Tenant '${subdomain}' not found` }, { status: 404 });
+      return NextResponse.json({ error: `Tenant '${subdomain}' not found`, steps }, { status: 404 });
     }
 
-    const results: string[] = [];
+    // Step 4: Find templates
+    const templates = await prisma.tenant_templates.findMany({
+      where: { tenantId: tenant.id },
+      select: { id: true, templateName: true, s3Path: true, source: true, logoUrl: true, heroImageUrl: true, faviconUrl: true },
+    });
+    steps.push(`Found ${templates.length} templates: ${templates.map(t => `${t.templateName} (${t.s3Path})`).join(", ")}`);
+    steps.push(`Active template ID: ${tenant.activeTenantTemplateId || "none"}`);
 
-    // 1. Clear activeTenantTemplateId first (FK constraint)
+    // Dry run unless confirm=yes
+    if (confirm !== "yes") {
+      return NextResponse.json({
+        message: "DRY RUN — add &confirm=yes to actually delete",
+        tenant: { id: tenant.id, subdomain, businessName: tenant.businessName },
+        templates,
+        steps,
+      });
+    }
+
+    // Step 5: Clear active template FK
     if (tenant.activeTenantTemplateId) {
       await prisma.tenants.update({
         where: { id: tenant.id },
         data: { activeTenantTemplateId: null },
       });
-      results.push(`Cleared activeTenantTemplateId (was: ${tenant.activeTenantTemplateId})`);
+      steps.push(`Cleared activeTenantTemplateId (was ${tenant.activeTenantTemplateId})`);
     }
 
-    // 2. Delete S3 files for each tenant template
-    for (const tt of tenant.tenantTemplates) {
+    // Step 6: Delete S3 files
+    for (const tt of templates) {
       if (tt.s3Path) {
         try {
+          const { deleteS3Directory } = await import("@/lib/s3");
           const count = await deleteS3Directory(`${tt.s3Path}/`);
-          results.push(`S3: deleted ${count} objects at ${tt.s3Path}/`);
+          steps.push(`S3: deleted ${count} objects at ${tt.s3Path}/`);
         } catch (err) {
-          results.push(`S3: FAILED to delete ${tt.s3Path}/ — ${err}`);
-        }
-      }
-
-      // Also delete individually uploaded assets (logo, hero, favicon)
-      // These are in the uploads/ prefix, not the template s3Path
-      for (const url of [tt.logoUrl, tt.heroImageUrl, tt.faviconUrl].filter(Boolean)) {
-        if (url && url.startsWith("uploads/")) {
-          try {
-            const { createS3Client, getBucketConfig } = await import("@/lib/aws-config");
-            const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
-            const s3 = await createS3Client();
-            const { bucketName } = await getBucketConfig();
-            await s3.send(new DeleteObjectCommand({ Bucket: bucketName, Key: url }));
-            results.push(`S3: deleted asset ${url}`);
-          } catch (err) {
-            results.push(`S3: FAILED to delete asset ${url} — ${err}`);
-          }
+          steps.push(`S3: FAILED ${tt.s3Path}/ — ${err}`);
         }
       }
     }
 
-    // 3. Delete all tenant_templates from DB
+    // Step 7: Delete DB records
     const deleted = await prisma.tenant_templates.deleteMany({
       where: { tenantId: tenant.id },
     });
-    results.push(`DB: deleted ${deleted.count} tenant_templates`);
+    steps.push(`DB: deleted ${deleted.count} tenant_templates`);
 
     return NextResponse.json({
       success: true,
       tenant: { id: tenant.id, subdomain, businessName: tenant.businessName },
-      results,
+      steps,
     });
   } catch (error) {
-    console.error("[reset-templates] Error:", error);
-    return NextResponse.json(
-      { error: "Reset failed", message: error instanceof Error ? error.message : String(error) },
-      { status: 500 },
-    );
+    steps.push(`FATAL: ${error instanceof Error ? error.message : String(error)}`);
+    return NextResponse.json({ error: "Reset failed", steps }, { status: 500 });
   }
+}
+
+export async function POST(req: NextRequest) {
+  return GET(req);
 }
