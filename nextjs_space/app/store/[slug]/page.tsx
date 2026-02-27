@@ -4,6 +4,8 @@ import { getTenantBasePath } from "@/lib/tenant-utils";
 import { prisma } from "@/lib/db";
 import { getFileUrl, getFileUrlWithFallback, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
 
+export const dynamic = 'force-dynamic';
+
 // Import template registry (legacy React templates)
 import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
 

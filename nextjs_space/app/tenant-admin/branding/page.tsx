@@ -7,6 +7,8 @@ import { Sparkles } from 'lucide-react';
 
 import { getJsonFromS3 } from '@/lib/s3';
 
+export const dynamic = 'force-dynamic';
+
 export default async function BrandingPage({ searchParams }: { searchParams: { templateId?: string } }) {
   const user = await currentUser();
 
