@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
       where: { tenantId: tenant.id },
       select: { id: true, templateName: true, s3Path: true, source: true, logoUrl: true, heroImageUrl: true, faviconUrl: true },
     });
-    steps.push(`Found ${templates.length} templates: ${templates.map(t => `${t.templateName} (${t.s3Path})`).join(", ")}`);
+    steps.push(`Found ${templates.length} templates: ${templates.map((t: any) => `${t.templateName} (${t.s3Path})`).join(", ")}`);
     steps.push(`Active template ID: ${tenant.activeTenantTemplateId || "none"}`);
 
     // Dry run unless confirm=yes
