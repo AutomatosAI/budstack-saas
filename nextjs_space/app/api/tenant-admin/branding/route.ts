@@ -71,9 +71,10 @@ export async function PUT(req: NextRequest) {
     const activeTemplateId = tenant.activeTenantTemplateId;
 
     if (activeTemplateId) {
-      // Fetch current template to get existing designSystem
+      // Fetch current template (with base template for slug-based URL fallback)
       const currentTemplate = await prisma.tenant_templates.findUnique({
         where: { id: activeTemplateId },
+        include: { templates: true },
       });
 
       const currentDS = currentTemplate?.designSystem || {};
@@ -142,7 +143,10 @@ export async function PUT(req: NextRequest) {
       // Handle layout changes (sections array & config overrides)
       // branding-form passes these implicitly within the "settings" blob
       const incomingSettings = settings as any;
-      if (Array.isArray(incomingSettings.layoutSections) && incomingSettings.layoutSections.length > 0) {
+      const hasLayoutSections = Array.isArray(incomingSettings.layoutSections) && incomingSettings.layoutSections.length > 0;
+      const hasSectionConfigs = incomingSettings.sectionConfigs && Object.keys(incomingSettings.sectionConfigs).length > 0;
+
+      if (hasLayoutSections || hasSectionConfigs) {
         // Read existing layout from S3 so we preserve navigation, footer, settings keys
         let baseLayout: any = {};
         if (currentTemplate?.s3Path) {
@@ -153,15 +157,46 @@ export async function PUT(req: NextRequest) {
           }
         }
 
-        // Merge base layout with reordered/new sections and config overrides
-        const updatedSections = (incomingSettings.layoutSections || []).map((s: any) => {
-          if (incomingSettings.sectionConfigs && incomingSettings.sectionConfigs[s.id]) {
-            return {
-              ...s,
-              config: { ...s.config, ...incomingSettings.sectionConfigs[s.id] }
-            };
+        // Use incoming sections if provided, otherwise keep existing sections from S3
+        const sourceSections = hasLayoutSections
+          ? incomingSettings.layoutSections
+          : (baseLayout.sections || []);
+
+        // Merge sections with config overrides, stripping signed S3 URLs back to relative paths
+        const updatedSections = sourceSections.map((s: any) => {
+          const mergedConfig = { ...s.config };
+
+          // Apply sectionConfig overrides if present
+          if (hasSectionConfigs && incomingSettings.sectionConfigs[s.id]) {
+            Object.assign(mergedConfig, incomingSettings.sectionConfigs[s.id]);
           }
-          return s;
+
+          // Strip signed S3 URLs back to relative paths so layout.json stays portable.
+          // page.tsx signs relative paths on load; we must reverse that before writing back.
+          for (const key of ['imageUrl', 'videoUrl', 'watermarkUrl'] as const) {
+            const val = mergedConfig[key];
+            if (val && typeof val === 'string' && val.startsWith('http')) {
+              const urlWithoutQuery = val.split('?')[0];
+              // Try tenant s3Path first, then base template path
+              const prefixes = [
+                currentTemplate?.s3Path,
+                currentTemplate?.templates?.slug ? `templates/${currentTemplate.templates.slug}` : null,
+              ].filter(Boolean) as string[];
+
+              for (const prefix of prefixes) {
+                const idx = urlWithoutQuery.indexOf(prefix);
+                if (idx !== -1) {
+                  const relativePath = urlWithoutQuery.slice(idx + prefix.length + 1);
+                  if (relativePath && !relativePath.includes('//')) {
+                    mergedConfig[key] = relativePath;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          return { ...s, config: mergedConfig };
         });
 
         const finalLayout = {
