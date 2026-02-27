@@ -1704,7 +1704,7 @@ export default function BrandingForm({
           </div>
         </div>
 
-        <div className="w-full h-full pt-10 overflow-y-auto preview-scrollbar bg-background relative">
+        <div className="w-full h-full pt-10 overflow-y-auto preview-scrollbar bg-background relative" style={{ transform: 'scale(1)' }}>
 
           {automatosApiKey && (
             <div className="absolute top-4 right-4 z-50">
