@@ -21,9 +21,10 @@ export function StoreEditorHelperBot({
     useEffect(() => {
         setIsClient(true);
 
-        // Load SDK at runtime only — webpackIgnore prevents build failure when package is absent
-        import(/* webpackIgnore: true */ "@automatos/widget-sdk/react")
-            .then((mod) => setChatComponent(() => mod.AutomatosChat))
+        // Load SDK at runtime only — hidden from TS type checker and webpack bundler
+        const sdkModule = "@automatos/widget-sdk/react";
+        (Function("m", "return import(m)")(sdkModule) as Promise<any>)
+            .then((mod: any) => setChatComponent(() => mod.AutomatosChat))
             .catch(() => {
                 // SDK not installed — widget won't render
             });
