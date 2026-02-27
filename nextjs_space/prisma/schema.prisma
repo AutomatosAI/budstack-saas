@@ -183,20 +183,37 @@ model drgreen_carts {
 }
 
 model drgreen_webhook_logs {
-  id             String    @id
-  tenantId       String
-  webhookType    String
-  orderId        String?
-  drGreenOrderId String?
-  payload        Json
-  processed      Boolean   @default(false)
-  processedAt    DateTime?
-  error          String?
-  createdAt      DateTime  @default(now())
-  tenants        tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id              String    @id
+  tenantId        String
+  webhookType     String
+  orderId         String?
+  drGreenOrderId  String?
+  drGreenClientId String?
+  payload         Json
+  processed       Boolean   @default(false)
+  processedAt     DateTime?
+  error           String?
+  createdAt       DateTime  @default(now())
+  tenants         tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([drGreenOrderId])
+  @@index([drGreenClientId])
   @@index([tenantId, processed])
+}
+
+model kyc_journey_logs {
+  id          String   @id @default(dbgenerated("gen_random_uuid()"))
+  tenantId    String
+  clientId    String
+  email       String?
+  eventType   String
+  eventSource String   @default("drgreen-webhook")
+  eventData   Json?
+  createdAt   DateTime @default(now())
+  tenants     tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, clientId])
+  @@index([eventType])
 }
 
 model order_items {
@@ -421,6 +438,7 @@ model tenants {
   consultations          consultations[]
   drgreen_carts          drgreen_carts[]
   drgreen_webhook_logs   drgreen_webhook_logs[]
+  kyc_journey_logs       kyc_journey_logs[]
   email_event_mappings   email_event_mappings[]
   email_logs             email_logs[]
   email_templates        email_templates[]

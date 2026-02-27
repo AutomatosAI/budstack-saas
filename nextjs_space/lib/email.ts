@@ -4,6 +4,10 @@ import WelcomeEmail from "@/emails/welcome";
 import PasswordResetEmail from "@/emails/password-reset";
 import OrderConfirmationEmail from "@/emails/order-confirmation";
 import TenantWelcomeEmail from "@/emails/tenant-welcome";
+import KycLinkEmail from "@/emails/kyc-link";
+import KycStatusEmail from "@/emails/kyc-status";
+import ClientStatusEmail from "@/emails/client-status";
+import OrderStatusUpdateEmail from "@/emails/order-status-update";
 
 export interface EmailOptions {
   to: string;
@@ -98,5 +102,50 @@ export const emailTemplates = {
       }),
     );
     return html;
+  },
+
+  kycLink: (userName: string, kycLink: string, tenantName: string) => {
+    return render(KycLinkEmail({ userName, kycLink, tenantName }));
+  },
+
+  kycStatus: (
+    userName: string,
+    status: "approved" | "rejected",
+    tenantName: string,
+    rejectionReason?: string,
+    kycLink?: string,
+  ) => {
+    return render(
+      KycStatusEmail({ userName, status, tenantName, rejectionReason, kycLink }),
+    );
+  },
+
+  clientStatus: (
+    userName: string,
+    status: "approved" | "rejected",
+    tenantName: string,
+    rejectionReason?: string,
+  ) => {
+    return render(
+      ClientStatusEmail({ userName, status, tenantName, rejectionReason }),
+    );
+  },
+
+  orderStatusUpdate: (
+    userName: string,
+    orderNumber: string,
+    status: "SHIPPED" | "DELIVERED" | "CANCELLED" | "CONFIRMED" | "PROCESSING",
+    tenantName: string,
+    trackingUrl?: string,
+  ) => {
+    return render(
+      OrderStatusUpdateEmail({
+        userName,
+        orderNumber,
+        status,
+        tenantName,
+        trackingUrl,
+      }),
+    );
   },
 };

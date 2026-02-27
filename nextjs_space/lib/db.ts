@@ -53,6 +53,7 @@ const tenantScopedModels = new Set([
   'consultations',
   'drgreen_carts',
   'drgreen_webhook_logs',
+  'kyc_journey_logs',
   'orders',
   'posts',
   'products',

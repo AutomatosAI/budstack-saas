@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
+import { verifyDrGreenWebhookSignature } from "@/lib/drgreen-webhook-verify";
+import { decrypt } from "@/lib/encryption";
 
 /**
  * Fiat Payment Webhook Handler (Pay-Inn)
@@ -8,8 +10,11 @@ import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
  * Handles payment notifications from Pay-Inn for fiat (credit card) payments
  */
 export async function POST(request: NextRequest) {
+  let rawBody = "";
+
   try {
-    const body = await request.json();
+    rawBody = await request.text();
+    const body = JSON.parse(rawBody);
 
     console.log("[Fiat Webhook] Received:", JSON.stringify(body, null, 2));
 
@@ -25,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     if (!custom) {
       console.error("[Fiat Webhook] Missing nonce (custom field)");
-      return NextResponse.json({ message: "Missing nonce" }, { status: 400 });
+      return NextResponse.json({ error: "Missing nonce" }, { status: 400 });
     }
 
     // Find order by nonce
@@ -34,8 +39,8 @@ export async function POST(request: NextRequest) {
         nonce: custom,
       },
       include: {
-        tenant: true,
-        user: true,
+        tenants: true,
+        users: true,
       },
     });
 
@@ -43,8 +48,9 @@ export async function POST(request: NextRequest) {
       console.error("[Fiat Webhook] Order not found for nonce:", custom);
 
       // Log webhook anyway for audit
-      await prisma.drGreenWebhookLog.create({
+      await prisma.drgreen_webhook_logs.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: "unknown",
           webhookType: "fiat",
           payload: body,
@@ -53,7 +59,20 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json({ message: "Order not found" }, { status: 404 });
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    // Verify signature using tenant's secret
+    const signature = request.headers.get("x-webhook-signature") || "";
+    if (order.tenants?.drGreenSecretKey) {
+      const secret = decrypt(order.tenants.drGreenSecretKey, {
+        allowUnencryptedMigration: true,
+        migrationDeadline: "2026-12-31",
+      });
+      if (!verifyDrGreenWebhookSignature(rawBody, signature, secret)) {
+        console.error("[Fiat Webhook] Signature verification failed");
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
     }
 
     // Map Pay-Inn status to payment status
@@ -81,8 +100,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Log webhook
-    await prisma.drGreenWebhookLog.create({
+    await prisma.drgreen_webhook_logs.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId: order.tenantId,
         webhookType: "fiat",
         orderId: order.id,
@@ -106,7 +126,7 @@ export async function POST(request: NextRequest) {
           amount: parseFloat(amount || "0"),
           currency: currency || "USD",
           invoiceId: payment_id,
-          customerEmail: order.user.email,
+          customerEmail: order.users.email,
         },
       });
 
@@ -119,7 +139,7 @@ export async function POST(request: NextRequest) {
           orderId: order.id,
           orderNumber: order.orderNumber,
           reason: "Payment failed",
-          customerEmail: order.user.email,
+          customerEmail: order.users.email,
         },
       });
 
@@ -134,14 +154,17 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[Fiat Webhook] Error:", error);
 
-    // Try to log error
     try {
-      const body = await request.json();
-      await prisma.drGreenWebhookLog.create({
+      const errorPayload = (() => {
+        try { return JSON.parse(rawBody); }
+        catch { return { raw: rawBody?.substring(0, 500) || "empty" }; }
+      })();
+      await prisma.drgreen_webhook_logs.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: "unknown",
           webhookType: "fiat",
-          payload: body,
+          payload: errorPayload,
           processed: false,
           error: error instanceof Error ? error.message : "Unknown error",
         },

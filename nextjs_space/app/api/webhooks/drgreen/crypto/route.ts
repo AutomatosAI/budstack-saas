@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
+import { verifyDrGreenWebhookSignature } from "@/lib/drgreen-webhook-verify";
+import { decrypt } from "@/lib/encryption";
 
 /**
  * Crypto Payment Webhook Handler (CoinRemitter)
@@ -12,8 +14,11 @@ import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
  * - BTC
  */
 export async function POST(request: NextRequest) {
+  let rawBody = "";
+
   try {
-    const body = await request.json();
+    rawBody = await request.text();
+    const body = JSON.parse(rawBody);
 
     console.log("[Crypto Webhook] Received:", JSON.stringify(body, null, 2));
 
@@ -34,7 +39,7 @@ export async function POST(request: NextRequest) {
         "[Crypto Webhook] Missing Dr. Green Order ID (custom_data2)",
       );
       return NextResponse.json(
-        { message: "Missing order ID" },
+        { error: "Missing order ID" },
         { status: 400 },
       );
     }
@@ -45,8 +50,8 @@ export async function POST(request: NextRequest) {
         drGreenOrderId: custom_data2,
       },
       include: {
-        tenant: true,
-        user: true,
+        tenants: true,
+        users: true,
       },
     });
 
@@ -54,8 +59,9 @@ export async function POST(request: NextRequest) {
       console.error("[Crypto Webhook] Order not found:", custom_data2);
 
       // Log webhook anyway for audit
-      await prisma.drGreenWebhookLog.create({
+      await prisma.drgreen_webhook_logs.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: "unknown",
           webhookType: "crypto",
           drGreenOrderId: custom_data2,
@@ -65,7 +71,20 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json({ message: "Order not found" }, { status: 404 });
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    // Verify signature using tenant's secret
+    const signature = request.headers.get("x-webhook-signature") || "";
+    if (order.tenants?.drGreenSecretKey) {
+      const secret = decrypt(order.tenants.drGreenSecretKey, {
+        allowUnencryptedMigration: true,
+        migrationDeadline: "2026-12-31",
+      });
+      if (!verifyDrGreenWebhookSignature(rawBody, signature, secret)) {
+        console.error("[Crypto Webhook] Signature verification failed");
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
     }
 
     // Map CoinRemitter status codes to payment status
@@ -111,8 +130,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Log webhook
-    await prisma.drGreenWebhookLog.create({
+    await prisma.drgreen_webhook_logs.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId: order.tenantId,
         webhookType: "crypto",
         orderId: order.id,
@@ -150,14 +170,17 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[Crypto Webhook] Error:", error);
 
-    // Try to log error
     try {
-      const body = await request.json();
-      await prisma.drGreenWebhookLog.create({
+      const errorPayload = (() => {
+        try { return JSON.parse(rawBody); }
+        catch { return { raw: rawBody?.substring(0, 500) || "empty" }; }
+      })();
+      await prisma.drgreen_webhook_logs.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: "unknown",
           webhookType: "crypto",
-          payload: body,
+          payload: errorPayload,
           processed: false,
           error: error instanceof Error ? error.message : "Unknown error",
         },

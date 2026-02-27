@@ -39,6 +39,14 @@ export const WEBHOOK_EVENTS = {
     DRGREEN_PAYMENT_FAILED: "drgreen.payment_failed",
     DRGREEN_ORDER_CREATED: "drgreen.order_created",
     DRGREEN_ORDER_APPROVED: "drgreen.order_approved",
+
+    // KYC Events
+    KYC_LINK_GENERATED: "kyc.link_generated",
+    KYC_VERIFIED: "kyc.verified",
+    KYC_REJECTED: "kyc.rejected",
+
+    // Inventory Events
+    INVENTORY_UPDATED: "inventory.updated",
 } as const;
 
 /**
@@ -91,6 +99,26 @@ export const WEBHOOK_EVENT_CATEGORIES = [
             {
                 value: WEBHOOK_EVENTS.CONSULTATION_REJECTED,
                 label: "Consultation Rejected",
+            },
+        ],
+    },
+    {
+        name: "KYC Events",
+        events: [
+            {
+                value: WEBHOOK_EVENTS.KYC_LINK_GENERATED,
+                label: "KYC Link Generated",
+            },
+            { value: WEBHOOK_EVENTS.KYC_VERIFIED, label: "KYC Verified" },
+            { value: WEBHOOK_EVENTS.KYC_REJECTED, label: "KYC Rejected" },
+        ],
+    },
+    {
+        name: "Inventory Events",
+        events: [
+            {
+                value: WEBHOOK_EVENTS.INVENTORY_UPDATED,
+                label: "Inventory Updated",
             },
         ],
     },
