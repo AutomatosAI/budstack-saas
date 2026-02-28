@@ -8,7 +8,7 @@ export default async function PlatformSettingsConfigPage() {
   const user = await currentUser();
 
   if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   // Get or create platform config

@@ -20,7 +20,7 @@ export default async function TenantAdminLayout({
     (user.publicMetadata.role !== "TENANT_ADMIN" &&
       user.publicMetadata.role !== "SUPER_ADMIN")
   ) {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   const email = user.emailAddresses[0]?.emailAddress;

@@ -14,7 +14,7 @@ export default async function TheWirePage() {
   const user = await currentUser();
 
   if (!user) {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   const email = user.emailAddresses[0]?.emailAddress;

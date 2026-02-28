@@ -13,9 +13,10 @@ import {
   User,
   LogOut,
   Settings,
-  Calendar,
   Stethoscope,
   Shield,
+  LayoutDashboard,
+  Store,
 } from "lucide-react";
 import { CartDropdown } from "./cart-dropdown";
 // import { LanguageSwitcher } from './language-switcher';
@@ -206,35 +207,45 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
                     </p>
                   </div>
                   <DropdownMenuSeparator />
-                  {((user?.publicMetadata?.role === "TENANT_ADMIN" ||
-                    user?.publicMetadata?.role === "SUPER_ADMIN")) && (
-                      <>
-                        <DropdownMenuItem
-                          onClick={() => router.push("/tenant-admin")}
-                          className="cursor-pointer"
-                        >
-                          <Shield className="w-4 h-4 mr-2" />
-                          Tenant Admin
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                      </>
+                  {user?.publicMetadata?.role === "SUPER_ADMIN" && (
+                      <DropdownMenuItem
+                        onClick={() => router.push("/super-admin")}
+                        className="cursor-pointer"
+                      >
+                        <Shield className="w-4 h-4 mr-2" />
+                        Super Admin
+                      </DropdownMenuItem>
+                    )}
+                  {(user?.publicMetadata?.role === "TENANT_ADMIN" ||
+                    user?.publicMetadata?.role === "SUPER_ADMIN") && (
+                      <DropdownMenuItem
+                        onClick={() => router.push("/tenant-admin")}
+                        className="cursor-pointer"
+                      >
+                        <Store className="w-4 h-4 mr-2" />
+                        Store Dashboard
+                      </DropdownMenuItem>
+                    )}
+                  {(user?.publicMetadata?.role === "TENANT_ADMIN" ||
+                    user?.publicMetadata?.role === "SUPER_ADMIN") && (
+                      <DropdownMenuSeparator />
                     )}
                   <DropdownMenuItem
-                    onClick={() => router.push("/dashboard")}
+                    onClick={() => router.push(`${baseStorePath}/dashboard`)}
                     className="cursor-pointer"
                   >
-                    <User className="w-4 h-4 mr-2" />
-                    Dashboard
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    My Account
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => router.push("/dashboard/consultations")}
+                    onClick={() => router.push(`${baseStorePath}/consultation`)}
                     className="cursor-pointer"
                   >
                     <Stethoscope className="w-4 h-4 mr-2" />
                     Consultations
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => router.push("/dashboard/settings")}
+                    onClick={() => router.push(`${baseStorePath}/dashboard`)}
                     className="cursor-pointer"
                   >
                     <Settings className="w-4 h-4 mr-2" />

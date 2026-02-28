@@ -7,7 +7,7 @@ export default async function AuthCallbackPage() {
     const user = await currentUser();
 
     if (!user) {
-        return redirect("/sign-in");
+        return redirect("/auth/login");
     }
 
     // Check role in metadata

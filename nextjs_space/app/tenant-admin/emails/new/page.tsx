@@ -10,7 +10,7 @@ export default async function TenantNewEmailPage() {
     !user ||
     !["TENANT_ADMIN", "SUPER_ADMIN"].includes((user.publicMetadata.role as string) || "")
   ) {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   const email = user.emailAddresses[0]?.emailAddress;

@@ -18,7 +18,7 @@ export default async function OnboardingPage() {
   const user = await currentUser();
 
   if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   // Get pending onboarding requests (inactive tenants)

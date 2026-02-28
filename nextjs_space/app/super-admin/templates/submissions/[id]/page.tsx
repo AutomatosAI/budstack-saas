@@ -17,7 +17,7 @@ export default async function SubmissionReviewPage({
 }) {
   const user = await currentUser();
   if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   const { id } = await params;

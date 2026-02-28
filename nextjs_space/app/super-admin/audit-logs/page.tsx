@@ -14,7 +14,7 @@ export default async function AuditLogsPage() {
   const user = await currentUser();
 
   if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   // Generate mock events for demo (replace with real data in production)

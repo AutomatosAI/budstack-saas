@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Shield, Store } from "lucide-react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import {
     DropdownMenu,
@@ -20,6 +20,7 @@ export function HeaderProfile({ theme = "tenant-admin" }: HeaderProfileProps) {
     const { user, isLoaded } = useUser();
     const { signOut } = useClerk();
 
+    const role = user?.publicMetadata?.role as string | undefined;
     const profileUrl = theme === "super-admin" ? "/super-admin/profile" : "/tenant-admin/profile";
 
     const handleLogout = async () => {
@@ -46,6 +47,23 @@ export function HeaderProfile({ theme = "tenant-admin" }: HeaderProfileProps) {
             <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {/* Dashboard shortcuts based on role */}
+                {role === "SUPER_ADMIN" && theme !== "super-admin" && (
+                    <DropdownMenuItem asChild>
+                        <Link href="/super-admin" className="cursor-pointer w-full flex items-center">
+                            <Shield className="mr-2 h-4 w-4" />
+                            <span>Super Admin</span>
+                        </Link>
+                    </DropdownMenuItem>
+                )}
+                {(role === "SUPER_ADMIN" || role === "TENANT_ADMIN") && theme !== "tenant-admin" && (
+                    <DropdownMenuItem asChild>
+                        <Link href="/tenant-admin" className="cursor-pointer w-full flex items-center">
+                            <Store className="mr-2 h-4 w-4" />
+                            <span>Store Dashboard</span>
+                        </Link>
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                     <Link href={profileUrl} className="cursor-pointer w-full flex items-center">
                         <User className="mr-2 h-4 w-4" />

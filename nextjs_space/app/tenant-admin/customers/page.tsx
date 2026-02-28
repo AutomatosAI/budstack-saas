@@ -26,7 +26,7 @@ export default async function CustomersListPage({
     !user ||
     !["TENANT_ADMIN", "SUPER_ADMIN"].includes((user.publicMetadata.role as string) || "")
   ) {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   // Tenant admins only see their own customers
@@ -41,7 +41,7 @@ export default async function CustomersListPage({
   }
 
   if (!tenantId && user.publicMetadata.role === "TENANT_ADMIN") {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   // Await searchParams (Next.js 15+ async searchParams)

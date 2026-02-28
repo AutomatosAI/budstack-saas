@@ -15,7 +15,7 @@ export default async function EditPostPage({
   const user = await currentUser();
 
   if (!user) {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   const { id } = params;

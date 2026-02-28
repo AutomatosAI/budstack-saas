@@ -7,7 +7,7 @@ export default async function SuperAdminDashboard() {
   const user = await currentUser();
 
   if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   // Get stats for overview panel

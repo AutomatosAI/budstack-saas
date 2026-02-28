@@ -12,13 +12,13 @@ export default async function SeoPage() {
     (user.publicMetadata.role !== "TENANT_ADMIN" &&
       user.publicMetadata.role !== "SUPER_ADMIN")
   ) {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   const email = user.emailAddresses[0]?.emailAddress;
 
   if (!email) {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   const localUser = await prisma.users.findUnique({

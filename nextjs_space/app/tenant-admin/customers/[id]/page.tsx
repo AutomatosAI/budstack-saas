@@ -17,7 +17,7 @@ export default async function CustomerDetailPage({
     !user ||
     !["TENANT_ADMIN", "SUPER_ADMIN"].includes((user.publicMetadata.role as string) || "")
   ) {
-    redirect("/sign-in");
+    redirect("/auth/login");
   }
 
   // Tenant admins can only access their own tenant's customers

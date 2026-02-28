@@ -15,7 +15,7 @@ export default async function TemplatesManagementPage() {
   const user = await currentUser();
 
   if (!user || user.publicMetadata.role !== 'SUPER_ADMIN') {
-    redirect('/sign-in');
+    redirect('/auth/login');
   }
 
   // Fetch all templates
