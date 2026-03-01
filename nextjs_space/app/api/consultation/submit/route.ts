@@ -16,33 +16,30 @@ function generateSignature(payload: string, secretKey: string): string {
   try {
     const crypto = require("crypto");
 
-    // Handle escaped newlines if they exist
-    let privateKeyPEM = secretKey.replace(/\\n/g, '\n');
+    // Clean up input
+    let cleanKey = secretKey.trim();
 
-    // If it doesn't look like a PEM, try base64 decoding
-    if (!privateKeyPEM.includes("-----BEGIN ")) {
+    // The keys provided by Dr. Green appear to be base64 strings containing the PEM block
+    let privateKeyPEM = cleanKey;
+    if (!cleanKey.includes("-----BEGIN ")) {
       try {
-        const decoded = Buffer.from(privateKeyPEM.trim(), "base64").toString("utf-8");
+        const decoded = Buffer.from(cleanKey, "base64").toString("utf-8");
         if (decoded.includes("-----BEGIN ")) {
           privateKeyPEM = decoded;
         } else {
-          // If it's still not a PEM after decoding, the user likely swapped the API and Secret keys
-          throw new Error("Secret Key does not appear to be a valid PEM format. Did you accidentally swap the API Key and Secret Key in your Dr. Green Settings?");
+          throw new Error("Secret Key must be a valid PEM format or a base64 encoded PEM.");
         }
-      } catch (e: any) {
-        if (e.message.includes("Secret Key does not appear")) throw e;
-        console.warn("Failed to decode secret key as base64, using raw value");
+      } catch (err: any) {
+        throw new Error("Unable to decode Secret Key as base64. Ensure it is correct.");
       }
     }
 
-    // Sign the payload with SHA256
+    // Dr. Green requires SHA256 signatures over the payload json using the Private Key
     const sign = crypto.createSign("SHA256");
     sign.update(payload);
     sign.end();
 
-    // Generate signature and return as base64
-    const signature = sign.sign(privateKeyPEM);
-    return signature.toString("base64");
+    return sign.sign(privateKeyPEM, "base64");
   } catch (error: any) {
     console.error("Error generating signature:", error);
     throw new Error(error.message || "Failed to generate API signature");
