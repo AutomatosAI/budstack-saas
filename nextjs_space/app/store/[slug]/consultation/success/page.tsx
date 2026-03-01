@@ -319,7 +319,7 @@ export default function ConsultationSuccessPage() {
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
             <Button
-              onClick={() => router.push(`/store/${slug}/products`)}
+              onClick={() => router.push(`/products`)}
               className="flex-1"
               variant="outline"
             >

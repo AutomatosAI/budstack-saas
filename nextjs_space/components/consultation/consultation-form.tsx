@@ -188,12 +188,8 @@ export function ConsultationForm({
 
       toast.success("Consultation submitted successfully!");
 
-      // Detect subdomain: if on subdomain, paths don't need /store/slug prefix
-      // (middleware rewrites subdomain paths automatically)
-      const isSubdomain = typeof window !== "undefined" &&
-        !window.location.pathname.startsWith("/store/");
-      const basePath = isSubdomain ? "" : `/store/${tenantSlug}`;
-
+      // All storefronts use subdomain routing ([slug].budstacks.io)
+      // Middleware rewrites bare paths → /store/slug/... automatically
       const successParams = new URLSearchParams({
         id: result.questionnaireId || "",
         clientId: result.drGreenClientId || "",
@@ -201,7 +197,7 @@ export function ConsultationForm({
         approval: result.adminApproval || "PENDING",
       }).toString();
 
-      router.push(`${basePath}/consultation/success?${successParams}`);
+      router.push(`/consultation/success?${successParams}`);
     } catch (error: any) {
       toast.error(error.message || "Failed to submit consultation");
     } finally {
