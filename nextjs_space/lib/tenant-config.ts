@@ -41,18 +41,28 @@ export async function getTenantDrGreenConfig(
     throw new Error("Failed to decrypt Dr Green credentials. Please update your settings.");
   }
 
+  // Auto-detect swapped keys: if apiKey looks like a PEM/base64-PEM and secretKey is short,
+  // the admin pasted them in the wrong fields. Swap silently.
+  let finalApiKey = decryptedApiKey;
+  let finalSecretKey = decryptedSecret;
+
+  const looksLikePEM = (v: string) =>
+    v.includes("-----BEGIN ") || v.startsWith("LS0tLS"); // LS0tLS = base64("-----")
+
+  if (looksLikePEM(finalApiKey) && !looksLikePEM(finalSecretKey)) {
+    console.warn(`[DrGreen Config] Keys appear swapped for tenant ${tenantId} — auto-correcting (apiKey has PEM, secretKey is short token)`);
+    [finalApiKey, finalSecretKey] = [finalSecretKey, finalApiKey];
+  }
+
   // Get API URL: platform config (source of truth) > tenant override > env fallback
-  // Platform config is managed by super-admin and should be the canonical URL.
-  // Tenant-level URL is only used as a last-resort fallback to avoid confusion
-  // when tenant has a stale/wrong URL that shadows the correct platform config.
   const platformConfig = await prisma.platform_config.findUnique({
     where: { id: "config" },
   });
   let apiUrl = platformConfig?.drGreenApiUrl || tenant.drGreenApiUrl || process.env.DRGREEN_API_URL || undefined;
 
   return {
-    apiKey: decryptedApiKey,
-    secretKey: decryptedSecret,
+    apiKey: finalApiKey,
+    secretKey: finalSecretKey,
     apiUrl: apiUrl || undefined,
   };
 }
