@@ -20,17 +20,22 @@ function generateSignature(payload: string, secretKey: string): string {
     let cleanKey = secretKey.trim();
 
     // The keys provided by Dr. Green appear to be base64 strings containing the PEM block
+    // OR they might just be the raw base64 string without the -----BEGIN/END----- lines
     let privateKeyPEM = cleanKey;
     if (!cleanKey.includes("-----BEGIN ")) {
       try {
+        // First try to decode it, in case it's a base64 encoded block of a FULL PEM file
         const decoded = Buffer.from(cleanKey, "base64").toString("utf-8");
         if (decoded.includes("-----BEGIN ")) {
           privateKeyPEM = decoded;
         } else {
-          throw new Error("Secret Key must be a valid PEM format or a base64 encoded PEM.");
+          // If decoding it doesn't reveal a PEM file, then the raw string ITSELF is likely 
+          // just the raw Base64 data of the EC private key. So we wrap it in the PEM headers ourselves!
+          privateKeyPEM = `-----BEGIN PRIVATE KEY-----\n${cleanKey.match(/.{1,64}/g)?.join('\n') || cleanKey}\n-----END PRIVATE KEY-----`;
         }
       } catch (err: any) {
-        throw new Error("Unable to decode Secret Key as base64. Ensure it is correct.");
+        // Fallback: Just wrap it
+        privateKeyPEM = `-----BEGIN PRIVATE KEY-----\n${cleanKey.match(/.{1,64}/g)?.join('\n') || cleanKey}\n-----END PRIVATE KEY-----`;
       }
     }
 
