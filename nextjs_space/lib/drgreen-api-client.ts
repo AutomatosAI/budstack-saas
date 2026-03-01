@@ -20,19 +20,63 @@ const DEFAULT_DOCTOR_GREEN_API_URL =
  *
  * crypto.sign(null, ...) was NOT hashing before signing, producing invalid signatures.
  */
+function normalizePEM(input: string): string {
+  let key = input.trim();
+
+  if (key.includes("-----BEGIN ")) {
+    const pemMatch = key.match(/(-----BEGIN [^-]+-----)([\s\S]*?)(-----END [^-]+-----)/);
+    if (pemMatch) {
+      const header = pemMatch[1];
+      const body = pemMatch[2].replace(/\s+/g, "");
+      const footer = pemMatch[3];
+      const wrapped = body.match(/.{1,64}/g)?.join("\n") || body;
+      return `${header}\n${wrapped}\n${footer}`;
+    }
+    return key;
+  }
+
+  try {
+    const decoded = Buffer.from(key, "base64").toString("utf-8");
+    if (decoded.includes("-----BEGIN ")) {
+      return normalizePEM(decoded);
+    }
+  } catch {
+    // Not valid base64
+  }
+
+  const cleaned = key.replace(/\s+/g, "");
+  const wrapped = cleaned.match(/.{1,64}/g)?.join("\n") || cleaned;
+  return `-----BEGIN PRIVATE KEY-----\n${wrapped}\n-----END PRIVATE KEY-----`;
+}
+
 export function generateDrGreenSignature(payload: string, secretKey: string): string {
   const crypto = require('crypto');
 
-  // Base64 decode the secret key to get the PEM string
-  const privateKeyPEM = Buffer.from(secretKey, 'base64').toString('utf-8');
+  const privateKeyPEM = normalizePEM(secretKey);
 
-  // Explicitly SHA-256 hash then sign (same as consultation submit route)
+  const headerMatch = privateKeyPEM.match(/-----BEGIN ([^-]+)-----/);
+  console.log(`[DrGreen Signature] PEM type: "${headerMatch?.[1] || "UNKNOWN"}" | len: ${privateKeyPEM.length}`);
+
+  let privateKey;
+  try {
+    privateKey = crypto.createPrivateKey(privateKeyPEM);
+  } catch (keyError: any) {
+    console.error(`[DrGreen Signature] createPrivateKey failed: ${keyError.message}`);
+    if (privateKeyPEM.includes("BEGIN PRIVATE KEY")) {
+      const body = privateKeyPEM.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\s+/g, "");
+      const ecPEM = `-----BEGIN EC PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join("\n") || body}\n-----END EC PRIVATE KEY-----`;
+      console.log("[DrGreen Signature] Retrying with EC PRIVATE KEY header...");
+      privateKey = crypto.createPrivateKey(ecPEM);
+    } else {
+      throw keyError;
+    }
+  }
+
   const sign = crypto.createSign('SHA256');
   sign.update(payload);
   sign.end();
-  const signature = sign.sign(privateKeyPEM);
 
-  return signature.toString('base64');
+  return sign.sign(privateKey).toString('base64');
 }
 
 /**

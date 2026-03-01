@@ -99,15 +99,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (drGreenApiKey && drGreenApiKey.trim() !== '') {
-      try {
-        dataToUpdate.drGreenApiKey = encrypt(drGreenApiKey);
-      } catch (e) {
-        console.error('Encryption failed:', e);
-        throw e;
-      }
-    }
-
     console.log('Updating tenant with data:', {
       ...dataToUpdate,
       drGreenSecretKey: dataToUpdate.drGreenSecretKey ? '***' : undefined,

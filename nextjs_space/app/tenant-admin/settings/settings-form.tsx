@@ -192,14 +192,15 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
             <Label htmlFor="drGreenApiKey" className="text-foreground font-medium">
               API Key
             </Label>
-            <Input
+            <textarea
               id="drGreenApiKey"
               value={formData.drGreenApiKey}
               onChange={(e) =>
                 setFormData({ ...formData, drGreenApiKey: e.target.value })
               }
               placeholder={hasApiKey ? "******** (Verified)" : "Paste your Public Key here"}
-              className="mt-2 rounded-xl"
+              rows={3}
+              className="mt-2 rounded-xl w-full border border-input bg-background px-3 py-2 text-sm font-mono resize-y"
             />
             <p className="text-xs text-muted-foreground mt-2">
               {hasApiKey ? "Leave empty to keep existing key." : "Required for Dr. Green integration."}
@@ -209,9 +210,8 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
             <Label htmlFor="drGreenSecretKey" className="text-foreground font-medium">
               Secret Key
             </Label>
-            <Input
+            <textarea
               id="drGreenSecretKey"
-              type="password"
               value={formData.drGreenSecretKey}
               onChange={(e) =>
                 setFormData({ ...formData, drGreenSecretKey: e.target.value })
@@ -221,7 +221,8 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                   ? "******** (Verified)"
                   : "Paste your Private Key here"
               }
-              className="mt-2 rounded-xl"
+              rows={3}
+              className="mt-2 rounded-xl w-full border border-input bg-background px-3 py-2 text-sm font-mono resize-y"
             />
             <p className="text-xs text-muted-foreground mt-2">
               {tenant.drGreenSecretKey

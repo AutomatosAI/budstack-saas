@@ -12,39 +12,75 @@ import crypto from "crypto";
 /**
  * Generate ECDSA signature for API request (using Node.js crypto)
  */
+function normalizePEM(input: string): string {
+  let key = input.trim();
+
+  // If already a proper PEM string, normalize line breaks and return
+  if (key.includes("-----BEGIN ")) {
+    // Fix single-line PEM (pasted from <input> instead of <textarea>)
+    // Extract header, base64 body, and footer
+    const pemMatch = key.match(/(-----BEGIN [^-]+-----)([\s\S]*?)(-----END [^-]+-----)/);
+    if (pemMatch) {
+      const header = pemMatch[1];
+      const body = pemMatch[2].replace(/\s+/g, ""); // strip all whitespace from body
+      const footer = pemMatch[3];
+      const wrapped = body.match(/.{1,64}/g)?.join("\n") || body;
+      return `${header}\n${wrapped}\n${footer}`;
+    }
+    return key;
+  }
+
+  // Try base64 decode — Dr. Green may provide keys as base64-encoded PEM
+  try {
+    const decoded = Buffer.from(key, "base64").toString("utf-8");
+    if (decoded.includes("-----BEGIN ")) {
+      return normalizePEM(decoded); // Recursively normalize the decoded PEM
+    }
+  } catch {
+    // Not valid base64, fall through
+  }
+
+  // Raw base64 key data — wrap in PKCS#8 headers
+  const cleaned = key.replace(/\s+/g, "");
+  const wrapped = cleaned.match(/.{1,64}/g)?.join("\n") || cleaned;
+  return `-----BEGIN PRIVATE KEY-----\n${wrapped}\n-----END PRIVATE KEY-----`;
+}
+
 function generateSignature(payload: string, secretKey: string): string {
   try {
     const crypto = require("crypto");
 
-    // Clean up input
-    let cleanKey = secretKey.trim();
+    const privateKeyPEM = normalizePEM(secretKey);
 
-    // The keys provided by Dr. Green appear to be base64 strings containing the PEM block
-    // OR they might just be the raw base64 string without the -----BEGIN/END----- lines
-    let privateKeyPEM = cleanKey;
-    if (!cleanKey.includes("-----BEGIN ")) {
-      try {
-        // First try to decode it, in case it's a base64 encoded block of a FULL PEM file
-        const decoded = Buffer.from(cleanKey, "base64").toString("utf-8");
-        if (decoded.includes("-----BEGIN ")) {
-          privateKeyPEM = decoded;
-        } else {
-          // If decoding it doesn't reveal a PEM file, then the raw string ITSELF is likely 
-          // just the raw Base64 data of the EC private key. So we wrap it in the PEM headers ourselves!
-          privateKeyPEM = `-----BEGIN PRIVATE KEY-----\n${cleanKey.match(/.{1,64}/g)?.join('\n') || cleanKey}\n-----END PRIVATE KEY-----`;
-        }
-      } catch (err: any) {
-        // Fallback: Just wrap it
-        privateKeyPEM = `-----BEGIN PRIVATE KEY-----\n${cleanKey.match(/.{1,64}/g)?.join('\n') || cleanKey}\n-----END PRIVATE KEY-----`;
+    // Log PEM header type for diagnostics (don't log the key itself)
+    const headerMatch = privateKeyPEM.match(/-----BEGIN ([^-]+)-----/);
+    const pemLines = privateKeyPEM.split("\n").length;
+    console.log(`[Signature] PEM type: "${headerMatch?.[1] || "UNKNOWN"}" | lines: ${pemLines} | bodyLen: ${privateKeyPEM.length}`);
+
+    // Use createPrivateKey for better format handling (supports PKCS#8, SEC1 EC, PKCS#1 RSA)
+    let privateKey;
+    try {
+      privateKey = crypto.createPrivateKey(privateKeyPEM);
+    } catch (keyError: any) {
+      console.error(`[Signature] createPrivateKey failed: ${keyError.message}`);
+      // Try with EC PRIVATE KEY headers if PRIVATE KEY failed
+      if (privateKeyPEM.includes("BEGIN PRIVATE KEY")) {
+        const body = privateKeyPEM.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\s+/g, "");
+        const ecPEM = `-----BEGIN EC PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join("\n") || body}\n-----END EC PRIVATE KEY-----`;
+        console.log("[Signature] Retrying with EC PRIVATE KEY header...");
+        privateKey = crypto.createPrivateKey(ecPEM);
+      } else {
+        throw keyError;
       }
     }
 
-    // Dr. Green requires SHA256 signatures over the payload json using the Private Key
+    console.log(`[Signature] Key loaded: type=${privateKey.type} asymmetricKeyType=${privateKey.asymmetricKeyType}`);
+
     const sign = crypto.createSign("SHA256");
     sign.update(payload);
     sign.end();
 
-    return sign.sign(privateKeyPEM, "base64");
+    return sign.sign(privateKey, "base64");
   } catch (error: any) {
     console.error("Error generating signature:", error);
     throw new Error(error.message || "Failed to generate API signature");
