@@ -23,6 +23,7 @@ import {
   ArrowLeft,
   Palette,
   Eye,
+  EyeOff,
   Check,
   Rocket,
 } from "lucide-react";
@@ -55,6 +56,7 @@ export default function OnboardingForm({
 }: OnboardingFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     businessName: "",
@@ -161,10 +163,10 @@ export default function OnboardingForm({
                 <div className="flex flex-col items-center">
                   <div
                     className={`flex items-center justify-center w-14 h-14 rounded-2xl transition-all ${isActive
-                        ? "bg-primary text-primary-foreground shadow-lg"
-                        : isCompleted
-                          ? "bg-success text-white"
-                          : "bg-muted text-muted-foreground"
+                      ? "bg-primary text-primary-foreground shadow-lg"
+                      : isCompleted
+                        ? "bg-success text-white"
+                        : "bg-muted text-muted-foreground"
                       }`}
                   >
                     {isCompleted ? (
@@ -176,10 +178,10 @@ export default function OnboardingForm({
                   <div className="mt-3 text-center">
                     <div
                       className={`text-sm font-medium ${isActive
-                          ? "text-foreground"
-                          : isCompleted
-                            ? "text-success"
-                            : "text-muted-foreground"
+                        ? "text-foreground"
+                        : isCompleted
+                          ? "text-success"
+                          : "text-muted-foreground"
                         }`}
                     >
                       {step.title}
@@ -303,17 +305,26 @@ export default function OnboardingForm({
                 <Lock className="h-4 w-4 text-accent" />
                 Create Password *
               </Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                minLength={6}
-                placeholder="Minimum 6 characters"
-                className="mt-2 h-12 rounded-xl border-border bg-muted/30"
-              />
+              <div className="relative mt-2">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  minLength={6}
+                  placeholder="Minimum 6 characters"
+                  className="h-12 rounded-xl border-border bg-muted/30 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               <div className="mt-3 tile px-4 py-3">
                 <div
                   className={`text-xs flex items-center gap-2 ${formData.password.length >= 6 ? "text-success" : "text-muted-foreground"}`}
@@ -414,8 +425,8 @@ export default function OnboardingForm({
                     type="button"
                     onClick={() => setFormData({ ...formData, templateId: template.id })}
                     className={`card-nested p-5 text-left transition-all hover:shadow-lg ${formData.templateId === template.id
-                        ? 'ring-2 ring-accent bg-accent/5'
-                        : 'hover:bg-muted/50'
+                      ? 'ring-2 ring-accent bg-accent/5'
+                      : 'hover:bg-muted/50'
                       }`}
                   >
                     <div className="flex items-center gap-3 mb-3">
