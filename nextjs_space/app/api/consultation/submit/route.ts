@@ -290,7 +290,7 @@ export async function POST(request: NextRequest) {
       // 2. Tenant Credentials
       const { apiKey, secretKey } = await getTenantDrGreenConfig(body.tenantId);
 
-      console.log(`[Consultation] CREDENTIALS: apiUrl=${drGreenApiUrl} | apiKeyPrefix=${apiKey?.slice(0, 6)} | hasSecret=${!!secretKey} | tenantId=${body.tenantId}`);
+      console.log(`[Consultation] CREDENTIALS: apiUrl=${drGreenApiUrl} | apiKeyLen=${apiKey?.length} | apiKeyPrefix=${apiKey?.slice(0, 8)} | secretKeyLen=${secretKey?.length} | secretKeyPrefix=${secretKey?.slice(0, 8)} | tenantId=${body.tenantId}`);
 
       // Format date for Dr. Green API (YYYY-MM-DD)
       const dobFormatted = body.dateOfBirth
