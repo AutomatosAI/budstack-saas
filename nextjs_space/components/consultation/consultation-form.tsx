@@ -187,19 +187,21 @@ export function ConsultationForm({
       }
 
       toast.success("Consultation submitted successfully!");
-      toast.success(
-        `Account created! You can now login at /store/${tenantSlug}/login`,
-      );
 
-      // Redirect to tenant-scoped success page
-      router.push(
-        `/store/${tenantSlug}/consultation/success?${new URLSearchParams({
-          id: result.questionnaireId || "",
-          clientId: result.drGreenClientId || "",
-          ...(result.kycLink && { kycLink: result.kycLink }),
-          approval: result.adminApproval || "PENDING",
-        }).toString()}`,
-      );
+      // Detect subdomain: if on subdomain, paths don't need /store/slug prefix
+      // (middleware rewrites subdomain paths automatically)
+      const isSubdomain = typeof window !== "undefined" &&
+        !window.location.pathname.startsWith("/store/");
+      const basePath = isSubdomain ? "" : `/store/${tenantSlug}`;
+
+      const successParams = new URLSearchParams({
+        id: result.questionnaireId || "",
+        clientId: result.drGreenClientId || "",
+        ...(result.kycLink && { kycLink: result.kycLink }),
+        approval: result.adminApproval || "PENDING",
+      }).toString();
+
+      router.push(`${basePath}/consultation/success?${successParams}`);
     } catch (error: any) {
       toast.error(error.message || "Failed to submit consultation");
     } finally {
