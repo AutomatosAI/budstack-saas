@@ -4,7 +4,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
-import { getPlatformConfig } from "@/lib/platform-config";
+
 import { prisma } from "@/lib/db";
 import { mapMedicalConditionsForDrGreen } from '@/lib/dr-green-mapping';
 import crypto from "crypto";
@@ -281,16 +281,11 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // Fetch Configuration dynamically
-      // 1. Platform Config for API URL
-      const platformConfig = await getPlatformConfig();
-      const drGreenApiUrl =
-        platformConfig.drGreenApiUrl || "https://api.drgreennft.com/api/v1";
+      // Fetch tenant credentials + API URL (respects tenant override > env var > platform config)
+      const { apiKey, secretKey, apiUrl } = await getTenantDrGreenConfig(body.tenantId);
+      const drGreenApiUrl = apiUrl || "https://api.drgreennft.com/api/v1";
 
-      // 2. Tenant Credentials
-      const { apiKey, secretKey } = await getTenantDrGreenConfig(body.tenantId);
-
-      console.log(`[Consultation] CREDENTIALS: apiUrl=${drGreenApiUrl} | apiKeyLen=${apiKey?.length} | apiKeyPrefix=${apiKey?.slice(0, 8)} | secretKeyLen=${secretKey?.length} | secretKeyPrefix=${secretKey?.slice(0, 8)} | tenantId=${body.tenantId}`);
+      console.log(`[Consultation] CREDENTIALS: apiUrl=${drGreenApiUrl} | apiKeyLen=${apiKey?.length} | secretKeyLen=${secretKey?.length} | tenantId=${body.tenantId}`);
 
       // Format date for Dr. Green API (YYYY-MM-DD)
       const dobFormatted = body.dateOfBirth

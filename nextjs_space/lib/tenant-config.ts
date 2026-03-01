@@ -54,11 +54,11 @@ export async function getTenantDrGreenConfig(
     [finalApiKey, finalSecretKey] = [finalSecretKey, finalApiKey];
   }
 
-  // Get API URL: platform config (source of truth) > tenant override > env fallback
+  // Get API URL: tenant override > env var > platform config DB
   const platformConfig = await prisma.platform_config.findUnique({
     where: { id: "config" },
   });
-  let apiUrl = platformConfig?.drGreenApiUrl || tenant.drGreenApiUrl || process.env.DRGREEN_API_URL || undefined;
+  let apiUrl = tenant.drGreenApiUrl || process.env.DRGREEN_API_URL || platformConfig?.drGreenApiUrl || undefined;
 
   return {
     apiKey: finalApiKey,
