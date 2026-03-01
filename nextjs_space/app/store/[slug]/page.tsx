@@ -229,19 +229,45 @@ export default async function TenantStorePage({
     const assetS3Path = layoutS3Path || tenantS3Path;
     const needsFallback = assetS3Path && assetS3Path !== baseS3Path;
     if (layout?.sections && assetS3Path) {
+      const assetKeys = ['imageUrl', 'videoUrl', 'watermarkUrl'] as const;
+
+      async function signAssetUrl(val: string): Promise<string> {
+        const primaryKey = `${assetS3Path}/${val}`;
+        const fallbackKey = `${baseS3Path}/${val}`;
+        return needsFallback
+          ? await getFileUrlWithFallback(primaryKey, fallbackKey)
+          : await getFileUrl(primaryKey);
+      }
+
       for (const section of layout.sections) {
-        for (const key of ['imageUrl', 'videoUrl', 'watermarkUrl'] as const) {
+        // Sign top-level config asset URLs
+        for (const key of assetKeys) {
           const val = section.config?.[key];
           if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
             try {
-              const primaryKey = `${assetS3Path}/${val}`;
-              const fallbackKey = `${baseS3Path}/${val}`;
-              console.log(`[page] Signing section ${key} for ${section.type}:`, primaryKey, needsFallback ? `(fallback: ${fallbackKey})` : '');
-              (section.config as any)[key] = needsFallback
-                ? await getFileUrlWithFallback(primaryKey, fallbackKey)
-                : await getFileUrl(primaryKey);
+              console.log(`[page] Signing section ${key} for ${section.type}:`, `${assetS3Path}/${val}`);
+              (section.config as any)[key] = await signAssetUrl(val);
             } catch (err) {
               console.error(`[page] Failed to sign section ${key} for ${section.type}:`, err);
+            }
+          }
+        }
+
+        // Sign asset URLs inside items arrays (e.g. Gallery items with imageUrl)
+        const items = section.config?.items;
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            if (item && typeof item === 'object') {
+              for (const key of assetKeys) {
+                const val = (item as any)[key];
+                if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
+                  try {
+                    (item as any)[key] = await signAssetUrl(val);
+                  } catch (err) {
+                    console.error(`[page] Failed to sign item ${key} for ${section.type}:`, err);
+                  }
+                }
+              }
             }
           }
         }

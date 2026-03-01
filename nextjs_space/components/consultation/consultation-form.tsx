@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -137,17 +137,30 @@ export function ConsultationForm({
 
   const progress = (currentStep / TOTAL_STEPS) * 100;
 
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const scrollToFormTop = () => {
+    if (formRef.current) {
+      // 120px offset to gracefully account for the sticky glassmorphic header
+      const yOffset = -120;
+      const y = formRef.current.getBoundingClientRect().top + window.scrollY + yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep(currentStep + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollToFormTop();
     }
   };
 
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollToFormTop();
     }
   };
 
@@ -247,7 +260,7 @@ export function ConsultationForm({
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
+    <div className="max-w-3xl mx-auto py-8 px-4" ref={formRef}>
       <Card>
         <CardContent className="pt-6">
           {/* Progress Bar */}

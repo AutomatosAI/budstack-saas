@@ -7,7 +7,8 @@ import { useInView } from 'react-intersection-observer';
 import { SectionProps } from '@/lib/types/section-props';
 
 interface GalleryItem {
-  src: string;
+  src?: string;
+  imageUrl?: string;
   alt: string;
   span?: 'wide' | 'tall' | 'normal';
 }
@@ -72,7 +73,7 @@ export function Gallery(props: SectionProps) {
               className={`relative rounded-xl overflow-hidden group ${getSpanClass(item.span)}`}
             >
               <Image
-                src={item.src}
+                src={item.src || item.imageUrl || ''}
                 alt={item.alt}
                 fill
                 className="object-cover transition-transform duration-500 group-hover:scale-105"

@@ -35,7 +35,9 @@ import {
   Trash2,
   Plus,
   Loader2,
+  Eye,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -246,6 +248,7 @@ export default function BrandingForm({
   const [favicon, setFavicon] = useState<File | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const settings = (tenant.settings as TenantSettings) || {};
   const automatosApiKey = settings?.automatosApiKey;
@@ -743,53 +746,67 @@ export default function BrandingForm({
   }
 
   return (
-    <div className="flex flex-col xl:flex-row gap-6 h-[calc(100vh-10rem)] overflow-hidden">
+    <div className="flex flex-col lg:flex-row gap-2 lg:gap-6 h-[calc(100vh-7rem)] lg:h-[calc(100vh-10rem)] overflow-hidden">
       {/* LEFT: Editor Sidebar */}
-      <div className="w-full xl:w-[450px] flex-shrink-0 flex flex-col overflow-y-auto pr-2 pb-20 editor-scrollbar">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-20 py-4 border-b flex items-center justify-between mb-6">
+      <div className={cn(
+        "w-full lg:w-[420px] flex-shrink-0 flex flex-col overflow-y-auto pr-2 pb-20 editor-scrollbar",
+        showPreview && "hidden lg:flex"
+      )}>
+        <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
+          <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-20 py-3 lg:py-4 border-b flex items-center justify-between mb-4 lg:mb-6">
             <h2 className="text-xl font-bold flex items-center gap-2">
               <Layout className="w-5 h-5 text-primary" />
               Store Editor
             </h2>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              size="sm"
-            >
-              {isLoading ? "Publishing..." : "Publish Site"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="lg:hidden"
+                onClick={() => setShowPreview(true)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                size="sm"
+              >
+                {isLoading ? "Publishing..." : "Publish Site"}
+              </Button>
+            </div>
           </div>
 
-          <Tabs defaultValue="design" className="space-y-6">
-            <TabsList className="grid w-full h-auto grid-cols-3 gap-2 sm:grid-cols-3 md:gap-2">
-              <TabsTrigger value="design">
-                <Layout className="w-4 h-4 mr-2" />
-                Design
+          <Tabs defaultValue="design" className="space-y-4 lg:space-y-6">
+            <TabsList className="grid w-full h-auto grid-cols-4 sm:grid-cols-4 gap-1 sm:gap-2">
+              <TabsTrigger value="design" className="text-xs px-2">
+                <Layout className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Design</span>
               </TabsTrigger>
-              <TabsTrigger value="colors">
-                <Palette className="w-4 h-4 mr-2" />
-                Colors
+              <TabsTrigger value="colors" className="text-xs px-2">
+                <Palette className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Colors</span>
               </TabsTrigger>
-              <TabsTrigger value="typography">
-                <Type className="w-4 h-4 mr-2" />
-                Type
+              <TabsTrigger value="typography" className="text-xs px-2">
+                <Type className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Type</span>
               </TabsTrigger>
-              <TabsTrigger value="layout">
-                <Settings className="w-4 h-4 mr-2" />
-                Layout
+              <TabsTrigger value="layout" className="text-xs px-2">
+                <Settings className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Layout</span>
               </TabsTrigger>
-              <TabsTrigger value="content">
-                <FileText className="w-4 h-4 mr-2" />
-                Content
+              <TabsTrigger value="content" className="text-xs px-2">
+                <FileText className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Content</span>
               </TabsTrigger>
-              <TabsTrigger value="education">
-                <FileText className="w-4 h-4 mr-2" />
-                Education
+              <TabsTrigger value="education" className="text-xs px-2">
+                <FileText className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Education</span>
               </TabsTrigger>
-              <TabsTrigger value="advanced">
-                <Settings className="w-4 h-4 mr-2" />
-                Advanced
+              <TabsTrigger value="advanced" className="text-xs px-2">
+                <Settings className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Advanced</span>
               </TabsTrigger>
             </TabsList>
 
@@ -1692,7 +1709,19 @@ export default function BrandingForm({
       </div>
 
       {/* RIGHT: Live Preview Pane */}
-      <div className="flex-1 bg-muted/20 border-2 rounded-xl border-dashed overflow-hidden relative shadow-inner isolate z-0">
+      <div className={cn(
+        "flex-1 bg-muted/20 border-2 rounded-xl border-dashed overflow-hidden relative shadow-inner isolate z-0",
+        "hidden lg:block",
+        showPreview && "!block fixed inset-0 z-50 rounded-none border-0 lg:relative lg:z-0 lg:rounded-xl lg:border-2"
+      )}>
+        {showPreview && (
+          <button
+            onClick={() => setShowPreview(false)}
+            className="lg:hidden absolute top-3 left-3 z-[60] bg-background/90 backdrop-blur-sm border rounded-lg px-3 py-1.5 text-sm font-medium shadow-md"
+          >
+            ← Back to Editor
+          </button>
+        )}
         <div className="absolute top-0 inset-x-0 h-10 bg-muted/80 backdrop-blur-md border-b flex items-center justify-between px-4 font-mono text-xs text-muted-foreground z-50">
           <div className="flex items-center gap-4">
             <div className="flex gap-1.5 mr-4">

@@ -16,9 +16,24 @@ function generateSignature(payload: string, secretKey: string): string {
   try {
     const crypto = require("crypto");
 
-    // Decode the base64 private key - Handle both raw and base64 encoded keys if needed,
-    // but assuming standard base64 from config.
-    const privateKeyPEM = Buffer.from(secretKey, "base64").toString("utf-8");
+    // Handle escaped newlines if they exist
+    let privateKeyPEM = secretKey.replace(/\\n/g, '\n');
+
+    // If it doesn't look like a PEM, try base64 decoding
+    if (!privateKeyPEM.includes("-----BEGIN ")) {
+      try {
+        const decoded = Buffer.from(privateKeyPEM.trim(), "base64").toString("utf-8");
+        if (decoded.includes("-----BEGIN ")) {
+          privateKeyPEM = decoded;
+        } else {
+          // If it's still not a PEM after decoding, the user likely swapped the API and Secret keys
+          throw new Error("Secret Key does not appear to be a valid PEM format. Did you accidentally swap the API Key and Secret Key in your Dr. Green Settings?");
+        }
+      } catch (e: any) {
+        if (e.message.includes("Secret Key does not appear")) throw e;
+        console.warn("Failed to decode secret key as base64, using raw value");
+      }
+    }
 
     // Sign the payload with SHA256
     const sign = crypto.createSign("SHA256");
@@ -28,9 +43,9 @@ function generateSignature(payload: string, secretKey: string): string {
     // Generate signature and return as base64
     const signature = sign.sign(privateKeyPEM);
     return signature.toString("base64");
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating signature:", error);
-    throw new Error("Failed to generate API signature");
+    throw new Error(error.message || "Failed to generate API signature");
   }
 }
 
