@@ -334,22 +334,20 @@ export async function POST(request: NextRequest) {
           medicalHistory1: body.hasCancerTreatment,
           medicalHistory2: body.hasImmunosuppressants,
           medicalHistory3: body.hasLiverDisease,
-          medicalHistory4: false, // Placeholder for other condition
-          medicalHistory5: body.hasPsychiatricHistory
-            ? ["depression"]
-            : ["none"], // Must be array
-          medicalHistory6: body.hasAlcoholAbuse,
-          medicalHistory7: body.hasDrugServices ? ["anxiety"] : ["none"], // Must be array
-          medicalHistory7Relation: "", // Required string
-          medicalHistory8: false, // Placeholder
-          medicalHistory9: false, // Placeholder
-          medicalHistory10: false, // Placeholder
+          medicalHistory4: body.hasPsychiatricHistory,
+          medicalHistory5: body.hasPsychiatricHistory ? ["depression"] : ["none"],
+          medicalHistory6: false, // Suicidal history
+          medicalHistory7: ["none"], // Family history
+          medicalHistory7Relation: "none",
+          medicalHistory8: body.hasDrugServices,
+          medicalHistory9: body.hasAlcoholAbuse,
+          medicalHistory10: body.hasDrugServices,
+          medicalHistory11: body.alcoholUnitsPerWeek || "0",
           medicalHistory12: body.cannabisReducesMeds,
           medicalHistory13: body.cannabisFrequency || "never",
-          medicalHistory14:
-            body.cannabisFrequency && body.cannabisFrequency !== "never"
-              ? ["vaporizing"]
-              : ["never"],
+          medicalHistory14: body.cannabisFrequency && body.cannabisFrequency !== "never" ? ["vaporizing"] : ["never"],
+          medicalHistory15: body.cannabisAmountPerDay || "",
+          medicalHistory16: false, // cannabisReaction
         },
       };
 
