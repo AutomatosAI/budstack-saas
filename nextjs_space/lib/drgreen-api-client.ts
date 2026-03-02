@@ -118,8 +118,11 @@ export async function callDrGreenAPI<T>(
   const maskedKey = apiKey ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}` : 'MISSING';
   const hasSecret = !!secretKey;
 
-  // TEMP DEBUG — isDev is false in Next.js prod builds, use console.error to see in Railway logs
-  console.error(`[DrGreen API] >>> ${method} ${fullUrl} | apiKey: ${maskedKey} | secretLen: ${secretKey?.length || 0}`);
+  // TEMP DEBUG — fingerprint keys so we can verify correct keys on Railway
+  const crypto2 = require('crypto');
+  const apiKeyHash = apiKey ? crypto2.createHash('sha256').update(apiKey).digest('hex').slice(0, 12) : 'NONE';
+  const secretHash = secretKey ? crypto2.createHash('sha256').update(secretKey).digest('hex').slice(0, 12) : 'NONE';
+  console.error(`[DrGreen API] >>> ${method} ${fullUrl} | keyHash: ${apiKeyHash} | secretHash: ${secretHash} | secretLen: ${secretKey?.length || 0}`);
 
   if (!apiKey || !secretKey) {
     console.error(`[DrGreen API] MISSING_CREDENTIALS — apiKey: ${!!apiKey}, secretKey: ${!!secretKey}`);
