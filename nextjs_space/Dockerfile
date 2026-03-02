@@ -64,17 +64,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./app/public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./app/.next/static
 
-# Copy Prisma schema and generated client into standalone app
+# Copy Prisma schema for migrations
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./app/node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./app/node_modules/@prisma
+
+# Copy full node_modules (includes Prisma generated client, scripts deps, etc.)
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy scripts and lib for maintenance tasks (migrations, seeding, S3 sync)
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/lib ./lib
-
-# Copy ONLY node_modules needed for maintenance scripts (once, not twice)
-COPY --from=builder /app/node_modules ./node_modules
 
 # Create templates directory for S3 sync with correct permissions
 RUN mkdir -p /app/templates && chown nextjs:nodejs /app/templates
