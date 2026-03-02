@@ -54,6 +54,8 @@
     "@floating-ui/react": "0.26.0",
     "@headlessui/react": "1.7.18",
     "@hookform/resolvers": "3.9.0",
+    "@noble/hashes": "1.4.0",
+    "@noble/secp256k1": "2.1.0",
     "@prisma/client": "6.7.0",
     "@radix-ui/react-accordion": "1.2.0",
     "@radix-ui/react-alert-dialog": "1.1.1",
