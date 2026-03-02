@@ -553,6 +553,7 @@ enum ConsultationStatus {
 
 enum OrderStatus {
   PENDING
+  PENDING_SYNC
   CONFIRMED
   PROCESSING
   SHIPPED
@@ -562,6 +563,7 @@ enum OrderStatus {
 
 enum PaymentStatus {
   PENDING
+  AWAITING_PROCESSING
   PAID
   FAILED
   EXPIRED
