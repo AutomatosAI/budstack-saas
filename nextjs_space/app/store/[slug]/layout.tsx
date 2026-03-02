@@ -2,11 +2,10 @@ import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
-import { getCurrentTenant } from "@/lib/tenant";
-import { getFileUrl, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
+import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/lib/tenant";
+import { getFileUrl } from "@/lib/s3";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { readFileSync } from "fs";
+import { readFile } from "fs/promises";
 import { join } from "path";
 // Import template registries (legacy + section-based)
 import { TEMPLATE_COMPONENTS, TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/template-registry";
@@ -15,38 +14,15 @@ import type { TemplateLayout } from "@/lib/types/template-layout";
 import { CartProvider } from "./_contexts/CartContext";
 import { getTenantBasePath } from "@/lib/tenant-utils";
 import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrapper";
-
-// Deep merge two objects — overrides win for leaf values, objects are recursed
-function deepMergeObjects(base: any, overrides: any): any {
-  if (!base) return overrides;
-  if (!overrides) return base;
-  const result = { ...base };
-  for (const key of Object.keys(overrides)) {
-    const val = overrides[key];
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      result[key] = deepMergeObjects(base[key], val);
-    } else if (val !== undefined && val !== null && val !== '') {
-      result[key] = val;
-    }
-  }
-  return result;
-}
-
-// Sanitize CSS from S3 - strip dangerous patterns
-function sanitizeCss(css: string | null): string {
-  if (!css) return '';
-  return css
-    .replace(/@import[^;]+;/gi, '')
-    .replace(/url\([^)]+\)/gi, '')
-    .replace(/expression\([^)]+\)/gi, '');
-}
+import { deepMerge } from "@/lib/utils";
+import { sanitizeCss } from "@/lib/css-utils";
 
 // Extract runtime-safe CSS from a template's styles.css on disk
 // Keeps :root vars, class rules, @keyframes — strips @tailwind/@layer/@apply/body/* selectors
-function extractTemplateCss(templateSlug: string): { css: string; fontUrl: string | null } {
+async function extractTemplateCss(templateSlug: string): Promise<{ css: string; fontUrl: string | null }> {
   try {
     const cssPath = join(process.cwd(), 'templates', templateSlug, 'styles.css');
-    const raw = readFileSync(cssPath, 'utf-8');
+    const raw = await readFile(cssPath, 'utf-8');
 
     // Extract Google Fonts URL from @import
     const fontMatch = raw.match(/@import\s+url\(['"]?(https:\/\/fonts\.googleapis\.com[^'")\s]+)['"]?\)/);
@@ -111,19 +87,7 @@ export default async function TenantStoreLayout({
     notFound();
   }
 
-  // Fetch tenant with template relation
-  // Fetch tenant with template relation AND active tenant template
-  const tenantWithTemplate = await prisma.tenants.findUnique({
-    where: { id: tenant.id },
-    include: {
-      template: true,
-      activeTenantTemplate: {
-        include: {
-          templates: true,
-        },
-      },
-    },
-  });
+  const tenantWithTemplate = await getTenantWithTemplate(tenant.id);
 
   if (!tenantWithTemplate) {
     notFound();
@@ -191,44 +155,38 @@ export default async function TenantStoreLayout({
   const address = settings.address || "Your Business Address";
   const socialLinks = settings.socialMedia || {};
 
-  // Check if this template has a layout.json (data-driven)
-  // Templates with layout.json in S3 get data-driven nav/footer
-  // Templates without (healingbuds) fall through to legacy nav/footer
+  // Load template assets from S3 (cached — shared with page.tsx)
   const tenantS3Path = activeTemplate?.s3Path?.replace(/\/+$/, '') || null;
   const baseS3Path = templateSlug ? `templates/${templateSlug}` : null;
-  let layout: TemplateLayout | null = null;
-  let customCss: string | null = null;
-  let defaults: any = null;
+  const { layout, defaults, customCss } = await getTemplateAssets(tenantS3Path, baseS3Path);
 
-  console.log("[layout] templateSlug:", templateSlug, "tenantS3Path:", tenantS3Path, "baseS3Path:", baseS3Path);
-  for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
-    try {
-      console.log("[layout] Trying S3:", `${s3Prefix}/layout.json`);
-      layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
-      if (layout) {
-        console.log("[layout] FOUND layout.json at:", s3Prefix, "nav:", layout.navigation, "footer:", layout.footer, "settings:", JSON.stringify(layout.settings));
-        customCss = await getTextFromS3(`${s3Prefix}/styles.css`).catch(() => null);
-        console.log("[layout] styles.css loaded:", customCss ? `${customCss.length} chars` : "NULL/EMPTY");
-        defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null);
-        console.log("[layout] defaults.json loaded:", defaults ? Object.keys(defaults) : "NULL");
-        break;
+  // 3. Fallback to defaults.json logoPath when DB logoUrl is null
+  if (!logoUrl && defaults?.logoPath) {
+    const logoS3Base = tenantS3Path || baseS3Path;
+    if (logoS3Base) {
+      const logoKey = `${logoS3Base}/${defaults.logoPath}`;
+      try {
+        logoUrl = await getFileUrl(logoKey);
+      } catch {
+        // Try base template path if tenant path failed
+        if (tenantS3Path && baseS3Path) {
+          try {
+            logoUrl = await getFileUrl(`${baseS3Path}/${defaults.logoPath}`);
+          } catch { /* no logo available */ }
+        }
       }
-    } catch {
-      console.log("[layout] No layout.json at:", s3Prefix);
     }
   }
+
   // Legacy templates (in TEMPLATE_COMPONENTS) bundle their own nav/footer in index.tsx
-  // Data-driven templates get nav/footer from layout via renderNavigation/renderFooter
   const legacyTemplateExists = !!(templateSlug && TEMPLATE_COMPONENTS[templateSlug]);
-  // Skip layout chrome ONLY for legacy templates (they bundle their own nav/footer)
   const skipLayoutChrome = legacyTemplateExists && !layout;
-  console.log("[layout] Final: layout found:", !!layout, "legacyTemplate:", legacyTemplateExists, "skipLayoutChrome:", skipLayoutChrome);
 
   // For legacy templates, load CSS from filesystem so sub-pages get design tokens
   let legacyCss = '';
   let legacyFontUrl: string | null = null;
   if (legacyTemplateExists && !layout && templateSlug) {
-    const extracted = extractTemplateCss(templateSlug);
+    const extracted = await extractTemplateCss(templateSlug);
     legacyCss = extracted.css;
     legacyFontUrl = extracted.fontUrl;
   }
@@ -315,9 +273,7 @@ export default async function TenantStoreLayout({
     }
   })();
 
-  const mergedDesignSystem = deepMergeObjects(defaults?.designSystem || null, activeTemplate?.designSystem || null);
-  console.log("[layout] designSystem: defaults?", !!defaults?.designSystem, "db?", !!activeTemplate?.designSystem,
-    "merged colors.background:", (mergedDesignSystem as any)?.colors?.background || "NOT SET");
+  const mergedDesignSystem = deepMerge(defaults?.designSystem || null, activeTemplate?.designSystem || null);
 
   let widgetThemeOverrides: Record<string, string> | undefined = undefined;
   if ((mergedDesignSystem as any)?.colors) {

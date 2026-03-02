@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
-import { copyDirectory } from "@/lib/s3-copy";
-import { getJsonFromS3 } from "@/lib/s3";
+import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import crypto from "crypto";
 
@@ -62,7 +61,7 @@ export async function POST(request: NextRequest) {
     console.log(`Cloning template from ${sourceS3Prefix} to ${destS3Dir}`);
 
     // 5. Copy S3 Assets
-    const filesCopied = await copyDirectory(sourceS3Prefix, destS3Dir);
+    const filesCopied = await copyS3Directory(sourceS3Prefix, destS3Dir);
     console.log(`Copied ${filesCopied} files`);
 
     // 5b. Read defaults.json from base template to seed DB fields
@@ -76,6 +75,9 @@ export async function POST(request: NextRequest) {
         if (defaults.footer) seedData.footer = defaults.footer;
         if (defaults.heroImagePath) {
           seedData.heroImageUrl = `${destS3Dir}${defaults.heroImagePath}`;
+        }
+        if (defaults.logoPath) {
+          seedData.logoUrl = `${destS3Dir}${defaults.logoPath}`;
         }
         console.log(`[Clone] Seeded from defaults.json: ${Object.keys(seedData).join(", ")}`);
       }
