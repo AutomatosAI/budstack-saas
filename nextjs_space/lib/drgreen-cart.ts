@@ -86,11 +86,12 @@ export async function addToCart(params: {
   const actualQuantity = quantity * size;
 
   // Call Dr. Green API to add to cart
-  const response = await callDrGreenAPI(`/dapp/carts?clientId=${clientId}`, {
+  const response = await callDrGreenAPI('/dapp/carts', {
     method: "POST",
     apiKey,
     secretKey,
     baseUrl: apiUrl,
+    queryParams: { clientId },
     validateSuccessFlag: true,
     body: {
       items: [
@@ -170,11 +171,12 @@ export async function getCart(params: {
     const clientId = await ensureClientId(userId, tenantId, apiKey, secretKey);
 
     // Refresh from Dr. Green API
-    const response = await callDrGreenAPI(`/dapp/carts?clientId=${clientId}`, {
+    const response = await callDrGreenAPI('/dapp/carts', {
       method: "GET",
       apiKey,
       secretKey,
       baseUrl: apiUrl,
+      queryParams: { clientId },
       validateSuccessFlag: true,
     });
 
@@ -275,12 +277,13 @@ export async function removeFromCart(params: {
 
   // Call Dr. Green API to remove item
   await callDrGreenAPI(
-    `/dapp/carts/${cart.drGreenCartId}?strainId=${strainId}`,
+    `/dapp/carts/${cart.drGreenCartId}`,
     {
       method: "DELETE",
       apiKey,
       secretKey,
       baseUrl: apiUrl,
+      queryParams: { strainId },
       validateSuccessFlag: true,
       body: { cartId: cart.drGreenCartId },
     },
