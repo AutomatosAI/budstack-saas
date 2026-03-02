@@ -4,87 +4,11 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
+import { callDrGreenAPI } from "@/lib/drgreen-api-client";
 
 import { prisma } from "@/lib/db";
 import { mapMedicalConditionsForDrGreen } from '@/lib/dr-green-mapping';
 import crypto from "crypto";
-
-/**
- * Generate ECDSA signature for API request (using Node.js crypto)
- */
-function normalizePEM(input: string): string {
-  let key = input.trim();
-
-  // If already a proper PEM string, normalize line breaks and return
-  if (key.includes("-----BEGIN ")) {
-    // Fix single-line PEM (pasted from <input> instead of <textarea>)
-    // Extract header, base64 body, and footer
-    const pemMatch = key.match(/(-----BEGIN [^-]+-----)([\s\S]*?)(-----END [^-]+-----)/);
-    if (pemMatch) {
-      const header = pemMatch[1];
-      const body = pemMatch[2].replace(/\s+/g, ""); // strip all whitespace from body
-      const footer = pemMatch[3];
-      const wrapped = body.match(/.{1,64}/g)?.join("\n") || body;
-      return `${header}\n${wrapped}\n${footer}`;
-    }
-    return key;
-  }
-
-  // Try base64 decode — Dr. Green may provide keys as base64-encoded PEM
-  try {
-    const decoded = Buffer.from(key, "base64").toString("utf-8");
-    if (decoded.includes("-----BEGIN ")) {
-      return normalizePEM(decoded); // Recursively normalize the decoded PEM
-    }
-  } catch {
-    // Not valid base64, fall through
-  }
-
-  // Raw base64 key data — wrap in PKCS#8 headers
-  const cleaned = key.replace(/\s+/g, "");
-  const wrapped = cleaned.match(/.{1,64}/g)?.join("\n") || cleaned;
-  return `-----BEGIN PRIVATE KEY-----\n${wrapped}\n-----END PRIVATE KEY-----`;
-}
-
-function generateSignature(payload: string, secretKey: string): string {
-  try {
-    const crypto = require("crypto");
-
-    const privateKeyPEM = normalizePEM(secretKey);
-
-    const headerMatch = privateKeyPEM.match(/-----BEGIN ([^-]+)-----/);
-    if (process.env.NODE_ENV === 'development') {
-      const pemLines = privateKeyPEM.split("\n").length;
-      console.log(`[Signature] PEM type: "${headerMatch?.[1] || "UNKNOWN"}" | lines: ${pemLines}`);
-    }
-
-    // Use createPrivateKey for better format handling (supports PKCS#8, SEC1 EC, PKCS#1 RSA)
-    let privateKey;
-    try {
-      privateKey = crypto.createPrivateKey(privateKeyPEM);
-    } catch (keyError: any) {
-      console.error(`[Signature] createPrivateKey failed: ${keyError.message}`);
-      // Try with EC PRIVATE KEY headers if PRIVATE KEY failed
-      if (privateKeyPEM.includes("BEGIN PRIVATE KEY")) {
-        const body = privateKeyPEM.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\s+/g, "");
-        const ecPEM = `-----BEGIN EC PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join("\n") || body}\n-----END EC PRIVATE KEY-----`;
-        console.log("[Signature] Retrying with EC PRIVATE KEY header...");
-        privateKey = crypto.createPrivateKey(ecPEM);
-      } else {
-        throw keyError;
-      }
-    }
-
-    const sign = crypto.createSign("SHA256");
-    sign.update(payload);
-    sign.end();
-
-    return sign.sign(privateKey, "base64");
-  } catch (error: any) {
-    console.error("Error generating signature:", error);
-    throw new Error(error.message || "Failed to generate API signature");
-  }
-}
 
 /**
  * Convert ISO 3166-1 Alpha-2 to Alpha-3 country codes
@@ -282,8 +206,6 @@ export async function POST(request: NextRequest) {
     try {
       // Fetch tenant credentials + API URL (respects tenant override > env var > platform config)
       const { apiKey, secretKey, apiUrl } = await getTenantDrGreenConfig(body.tenantId);
-      const drGreenApiUrl = apiUrl || "https://api.drgreennft.com/api/v1";
-
       if (process.env.NODE_ENV === 'development') {
         console.log(`[Consultation] Credentials loaded for tenant ${body.tenantId}`);
       }
@@ -385,49 +307,14 @@ export async function POST(request: NextRequest) {
         },
       };
 
-      // Submit to Dr. Green API
-      const payloadStr = JSON.stringify(drGreenPayload);
-
-      if (process.env.NODE_ENV === 'development') {
-        console.log("[Consultation] DR GREEN DEBUG:", {
-          apiUrl: `${drGreenApiUrl}/dapp/clients`,
-          hasApiKey: !!apiKey,
-          hasSecretKey: !!secretKey,
-        });
-      }
-
-      const signature = generateSignature(payloadStr, secretKey);
-
-      const response = await fetch(`${drGreenApiUrl}/dapp/clients`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-auth-apikey": apiKey,
-          "x-auth-signature": signature,
-        },
-        body: payloadStr,
+      // Submit to Dr. Green API via shared client
+      const drGreenResponse = await callDrGreenAPI<any>('/dapp/clients', {
+        method: 'POST',
+        apiKey,
+        secretKey,
+        baseUrl: apiUrl,
+        body: drGreenPayload,
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { message: errorText };
-        }
-
-        console.error("Dr. Green API Error Response:", {
-          status: response.status,
-          statusText: response.statusText,
-        });
-
-        throw new Error(
-          `Dr.Green API Error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`,
-        );
-      }
-
-      const drGreenResponse = await response.json();
 
       // Extract KYC link and client ID from response
       // Dr Green API nests client under data.client (confirmed from live response)
