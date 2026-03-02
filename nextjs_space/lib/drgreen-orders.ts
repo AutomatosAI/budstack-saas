@@ -279,8 +279,9 @@ export async function submitOrder(params: {
                 log('STEP_3_FALLBACK: Direct order SUCCESS', orderData);
             } catch (e) {
                 const msg = e instanceof Error ? e.message : String(e);
-                log('STEP_3_FALLBACK: Direct order FAILED', { error: msg });
-                throw new Error(`Dr. Green order failed: ${msg}`);
+                log('STEP_3_FALLBACK: Direct order FAILED — will use local fallback', { error: msg });
+                lastError = msg;
+                // Don't throw — fall through to local fallback below
             }
         }
     } else {
@@ -288,18 +289,83 @@ export async function submitOrder(params: {
         throw new Error("User must complete consultation before placing orders");
     }
 
-    if (!orderData || !orderData.id) {
-        log('FAIL: No order data or missing id', { orderData });
-        throw new Error("Failed to create order on Dr. Green");
-    }
-
     // Calculate order totals from cart
     const subtotal = cartItems.reduce((sum, item) => {
         return sum + (item.strain?.retailPrice || 0) * item.quantity;
     }, 0);
-
-    const shippingCost = 5.0; // Default shipping cost
+    const shippingCost = 5.0;
     const total = subtotal + shippingCost;
+
+    // ========== LOCAL-FIRST FALLBACK (copied from template Checkout.tsx) ==========
+    // When ALL Dr Green API steps fail, create a local order with PENDING_SYNC
+    // so the user still gets a success response and admin can sync later
+    if (!orderData || !orderData.id) {
+        const now = new Date();
+        const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
+        const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const localOrderId = `LOCAL-${datePart}-${rand}`;
+
+        log('LOCAL_FALLBACK: All Dr Green API steps failed — creating local order', {
+            localOrderId,
+            subtotal,
+            total,
+            itemCount: cartItems.length,
+        });
+
+        const order = await prisma.$transaction(async (tx: any) => {
+            const createdOrder = await tx.orders.create({
+                data: {
+                    id: crypto.randomUUID(),
+                    userId,
+                    tenantId,
+                    subtotal,
+                    shippingCost,
+                    total,
+                    shippingInfo: shippingInfo as any,
+                    status: "PENDING_SYNC",
+                    paymentStatus: "AWAITING_PROCESSING",
+                    drGreenOrderId: localOrderId,
+                    orderNumber: localOrderId,
+                    updatedAt: new Date(),
+                    order_items: {
+                        create: cartItems.map((item) => ({
+                            id: crypto.randomUUID(),
+                            productId: item.strainId,
+                            productName: item.strain?.name || "Unknown Product",
+                            quantity: item.quantity,
+                            price: item.strain?.retailPrice || 0,
+                        })),
+                    },
+                },
+                include: {
+                    order_items: true,
+                },
+            });
+
+            await tx.drgreen_carts.deleteMany({
+                where: { userId, tenantId },
+            });
+
+            return createdOrder;
+        });
+
+        log('LOCAL_FALLBACK: Order created successfully', {
+            orderId: order.id,
+            localOrderId,
+        });
+
+        return {
+            orderId: order.id,
+            drGreenOrderId: localOrderId,
+            orderNumber: localOrderId,
+            status: "PENDING_SYNC",
+            total: order.total,
+            message: "Order received and saved. Our team will process it shortly.",
+        };
+    }
+
+    // ========== DR GREEN API ORDER SUCCEEDED ==========
+    log('DR_GREEN_ORDER_SUCCESS', { drGreenOrderId: orderData.id });
 
     const order = await prisma.$transaction(async (tx: any) => {
         const createdOrder = await tx.orders.create({
@@ -333,10 +399,7 @@ export async function submitOrder(params: {
         });
 
         await tx.drgreen_carts.deleteMany({
-            where: {
-                userId,
-                tenantId,
-            },
+            where: { userId, tenantId },
         });
 
         return createdOrder;

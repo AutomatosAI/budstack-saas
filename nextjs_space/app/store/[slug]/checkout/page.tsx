@@ -165,13 +165,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
   // Order confirmation screen
   if (orderResult) {
-    const isPending = !orderResult.drGreenOrderId;
+    const isLocalOrder = !orderResult.drGreenOrderId || orderResult.drGreenOrderId.startsWith("LOCAL-");
     return (
       <div className="min-h-screen bg-gray-50 pt-36 pb-20">
         <div className="container mx-auto px-4 max-w-lg">
           <Card className="border-gray-200">
             <CardContent className="pt-8 pb-8 text-center space-y-4">
-              {isPending ? (
+              {isLocalOrder ? (
                 <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
                   <Clock className="w-8 h-8 text-amber-600" />
                 </div>
@@ -183,11 +183,11 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
               <div>
                 <h2 className="text-xl font-bold text-gray-900">
-                  {isPending ? "Order Received" : "Order Confirmed"}
+                  {isLocalOrder ? "Order Received" : "Order Confirmed"}
                 </h2>
                 <p className="text-gray-500 mt-1 text-sm">
-                  {isPending
-                    ? "Our team will process your order shortly."
+                  {isLocalOrder
+                    ? "Your order has been received and saved. Our team will process it shortly."
                     : "Your order has been placed successfully."}
                 </p>
               </div>
@@ -211,7 +211,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               </div>
 
               <p className="text-xs text-gray-400">
-                {isPending
+                {isLocalOrder
                   ? "You'll receive a confirmation email once processed."
                   : "Tracking information will be sent to your email."}
               </p>
