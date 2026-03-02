@@ -114,7 +114,7 @@ export function NavHealingBuds(props: SectionProps) {
       }}
     >
       <div
-        className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-all duration-300"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-all duration-300"
         style={{ height: scrolled ? '60px' : '72px' }}
       >
         {/* Logo */}
@@ -307,7 +307,7 @@ export function NavHealingBuds(props: SectionProps) {
             borderColor: 'rgba(255,255,255,0.1)',
           }}
         >
-          <div className="max-w-[1400px] mx-auto px-4 py-4 space-y-1">
+          <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
             {links.map((link: { label: string; href: string }) => {
               const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
               return (
