@@ -302,7 +302,7 @@ export async function fetchProducts(
   const alpha3Code = toAlpha3(country);
   const response = await doctorGreenRequest<{
     data: { strains: DoctorGreenProduct[] };
-  }>('/strains', { config, queryParams: { country: alpha3Code } });
+  }>('/strains', { config, queryParams: { countryCode: alpha3Code, orderBy: 'desc', take: 200, page: 1 } });
 
   const products = response.data?.strains || [];
   return products.map((product) => normalizeProduct(product, country));
