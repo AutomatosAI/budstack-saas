@@ -86,13 +86,13 @@ export async function addToCart(params: {
   const actualQuantity = quantity * size;
 
   // Call Dr. Green API to add to cart
+  // clientCartId must be the Dr Green clientId (not the cart UUID)
+  // Matches the working pattern from drgreen-orders.ts and the template proxy
   const response = await callDrGreenAPI('/dapp/carts', {
     method: "POST",
     apiKey,
     secretKey,
     baseUrl: apiUrl,
-    queryParams: { clientId },
-    validateSuccessFlag: true,
     body: {
       items: [
         {
@@ -100,7 +100,7 @@ export async function addToCart(params: {
           strainId,
         },
       ],
-      clientCartId: cart?.drGreenCartId || undefined,
+      clientCartId: clientId,
     },
   });
 
@@ -176,8 +176,7 @@ export async function getCart(params: {
       apiKey,
       secretKey,
       baseUrl: apiUrl,
-      queryParams: { clientId },
-      validateSuccessFlag: true,
+      signBody: { clientId },
     });
 
     const cartData = (response as any).data?.clients?.[0]?.clientCart?.[0];
@@ -283,9 +282,7 @@ export async function removeFromCart(params: {
       apiKey,
       secretKey,
       baseUrl: apiUrl,
-      queryParams: { strainId },
-      validateSuccessFlag: true,
-      body: { cartId: cart.drGreenCartId },
+      body: { cartId: cart.drGreenCartId, strainId },
     },
   );
 
@@ -321,7 +318,6 @@ export async function clearCart(params: {
       apiKey,
       secretKey,
       baseUrl: apiUrl,
-      validateSuccessFlag: true,
       body: { cartId: cart.drGreenCartId },
     });
   }

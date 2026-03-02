@@ -56,9 +56,6 @@ export function generateDrGreenSignature(payload: string, secretKey: string): st
 
   const privateKeyPEM = normalizePEM(secretKey);
 
-  const headerMatch = privateKeyPEM.match(/-----BEGIN ([^-]+)-----/);
-  console.error(`[DrGreen Sig] PEM type: "${headerMatch?.[1] || "UNKNOWN"}" | pemLen: ${privateKeyPEM.length} | payload: "${payload.slice(0, 60)}"`);
-
   let privateKey;
   try {
     privateKey = crypto.createPrivateKey(privateKeyPEM);
@@ -73,15 +70,6 @@ export function generateDrGreenSignature(payload: string, secretKey: string): st
       throw keyError;
     }
   }
-
-  console.error(`[DrGreen Sig] key algo: ${privateKey.asymmetricKeyType} | curve: ${(privateKey as any).asymmetricKeyDetails?.namedCurve}`);
-
-  // TEMP: sign a fixed test string for comparison with local
-  const testSig = crypto.createSign('SHA256');
-  testSig.update('test123');
-  testSig.end();
-  const testResult = testSig.sign(privateKey).toString('base64');
-  console.error(`[DrGreen Sig] TEST_SIG("test123"): ${testResult}`);
 
   const sign = crypto.createSign('SHA256');
   sign.update(payload);
@@ -127,11 +115,7 @@ export async function callDrGreenAPI<T>(
   const maskedKey = apiKey ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}` : 'MISSING';
   const hasSecret = !!secretKey;
 
-  // TEMP DEBUG — fingerprint keys so we can verify correct keys on Railway
-  const crypto2 = require('crypto');
-  const apiKeyHash = apiKey ? crypto2.createHash('sha256').update(apiKey).digest('hex').slice(0, 12) : 'NONE';
-  const secretHash = secretKey ? crypto2.createHash('sha256').update(secretKey).digest('hex').slice(0, 12) : 'NONE';
-  console.error(`[DrGreen API] >>> ${method} ${fullUrl} | keyHash: ${apiKeyHash} | secretHash: ${secretHash} | secretLen: ${secretKey?.length || 0}`);
+  if (isDev) console.log(`[DrGreen API] >>> ${method} ${fullUrl}`);
 
   if (!apiKey || !secretKey) {
     console.error(`[DrGreen API] MISSING_CREDENTIALS — apiKey: ${!!apiKey}, secretKey: ${!!secretKey}`);
@@ -173,12 +157,8 @@ export async function callDrGreenAPI<T>(
     signaturePayload = payload;
   }
 
-  console.error(`[DrGreen API]   signing: "${signaturePayload.slice(0, 100)}" (${signaturePayload.length} chars)`);
-
   const signature = generateDrGreenSignature(signaturePayload, secretKey);
   requestHeaders['x-auth-signature'] = signature;
-  console.error(`[DrGreen API]   sig: ${signature.slice(0, 30)}... (${signature.length} chars)`);
-  if (isDev) console.log(`[DrGreen API]   signature: ${signature.slice(0, 20)}... (${signature.length} chars)`);
 
   const startTime = Date.now();
   const response = await fetch(fullUrl, {
@@ -195,8 +175,7 @@ export async function callDrGreenAPI<T>(
     const errorText = await response.text().catch(() => '');
     let errorData: any = {};
     try { errorData = JSON.parse(errorText); } catch { /* not JSON */ }
-    console.error(`[DrGreen API] ERROR response body: ${errorText.slice(0, 500)}`);
-    console.error(`[DrGreen API] ERROR response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
+    console.error(`[DrGreen API] ERROR ${method} ${endpoint}: ${response.status} — ${errorText.slice(0, 300)}`);
     throw new Error(
       `Doctor Green API Error: ${response.status} ${response.statusText} - ${errorText.slice(0, 500)}`
     );

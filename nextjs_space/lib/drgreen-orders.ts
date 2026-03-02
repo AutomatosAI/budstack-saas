@@ -400,7 +400,6 @@ export async function getOrder(params: {
                     method: "GET",
                     apiKey,
                     secretKey,
-                    validateSuccessFlag: true,
                 },
             );
 
