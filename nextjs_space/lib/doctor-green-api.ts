@@ -299,10 +299,11 @@ export async function fetchProducts(
   country: string = "SA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct[]> {
-  const alpha3Code = toAlpha3(country);
+  // Call /strains with no query params — query params cause 401 on this endpoint
+  // from Railway (works for all other endpoints). No-param call returns all strains.
   const response = await doctorGreenRequest<{
     data: { strains: DoctorGreenProduct[] };
-  }>('/strains', { config, queryParams: { countryCode: alpha3Code, orderBy: 'desc', take: 200, page: 1 } });
+  }>('/strains', { config });
 
   const products = response.data?.strains || [];
   return products.map((product) => normalizeProduct(product, country));
