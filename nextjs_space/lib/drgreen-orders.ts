@@ -136,34 +136,58 @@ export async function submitOrder(params: {
         const countryCode = shippingInfo.countryCode || toAlpha3CountryCode(shippingInfo.country);
 
         // Step 1: Update client shipping address on Dr Green
-        log('STEP_1: Updating client shipping address');
+        const shippingPayload = {
+            shipping: {
+                address1: shippingInfo.address1,
+                address2: shippingInfo.address2 || '',
+                landmark: '',
+                city: shippingInfo.city,
+                state: shippingInfo.state || shippingInfo.city,
+                country: shippingInfo.country,
+                countryCode: countryCode,
+                postalCode: shippingInfo.postalCode,
+            }
+        };
+        log('STEP_1: Updating client shipping address', { clientId, shipping: shippingPayload });
         try {
-            await callDrGreenAPI(`/dapp/clients/${clientId}`, {
+            const patchResponse = await callDrGreenAPI<any>(`/dapp/clients/${clientId}`, {
                 ...apiOpts,
                 method: "PATCH",
-                body: {
-                    shipping: {
-                        address1: shippingInfo.address1,
-                        address2: shippingInfo.address2 || '',
-                        landmark: '',
-                        city: shippingInfo.city,
-                        state: shippingInfo.state || shippingInfo.city,
-                        country: shippingInfo.country,
-                        countryCode: countryCode,
-                        postalCode: shippingInfo.postalCode,
-                    }
-                },
+                body: shippingPayload,
             });
-            log('STEP_1: Shipping address updated');
+            log('STEP_1: Shipping PATCH response', {
+                success: patchResponse?.success,
+                hasData: !!patchResponse?.data,
+                message: patchResponse?.message,
+            });
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
             log('STEP_1: Shipping PATCH failed (non-blocking)', { error: msg });
             // Non-blocking — continue anyway (same as reference)
         }
 
-        // Wait for propagation (reference uses 1500ms)
-        log('STEP_1: Waiting 1500ms for propagation');
-        await sleep(1500);
+        // Wait for propagation
+        log('STEP_1: Waiting 2000ms for propagation');
+        await sleep(2000);
+
+        // Verify shipping was saved by fetching client
+        try {
+            const clientCheck = await callDrGreenAPI<any>(`/dapp/clients/${clientId}`, {
+                ...apiOpts,
+                method: "GET",
+            });
+            const clientData = clientCheck?.data?.client || clientCheck?.data;
+            log('STEP_1_VERIFY: Client state after PATCH', {
+                hasShipping: !!clientData?.shipping,
+                shippingAddress1: clientData?.shipping?.address1 || 'NONE',
+                shippingCountry: clientData?.shipping?.country || 'NONE',
+                shippingCountryCode: clientData?.shipping?.countryCode || 'NONE',
+            });
+        } catch (e) {
+            log('STEP_1_VERIFY: Could not verify client (non-blocking)', {
+                error: e instanceof Error ? e.message : String(e),
+            });
+        }
 
         // Step 2: Add items to Dr Green server-side cart (with retry)
         const drGreenCartItems = cartItems.map(item => ({
@@ -182,6 +206,7 @@ export async function submitOrder(params: {
                 await callDrGreenAPI("/dapp/carts", {
                     ...apiOpts,
                     method: "POST",
+                    queryParams: { clientId },
                     body: cartPayload,
                 });
                 log(`STEP_2: Cart add success (attempt ${attempt})`);
@@ -193,7 +218,7 @@ export async function submitOrder(params: {
                 lastError = msg;
 
                 if (msg.includes("shipping address not found") && attempt < maxAttempts) {
-                    const delay = attempt * 1000;
+                    const delay = attempt * 2000;
                     log(`STEP_2: Retrying in ${delay}ms (shipping propagation)`);
                     await sleep(delay);
                 } else if (attempt < maxAttempts) {
