@@ -206,7 +206,6 @@ export async function submitOrder(params: {
                 await callDrGreenAPI("/dapp/carts", {
                     ...apiOpts,
                     method: "POST",
-                    queryParams: { clientId },
                     body: cartPayload,
                 });
                 log(`STEP_2: Cart add success (attempt ${attempt})`);
