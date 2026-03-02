@@ -26,24 +26,12 @@ export default async function AuthCallbackPage() {
         return redirect("/tenant-admin");
     }
 
-    // 3. Patient — redirect to storefront patient dashboard
-    if (role === "PATIENT") {
-        // Find their tenant to build the subdomain dashboard URL
-        const localUser = await prisma.users.findFirst({ where: { email }, include: { tenants: { select: { subdomain: true } } } });
-        if (localUser?.tenants?.subdomain) {
-            return redirect(`/store/${localUser.tenants.subdomain}/dashboard`);
-        }
-        return redirect("/");
-    }
-
-    // 4. No role — try DB lookup as fallback (sync issue?)
+    // 3. Consumer / other
+    // If no role, try to find in DB to be safe (sync issue?)
     if (!role) {
-        const localUser = await prisma.users.findFirst({ where: { email }, include: { tenants: { select: { subdomain: true } } } });
+        const localUser = await prisma.users.findFirst({ where: { email } });
         if (localUser?.role === "SUPER_ADMIN") return redirect("/super-admin");
         if (localUser?.role === "TENANT_ADMIN") return redirect("/tenant-admin");
-        if (localUser?.role === "PATIENT" && localUser?.tenants?.subdomain) {
-            return redirect(`/store/${localUser.tenants.subdomain}/dashboard`);
-        }
     }
 
     // Default fallback

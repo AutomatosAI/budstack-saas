@@ -15,11 +15,19 @@ export default async function TenantAdminLayout({
 }) {
   const user = await currentUser();
 
+  if (!user) {
+    console.warn("[tenant-admin] REJECTED — no Clerk user found, redirecting to login");
+    redirect("/auth/login");
+  }
+
   if (
-    !user ||
-    (user.publicMetadata.role !== "TENANT_ADMIN" &&
-      user.publicMetadata.role !== "SUPER_ADMIN")
+    user.publicMetadata.role !== "TENANT_ADMIN" &&
+    user.publicMetadata.role !== "SUPER_ADMIN"
   ) {
+    const rejectedEmail = user.emailAddresses[0]?.emailAddress;
+    console.warn(
+      `[tenant-admin] REJECTED — email: ${rejectedEmail}, clerkId: ${user.id}, role: "${user.publicMetadata.role}", metadata: ${JSON.stringify(user.publicMetadata)}`
+    );
     redirect("/auth/login");
   }
 

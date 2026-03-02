@@ -48,7 +48,7 @@ export default function LoginPage() {
                   {isSigningOut ? "Signing out..." : "Sign Out and Sign In as Different User"}
                 </Button>
                 <Button
-                  onClick={() => router.push("/")}
+                  onClick={() => router.push("/auth/callback")}
                   variant="outline"
                   className="w-full"
                 >
