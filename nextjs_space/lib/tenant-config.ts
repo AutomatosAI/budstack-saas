@@ -3,19 +3,36 @@ import { decrypt } from "@/lib/encryption";
 import { DoctorGreenConfig } from "@/lib/doctor-green-api";
 
 /**
- * Retrieves and decrypts the Dr Green credentials for a specific tenant.
- * Also fetches the API URL from tenant config (priority) or platform config (fallback).
- * Throws an error if credentials are missing or invalid.
+ * Retrieves Dr Green credentials for a specific tenant.
+ *
+ * Priority (matches healingbudstacks template pattern):
+ *   1. Environment variables: DRGREEN_API_KEY + DRGREEN_SECRET_KEY
+ *   2. Tenant DB: drGreenApiKey + drGreenSecretKey (encrypted)
+ *
+ * The template always uses env vars. Env-var override ensures the same
+ * credential scope that the working template has (production keys that
+ * can write shipping + create carts + create orders).
  */
 export async function getTenantDrGreenConfig(
   tenantId: string,
 ): Promise<DoctorGreenConfig> {
+  // 1. Env-var credentials take priority (matches template approach)
+  const envApiKey = process.env.DRGREEN_API_KEY;
+  const envSecretKey = process.env.DRGREEN_SECRET_KEY;
+
+  if (envApiKey && envSecretKey) {
+    const apiUrl = process.env.DRGREEN_API_URL || undefined;
+    console.log(`[DrGreen Config] Using env var credentials (template pattern)`);
+    return { apiKey: envApiKey, secretKey: envSecretKey, apiUrl };
+  }
+
+  // 2. Fall back to tenant DB credentials
   const tenant = await prisma.tenants.findUnique({
     where: { id: tenantId },
     select: {
       drGreenApiKey: true,
       drGreenSecretKey: true,
-      drGreenApiUrl: true, // Tenant-level override
+      drGreenApiUrl: true,
     },
   });
 
@@ -41,25 +58,21 @@ export async function getTenantDrGreenConfig(
     throw new Error("Failed to decrypt Dr Green credentials. Please update your settings.");
   }
 
-  // Auto-detect swapped keys: if apiKey looks like a PEM/base64-PEM and secretKey is short,
-  // the admin pasted them in the wrong fields. Swap silently.
   let finalApiKey = decryptedApiKey;
   let finalSecretKey = decryptedSecret;
 
   const looksLikePEM = (v: string) =>
-    v.includes("-----BEGIN ") || v.startsWith("LS0tLS"); // LS0tLS = base64("-----")
+    v.includes("-----BEGIN ") || v.startsWith("LS0tLS");
 
   if (looksLikePEM(finalApiKey) && !looksLikePEM(finalSecretKey)) {
-    console.warn(`[DrGreen Config] Keys appear swapped for tenant ${tenantId} — auto-correcting (apiKey has PEM, secretKey is short token)`);
+    console.warn(`[DrGreen Config] Keys appear swapped for tenant ${tenantId} — auto-correcting`);
     [finalApiKey, finalSecretKey] = [finalSecretKey, finalApiKey];
   }
 
-  // Get API URL: env var (Railway) > tenant override > platform config DB
-  // Env var takes priority so operators can switch environments without DB changes
   const platformConfig = await prisma.platform_config.findUnique({
     where: { id: "config" },
   });
-  let apiUrl = process.env.DRGREEN_API_URL || tenant.drGreenApiUrl || platformConfig?.drGreenApiUrl || undefined;
+  const apiUrl = process.env.DRGREEN_API_URL || tenant.drGreenApiUrl || platformConfig?.drGreenApiUrl || undefined;
 
   return {
     apiKey: finalApiKey,

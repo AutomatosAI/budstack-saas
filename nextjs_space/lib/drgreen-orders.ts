@@ -155,11 +155,19 @@ export async function submitOrder(params: {
                 method: "PATCH",
                 body: shippingPayload,
             });
-            log('STEP_1: Shipping PATCH response', {
-                success: patchResponse?.success,
-                hasData: !!patchResponse?.data,
-                message: patchResponse?.message,
-            });
+            // Verify shipping persisted (template checks this for credential scope)
+            const returnedShipping = patchResponse?.data?.shipping || patchResponse?.shipping;
+            if (returnedShipping && returnedShipping.address1) {
+                log('STEP_1: Shipping verified in response', {
+                    address1: returnedShipping.address1,
+                    city: returnedShipping.city,
+                });
+            } else {
+                log('STEP_1: Shipping NOT confirmed in response (credential scope issue)', {
+                    success: patchResponse?.success,
+                    dataKeys: patchResponse?.data ? Object.keys(patchResponse.data) : [],
+                });
+            }
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
             log('STEP_1: Shipping PATCH failed (non-blocking)', { error: msg });
