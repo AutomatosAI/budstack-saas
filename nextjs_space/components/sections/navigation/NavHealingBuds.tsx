@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Menu, X, ShoppingCart, ChevronDown, User, LogOut, Store, LayoutDashboard, Shield } from 'lucide-react';
+import { Menu, X, ShoppingCart, ChevronDown, LogOut, Store, LayoutDashboard, Shield } from 'lucide-react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { SectionProps } from '@/lib/types/section-props';
 import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
@@ -19,49 +19,50 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 /**
- * NavHealingBuds — Dedicated navigation for HealingBuds template.
+ * NavHealingBuds — Dark edge-to-edge navigation with Clerk auth, KYC badge & cart.
  *
- * Edge-to-edge dark teal header with:
- * - Wide HB monogram logo (hb-logo-white-new.png)
- * - 6 nav links (configurable via defaults.json)
- * - Cart icon with item count badge
- * - KYC verification status badge
- * - "Check Eligibility" green CTA
- * - Clerk auth user dropdown (email, role badge, dashboard, sign out)
- * - Mobile hamburger menu
+ * Fully data-driven — all config from defaults.json / sectionConfig:
+ *   navigation.links       → nav links array
+ *   navigation.cta         → { label, href } primary CTA
+ *   navigation.showCart     → boolean (default true)
+ *   navigation.accentColor → active link color (default: CSS var --tenant-color-accent)
+ *   navigation.bgColor     → header background (default: CSS var --tenant-color-primary)
+ *   navigation.signedOutLabel → text for signed-out button (default "Connect")
+ *
+ * Logo comes from logoUrl prop (signed S3 URL from layout.tsx).
+ * Colors come from CSS variables set by TenantThemeProvider.
  */
 export function NavHealingBuds(props: SectionProps) {
-  const { tenant, logoUrl, consultationUrl, productsUrl, aboutUrl, contactUrl, navigation, sectionConfig } = props;
+  const { tenant, logoUrl, consultationUrl, navigation, sectionConfig } = props;
 
   const businessName = tenant.businessName;
   const basePath = getTenantBasePath(tenant.subdomain);
   const router = useRouter();
   const pathname = usePathname();
 
-  // --- Links ---
+  // --- Config from defaults.json / sectionConfig ---
+  const config = sectionConfig || navigation || {};
+  const showCart = config.showCart !== false;
+  const accentColor = config.accentColor || null; // falls back to CSS var
+  const bgColor = config.bgColor || null; // falls back to CSS var
+  const signedOutLabel = config.signedOutLabel || 'Connect';
+
+  // --- Links from defaults.json ---
   const defaultLinks = [
-    { label: 'About Us', href: '/about' },
-    { label: 'Research', href: '/conditions' },
-    { label: 'The Wire', href: '/the-wire' },
-    { label: 'Eligibility', href: '/consultation' },
-    { label: 'Strains', href: '/products' },
-    { label: 'Support', href: '/support' },
+    { label: 'Products', href: '/products' },
+    { label: 'About', href: '/about' },
+    { label: 'Contact', href: '/contact' },
   ];
 
   const prefixHref = (href: string) => prefixTenantHref(href, basePath);
-
-  const rawLinks = sectionConfig?.links || navigation?.links || defaultLinks;
+  const rawLinks = config.links || navigation?.links || defaultLinks;
   const links = rawLinks.map((l: any) => ({ ...l, href: prefixHref(l.href) }));
 
-  // --- CTA ---
-  const ctaLabel = sectionConfig?.cta?.label || navigation?.cta?.label || 'Check Eligibility';
+  // --- CTA from defaults.json ---
+  const ctaLabel = config.cta?.label || navigation?.cta?.label || 'Get Started';
   const ctaHref = prefixHref(
-    sectionConfig?.cta?.href || navigation?.cta?.href || consultationUrl || '/consultation',
+    config.cta?.href || navigation?.cta?.href || consultationUrl || '/consultation',
   );
-
-  // --- Logo ---
-  // Use the wide HB logo instead of the square icon passed via logoUrl
-  const wideLogoSrc = '/templates/healingbuds/hb-logo-white-new.png';
 
   // --- Scroll state ---
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -103,11 +104,16 @@ export function NavHealingBuds(props: SectionProps) {
   const displayEmail = userEmail.length > 24 ? userEmail.slice(0, 22) + '...' : userEmail;
   const userInitial = user?.firstName?.[0] || userEmail[0]?.toUpperCase() || 'U';
 
+  // Dynamic colors — use config overrides or CSS variables from TenantThemeProvider
+  const navBg = bgColor || 'hsl(var(--tenant-color-primary, 178 48% 16%))';
+  const navBgScrolled = bgColor || 'hsl(var(--tenant-color-primary, 178 48% 16%))';
+  const activeColor = accentColor || 'hsl(var(--tenant-color-accent, 48 96% 53%))';
+
   return (
     <nav
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
       style={{
-        backgroundColor: scrolled ? 'rgba(26, 46, 42, 0.98)' : 'rgba(26, 46, 42, 0.95)',
+        backgroundColor: scrolled ? navBgScrolled : navBg,
         backdropFilter: scrolled ? 'blur(20px)' : 'blur(8px)',
         WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'blur(8px)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -117,23 +123,35 @@ export function NavHealingBuds(props: SectionProps) {
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-all duration-300"
         style={{ height: scrolled ? '60px' : '72px' }}
       >
-        {/* Logo */}
+        {/* Logo — from logoUrl prop (S3 signed URL) */}
         <Link href={basePath || '/'} className="flex items-center shrink-0">
-          <div
-            className="relative transition-all duration-300"
-            style={{
-              width: scrolled ? '140px' : '180px',
-              height: scrolled ? '35px' : '45px',
-            }}
-          >
-            <Image
-              src={wideLogoSrc}
-              alt={businessName}
-              fill
-              className="object-contain object-left"
-              priority
-            />
-          </div>
+          {logoUrl ? (
+            <div
+              className="relative transition-all duration-300"
+              style={{
+                width: scrolled ? '140px' : '180px',
+                height: scrolled ? '35px' : '45px',
+              }}
+            >
+              <Image
+                src={logoUrl}
+                alt={businessName}
+                fill
+                className="object-contain object-left"
+                priority
+              />
+            </div>
+          ) : (
+            <span
+              className="font-bold text-white transition-all duration-300 uppercase tracking-wide"
+              style={{
+                fontFamily: 'var(--tenant-font-heading, sans-serif)',
+                fontSize: scrolled ? '0.95rem' : '1.1rem',
+              }}
+            >
+              {businessName}
+            </span>
+          )}
         </Link>
 
         {/* Desktop Nav Links */}
@@ -146,7 +164,7 @@ export function NavHealingBuds(props: SectionProps) {
                 href={link.href}
                 className="text-xs font-medium transition-colors px-3 py-2 rounded-lg hover:bg-white/10"
                 style={{
-                  color: isActive ? '#EAB308' : 'rgba(255,255,255,0.8)',
+                  color: isActive ? activeColor : 'rgba(255,255,255,0.8)',
                 }}
               >
                 {link.label}
@@ -158,18 +176,20 @@ export function NavHealingBuds(props: SectionProps) {
         {/* Desktop Right Actions */}
         <div className="hidden lg:flex items-center gap-3 shrink-0">
           {/* Cart */}
-          <Link
-            href={`${basePath}/cart`}
-            className="relative p-2 rounded-lg hover:bg-white/10 transition-colors"
-            aria-label="Cart"
-          >
-            <ShoppingCart size={18} className="text-white/70" />
-            {totalItems > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-bold px-1">
-                {totalItems > 99 ? '99+' : totalItems}
-              </span>
-            )}
-          </Link>
+          {showCart && (
+            <Link
+              href={`${basePath}/cart`}
+              className="relative p-2 rounded-lg hover:bg-white/10 transition-colors"
+              aria-label="Cart"
+            >
+              <ShoppingCart size={18} className="text-white/70" />
+              {totalItems > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-bold px-1">
+                  {totalItems > 99 ? '99+' : totalItems}
+                </span>
+              )}
+            </Link>
+          )}
 
           {/* KYC Badge — only when signed in */}
           {isSignedIn && kyc && (
@@ -189,7 +209,7 @@ export function NavHealingBuds(props: SectionProps) {
             </div>
           )}
 
-          {/* Check Eligibility CTA — hidden for verified users */}
+          {/* CTA — hidden for verified users */}
           {!kycVerified && (
             <Link
               href={ctaHref}
@@ -264,26 +284,27 @@ export function NavHealingBuds(props: SectionProps) {
                 border: '1.5px solid rgba(255,255,255,0.4)',
               }}
             >
-              Connect
+              {signedOutLabel}
             </Link>
           )}
         </div>
 
         {/* Mobile Toggle */}
         <div className="flex lg:hidden items-center gap-2">
-          {/* Mobile Cart */}
-          <Link
-            href={`${basePath}/cart`}
-            className="relative p-2 rounded-lg hover:bg-white/10 transition-colors"
-            aria-label="Cart"
-          >
-            <ShoppingCart size={20} className="text-white/70" />
-            {totalItems > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-bold px-1">
-                {totalItems > 99 ? '99+' : totalItems}
-              </span>
-            )}
-          </Link>
+          {showCart && (
+            <Link
+              href={`${basePath}/cart`}
+              className="relative p-2 rounded-lg hover:bg-white/10 transition-colors"
+              aria-label="Cart"
+            >
+              <ShoppingCart size={20} className="text-white/70" />
+              {totalItems > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-bold px-1">
+                  {totalItems > 99 ? '99+' : totalItems}
+                </span>
+              )}
+            </Link>
+          )}
           <button
             className="p-2 rounded-lg hover:bg-white/10 transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -303,7 +324,7 @@ export function NavHealingBuds(props: SectionProps) {
         <div
           className="lg:hidden border-t"
           style={{
-            backgroundColor: 'rgba(26, 46, 42, 0.99)',
+            backgroundColor: navBg,
             borderColor: 'rgba(255,255,255,0.1)',
           }}
         >
@@ -315,7 +336,7 @@ export function NavHealingBuds(props: SectionProps) {
                   key={link.href}
                   href={link.href}
                   className="block text-base font-medium py-3 px-3 rounded-lg hover:bg-white/10 transition-colors"
-                  style={{ color: isActive ? '#EAB308' : 'rgba(255,255,255,0.85)' }}
+                  style={{ color: isActive ? activeColor : 'rgba(255,255,255,0.85)' }}
                   onClick={() => setMobileOpen(false)}
                 >
                   {link.label}
@@ -344,7 +365,6 @@ export function NavHealingBuds(props: SectionProps) {
             )}
 
             <div className="pt-3 space-y-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
-              {/* CTA */}
               {!kycVerified && (
                 <Link
                   href={ctaHref}
@@ -355,7 +375,6 @@ export function NavHealingBuds(props: SectionProps) {
                 </Link>
               )}
 
-              {/* Auth actions */}
               {isSignedIn ? (
                 <div className="space-y-1 pt-2">
                   <div className="px-3 py-2">
@@ -392,7 +411,7 @@ export function NavHealingBuds(props: SectionProps) {
                   style={{ border: '1.5px solid rgba(255,255,255,0.4)' }}
                   onClick={() => setMobileOpen(false)}
                 >
-                  Connect
+                  {signedOutLabel}
                 </Link>
               )}
             </div>
