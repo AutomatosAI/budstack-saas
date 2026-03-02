@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { uploadFile } from "@/lib/s3";
+import { validateUpload } from "@/lib/upload-validation";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,6 +21,11 @@ export async function POST(req: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    const validation = validateUpload(file);
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
     // Convert file to buffer

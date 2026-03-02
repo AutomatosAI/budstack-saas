@@ -11,10 +11,16 @@ export async function getBucketConfig() {
   };
 }
 
+let cachedS3Client: S3Client | null = null;
+let clientExpiry = 0;
+
 export async function createS3Client() {
+  const now = Date.now();
+  if (cachedS3Client && now < clientExpiry) return cachedS3Client;
+
   const config = await getPlatformConfig();
 
-  return new S3Client({
+  cachedS3Client = new S3Client({
     region: config.awsRegion || process.env.AWS_REGION || "eu-west-2",
     credentials:
       config.awsAccessKeyId && config.awsSecretAccessKey
@@ -22,6 +28,8 @@ export async function createS3Client() {
             accessKeyId: config.awsAccessKeyId,
             secretAccessKey: config.awsSecretAccessKey,
           }
-        : undefined, // Falls back to default AWS credential chain if not provided
+        : undefined,
   });
+  clientExpiry = now + 60_000; // Refresh every 60s alongside config cache
+  return cachedS3Client;
 }

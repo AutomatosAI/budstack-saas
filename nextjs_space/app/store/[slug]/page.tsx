@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import { getCurrentTenant, getTenantUrl } from "@/lib/tenant";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/lib/tenant";
+import { getTenantUrl, getTenantBasePath } from "@/lib/tenant-utils";
 import { prisma } from "@/lib/db";
-import { getFileUrl, getFileUrlWithFallback, getJsonFromS3, getTextFromS3 } from "@/lib/s3";
+import { getFileUrl, getFileUrlWithFallback } from "@/lib/s3";
 
 export const dynamic = 'force-dynamic';
 
@@ -30,29 +30,13 @@ export default async function TenantStorePage({
   const tenant = await getCurrentTenant();
   const resolvedSearchParams = await searchParams;
   const previewTemplateId = resolvedSearchParams?.preview || null;
-  console.log(
-    "[DEBUG] TenantStorePage: Resolved tenant:",
-    tenant ? tenant.subdomain : "null",
-    previewTemplateId ? `(preview: ${previewTemplateId})` : "",
-  );
 
   if (!tenant) {
-    console.error("[DEBUG] TenantStorePage: Tenant not found, returning 404");
     notFound();
   }
 
-  // Fetch tenant with active template
-  const tenantWithTemplate = await prisma.tenants.findUnique({
-    where: { id: tenant.id },
-    include: {
-      template: true, // Base template (legacy)
-      activeTenantTemplate: {
-        include: {
-          templates: true,
-        },
-      },
-    },
-  });
+  // Cached — shared with layout.tsx, no duplicate DB hit
+  const tenantWithTemplate = await getTenantWithTemplate(tenant.id);
 
   // If preview mode, load the specified template instead
   let previewTenantTemplate: any = null;
@@ -60,25 +44,14 @@ export default async function TenantStorePage({
     previewTenantTemplate = await prisma.tenant_templates.findFirst({
       where: {
         id: previewTemplateId,
-        tenantId: tenant.id, // Security: verify it belongs to this tenant
+        tenantId: tenant.id,
       },
       include: { templates: true },
     });
   }
 
   if (!tenantWithTemplate) {
-    console.error(
-      "[DEBUG] TenantStorePage: tenantWithTemplate not found for id:",
-      tenant.id,
-    );
     notFound();
-  } else {
-    console.log(
-      "[DEBUG] TenantStorePage: Found tenantWithTemplate. activeTenantTemplate:",
-      !!tenantWithTemplate.activeTenantTemplate,
-      "Legacy template:",
-      !!tenantWithTemplate.template,
-    );
   }
 
   // URLs for template props (navigation links — use basePath to avoid double prefix)
@@ -108,67 +81,42 @@ export default async function TenantStorePage({
     });
 
     const templateSlug = baseTemplate.slug;
-    console.log("[page] templateSlug:", templateSlug, "baseTemplate:", baseTemplate.name);
 
-    // Fetch defaults.json early — needed for hero image fallback and later merging
+    // Load template assets from S3 (cached — shared with layout.tsx, no duplicate fetches)
     const baseS3Path = `templates/${templateSlug}`;
     const normalizedS3Path = tenantTemplate.s3Path?.replace(/\/+$/, '') || null;
-    let defaults: any = null;
-    for (const s3Prefix of [normalizedS3Path, baseS3Path].filter(Boolean)) {
-      try {
-        defaults = await getJsonFromS3(`${s3Prefix}/defaults.json`);
-        if (defaults) break;
-      } catch {
-        // continue
-      }
-    }
+    const templateAssets = await getTemplateAssets(normalizedS3Path, baseS3Path);
+    const { layout, customCss, defaults } = templateAssets;
 
-    // Process hero image URL — DB value, or fallback to defaults.json heroImagePath
+    // Sign hero image and logo URLs in parallel
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
     const fallbackS3Path = normalizedS3Path || baseS3Path;
     if (!heroImageUrl && defaults?.heroImagePath && fallbackS3Path) {
       heroImageUrl = `${fallbackS3Path}/${defaults.heroImagePath}`;
-      console.log("[page] Using defaults.json heroImagePath fallback:", heroImageUrl);
-    }
-    if (
-      heroImageUrl &&
-      !heroImageUrl.startsWith("/") &&
-      !heroImageUrl.startsWith("http")
-    ) {
-      try {
-        console.log("[DEBUG] StorePage: Signing heroImageUrl:", heroImageUrl);
-        // If the hero image is at the tenant path, fall back to base template path
-        const heroFallbackKey = normalizedS3Path && defaults?.heroImagePath
-          ? `${baseS3Path}/${defaults.heroImagePath}`
-          : null;
-        const signedUrl = heroFallbackKey
-          ? await getFileUrlWithFallback(heroImageUrl, heroFallbackKey)
-          : await getFileUrl(heroImageUrl);
-        console.log(
-          "[DEBUG] StorePage: Signed hero URL result:",
-          signedUrl ? signedUrl.substring(0, 50) + "..." : "null",
-        );
-        heroImageUrl = signedUrl;
-      } catch (error) {
-        console.error("Error fetching hero image from S3:", error);
-      }
     }
 
-    // Process logo URL (sign if S3 path)
     let logoUrl = tenantTemplate.logoUrl || null;
-    if (logoUrl && !logoUrl.startsWith("/") && !logoUrl.startsWith("http")) {
-      try {
-        console.log("[DEBUG] StorePage: Signing logoUrl:", logoUrl);
-        const signedUrl = await getFileUrl(logoUrl);
-        console.log(
-          "[DEBUG] StorePage: Signed logo URL result:",
-          signedUrl ? signedUrl.substring(0, 50) + "..." : "null",
-        );
-        logoUrl = signedUrl;
-      } catch (error) {
-        console.error("Error fetching logo from S3:", error);
-      }
-    }
+
+    // Sign both in parallel (independent operations)
+    const [signedHero, signedLogo] = await Promise.all([
+      (async () => {
+        if (!heroImageUrl || heroImageUrl.startsWith("/") || heroImageUrl.startsWith("http")) return heroImageUrl;
+        try {
+          const heroFallbackKey = normalizedS3Path && defaults?.heroImagePath
+            ? `${baseS3Path}/${defaults.heroImagePath}` : null;
+          return heroFallbackKey
+            ? await getFileUrlWithFallback(heroImageUrl, heroFallbackKey)
+            : await getFileUrl(heroImageUrl);
+        } catch { return heroImageUrl; }
+      })(),
+      (async () => {
+        if (!logoUrl || logoUrl.startsWith("/") || logoUrl.startsWith("http")) return logoUrl;
+        try { return await getFileUrl(logoUrl); }
+        catch { return logoUrl; }
+      })(),
+    ]);
+    heroImageUrl = signedHero;
+    logoUrl = signedLogo;
 
     // Build common template props
     const templateProps = {
@@ -192,68 +140,33 @@ export default async function TenantStorePage({
       logoUrl,
     };
 
-    // PATH 1: Data-driven template (layout.json in S3)
-    // Templates with layout.json in S3 are data-driven (cannabizz, wellness-nature, gta-cannabis)
-    // Templates WITHOUT layout.json fall through to PATH 2 (healingbuds)
-    const tenantS3Path = normalizedS3Path;
-    let layout: TemplateLayout | null = null;
-    let customCss: string | null = null;
-    let layoutS3Path: string | null = null;
-
-    console.log("[page] S3 paths:", [tenantS3Path, baseS3Path].filter(Boolean));
-    for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
-      try {
-        console.log("[page] Trying S3:", `${s3Prefix}/layout.json`);
-        layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
-        if (layout) {
-          console.log("[page] FOUND layout.json, using data-driven PATH 1");
-          layoutS3Path = s3Prefix;
-          customCss = await getTextFromS3(`${s3Prefix}/styles.css`);
-          break;
-        }
-      } catch {
-        console.log("[page] No layout.json at:", s3Prefix);
-      }
-    }
-
-    console.log("[page] layout found:", !!layout, "falling to legacy:", !layout);
-
-    // Verify deployment version
-    console.log("[DEPLOY_CHECK] Loading Store Page - Version: Watermark_V2");
-
     // Sign section-level asset URLs in layout.json configs
     // Templates can reference assets by relative filename (e.g. "assets/about-photo.jpg")
     // which need to be resolved to signed S3 URLs before rendering.
     // Cloned tenants have layout.json at their S3 path but assets may only exist
     // in the base template path, so we fall back to baseS3Path when needed.
-    const assetS3Path = layoutS3Path || tenantS3Path;
+    const assetS3Path = normalizedS3Path || baseS3Path;
     const needsFallback = assetS3Path && assetS3Path !== baseS3Path;
     if (layout?.sections && assetS3Path) {
       const assetKeys = ['imageUrl', 'videoUrl', 'watermarkUrl'] as const;
 
-      async function signAssetUrl(val: string): Promise<string> {
+      function signAssetUrl(val: string): Promise<string> {
         const primaryKey = `${assetS3Path}/${val}`;
         const fallbackKey = `${baseS3Path}/${val}`;
         return needsFallback
-          ? await getFileUrlWithFallback(primaryKey, fallbackKey)
-          : await getFileUrl(primaryKey);
+          ? getFileUrlWithFallback(primaryKey, fallbackKey)
+          : getFileUrl(primaryKey);
       }
 
+      // Collect all signing tasks, then execute in parallel
+      const signingTasks: Array<{ target: any; key: string; promise: Promise<string> }> = [];
       for (const section of layout.sections) {
-        // Sign top-level config asset URLs
         for (const key of assetKeys) {
           const val = section.config?.[key];
           if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
-            try {
-              console.log(`[page] Signing section ${key} for ${section.type}:`, `${assetS3Path}/${val}`);
-              (section.config as any)[key] = await signAssetUrl(val);
-            } catch (err) {
-              console.error(`[page] Failed to sign section ${key} for ${section.type}:`, err);
-            }
+            signingTasks.push({ target: section.config, key, promise: signAssetUrl(val) });
           }
         }
-
-        // Sign asset URLs inside items arrays (e.g. Gallery items with imageUrl)
         const items = section.config?.items;
         if (Array.isArray(items)) {
           for (const item of items) {
@@ -261,17 +174,20 @@ export default async function TenantStorePage({
               for (const key of assetKeys) {
                 const val = (item as any)[key];
                 if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
-                  try {
-                    (item as any)[key] = await signAssetUrl(val);
-                  } catch (err) {
-                    console.error(`[page] Failed to sign item ${key} for ${section.type}:`, err);
-                  }
+                  signingTasks.push({ target: item, key, promise: signAssetUrl(val) });
                 }
               }
             }
           }
         }
       }
+
+      const results = await Promise.allSettled(signingTasks.map(t => t.promise));
+      results.forEach((result, i) => {
+        if (result.status === 'fulfilled') {
+          (signingTasks[i].target as any)[signingTasks[i].key] = result.value;
+        }
+      });
     }
 
     if (layout) {

@@ -55,11 +55,10 @@ export async function GET(request: NextRequest) {
       where.isActive = false;
     }
 
-    // Get total count
-    const total = await prisma.users.count({ where });
-
-    // Get customers with pagination
-    const customers = await prisma.users.findMany({
+    // Get total count and customers in parallel
+    const [total, customers] = await Promise.all([
+      prisma.users.count({ where }),
+      prisma.users.findMany({
       where,
       select: {
         id: true,
@@ -81,7 +80,8 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
-    });
+    }),
+    ]);
 
     return NextResponse.json({
       customers,

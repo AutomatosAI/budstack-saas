@@ -11,7 +11,7 @@ import {
   Store,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { getTenantUrl } from "@/lib/tenant";
+import { getTenantUrl } from "@/lib/tenant-utils";
 import { QuickActionsWidget } from "@/components/admin/QuickActionsWidget";
 
 export default async function TenantAdminDashboard() {

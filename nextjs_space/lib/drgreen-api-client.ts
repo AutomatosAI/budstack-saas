@@ -13,6 +13,8 @@ interface DrGreenApiOptions {
 const DEFAULT_DOCTOR_GREEN_API_URL =
   process.env.DOCTOR_GREEN_API_URL || 'https://api.drgreennft.com/api/v1';
 
+const isDev = process.env.NODE_ENV === 'development';
+
 /**
  * Generate ECDSA signature for API request.
  * Uses explicit SHA-256 hashing — matches the working consultation submit route
@@ -55,7 +57,7 @@ export function generateDrGreenSignature(payload: string, secretKey: string): st
   const privateKeyPEM = normalizePEM(secretKey);
 
   const headerMatch = privateKeyPEM.match(/-----BEGIN ([^-]+)-----/);
-  console.log(`[DrGreen Signature] PEM type: "${headerMatch?.[1] || "UNKNOWN"}" | len: ${privateKeyPEM.length}`);
+  if (isDev) console.log(`[DrGreen Signature] PEM type: "${headerMatch?.[1] || "UNKNOWN"}" | len: ${privateKeyPEM.length}`);
 
   let privateKey;
   try {
@@ -65,7 +67,7 @@ export function generateDrGreenSignature(payload: string, secretKey: string): st
     if (privateKeyPEM.includes("BEGIN PRIVATE KEY")) {
       const body = privateKeyPEM.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\s+/g, "");
       const ecPEM = `-----BEGIN EC PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join("\n") || body}\n-----END EC PRIVATE KEY-----`;
-      console.log("[DrGreen Signature] Retrying with EC PRIVATE KEY header...");
+      if (isDev) console.log("[DrGreen Signature] Retrying with EC PRIVATE KEY header...");
       privateKey = crypto.createPrivateKey(ecPEM);
     } else {
       throw keyError;
@@ -116,8 +118,10 @@ export async function callDrGreenAPI<T>(
   const maskedKey = apiKey ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}` : 'MISSING';
   const hasSecret = !!secretKey;
 
-  console.log(`[DrGreen API] >>> ${method} ${fullUrl}`);
-  console.log(`[DrGreen API]   apiKey: ${maskedKey} | hasSecret: ${hasSecret} | baseUrl: ${baseUrl}`);
+  if (isDev) {
+    console.log(`[DrGreen API] >>> ${method} ${fullUrl}`);
+    console.log(`[DrGreen API]   apiKey: ${maskedKey} | hasSecret: ${hasSecret} | baseUrl: ${baseUrl}`);
+  }
 
   if (!apiKey || !secretKey) {
     console.error(`[DrGreen API] MISSING_CREDENTIALS — apiKey: ${!!apiKey}, secretKey: ${!!secretKey}`);
@@ -128,7 +132,7 @@ export async function callDrGreenAPI<T>(
     ? (typeof body === 'string' ? body : JSON.stringify(body))
     : '';
 
-  if (body) {
+  if (isDev && body) {
     console.log(`[DrGreen API]   body: ${payload.slice(0, 200)}`);
   }
 
@@ -159,11 +163,11 @@ export async function callDrGreenAPI<T>(
     signaturePayload = payload;
   }
 
-  console.log(`[DrGreen API]   signing: "${signaturePayload.slice(0, 100)}${signaturePayload.length > 100 ? '...' : ''}" (${signaturePayload.length} chars)`);
+  if (isDev) console.log(`[DrGreen API]   signing: "${signaturePayload.slice(0, 100)}${signaturePayload.length > 100 ? '...' : ''}" (${signaturePayload.length} chars)`);
 
   const signature = generateDrGreenSignature(signaturePayload, secretKey);
   requestHeaders['x-auth-signature'] = signature;
-  console.log(`[DrGreen API]   signature: ${signature.slice(0, 20)}... (${signature.length} chars)`);
+  if (isDev) console.log(`[DrGreen API]   signature: ${signature.slice(0, 20)}... (${signature.length} chars)`);
 
   const startTime = Date.now();
   const response = await fetch(fullUrl, {
@@ -174,7 +178,7 @@ export async function callDrGreenAPI<T>(
   });
   const elapsed = Date.now() - startTime;
 
-  console.log(`[DrGreen API] <<< ${response.status} ${response.statusText} (${elapsed}ms)`);
+  if (isDev) console.log(`[DrGreen API] <<< ${response.status} ${response.statusText} (${elapsed}ms)`);
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
@@ -196,12 +200,12 @@ export async function callDrGreenAPI<T>(
     throw new Error(`Doctor Green API returned non-JSON response: ${responseText.slice(0, 200)}`);
   }
 
-  console.log(`[DrGreen API]   response data: ${JSON.stringify(data).slice(0, 300)}`);
+  if (isDev) console.log(`[DrGreen API]   response data: ${JSON.stringify(data).slice(0, 300)}`);
 
   // Check success flag — handle both string "true" and boolean true
   if (validateSuccessFlag) {
     const successVal = data?.success;
-    console.log(`[DrGreen API]   validateSuccessFlag: success=${JSON.stringify(successVal)} (type: ${typeof successVal})`);
+    if (isDev) console.log(`[DrGreen API]   validateSuccessFlag: success=${JSON.stringify(successVal)} (type: ${typeof successVal})`);
     if (successVal !== 'true' && successVal !== true) {
       console.error(`[DrGreen API]   FAILED success check — message: ${data?.message}`);
       throw new Error(data?.message || 'Dr. Green API error');

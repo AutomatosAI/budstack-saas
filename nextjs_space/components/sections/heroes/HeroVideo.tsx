@@ -59,7 +59,6 @@ export function HeroVideo({
   return (
     <section className={`relative ${selectedHeightClass} flex items-center overflow-hidden`}>
       {/* Background: Video → Image → Gradient fallback */}
-      {/* Background: Video → Image → Gradient fallback */}
       {heroType === 'video' && videoUrl ? (
         <video
           autoPlay

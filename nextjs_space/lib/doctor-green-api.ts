@@ -90,8 +90,6 @@ export async function doctorGreenRequest<T>(
     throw new Error("MISSING_CREDENTIALS");
   }
 
-  if (!apiKey) console.warn("Warning: No Dr Green API Key provided");
-
   return callDrGreenAPI(endpoint, {
     method,
     apiKey,
@@ -194,7 +192,6 @@ export interface DoctorGreenOrder {
 // Professional product image fallbacks (AI-generated medical-grade images)
 // Doctor Green staging API returns image paths but files are not hosted (404 errors)
 // Country code conversion (Alpha-2 to Alpha-3 ISO codes)
-// Country code conversion (Alpha-2 to Alpha-3 ISO codes)
 const COUNTRY_CODE_MAP: Record<string, string> = {
   PT: 'PRT',
   GB: 'GBR',
@@ -248,6 +245,56 @@ function toAlpha3(code: string): string {
  * @param country - Two-letter country code (e.g., 'PT' for Portugal, 'SA' for South Africa)
  * @default 'SA' - South Africa (only live site currently)
  */
+/**
+ * Normalize a Dr Green product: resolve image URLs, calculate stock, map currency.
+ */
+function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorGreenProduct {
+  const apiBase = API_URL.replace(/\/api\/v1\/?$/, '');
+  const IMAGE_BASE_URL = apiBase || "https://api.drgreennft.com";
+  const defaultCurrency = getCurrencyByCountry(country);
+
+  // Construct full image URL if relative
+  let fullImageUrl = product.imageUrl;
+  if (fullImageUrl && !fullImageUrl.startsWith("http")) {
+    const baseUrl = IMAGE_BASE_URL.endsWith('/') ? IMAGE_BASE_URL.slice(0, -1) : IMAGE_BASE_URL;
+    const path = fullImageUrl.startsWith('/') ? fullImageUrl : `/${fullImageUrl}`;
+    fullImageUrl = `${baseUrl}${path}`;
+  }
+
+  // Calculate stock from strainLocations, fall back to product-level fields
+  const locations = product.strainLocations || [];
+  const locationStock = locations.reduce((sum: number, loc: any) => sum + (loc.stockQuantity || 0), 0);
+  const isAvailableAtAnyLocation = locations.some((loc: any) => loc.isAvailable === true);
+  const totalStock = locationStock > 0 ? locationStock : (product.stockQuantity || 0);
+  const isAvailable = locations.length > 0
+    ? isAvailableAtAnyLocation
+    : (product.isAvailable !== false && totalStock > 0);
+
+  // Match local currency price
+  const localCurrencyPrice = product.prices?.find(
+    (p: any) => p.currency?.toLowerCase() === defaultCurrency.toLowerCase()
+  );
+  const price = localCurrencyPrice?.retailPrice || product.retailPrice || 0;
+  const currency = localCurrencyPrice?.currency
+    ? localCurrencyPrice.currency.toUpperCase()
+    : (product.currency || defaultCurrency);
+
+  return {
+    ...product,
+    strain_type: (product.type?.toUpperCase() as "INDICA" | "SATIVA" | "HYBRID") || "HYBRID",
+    thc_content: product.thc || 0,
+    cbd_content: product.cbd || 0,
+    price,
+    currency,
+    in_stock: isAvailable && totalStock > 0,
+    isAvailable: isAvailable && totalStock > 0,
+    stock_quantity: totalStock,
+    stockQuantity: totalStock,
+    image_url: fullImageUrl,
+    imageUrl: fullImageUrl,
+  };
+}
+
 export async function fetchProducts(
   country: string = "SA",
   config: DoctorGreenConfig,
@@ -257,148 +304,20 @@ export async function fetchProducts(
     data: { strains: DoctorGreenProduct[] };
   }>(`/strains?country=${alpha3Code}`, { config });
 
-  // Extract strains from the response and normalize the data
   const products = response.data?.strains || [];
-
-  // Base URL for Doctor Green images
-  // Use the API_URL environment variable base, removing /api/v1 if present
-  // or default to staging base if not set
-  const apiBase = API_URL.replace(/\/api\/v1\/?$/, '');
-  const IMAGE_BASE_URL = apiBase || "https://api.drgreennft.com";
-
-  // Get default currency for this country as fallback
-  const defaultCurrency = getCurrencyByCountry(country);
-
-  // Normalize fields for backwards compatibility with our UI
-  return products.map((product) => {
-    // Construct full image URL if imageUrl is relative
-    let fullImageUrl = product.imageUrl;
-    if (fullImageUrl && !fullImageUrl.startsWith("http")) {
-      // Ensure we don't end up with double slashes
-      const baseUrl = IMAGE_BASE_URL.endsWith('/') ? IMAGE_BASE_URL.slice(0, -1) : IMAGE_BASE_URL;
-      const path = fullImageUrl.startsWith('/') ? fullImageUrl : `/${fullImageUrl}`;
-      fullImageUrl = `${baseUrl}${path}`;
-    }
-
-    // Calculate stock from strainLocations array, falling back to product-level fields
-    const locations = product.strainLocations || [];
-    const locationStock = locations.reduce(
-      (sum: number, loc: any) => sum + (loc.stockQuantity || 0),
-      0,
-    );
-    const isAvailableAtAnyLocation = locations.some(
-      (loc: any) => loc.isAvailable === true,
-    );
-
-    // Use location-level data if available, otherwise fall back to product-level
-    const totalStock = locationStock > 0 ? locationStock : (product.stockQuantity || 0);
-    const isAvailable = locations.length > 0
-      ? isAvailableAtAnyLocation
-      : (product.isAvailable !== false && totalStock > 0);
-
-    // Try to find price matching the local currency
-    const localCurrencyPrice = product.prices?.find(
-      (p: any) => p.currency?.toLowerCase() === defaultCurrency.toLowerCase()
-    );
-
-    const price = localCurrencyPrice?.retailPrice || product.retailPrice || 0;
-    const currency = localCurrencyPrice?.currency
-      ? localCurrencyPrice.currency.toUpperCase()
-      : (product.currency || defaultCurrency);
-
-    return {
-      ...product,
-      strain_type:
-        (product.type?.toUpperCase() as "INDICA" | "SATIVA" | "HYBRID") ||
-        "HYBRID",
-      thc_content: product.thc || 0,
-      cbd_content: product.cbd || 0,
-      price: price,
-      currency: currency,
-      in_stock: isAvailable && totalStock > 0,
-      isAvailable: isAvailable && totalStock > 0,
-      stock_quantity: totalStock,
-      stockQuantity: totalStock,
-      image_url: fullImageUrl,
-      imageUrl: fullImageUrl,
-    };
-  });
+  return products.map((product) => normalizeProduct(product, country));
 }
 
-/**
- * Fetch a single product by ID
- * @default country='SA' - South Africa (only live site currently)
- */
 export async function fetchProduct(
   productId: string,
   country: string = "SA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct> {
-  const alpha3Code = toAlpha3(country);
   const response = await doctorGreenRequest<{ data: DoctorGreenProduct }>(
     `/strains/${productId}`,
     { config },
   );
-
-  const product = response.data;
-
-  // Base URL for Doctor Green images
-  const apiBase = API_URL.replace(/\/api\/v1\/?$/, '');
-  const IMAGE_BASE_URL = apiBase || "https://api.drgreennft.com";
-
-  // Get default currency for this country as fallback
-  const defaultCurrency = getCurrencyByCountry(country);
-
-  // Construct full image URL if imageUrl is relative
-  let fullImageUrl = product.imageUrl;
-  if (fullImageUrl && !fullImageUrl.startsWith("http")) {
-    // Ensure we don't end up with double slashes
-    const baseUrl = IMAGE_BASE_URL.endsWith('/') ? IMAGE_BASE_URL.slice(0, -1) : IMAGE_BASE_URL;
-    const path = fullImageUrl.startsWith('/') ? fullImageUrl : `/${fullImageUrl}`;
-    fullImageUrl = `${baseUrl}${path}`;
-  }
-
-  // Calculate stock from strainLocations array, falling back to product-level fields
-  const locations = product.strainLocations || [];
-  const locationStock = locations.reduce(
-    (sum: number, loc: any) => sum + (loc.stockQuantity || 0),
-    0,
-  );
-  const isAvailableAtAnyLocation = locations.some(
-    (loc: any) => loc.isAvailable === true,
-  );
-
-  const totalStock = locationStock > 0 ? locationStock : (product.stockQuantity || 0);
-  const isAvailable = locations.length > 0
-    ? isAvailableAtAnyLocation
-    : (product.isAvailable !== false && totalStock > 0);
-
-  // Try to find price matching the local currency
-  const localCurrencyPrice = product.prices?.find(
-    (p: any) => p.currency?.toLowerCase() === defaultCurrency.toLowerCase()
-  );
-
-  const price = localCurrencyPrice?.retailPrice || product.retailPrice || 0;
-  const currency = localCurrencyPrice?.currency
-    ? localCurrencyPrice.currency.toUpperCase()
-    : (product.currency || defaultCurrency);
-
-  return {
-    ...product,
-    strain_type:
-      (product.type?.toUpperCase() as "INDICA" | "SATIVA" | "HYBRID") ||
-      "HYBRID",
-    thc_content: product.thc || 0,
-    cbd_content: product.cbd || 0,
-    price: price,
-    currency: currency,
-    in_stock: isAvailable && totalStock > 0,
-    isAvailable: isAvailable && totalStock > 0,
-    stock_quantity: totalStock,
-    stockQuantity: totalStock,
-    image_url: fullImageUrl,
-    imageUrl: fullImageUrl,
-  };
+  return normalizeProduct(response.data, country);
 }
 
 /**

@@ -84,9 +84,9 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Create Clerk User
+    const client = await clerkClient();
     let clerkUser;
     try {
-      const client = await clerkClient();
       clerkUser = await client.users.createUser({
         emailAddress: [email],
         password,
@@ -113,7 +113,6 @@ export async function POST(req: NextRequest) {
     // 3. Create Clerk Organization
     let clerkOrg;
     try {
-      const client = await clerkClient();
       clerkOrg = await client.organizations.createOrganization({
         name: businessName,
         slug: subdomain, // Using subdomain as the org slug for consistency
@@ -128,7 +127,6 @@ export async function POST(req: NextRequest) {
       // Clean up user if org creation fails? 
       // Ideally yes, but for now let's just error out. 
       // Deleting the user requires the ID.
-      const client = await clerkClient();
       await client.users.deleteUser(clerkUser.id);
 
       if (error.errors?.[0]?.code === "form_identifier_exists") { // Only applies to user, but slug collision is distinct
@@ -144,7 +142,6 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Update Clerk User Metadata with new Org ID (for easier lookup later)
-    const client = await clerkClient();
     await client.users.updateUserMetadata(clerkUser.id, {
       publicMetadata: {
         role: "TENANT_ADMIN",
@@ -300,7 +297,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("Onboarding error:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

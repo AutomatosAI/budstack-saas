@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Tenant } from "@/types/client";
 import { TenantSettings } from "@/lib/types";
+import { sanitizeCss } from "@/lib/css-utils";
 
 interface TenantThemeProviderProps {
   tenant?: Tenant;
@@ -38,7 +39,7 @@ export function TenantThemeProvider({
     tenantTemplate?.designSystem || (settings as any).designSystem;
   const customCss = tenantTemplate?.customCss || settings.customCSS;
   const sanitizedCustomCss = useMemo(
-    () => sanitizeCustomCss(customCss),
+    () => sanitizeCss(customCss),
     [customCss],
   );
   const containerRef = useRef<HTMLDivElement>(null);
@@ -341,11 +342,3 @@ function getTenantThemeClasses(settings: TenantSettings): string {
   return classes.join(" ");
 }
 
-function sanitizeCustomCss(css?: string | null): string {
-  if (!css) return "";
-
-  return css
-    .replace(/@import[^;]+;/gi, "")
-    .replace(/url\([^)]+\)/gi, "")
-    .replace(/expression\([^)]+\)/gi, "");
-}

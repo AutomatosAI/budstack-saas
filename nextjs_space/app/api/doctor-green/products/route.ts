@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchProducts } from "@/lib/doctor-green-api";
+import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 
 /**
  * GET /api/doctor-green/products?country=PT
@@ -28,8 +29,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch tenant-specific Dr Green Config
-    const { getTenantDrGreenConfig } = await import("@/lib/tenant-config");
     const doctorGreenConfig = await getTenantDrGreenConfig(tenant.id);
 
     // Fetch from Doctor Green API with country code (or tenant default) and config

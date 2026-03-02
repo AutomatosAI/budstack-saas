@@ -6,8 +6,7 @@
  */
 
 import { prisma } from "./db";
-import { copyDirectory } from "./s3-copy";
-import { deleteS3Directory } from "./s3";
+import { copyS3Directory, deleteS3Directory } from "./s3";
 import { getBucketConfig } from "./aws-config";
 
 /**
@@ -73,7 +72,7 @@ export async function submitToMarketplace(
   const stagingPrefix = `${folderPrefix}marketplace-submissions/${submission.id}/`;
   const sourcePrefix = `${tenantTemplate.s3Path}/`;
 
-  await copyDirectory(sourcePrefix, stagingPrefix);
+  await copyS3Directory(sourcePrefix, stagingPrefix);
 
   // Update the submission with the staging path
   const updated = await prisma.marketplace_submissions.update({
@@ -168,7 +167,7 @@ export async function resubmitToMarketplace(submissionId: string) {
   const sourcePrefix = `${submission.tenantTemplate.s3Path}/`;
   const stagingPrefix = submission.stagingS3Path;
 
-  await copyDirectory(sourcePrefix, stagingPrefix);
+  await copyS3Directory(sourcePrefix, stagingPrefix);
 
   // Reset status to pending
   const history = (submission.reviewHistory as any[]) || [];

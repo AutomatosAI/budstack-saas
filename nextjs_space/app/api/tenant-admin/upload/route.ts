@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { uploadFile } from "@/lib/s3";
 import { getBucketConfig } from "@/lib/aws-config";
+import { validateUpload } from "@/lib/upload-validation";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,6 +19,11 @@ export async function POST(req: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    const validation = validateUpload(file, { allowDocuments: true });
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
     // Convert File to Buffer

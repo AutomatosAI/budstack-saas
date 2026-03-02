@@ -34,7 +34,6 @@ export async function uploadFile(
 export async function getFileUrl(key: string): Promise<string> {
   const s3Client = await createS3Client();
   const { bucketName } = await getBucketConfig();
-  console.log("[DEBUG] getFileUrl for key:", key, "Bucket:", bucketName);
 
   const command = new GetObjectCommand({
     Bucket: bucketName,
@@ -62,10 +61,12 @@ export async function fileExistsInS3(key: string): Promise<boolean> {
  * that may live in the base template path rather than the tenant's clone path.
  */
 export async function getFileUrlWithFallback(primaryKey: string, fallbackKey: string): Promise<string> {
-  if (await fileExistsInS3(primaryKey)) {
-    return getFileUrl(primaryKey);
-  }
-  return getFileUrl(fallbackKey);
+  // Check existence and pre-generate fallback URL in parallel to avoid sequential round-trips
+  const [exists, fallbackUrl] = await Promise.all([
+    fileExistsInS3(primaryKey),
+    getFileUrl(fallbackKey),
+  ]);
+  return exists ? await getFileUrl(primaryKey) : fallbackUrl;
 }
 
 export async function deleteFile(key: string): Promise<void> {
@@ -206,20 +207,24 @@ export async function copyS3Directory(
       }),
     );
 
-    for (const obj of listResponse.Contents || []) {
-      if (!obj.Key) continue;
-      const relativePath = obj.Key.slice(sourcePrefix.length);
-      const destKey = destPrefix + relativePath;
+    if (!listResponse.Contents || listResponse.Contents.length === 0) break;
 
-      await s3Client.send(
-        new CopyObjectCommand({
-          Bucket: bucketName,
-          CopySource: `${bucketName}/${obj.Key}`,
-          Key: destKey,
-        }),
-      );
-      copyCount++;
-    }
+    await Promise.all(
+      listResponse.Contents.map(async (obj) => {
+        if (!obj.Key) return;
+        const relativePath = obj.Key.slice(sourcePrefix.length);
+        const destKey = destPrefix + relativePath;
+
+        await s3Client.send(
+          new CopyObjectCommand({
+            Bucket: bucketName,
+            CopySource: encodeURI(`${bucketName}/${obj.Key}`),
+            Key: destKey,
+          }),
+        );
+        copyCount++;
+      }),
+    );
 
     continuationToken = listResponse.NextContinuationToken;
   } while (continuationToken);

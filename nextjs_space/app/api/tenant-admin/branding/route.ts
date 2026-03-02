@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { uploadFile, getJsonFromS3 } from "@/lib/s3";
 import { TenantSettings } from "@/lib/types";
+import { deepMerge } from "@/lib/utils";
 
 export async function PUT(req: NextRequest) {
   try {
@@ -290,19 +291,3 @@ export async function POST(req: NextRequest) {
   return PUT(req);
 }
 
-/** Deep merge objects — target values win over source, but only if non-empty */
-function deepMerge(source: any, target: any): any {
-  if (!source) return target;
-  if (!target) return source;
-  const result = { ...source };
-  for (const key of Object.keys(target)) {
-    const val = target[key];
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      result[key] = deepMerge(source[key], val);
-    } else if (val !== undefined && val !== null && val !== '') {
-      result[key] = val;
-    }
-    // Skip empty/undefined values — keeps source intact
-  }
-  return result;
-}

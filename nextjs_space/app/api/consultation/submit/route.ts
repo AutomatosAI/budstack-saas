@@ -52,10 +52,11 @@ function generateSignature(payload: string, secretKey: string): string {
 
     const privateKeyPEM = normalizePEM(secretKey);
 
-    // Log PEM header type for diagnostics (don't log the key itself)
     const headerMatch = privateKeyPEM.match(/-----BEGIN ([^-]+)-----/);
-    const pemLines = privateKeyPEM.split("\n").length;
-    console.log(`[Signature] PEM type: "${headerMatch?.[1] || "UNKNOWN"}" | lines: ${pemLines} | bodyLen: ${privateKeyPEM.length}`);
+    if (process.env.NODE_ENV === 'development') {
+      const pemLines = privateKeyPEM.split("\n").length;
+      console.log(`[Signature] PEM type: "${headerMatch?.[1] || "UNKNOWN"}" | lines: ${pemLines}`);
+    }
 
     // Use createPrivateKey for better format handling (supports PKCS#8, SEC1 EC, PKCS#1 RSA)
     let privateKey;
@@ -73,8 +74,6 @@ function generateSignature(payload: string, secretKey: string): string {
         throw keyError;
       }
     }
-
-    console.log(`[Signature] Key loaded: type=${privateKey.type} asymmetricKeyType=${privateKey.asymmetricKeyType}`);
 
     const sign = crypto.createSign("SHA256");
     sign.update(payload);
@@ -285,7 +284,9 @@ export async function POST(request: NextRequest) {
       const { apiKey, secretKey, apiUrl } = await getTenantDrGreenConfig(body.tenantId);
       const drGreenApiUrl = apiUrl || "https://api.drgreennft.com/api/v1";
 
-      console.log(`[Consultation] CREDENTIALS: apiUrl=${drGreenApiUrl} | apiKeyLen=${apiKey?.length} | secretKeyLen=${secretKey?.length} | tenantId=${body.tenantId}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[Consultation] Credentials loaded for tenant ${body.tenantId}`);
+      }
 
       // Format date for Dr. Green API (YYYY-MM-DD)
       const dobFormatted = body.dateOfBirth
@@ -387,27 +388,13 @@ export async function POST(request: NextRequest) {
       // Submit to Dr. Green API
       const payloadStr = JSON.stringify(drGreenPayload);
 
-      console.log("\n=== DR GREEN API DEBUG ===");
-      console.log("API URL:", `${drGreenApiUrl}/dapp/clients`);
-      console.log("Has API Key:", !!apiKey);
-      console.log("Has Secret Key:", !!secretKey);
-      console.log("\n=== PHONE FIELDS DEBUG ===");
-      console.log("Raw phoneCode from form:", JSON.stringify(body.phoneCode));
-      console.log(
-        "Raw phoneNumber from form:",
-        JSON.stringify(body.phoneNumber),
-      );
-      console.log(
-        "Cleaned phoneCode:",
-        JSON.stringify(body.phoneCode.replace(/[^\+\d]/g, "")),
-      );
-      console.log(
-        "Cleaned contactNumber:",
-        JSON.stringify(body.phoneNumber.replace(/\D/g, "")),
-      );
-      console.log("\n=== PAYLOAD ===");
-      console.log(JSON.stringify(drGreenPayload, null, 2));
-      console.log("\n===================\n");
+      if (process.env.NODE_ENV === 'development') {
+        console.log("[Consultation] DR GREEN DEBUG:", {
+          apiUrl: `${drGreenApiUrl}/dapp/clients`,
+          hasApiKey: !!apiKey,
+          hasSecretKey: !!secretKey,
+        });
+      }
 
       const signature = generateSignature(payloadStr, secretKey);
 
@@ -433,8 +420,6 @@ export async function POST(request: NextRequest) {
         console.error("Dr. Green API Error Response:", {
           status: response.status,
           statusText: response.statusText,
-          body: errorData,
-          headers: Object.fromEntries(response.headers.entries()),
         });
 
         throw new Error(
@@ -443,7 +428,6 @@ export async function POST(request: NextRequest) {
       }
 
       const drGreenResponse = await response.json();
-      console.log("[Consultation] DR_GREEN_RESPONSE:", JSON.stringify(drGreenResponse).slice(0, 500));
 
       // Extract KYC link and client ID from response
       // Dr Green API nests client under data.client (confirmed from live response)
@@ -458,7 +442,7 @@ export async function POST(request: NextRequest) {
         drGreenResponse.client?.kycLink ||
         drGreenResponse.kycLink || null;
 
-      console.log(`[Consultation] RESULT: clientId=${clientId} | kycLink=${kycLink ? kycLink.slice(0, 80) + '...' : 'NONE'} | apiKeyUsed=${apiKey?.slice(0, 6)}`);
+      console.log(`[Consultation] Result: clientId=${clientId ? 'OK' : 'MISSING'} | kycLink=${kycLink ? 'OK' : 'NONE'}`);
 
       if (!clientId) {
         console.error("Dr. Green API response missing client ID:", JSON.stringify(drGreenResponse));
@@ -572,7 +556,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("Consultation submission error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Internal server error" },
+      { success: false, error: "Internal server error" },
       { status: 500 },
     );
   }

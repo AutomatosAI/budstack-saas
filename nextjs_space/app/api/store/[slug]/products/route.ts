@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchProducts } from "@/lib/doctor-green-api";
+import { fetchProducts, fetchProduct as fetchSingleProduct } from "@/lib/doctor-green-api";
 import { getTenantBySlug } from "@/lib/tenant";
+import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 
 /**
  * GET /api/store/[slug]/products
@@ -18,10 +19,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("id");
 
-    // Get tenant by slug
-    console.log(`[API] Fetching tenant for slug: '${slug}'`);
     tenant = await getTenantBySlug(slug);
-    console.log(`[API] Found tenant: ${tenant ? tenant.subdomain : "null"}`);
 
     if (!tenant) {
       return NextResponse.json(
@@ -35,52 +33,39 @@ export async function GET(
       );
     }
 
-    // Get country code from tenant (default to SA - South Africa, the only live site)
     const country = tenant.countryCode || "SA";
-
-    // Fetch tenant-specific Dr Green Config
-    const { getTenantDrGreenConfig } = await import("@/lib/tenant-config");
     const doctorGreenConfig = await getTenantDrGreenConfig(tenant.id);
 
-    // Fetch from Doctor Green API with tenant's country code and config
-    const products = await fetchProducts(country, doctorGreenConfig);
-
-    // If product ID is provided, return single product with similar products
+    // Single product: fetch product + catalog in parallel for similar products
     if (productId) {
-      const product = products.find((p) => p.id === productId);
+      const [product, allProducts] = await Promise.all([
+        fetchSingleProduct(productId, country, doctorGreenConfig),
+        fetchProducts(country, doctorGreenConfig),
+      ]);
 
       if (!product) {
         return NextResponse.json(
-          {
-            success: false,
-            error: "Product not found",
-            data: null,
-          },
+          { success: false, error: "Product not found", data: null },
           { status: 404 },
         );
       }
 
-      // Find similar products (same type, excluding current product)
-      const similarProducts = products
-        .filter(
-          (p) => p.id !== productId && p.type === product.type && p.isAvailable,
-        )
-        .slice(0, 4); // Limit to 4 similar products
+      const similarProducts = allProducts
+        .filter((p) => p.id !== productId && p.type === product.type && p.isAvailable)
+        .slice(0, 4);
 
       return NextResponse.json({
         success: true,
         data: product,
-        similarProducts: similarProducts,
-        country: country,
-        tenant: {
-          businessName: tenant.businessName,
-          subdomain: tenant.subdomain,
-        },
+        similarProducts,
+        country,
+        tenant: { businessName: tenant.businessName, subdomain: tenant.subdomain },
         source: "api",
       });
     }
 
-    // Return all products
+    // All products
+    const products = await fetchProducts(country, doctorGreenConfig);
     return NextResponse.json({
       success: true,
       data: products,

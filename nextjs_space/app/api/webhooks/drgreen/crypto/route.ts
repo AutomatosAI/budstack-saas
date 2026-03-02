@@ -20,7 +20,9 @@ export async function POST(request: NextRequest) {
     rawBody = await request.text();
     const body = JSON.parse(rawBody);
 
-    console.log("[Crypto Webhook] Received:", JSON.stringify(body, null, 2));
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[Crypto Webhook] Received:", JSON.stringify(body, null, 2));
+    }
 
     // Extract key fields from webhook payload
     const {
@@ -85,6 +87,9 @@ export async function POST(request: NextRequest) {
         console.error("[Crypto Webhook] Signature verification failed");
         return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      console.error("[Crypto Webhook] No drGreenSecretKey configured, rejecting");
+      return NextResponse.json({ error: "Webhook secret not configured" }, { status: 401 });
     }
 
     // Map CoinRemitter status codes to payment status

@@ -7,6 +7,7 @@ import {
   createOrder as createDrGreenOrder,
   getCurrencyByCountry,
 } from "@/lib/doctor-green-api";
+import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 
 export async function POST(req: NextRequest) {
   try {
@@ -119,8 +120,6 @@ export async function POST(req: NextRequest) {
         platform_order_number: order.orderNumber, // Reference to BudStacks order
       };
 
-      // Fetch tenant-specific Dr Green Config
-      const { getTenantDrGreenConfig } = await import("@/lib/tenant-config");
       const doctorGreenConfig = await getTenantDrGreenConfig(tenant.id);
 
       const drGreenOrder = await createDrGreenOrder(

@@ -5,20 +5,13 @@ import { getSectionComponent } from '@/lib/section-registry';
 import type { SectionProps } from '@/lib/types/section-props';
 import type { TemplateLayout } from '@/lib/types/template-layout';
 import { motion } from 'framer-motion';
+import { sanitizeCss } from '@/lib/css-utils';
 
 interface Props {
   layout: TemplateLayout;
   sectionProps: SectionProps;
   customCss?: string | null;
   renderChrome?: boolean; // When false, skip nav/footer (layout handles them)
-}
-
-function sanitizeCss(css?: string | null): string {
-  if (!css) return '';
-  return css
-    .replace(/@import[^;]+;/gi, '')
-    .replace(/url\([^)]+\)/gi, '')
-    .replace(/expression\([^)]+\)/gi, '');
 }
 
 // --- SVG Divider Helpers ---

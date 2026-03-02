@@ -75,8 +75,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
       }
     } else {
-      // No secret configured — dev mode, allow through with warning
-      console.warn("[DrGreen Status] No drGreenSecretKey configured for tenant, skipping signature check");
+      // No secret configured — reject in production, allow in dev
+      if (process.env.NODE_ENV === 'production') {
+        console.error("[DrGreen Status] No drGreenSecretKey configured for tenant, rejecting webhook");
+        await logWebhook(resolved.tenantId, event, payload, false, "No webhook secret configured");
+        return NextResponse.json({ error: "Webhook secret not configured" }, { status: 401 });
+      }
+      console.warn("[DrGreen Status] No drGreenSecretKey configured for tenant, skipping signature check (dev mode)");
     }
 
     // --- Dispatch to Event Handler ---

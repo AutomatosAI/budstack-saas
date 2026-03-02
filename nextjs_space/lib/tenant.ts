@@ -3,6 +3,8 @@ import { headers } from 'next/headers';
 import { prisma } from './db';
 import { cache } from 'react';
 import { setTenantContext } from './tenant-context';
+import { getJsonFromS3, getTextFromS3 } from './s3';
+import type { TemplateLayout } from './types/template-layout';
 
 // Extract Tenant type from Prisma query result
 type Tenant = Awaited<ReturnType<typeof prisma.tenants.findFirst>>;
@@ -56,6 +58,50 @@ export const getCurrentTenant = cache(async (): Promise<Tenant | null> => {
     setTenantContext(null);
     return null;
   }
+});
+
+/**
+ * Fetch tenant with template data (active template + base template).
+ * Cached per request — safe to call from both layout.tsx and page.tsx.
+ */
+export const getTenantWithTemplate = cache(async (tenantId: string) => {
+  return prisma.tenants.findUnique({
+    where: { id: tenantId },
+    include: {
+      template: true,
+      activeTenantTemplate: {
+        include: {
+          templates: true,
+        },
+      },
+    },
+  });
+});
+
+/**
+ * Load template assets (layout.json, defaults.json, styles.css) from S3.
+ * Tries tenant-specific S3 path first, falls back to base template path.
+ * Cached per request — safe to call from both layout.tsx and page.tsx.
+ */
+export const getTemplateAssets = cache(async (
+  tenantS3Path: string | null,
+  baseS3Path: string | null,
+): Promise<{ layout: TemplateLayout | null; defaults: any; customCss: string | null }> => {
+  for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
+    try {
+      const layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
+      if (layout) {
+        const [customCss, defaults] = await Promise.all([
+          getTextFromS3(`${s3Prefix}/styles.css`).catch(() => null),
+          getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null),
+        ]);
+        return { layout, defaults, customCss };
+      }
+    } catch {
+      // No layout.json at this prefix — try next
+    }
+  }
+  return { layout: null, defaults: null, customCss: null };
 });
 
 /**
@@ -180,22 +226,3 @@ export async function getTenantFromRequest(
   return null;
 }
 
-/**
- * Get tenant URL for display purposes
- * Uses path-based routing: budstacks.io/store/{slug}
- */
-export function getTenantUrl(tenant: Tenant): string {
-  // If custom domain is configured, use it
-  if (tenant.customDomain) {
-    return `https://${tenant.customDomain}`;
-  }
-
-  // Use path-based routing for development
-  if (process.env.NODE_ENV === 'development') {
-    return `/store/${tenant.subdomain}`;
-  }
-
-  // Use subdomain-based routing for production
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
-  return `https://${tenant.subdomain}.${baseDomain}`;
-}

@@ -111,8 +111,31 @@ export async function GET(req: NextRequest) {
       ? { [sortBy]: sortOrder }
       : { createdAt: "desc" };
 
-    // Get filtered count and paginated orders in parallel
-    // Also get counts for filter badges
+    // Build base filter (without status) for badge counts
+    const baseFilter: any = {
+      tenantId,
+      ...(search
+        ? {
+          OR: [
+            { orderNumber: { contains: search, mode: "insensitive" } },
+            { users: { name: { contains: search, mode: "insensitive" } } },
+            { users: { email: { contains: search, mode: "insensitive" } } },
+          ],
+        }
+        : {}),
+      ...(dateFrom || dateTo
+        ? {
+          createdAt: {
+            ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+            ...(dateTo
+              ? { lte: new Date(new Date(dateTo).setDate(new Date(dateTo).getDate() + 1)) }
+              : {}),
+          },
+        }
+        : {}),
+    };
+
+    // Get filtered count, paginated orders, and status badge counts in parallel
     const [
       filteredCount,
       orders,
@@ -152,147 +175,9 @@ export async function GET(req: NextRequest) {
         skip,
         take: pageSize,
       }),
-      // Count by status (with search and date filters applied if present)
-      prisma.orders.count({
-        where: {
-          tenantId,
-          ...(search
-            ? {
-              OR: [
-                { orderNumber: { contains: search, mode: "insensitive" } },
-                {
-                  users: { name: { contains: search, mode: "insensitive" } },
-                },
-                {
-                  users: { email: { contains: search, mode: "insensitive" } },
-                },
-              ],
-            }
-            : {}),
-          ...(dateFrom || dateTo
-            ? {
-              createdAt: {
-                ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-                ...(dateTo
-                  ? {
-                    lte: new Date(
-                      new Date(dateTo).setDate(
-                        new Date(dateTo).getDate() + 1,
-                      ),
-                    ),
-                  }
-                  : {}),
-              },
-            }
-            : {}),
-          status: "PENDING",
-        },
-      }),
-      prisma.orders.count({
-        where: {
-          tenantId,
-          ...(search
-            ? {
-              OR: [
-                { orderNumber: { contains: search, mode: "insensitive" } },
-                {
-                  users: { name: { contains: search, mode: "insensitive" } },
-                },
-                {
-                  users: { email: { contains: search, mode: "insensitive" } },
-                },
-              ],
-            }
-            : {}),
-          ...(dateFrom || dateTo
-            ? {
-              createdAt: {
-                ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-                ...(dateTo
-                  ? {
-                    lte: new Date(
-                      new Date(dateTo).setDate(
-                        new Date(dateTo).getDate() + 1,
-                      ),
-                    ),
-                  }
-                  : {}),
-              },
-            }
-            : {}),
-          status: "PROCESSING",
-        },
-      }),
-      prisma.orders.count({
-        where: {
-          tenantId,
-          ...(search
-            ? {
-              OR: [
-                { orderNumber: { contains: search, mode: "insensitive" } },
-                {
-                  users: { name: { contains: search, mode: "insensitive" } },
-                },
-                {
-                  users: { email: { contains: search, mode: "insensitive" } },
-                },
-              ],
-            }
-            : {}),
-          ...(dateFrom || dateTo
-            ? {
-              createdAt: {
-                ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-                ...(dateTo
-                  ? {
-                    lte: new Date(
-                      new Date(dateTo).setDate(
-                        new Date(dateTo).getDate() + 1,
-                      ),
-                    ),
-                  }
-                  : {}),
-              },
-            }
-            : {}),
-          status: "COMPLETED",
-        },
-      }),
-      prisma.orders.count({
-        where: {
-          tenantId,
-          ...(search
-            ? {
-              OR: [
-                { orderNumber: { contains: search, mode: "insensitive" } },
-                {
-                  users: { name: { contains: search, mode: "insensitive" } },
-                },
-                {
-                  users: { email: { contains: search, mode: "insensitive" } },
-                },
-              ],
-            }
-            : {}),
-          ...(dateFrom || dateTo
-            ? {
-              createdAt: {
-                ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-                ...(dateTo
-                  ? {
-                    lte: new Date(
-                      new Date(dateTo).setDate(
-                        new Date(dateTo).getDate() + 1,
-                      ),
-                    ),
-                  }
-                  : {}),
-              },
-            }
-            : {}),
-          status: "CANCELLED",
-        },
-      }),
+      ...["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"].map(
+        (status) => prisma.orders.count({ where: { ...baseFilter, status } })
+      ),
     ]);
 
     // Transform orders to match expected format (rename order_items to items, users to user)
