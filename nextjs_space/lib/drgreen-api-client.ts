@@ -57,22 +57,31 @@ export function generateDrGreenSignature(payload: string, secretKey: string): st
   const privateKeyPEM = normalizePEM(secretKey);
 
   const headerMatch = privateKeyPEM.match(/-----BEGIN ([^-]+)-----/);
-  if (isDev) console.log(`[DrGreen Signature] PEM type: "${headerMatch?.[1] || "UNKNOWN"}" | len: ${privateKeyPEM.length}`);
+  console.error(`[DrGreen Sig] PEM type: "${headerMatch?.[1] || "UNKNOWN"}" | pemLen: ${privateKeyPEM.length} | payload: "${payload.slice(0, 60)}"`);
 
   let privateKey;
   try {
     privateKey = crypto.createPrivateKey(privateKeyPEM);
   } catch (keyError: any) {
-    console.error(`[DrGreen Signature] createPrivateKey failed: ${keyError.message}`);
+    console.error(`[DrGreen Sig] createPrivateKey failed: ${keyError.message}`);
     if (privateKeyPEM.includes("BEGIN PRIVATE KEY")) {
       const body = privateKeyPEM.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\s+/g, "");
       const ecPEM = `-----BEGIN EC PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join("\n") || body}\n-----END EC PRIVATE KEY-----`;
-      if (isDev) console.log("[DrGreen Signature] Retrying with EC PRIVATE KEY header...");
+      console.error("[DrGreen Sig] Retrying with EC PRIVATE KEY header...");
       privateKey = crypto.createPrivateKey(ecPEM);
     } else {
       throw keyError;
     }
   }
+
+  console.error(`[DrGreen Sig] key algo: ${privateKey.asymmetricKeyType} | curve: ${(privateKey as any).asymmetricKeyDetails?.namedCurve}`);
+
+  // TEMP: sign a fixed test string for comparison with local
+  const testSig = crypto.createSign('SHA256');
+  testSig.update('test123');
+  testSig.end();
+  const testResult = testSig.sign(privateKey).toString('base64');
+  console.error(`[DrGreen Sig] TEST_SIG("test123"): ${testResult}`);
 
   const sign = crypto.createSign('SHA256');
   sign.update(payload);
