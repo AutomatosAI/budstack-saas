@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchProducts, fetchProduct as fetchSingleProduct } from "@/lib/doctor-green-api";
+import { fetchProducts } from "@/lib/doctor-green-api";
 import { getTenantBySlug } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 
@@ -36,12 +36,10 @@ export async function GET(
     const country = tenant.countryCode || "SA";
     const doctorGreenConfig = await getTenantDrGreenConfig(tenant.id);
 
-    // Single product: fetch product + catalog in parallel for similar products
+    // Single product: fetch all products once, find the one we need + similar
     if (productId) {
-      const [product, allProducts] = await Promise.all([
-        fetchSingleProduct(productId, country, doctorGreenConfig),
-        fetchProducts(country, doctorGreenConfig),
-      ]);
+      const allProducts = await fetchProducts(country, doctorGreenConfig);
+      const product = allProducts.find((p) => p.id === productId);
 
       if (!product) {
         return NextResponse.json(

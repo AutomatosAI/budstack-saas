@@ -322,20 +322,13 @@ export async function fetchProduct(
   country: string = "SA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct> {
-  // Single strain is also public — fetch without auth
-  const baseUrl = config.apiUrl || API_URL;
-  const response = await fetch(`${baseUrl}/strains/${productId}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch strain ${productId}: ${response.status} ${response.statusText}`);
+  // /strains/{id} requires auth that doesn't work — use the public list and filter
+  const allProducts = await fetchProducts(country, config);
+  const product = allProducts.find(p => p.id === productId);
+  if (!product) {
+    throw new Error(`Product ${productId} not found`);
   }
-
-  const data = await response.json();
-  return normalizeProduct(data.data || data, country);
+  return product;
 }
 
 /**
