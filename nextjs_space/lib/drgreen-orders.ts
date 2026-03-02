@@ -166,28 +166,9 @@ export async function submitOrder(params: {
             // Non-blocking — continue anyway (same as reference)
         }
 
-        // Wait for propagation
-        log('STEP_1: Waiting 2000ms for propagation');
-        await sleep(2000);
-
-        // Verify shipping was saved by fetching client
-        try {
-            const clientCheck = await callDrGreenAPI<any>(`/dapp/clients/${clientId}`, {
-                ...apiOpts,
-                method: "GET",
-            });
-            const clientData = clientCheck?.data?.client || clientCheck?.data;
-            log('STEP_1_VERIFY: Client state after PATCH', {
-                hasShipping: !!clientData?.shipping,
-                shippingAddress1: clientData?.shipping?.address1 || 'NONE',
-                shippingCountry: clientData?.shipping?.country || 'NONE',
-                shippingCountryCode: clientData?.shipping?.countryCode || 'NONE',
-            });
-        } catch (e) {
-            log('STEP_1_VERIFY: Could not verify client (non-blocking)', {
-                error: e instanceof Error ? e.message : String(e),
-            });
-        }
+        // Wait for propagation (Lovable uses 1500ms)
+        log('STEP_1: Waiting 1500ms for propagation');
+        await sleep(1500);
 
         // Step 2: Add items to Dr Green server-side cart (with retry)
         const drGreenCartItems = cartItems.map(item => ({
@@ -233,7 +214,6 @@ export async function submitOrder(params: {
                 const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
                     ...apiOpts,
                     method: "POST",
-                    validateSuccessFlag: true,
                     body: { clientId },
                 });
                 orderData = (drGreenResponse as any).data || (drGreenResponse as any).order || drGreenResponse;
@@ -285,7 +265,6 @@ export async function submitOrder(params: {
                 const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
                     ...apiOpts,
                     method: "POST",
-                    validateSuccessFlag: true,
                     body: directPayload,
                 });
                 orderData = (drGreenResponse as any).data || (drGreenResponse as any).order || drGreenResponse;

@@ -226,7 +226,7 @@ export default function CartPage() {
                     onClick={() => router.push(`${basePath}/checkout`)}
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
-                    Place Order
+                    Proceed to Checkout
                   </Button>
 
                   <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 flex gap-3 items-start">
