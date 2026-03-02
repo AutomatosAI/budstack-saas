@@ -118,10 +118,8 @@ export async function callDrGreenAPI<T>(
   const maskedKey = apiKey ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}` : 'MISSING';
   const hasSecret = !!secretKey;
 
-  if (isDev) {
-    console.log(`[DrGreen API] >>> ${method} ${fullUrl}`);
-    console.log(`[DrGreen API]   apiKey: ${maskedKey} | hasSecret: ${hasSecret} | baseUrl: ${baseUrl}`);
-  }
+  // TEMP DEBUG — isDev is false in Next.js prod builds, use console.error to see in Railway logs
+  console.error(`[DrGreen API] >>> ${method} ${fullUrl} | apiKey: ${maskedKey} | secretLen: ${secretKey?.length || 0}`);
 
   if (!apiKey || !secretKey) {
     console.error(`[DrGreen API] MISSING_CREDENTIALS — apiKey: ${!!apiKey}, secretKey: ${!!secretKey}`);
@@ -163,10 +161,11 @@ export async function callDrGreenAPI<T>(
     signaturePayload = payload;
   }
 
-  if (isDev) console.log(`[DrGreen API]   signing: "${signaturePayload.slice(0, 100)}${signaturePayload.length > 100 ? '...' : ''}" (${signaturePayload.length} chars)`);
+  console.error(`[DrGreen API]   signing: "${signaturePayload.slice(0, 100)}" (${signaturePayload.length} chars)`);
 
   const signature = generateDrGreenSignature(signaturePayload, secretKey);
   requestHeaders['x-auth-signature'] = signature;
+  console.error(`[DrGreen API]   sig: ${signature.slice(0, 30)}... (${signature.length} chars)`);
   if (isDev) console.log(`[DrGreen API]   signature: ${signature.slice(0, 20)}... (${signature.length} chars)`);
 
   const startTime = Date.now();
