@@ -249,13 +249,39 @@ export async function submitOrder(params: {
             stepFailed = 'cart-add';
         }
 
-        // Fallback: Direct order creation with items in payload
+        // Fallback: Direct order creation with items + shippingAddress in payload
+        // This bypasses the cart flow entirely (which requires shipping saved on client)
+        // Matches Lovable's working fallback pattern
         if (!orderData) {
-            log('STEP_3_FALLBACK: Attempting direct order with items', { previousStep: stepFailed });
-            const directPayload = {
+            log('STEP_3_FALLBACK: Attempting direct order with items + shippingAddress', { previousStep: stepFailed });
+
+            // Build items with price from cart data
+            const directItems = cartItems.map(item => ({
+                strainId: item.strainId,
+                quantity: item.quantity,
+                ...(item.strain?.retailPrice !== undefined ? { price: item.strain.retailPrice } : {}),
+            }));
+
+            const directPayload: Record<string, any> = {
                 clientId,
-                items: drGreenCartItems,
+                items: directItems,
+                shippingAddress: {
+                    address1: shippingInfo.address1,
+                    address2: shippingInfo.address2 || '',
+                    city: shippingInfo.city,
+                    state: shippingInfo.state || shippingInfo.city,
+                    country: shippingInfo.country,
+                    countryCode: countryCode,
+                    postalCode: shippingInfo.postalCode,
+                },
             };
+
+            log('STEP_3_FALLBACK: Payload', {
+                itemCount: directItems.length,
+                hasShipping: true,
+                country: shippingInfo.country,
+            });
+
             try {
                 const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
                     ...apiOpts,
