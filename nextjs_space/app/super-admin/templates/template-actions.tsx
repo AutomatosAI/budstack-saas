@@ -44,7 +44,7 @@ export function TemplateActions({
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/super-admin/templates/${templateId}`, {
+      const response = await fetch(`/api/super-admin/templates/${templateId}?force=true`, {
         method: "DELETE",
       });
 
