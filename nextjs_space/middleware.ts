@@ -15,7 +15,6 @@ const isPublicRoute = createRouteMatcher([
   "/onboarding", // Customer onboarding wizard
   "/api/onboarding", // Public onboarding validation/submission
   "/api/consultation(.*)", // Public consultation submission
-  "/api/fix-ds(.*)" // TEMP: fix corrupted designSystem (remove after use)
 ]);
 
 // Define routes that require Tenant Context but might be public (like Storefront)
@@ -60,6 +59,11 @@ export default clerkMiddleware(async (auth, req) => {
     // (e.g. /api/store/slug/products, /api/tenant/slug). Each route handles
     // its own auth internally so skipping the middleware auth check is safe.
     if (pathname.startsWith('/api/')) {
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+
+    // Platform routes: don't rewrite — these live outside /store/
+    if (pathname.startsWith('/auth/') || pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin') || pathname.startsWith('/onboarding')) {
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
 
