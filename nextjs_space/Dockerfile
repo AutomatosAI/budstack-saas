@@ -3,20 +3,22 @@
 # ============================================
 FROM node:20-slim AS deps
 RUN apt-get update -y && apt-get install -y openssl ca-certificates
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
+# Copy package files and lockfile for deterministic installs
+COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
 
 # Install dependencies
-RUN yarn install --frozen-lockfile --network-timeout 600000 || yarn install --network-timeout 600000
+RUN pnpm install --frozen-lockfile
 
 # ============================================
 # Stage 2: Builder
 # ============================================
 FROM node:20-slim AS builder
+RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 # Copy dependencies
@@ -33,7 +35,7 @@ ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate
 
 # Build Next.js application
-RUN yarn build
+RUN pnpm build
 
 # ============================================
 # Stage 3: Runner
@@ -51,36 +53,28 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy necessary files (for root level server.js if it exists)
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# Copy necessary files
 COPY --from=builder /app/package.json ./package.json
 
-# Copy build output
+# Copy build output (standalone includes its own minimal node_modules)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Also copy public and static to the inner 'app' folder where server.js resides
-# This is required by Next.js standalone mode to serve graphics/styles correctly
+# Copy public assets to where standalone server.js expects them
 COPY --from=builder --chown=nextjs:nodejs /app/public ./app/public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./app/.next/static
 
-# Copy Prisma schema and generated client
+# Copy Prisma schema and generated client into standalone app
 COPY --from=builder /app/prisma ./prisma
-
-# Copy the generated Prisma client and the runtime client to the standalone node_modules
-# Nextjs standalone build puts the app in a subfolder (usually named after the project)
-# We saw it was in '/app/app/' in our debug ls
 COPY --from=builder /app/node_modules/.prisma ./app/node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./app/node_modules/@prisma
 
-# Copy scripts for seeding and maintenance
+# Copy scripts and lib for maintenance tasks (migrations, seeding, S3 sync)
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/lib ./lib
 
-# Copy all node_modules for maintenance tasks (seeding, etc)
+# Copy ONLY node_modules needed for maintenance scripts (once, not twice)
 COPY --from=builder /app/node_modules ./node_modules
-# Also copy to the standalone app folder for correctly resolving dependencies in maintenance tasks
-COPY --from=builder /app/node_modules ./app/node_modules
 
 # Create templates directory for S3 sync with correct permissions
 RUN mkdir -p /app/templates && chown nextjs:nodejs /app/templates

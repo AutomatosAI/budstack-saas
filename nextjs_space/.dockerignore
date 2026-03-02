@@ -1,0 +1,38 @@
+# Dependencies (reinstalled in Docker)
+node_modules/
+
+# Build output (rebuilt in Docker)
+.next/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug files
+debug*.txt
+debug-*.txt
+
+# Test files
+playwright-report/
+test-results/
+*.test.ts
+*.test.tsx
+*.spec.ts
+
+# Documentation
+*.md
+docs/
+LICENSE
+
+# Local env (Railway injects its own)
+.env
+.env.*
+!.env.example
