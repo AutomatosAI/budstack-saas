@@ -79,7 +79,7 @@ export function NavHealingBuds(props: SectionProps) {
 
   // --- Clerk auth ---
   const { user, isLoaded, isSignedIn } = useUser();
-  const { signOut, openSignIn } = useClerk();
+  const { signOut } = useClerk();
   const role = (user?.publicMetadata as any)?.role as string | undefined;
 
   // --- KYC status ---
@@ -277,15 +277,15 @@ export function NavHealingBuds(props: SectionProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <button
-              onClick={() => openSignIn()}
+            <Link
+              href={`${basePath}/login`}
               className="px-4 py-2 text-xs font-semibold rounded-full text-white transition-all hover:bg-white/10"
               style={{
                 border: '1.5px solid rgba(255,255,255,0.4)',
               }}
             >
               {signedOutLabel}
-            </button>
+            </Link>
           )}
         </div>
 
@@ -405,13 +405,14 @@ export function NavHealingBuds(props: SectionProps) {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => { openSignIn(); setMobileOpen(false); }}
-                  className="w-full text-center px-6 py-3 text-sm font-semibold text-white rounded-full transition-all"
+                <Link
+                  href={`${basePath}/login`}
+                  className="block w-full text-center px-6 py-3 text-sm font-semibold text-white rounded-full transition-all"
                   style={{ border: '1.5px solid rgba(255,255,255,0.4)' }}
+                  onClick={() => setMobileOpen(false)}
                 >
                   {signedOutLabel}
-                </button>
+                </Link>
               )}
             </div>
           </div>
