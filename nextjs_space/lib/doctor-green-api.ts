@@ -299,14 +299,22 @@ export async function fetchProducts(
   country: string = "SA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct[]> {
-  // Call /strains with no query params — query params cause 401 on this endpoint
-  // from Railway (works for all other endpoints). No-param call returns all strains.
-  const response = await doctorGreenRequest<{
-    data: { strains: DoctorGreenProduct[] };
-  }>('/strains', { config });
+  // /strains is a public endpoint — fetch directly without auth headers
+  // Sending auth causes 401 rejection on Railway (API validates headers even though endpoint is public)
+  const baseUrl = config.apiUrl || API_URL;
+  const response = await fetch(`${baseUrl}/strains`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+  });
 
-  const products = response.data?.strains || [];
-  return products.map((product) => normalizeProduct(product, country));
+  if (!response.ok) {
+    throw new Error(`Failed to fetch strains: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const products = data.data?.strains || [];
+  return products.map((product: DoctorGreenProduct) => normalizeProduct(product, country));
 }
 
 export async function fetchProduct(
@@ -314,11 +322,20 @@ export async function fetchProduct(
   country: string = "SA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct> {
-  const response = await doctorGreenRequest<{ data: DoctorGreenProduct }>(
-    `/strains/${productId}`,
-    { config },
-  );
-  return normalizeProduct(response.data, country);
+  // Single strain is also public — fetch without auth
+  const baseUrl = config.apiUrl || API_URL;
+  const response = await fetch(`${baseUrl}/strains/${productId}`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch strain ${productId}: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return normalizeProduct(data.data || data, country);
 }
 
 /**
