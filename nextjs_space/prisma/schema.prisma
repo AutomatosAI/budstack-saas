@@ -426,6 +426,12 @@ model tenants {
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime
   countryCode            String                    @default("PT")
+  businessAddress1       String?
+  businessAddress2       String?
+  businessCity           String?
+  businessState          String?
+  businessPostalCode     String?
+  businessCountry        String?
   templateId             String?
   activeTenantTemplateId String?                   @unique
   drGreenApiUrl          String?
