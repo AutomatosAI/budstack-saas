@@ -69,24 +69,6 @@ export function getCurrencySymbol(isoCode: string): string {
   return CURRENCY_SYMBOL_MAP[isoCode.toUpperCase()] || isoCode;
 }
 
-// Dr Green API returns prices in EUR. Convert to tenant's local currency.
-// Rates match the Lovable template fallbacks (ZAR base: 1 ZAR = X of other currency).
-// In this map the values are "how much of target currency you get per 1 EUR".
-const EUR_RATES: Record<string, number> = {
-  EUR: 1,
-  ZAR: 19.23,    // 1 EUR ≈ R 19.23
-  GBP: 0.846,
-  USD: 1.096,
-  THB: 38.08,
-  CAD: 1.47,
-  AUD: 1.63,
-};
-
-function convertFromEUR(eurAmount: number, targetCurrency: string): number {
-  const rate = EUR_RATES[targetCurrency.toUpperCase()];
-  if (!rate || rate === 1) return eurAmount;
-  return Math.round(eurAmount * rate * 100) / 100;
-}
 
 
 export interface DoctorGreenConfig {
@@ -309,26 +291,10 @@ function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorG
     ? isAvailableAtAnyLocation
     : (product.isAvailable !== false && totalStock > 0);
 
-  // Match local currency price from the prices array if available
-  const localCurrencyPrice = product.prices?.find(
-    (p: any) => p.currency?.toLowerCase() === defaultCurrency.toLowerCase()
-  );
-
-  let price: number;
-  let isoCode: string;
-
-  if (localCurrencyPrice?.retailPrice) {
-    // API provided a localized price — use directly
-    price = localCurrencyPrice.retailPrice;
-    isoCode = localCurrencyPrice.currency.toUpperCase();
-  } else {
-    // API returns EUR — convert to tenant's currency (matches Lovable template)
-    const eurPrice = product.retailPrice || 0;
-    isoCode = defaultCurrency;
-    price = convertFromEUR(eurPrice, defaultCurrency);
-  }
-
-  const currency = getCurrencySymbol(isoCode);
+  // The /dapp/strains endpoint returns country-specific pricing via countryCode param
+  // retailPrice is already in the tenant's local currency
+  const price = product.retailPrice || 0;
+  const currency = getCurrencySymbol(defaultCurrency);
 
   // Resolve strainImages URLs too
   const resolvedStrainImages = product.strainImages?.map((img) => ({
@@ -357,29 +323,19 @@ export async function fetchProducts(
   country: string = "ZA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct[]> {
-  // /strains is a public endpoint — fetch directly without auth headers
-  // Sending auth causes 401 rejection on Railway (API validates headers even though endpoint is public)
-  const baseUrl = config.apiUrl || API_URL;
-  // Pass countryCode as Alpha-3 (e.g. ZAF) so the API returns country-specific pricing
+  // Use authenticated /dapp/strains endpoint — returns country-specific pricing
   const alpha3 = toAlpha3(country);
-  const params = new URLSearchParams({
-    countryCode: alpha3,
-    orderBy: 'desc',
-    take: '100',
-    page: '1',
-  });
-  const response = await fetch(`${baseUrl}/strains?${params}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    cache: 'no-store',
+  const response = await doctorGreenRequest<any>('/dapp/strains', {
+    config,
+    queryParams: {
+      countryCode: alpha3,
+      orderBy: 'desc',
+      take: 100,
+      page: 1,
+    },
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch strains: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const products = data.data?.strains || [];
+  const products = response?.data?.strains || response?.strains || [];
   return products.map((product: DoctorGreenProduct) => normalizeProduct(product, country));
 }
 
