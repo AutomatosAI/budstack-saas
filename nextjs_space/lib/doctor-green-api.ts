@@ -57,6 +57,40 @@ export function getCurrencyByCountry(countryCode: string): string {
   return CURRENCY_MAP[countryCode.toUpperCase()] || "ZAR";
 }
 
+// Map ISO currency codes to display symbols
+const CURRENCY_SYMBOL_MAP: Record<string, string> = {
+  ZAR: "R", EUR: "€", GBP: "£", USD: "$", CAD: "C$",
+  AUD: "A$", NZD: "NZ$", CHF: "CHF", SEK: "kr", NOK: "kr",
+  DKK: "kr", BRL: "R$", SAR: "SAR", THB: "฿", MYR: "RM",
+  SGD: "S$", INR: "₹", JPY: "¥", KRW: "₩", CNY: "¥",
+};
+
+export function getCurrencySymbol(isoCode: string): string {
+  return CURRENCY_SYMBOL_MAP[isoCode.toUpperCase()] || isoCode;
+}
+
+// Dr Green API prices are in EUR. Convert to target currency.
+// Rates are EUR-based: how many units of target currency per 1 EUR.
+// Matches the Lovable template's fallback rates.
+const EUR_EXCHANGE_RATES: Record<string, number> = {
+  EUR: 1,
+  ZAR: 19.23,     // 1 EUR ≈ 19.23 ZAR
+  GBP: 0.846,
+  USD: 1.096,
+  THB: 38.08,
+  CAD: 1.47,
+  AUD: 1.63,
+  NZD: 1.76,
+  CHF: 0.97,
+  SAR: 4.11,
+};
+
+function convertFromEUR(eurAmount: number, targetCurrency: string): number {
+  const rate = EUR_EXCHANGE_RATES[targetCurrency.toUpperCase()];
+  if (!rate || rate === 1) return eurAmount; // No conversion if EUR or unknown
+  return Math.round(eurAmount * rate * 100) / 100;
+}
+
 export interface DoctorGreenConfig {
   apiKey: string;
   secretKey: string;
@@ -277,14 +311,26 @@ function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorG
     ? isAvailableAtAnyLocation
     : (product.isAvailable !== false && totalStock > 0);
 
-  // Match local currency price
+  // Match local currency price from the prices array first
   const localCurrencyPrice = product.prices?.find(
     (p: any) => p.currency?.toLowerCase() === defaultCurrency.toLowerCase()
   );
-  const price = localCurrencyPrice?.retailPrice || product.retailPrice || 0;
-  const currency = localCurrencyPrice?.currency
-    ? localCurrencyPrice.currency.toUpperCase()
-    : (product.currency || defaultCurrency);
+
+  let price: number;
+  let isoCode: string;
+
+  if (localCurrencyPrice?.retailPrice) {
+    // API provided a price in the tenant's currency — use it directly
+    price = localCurrencyPrice.retailPrice;
+    isoCode = localCurrencyPrice.currency.toUpperCase();
+  } else {
+    // API only has EUR retailPrice — convert to tenant's currency
+    const eurPrice = product.retailPrice || 0;
+    isoCode = defaultCurrency;
+    price = defaultCurrency === "EUR" ? eurPrice : convertFromEUR(eurPrice, defaultCurrency);
+  }
+
+  const currency = getCurrencySymbol(isoCode);
 
   // Resolve strainImages URLs too
   const resolvedStrainImages = product.strainImages?.map((img) => ({

@@ -51,6 +51,19 @@ export default async function ProductsPage({
 
   const tenantId = localUser.tenantId;
 
+  // Get tenant currency symbol from country code
+  const tenant = await prisma.tenants.findUnique({
+    where: { id: tenantId },
+    select: { countryCode: true },
+  });
+  const CURRENCY_SYMBOLS: Record<string, string> = {
+    ZA: "R", ZAR: "R", GB: "£", GBP: "£", US: "$", USD: "$",
+    EU: "€", EUR: "€", PT: "€", DE: "€", FR: "€", ES: "€",
+    IT: "€", NL: "€", BE: "€", AT: "€", IE: "€", GR: "€",
+    CA: "C$", AU: "A$", NZ: "NZ$", CH: "CHF", SE: "kr",
+  };
+  const currencySymbol = CURRENCY_SYMBOLS[tenant?.countryCode || "ZA"] || "R";
+
   // Await searchParams (Next.js 15+ async searchParams)
   const params = await searchParams;
 
@@ -221,6 +234,7 @@ export default async function ProductsPage({
         inStockCount={inStockCount}
         outOfStockCount={outOfStockCount}
         categoryCounts={categoryCountsMap}
+        currencySymbol={currencySymbol}
       />
     </div>
   );

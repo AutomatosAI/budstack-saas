@@ -114,6 +114,8 @@ interface ProductsTableProps {
   outOfStockCount: number;
   /** Category counts map (with search applied) */
   categoryCounts: Record<string, number>;
+  /** Currency symbol derived from tenant country code */
+  currencySymbol?: string;
 }
 
 /**
@@ -125,6 +127,7 @@ interface SortableProductRowProps {
   onSelectOne: (id: string, checked: boolean) => void;
   getStrainBadgeClasses: (name: string) => string;
   getStrainLabel: (name: string) => string;
+  currencySymbol: string;
 }
 
 function SortableProductRow({
@@ -133,6 +136,7 @@ function SortableProductRow({
   onSelectOne,
   getStrainBadgeClasses,
   getStrainLabel,
+  currencySymbol,
 }: SortableProductRowProps) {
   const {
     attributes,
@@ -191,7 +195,7 @@ function SortableProductRow({
             </span>
             {/* Show category and price on mobile */}
             <span className="block text-xs text-slate-500 md:hidden">
-              {product.category || "Uncategorized"} • €
+              {product.category || "Uncategorized"} • {currencySymbol}
               {typeof product.price === "number"
                 ? product.price.toFixed(2)
                 : product.price}
@@ -219,7 +223,7 @@ function SortableProductRow({
       </TableCell>
 
       <TableCell className="text-right text-slate-700 font-medium hidden sm:table-cell">
-        €
+        {currencySymbol}
         {typeof product.price === "number"
           ? product.price.toFixed(2)
           : product.price}
@@ -272,6 +276,7 @@ export function ProductsTable({
   inStockCount,
   outOfStockCount,
   categoryCounts,
+  currencySymbol = "R",
 }: ProductsTableProps) {
   const router = useRouter();
   const [
@@ -511,7 +516,7 @@ export function ProductsTable({
       category: p.category || "",
       thcContent: p.thcContent != null ? `${p.thcContent}%` : "",
       cbdContent: p.cbdContent != null ? `${p.cbdContent}%` : "",
-      price: `$${p.price.toFixed(2)}`,
+      price: `${currencySymbol}${p.price.toFixed(2)}`,
       stock: p.stock,
       status: p.stock > 0 ? "In Stock" : "Out of Stock",
       createdAt: format(new Date(p.createdAt), "yyyy-MM-dd"),
@@ -552,7 +557,7 @@ export function ProductsTable({
       category: p.category || "",
       thcContent: p.thcContent != null ? `${p.thcContent}%` : "",
       cbdContent: p.cbdContent != null ? `${p.cbdContent}%` : "",
-      price: `$${p.price.toFixed(2)}`,
+      price: `${currencySymbol}${p.price.toFixed(2)}`,
       stock: p.stock,
       status: p.stock > 0 ? "In Stock" : "Out of Stock",
       createdAt: format(new Date(p.createdAt), "yyyy-MM-dd"),
@@ -889,6 +894,7 @@ export function ProductsTable({
                           onSelectOne={handleSelectOne}
                           getStrainBadgeClasses={getStrainBadgeClasses}
                           getStrainLabel={getStrainLabel}
+                          currencySymbol={currencySymbol}
                         />
                       ))}
                     </TableBody>
