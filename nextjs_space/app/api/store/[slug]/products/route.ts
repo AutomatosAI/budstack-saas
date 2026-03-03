@@ -33,7 +33,7 @@ export async function GET(
       );
     }
 
-    const country = tenant.countryCode || "SA";
+    const country = tenant.countryCode || "ZA";
     const doctorGreenConfig = await getTenantDrGreenConfig(tenant.id);
 
     // Single product: fetch all products once, find the one we need + similar

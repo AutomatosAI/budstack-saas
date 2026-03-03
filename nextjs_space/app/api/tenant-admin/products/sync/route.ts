@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
@@ -40,7 +41,7 @@ export async function POST() {
       where: { id: tenantId },
       select: { countryCode: true },
     });
-    const country = tenant?.countryCode || "SA";
+    const country = tenant?.countryCode || "ZA";
 
     // Fetch Dr Green credentials and pull products
     const config = await getTenantDrGreenConfig(tenantId);
@@ -88,18 +89,19 @@ export async function POST() {
         updatedAt: new Date(),
       };
 
-      // Use Dr Green strain ID as the product ID so re-syncs are idempotent
+      // Upsert on the unique (slug, tenantId) constraint so each tenant
+      // gets their own copy of every strain and re-syncs are idempotent.
       const existing = await prisma.products.findUnique({
-        where: { id: dg.id },
+        where: { slug_tenantId: { slug, tenantId } },
       });
 
-      if (existing && existing.tenantId === tenantId) {
-        await prisma.products.update({ where: { id: dg.id }, data });
+      if (existing) {
+        await prisma.products.update({ where: { id: existing.id }, data });
         updated++;
-      } else if (!existing) {
+      } else {
         await prisma.products.create({
           data: {
-            id: dg.id,
+            id: randomUUID(),
             tenantId,
             ...data,
             displayOrder: created,
@@ -108,7 +110,6 @@ export async function POST() {
         });
         created++;
       }
-      // If exists but belongs to another tenant, skip
     }
 
     return NextResponse.json({

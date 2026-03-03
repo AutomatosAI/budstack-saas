@@ -19,7 +19,8 @@ const CURRENCY_MAP: Record<string, string> = {
   AT: "EUR",
   IE: "EUR",
   GR: "EUR",
-  SA: "ZAR",
+  ZA: "ZAR",
+  SA: "SAR",
   UK: "GBP",
   GB: "GBP",
   US: "USD",
@@ -197,7 +198,7 @@ const COUNTRY_CODE_MAP: Record<string, string> = {
   GB: 'GBR',
   UK: 'GBR',
   ZA: 'ZAF',
-  SA: 'ZAF', // Common alias for South Africa used in this project
+  SA: 'SAU',
   TH: 'THA',
   US: 'USA',
   DE: 'DEU',
@@ -309,7 +310,7 @@ function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorG
 }
 
 export async function fetchProducts(
-  country: string = "SA",
+  country: string = "ZA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct[]> {
   // /strains is a public endpoint — fetch directly without auth headers
@@ -332,7 +333,7 @@ export async function fetchProducts(
 
 export async function fetchProduct(
   productId: string,
-  country: string = "SA",
+  country: string = "ZA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct> {
   // /strains/{id} requires auth that doesn't work — use the public list and filter
