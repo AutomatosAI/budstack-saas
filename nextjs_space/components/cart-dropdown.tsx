@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useCartStore } from '@/lib/cart-store';
-import { ShoppingCart, X, Plus, Minus, ShoppingBag } from 'lucide-react';
+import { useCartStore, WEIGHT_OPTIONS } from '@/lib/cart-store';
+import { ShoppingCart, X, ShoppingBag } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -72,7 +72,7 @@ export function CartDropdown() {
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm truncate">{item.name}</h4>
                     <p className="text-sm text-gray-600 mt-1">
-                      {item.currency || '€'}{item.price.toFixed(2)}
+                      {item.currency || 'R'}{item.price.toFixed(2)} /g
                     </p>
                     {(item.thcContent || item.cbdContent) && (
                       <p className="text-xs text-gray-500 mt-1">
@@ -81,25 +81,21 @@ export function CartDropdown() {
                         {item.cbdContent && `CBD: ${item.cbdContent}%`}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 mt-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="text-sm font-medium w-8 text-center">{item.quantity}</span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
+                    <div className="flex items-center gap-1 mt-2">
+                      {WEIGHT_OPTIONS.map((w) => (
+                        <Button
+                          key={w}
+                          variant={item.quantity === w ? "default" : "outline"}
+                          className="h-7 px-2.5 text-xs font-bold"
+                          onClick={() => updateQuantity(item.productId, w)}
+                        >
+                          {w}g
+                        </Button>
+                      ))}
                     </div>
+                    <p className="text-sm font-semibold mt-2">
+                      {item.currency || 'R'}{(item.price * item.quantity).toFixed(2)}
+                    </p>
                   </div>
                   <Button
                     variant="ghost"
@@ -118,7 +114,7 @@ export function CartDropdown() {
             <div className="space-y-4">
               <div className="flex justify-between items-center text-lg font-bold">
                 <span>Total:</span>
-                <span>{items[0]?.currency || '€'}{getTotalPrice().toFixed(2)}</span>
+                <span>{items[0]?.currency || 'R'}{getTotalPrice().toFixed(2)}</span>
               </div>
 
               <Link href="/checkout" className="block">

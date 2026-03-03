@@ -19,7 +19,7 @@ import { Tenant } from "@/types/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RestrictedRegionGate } from "@/components/shop/RestrictedRegionGate";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCartStore } from "@/lib/cart-store";
+import { useCartStore, WEIGHT_OPTIONS } from "@/lib/cart-store";
 import { toast } from "@/components/ui/sonner";
 import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
 import { getTenantBasePath } from "@/lib/tenant-utils";
@@ -33,8 +33,6 @@ const parseToArray = (str?: string): string[] => {
     .map((s) => s.trim())
     .filter(Boolean);
 };
-
-const WEIGHT_OPTIONS = [2, 5, 10] as const;
 
 const benefits = [
   {
@@ -128,13 +126,12 @@ function ProductCard({
     e.stopPropagation();
     if (!isAvailable) return;
 
-    const totalPrice = pricePerGram * selectedWeight;
     addItem({
-      id: `${product.id}-${selectedWeight}g`,
+      id: product.id,
       productId: product.id,
-      name: `${product.name} (${selectedWeight}g)`,
-      price: totalPrice,
-      weight: selectedWeight,
+      name: product.name,
+      price: pricePerGram,
+      quantity: selectedWeight,
       image: imageUrl,
       thcContent: product.thc_content || product.thc || 0,
       cbdContent: product.cbd_content || product.cbd || 0,

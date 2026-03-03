@@ -10,8 +10,6 @@ import {
   Loader2,
   AlertCircle,
   ShoppingCart,
-  Plus,
-  Minus,
   Check,
   Star,
 } from "lucide-react";
@@ -74,7 +72,7 @@ export default function ProductDetailPage() {
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  const [selectedWeight, setSelectedWeight] = useState(2);
   const [selectedImage, setSelectedImage] = useState(0);
 
   const addItem = useCartStore((state) => state.addItem);
@@ -163,14 +161,14 @@ export default function ProductDetailPage() {
         productId: product.id,
         name: product.name,
         price: product.price || product.retailPrice || 0,
-        quantity: quantity,
+        quantity: selectedWeight,
         image: product.image_url || product.imageUrl,
         thcContent: product.thc_content || product.thc || 0,
         cbdContent: product.cbd_content || product.cbd || 0,
         currency: product.currency || "EUR",
       });
 
-      toast.success(`Added ${quantity} ${product.name} to cart!`);
+      toast.success(`Added ${product.name} (${selectedWeight}g) to cart!`);
     } catch (error) {
       console.error("Error adding to cart:", error);
       toast.error("Failed to add item to cart");
@@ -602,38 +600,56 @@ export default function ProductDetailPage() {
                 </div>
               ) : (
                 <>
-                  {/* Quantity Selector */}
-                  <div className="flex items-center gap-4 mb-6">
+                  {/* Weight Selector */}
+                  <div className="mb-6">
                     <p
-                      className="text-sm font-medium"
+                      className="text-sm font-medium mb-3"
                       style={{ color: "var(--tenant-color-text, #1f2937)" }}
                     >
-                      Quantity:
+                      Select Weight:
                     </p>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        disabled={quantity <= 1}
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                      <span
-                        className="text-xl font-semibold w-12 text-center"
-                        style={{ color: "var(--tenant-color-text, #1f2937)" }}
-                      >
-                        {quantity}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setQuantity(quantity + 1)}
-                        disabled={!product.isAvailable}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
+                    <div className="flex gap-2">
+                      {[2, 5, 10].map((w) => (
+                        <Button
+                          key={w}
+                          variant="outline"
+                          className="flex-1 h-11 text-base font-bold"
+                          style={{
+                            backgroundColor:
+                              selectedWeight === w
+                                ? "var(--tenant-color-primary, #059669)"
+                                : "transparent",
+                            color:
+                              selectedWeight === w
+                                ? "#ffffff"
+                                : "var(--tenant-color-text, #1f2937)",
+                            borderColor:
+                              selectedWeight === w
+                                ? "var(--tenant-color-primary, #059669)"
+                                : "var(--tenant-color-border, #e5e7eb)",
+                          }}
+                          onClick={() => setSelectedWeight(w)}
+                        >
+                          {w}g
+                        </Button>
+                      ))}
                     </div>
+                  </div>
+
+                  {/* Total price display */}
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--tenant-color-text-muted, #6b7280)" }}
+                    >
+                      Total:
+                    </p>
+                    <p
+                      className="text-2xl font-bold"
+                      style={{ color: "var(--tenant-color-heading, #111827)" }}
+                    >
+                      {displayCurrency} {(displayPrice * selectedWeight).toFixed(2)}
+                    </p>
                   </div>
 
                   {/* Stock Info */}
@@ -642,7 +658,7 @@ export default function ProductDetailPage() {
                       className="text-sm mb-4"
                       style={{ color: "var(--tenant-color-success, #10b981)" }}
                     >
-                      ✓ {product.stockQuantity} units available
+                      ✓ In stock
                     </p>
                   )}
 
@@ -659,7 +675,9 @@ export default function ProductDetailPage() {
                     }}
                   >
                     <ShoppingCart className="w-5 h-5 mr-2" />
-                    {product.isAvailable ? "Add to Cart" : "Out of Stock"}
+                    {product.isAvailable
+                      ? `Add to Cart — ${displayCurrency} ${(displayPrice * selectedWeight).toFixed(2)}`
+                      : "Out of Stock"}
                   </Button>
                 </>
               )}

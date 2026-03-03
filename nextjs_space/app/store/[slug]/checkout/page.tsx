@@ -419,7 +419,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                             fontFamily: "var(--tenant-font-base, sans-serif)",
                           }}
                         >
-                          {item.name} &times; {item.quantity}
+                          {item.name} ({item.quantity}g)
                         </span>
                         <span
                           className="font-medium whitespace-nowrap"

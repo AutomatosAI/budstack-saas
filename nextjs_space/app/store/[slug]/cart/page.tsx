@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ShoppingBag,
-  Minus,
-  Plus,
   Trash2,
   ArrowLeft,
   CreditCard,
@@ -15,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useCartStore } from "@/lib/cart-store";
+import { useCartStore, WEIGHT_OPTIONS } from "@/lib/cart-store";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { getTenantBasePath } from "@/lib/tenant-utils";
@@ -154,49 +152,40 @@ export default function CartPage() {
                             }}
                           >
                             {currency}
-                            {item.price.toFixed(2)} per unit
+                            {item.price.toFixed(2)} per gram
                           </p>
                         </div>
 
-                        {/* Quantity controls */}
+                        {/* Weight selector (2g, 5g, 10g) */}
                         <div
                           className="flex items-center gap-1 rounded-lg p-1"
                           style={{
                             backgroundColor: "hsl(var(--tenant-color-primary) / 0.06)",
                           }}
                         >
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 rounded-md"
-                            onClick={() =>
-                              updateQuantity(
-                                item.productId,
-                                Math.max(0, item.quantity - 1)
-                              )
-                            }
-                          >
-                            <Minus className="w-3 h-3" />
-                          </Button>
-                          <span
-                            className="w-8 text-center text-sm font-medium"
-                            style={{
-                              color: "hsl(var(--tenant-color-heading))",
-                              fontFamily: "var(--tenant-font-base, sans-serif)",
-                            }}
-                          >
-                            {item.quantity}
-                          </span>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 rounded-md"
-                            onClick={() =>
-                              updateQuantity(item.productId, item.quantity + 1)
-                            }
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
+                          {WEIGHT_OPTIONS.map((w) => (
+                            <Button
+                              key={w}
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2.5 text-xs font-bold rounded-md"
+                              style={{
+                                backgroundColor:
+                                  item.quantity === w
+                                    ? "hsl(var(--tenant-color-primary))"
+                                    : "transparent",
+                                color:
+                                  item.quantity === w
+                                    ? "white"
+                                    : "hsl(var(--tenant-color-text))",
+                              }}
+                              onClick={() =>
+                                updateQuantity(item.productId, w)
+                              }
+                            >
+                              {w}g
+                            </Button>
+                          ))}
                         </div>
 
                         {/* Price + remove */}
@@ -253,45 +242,51 @@ export default function CartPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span
-                      style={{
-                        color: "hsl(var(--tenant-color-text))",
-                        fontFamily: "var(--tenant-font-base, sans-serif)",
-                      }}
-                    >
-                      Subtotal ({items.length} {items.length === 1 ? "item" : "items"})
-                    </span>
-                    <span
-                      className="font-medium"
-                      style={{
-                        color: "hsl(var(--tenant-color-heading))",
-                        fontFamily: "var(--tenant-font-base, sans-serif)",
-                      }}
-                    >
-                      {currency}
-                      {subtotal.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span
-                      style={{
-                        color: "hsl(var(--tenant-color-text))",
-                        fontFamily: "var(--tenant-font-base, sans-serif)",
-                      }}
-                    >
-                      Shipping
-                    </span>
-                    <span
-                      className="text-sm font-medium"
-                      style={{
-                        color: "hsl(var(--tenant-color-primary))",
-                        fontFamily: "var(--tenant-font-base, sans-serif)",
-                      }}
-                    >
-                      Calculated at checkout
-                    </span>
-                  </div>
+                  {items.map((item) => (
+                    <div key={item.productId} className="flex justify-between text-sm">
+                      <span
+                        className="truncate pr-2"
+                        style={{
+                          color: "hsl(var(--tenant-color-text))",
+                          fontFamily: "var(--tenant-font-base, sans-serif)",
+                        }}
+                      >
+                        {item.name} ({item.quantity}g)
+                      </span>
+                      <span
+                        className="font-medium whitespace-nowrap"
+                        style={{
+                          color: "hsl(var(--tenant-color-heading))",
+                          fontFamily: "var(--tenant-font-base, sans-serif)",
+                        }}
+                      >
+                        {currency}
+                        {(item.price * item.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <Separator />
+
+                <div className="flex justify-between text-sm">
+                  <span
+                    style={{
+                      color: "hsl(var(--tenant-color-text))",
+                      fontFamily: "var(--tenant-font-base, sans-serif)",
+                    }}
+                  >
+                    Shipping
+                  </span>
+                  <span
+                    className="text-sm font-medium"
+                    style={{
+                      color: "hsl(var(--tenant-color-primary))",
+                      fontFamily: "var(--tenant-font-base, sans-serif)",
+                    }}
+                  >
+                    Calculated at checkout
+                  </span>
                 </div>
 
                 <Separator />

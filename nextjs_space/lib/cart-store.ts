@@ -1,13 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export const WEIGHT_OPTIONS = [2, 5, 10] as const;
+
 export interface CartItem {
   id: string;
   productId: string;
   name: string;
-  price: number;
-  quantity: number;
-  weight?: number;
+  price: number;       // price per gram
+  quantity: number;     // weight in grams (2, 5, or 10)
   image?: string;
   thcContent?: number;
   cbdContent?: number;
@@ -16,7 +17,7 @@ export interface CartItem {
 
 interface CartStore {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
+  addItem: (item: CartItem) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -29,6 +30,7 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
 
+      // One entry per strain — adding same strain replaces weight
       addItem: (item) => {
         const existingItem = get().items.find(
           (i) => i.productId === item.productId,
@@ -38,13 +40,13 @@ export const useCartStore = create<CartStore>()(
           set({
             items: get().items.map((i) =>
               i.productId === item.productId
-                ? { ...i, quantity: i.quantity + (item.quantity || 1) }
+                ? { ...i, quantity: item.quantity, price: item.price }
                 : i,
             ),
           });
         } else {
           set({
-            items: [...get().items, { ...item, quantity: item.quantity || 1 }],
+            items: [...get().items, item],
           });
         }
       },
@@ -55,6 +57,7 @@ export const useCartStore = create<CartStore>()(
         });
       },
 
+      // Update weight (quantity = grams)
       updateQuantity: (productId, quantity) => {
         if (quantity <= 0) {
           get().removeItem(productId);
@@ -70,9 +73,10 @@ export const useCartStore = create<CartStore>()(
       clearCart: () => set({ items: [] }),
 
       getTotalItems: () => {
-        return get().items.reduce((total, item) => total + item.quantity, 0);
+        return get().items.length;
       },
 
+      // Total = sum of (price_per_gram × weight_in_grams)
       getTotalPrice: () => {
         return get().items.reduce(
           (total, item) => total + item.price * item.quantity,
