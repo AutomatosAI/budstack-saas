@@ -172,26 +172,41 @@ export async function PUT(req: NextRequest) {
             Object.assign(mergedConfig, incomingSettings.sectionConfigs[s.id]);
           }
 
-          // Strip signed S3 URLs back to relative paths so layout.json stays portable.
-          // page.tsx signs relative paths on load; we must reverse that before writing back.
+          // Strip signed S3 URLs back to raw S3 keys so layout.json stays portable.
+          // page.tsx signs keys on load; we must reverse that before writing back.
           for (const key of ['imageUrl', 'videoUrl', 'watermarkUrl'] as const) {
             const val = mergedConfig[key];
             if (val && typeof val === 'string' && val.startsWith('http')) {
               const urlWithoutQuery = val.split('?')[0];
-              // Try tenant s3Path first, then base template path
-              const prefixes = [
-                currentTemplate?.s3Path,
-                currentTemplate?.templates?.slug ? `templates/${currentTemplate.templates.slug}` : null,
-              ].filter(Boolean) as string[];
 
-              for (const prefix of prefixes) {
-                const idx = urlWithoutQuery.indexOf(prefix);
-                if (idx !== -1) {
-                  const relativePath = urlWithoutQuery.slice(idx + prefix.length + 1);
-                  if (relativePath && !relativePath.includes('//')) {
-                    mergedConfig[key] = relativePath;
-                    break;
+              // Try to extract the S3 key from the URL.
+              // S3 URLs look like: https://{bucket}.s3.{region}.amazonaws.com/{key}
+              const s3Match = urlWithoutQuery.match(/\.amazonaws\.com\/(.+)$/);
+              if (s3Match) {
+                const fullKey = decodeURIComponent(s3Match[1]);
+
+                // Try to make template-relative (for template assets)
+                const prefixes = [
+                  currentTemplate?.s3Path,
+                  currentTemplate?.templates?.slug ? `templates/${currentTemplate.templates.slug}` : null,
+                ].filter(Boolean) as string[];
+
+                let madeRelative = false;
+                for (const prefix of prefixes) {
+                  const idx = fullKey.indexOf(prefix);
+                  if (idx !== -1) {
+                    const relativePath = fullKey.slice(idx + prefix.length + 1);
+                    if (relativePath && !relativePath.includes('//')) {
+                      mergedConfig[key] = relativePath;
+                      madeRelative = true;
+                      break;
+                    }
                   }
+                }
+
+                // For uploaded files (development/uploads/...), store the raw S3 key
+                if (!madeRelative) {
+                  mergedConfig[key] = fullKey;
                 }
               }
             }

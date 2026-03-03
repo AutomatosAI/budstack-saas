@@ -151,6 +151,12 @@ export default async function TenantStorePage({
       const assetKeys = ['imageUrl', 'videoUrl', 'watermarkUrl'] as const;
 
       function signAssetUrl(val: string): Promise<string> {
+        // Uploaded files are stored as absolute S3 keys (e.g. "development/uploads/...")
+        // rather than relative to the template path. Sign them directly.
+        const isAbsoluteKey = val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/');
+        if (isAbsoluteKey) {
+          return getFileUrl(val);
+        }
         const primaryKey = `${assetS3Path}/${val}`;
         const fallbackKey = `${baseS3Path}/${val}`;
         return needsFallback

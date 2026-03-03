@@ -120,9 +120,13 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
           const isAnimated = animationType !== "none";
 
           // Map sectionConfig.imageUrl → heroImageUrl for hero sections
-          // so the editor's image upload field works without changing every hero component
+          // so the editor's image upload field works without changing every hero component.
+          // Only override if the value is a valid URL (signed URLs start with http).
           const isHero = section.type.startsWith('Hero');
-          const heroImageOverride = isHero ? section.config?.imageUrl : undefined;
+          const configImage = isHero ? section.config?.imageUrl : undefined;
+          const heroImageOverride = configImage && typeof configImage === 'string' && configImage.startsWith('http')
+            ? configImage
+            : undefined;
 
           const sectionElement = (
             <section key={section.id || `section-${i}`} id={section.id} className="relative">

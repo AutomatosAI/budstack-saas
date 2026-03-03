@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
-import { uploadFile } from "@/lib/s3";
+import { uploadFile, getFileUrl } from "@/lib/s3";
 import { validateUpload } from "@/lib/upload-validation";
 
 export async function POST(req: NextRequest) {
@@ -39,7 +39,10 @@ export async function POST(req: NextRequest) {
     // Upload to S3
     const cloudStoragePath = await uploadFile(buffer, fileName);
 
-    return NextResponse.json({ url: cloudStoragePath });
+    // Return both the raw S3 key (for saving) and a signed URL (for preview display)
+    const signedUrl = await getFileUrl(cloudStoragePath);
+
+    return NextResponse.json({ url: signedUrl, key: cloudStoragePath });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(
