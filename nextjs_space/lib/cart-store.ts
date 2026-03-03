@@ -7,6 +7,7 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  weight?: number;
   image?: string;
   thcContent?: number;
   cbdContent?: number;
