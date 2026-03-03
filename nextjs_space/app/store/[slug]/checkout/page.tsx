@@ -157,8 +157,14 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
+      >
+        <Loader2
+          className="w-6 h-6 animate-spin"
+          style={{ color: "hsl(var(--tenant-color-primary) / 0.4)" }}
+        />
       </div>
     );
   }
@@ -167,42 +173,99 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   if (orderResult) {
     const isLocalOrder = !orderResult.drGreenOrderId || orderResult.drGreenOrderId.startsWith("LOCAL-");
     return (
-      <div className="min-h-screen bg-gray-50 pt-36 pb-20">
+      <div
+        className="min-h-screen pt-36 pb-20"
+        style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
+      >
         <div className="container mx-auto px-4 max-w-lg">
-          <Card className="border-gray-200">
+          <Card
+            style={{
+              borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
+            }}
+          >
             <CardContent className="pt-8 pb-8 text-center space-y-4">
               {isLocalOrder ? (
-                <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
-                  <Clock className="w-8 h-8 text-amber-600" />
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto"
+                  style={{ backgroundColor: "hsl(38 92% 90%)" }}
+                >
+                  <Clock className="w-8 h-8" style={{ color: "hsl(38 80% 45%)" }} />
                 </div>
               ) : (
-                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-8 h-8 text-green-600" />
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto"
+                  style={{ backgroundColor: "hsl(var(--tenant-color-primary) / 0.1)" }}
+                >
+                  <CheckCircle2
+                    className="w-8 h-8"
+                    style={{ color: "hsl(var(--tenant-color-primary))" }}
+                  />
                 </div>
               )}
 
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2
+                  className="text-xl font-bold"
+                  style={{
+                    color: "hsl(var(--tenant-color-heading))",
+                    fontFamily: "var(--tenant-font-heading, sans-serif)",
+                  }}
+                >
                   {isLocalOrder ? "Order Received" : "Order Confirmed"}
                 </h2>
-                <p className="text-gray-500 mt-1 text-sm">
+                <p
+                  className="mt-1 text-sm"
+                  style={{
+                    color: "hsl(var(--tenant-color-text))",
+                    fontFamily: "var(--tenant-font-base, sans-serif)",
+                  }}
+                >
                   {isLocalOrder
                     ? "Your order has been received and saved. Our team will process it shortly."
                     : "Your order has been placed successfully."}
                 </p>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4 text-left space-y-2">
+              <div
+                className="rounded-lg p-4 text-left space-y-2"
+                style={{
+                  backgroundColor: "hsl(var(--tenant-color-primary) / 0.04)",
+                }}
+              >
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Order ID</span>
-                  <span className="font-mono font-medium text-gray-900">
+                  <span
+                    style={{
+                      color: "hsl(var(--tenant-color-text))",
+                      fontFamily: "var(--tenant-font-base, sans-serif)",
+                    }}
+                  >
+                    Order ID
+                  </span>
+                  <span
+                    className="font-mono font-medium"
+                    style={{
+                      color: "hsl(var(--tenant-color-heading))",
+                    }}
+                  >
                     {orderResult.orderNumber}
                   </span>
                 </div>
                 {orderResult.total > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Total</span>
-                    <span className="font-medium text-gray-900">
+                    <span
+                      style={{
+                        color: "hsl(var(--tenant-color-text))",
+                        fontFamily: "var(--tenant-font-base, sans-serif)",
+                      }}
+                    >
+                      Total
+                    </span>
+                    <span
+                      className="font-medium"
+                      style={{
+                        color: "hsl(var(--tenant-color-heading))",
+                      }}
+                    >
                       {currency}
                       {orderResult.total.toFixed(2)}
                     </span>
@@ -210,7 +273,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 )}
               </div>
 
-              <p className="text-xs text-gray-400">
+              <p
+                className="text-xs"
+                style={{
+                  color: "hsl(var(--tenant-color-text) / 0.6)",
+                  fontFamily: "var(--tenant-font-base, sans-serif)",
+                }}
+              >
                 {isLocalOrder
                   ? "You'll receive a confirmation email once processed."
                   : "Tracking information will be sent to your email."}
@@ -218,7 +287,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
               <div className="pt-2 space-y-2">
                 <Link href={`${basePath}/products`} className="block">
-                  <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                  <Button
+                    className="w-full text-white"
+                    style={{
+                      backgroundColor: "hsl(var(--tenant-color-primary))",
+                      fontFamily: "var(--tenant-font-base, sans-serif)",
+                    }}
+                  >
                     Continue Shopping
                   </Button>
                 </Link>
@@ -238,15 +313,46 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   // Empty cart
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-20 px-4">
+      <div
+        className="min-h-screen flex items-center justify-center py-20 px-4"
+        style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
+      >
         <div className="max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ShoppingBag className="w-8 h-8 text-gray-400" />
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{ backgroundColor: "hsl(var(--tenant-color-primary) / 0.08)" }}
+          >
+            <ShoppingBag
+              className="w-8 h-8"
+              style={{ color: "hsl(var(--tenant-color-primary) / 0.4)" }}
+            />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-          <p className="text-gray-500 mb-6 text-sm">Add items before checking out.</p>
+          <h2
+            className="text-xl font-bold mb-2"
+            style={{
+              color: "hsl(var(--tenant-color-heading))",
+              fontFamily: "var(--tenant-font-heading, sans-serif)",
+            }}
+          >
+            Your cart is empty
+          </h2>
+          <p
+            className="mb-6 text-sm"
+            style={{
+              color: "hsl(var(--tenant-color-text))",
+              fontFamily: "var(--tenant-font-base, sans-serif)",
+            }}
+          >
+            Add items before checking out.
+          </p>
           <Link href={`${basePath}/products`}>
-            <Button className="bg-green-600 hover:bg-green-700 text-white">
+            <Button
+              className="text-white"
+              style={{
+                backgroundColor: "hsl(var(--tenant-color-primary))",
+                fontFamily: "var(--tenant-font-base, sans-serif)",
+              }}
+            >
               Browse Products
             </Button>
           </Link>
@@ -256,35 +362,72 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-36 pb-20">
+    <div
+      className="min-h-screen pt-36 pb-20"
+      style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
+    >
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
           <Link href={`${basePath}/cart`}>
-            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-900">
+            <Button
+              variant="ghost"
+              size="sm"
+              style={{ color: "hsl(var(--tenant-color-text))" }}
+            >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to Cart
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Checkout</h1>
+          <h1
+            className="text-2xl font-bold"
+            style={{
+              color: "hsl(var(--tenant-color-heading))",
+              fontFamily: "var(--tenant-font-heading, sans-serif)",
+            }}
+          >
+            Checkout
+          </h1>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: Order Summary */}
             <div className="lg:col-span-1 order-2 lg:order-1">
-              <Card className="border-gray-200 sticky top-24">
+              <Card
+                className="sticky top-24"
+                style={{
+                  borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
+                }}
+              >
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Order Summary</CardTitle>
+                  <CardTitle
+                    className="text-base"
+                    style={{ fontFamily: "var(--tenant-font-heading, sans-serif)" }}
+                  >
+                    Order Summary
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="space-y-2">
                     {items.map((item) => (
                       <div key={item.productId} className="flex justify-between text-sm">
-                        <span className="text-gray-600 truncate pr-2">
+                        <span
+                          className="truncate pr-2"
+                          style={{
+                            color: "hsl(var(--tenant-color-text))",
+                            fontFamily: "var(--tenant-font-base, sans-serif)",
+                          }}
+                        >
                           {item.name} &times; {item.quantity}
                         </span>
-                        <span className="font-medium text-gray-900 whitespace-nowrap">
+                        <span
+                          className="font-medium whitespace-nowrap"
+                          style={{
+                            color: "hsl(var(--tenant-color-heading))",
+                            fontFamily: "var(--tenant-font-base, sans-serif)",
+                          }}
+                        >
                           {currency}
                           {(item.price * item.quantity).toFixed(2)}
                         </span>
@@ -295,15 +438,41 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   <Separator />
 
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-900">Total</span>
-                    <span className="text-lg font-bold text-green-600">
+                    <span
+                      className="font-semibold"
+                      style={{
+                        color: "hsl(var(--tenant-color-heading))",
+                        fontFamily: "var(--tenant-font-heading, sans-serif)",
+                      }}
+                    >
+                      Total
+                    </span>
+                    <span
+                      className="text-lg font-bold"
+                      style={{
+                        color: "hsl(var(--tenant-color-primary))",
+                        fontFamily: "var(--tenant-font-heading, sans-serif)",
+                      }}
+                    >
                       {currency}
                       {subtotal.toFixed(2)}
                     </span>
                   </div>
 
-                  <div className="rounded-lg bg-green-50 border border-green-100 p-3">
-                    <p className="text-xs text-green-700 leading-relaxed">
+                  <div
+                    className="rounded-lg p-3"
+                    style={{
+                      backgroundColor: "hsl(var(--tenant-color-primary) / 0.06)",
+                      border: "1px solid hsl(var(--tenant-color-primary) / 0.12)",
+                    }}
+                  >
+                    <p
+                      className="text-xs leading-relaxed"
+                      style={{
+                        color: "hsl(var(--tenant-color-text))",
+                        fontFamily: "var(--tenant-font-base, sans-serif)",
+                      }}
+                    >
                       Payment instructions will be sent after your order is placed.
                       Crypto and card options available.
                     </p>
@@ -315,11 +484,22 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
             {/* Right: Shipping + Place Order */}
             <div className="lg:col-span-2 order-1 lg:order-2 space-y-4">
               {/* Shipping Address */}
-              <Card className="border-gray-200">
+              <Card
+                style={{
+                  borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
+                }}
+              >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <MapPin className="w-4 h-4 text-gray-500" />
-                    Shipping Address
+                    <MapPin
+                      className="w-4 h-4"
+                      style={{ color: "hsl(var(--tenant-color-text))" }}
+                    />
+                    <span
+                      style={{ fontFamily: "var(--tenant-font-heading, sans-serif)" }}
+                    >
+                      Shipping Address
+                    </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -331,33 +511,59 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                       className="space-y-3"
                     >
                       <label
-                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                          addressMode === "saved"
-                            ? "border-green-300 bg-green-50"
-                            : "border-gray-200 hover:bg-gray-50"
-                        }`}
+                        className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+                        style={{
+                          borderColor: addressMode === "saved"
+                            ? "hsl(var(--tenant-color-primary) / 0.5)"
+                            : "hsl(var(--tenant-color-primary) / 0.12)",
+                          backgroundColor: addressMode === "saved"
+                            ? "hsl(var(--tenant-color-primary) / 0.06)"
+                            : "transparent",
+                        }}
                       >
                         <RadioGroupItem value="saved" className="mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p
+                            className="text-sm font-medium"
+                            style={{
+                              color: "hsl(var(--tenant-color-heading))",
+                              fontFamily: "var(--tenant-font-base, sans-serif)",
+                            }}
+                          >
                             Use saved address
                           </p>
-                          <p className="text-xs text-gray-500 mt-0.5 truncate">
+                          <p
+                            className="text-xs mt-0.5 truncate"
+                            style={{
+                              color: "hsl(var(--tenant-color-text))",
+                              fontFamily: "var(--tenant-font-base, sans-serif)",
+                            }}
+                          >
                             {savedAddress.address1}, {savedAddress.city},{" "}
                             {savedAddress.state} {savedAddress.postalCode}
                           </p>
                         </div>
                       </label>
                       <label
-                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                          addressMode === "custom"
-                            ? "border-green-300 bg-green-50"
-                            : "border-gray-200 hover:bg-gray-50"
-                        }`}
+                        className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+                        style={{
+                          borderColor: addressMode === "custom"
+                            ? "hsl(var(--tenant-color-primary) / 0.5)"
+                            : "hsl(var(--tenant-color-primary) / 0.12)",
+                          backgroundColor: addressMode === "custom"
+                            ? "hsl(var(--tenant-color-primary) / 0.06)"
+                            : "transparent",
+                        }}
                       >
                         <RadioGroupItem value="custom" className="mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">
+                          <p
+                            className="text-sm font-medium"
+                            style={{
+                              color: "hsl(var(--tenant-color-heading))",
+                              fontFamily: "var(--tenant-font-base, sans-serif)",
+                            }}
+                          >
                             Enter a different address
                           </p>
                         </div>
@@ -369,7 +575,14 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   {(addressMode === "custom" || !savedAddress) && (
                     <div className="space-y-3">
                       <div>
-                        <Label htmlFor="address1" className="text-sm text-gray-700">
+                        <Label
+                          htmlFor="address1"
+                          className="text-sm"
+                          style={{
+                            color: "hsl(var(--tenant-color-text))",
+                            fontFamily: "var(--tenant-font-base, sans-serif)",
+                          }}
+                        >
                           Address Line 1 *
                         </Label>
                         <Input
@@ -384,7 +597,14 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                       </div>
 
                       <div>
-                        <Label htmlFor="address2" className="text-sm text-gray-700">
+                        <Label
+                          htmlFor="address2"
+                          className="text-sm"
+                          style={{
+                            color: "hsl(var(--tenant-color-text))",
+                            fontFamily: "var(--tenant-font-base, sans-serif)",
+                          }}
+                        >
                           Address Line 2
                         </Label>
                         <Input
@@ -399,7 +619,14 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label htmlFor="city" className="text-sm text-gray-700">
+                          <Label
+                            htmlFor="city"
+                            className="text-sm"
+                            style={{
+                              color: "hsl(var(--tenant-color-text))",
+                              fontFamily: "var(--tenant-font-base, sans-serif)",
+                            }}
+                          >
                             City *
                           </Label>
                           <Input
@@ -412,7 +639,14 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="state" className="text-sm text-gray-700">
+                          <Label
+                            htmlFor="state"
+                            className="text-sm"
+                            style={{
+                              color: "hsl(var(--tenant-color-text))",
+                              fontFamily: "var(--tenant-font-base, sans-serif)",
+                            }}
+                          >
                             State / Province *
                           </Label>
                           <Input
@@ -428,7 +662,14 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label htmlFor="postalCode" className="text-sm text-gray-700">
+                          <Label
+                            htmlFor="postalCode"
+                            className="text-sm"
+                            style={{
+                              color: "hsl(var(--tenant-color-text))",
+                              fontFamily: "var(--tenant-font-base, sans-serif)",
+                            }}
+                          >
                             Postal Code *
                           </Label>
                           <Input
@@ -441,7 +682,14 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="country" className="text-sm text-gray-700">
+                          <Label
+                            htmlFor="country"
+                            className="text-sm"
+                            style={{
+                              color: "hsl(var(--tenant-color-text))",
+                              fontFamily: "var(--tenant-font-base, sans-serif)",
+                            }}
+                          >
                             Country *
                           </Label>
                           <Input
@@ -460,18 +708,41 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               </Card>
 
               {/* Place Order */}
-              <Card className="border-gray-200">
+              <Card
+                style={{
+                  borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
+                }}
+              >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <CreditCard className="w-4 h-4 text-gray-500" />
-                    Payment
+                    <CreditCard
+                      className="w-4 h-4"
+                      style={{ color: "hsl(var(--tenant-color-text))" }}
+                    />
+                    <span
+                      style={{ fontFamily: "var(--tenant-font-heading, sans-serif)" }}
+                    >
+                      Payment
+                    </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Shipping summary when using saved */}
                   {addressMode === "saved" && savedAddress && (
-                    <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
-                      <p className="font-medium text-gray-700 mb-1">Shipping to:</p>
+                    <div
+                      className="rounded-lg p-3 text-sm"
+                      style={{
+                        backgroundColor: "hsl(var(--tenant-color-primary) / 0.04)",
+                        color: "hsl(var(--tenant-color-text))",
+                        fontFamily: "var(--tenant-font-base, sans-serif)",
+                      }}
+                    >
+                      <p
+                        className="font-medium mb-1"
+                        style={{ color: "hsl(var(--tenant-color-heading))" }}
+                      >
+                        Shipping to:
+                      </p>
                       <p>
                         {savedAddress.address1}
                         {savedAddress.address2 ? `, ${savedAddress.address2}` : ""}
@@ -494,8 +765,12 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   <Button
                     type="submit"
                     size="lg"
-                    className="w-full h-12 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white"
+                    className="w-full h-12 text-sm font-semibold text-white"
                     disabled={isSubmitting}
+                    style={{
+                      backgroundColor: "hsl(var(--tenant-color-primary))",
+                      fontFamily: "var(--tenant-font-base, sans-serif)",
+                    }}
                   >
                     {isSubmitting ? (
                       <>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Target,
@@ -105,6 +106,7 @@ export default function AboutContent({
   const heroSubtitle =
     pageContent?.heroSubtitle ||
     "Setting new standards in medical cannabis excellence";
+  const missionImage = pageContent?.missionImage || null;
   const missionTitle = pageContent?.missionTitle || "Our Mission";
   const missionParagraphs = pageContent?.missionParagraphs || [
     `${businessName} was founded with a vision to improve patient access to high-quality medical cannabis. We believe every patient deserves safe, effective, and consistent medication backed by rigorous science.`,
@@ -178,7 +180,7 @@ export default function AboutContent({
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            className="max-w-4xl mx-auto"
+            className="max-w-5xl mx-auto"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
@@ -211,20 +213,36 @@ export default function AboutContent({
               </h2>
             </motion.div>
 
-            <div className="space-y-5">
-              {missionParagraphs.map((text: string, i: number) => (
-                <motion.p
-                  key={i}
-                  className="text-base md:text-lg leading-relaxed"
-                  style={{
-                    color: "hsl(var(--tenant-color-text))",
-                    fontFamily: "var(--tenant-font-base, sans-serif)",
-                  }}
+            <div className={missionImage ? "grid md:grid-cols-2 gap-10 items-start" : ""}>
+              <div className="space-y-5">
+                {missionParagraphs.map((text: string, i: number) => (
+                  <motion.p
+                    key={i}
+                    className="text-base md:text-lg leading-relaxed"
+                    style={{
+                      color: "hsl(var(--tenant-color-text))",
+                      fontFamily: "var(--tenant-font-base, sans-serif)",
+                    }}
+                    variants={fadeInUp}
+                  >
+                    {text}
+                  </motion.p>
+                ))}
+              </div>
+
+              {missionImage && (
+                <motion.div
+                  className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-lg"
                   variants={fadeInUp}
                 >
-                  {text}
-                </motion.p>
-              ))}
+                  <Image
+                    src={missionImage}
+                    alt={missionTitle}
+                    fill
+                    className="object-cover"
+                  />
+                </motion.div>
+              )}
             </div>
           </motion.div>
         </div>
@@ -383,52 +401,66 @@ export default function AboutContent({
                     title: string;
                     description: string;
                     features: string[];
+                    image?: string;
                   },
                   i: number
                 ) => (
                   <motion.div
                     key={i}
-                    className="bg-white/[0.06] backdrop-blur-sm rounded-xl p-7 border border-white/10 hover:bg-white/[0.1] transition-colors"
+                    className="bg-white/[0.06] backdrop-blur-sm rounded-xl overflow-hidden border border-white/10 hover:bg-white/[0.1] transition-colors"
                     variants={fadeInUp}
                   >
-                    <h3
-                      className="text-xl font-semibold text-white mb-3 tracking-tight"
-                      style={{
-                        fontFamily:
-                          "var(--tenant-font-heading, sans-serif)",
-                      }}
-                    >
-                      {facility.title}
-                    </h3>
-                    <p
-                      className="text-sm text-white/70 leading-relaxed mb-5"
-                      style={{
-                        fontFamily: "var(--tenant-font-base, sans-serif)",
-                      }}
-                    >
-                      {facility.description}
-                    </p>
-                    <ul className="space-y-2">
-                      {facility.features.map(
-                        (feature: string, fi: number) => (
-                          <li
-                            key={fi}
-                            className="flex items-center gap-2"
-                          >
-                            <CheckCircle2 className="w-4 h-4 text-white/60 flex-shrink-0" />
-                            <span
-                              className="text-sm text-white/80"
-                              style={{
-                                fontFamily:
-                                  "var(--tenant-font-base, sans-serif)",
-                              }}
+                    {facility.image && (
+                      <div className="relative aspect-[16/9] overflow-hidden">
+                        <Image
+                          src={facility.image}
+                          alt={facility.title}
+                          fill
+                          className="object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                      </div>
+                    )}
+                    <div className="p-7">
+                      <h3
+                        className="text-xl font-semibold text-white mb-3 tracking-tight"
+                        style={{
+                          fontFamily:
+                            "var(--tenant-font-heading, sans-serif)",
+                        }}
+                      >
+                        {facility.title}
+                      </h3>
+                      <p
+                        className="text-sm text-white/70 leading-relaxed mb-5"
+                        style={{
+                          fontFamily: "var(--tenant-font-base, sans-serif)",
+                        }}
+                      >
+                        {facility.description}
+                      </p>
+                      <ul className="space-y-2">
+                        {facility.features.map(
+                          (feature: string, fi: number) => (
+                            <li
+                              key={fi}
+                              className="flex items-center gap-2"
                             >
-                              {feature}
-                            </span>
-                          </li>
-                        )
-                      )}
-                    </ul>
+                              <CheckCircle2 className="w-4 h-4 text-white/60 flex-shrink-0" />
+                              <span
+                                className="text-sm text-white/80"
+                                style={{
+                                  fontFamily:
+                                    "var(--tenant-font-base, sans-serif)",
+                                }}
+                              >
+                                {feature}
+                              </span>
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
                   </motion.div>
                 )
               )}
@@ -487,16 +519,17 @@ export default function AboutContent({
                             i % 2 === 0 ? "md:text-right" : "md:text-left"
                           }`}
                         >
-                          <h3
-                            className="text-lg font-bold mb-1"
+                          <span
+                            className="inline-block px-3 py-1 rounded-full text-sm font-bold mb-2"
                             style={{
+                              backgroundColor: "hsl(var(--tenant-color-primary) / 0.12)",
                               color: "hsl(var(--tenant-color-primary))",
                               fontFamily:
                                 "var(--tenant-font-heading, sans-serif)",
                             }}
                           >
                             {item.year}
-                          </h3>
+                          </span>
                           <p
                             className="text-sm leading-relaxed"
                             style={{

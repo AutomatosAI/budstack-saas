@@ -167,6 +167,11 @@ export default function ProductsPage() {
     notFound();
   }
 
+  const pageContent = (tenant as any).pageContent?.products;
+  const heroTitle = pageContent?.heroTitle || "Premium Cultivars";
+  const heroSubtitle = pageContent?.heroSubtitle || "Browse our selection of pharmaceutical-grade medical cannabis products, carefully curated for qualified patients.";
+  const heroImage = pageContent?.heroImage || null;
+
   return (
     <div
       className="min-h-screen pb-24 lg:pb-0"
@@ -176,10 +181,28 @@ export default function ProductsPage() {
       <section
         className="relative pt-28 sm:pt-32 pb-12 sm:pb-16 overflow-hidden"
         style={{
-          background:
-            "linear-gradient(to bottom, hsl(var(--tenant-color-primary) / 0.08), transparent)",
+          background: heroImage
+            ? undefined
+            : "linear-gradient(to bottom, hsl(var(--tenant-color-primary) / 0.08), transparent)",
         }}
       >
+        {heroImage && (
+          <>
+            <Image
+              src={heroImage}
+              alt=""
+              fill
+              className="object-cover"
+              priority
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: "linear-gradient(to bottom, hsl(var(--tenant-color-primary) / 0.85), hsl(var(--tenant-color-primary) / 0.6))",
+              }}
+            />
+          </>
+        )}
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
           <motion.div
             initial="hidden"
@@ -190,23 +213,22 @@ export default function ProductsPage() {
             <motion.h1
               className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4"
               style={{
-                color: "hsl(var(--tenant-color-heading))",
+                color: heroImage ? "white" : "hsl(var(--tenant-color-heading))",
                 fontFamily: "var(--tenant-font-heading, sans-serif)",
               }}
               variants={fadeInUp}
             >
-              Premium Cultivars
+              {heroTitle}
             </motion.h1>
             <motion.p
               className="text-base sm:text-lg mb-8 px-2"
               style={{
-                color: "hsl(var(--tenant-color-text))",
+                color: heroImage ? "rgba(255,255,255,0.9)" : "hsl(var(--tenant-color-text))",
                 fontFamily: "var(--tenant-font-base, sans-serif)",
               }}
               variants={fadeInUp}
             >
-              Browse our selection of pharmaceutical-grade medical cannabis
-              products, carefully curated for qualified patients.
+              {heroSubtitle}
             </motion.p>
           </motion.div>
         </div>

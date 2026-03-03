@@ -23,7 +23,7 @@ export default async function ConsultationPage({
       style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
       <main className="pt-28 md:pt-32">
-        <ConsultationContent basePath={basePath} />
+        <ConsultationContent basePath={basePath} pageContent={(tenant as any).pageContent?.consultation} />
 
         {/* Consultation Form */}
         <section className="py-16 md:py-24">

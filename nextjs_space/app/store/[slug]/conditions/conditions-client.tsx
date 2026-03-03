@@ -197,7 +197,7 @@ export default function ConditionsClient({
                   return (
                     <motion.div
                       key={i}
-                      className="rounded-xl p-6 text-center"
+                      className="rounded-xl p-6 text-center shadow-lg hover:shadow-xl transition-shadow"
                       style={{
                         backgroundColor:
                           "hsl(var(--tenant-color-primary) / 0.05)",
@@ -207,7 +207,7 @@ export default function ConditionsClient({
                       variants={fadeInUp}
                     >
                       <div
-                        className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4"
+                        className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
                         style={{
                           backgroundColor:
                             "hsl(var(--tenant-color-primary) / 0.1)",
@@ -340,61 +340,97 @@ export default function ConditionsClient({
                     }}
                   >
                     <Link href={`conditions/${condition.slug}`}>
-                      <div
-                        className="group block rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border"
-                        style={{
-                          backgroundColor: "hsl(var(--tenant-color-background))",
-                          borderColor:
-                            "hsl(var(--tenant-color-primary) / 0.12)",
-                        }}
-                      >
+                      {condition.image ? (
+                        /* Image overlay variant */
                         <div
-                          className="h-48 overflow-hidden relative"
-                          style={{
-                            background: condition.image
-                              ? undefined
-                              : "linear-gradient(135deg, hsl(var(--tenant-color-primary) / 0.1), hsl(var(--tenant-color-primary) / 0.03))",
-                          }}
+                          className="group block rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-2 relative aspect-[4/3]"
                         >
                           <Image
-                            src={
-                              condition.image || "/placeholder-condition.jpg"
-                            }
+                            src={condition.image}
                             alt={condition.name}
                             fill
-                            className="object-contain p-6 group-hover:scale-105 transition-transform duration-500"
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
                           />
-                          {/* Gradient overlay on hover */}
                           <div
-                            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                            className="absolute inset-0"
+                            style={{
+                              background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)",
+                            }}
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 p-5">
+                            <h3
+                              className="text-lg font-semibold mb-1 text-white"
+                              style={{
+                                fontFamily:
+                                  "var(--tenant-font-heading, sans-serif)",
+                              }}
+                            >
+                              {condition.name}
+                            </h3>
+                            <p
+                              className="text-sm text-white/80"
+                              style={{
+                                fontFamily: "var(--tenant-font-base, sans-serif)",
+                              }}
+                            >
+                              {condition.category}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        /* No-image card variant */
+                        <div
+                          className="group block rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border"
+                          style={{
+                            backgroundColor: "hsl(var(--tenant-color-background))",
+                            borderColor:
+                              "hsl(var(--tenant-color-primary) / 0.12)",
+                          }}
+                        >
+                          <div
+                            className="h-48 overflow-hidden relative"
                             style={{
                               background:
-                                "linear-gradient(to top, hsl(var(--tenant-color-primary) / 0.15), transparent)",
-                            }}
-                          />
-                        </div>
-                        <div className="p-5">
-                          <h3
-                            className="text-lg font-semibold mb-1 group-hover:opacity-80 transition-colors"
-                            style={{
-                              color: "hsl(var(--tenant-color-heading))",
-                              fontFamily:
-                                "var(--tenant-font-heading, sans-serif)",
+                                "linear-gradient(135deg, hsl(var(--tenant-color-primary) / 0.1), hsl(var(--tenant-color-primary) / 0.03))",
                             }}
                           >
-                            {condition.name}
-                          </h3>
-                          <p
-                            className="text-sm"
-                            style={{
-                              color: "hsl(var(--tenant-color-primary))",
-                              fontFamily: "var(--tenant-font-base, sans-serif)",
-                            }}
-                          >
-                            {condition.category}
-                          </p>
+                            <Image
+                              src="/placeholder-condition.jpg"
+                              alt={condition.name}
+                              fill
+                              className="object-contain p-6 group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div
+                              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                              style={{
+                                background:
+                                  "linear-gradient(to top, hsl(var(--tenant-color-primary) / 0.15), transparent)",
+                              }}
+                            />
+                          </div>
+                          <div className="p-5">
+                            <h3
+                              className="text-lg font-semibold mb-1 group-hover:opacity-80 transition-colors"
+                              style={{
+                                color: "hsl(var(--tenant-color-heading))",
+                                fontFamily:
+                                  "var(--tenant-font-heading, sans-serif)",
+                              }}
+                            >
+                              {condition.name}
+                            </h3>
+                            <p
+                              className="text-sm"
+                              style={{
+                                color: "hsl(var(--tenant-color-primary))",
+                                fontFamily: "var(--tenant-font-base, sans-serif)",
+                              }}
+                            >
+                              {condition.category}
+                            </p>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </Link>
                   </motion.div>
                 ))}

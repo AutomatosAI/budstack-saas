@@ -15,6 +15,7 @@ import {
   Mail,
   Phone,
   Clock,
+  ChevronRight,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -262,7 +263,7 @@ export default function SupportContent({
               <motion.div key={action.title} variants={fadeInUp}>
                 <Link href={action.href}>
                   <div
-                    className="group rounded-xl p-6 text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border"
+                    className="group rounded-xl overflow-hidden text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border"
                     style={{
                       borderColor:
                         "hsl(var(--tenant-color-primary) / 0.12)",
@@ -270,39 +271,50 @@ export default function SupportContent({
                         "hsl(var(--tenant-color-background))",
                     }}
                   >
+                    {/* Accent bar */}
                     <div
-                      className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform"
-                      style={{
-                        backgroundColor:
-                          "hsl(var(--tenant-color-primary) / 0.1)",
-                      }}
-                    >
-                      <action.icon
-                        className="w-6 h-6"
+                      className="h-1.5"
+                      style={{ backgroundColor: "hsl(var(--tenant-color-primary))" }}
+                    />
+                    <div className="p-6">
+                      <div
+                        className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform"
                         style={{
-                          color: "hsl(var(--tenant-color-primary))",
+                          backgroundColor:
+                            "hsl(var(--tenant-color-primary) / 0.1)",
                         }}
+                      >
+                        <action.icon
+                          className="w-6 h-6"
+                          style={{
+                            color: "hsl(var(--tenant-color-primary))",
+                          }}
+                        />
+                      </div>
+                      <h3
+                        className="font-semibold text-base mb-2"
+                        style={{
+                          color: "hsl(var(--tenant-color-heading))",
+                          fontFamily:
+                            "var(--tenant-font-heading, sans-serif)",
+                        }}
+                      >
+                        {action.title}
+                      </h3>
+                      <p
+                        className="text-sm mb-3"
+                        style={{
+                          color: "hsl(var(--tenant-color-text))",
+                          fontFamily: "var(--tenant-font-base, sans-serif)",
+                        }}
+                      >
+                        {action.description}
+                      </p>
+                      <ChevronRight
+                        className="w-4 h-4 mx-auto transition-transform group-hover:translate-x-1"
+                        style={{ color: "hsl(var(--tenant-color-primary))" }}
                       />
                     </div>
-                    <h3
-                      className="font-semibold text-base mb-2"
-                      style={{
-                        color: "hsl(var(--tenant-color-heading))",
-                        fontFamily:
-                          "var(--tenant-font-heading, sans-serif)",
-                      }}
-                    >
-                      {action.title}
-                    </h3>
-                    <p
-                      className="text-sm"
-                      style={{
-                        color: "hsl(var(--tenant-color-text))",
-                        fontFamily: "var(--tenant-font-base, sans-serif)",
-                      }}
-                    >
-                      {action.description}
-                    </p>
                   </div>
                 </Link>
               </motion.div>
@@ -405,17 +417,27 @@ export default function SupportContent({
                               }}
                             >
                               <AccordionTrigger className="px-6 py-4 hover:no-underline text-left">
-                                <span
-                                  className="font-medium text-sm"
-                                  style={{
-                                    color:
-                                      "hsl(var(--tenant-color-heading))",
-                                    fontFamily:
-                                      "var(--tenant-font-base, sans-serif)",
-                                  }}
-                                >
-                                  {faq.q}
-                                </span>
+                                <div className="flex items-center gap-3">
+                                  <span
+                                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                                    style={{
+                                      backgroundColor: "hsl(var(--tenant-color-primary))",
+                                    }}
+                                  >
+                                    {qi + 1}
+                                  </span>
+                                  <span
+                                    className="font-medium text-sm"
+                                    style={{
+                                      color:
+                                        "hsl(var(--tenant-color-heading))",
+                                      fontFamily:
+                                        "var(--tenant-font-base, sans-serif)",
+                                    }}
+                                  >
+                                    {faq.q}
+                                  </span>
+                                </div>
                               </AccordionTrigger>
                               <AccordionContent className="px-6 pb-5">
                                 <p

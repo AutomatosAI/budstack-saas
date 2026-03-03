@@ -130,11 +130,17 @@ const steps = [
 
 interface ConsultationContentProps {
   basePath: string;
+  pageContent?: any;
 }
 
 export default function ConsultationContent({
   basePath,
+  pageContent,
 }: ConsultationContentProps) {
+  const contentSpecialties = pageContent?.specialties || specialties;
+  const contentSteps = pageContent?.steps || steps;
+  const heroTitle = pageContent?.heroTitle || "Medical Cannabis Consultation";
+  const heroSubtitle = pageContent?.heroSubtitle || "Begin your journey towards personalised medical cannabis treatment. Our streamlined process connects you with licensed prescribers.";
   return (
     <>
       {/* Hero Section */}
@@ -175,7 +181,7 @@ export default function ConsultationContent({
               }}
               variants={fadeInUp}
             >
-              Medical Cannabis Consultation
+              {heroTitle}
             </motion.h1>
             <motion.p
               className="text-lg md:text-xl max-w-3xl mx-auto font-light"
@@ -185,9 +191,7 @@ export default function ConsultationContent({
               }}
               variants={fadeInUp}
             >
-              Begin your journey towards personalised medical cannabis
-              treatment. Our streamlined process connects you with licensed
-              prescribers.
+              {heroSubtitle}
             </motion.p>
           </motion.div>
         </div>
@@ -227,8 +231,11 @@ export default function ConsultationContent({
 
             <motion.div variants={fadeInUp}>
               <Accordion type="single" collapsible className="space-y-4">
-                {specialties.map((specialty, index) => {
-                  const IconComp = specialty.icon;
+                {contentSpecialties.map((specialty: any, index: number) => {
+                  const iconMap: Record<string, any> = { Activity, Brain, Stethoscope, Heart, HandHeart };
+                  const IconComp = typeof specialty.icon === "string"
+                    ? iconMap[specialty.icon] || Activity
+                    : specialty.icon;
                   return (
                     <AccordionItem
                       key={index}
@@ -287,7 +294,7 @@ export default function ConsultationContent({
                       </AccordionTrigger>
                       <AccordionContent className="px-6 pb-6">
                         <ul className="grid sm:grid-cols-2 gap-3 pt-2">
-                          {specialty.conditions.map((condition, ci) => (
+                          {specialty.conditions.map((condition: string, ci: number) => (
                             <li
                               key={ci}
                               className="flex items-center gap-2"
@@ -349,8 +356,11 @@ export default function ConsultationContent({
             </motion.h2>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {steps.map((step, index) => {
-                const StepIcon = step.icon;
+              {contentSteps.map((step: any, index: number) => {
+                const stepIconMap: Record<string, any> = { ClipboardList, UserCheck, MessageSquare, FileCheck };
+                const StepIcon = typeof step.icon === "string"
+                  ? stepIconMap[step.icon] || ClipboardList
+                  : step.icon;
                 return (
                   <motion.div
                     key={index}
@@ -392,6 +402,18 @@ export default function ConsultationContent({
                     >
                       {step.title}
                     </h3>
+                    {step.highlight && (
+                      <span
+                        className="inline-block px-3 py-0.5 rounded-full text-xs font-semibold mb-2"
+                        style={{
+                          backgroundColor: "hsl(var(--tenant-color-primary) / 0.1)",
+                          color: "hsl(var(--tenant-color-primary))",
+                          fontFamily: "var(--tenant-font-base, sans-serif)",
+                        }}
+                      >
+                        {step.highlight}
+                      </span>
+                    )}
                     <p
                       className="text-sm leading-relaxed"
                       style={{
