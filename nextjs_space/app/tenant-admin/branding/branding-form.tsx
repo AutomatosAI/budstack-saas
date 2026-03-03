@@ -1539,11 +1539,11 @@ export default function BrandingForm({
                                 />
                               ) : (
                                 <Input
-                                  type={field.type === 'url' ? 'url' : 'text'}
+                                  type="text"
                                   value={String(fieldValue || '')}
                                   onChange={(e) => updateField(field.key, e.target.value)}
                                   className="mt-1"
-                                  placeholder={field.placeholder || (field.type === 'url' ? 'https://...' : undefined)}
+                                  placeholder={field.placeholder || (field.type === 'url' ? '/page or https://...' : undefined)}
                                 />
                               )}
                             </div>

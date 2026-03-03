@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { uploadFile, getFileUrl } from "@/lib/s3";
+import { uploadFile, getFileUrl, deleteS3Directory } from "@/lib/s3";
 import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
@@ -204,6 +204,16 @@ export async function DELETE(
     } catch (fsError: any) {
       console.error("[Template Delete] Error removing directory:", fsError);
       // Continue with database deletion even if file system cleanup fails
+    }
+
+    // Delete S3 template files
+    if (template.slug) {
+      try {
+        const s3Deleted = await deleteS3Directory(`templates/${template.slug}/`);
+        console.log(`[Template Delete] S3 cleanup: ${s3Deleted} file(s) deleted from templates/${template.slug}/`);
+      } catch (s3Error: any) {
+        console.error("[Template Delete] S3 cleanup failed (continuing):", s3Error.message);
+      }
     }
 
     // Delete database record
