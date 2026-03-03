@@ -80,7 +80,7 @@ export async function GET(
       error instanceof Error ? error.message : "Unknown error";
     console.error("Doctor Green API Error:", errorMessage);
 
-    // Return specific error for missing credentials
+    // Return specific error for missing credentials — frontend shows setup guide
     if (
       errorMessage.includes("MISSING_CREDENTIALS") ||
       errorMessage.includes("Dr Green API credentials are not configured")
@@ -88,11 +88,12 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
+          missingCredentials: true,
           error:
-            "Dr Green API Keys missing. Please configure them in the Tenant Admin Dashboard.",
+            "This store's Dr Green API keys have not been configured yet. Please add your API Key and Secret Key in the Tenant Admin Dashboard under Settings.",
           data: [],
           count: 0,
-          source: "api_error",
+          source: "missing_credentials",
           tenant: tenant
             ? {
                 businessName: tenant.businessName,
@@ -100,8 +101,8 @@ export async function GET(
               }
             : undefined,
         },
-        { status: 500 },
-      ); // Or 400? Keeping 500 for server config error
+        { status: 200 },
+      );
     }
 
     // Return generic error - NO MOCK FALLBACK (API ONLY)

@@ -325,6 +325,8 @@ export async function fetchProducts(
 ): Promise<DoctorGreenProduct[]> {
   // Use authenticated /dapp/strains endpoint — returns country-specific pricing
   const alpha3 = toAlpha3(country);
+  console.log(`[fetchProducts] country=${country} alpha3=${alpha3}`);
+
   const response = await doctorGreenRequest<any>('/dapp/strains', {
     config,
     queryParams: {
@@ -335,7 +337,20 @@ export async function fetchProducts(
     },
   });
 
+  // Debug: log response shape and first product pricing
+  const responseKeys = Object.keys(response || {});
+  const dataKeys = response?.data ? Object.keys(response.data) : [];
+  console.log(`[fetchProducts] Response keys: [${responseKeys}], data keys: [${dataKeys}]`);
+
   const products = response?.data?.strains || response?.strains || [];
+
+  if (products.length > 0) {
+    const p = products[0];
+    console.log(`[fetchProducts] First product: "${p.name}" retailPrice=${p.retailPrice} currency=${p.currency} prices=${JSON.stringify(p.prices?.slice?.(0, 2))}`);
+  } else {
+    console.log(`[fetchProducts] No products returned`);
+  }
+
   return products.map((product: DoctorGreenProduct) => normalizeProduct(product, country));
 }
 

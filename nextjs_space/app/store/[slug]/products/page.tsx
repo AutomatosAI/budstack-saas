@@ -14,6 +14,7 @@ import {
   ShoppingCart,
   Lock,
   Loader2,
+  Settings,
 } from "lucide-react";
 import { Tenant } from "@/types/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -451,6 +452,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
+  const [missingCredentials, setMissingCredentials] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEffects, setSelectedEffects] = useState<string[]>([]);
@@ -473,6 +475,8 @@ export default function ProductsPage() {
         }
         if (data.success) {
           setProducts(data.data);
+        } else if (data.missingCredentials) {
+          setMissingCredentials(true);
         } else {
           setProductsError(data.error || "Failed to load products");
           if (data.error === "Tenant not found") setTenant(null);
@@ -800,6 +804,43 @@ export default function ProductsPage() {
                 {Array.from({ length: 8 }).map((_, i) => (
                   <ProductSkeleton key={i} />
                 ))}
+              </div>
+            ) : missingCredentials ? (
+              <div className="text-center py-20 max-w-lg mx-auto">
+                <div
+                  className="h-16 w-16 rounded-2xl flex items-center justify-center mx-auto mb-6"
+                  style={{
+                    backgroundColor: "hsl(var(--tenant-color-primary) / 0.1)",
+                  }}
+                >
+                  <Settings
+                    className="h-8 w-8"
+                    style={{ color: "hsl(var(--tenant-color-primary))" }}
+                  />
+                </div>
+                <h3
+                  className="text-xl font-semibold mb-3"
+                  style={{
+                    color: "hsl(var(--tenant-color-heading))",
+                    fontFamily: "var(--tenant-font-heading, sans-serif)",
+                  }}
+                >
+                  Products Coming Soon
+                </h3>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{
+                    color: "hsl(var(--tenant-color-text))",
+                    fontFamily: "var(--tenant-font-base, sans-serif)",
+                  }}
+                >
+                  This store is still being set up. The store admin needs to add
+                  their Dr Green API keys in the{" "}
+                  <span className="font-medium">Tenant Admin Dashboard</span>{" "}
+                  under{" "}
+                  <span className="font-medium">Settings</span>{" "}
+                  to connect their product catalog.
+                </p>
               </div>
             ) : productsError ? (
               <Alert className="max-w-2xl mx-auto">

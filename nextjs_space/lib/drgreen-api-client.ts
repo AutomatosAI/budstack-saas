@@ -250,7 +250,7 @@ export async function callDrGreenAPI<T>(
     ? `${baseUrl}${endpoint}?${queryString}`
     : `${baseUrl}${endpoint}`;
 
-  if (isDev) console.log(`[DrGreen API] >>> ${method} ${fullUrl}`);
+  console.log(`[DrGreen API] >>> ${method} ${fullUrl}`);
 
   if (!apiKey || !secretKey) {
     throw new Error('MISSING_CREDENTIALS');
@@ -292,7 +292,7 @@ export async function callDrGreenAPI<T>(
   });
   const elapsed = Date.now() - startTime;
 
-  if (isDev) console.log(`[DrGreen API] <<< ${response.status} ${response.statusText} (${elapsed}ms)`);
+  console.log(`[DrGreen API] <<< ${response.status} ${response.statusText} (${elapsed}ms)`);
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
