@@ -69,27 +69,25 @@ export function getCurrencySymbol(isoCode: string): string {
   return CURRENCY_SYMBOL_MAP[isoCode.toUpperCase()] || isoCode;
 }
 
-// Dr Green API prices are in EUR. Convert to target currency.
-// Rates are EUR-based: how many units of target currency per 1 EUR.
-// Matches the Lovable template's fallback rates.
-const EUR_EXCHANGE_RATES: Record<string, number> = {
+// Dr Green API returns prices in EUR. Convert to tenant's local currency.
+// Rates match the Lovable template fallbacks (ZAR base: 1 ZAR = X of other currency).
+// In this map the values are "how much of target currency you get per 1 EUR".
+const EUR_RATES: Record<string, number> = {
   EUR: 1,
-  ZAR: 19.23,     // 1 EUR ≈ 19.23 ZAR
+  ZAR: 19.23,    // 1 EUR ≈ R 19.23
   GBP: 0.846,
   USD: 1.096,
   THB: 38.08,
   CAD: 1.47,
   AUD: 1.63,
-  NZD: 1.76,
-  CHF: 0.97,
-  SAR: 4.11,
 };
 
 function convertFromEUR(eurAmount: number, targetCurrency: string): number {
-  const rate = EUR_EXCHANGE_RATES[targetCurrency.toUpperCase()];
-  if (!rate || rate === 1) return eurAmount; // No conversion if EUR or unknown
+  const rate = EUR_RATES[targetCurrency.toUpperCase()];
+  if (!rate || rate === 1) return eurAmount;
   return Math.round(eurAmount * rate * 100) / 100;
 }
+
 
 export interface DoctorGreenConfig {
   apiKey: string;
@@ -311,7 +309,7 @@ function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorG
     ? isAvailableAtAnyLocation
     : (product.isAvailable !== false && totalStock > 0);
 
-  // Match local currency price from the prices array first
+  // Match local currency price from the prices array if available
   const localCurrencyPrice = product.prices?.find(
     (p: any) => p.currency?.toLowerCase() === defaultCurrency.toLowerCase()
   );
@@ -320,14 +318,14 @@ function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorG
   let isoCode: string;
 
   if (localCurrencyPrice?.retailPrice) {
-    // API provided a price in the tenant's currency — use it directly
+    // API provided a localized price — use directly
     price = localCurrencyPrice.retailPrice;
     isoCode = localCurrencyPrice.currency.toUpperCase();
   } else {
-    // API only has EUR retailPrice — convert to tenant's currency
+    // API returns EUR — convert to tenant's currency (matches Lovable template)
     const eurPrice = product.retailPrice || 0;
     isoCode = defaultCurrency;
-    price = defaultCurrency === "EUR" ? eurPrice : convertFromEUR(eurPrice, defaultCurrency);
+    price = convertFromEUR(eurPrice, defaultCurrency);
   }
 
   const currency = getCurrencySymbol(isoCode);
@@ -362,7 +360,15 @@ export async function fetchProducts(
   // /strains is a public endpoint — fetch directly without auth headers
   // Sending auth causes 401 rejection on Railway (API validates headers even though endpoint is public)
   const baseUrl = config.apiUrl || API_URL;
-  const response = await fetch(`${baseUrl}/strains`, {
+  // Pass countryCode as Alpha-3 (e.g. ZAF) so the API returns country-specific pricing
+  const alpha3 = toAlpha3(country);
+  const params = new URLSearchParams({
+    countryCode: alpha3,
+    orderBy: 'desc',
+    take: '100',
+    page: '1',
+  });
+  const response = await fetch(`${baseUrl}/strains?${params}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
