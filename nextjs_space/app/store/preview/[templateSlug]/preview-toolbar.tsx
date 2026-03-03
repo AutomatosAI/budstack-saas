@@ -23,7 +23,7 @@ export default function PreviewToolbar({
   // Apply width constraint to the template wrapper div (class="template-{slug}")
   useEffect(() => {
     const container = document.querySelector(
-      '[class^="template-"]'
+      '[class*="template-"]'
     ) as HTMLElement | null;
     if (!container) return;
 
