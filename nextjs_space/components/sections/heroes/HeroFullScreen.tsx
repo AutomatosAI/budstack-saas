@@ -33,7 +33,7 @@ export function HeroFullScreen({
   // Advanced configurations from tenant settings
   const heroOverlayStyle = pageContent?.home?.heroOverlayStyle || 'gradient-dark';
   const heroOverlayOpacity = pageContent?.home?.heroOverlayOpacity ?? 70;
-  const heroHeight = pageContent?.home?.heroHeight || 'large';
+  const heroHeight = sectionConfig?.heroHeight || pageContent?.home?.heroHeight || 'large';
 
   // Map height enum to classes
   const heightClass: Record<string, string> = {

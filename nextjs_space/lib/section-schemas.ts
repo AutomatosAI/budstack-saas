@@ -39,6 +39,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'imageUrl', label: 'Background Image', type: 'image', default: '' },
       { key: 'textAlign', label: 'Text Alignment', type: 'select', default: 'center', options: ['left', 'center', 'right'] },
       { key: 'heroType', label: 'Background Style', type: 'select', default: 'gradient-image', options: ['image', 'gradient', 'gradient-image'] },
+      { key: 'heroHeight', label: 'Hero Height', type: 'select', default: 'large', options: ['medium', 'large', 'full'] },
     ],
   },
   HeroSplit: {
@@ -69,6 +70,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'textAlign', label: 'Text Alignment', type: 'select', default: 'center', options: ['left', 'center', 'right'] },
       { key: 'heroType', label: 'Background Style', type: 'select', default: 'image', options: ['image', 'gradient', 'gradient-image'] },
       { key: 'overlayOpacity', label: 'Overlay Opacity (%)', type: 'number', default: 50 },
+      { key: 'heroHeight', label: 'Hero Height', type: 'select', default: 'large', options: ['medium', 'large', 'full'] },
     ],
   },
   HeroMinimal: {
