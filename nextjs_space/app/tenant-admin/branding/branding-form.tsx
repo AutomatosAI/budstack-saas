@@ -48,28 +48,14 @@ import {
 } from "@/components/ui/dialog";
 import { SECTION_REGISTRY } from "@/lib/section-registry";
 import { StoreEditorHelperBot } from "@/components/admin/StoreEditorHelperBot";
-
-// When a new section is added from the modal, it needs default config properties 
-// to ensure the left-sidebar form fields generate correctly. 
-const SECTION_DEFAULTS: Record<string, Record<string, any>> = {
-  HeroFullScreen: { heading: "Welcome", subtitle: "A full screen hero", ctaText: "Start", imageUrl: "" },
-  HeroSplit: { heading: "New Split Hero", subtitle: "Describe it here", ctaText: "Click Me", imageUrl: "" },
-  HeroVideo: { heading: "Video Hero", subtitle: "Watch this", videoUrl: "" },
-  HeroMinimal: { heading: "Clean & Simple", subtitle: "Minimalist hero block" },
-  ValueProps: { title: "Why Choose Us" }, // Does not support array editing yet
-  ProductShowcase: { heading: "Our Products", subtitle: "Explore our range" },
-  Testimonials: { heading: "What They Say", subtitle: "Customer feedback" },
-  About: { heading: "About Us", content: "Our story", imageUrl: "" },
-  Gallery: { heading: "Gallery", subtitle: "See our work" },
-  Stats: { heading: "By The Numbers" },
-  FAQ: { heading: "Frequently Asked Questions", subtitle: "Find answers here" },
-  BlogFeed: { heading: "Latest News", subtitle: "Read our blog" },
-  Features: { heading: "Features", subtitle: "What we offer", imageUrl: "" },
-  ImageShowcase: { heading: "Showcase", subtitle: "Highlight an image", imageUrl: "" },
-  CTABanner: { heading: "Ready?", subtitle: "Let's go", ctaText: "Start" },
-  CTAWithImage: { heading: "Join Us", subtitle: "Don't wait", ctaText: "Sign Up", imageUrl: "" },
-  CTASplit: { heading: "Contact Us", subtitle: "We are here help", ctaText: "Email" },
-};
+import {
+  SECTION_SCHEMAS,
+  getSectionDefaults,
+  getEditableFields,
+  getSectionsByCategory,
+  migrateSectionConfig,
+} from "@/lib/section-schemas";
+import type { FieldSchema } from "@/lib/section-schemas";
 import {
   DndContext,
   closestCenter,
@@ -722,20 +708,46 @@ export default function BrandingForm({
   }
 
   function handleAddSection(type: string) {
+    const defaults = getSectionDefaults(type);
     const newSection = {
       id: `${type.toLowerCase()}-${Date.now().toString(36)}`,
-      type: type,
-      config: SECTION_DEFAULTS[type] || { heading: "New Section", subtitle: "Edit me" }
+      type,
+      config: defaults,
     };
     setFormData((prev) => ({
       ...prev,
       layoutSections: [...prev.layoutSections, newSection],
       sectionConfigs: {
         ...prev.sectionConfigs,
-        [newSection.id]: { ...newSection.config }
-      }
+        [newSection.id]: { ...defaults },
+      },
     }));
     setIsAddSectionOpen(false);
+  }
+
+  function handleChangeSectionType(sectionId: string, newType: string) {
+    setFormData((prev) => {
+      const sectionIndex = prev.layoutSections.findIndex((s) => s.id === sectionId);
+      if (sectionIndex === -1) return prev;
+
+      const oldConfig = prev.sectionConfigs[sectionId] || prev.layoutSections[sectionIndex].config || {};
+      const migratedConfig = migrateSectionConfig(oldConfig, newType);
+      const updatedSections = [...prev.layoutSections];
+      updatedSections[sectionIndex] = {
+        ...updatedSections[sectionIndex],
+        type: newType,
+        config: migratedConfig,
+      };
+
+      return {
+        ...prev,
+        layoutSections: updatedSections,
+        sectionConfigs: {
+          ...prev.sectionConfigs,
+          [sectionId]: migratedConfig,
+        },
+      };
+    });
   }
 
   function handleRemoveSection(id: string) {
@@ -1266,20 +1278,29 @@ export default function BrandingForm({
                         <DialogHeader>
                           <DialogTitle>Component Library</DialogTitle>
                           <DialogDescription>
-                            Select a new section to add it to your layout.
+                            Select a section to add to your layout.
                           </DialogDescription>
                         </DialogHeader>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-                          {Object.keys(SECTION_REGISTRY).map((type) => (
-                            <Button
-                              key={type}
-                              variant="outline"
-                              className="h-auto py-6 flex flex-col justify-center items-center gap-2 hover:bg-slate-50 transition-colors"
-                              onClick={() => handleAddSection(type)}
-                            >
-                              <div className="font-semibold">{type.replace(/([A-Z])/g, ' $1').trim()}</div>
-                              <div className="text-xs text-muted-foreground opacity-60 font-mono">{type}</div>
-                            </Button>
+                        <div className="space-y-6 mt-4">
+                          {getSectionsByCategory().map((group) => (
+                            <div key={group.category}>
+                              <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-3">
+                                {group.label}
+                              </h3>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {group.types.map(({ type, schema }) => (
+                                  <Button
+                                    key={type}
+                                    variant="outline"
+                                    className="h-auto py-4 flex flex-col justify-center items-center gap-1.5 hover:bg-slate-50 transition-colors"
+                                    onClick={() => handleAddSection(type)}
+                                  >
+                                    <div className="font-semibold text-sm">{schema.label}</div>
+                                    <div className="text-xs text-muted-foreground text-center leading-tight">{schema.description}</div>
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </DialogContent>
@@ -1417,95 +1438,122 @@ export default function BrandingForm({
               </div>
 
               {formData.layoutSections.map((section: any) => {
-                // Skip sections without a config or ID
-                if (!section.id || !section.config) return null;
+                if (!section.id) return null;
 
-                const configValues = formData.sectionConfigs[section.id] || {};
+                const configValues = formData.sectionConfigs[section.id] || section.config || {};
+                const editableFields = getEditableFields(section.type);
+                const schema = SECTION_SCHEMAS[section.type];
+                const sameCategory = schema
+                  ? Object.entries(SECTION_SCHEMAS)
+                      .filter(([t, s]) => s.category === schema.category && t !== section.type)
+                      .map(([t, s]) => ({ type: t, label: s.label }))
+                  : [];
+
+                const updateField = (key: string, value: string | number) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    sectionConfigs: {
+                      ...prev.sectionConfigs,
+                      [section.id]: {
+                        ...prev.sectionConfigs[section.id],
+                        [key]: value,
+                      },
+                    },
+                  }));
+                };
 
                 return (
                   <Card key={section.id}>
                     <CardHeader>
-                      <CardTitle className="capitalize">
-                        {section.type.replace(/([A-Z])/g, ' $1').trim()}
-                        <span className="text-muted-foreground text-sm font-normal ml-2">
-                          (#{section.id})
-                        </span>
-                      </CardTitle>
+                      <div className="flex items-center justify-between gap-2">
+                        <CardTitle className="text-base">
+                          {schema?.label || section.type.replace(/([A-Z])/g, ' $1').trim()}
+                        </CardTitle>
+                        {sameCategory.length > 0 && (
+                          <Select
+                            value={section.type}
+                            onValueChange={(newType) => handleChangeSectionType(section.id, newType)}
+                          >
+                            <SelectTrigger className="w-[180px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={section.type}>
+                                {schema?.label || section.type}
+                              </SelectItem>
+                              {sameCategory.map((opt) => (
+                                <SelectItem key={opt.type} value={opt.type}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {Object.entries(configValues).map(([key, value]) => {
-                        // Only render generic string fields for now (exclude arrays/objects directly)
-                        if (typeof value !== 'string') return null;
+                      {editableFields.length > 0 ? (
+                        editableFields.map((field: FieldSchema) => {
+                          const fieldValue = configValues[field.key] ?? field.default;
 
-                        // Determine if it should be a textarea (longer content)
-                        const isLongText = key.toLowerCase().includes('content') ||
-                          key.toLowerCase().includes('description') ||
-                          key.toLowerCase().includes('subtitle');
+                          return (
+                            <div key={`${section.id}-${field.key}`}>
+                              <Label>{field.label}</Label>
 
-                        // Determine if it looks like an image URL
-                        const isImage = key.toLowerCase().includes('image') ||
-                          key.toLowerCase().includes('logo') ||
-                          key.toLowerCase().includes('icon');
-
-                        return (
-                          <div key={`${section.id}-${key}`}>
-                            <Label className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</Label>
-
-                            {isImage ? (
-                              <SectionImageUploader
-                                value={value as string}
-                                onChange={(url) => {
-                                  setFormData({
-                                    ...formData,
-                                    sectionConfigs: {
-                                      ...formData.sectionConfigs,
-                                      [section.id]: {
-                                        ...formData.sectionConfigs[section.id],
-                                        [key]: url
-                                      }
-                                    }
-                                  });
-                                }}
-                              />
-                            ) : isLongText ? (
-                              <Textarea
-                                value={value as string}
-                                onChange={(e) => {
-                                  setFormData({
-                                    ...formData,
-                                    sectionConfigs: {
-                                      ...formData.sectionConfigs,
-                                      [section.id]: {
-                                        ...formData.sectionConfigs[section.id],
-                                        [key]: e.target.value
-                                      }
-                                    }
-                                  });
-                                }}
-                                rows={3}
-                                className="mt-1"
-                              />
-                            ) : (
-                              <Input
-                                value={value as string}
-                                onChange={(e) => {
-                                  setFormData({
-                                    ...formData,
-                                    sectionConfigs: {
-                                      ...formData.sectionConfigs,
-                                      [section.id]: {
-                                        ...formData.sectionConfigs[section.id],
-                                        [key]: e.target.value
-                                      }
-                                    }
-                                  });
-                                }}
-                                className="mt-1"
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
+                              {field.type === 'image' ? (
+                                <SectionImageUploader
+                                  value={String(fieldValue || '')}
+                                  onChange={(url) => updateField(field.key, url)}
+                                />
+                              ) : field.type === 'textarea' ? (
+                                <Textarea
+                                  value={String(fieldValue || '')}
+                                  onChange={(e) => updateField(field.key, e.target.value)}
+                                  rows={3}
+                                  className="mt-1"
+                                  placeholder={field.placeholder}
+                                />
+                              ) : field.type === 'select' && field.options ? (
+                                <Select
+                                  value={String(fieldValue || field.options[0])}
+                                  onValueChange={(val) => updateField(field.key, val)}
+                                >
+                                  <SelectTrigger className="mt-1">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {field.options.map((opt) => (
+                                      <SelectItem key={opt} value={opt}>
+                                        {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : field.type === 'number' ? (
+                                <Input
+                                  type="number"
+                                  value={fieldValue}
+                                  onChange={(e) => updateField(field.key, Number(e.target.value))}
+                                  className="mt-1"
+                                  placeholder={field.placeholder}
+                                />
+                              ) : (
+                                <Input
+                                  type={field.type === 'url' ? 'url' : 'text'}
+                                  value={String(fieldValue || '')}
+                                  onChange={(e) => updateField(field.key, e.target.value)}
+                                  className="mt-1"
+                                  placeholder={field.placeholder || (field.type === 'url' ? 'https://...' : undefined)}
+                                />
+                              )}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          No editable fields defined for this section type.
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 );
