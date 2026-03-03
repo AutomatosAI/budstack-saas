@@ -84,62 +84,47 @@ export async function PUT(req: NextRequest) {
       const defined = (obj: Record<string, any>) =>
         Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined && v !== null && v !== ''));
 
-      // Merge new settings into Design System structure
-      const newDesignSystem = {
-        ...currentDS,
-        colors: {
-          ...currentDS.colors,
-          ...defined({
-            primary: settings.primaryColor,
-            secondary: settings.secondaryColor,
-            accent: settings.accentColor,
-            background: settings.backgroundColor,
-            text: settings.textColor,
-            heading: settings.headingColor,
-          }),
-        },
-        typography: {
-          ...currentDS.typography,
-          fontFamily: {
-            ...currentDS.typography?.fontFamily,
-            ...defined({
-              body: settings.fontFamily,
-              heading: settings.headingFontFamily,
-            }),
+      // Merge new settings into Design System — preserve ALL existing keys (primary-scale, gradients, custom shadows, etc.)
+      const colorOverrides = defined({
+        primary: settings.primaryColor,
+        secondary: settings.secondaryColor,
+        accent: settings.accentColor,
+        background: settings.backgroundColor,
+        text: settings.textColor,
+        heading: settings.headingColor,
+      });
+      const typoOverrides = defined({
+        body: settings.fontFamily,
+        heading: settings.headingFontFamily,
+      });
+      const fontSizeOverrides = defined({
+        base: settings.fontSize,
+      });
+
+      const newDesignSystem = deepMerge(currentDS, {
+        ...(Object.keys(colorOverrides).length > 0 ? { colors: colorOverrides } : {}),
+        ...(Object.keys(typoOverrides).length > 0 || Object.keys(fontSizeOverrides).length > 0 ? {
+          typography: {
+            ...(Object.keys(typoOverrides).length > 0 ? { fontFamily: typoOverrides } : {}),
+            ...(Object.keys(fontSizeOverrides).length > 0 ? { fontSize: fontSizeOverrides } : {}),
           },
-          fontSize: {
-            ...currentDS.typography?.fontSize,
-            ...defined({
-              base: settings.fontSize,
-            }),
-          },
-        },
-        borderRadius: {
-          ...currentDS.borderRadius,
-          ...defined({
-            container: settings.borderRadius,
-            button: settings.buttonStyle,
-          }),
-        },
-        spacing: {
-          ...currentDS.spacing,
-          ...defined({
-            scale: settings.spacing,
-          }),
-        },
-        shadows: {
-          ...currentDS.shadows,
-          ...defined({
-            card: settings.shadowStyle,
-          }),
-        },
-      };
+        } : {}),
+        ...(settings.borderRadius || settings.buttonStyle ? {
+          borderRadius: defined({ container: settings.borderRadius, button: settings.buttonStyle }),
+        } : {}),
+        ...(settings.spacing ? { spacing: defined({ scale: settings.spacing }) } : {}),
+        ...(settings.shadowStyle ? { shadows: defined({ card: settings.shadowStyle }) } : {}),
+      });
 
       // Handle file uploads for template
       const updateData: any = {
         designSystem: newDesignSystem,
-        customCss: settings.customCSS,
       };
+
+      // Only overwrite customCss if the form actually sent a value (prevents wiping S3 styles.css)
+      if (settings.customCSS !== undefined && settings.customCSS !== null) {
+        updateData.customCss = settings.customCSS;
+      }
 
       // Handle layout changes (sections array & config overrides)
       // branding-form passes these implicitly within the "settings" blob
@@ -257,7 +242,7 @@ export async function PUT(req: NextRequest) {
         updateData.pageContent = deepMerge(currentPageContent, settings.pageContent);
       }
 
-      console.log("[branding] Saving designSystem colors:", JSON.stringify(newDesignSystem.colors, null, 2));
+      console.log("[branding] Saving designSystem keys:", Object.keys(newDesignSystem), "color keys:", Object.keys(newDesignSystem.colors || {}));
       console.log("[branding] Saving pageContent keys:", Object.keys(updateData.pageContent || {}));
 
       // Update TenantTemplate
