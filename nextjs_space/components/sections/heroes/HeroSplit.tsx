@@ -23,7 +23,7 @@ export function HeroSplit({
 
   return (
     <section
-      className="min-h-screen flex items-center"
+      className="min-h-[calc(100dvh-4rem)] flex items-center"
       style={{ backgroundColor: 'hsl(var(--tenant-color-background))' }}
     >
       <div className="container mx-auto px-6">

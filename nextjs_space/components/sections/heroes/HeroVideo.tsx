@@ -41,11 +41,11 @@ export function HeroVideo({
   const heroOverlayOpacity = pageContent?.home?.heroOverlayOpacity ?? 55;
   const heroHeight = sectionConfig?.heroHeight || pageContent?.home?.heroHeight || 'large';
 
-  // Map height enum to classes
+  // Map height enum to classes — 'full' accounts for nav bar height
   const heightClass: Record<string, string> = {
     medium: 'min-h-[500px] py-20',
     large: 'min-h-[700px] py-32',
-    full: 'min-h-screen',
+    full: 'min-h-[calc(100dvh-4rem)]',
   };
 
   const selectedHeightClass = heightClass[heroHeight as string] || heightClass['large'];

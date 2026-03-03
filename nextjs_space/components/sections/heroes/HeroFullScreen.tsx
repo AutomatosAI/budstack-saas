@@ -34,13 +34,12 @@ export function HeroFullScreen({
   const heroOverlayStyle = pageContent?.home?.heroOverlayStyle || 'gradient-dark';
   const heroOverlayOpacity = pageContent?.home?.heroOverlayOpacity ?? 70;
   const heroHeight = sectionConfig?.heroHeight || pageContent?.home?.heroHeight || 'large';
-  console.log('[HeroFullScreen] heroHeight debug:', { resolved: heroHeight, fromConfig: sectionConfig?.heroHeight, fromPageContent: pageContent?.home?.heroHeight, sectionConfigKeys: Object.keys(sectionConfig || {}), pageContentHomeKeys: Object.keys(pageContent?.home || {}) });
 
-  // Map height enum to classes
+  // Map height enum to classes — 'full' accounts for nav bar height
   const heightClass: Record<string, string> = {
     medium: 'min-h-[500px] py-20',
     large: 'min-h-[700px] py-32',
-    full: 'min-h-screen',
+    full: 'min-h-[calc(100dvh-4rem)]',
   };
 
   const selectedHeightClass = heightClass[heroHeight as string] || heightClass['large'];
