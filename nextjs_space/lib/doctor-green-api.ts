@@ -248,18 +248,24 @@ function toAlpha3(code: string): string {
 /**
  * Normalize a Dr Green product: resolve image URLs, calculate stock, map currency.
  */
+// Dr Green DB stores relative S3 keys (e.g. "dr-green-strains/img.png").
+// The backend should prepend the bucket URL but hasn't deployed that fix yet.
+// Workaround: resolve relative image paths against the S3 bucket, not the API.
+const S3_BUCKET_BASE_URL = "https://prod-profiles-backend.s3.amazonaws.com";
+
+function resolveImageUrl(raw: string | undefined | null): string | undefined {
+  if (!raw) return undefined;
+  // Already a full URL — leave it alone
+  if (raw.startsWith("http")) return raw;
+  // Relative path → prepend S3 bucket
+  const path = raw.startsWith("/") ? raw.slice(1) : raw;
+  return `${S3_BUCKET_BASE_URL}/${path}`;
+}
+
 function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorGreenProduct {
-  const apiBase = API_URL.replace(/\/api\/v1\/?$/, '');
-  const IMAGE_BASE_URL = apiBase || "https://api.drgreennft.com";
   const defaultCurrency = getCurrencyByCountry(country);
 
-  // Construct full image URL if relative
-  let fullImageUrl = product.imageUrl;
-  if (fullImageUrl && !fullImageUrl.startsWith("http")) {
-    const baseUrl = IMAGE_BASE_URL.endsWith('/') ? IMAGE_BASE_URL.slice(0, -1) : IMAGE_BASE_URL;
-    const path = fullImageUrl.startsWith('/') ? fullImageUrl : `/${fullImageUrl}`;
-    fullImageUrl = `${baseUrl}${path}`;
-  }
+  const fullImageUrl = resolveImageUrl(product.imageUrl);
 
   // Calculate stock from strainLocations, fall back to product-level fields
   const locations = product.strainLocations || [];
@@ -279,6 +285,12 @@ function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorG
     ? localCurrencyPrice.currency.toUpperCase()
     : (product.currency || defaultCurrency);
 
+  // Resolve strainImages URLs too
+  const resolvedStrainImages = product.strainImages?.map((img) => ({
+    ...img,
+    strainImageUrl: resolveImageUrl(img.strainImageUrl) || img.strainImageUrl,
+  }));
+
   return {
     ...product,
     strain_type: (product.type?.toUpperCase() as "INDICA" | "SATIVA" | "HYBRID") || "HYBRID",
@@ -292,6 +304,7 @@ function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorG
     stockQuantity: totalStock,
     image_url: fullImageUrl,
     imageUrl: fullImageUrl,
+    strainImages: resolvedStrainImages,
   };
 }
 
