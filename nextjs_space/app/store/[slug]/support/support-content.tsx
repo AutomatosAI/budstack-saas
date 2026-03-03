@@ -198,7 +198,7 @@ export default function SupportContent({
     <>
       {/* Hero Section */}
       <section
-        className="py-12 md:py-16"
+        className="pt-28 md:pt-36 pb-12 md:pb-16"
         style={{
           background:
             "linear-gradient(to bottom, hsl(var(--tenant-color-primary) / 0.06), transparent)",

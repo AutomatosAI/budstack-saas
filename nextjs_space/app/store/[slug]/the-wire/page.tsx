@@ -56,10 +56,10 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
       className="min-h-screen pb-24 lg:pb-0"
       style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
-      <main className="pt-28 md:pt-32">
+      <main>
         {/* Hero Section */}
         <section
-          className="py-16 md:py-24 relative overflow-hidden"
+          className="pt-28 md:pt-32 pb-16 md:pb-24 relative overflow-hidden"
           style={{ backgroundColor: "hsl(var(--tenant-color-primary))" }}
         >
           {/* SVG dot pattern overlay */}

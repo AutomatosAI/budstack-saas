@@ -45,11 +45,11 @@ export default function BlockchainTechnologyPage() {
       className="min-h-screen pb-24 lg:pb-0"
       style={{ backgroundColor: "var(--tenant-color-background)" }}
     >
-      <main className="pt-28 md:pt-32">
+      <main>
         {/* Hero Section */}
         <section
           style={{ backgroundColor: "var(--tenant-color-background)" }}
-          className="py-16 md:py-20"
+          className="pt-28 md:pt-32 pb-16 md:pb-20"
         >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div

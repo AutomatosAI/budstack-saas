@@ -126,7 +126,7 @@ export default function AboutContent({
     <>
       {/* Hero Section */}
       <section
-        className="py-16 md:py-24"
+        className="pt-28 md:pt-36 pb-16 md:pb-24"
         style={{
           background:
             "linear-gradient(to bottom, hsl(var(--tenant-color-primary) / 0.08), transparent)",

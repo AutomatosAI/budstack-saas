@@ -22,7 +22,7 @@ export default async function ConsultationPage({
       className="min-h-screen pb-24 lg:pb-0"
       style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
-      <main className="pt-28 md:pt-32">
+      <main>
         <ConsultationContent basePath={basePath} pageContent={(tenant as any).pageContent?.consultation} />
 
         {/* Consultation Form */}

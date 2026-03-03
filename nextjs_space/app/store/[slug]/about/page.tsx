@@ -22,7 +22,7 @@ export default async function AboutPage({
       className="min-h-screen pb-24 lg:pb-0"
       style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
-      <main className="pt-28 md:pt-32">
+      <main>
         <AboutContent
           basePath={basePath}
           businessName={tenant.businessName}
