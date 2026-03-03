@@ -147,7 +147,7 @@ export function NavHealingBuds(props: SectionProps) {
                 src={logoUrl}
                 alt={businessName}
                 fill
-                className="object-contain object-left"
+                className="object-contain"
                 priority
               />
             </div>
@@ -173,7 +173,8 @@ export function NavHealingBuds(props: SectionProps) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-xs font-medium transition-colors px-3 py-2 rounded-lg hover:bg-white/10 flex items-center gap-1.5"
+                data-active={isActive || undefined}
+                className="relative text-xs font-medium transition-colors px-3 py-2 rounded-lg hover:bg-white/10 flex items-center gap-1.5"
                 style={{
                   color: isActive ? activeColor : 'rgba(255,255,255,0.8)',
                 }}
@@ -225,6 +226,7 @@ export function NavHealingBuds(props: SectionProps) {
           {!kycVerified && (
             <Link
               href={ctaHref}
+              data-nav-cta=""
               className="px-4 py-2 text-xs font-semibold rounded-full bg-emerald-500 text-white hover:bg-emerald-400 transition-colors"
             >
               {ctaLabel}
@@ -348,6 +350,7 @@ export function NavHealingBuds(props: SectionProps) {
                 <Link
                   key={link.href}
                   href={link.href}
+                  data-active={isActive || undefined}
                   className="flex items-center gap-2 text-base font-medium py-3 px-3 rounded-lg hover:bg-white/10 transition-colors"
                   style={{ color: isActive ? activeColor : 'rgba(255,255,255,0.85)' }}
                   onClick={() => setMobileOpen(false)}
@@ -382,6 +385,7 @@ export function NavHealingBuds(props: SectionProps) {
               {!kycVerified && (
                 <Link
                   href={ctaHref}
+                  data-nav-cta=""
                   className="block text-center px-6 py-3 text-sm font-semibold text-white rounded-full bg-emerald-500 hover:bg-emerald-400 transition-colors"
                   onClick={() => setMobileOpen(false)}
                 >
