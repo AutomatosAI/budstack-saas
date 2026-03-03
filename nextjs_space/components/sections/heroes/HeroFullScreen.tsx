@@ -34,6 +34,7 @@ export function HeroFullScreen({
   const heroOverlayStyle = pageContent?.home?.heroOverlayStyle || 'gradient-dark';
   const heroOverlayOpacity = pageContent?.home?.heroOverlayOpacity ?? 70;
   const heroHeight = sectionConfig?.heroHeight || pageContent?.home?.heroHeight || 'large';
+  console.log('[HeroFullScreen] heroHeight debug:', { resolved: heroHeight, fromConfig: sectionConfig?.heroHeight, fromPageContent: pageContent?.home?.heroHeight, sectionConfigKeys: Object.keys(sectionConfig || {}), pageContentHomeKeys: Object.keys(pageContent?.home || {}) });
 
   // Map height enum to classes
   const heightClass: Record<string, string> = {
