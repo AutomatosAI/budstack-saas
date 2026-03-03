@@ -1,10 +1,10 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { Package, RefreshCw } from "lucide-react";
+import { Package } from "lucide-react";
 import { ProductsTable } from "./products-table";
+import { SyncButton } from "./sync-button";
 
 /** Default pagination settings */
 const DEFAULT_PAGE_SIZE = 20;
@@ -211,10 +211,7 @@ export default async function ProductsPage({
           </p>
         </div>
         <div className="mt-4 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mt-0">
-          <Button variant="hero" size="lg" className="rounded-xl shadow-lg hover:shadow-xl transition-all">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Sync from Dr Green Admin
-          </Button>
+          <SyncButton />
         </div>
       </div>
 
