@@ -4,7 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Menu, X, ShoppingCart, ChevronDown, LogOut, Store, LayoutDashboard, Shield } from 'lucide-react';
+import {
+  Menu, X, ShoppingCart, ChevronDown, LogOut, Store, LayoutDashboard, Shield,
+  FileText, Newspaper, ClipboardCheck, Leaf, Headphones, Users, Info, Heart,
+  type LucideIcon,
+} from 'lucide-react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { SectionProps } from '@/lib/types/section-props';
 import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
@@ -46,6 +50,12 @@ export function NavHealingBuds(props: SectionProps) {
   const accentColor = config.accentColor || null; // falls back to CSS var
   const bgColor = config.bgColor || null; // falls back to CSS var
   const signedOutLabel = config.signedOutLabel || 'Connect';
+
+  // --- Icon map for data-driven nav icons (icon name from defaults.json) ---
+  const ICON_MAP: Record<string, LucideIcon> = {
+    FileText, Newspaper, ClipboardCheck, Leaf, Headphones, Users, Info, Heart,
+    Shield, Store, Menu,
+  };
 
   // --- Links from defaults.json ---
   const defaultLinks = [
@@ -156,17 +166,19 @@ export function NavHealingBuds(props: SectionProps) {
 
         {/* Desktop Nav Links */}
         <div className="hidden lg:flex items-center gap-1">
-          {links.map((link: { label: string; href: string }) => {
+          {links.map((link: { label: string; href: string; icon?: string }) => {
             const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
+            const IconComp = link.icon ? ICON_MAP[link.icon] : null;
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-xs font-medium transition-colors px-3 py-2 rounded-lg hover:bg-white/10"
+                className="text-xs font-medium transition-colors px-3 py-2 rounded-lg hover:bg-white/10 flex items-center gap-1.5"
                 style={{
                   color: isActive ? activeColor : 'rgba(255,255,255,0.8)',
                 }}
               >
+                {IconComp && <IconComp size={14} />}
                 {link.label}
               </Link>
             );
@@ -329,16 +341,18 @@ export function NavHealingBuds(props: SectionProps) {
           }}
         >
           <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
-            {links.map((link: { label: string; href: string }) => {
+            {links.map((link: { label: string; href: string; icon?: string }) => {
               const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
+              const IconComp = link.icon ? ICON_MAP[link.icon] : null;
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="block text-base font-medium py-3 px-3 rounded-lg hover:bg-white/10 transition-colors"
+                  className="flex items-center gap-2 text-base font-medium py-3 px-3 rounded-lg hover:bg-white/10 transition-colors"
                   style={{ color: isActive ? activeColor : 'rgba(255,255,255,0.85)' }}
                   onClick={() => setMobileOpen(false)}
                 >
+                  {IconComp && <IconComp size={18} />}
                   {link.label}
                 </Link>
               );
