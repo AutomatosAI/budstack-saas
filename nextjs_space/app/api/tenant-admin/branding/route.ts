@@ -68,8 +68,25 @@ export async function PUT(req: NextRequest) {
       settings.faviconPath = await uploadFile(buffer, fileName);
     }
 
-    // Check for active template
-    const activeTemplateId = tenant.activeTenantTemplateId;
+    // Accept optional templateId override — allows saving to non-active templates (e.g. blank canvas drafts)
+    const explicitTemplateId = formData.get("templateId") as string | null;
+    let saveTargetId = tenant.activeTenantTemplateId;
+
+    if (explicitTemplateId) {
+      // Validate the template belongs to this tenant
+      const targetTemplate = await prisma.tenant_templates.findFirst({
+        where: { id: explicitTemplateId, tenantId: tenant.id },
+      });
+      if (!targetTemplate) {
+        return NextResponse.json(
+          { error: "Template not found or does not belong to this tenant" },
+          { status: 403 },
+        );
+      }
+      saveTargetId = explicitTemplateId;
+    }
+
+    const activeTemplateId = saveTargetId;
 
     if (activeTemplateId) {
       // Fetch current template (with base template for slug-based URL fallback)

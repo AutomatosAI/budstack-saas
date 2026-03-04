@@ -11,6 +11,7 @@ import TemplateCloneButton from "./clone-button";
 import ActivateButton from "./activate-button";
 import DeleteButton from "./delete-button";
 import { UploadTemplateDialog } from "./upload-dialog";
+import { CreateBlankDialog } from "./create-blank-dialog";
 import UpdateGitHubButton from "./update-github-button";
 import { ShareMarketplaceDialog } from "./share-marketplace-dialog";
 import WithdrawButton from "./withdraw-button";
@@ -131,7 +132,8 @@ export default async function TemplatesPage() {
 
                 {/* MY TEMPLATES TAB */}
                 <TabsContent value="my-templates">
-                    <div className="flex justify-end mb-6">
+                    <div className="flex justify-end gap-3 mb-6">
+                        <CreateBlankDialog />
                         <UploadTemplateDialog />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -144,10 +146,10 @@ export default async function TemplatesPage() {
                                     No Templates Found
                                 </h3>
                                 <p className="text-muted-foreground mb-4">
-                                    You haven&apos;t cloned any templates yet.
+                                    You don&apos;t have any templates yet.
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                    Visit the Marketplace to get started.
+                                    Create a new template or browse the Marketplace to get started.
                                 </p>
                             </div>
                         )}

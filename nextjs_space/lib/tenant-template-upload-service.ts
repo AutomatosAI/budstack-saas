@@ -14,6 +14,7 @@ import {
   generateSlug,
   cleanupTempDir,
 } from "./template-utils";
+import { getOrCreateCustomBase } from "./blank-template-defaults";
 import { randomUUID } from "crypto";
 import fs from "fs/promises";
 import path from "path";
@@ -48,25 +49,8 @@ export async function uploadFromGitHub(
     );
   }
 
-  // Need a base template record to satisfy the foreign key — find or create a "custom-base" placeholder
-  let customBase = await prisma.templates.findUnique({
-    where: { slug: "custom-base" },
-  });
-  if (!customBase) {
-    customBase = await prisma.templates.create({
-      data: {
-        id: randomUUID(),
-        name: "Custom Base",
-        slug: "custom-base",
-        description: "Placeholder base template for custom tenant uploads",
-        category: "system",
-        sourceType: "SYSTEM",
-        isActive: false,
-        isPublic: false,
-        updatedAt: new Date(),
-      },
-    });
-  }
+  // Need a base template record to satisfy the foreign key
+  const customBase = await getOrCreateCustomBase();
 
   // Download and extract the GitHub repo
   const extractPath = await downloadGitHubRepo(githubUrl, branch);

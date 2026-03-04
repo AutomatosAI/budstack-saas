@@ -252,6 +252,11 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
       const { businessName, ...settingsData } = formData;
       formDataToSend.append("businessName", businessName);
 
+      // Send templateId so the API saves to the correct template (not just the active one)
+      if (activeTemplate?.id) {
+        formDataToSend.append("templateId", activeTemplate.id);
+      }
+
       const colorFields: Record<string, string> = {};
       if (dirtyColors.has("primaryColor")) colorFields.primaryColor = settingsData.primaryColor;
       if (dirtyColors.has("secondaryColor")) colorFields.secondaryColor = settingsData.secondaryColor;
