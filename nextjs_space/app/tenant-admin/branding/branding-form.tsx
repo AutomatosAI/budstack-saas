@@ -227,6 +227,8 @@ export default function BrandingForm({
   tenant,
   activeTemplate,
 }: BrandingFormProps) {
+  // Base template CSS from S3 styles.css (read-only, not editable by user)
+  const templateCss = (activeTemplate as any)?.templateCss as string | null;
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [logo, setLogo] = useState<File | null>(null);
@@ -1802,7 +1804,7 @@ export default function BrandingForm({
               <TemplateRenderer
                 layout={liveLayout as any}
                 sectionProps={liveSectionProps}
-                customCss={formData.customCSS}
+                customCss={[templateCss, formData.customCSS].filter(Boolean).join('\n')}
                 renderChrome={true}
               />
             </TenantThemeProvider>

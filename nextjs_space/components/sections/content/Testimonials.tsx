@@ -7,8 +7,10 @@ import { Star, Quote } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
 
 interface Testimonial {
-  quote: string;
-  author: string;
+  quote?: string;
+  content?: string;
+  author?: string;
+  name?: string;
   role?: string;
   rating: number;
 }
@@ -103,7 +105,7 @@ export function Testimonials(props: SectionProps) {
                 className="text-base mb-6 leading-relaxed italic"
                 style={{ color: 'hsl(var(--tenant-color-text))' }}
               >
-                &ldquo;{item.quote}&rdquo;
+                &ldquo;{item.quote || item.content}&rdquo;
               </p>
 
               <div>
@@ -111,7 +113,7 @@ export function Testimonials(props: SectionProps) {
                   className="font-semibold"
                   style={{ color: 'hsl(var(--tenant-color-heading))' }}
                 >
-                  {item.author}
+                  {item.author || item.name}
                 </p>
                 {item.role && (
                   <p className="text-sm" style={{ color: 'hsl(var(--tenant-color-primary))' }}>

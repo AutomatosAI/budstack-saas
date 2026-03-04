@@ -5,7 +5,7 @@ import BrandingForm from './branding-form';
 import { Breadcrumbs } from '@/components/admin/shared';
 import { Sparkles } from 'lucide-react';
 
-import { getJsonFromS3 } from '@/lib/s3';
+import { getJsonFromS3, getTextFromS3 } from '@/lib/s3';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,7 +90,16 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
           (layoutJson as any).defaults = defaultsJson;
         }
 
+        // Fetch template styles.css so the editor preview matches the published site
+        let templateCss: string | null = null;
+        try {
+          templateCss = await getTextFromS3(`${s3Prefix}/styles.css`);
+        } catch {
+          // styles.css is optional
+        }
+
         (activeTemplate as any).layout = layoutJson;
+        (activeTemplate as any).templateCss = templateCss;
       } catch (e) {
         console.error("[BrandingPage] Failed to load layout.json for template", e);
       }
