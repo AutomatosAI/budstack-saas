@@ -55,6 +55,26 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
   const FooterComponent = showChrome ? getSectionComponent(layout.footer) : null;
   const sanitizedCss = useMemo(() => sanitizeCss(customCss), [customCss]);
 
+  // Generate per-section color override CSS from layout sections
+  const sectionColorCss = useMemo(() => {
+    return layout.sections
+      .filter(s => s.id && s.colorOverrides)
+      .map(s => {
+        const declarations = Object.entries(s.colorOverrides!)
+          .filter(([, v]) => v?.trim())
+          .map(([k, v]) => `--tenant-color-${k}: ${v}`)
+          .join('; ');
+        if (!declarations) return '';
+        // Use CSS.escape when available (browser), fallback to simple escaping (SSR)
+        const escaped = typeof globalThis.CSS?.escape === 'function'
+          ? globalThis.CSS.escape(s.id!)
+          : s.id!.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+        return `#${escaped} { ${declarations}; }`;
+      })
+      .filter(Boolean)
+      .join('\n');
+  }, [layout.sections]);
+
   // Generate section padding overrides from layout.settings.sectionPadding
   // This is rendered server-side so it doesn't depend on S3 CSS loading
   const sectionPaddingCss = useMemo(() => {
@@ -90,6 +110,9 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
       )}
       {sectionPaddingCss && (
         <style dangerouslySetInnerHTML={{ __html: sectionPaddingCss }} />
+      )}
+      {sectionColorCss && (
+        <style dangerouslySetInnerHTML={{ __html: sanitizeCss(sectionColorCss) || '' }} />
       )}
       {NavComponent && <NavComponent {...sectionProps} />}
       {layout.sections

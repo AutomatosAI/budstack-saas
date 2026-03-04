@@ -1,0 +1,152 @@
+"use client";
+
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Upload, Loader2 } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
+
+export const FONTS = [
+  { id: "inter", name: "Inter", description: "Modern sans-serif" },
+  { id: "roboto", name: "Roboto", description: "Classic sans-serif" },
+  { id: "lato", name: "Lato", description: "Friendly sans-serif" },
+  { id: "montserrat", name: "Montserrat", description: "Geometric sans-serif" },
+  { id: "poppins", name: "Poppins", description: "Rounded sans-serif" },
+  { id: "playfair", name: "Playfair Display", description: "Elegant serif" },
+  { id: "outfit", name: "Outfit", description: "Modern geometric sans-serif" },
+  { id: "nunito", name: "Nunito", description: "Rounded friendly sans-serif" },
+];
+
+export function ColorPicker({
+  label,
+  description,
+  value,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <p className="text-xs text-gray-500 mb-2">{description}</p>
+      <div className="flex gap-2">
+        <Input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-16 h-10 p-1 cursor-pointer"
+        />
+        <Input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#000000"
+          className="flex-1"
+        />
+      </div>
+    </div>
+  );
+}
+
+export function FileUpload({
+  label,
+  description,
+  accept,
+  onChange,
+  file,
+}: {
+  label: string;
+  description: string;
+  accept: string;
+  onChange: (file: File | null) => void;
+  file: File | null;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <p className="text-xs text-gray-500 mb-2">{description}</p>
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+        <input
+          type="file"
+          accept={accept}
+          onChange={(e) => onChange(e.target.files?.[0] || null)}
+          className="hidden"
+          id={`file-${label}`}
+        />
+        <label htmlFor={`file-${label}`} className="cursor-pointer">
+          <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+          {file ? (
+            <p className="text-sm text-green-600 font-medium">{file.name}</p>
+          ) : (
+            <p className="text-sm text-gray-600">
+              Click to upload or drag and drop
+            </p>
+          )}
+        </label>
+      </div>
+    </div>
+  );
+}
+
+export function SectionImageUploader({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/tenant-admin/branding/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      if (data.url) onChange(data.url);
+    } catch {
+      toast.error("Failed to upload image");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="mt-1 flex gap-2 items-center">
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="https://..."
+        className="flex-1"
+      />
+      <div className="relative border rounded-md p-1.5 flex h-10 w-10 items-center justify-center bg-muted/50 hover:bg-muted cursor-pointer shrink-0 transition-colors">
+        <input
+          type="file"
+          accept="image/*"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          onChange={handleUpload}
+          disabled={isUploading}
+        />
+        {isUploading ? (
+          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+        ) : (
+          <Upload className="w-4 h-4 text-muted-foreground" />
+        )}
+      </div>
+    </div>
+  );
+}

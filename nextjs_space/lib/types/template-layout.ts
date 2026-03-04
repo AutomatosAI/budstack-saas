@@ -1,8 +1,20 @@
+export interface SectionColorOverrides {
+  primary?: string;
+  secondary?: string;
+  accent?: string;
+  background?: string;
+  surface?: string;
+  text?: string;
+  heading?: string;
+  border?: string;
+}
+
 export interface LayoutSection {
   type: string;
   id?: string;
   config?: Record<string, any>;
   visible?: boolean;
+  colorOverrides?: SectionColorOverrides;
 }
 
 export interface TemplateLayout {

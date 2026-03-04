@@ -7,6 +7,16 @@
 
 export type FieldType = 'text' | 'textarea' | 'image' | 'url' | 'select' | 'number' | 'array';
 
+/** Shape of a single sub-field inside an array item (e.g. title, description inside a feature) */
+export interface ArrayItemField {
+  key: string;
+  label: string;
+  type: 'text' | 'textarea' | 'number' | 'image' | 'select';
+  default: string | number;
+  options?: string[];
+  placeholder?: string;
+}
+
 export interface FieldSchema {
   key: string;
   label: string;
@@ -14,6 +24,10 @@ export interface FieldSchema {
   default: string | number;
   options?: string[]; // For 'select' type
   placeholder?: string;
+  /** For 'array' type: defines the shape of each item in the array */
+  itemFields?: ArrayItemField[];
+  /** For 'array' type: label for the "Add" button, e.g. "Add Feature" */
+  itemLabel?: string;
 }
 
 export interface SectionSchema {
@@ -138,7 +152,11 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Why Choose Us' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
-      { key: 'items', label: 'Items', type: 'array', default: '' },
+      { key: 'items', label: 'Items', type: 'array', default: '', itemLabel: 'Value Prop', itemFields: [
+        { key: 'title', label: 'Title', type: 'text', default: 'Benefit' },
+        { key: 'description', label: 'Description', type: 'textarea', default: '' },
+        { key: 'icon', label: 'Icon', type: 'text', default: 'Star', placeholder: 'Lucide icon name' },
+      ]},
     ],
   },
   ProductShowcase: {
@@ -148,7 +166,11 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Our Products' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Explore our range' },
-      { key: 'categories', label: 'Categories', type: 'array', default: '' },
+      { key: 'categories', label: 'Categories', type: 'array', default: '', itemLabel: 'Category', itemFields: [
+        { key: 'title', label: 'Title', type: 'text', default: 'Category' },
+        { key: 'description', label: 'Description', type: 'text', default: '' },
+        { key: 'imageUrl', label: 'Image', type: 'image', default: '' },
+      ]},
     ],
   },
   Testimonials: {
@@ -158,7 +180,12 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'What They Say' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Customer feedback' },
-      { key: 'items', label: 'Items', type: 'array', default: '' },
+      { key: 'items', label: 'Items', type: 'array', default: '', itemLabel: 'Testimonial', itemFields: [
+        { key: 'quote', label: 'Quote', type: 'textarea', default: '' },
+        { key: 'name', label: 'Name', type: 'text', default: 'Customer' },
+        { key: 'role', label: 'Role / Title', type: 'text', default: '' },
+        { key: 'rating', label: 'Rating (1-5)', type: 'number', default: 5 },
+      ]},
     ],
   },
   About: {
@@ -169,7 +196,10 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'heading', label: 'Heading', type: 'text', default: 'About Us' },
       { key: 'content', label: 'Content', type: 'textarea', default: 'Our story' },
       { key: 'imageUrl', label: 'Image', type: 'image', default: '' },
-      { key: 'stats', label: 'Stats', type: 'array', default: '' },
+      { key: 'stats', label: 'Stats', type: 'array', default: '', itemLabel: 'Stat', itemFields: [
+        { key: 'label', label: 'Label', type: 'text', default: 'Stat' },
+        { key: 'value', label: 'Value', type: 'text', default: '100+' },
+      ]},
     ],
   },
   Gallery: {
@@ -179,7 +209,10 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Gallery' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'See our work' },
-      { key: 'items', label: 'Items', type: 'array', default: '' },
+      { key: 'items', label: 'Items', type: 'array', default: '', itemLabel: 'Image', itemFields: [
+        { key: 'title', label: 'Title', type: 'text', default: '' },
+        { key: 'imageUrl', label: 'Image', type: 'image', default: '' },
+      ]},
     ],
   },
   Stats: {
@@ -188,7 +221,10 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     description: 'Key numbers and statistics',
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'By The Numbers' },
-      { key: 'items', label: 'Items', type: 'array', default: '' },
+      { key: 'items', label: 'Items', type: 'array', default: '', itemLabel: 'Stat', itemFields: [
+        { key: 'label', label: 'Label', type: 'text', default: 'Stat' },
+        { key: 'value', label: 'Value', type: 'text', default: '100+' },
+      ]},
     ],
   },
   FAQ: {
@@ -198,7 +234,10 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Frequently Asked Questions' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Find answers here' },
-      { key: 'items', label: 'Items', type: 'array', default: '' },
+      { key: 'items', label: 'Items', type: 'array', default: '', itemLabel: 'Question', itemFields: [
+        { key: 'question', label: 'Question', type: 'text', default: 'Question?' },
+        { key: 'answer', label: 'Answer', type: 'textarea', default: '' },
+      ]},
     ],
   },
   BlogFeed: {
@@ -209,7 +248,12 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'heading', label: 'Heading', type: 'text', default: 'Latest News' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Read our blog' },
       { key: 'blogUrl', label: 'Blog URL', type: 'url', default: '' },
-      { key: 'posts', label: 'Posts', type: 'array', default: '' },
+      { key: 'posts', label: 'Posts', type: 'array', default: '', itemLabel: 'Post', itemFields: [
+        { key: 'title', label: 'Title', type: 'text', default: 'Blog Post' },
+        { key: 'excerpt', label: 'Excerpt', type: 'textarea', default: '' },
+        { key: 'imageUrl', label: 'Image', type: 'image', default: '' },
+        { key: 'url', label: 'Link', type: 'text', default: '' },
+      ]},
     ],
   },
   Features: {
@@ -219,7 +263,11 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Features' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'What we offer' },
-      { key: 'items', label: 'Items', type: 'array', default: '' },
+      { key: 'items', label: 'Items', type: 'array', default: '', itemLabel: 'Feature', itemFields: [
+        { key: 'title', label: 'Title', type: 'text', default: 'Feature' },
+        { key: 'description', label: 'Description', type: 'textarea', default: '' },
+        { key: 'icon', label: 'Icon', type: 'text', default: 'Star', placeholder: 'Lucide icon name' },
+      ]},
     ],
   },
   LogoMarquee: {
@@ -228,7 +276,10 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     description: 'Infinite scrolling brand logo carousel with edge fade',
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Trusted By' },
-      { key: 'logos', label: 'Logos', type: 'array', default: '' },
+      { key: 'logos', label: 'Logos', type: 'array', default: '', itemLabel: 'Logo', itemFields: [
+        { key: 'name', label: 'Brand Name', type: 'text', default: '' },
+        { key: 'imageUrl', label: 'Logo Image', type: 'image', default: '' },
+      ]},
       { key: 'speed', label: 'Speed (1-100)', type: 'number', default: 60 },
       { key: 'reverse', label: 'Reverse Direction', type: 'select', default: 'false', options: ['false', 'true'] },
     ],
@@ -240,7 +291,12 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Why We Stand Out' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
-      { key: 'cards', label: 'Cards', type: 'array', default: '' },
+      { key: 'cards', label: 'Cards', type: 'array', default: '', itemLabel: 'Card', itemFields: [
+        { key: 'title', label: 'Title', type: 'text', default: 'Card Title' },
+        { key: 'description', label: 'Description', type: 'textarea', default: '' },
+        { key: 'icon', label: 'Icon', type: 'text', default: 'Star', placeholder: 'Lucide icon name' },
+        { key: 'span', label: 'Span', type: 'select', default: 'normal', options: ['normal', 'wide', 'tall'] },
+      ]},
     ],
   },
   Pricing: {
@@ -250,7 +306,12 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Simple, Transparent Pricing' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Choose the plan that works for you' },
-      { key: 'tiers', label: 'Tiers', type: 'array', default: '' },
+      { key: 'tiers', label: 'Tiers', type: 'array', default: '', itemLabel: 'Tier', itemFields: [
+        { key: 'name', label: 'Plan Name', type: 'text', default: 'Basic' },
+        { key: 'price', label: 'Price', type: 'text', default: '$0', placeholder: '$29/mo' },
+        { key: 'description', label: 'Description', type: 'text', default: '' },
+        { key: 'cta', label: 'CTA Text', type: 'text', default: 'Get Started' },
+      ]},
     ],
   },
   TeamGrid: {
@@ -260,7 +321,12 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Meet Our Team' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'The experts behind your wellness journey' },
-      { key: 'members', label: 'Members', type: 'array', default: '' },
+      { key: 'members', label: 'Members', type: 'array', default: '', itemLabel: 'Member', itemFields: [
+        { key: 'name', label: 'Name', type: 'text', default: 'Team Member' },
+        { key: 'role', label: 'Role', type: 'text', default: '' },
+        { key: 'avatar', label: 'Avatar URL', type: 'image', default: '' },
+        { key: 'bio', label: 'Bio', type: 'textarea', default: '' },
+      ]},
     ],
   },
   Timeline: {
@@ -270,7 +336,11 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Our Journey' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
-      { key: 'entries', label: 'Entries', type: 'array', default: '' },
+      { key: 'entries', label: 'Entries', type: 'array', default: '', itemLabel: 'Entry', itemFields: [
+        { key: 'year', label: 'Year', type: 'text', default: '2024' },
+        { key: 'title', label: 'Title', type: 'text', default: 'Milestone' },
+        { key: 'description', label: 'Description', type: 'textarea', default: '' },
+      ]},
     ],
   },
   ComparisonTable: {
@@ -280,8 +350,12 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Compare Plans' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Find the right fit for your needs' },
-      { key: 'tiers', label: 'Tier Names', type: 'array', default: '' },
-      { key: 'features', label: 'Features', type: 'array', default: '' },
+      { key: 'tiers', label: 'Tier Names', type: 'array', default: '', itemLabel: 'Tier', itemFields: [
+        { key: 'name', label: 'Tier Name', type: 'text', default: 'Tier' },
+      ]},
+      { key: 'features', label: 'Features', type: 'array', default: '', itemLabel: 'Feature', itemFields: [
+        { key: 'name', label: 'Feature Name', type: 'text', default: 'Feature' },
+      ]},
     ],
   },
   Parallax: {
@@ -308,7 +382,9 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'rating', label: 'Rating (1-5)', type: 'number', default: 4.9 },
       { key: 'testimonial', label: 'Testimonial Text', type: 'textarea', default: '' },
       { key: 'testimonialAuthor', label: 'Testimonial Author', type: 'text', default: '' },
-      { key: 'avatars', label: 'Avatar URLs', type: 'array', default: '' },
+      { key: 'avatars', label: 'Avatar URLs', type: 'array', default: '', itemLabel: 'Avatar', itemFields: [
+        { key: 'imageUrl', label: 'Avatar Image', type: 'image', default: '' },
+      ]},
     ],
   },
   TabsShowcase: {
@@ -318,7 +394,13 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'What Sets Us Apart' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
-      { key: 'tabs', label: 'Tabs', type: 'array', default: '' },
+      { key: 'tabs', label: 'Tabs', type: 'array', default: '', itemLabel: 'Tab', itemFields: [
+        { key: 'label', label: 'Tab Label', type: 'text', default: 'Tab' },
+        { key: 'icon', label: 'Icon', type: 'text', default: 'Star', placeholder: 'Lucide icon name' },
+        { key: 'title', label: 'Content Title', type: 'text', default: '' },
+        { key: 'description', label: 'Content Description', type: 'textarea', default: '' },
+        { key: 'imageUrl', label: 'Image', type: 'image', default: '' },
+      ]},
     ],
   },
   VideoGallery: {
@@ -328,7 +410,11 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Gallery' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
-      { key: 'items', label: 'Items', type: 'array', default: '' },
+      { key: 'items', label: 'Items', type: 'array', default: '', itemLabel: 'Item', itemFields: [
+        { key: 'title', label: 'Title', type: 'text', default: '' },
+        { key: 'thumbnailUrl', label: 'Thumbnail', type: 'image', default: '' },
+        { key: 'videoUrl', label: 'Video URL', type: 'text', default: '', placeholder: 'https://youtube.com/...' },
+      ]},
     ],
   },
   ProcessSteps: {
@@ -339,7 +425,11 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'heading', label: 'Heading', type: 'text', default: 'How It Works' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Getting started is simple' },
       { key: 'orientation', label: 'Orientation', type: 'select', default: 'horizontal', options: ['horizontal', 'vertical'] },
-      { key: 'steps', label: 'Steps', type: 'array', default: '' },
+      { key: 'steps', label: 'Steps', type: 'array', default: '', itemLabel: 'Step', itemFields: [
+        { key: 'title', label: 'Title', type: 'text', default: 'Step' },
+        { key: 'description', label: 'Description', type: 'textarea', default: '' },
+        { key: 'icon', label: 'Icon', type: 'text', default: 'CheckCircle', placeholder: 'Lucide icon name' },
+      ]},
     ],
   },
   StatsCounter: {
@@ -348,7 +438,12 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     description: 'Animated digit roller with spring physics and icons',
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: '' },
-      { key: 'items', label: 'Items', type: 'array', default: '' },
+      { key: 'items', label: 'Items', type: 'array', default: '', itemLabel: 'Counter', itemFields: [
+        { key: 'label', label: 'Label', type: 'text', default: 'Metric' },
+        { key: 'value', label: 'Target Number', type: 'number', default: 100 },
+        { key: 'suffix', label: 'Suffix', type: 'text', default: '+', placeholder: '+, %, k, etc.' },
+        { key: 'icon', label: 'Icon', type: 'text', default: 'TrendingUp', placeholder: 'Lucide icon name' },
+      ]},
     ],
   },
   ImageShowcase: {
@@ -382,11 +477,13 @@ export function getSectionDefaults(type: string): Record<string, any> {
   return defaults;
 }
 
-/** Return only non-array fields suitable for the editor form */
+/** Return editable fields for the editor form.
+ *  Array fields with itemFields are included (rendered as item editors).
+ *  Array fields WITHOUT itemFields are still excluded (no schema to render). */
 export function getEditableFields(type: string): FieldSchema[] {
   const schema = SECTION_SCHEMAS[type];
   if (!schema) return [];
-  return schema.fields.filter((f) => f.type !== 'array');
+  return schema.fields.filter((f) => f.type !== 'array' || (f.itemFields && f.itemFields.length > 0));
 }
 
 /** Group section types by category, excluding nav/footer */

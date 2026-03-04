@@ -168,6 +168,33 @@ function applyThemeToContainer(
     root.style.setProperty("--tenant-font-body", bodyFont);
     root.style.setProperty("--tenant-font-heading", headingFont);
 
+    // Font weight
+    const fontWeightMap: Record<string, string> = { "300": "300", "400": "400", "500": "500", "700": "700" };
+    const headingWeightMap: Record<string, string> = { "400": "400", "500": "500", "600": "600", "700": "700", "800": "800" };
+    const dsFontWeight = designSystem.typography?.fontWeight?.body;
+    const dsHeadingWeight = designSystem.typography?.fontWeight?.heading;
+    root.style.setProperty(
+      "--tenant-font-weight",
+      fontWeightMap[dsFontWeight] || fontWeightMap[settings.fontWeight || "400"] || "400",
+    );
+    root.style.setProperty(
+      "--tenant-font-weight-heading",
+      headingWeightMap[dsHeadingWeight] || headingWeightMap[settings.headingFontWeight || "700"] || "700",
+    );
+
+    // Letter spacing
+    const letterSpacingMap: Record<string, string> = {
+      tight: "-0.025em",
+      normal: "0",
+      wide: "0.025em",
+      wider: "0.05em",
+    };
+    const dsLetterSpacing = designSystem.typography?.letterSpacing;
+    root.style.setProperty(
+      "--tenant-letter-spacing",
+      letterSpacingMap[dsLetterSpacing] || letterSpacingMap[settings.letterSpacingPreset || "normal"] || "0",
+    );
+
     // Font size scale — designSystem.typography.fontSize.base OR settings.fontSize
     const fontSizeMap: Record<string, string> = {
       small: "0.875rem",

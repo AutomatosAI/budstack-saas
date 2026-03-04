@@ -61,6 +61,9 @@ export interface TenantSettings {
   | "lato"
   | "poppins";
   fontSize?: "small" | "medium" | "large";
+  fontWeight?: string;
+  headingFontWeight?: string;
+  letterSpacingPreset?: "tight" | "normal" | "wide" | "wider";
 
   // === BUTTONS ===
   buttonStyle?: "rounded" | "square" | "pill"; // Border radius
