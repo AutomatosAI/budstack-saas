@@ -98,6 +98,51 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'ctaText', label: 'CTA Button Text', type: 'text', default: 'Get Started' },
     ],
   },
+  HeroWarpShader: {
+    label: 'Warp Shader Hero',
+    category: 'hero',
+    description: 'Animated fluid warp shader background with configurable pattern',
+    fields: [
+      { key: 'title', label: 'Title', type: 'text', default: 'Welcome' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Your tagline here' },
+      { key: 'description', label: 'Description', type: 'textarea', default: '' },
+      { key: 'ctaText', label: 'CTA Button Text', type: 'text', default: 'Get Started' },
+      { key: 'secondaryCtaText', label: 'Secondary CTA Text', type: 'text', default: '' },
+      { key: 'secondaryCtaHref', label: 'Secondary CTA Link', type: 'url', default: '' },
+      { key: 'shaderShape', label: 'Shader Pattern', type: 'select', default: 'checks', options: ['checks', 'stripes', 'edge'] },
+      { key: 'shaderSpeed', label: 'Animation Speed', type: 'select', default: '0.8', options: ['0.3', '0.5', '0.8', '1.2', '2'] },
+      { key: 'shaderSwirl', label: 'Swirl Intensity', type: 'select', default: '0.8', options: ['0.2', '0.5', '0.8', '1.2', '2'] },
+    ],
+  },
+  HeroMeshGradient: {
+    label: 'Mesh Gradient Hero',
+    category: 'hero',
+    description: 'Dark cinematic hero with layered animated mesh gradients',
+    fields: [
+      { key: 'title', label: 'Title', type: 'text', default: 'Welcome' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Your tagline here' },
+      { key: 'description', label: 'Description', type: 'textarea', default: '' },
+      { key: 'ctaText', label: 'CTA Button Text', type: 'text', default: 'Get Started' },
+      { key: 'secondaryCtaText', label: 'Secondary CTA Text', type: 'text', default: '' },
+      { key: 'secondaryCtaHref', label: 'Secondary CTA Link', type: 'url', default: '' },
+      { key: 'textAlign', label: 'Text Alignment', type: 'select', default: 'left', options: ['left', 'center'] },
+      { key: 'shaderSpeed', label: 'Animation Speed', type: 'select', default: '0.3', options: ['0.1', '0.3', '0.5', '0.8', '1'] },
+    ],
+  },
+  HeroAurora: {
+    label: 'Aurora Hero',
+    category: 'hero',
+    description: 'Animated aurora gradient with per-letter text reveal animation',
+    fields: [
+      { key: 'title', label: 'Title', type: 'text', default: 'Welcome' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Your tagline here' },
+      { key: 'description', label: 'Description', type: 'textarea', default: '' },
+      { key: 'ctaText', label: 'CTA Button Text', type: 'text', default: 'Get Started' },
+      { key: 'secondaryCtaText', label: 'Secondary CTA Text', type: 'text', default: '' },
+      { key: 'secondaryCtaHref', label: 'Secondary CTA Link', type: 'url', default: '' },
+      { key: 'auroraIntensity', label: 'Aurora Intensity', type: 'select', default: 'medium', options: ['subtle', 'medium', 'vivid'] },
+    ],
+  },
 
   // ─── CTAs ──────────────────────────────────────────────────
   Newsletter: {
