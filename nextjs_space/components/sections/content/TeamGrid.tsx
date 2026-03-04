@@ -1,0 +1,118 @@
+'use client';
+
+import React from 'react';
+import { motion } from 'framer-motion';
+import { useInView } from 'react-intersection-observer';
+import Image from 'next/image';
+import { SectionProps } from '@/lib/types/section-props';
+
+interface TeamMember {
+  name: string;
+  role: string;
+  avatar: string;
+  bio: string;
+}
+
+const defaultMembers: TeamMember[] = [
+  { name: 'Dr. Sarah Chen', role: 'Medical Director', avatar: '', bio: 'Board-certified physician with 15 years of experience in integrative medicine.' },
+  { name: 'James Ndlovu', role: 'Head Pharmacist', avatar: '', bio: 'Specialising in medicinal cannabis formulations and patient care.' },
+  { name: 'Thandi Molefe', role: 'Wellness Consultant', avatar: '', bio: 'Certified wellness expert guiding patients through their journey.' },
+  { name: 'David Park', role: 'Operations Lead', avatar: '', bio: 'Ensuring seamless service from order to delivery.' },
+];
+
+export function TeamGrid(props: SectionProps) {
+  const { sectionConfig } = props;
+  const heading = sectionConfig?.heading || 'Meet Our Team';
+  const subtitle = sectionConfig?.subtitle || 'The experts behind your wellness journey';
+  const members: TeamMember[] = sectionConfig?.members || defaultMembers;
+
+  const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
+
+  return (
+    <section
+      ref={ref}
+      className="py-8 sm:py-10"
+      style={{ backgroundColor: 'hsl(var(--tenant-color-surface))' }}
+    >
+      <div className="container mx-auto px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
+          className="text-center max-w-3xl mx-auto mb-12"
+        >
+          <h2
+            className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4"
+            style={{
+              fontFamily: 'var(--tenant-font-heading, sans-serif)',
+              color: 'hsl(var(--tenant-color-heading))',
+            }}
+          >
+            {heading}
+          </h2>
+          {subtitle && (
+            <p className="text-lg" style={{ color: 'hsl(var(--tenant-color-text))' }}>
+              {subtitle}
+            </p>
+          )}
+        </motion.div>
+
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${members.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-8 max-w-6xl mx-auto`}>
+          {members.map((member, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 30 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5, delay: index * 0.08 }}
+              className="text-center group"
+            >
+              <div
+                className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden relative"
+                style={{ backgroundColor: 'hsl(var(--tenant-color-primary) / 0.1)' }}
+              >
+                {member.avatar ? (
+                  <Image
+                    src={member.avatar}
+                    alt={member.name}
+                    fill
+                    className="object-cover"
+                    sizes="128px"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span
+                      className="text-3xl font-bold"
+                      style={{ color: 'hsl(var(--tenant-color-primary))' }}
+                    >
+                      {member.name.split(' ').map(n => n[0]).join('')}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <h3
+                className="text-lg font-bold mb-1"
+                style={{ color: 'hsl(var(--tenant-color-heading))' }}
+              >
+                {member.name}
+              </h3>
+              <p
+                className="text-sm font-medium mb-2"
+                style={{ color: 'hsl(var(--tenant-color-primary))' }}
+              >
+                {member.role}
+              </p>
+              {member.bio && (
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: 'hsl(var(--tenant-color-text))' }}
+                >
+                  {member.bio}
+                </p>
+              )}
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

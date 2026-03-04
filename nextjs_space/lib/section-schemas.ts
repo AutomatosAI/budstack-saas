@@ -86,6 +86,17 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
   },
 
   // ─── CTAs ──────────────────────────────────────────────────
+  Newsletter: {
+    label: 'Newsletter Signup',
+    category: 'cta',
+    description: 'Email signup section with heading, input, and subscribe button',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Stay in the Loop' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Get the latest news and offers delivered to your inbox.' },
+      { key: 'placeholder', label: 'Input Placeholder', type: 'text', default: 'you@example.com' },
+      { key: 'buttonText', label: 'Button Text', type: 'text', default: 'Subscribe' },
+    ],
+  },
   CTABanner: {
     label: 'CTA Banner',
     category: 'cta',
@@ -208,6 +219,135 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Features' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'What we offer' },
+      { key: 'items', label: 'Items', type: 'array', default: '' },
+    ],
+  },
+  LogoMarquee: {
+    label: 'Logo Marquee',
+    category: 'content',
+    description: 'Infinite scrolling brand logo carousel with edge fade',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Trusted By' },
+      { key: 'logos', label: 'Logos', type: 'array', default: '' },
+      { key: 'speed', label: 'Speed (1-100)', type: 'number', default: 60 },
+      { key: 'reverse', label: 'Reverse Direction', type: 'select', default: 'false', options: ['false', 'true'] },
+    ],
+  },
+  BentoGrid: {
+    label: 'Bento Grid',
+    category: 'content',
+    description: 'Asymmetric card grid with variable spans for a modern bento layout',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Why We Stand Out' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
+      { key: 'cards', label: 'Cards', type: 'array', default: '' },
+    ],
+  },
+  Pricing: {
+    label: 'Pricing',
+    category: 'content',
+    description: 'Pricing tier cards with feature lists and highlighted popular tier',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Simple, Transparent Pricing' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Choose the plan that works for you' },
+      { key: 'tiers', label: 'Tiers', type: 'array', default: '' },
+    ],
+  },
+  TeamGrid: {
+    label: 'Team Grid',
+    category: 'content',
+    description: 'Team member avatars with name, role, and bio',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Meet Our Team' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'The experts behind your wellness journey' },
+      { key: 'members', label: 'Members', type: 'array', default: '' },
+    ],
+  },
+  Timeline: {
+    label: 'Timeline',
+    category: 'content',
+    description: 'Vertical timeline with dot indicators and year labels',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Our Journey' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
+      { key: 'entries', label: 'Entries', type: 'array', default: '' },
+    ],
+  },
+  ComparisonTable: {
+    label: 'Comparison Table',
+    category: 'content',
+    description: 'Feature comparison grid with check/x icons across tiers',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Compare Plans' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Find the right fit for your needs' },
+      { key: 'tiers', label: 'Tier Names', type: 'array', default: '' },
+      { key: 'features', label: 'Features', type: 'array', default: '' },
+    ],
+  },
+  Parallax: {
+    label: 'Parallax Section',
+    category: 'content',
+    description: 'Full-width background image with parallax scroll effect and overlay text',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Experience the Difference' },
+      { key: 'description', label: 'Description', type: 'textarea', default: 'Premium quality products crafted with care.' },
+      { key: 'imageUrl', label: 'Background Image', type: 'image', default: '' },
+      { key: 'ctaText', label: 'CTA Button Text', type: 'text', default: '' },
+      { key: 'ctaHref', label: 'CTA Link', type: 'url', default: '' },
+      { key: 'overlayOpacity', label: 'Overlay Opacity (%)', type: 'number', default: 50 },
+    ],
+  },
+  SocialProof: {
+    label: 'Social Proof',
+    category: 'content',
+    description: 'Avatar stack badge with trust text and optional testimonial',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: '' },
+      { key: 'count', label: 'Customer Count', type: 'number', default: 10000 },
+      { key: 'label', label: 'Label', type: 'text', default: 'Happy Customers' },
+      { key: 'rating', label: 'Rating (1-5)', type: 'number', default: 4.9 },
+      { key: 'testimonial', label: 'Testimonial Text', type: 'textarea', default: '' },
+      { key: 'testimonialAuthor', label: 'Testimonial Author', type: 'text', default: '' },
+      { key: 'avatars', label: 'Avatar URLs', type: 'array', default: '' },
+    ],
+  },
+  TabsShowcase: {
+    label: 'Tabs Showcase',
+    category: 'content',
+    description: 'Tabbed content with icon triggers, per-tab image and description',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'What Sets Us Apart' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
+      { key: 'tabs', label: 'Tabs', type: 'array', default: '' },
+    ],
+  },
+  VideoGallery: {
+    label: 'Video Gallery',
+    category: 'content',
+    description: 'Video/image grid with click-to-expand modal',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Gallery' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
+      { key: 'items', label: 'Items', type: 'array', default: '' },
+    ],
+  },
+  ProcessSteps: {
+    label: 'Process Steps',
+    category: 'content',
+    description: 'Numbered steps with connecting lines and icons',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'How It Works' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Getting started is simple' },
+      { key: 'orientation', label: 'Orientation', type: 'select', default: 'horizontal', options: ['horizontal', 'vertical'] },
+      { key: 'steps', label: 'Steps', type: 'array', default: '' },
+    ],
+  },
+  StatsCounter: {
+    label: 'Stats Counter',
+    category: 'content',
+    description: 'Animated digit roller with spring physics and icons',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: '' },
       { key: 'items', label: 'Items', type: 'array', default: '' },
     ],
   },

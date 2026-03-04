@@ -18,11 +18,24 @@ import { FAQ } from '@/components/sections/content/FAQ';
 import { BlogFeed } from '@/components/sections/content/BlogFeed';
 import { Features } from '@/components/sections/content/Features';
 import { ImageShowcase } from '@/components/sections/content/ImageShowcase';
+import { LogoMarquee } from '@/components/sections/content/LogoMarquee';
+import { BentoGrid } from '@/components/sections/content/BentoGrid';
+import { Pricing } from '@/components/sections/content/Pricing';
+import { TeamGrid } from '@/components/sections/content/TeamGrid';
+import { Timeline } from '@/components/sections/content/Timeline';
+import { ComparisonTable } from '@/components/sections/content/ComparisonTable';
+import { Parallax } from '@/components/sections/content/Parallax';
+import { SocialProof } from '@/components/sections/content/SocialProof';
+import { TabsShowcase } from '@/components/sections/content/TabsShowcase';
+import { VideoGallery } from '@/components/sections/content/VideoGallery';
+import { ProcessSteps } from '@/components/sections/content/ProcessSteps';
+import { StatsCounter } from '@/components/sections/content/StatsCounter';
 
 // CTAs
 import { CTABanner } from '@/components/sections/ctas/CTABanner';
 import { CTAWithImage } from '@/components/sections/ctas/CTAWithImage';
 import { CTASplit } from '@/components/sections/ctas/CTASplit';
+import { Newsletter } from '@/components/sections/ctas/Newsletter';
 
 // Navigation
 import { NavMinimal } from '@/components/sections/navigation/NavMinimal';
@@ -51,9 +64,22 @@ export const SECTION_REGISTRY: Record<string, ComponentType<SectionProps>> = {
   BlogFeed,
   Features,
   ImageShowcase,
+  LogoMarquee,
+  BentoGrid,
+  Pricing,
+  TeamGrid,
+  Timeline,
+  ComparisonTable,
+  Parallax,
+  SocialProof,
+  TabsShowcase,
+  VideoGallery,
+  ProcessSteps,
+  StatsCounter,
   CTABanner,
   CTAWithImage,
   CTASplit,
+  Newsletter,
   NavMinimal,
   NavFull,
   NavTransparent,
