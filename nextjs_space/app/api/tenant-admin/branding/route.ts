@@ -101,19 +101,33 @@ export async function PUT(req: NextRequest) {
         base: settings.fontSize,
       });
 
+      // Font weight overrides
+      const fontWeightOverrides = defined({
+        body: settings.fontWeight,
+        heading: settings.headingFontWeight,
+      });
+
       const newDesignSystem = deepMerge(currentDS, {
         ...(Object.keys(colorOverrides).length > 0 ? { colors: colorOverrides } : {}),
-        ...(Object.keys(typoOverrides).length > 0 || Object.keys(fontSizeOverrides).length > 0 ? {
+        ...(Object.keys(typoOverrides).length > 0 || Object.keys(fontSizeOverrides).length > 0 || Object.keys(fontWeightOverrides).length > 0 ? {
           typography: {
             ...(Object.keys(typoOverrides).length > 0 ? { fontFamily: typoOverrides } : {}),
             ...(Object.keys(fontSizeOverrides).length > 0 ? { fontSize: fontSizeOverrides } : {}),
+            ...(Object.keys(fontWeightOverrides).length > 0 ? { fontWeight: fontWeightOverrides } : {}),
+            ...(settings.letterSpacingPreset ? { letterSpacing: settings.letterSpacingPreset } : {}),
           },
         } : {}),
         ...(settings.borderRadius || settings.buttonStyle ? {
           borderRadius: defined({ container: settings.borderRadius, button: settings.buttonStyle }),
         } : {}),
+        ...(settings.buttonSize ? { button: defined({ size: settings.buttonSize }) } : {}),
         ...(settings.spacing ? { spacing: defined({ scale: settings.spacing }) } : {}),
         ...(settings.shadowStyle ? { shadows: defined({ card: settings.shadowStyle }) } : {}),
+        // Premium design features — store in designSystem for round-trip
+        ...(settings.glassEffect ? { glassEffect: settings.glassEffect } : {}),
+        ...(settings.animationType ? { animationType: settings.animationType } : {}),
+        ...(settings.dividerStyle ? { dividerStyle: settings.dividerStyle } : {}),
+        ...((settings as any).buttonHoverEffect ? { buttonHoverEffect: (settings as any).buttonHoverEffect } : {}),
       });
 
       // Handle file uploads for template

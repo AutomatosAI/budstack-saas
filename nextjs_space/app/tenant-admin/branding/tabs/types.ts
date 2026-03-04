@@ -40,6 +40,7 @@ export interface EditorFormData {
   glassEffect: string;
   animationType: string;
   dividerStyle: string;
+  buttonHoverEffect: string;
 
   // Hero
   heroType: string;

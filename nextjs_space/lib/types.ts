@@ -68,6 +68,7 @@ export interface TenantSettings {
   // === BUTTONS ===
   buttonStyle?: "rounded" | "square" | "pill"; // Border radius
   buttonSize?: "small" | "medium" | "large";
+  buttonHoverEffect?: "none" | "lift" | "glow" | "scale" | "pulse"; // Button hover animation
 
   // === LAYOUT & SPACING ===
   borderRadius?: "none" | "small" | "medium" | "large"; // Global border radius

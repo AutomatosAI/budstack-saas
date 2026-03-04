@@ -51,12 +51,20 @@ export function TenantThemeProvider({
     }
   }, [settings, designSystem]);
 
+  // Build data-attributes for conditional CSS effects
+  const hoverEffect = designSystem?.buttonHoverEffect || settings.buttonHoverEffect || "none";
+  const glassEffectVal = designSystem?.glassEffect || settings.glassEffect || "none";
+
   return (
     <>
       {/* Load Google Fonts at runtime */}
       {googleFontsUrl && (
         <link href={googleFontsUrl} rel="stylesheet" />
       )}
+
+      {/* Scoped design system CSS — static rules that read CSS variables set by applyThemeToContainer.
+          TENANT_SCOPED_CSS is a compile-time constant (not user input), safe for injection. */}
+      <style dangerouslySetInnerHTML={{ __html: TENANT_SCOPED_CSS }} />
 
       {/* Inject custom CSS if provided */}
       {/* Must use dangerouslySetInnerHTML — React escapes > to \u003e breaking CSS child combinators */}
@@ -68,6 +76,8 @@ export function TenantThemeProvider({
       <div
         ref={containerRef}
         className={`tenant-theme-container ${getTenantThemeClasses(settings)}`}
+        data-hover={hoverEffect}
+        data-glass={glassEffectVal}
         style={{ minHeight: "100vh" }}
       >
         {children}
@@ -75,6 +85,108 @@ export function TenantThemeProvider({
     </>
   );
 }
+
+/**
+ * Static CSS rules that consume the --tenant-* CSS variables.
+ * This is the bridge between "variables are set" and "components actually use them".
+ * Scoped to .tenant-theme-container so editor UI is unaffected.
+ */
+const TENANT_SCOPED_CSS = `
+/* === TYPOGRAPHY === */
+.tenant-theme-container {
+  font-family: var(--tenant-font-body);
+  font-weight: var(--tenant-font-weight);
+  letter-spacing: var(--tenant-letter-spacing);
+  font-size: var(--tenant-font-size-base);
+}
+.tenant-theme-container h1,
+.tenant-theme-container h2,
+.tenant-theme-container h3,
+.tenant-theme-container h4,
+.tenant-theme-container h5,
+.tenant-theme-container h6 {
+  font-family: var(--tenant-font-heading);
+  font-weight: var(--tenant-font-weight-heading);
+}
+
+/* === BUTTONS (CTA-style within sections) === */
+.tenant-theme-container section a[class*="rounded"],
+.tenant-theme-container section button[class*="bg-"],
+.tenant-theme-container section a[class*="bg-"] {
+  border-radius: var(--tenant-button-radius) !important;
+  padding: var(--tenant-button-padding);
+  font-size: var(--tenant-button-font-size);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* === BUTTON HOVER EFFECTS === */
+.tenant-theme-container[data-hover="lift"] section a[class*="bg-"]:hover,
+.tenant-theme-container[data-hover="lift"] section button[class*="bg-"]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgb(0 0 0 / 0.18);
+}
+.tenant-theme-container[data-hover="glow"] section a[class*="bg-"]:hover,
+.tenant-theme-container[data-hover="glow"] section button[class*="bg-"]:hover {
+  box-shadow: 0 0 28px hsl(var(--primary) / 0.4);
+}
+.tenant-theme-container[data-hover="scale"] section a[class*="bg-"]:hover,
+.tenant-theme-container[data-hover="scale"] section button[class*="bg-"]:hover {
+  transform: scale(1.06);
+}
+.tenant-theme-container[data-hover="pulse"] section a[class*="bg-"]:hover,
+.tenant-theme-container[data-hover="pulse"] section button[class*="bg-"]:hover {
+  animation: tenant-pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes tenant-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+
+/* === CARDS — border radius + shadows === */
+.tenant-theme-container section div[class*="rounded-lg"],
+.tenant-theme-container section div[class*="rounded-xl"],
+.tenant-theme-container section div[class*="rounded-2xl"] {
+  border-radius: var(--tenant-border-radius);
+}
+.tenant-theme-container section div[class*="shadow-sm"],
+.tenant-theme-container section div[class*="shadow-md"],
+.tenant-theme-container section div[class*="shadow-lg"],
+.tenant-theme-container section div[class*="shadow-xl"] {
+  box-shadow: var(--tenant-shadow);
+}
+
+/* === GLASS EFFECT — frosted glass on cards within sections === */
+.tenant-theme-container[data-glass="light"] section div[class*="rounded"][class*="border"],
+.tenant-theme-container[data-glass="light"] section div[class*="rounded"][class*="bg-white"],
+.tenant-theme-container[data-glass="light"] section div[class*="rounded"][class*="bg-card"] {
+  backdrop-filter: blur(var(--tenant-backdrop-blur));
+  -webkit-backdrop-filter: blur(var(--tenant-backdrop-blur));
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.tenant-theme-container[data-glass="heavy"] section div[class*="rounded"][class*="border"],
+.tenant-theme-container[data-glass="heavy"] section div[class*="rounded"][class*="bg-white"],
+.tenant-theme-container[data-glass="heavy"] section div[class*="rounded"][class*="bg-card"] {
+  backdrop-filter: blur(var(--tenant-backdrop-blur));
+  -webkit-backdrop-filter: blur(var(--tenant-backdrop-blur));
+  background: rgba(255, 255, 255, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* === SECTION SPACING SCALE === */
+.tenant-theme-container section > div[class*="py-"],
+.tenant-theme-container section > section[class*="py-"] {
+  padding-top: calc(3rem * var(--tenant-spacing-scale, 1));
+  padding-bottom: calc(3rem * var(--tenant-spacing-scale, 1));
+}
+@media (min-width: 768px) {
+  .tenant-theme-container section > div[class*="py-"],
+  .tenant-theme-container section > section[class*="py-"] {
+    padding-top: calc(4rem * var(--tenant-spacing-scale, 1));
+    padding-bottom: calc(4rem * var(--tenant-spacing-scale, 1));
+  }
+}
+`;
 
 /**
  * Apply theme CSS variables to SCOPED container (not document root)
@@ -280,6 +392,15 @@ function applyThemeToContainer(
     const buttonSize = buttonSizeMap[dsButtonSize] || buttonSizeMap[settings.buttonSize || "medium"] || buttonSizeMap["medium"];
     root.style.setProperty("--tenant-button-padding", buttonSize.padding);
     root.style.setProperty("--tenant-button-font-size", buttonSize.fontSize);
+
+    // === BUTTON HOVER EFFECT ===
+    // Consumed via data-hover attribute on container, CSS rules defined in TENANT_SCOPED_CSS
+    const hoverEffect = designSystem.buttonHoverEffect || (settings as any).buttonHoverEffect || "none";
+    root.setAttribute("data-hover", hoverEffect);
+
+    // === GLASS EFFECT (data-attr for CSS) ===
+    const glass = designSystem.glassEffect || settings.glassEffect || "none";
+    root.setAttribute("data-glass", glass);
   }
 }
 

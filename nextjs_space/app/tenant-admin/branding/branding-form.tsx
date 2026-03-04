@@ -165,7 +165,7 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
     buttonStyle:
       matchOption(getVal(["borderRadius", "button"], undefined), BUTTON_STYLES) ||
       settings.buttonStyle || "rounded",
-    buttonSize: settings.buttonSize || "medium",
+    buttonSize: getVal(["button", "size"], undefined) || settings.buttonSize || "medium",
     borderRadius:
       matchOption(getVal(["borderRadius", "container"], undefined), BORDER_RADII) ||
       settings.borderRadius || "medium",
@@ -176,9 +176,10 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
       matchOption(getVal(["shadows", "card"], undefined), SHADOW_STYLES) ||
       settings.shadowStyle || "soft",
 
-    glassEffect: settings.glassEffect || "none",
-    animationType: settings.animationType || "none",
-    dividerStyle: settings.dividerStyle || "none",
+    glassEffect: getVal(["glassEffect"], undefined) || settings.glassEffect || "none",
+    animationType: getVal(["animationType"], undefined) || settings.animationType || "none",
+    dividerStyle: getVal(["dividerStyle"], undefined) || settings.dividerStyle || "none",
+    buttonHoverEffect: getVal(["buttonHoverEffect"], undefined) || (settings as any).buttonHoverEffect || "none",
     heroType: settings.heroType || "gradient-image",
 
     educationHotspots: settingsContent.educationHotspots || [],
@@ -353,6 +354,7 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
     glassEffect: formData.glassEffect,
     animationType: formData.animationType,
     dividerStyle: formData.dividerStyle,
+    buttonHoverEffect: formData.buttonHoverEffect,
   };
 
   const livePageContent = {
