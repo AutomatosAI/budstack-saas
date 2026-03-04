@@ -184,6 +184,18 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
 
     educationHotspots: settingsContent.educationHotspots || [],
 
+    logoPlacement: templateContent.logoPlacement || settingsContent.logoPlacement || {
+      navPosition: "left",
+      navSize: "medium",
+      showBusinessName: true,
+      heroShowLogo: true,
+      heroX: 50,
+      heroY: 20,
+      heroSize: "medium",
+      heroStyle: "circular",
+      footerShowLogo: true,
+    },
+
     homeHeroTitle: templateContent.home?.heroTitle || templateContent.homeHeroTitle || settingsContent.home?.heroTitle || "Welcome to Your Medical Cannabis Journey",
     homeHeroSubtitle: templateContent.home?.heroSubtitle || templateContent.homeHeroSubtitle || settingsContent.home?.heroSubtitle || "Premium medical cannabis products delivered with care",
     homeHeroCtaText: templateContent.home?.heroCtaText || templateContent.homeHeroCtaText || settingsContent.home?.heroCtaText || "Get Started",
@@ -260,6 +272,7 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
         sectionColorOverrides,
         pageContent: {
           educationHotspots: formData.educationHotspots,
+          logoPlacement: formData.logoPlacement,
           home: {
             heroTitle: formData.homeHeroTitle,
             heroSubtitle: formData.homeHeroSubtitle,
@@ -360,6 +373,7 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
   const livePageContent = {
     ...((activeTemplate?.pageContent as any) || {}),
     educationHotspots: formData.educationHotspots,
+    logoPlacement: formData.logoPlacement,
     home: {
       heroTitle: formData.homeHeroTitle,
       heroSubtitle: formData.homeHeroSubtitle,
@@ -507,6 +521,8 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
                 heroImage={heroImage}
                 favicon={favicon}
                 onFileChange={handleFileChange}
+                heroImageUrl={((activeTemplate as any)?.layout?.defaults?.heroImagePath) || undefined}
+                logoUrl={((activeTemplate as any)?.layout?.defaults?.logoPath) || undefined}
               />
             </TabsContent>
 

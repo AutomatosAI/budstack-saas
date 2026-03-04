@@ -21,6 +21,14 @@ export function HeroSplit({
   const secondaryCtaText = sectionConfig?.secondaryCtaText || 'Learn More';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '#about';
 
+  // Logo placement
+  const logoPlacement = pageContent?.logoPlacement;
+  const showHeroLogo = logoPlacement?.heroShowLogo ?? true;
+  const heroLogoSize = logoPlacement?.heroSize || 'medium';
+  const heroLogoStyle = logoPlacement?.heroStyle || 'plain';
+  const heroSizeMap: Record<string, string> = { small: '48px', medium: '64px', large: '96px', watermark: '200px' };
+  const heroLogoSizePx = heroSizeMap[heroLogoSize] || '64px';
+
   return (
     <section
       className="min-h-[calc(100dvh-4rem)] flex items-center"
@@ -34,9 +42,12 @@ export function HeroSplit({
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
           >
-            {logoUrl && (
-              <div className="relative w-16 h-16 mb-6">
-                <Image src={logoUrl} alt={`${businessName} Logo`} fill className="object-contain" />
+            {showHeroLogo && logoUrl && (
+              <div
+                className={`relative mb-6 ${heroLogoStyle === 'circular' ? 'rounded-full overflow-hidden border-4 border-white/30 shadow-xl' : ''} ${heroLogoStyle === 'badge' ? 'rounded-xl bg-white/90 shadow-lg p-2' : ''} ${heroLogoSize === 'watermark' ? 'opacity-[0.12]' : ''}`}
+                style={{ width: heroLogoSizePx, height: heroLogoSizePx }}
+              >
+                <Image src={logoUrl} alt={`${businessName} Logo`} fill className={heroLogoStyle === 'circular' ? 'object-cover' : 'object-contain'} />
               </div>
             )}
 

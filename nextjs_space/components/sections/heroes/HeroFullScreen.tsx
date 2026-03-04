@@ -58,6 +58,18 @@ export function HeroFullScreen({
   const hasHotspots = hotspots.length > 0;
   const glassEffect = tenant?.settings?.glassEffect || "none";
 
+  // Logo placement from branding editor
+  const logoPlacement = pageContent?.logoPlacement;
+  const showHeroLogo = logoPlacement?.heroShowLogo ?? true;
+  const heroLogoX = logoPlacement?.heroX ?? 50;
+  const heroLogoY = logoPlacement?.heroY ?? 20;
+  const heroLogoSize = logoPlacement?.heroSize || 'medium';
+  const heroLogoStyle = logoPlacement?.heroStyle || 'circular';
+  const heroSizeMap: Record<string, string> = { small: '48px', medium: '80px', large: '120px', watermark: '40vw' };
+  const heroSizeMaxMap: Record<string, string> = { small: '48px', medium: '80px', large: '120px', watermark: '500px' };
+  const heroLogoSizePx = heroSizeMap[heroLogoSize] || '80px';
+  const heroLogoMaxPx = heroSizeMaxMap[heroLogoSize] || '80px';
+
   return (
     <section className={`relative ${selectedHeightClass} flex items-center justify-center overflow-hidden`}>
       {/* Background: Image if available and heroType allows, otherwise rich gradient */}
@@ -125,21 +137,37 @@ export function HeroFullScreen({
         />
       </div>
 
+      {/* Positioned Hero Logo */}
+      {showHeroLogo && logoUrl && (
+        <div
+          className="absolute z-10 pointer-events-none"
+          style={{
+            left: `${heroLogoX}%`,
+            top: `${heroLogoY}%`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <div
+            className={`relative ${heroLogoStyle === 'circular' ? 'rounded-full overflow-hidden border-4 border-white/30 shadow-2xl' : ''} ${heroLogoStyle === 'badge' ? 'rounded-xl bg-white/90 shadow-lg p-2' : ''} ${heroLogoSize === 'watermark' ? 'opacity-[0.12]' : ''}`}
+            style={{
+              width: heroLogoSizePx,
+              height: heroLogoSizePx,
+              maxWidth: heroLogoMaxPx,
+              maxHeight: heroLogoMaxPx,
+            }}
+          >
+            <Image
+              src={logoUrl}
+              alt={`${businessName} Logo`}
+              fill
+              className={heroLogoStyle === 'circular' ? 'object-cover' : 'object-contain'}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className={`relative z-10 container mx-auto px-6 ${isLeft ? 'text-left' : 'text-center'}`}>
-        {logoUrl && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-            className={`mb-6 sm:mb-8 flex ${isLeft ? 'justify-start' : 'justify-center'}`}
-          >
-            <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl">
-              <Image src={logoUrl} alt={`${businessName} Logo`} fill className="object-cover" />
-            </div>
-          </motion.div>
-        )}
-
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}

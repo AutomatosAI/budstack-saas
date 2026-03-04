@@ -70,6 +70,7 @@ export function FooterBrand(props: SectionProps) {
   }));
   const disclaimer = sectionConfig?.disclaimer || footer?.disclaimer || '';
 
+  const showFooterLogo = props.pageContent?.logoPlacement?.footerShowLogo ?? true;
   const year = new Date().getFullYear();
 
   return (
@@ -85,7 +86,7 @@ export function FooterBrand(props: SectionProps) {
           {/* Brand Column */}
           <div className="lg:col-span-4">
             <div className="flex items-center gap-3 mb-4">
-              {logoUrl && (
+              {showFooterLogo && logoUrl && (
                 <div className="relative w-10 h-10">
                   <Image src={logoUrl} alt={businessName} fill className="object-contain" />
                 </div>

@@ -12,6 +12,14 @@ export function NavFull(props: SectionProps) {
   const businessName = tenant.businessName;
   const basePath = getTenantBasePath(tenant.subdomain);
 
+  // Logo placement
+  const logoPlacement = props.pageContent?.logoPlacement;
+  const navPos = logoPlacement?.navPosition || 'left';
+  const navSize = logoPlacement?.navSize || 'medium';
+  const showName = logoPlacement?.showBusinessName ?? true;
+  const navSizeMap: Record<string, string> = { small: '32px', medium: '40px', large: '48px' };
+  const logoSizePx = navSizeMap[navSize] || '40px';
+
   const defaultLinks = [
     { label: 'Products', href: productsUrl || `${basePath}/products` },
     { label: 'About', href: aboutUrl || `${basePath}/about` },
@@ -48,39 +56,85 @@ export function NavFull(props: SectionProps) {
       }}
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
-        <a href={basePath || '/'} className="flex items-center gap-3">
-          {logoUrl && (
-            <div className="relative w-10 h-10">
-              <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+        {/* LEFT ZONE */}
+        <div className="hidden lg:flex items-center gap-3 flex-1 min-w-0">
+          {navPos === 'left' && (
+            <a href={basePath || '/'} className="flex items-center gap-3">
+              {logoUrl && (
+                <div className="relative" style={{ width: logoSizePx, height: logoSizePx }}>
+                  <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+                </div>
+              )}
+              {showName && (
+                <span
+                  className="text-xl font-bold"
+                  style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: 'hsl(var(--tenant-color-heading))' }}
+                >
+                  {businessName}
+                </span>
+              )}
+            </a>
+          )}
+          {(navPos === 'center' || navPos === 'right') && (
+            <div className="flex items-center gap-8">
+              {links.map((link: { label: string; href: string }) => (
+                <a key={link.href} href={link.href} className="text-sm font-medium transition-colors hover:opacity-80" style={{ color: 'hsl(var(--tenant-color-text))' }}>
+                  {link.label}
+                </a>
+              ))}
             </div>
           )}
-          <span
-            className="text-xl font-bold"
-            style={{
-              fontFamily: 'var(--tenant-font-heading, sans-serif)',
-              color: 'hsl(var(--tenant-color-heading))',
-            }}
-          >
-            {businessName}
-          </span>
-        </a>
-
-        {/* Desktop Links */}
-        <div className="hidden lg:flex items-center gap-8">
-          {links.map((link: { label: string; href: string }) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium transition-colors hover:opacity-80"
-              style={{ color: 'hsl(var(--tenant-color-text))' }}
-            >
-              {link.label}
-            </a>
-          ))}
         </div>
 
-        {/* Desktop CTA + Cart */}
-        <div className="hidden lg:flex items-center gap-4">
+        {/* CENTER ZONE */}
+        <div className="hidden lg:flex items-center justify-center shrink-0">
+          {navPos === 'center' && (
+            <a href={basePath || '/'} className="flex items-center gap-3">
+              {logoUrl && (
+                <div className="relative" style={{ width: logoSizePx, height: logoSizePx }}>
+                  <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+                </div>
+              )}
+              {showName && (
+                <span
+                  className="text-xl font-bold"
+                  style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: 'hsl(var(--tenant-color-heading))' }}
+                >
+                  {businessName}
+                </span>
+              )}
+            </a>
+          )}
+          {navPos === 'left' && (
+            <div className="flex items-center gap-8">
+              {links.map((link: { label: string; href: string }) => (
+                <a key={link.href} href={link.href} className="text-sm font-medium transition-colors hover:opacity-80" style={{ color: 'hsl(var(--tenant-color-text))' }}>
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT ZONE */}
+        <div className="hidden lg:flex items-center gap-4 flex-1 justify-end">
+          {navPos === 'right' && (
+            <a href={basePath || '/'} className="flex items-center gap-3 mr-3">
+              {logoUrl && (
+                <div className="relative" style={{ width: logoSizePx, height: logoSizePx }}>
+                  <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+                </div>
+              )}
+              {showName && (
+                <span
+                  className="text-xl font-bold"
+                  style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: 'hsl(var(--tenant-color-heading))' }}
+                >
+                  {businessName}
+                </span>
+              )}
+            </a>
+          )}
           <a href={`${basePath}/cart`} aria-label="Cart">
             <ShoppingCart size={20} style={{ color: 'hsl(var(--tenant-color-text))' }} />
           </a>
@@ -93,7 +147,19 @@ export function NavFull(props: SectionProps) {
           </a>
         </div>
 
-        {/* Mobile Toggle */}
+        {/* Mobile: logo left + hamburger right */}
+        <a href={basePath || '/'} className="lg:hidden flex items-center gap-3">
+          {logoUrl && (
+            <div className="relative" style={{ width: logoSizePx, height: logoSizePx }}>
+              <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+            </div>
+          )}
+          {showName && (
+            <span className="text-xl font-bold" style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: 'hsl(var(--tenant-color-heading))' }}>
+              {businessName}
+            </span>
+          )}
+        </a>
         <button
           className="lg:hidden"
           onClick={() => setMobileOpen(!mobileOpen)}

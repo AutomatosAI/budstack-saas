@@ -1,5 +1,22 @@
 import type { Dispatch, SetStateAction } from "react";
 
+export interface LogoPlacement {
+  // Navigation
+  navPosition: "left" | "center" | "right";
+  navSize: "small" | "medium" | "large";
+  showBusinessName: boolean;
+
+  // Hero
+  heroShowLogo: boolean;
+  heroX: number;       // 0-100 percentage
+  heroY: number;       // 0-100 percentage
+  heroSize: "small" | "medium" | "large" | "watermark";
+  heroStyle: "plain" | "circular" | "badge";
+
+  // Footer
+  footerShowLogo: boolean;
+}
+
 export interface EditorFormData {
   // Dynamic Section Configuration
   sectionConfigs: Record<string, Record<string, any>>;
@@ -47,6 +64,9 @@ export interface EditorFormData {
 
   // Interactive
   educationHotspots: any[];
+
+  // Logo Placement
+  logoPlacement: LogoPlacement;
 
   // Page Content - Home
   homeHeroTitle: string;

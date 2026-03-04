@@ -24,6 +24,18 @@ export function NavDark(props: SectionProps) {
   const businessName = tenant.businessName;
   const basePath = getTenantBasePath(tenant.subdomain);
 
+  // Logo placement
+  const logoPlacement = props.pageContent?.logoPlacement;
+  const navPos = logoPlacement?.navPosition || 'left';
+  const navSize = logoPlacement?.navSize || 'medium';
+  const showName = logoPlacement?.showBusinessName ?? true;
+  const navSizeMap: Record<string, { normal: string; scrolled: string }> = {
+    small:  { normal: '32px', scrolled: '28px' },
+    medium: { normal: '48px', scrolled: '36px' },
+    large:  { normal: '56px', scrolled: '40px' },
+  };
+  const logoSizes = navSizeMap[navSize] || navSizeMap.medium;
+
   const defaultLinks = [
     { label: 'Products', href: productsUrl || `${basePath}/products` },
     { label: 'About', href: aboutUrl || `${basePath}/about` },
@@ -84,46 +96,138 @@ export function NavDark(props: SectionProps) {
           className="px-6 flex items-center justify-between transition-all duration-300"
           style={{ height: scrolled ? '60px' : '72px' }}
         >
-          {/* Logo + Brand */}
-          <a href={basePath || '/'} className="flex items-center gap-3 shrink-0">
-            {logoUrl && (
-              <div
-                className="relative transition-all duration-300"
-                style={{
-                  width: scrolled ? '36px' : '48px',
-                  height: scrolled ? '36px' : '48px',
-                }}
-              >
-                <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+          {/* 3-Zone Nav Layout */}
+          {/* LEFT ZONE */}
+          <div className="hidden lg:flex items-center gap-3 flex-1 min-w-0">
+            {navPos === 'left' && (
+              <a href={basePath || '/'} className="flex items-center gap-3 shrink-0">
+                {logoUrl && (
+                  <div
+                    className="relative transition-all duration-300"
+                    style={{
+                      width: scrolled ? logoSizes.scrolled : logoSizes.normal,
+                      height: scrolled ? logoSizes.scrolled : logoSizes.normal,
+                    }}
+                  >
+                    <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+                  </div>
+                )}
+                {showName && (
+                  <span
+                    className="font-bold text-white transition-all duration-300 uppercase tracking-wide"
+                    style={{
+                      fontFamily: 'var(--tenant-font-heading, sans-serif)',
+                      fontSize: scrolled ? '0.95rem' : '1.1rem',
+                      letterSpacing: '0.08em',
+                    }}
+                  >
+                    {businessName}
+                  </span>
+                )}
+              </a>
+            )}
+            {navPos === 'center' && (
+              <div className="flex items-center gap-1">
+                {links.map((link: { label: string; href: string }) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="text-xs font-medium text-white/80 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/10"
+                  >
+                    {link.label}
+                  </a>
+                ))}
               </div>
             )}
-            <span
-              className="font-bold text-white transition-all duration-300 uppercase tracking-wide"
-              style={{
-                fontFamily: 'var(--tenant-font-heading, sans-serif)',
-                fontSize: scrolled ? '0.95rem' : '1.1rem',
-                letterSpacing: '0.08em',
-              }}
-            >
-              {businessName}
-            </span>
-          </a>
-
-          {/* Desktop Links */}
-          <div className="hidden lg:flex items-center gap-1">
-            {links.map((link: { label: string; href: string }) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-xs font-medium text-white/80 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/10"
-              >
-                {link.label}
-              </a>
-            ))}
+            {navPos === 'right' && (
+              <div className="flex items-center gap-1">
+                {links.map((link: { label: string; href: string }) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="text-xs font-medium text-white/80 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/10"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center gap-2 shrink-0">
+          {/* CENTER ZONE */}
+          <div className="hidden lg:flex items-center justify-center shrink-0">
+            {navPos === 'center' && (
+              <a href={basePath || '/'} className="flex items-center gap-3">
+                {logoUrl && (
+                  <div
+                    className="relative transition-all duration-300"
+                    style={{
+                      width: scrolled ? logoSizes.scrolled : logoSizes.normal,
+                      height: scrolled ? logoSizes.scrolled : logoSizes.normal,
+                    }}
+                  >
+                    <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+                  </div>
+                )}
+                {showName && (
+                  <span
+                    className="font-bold text-white transition-all duration-300 uppercase tracking-wide"
+                    style={{
+                      fontFamily: 'var(--tenant-font-heading, sans-serif)',
+                      fontSize: scrolled ? '0.95rem' : '1.1rem',
+                      letterSpacing: '0.08em',
+                    }}
+                  >
+                    {businessName}
+                  </span>
+                )}
+              </a>
+            )}
+            {navPos === 'left' && (
+              <div className="flex items-center gap-1">
+                {links.map((link: { label: string; href: string }) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="text-xs font-medium text-white/80 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/10"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT ZONE */}
+          <div className="hidden lg:flex items-center gap-2 shrink-0 flex-1 justify-end">
+            {navPos === 'right' && (
+              <a href={basePath || '/'} className="flex items-center gap-3 mr-3">
+                {logoUrl && (
+                  <div
+                    className="relative transition-all duration-300"
+                    style={{
+                      width: scrolled ? logoSizes.scrolled : logoSizes.normal,
+                      height: scrolled ? logoSizes.scrolled : logoSizes.normal,
+                    }}
+                  >
+                    <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+                  </div>
+                )}
+                {showName && (
+                  <span
+                    className="font-bold text-white transition-all duration-300 uppercase tracking-wide"
+                    style={{
+                      fontFamily: 'var(--tenant-font-heading, sans-serif)',
+                      fontSize: scrolled ? '0.95rem' : '1.1rem',
+                      letterSpacing: '0.08em',
+                    }}
+                  >
+                    {businessName}
+                  </span>
+                )}
+              </a>
+            )}
+
             {showCart && (
               <a
                 href={`${basePath}/cart`}
@@ -165,7 +269,28 @@ export function NavDark(props: SectionProps) {
             )}
           </div>
 
-          {/* Mobile Toggle */}
+          {/* Mobile: always show logo left + hamburger right */}
+          <a href={basePath || '/'} className="lg:hidden flex items-center gap-3 shrink-0">
+            {logoUrl && (
+              <div
+                className="relative transition-all duration-300"
+                style={{
+                  width: scrolled ? logoSizes.scrolled : logoSizes.normal,
+                  height: scrolled ? logoSizes.scrolled : logoSizes.normal,
+                }}
+              >
+                <Image src={logoUrl} alt={businessName} fill className="object-contain" />
+              </div>
+            )}
+            {showName && (
+              <span
+                className="font-bold text-white transition-all duration-300 uppercase tracking-wide text-sm"
+                style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
+              >
+                {businessName}
+              </span>
+            )}
+          </a>
           <button
             className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
