@@ -42,11 +42,18 @@ export function HeroAurora({
   };
   const auroraOpacity = opacityMap[intensity] ?? 0.4;
 
+  // Color overrides
+  const primaryOverride = sectionConfig?.primaryColor as string | undefined;
+  const accentOverride = sectionConfig?.accentColor as string | undefined;
+  const cssOverrides: Record<string, string> = {};
+  if (primaryOverride) cssOverrides['--tenant-color-primary'] = primaryOverride;
+  if (accentOverride) cssOverrides['--tenant-color-accent'] = accentOverride;
+
   // Split title into words for per-letter animation
   const titleWords = title.split(' ');
 
   return (
-    <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden bg-background">
+    <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden bg-background" style={cssOverrides as React.CSSProperties}>
       {/* Aurora gradient layers */}
       <div
         className="absolute inset-0 overflow-hidden"

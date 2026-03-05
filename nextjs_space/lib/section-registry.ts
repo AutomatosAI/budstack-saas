@@ -9,6 +9,10 @@ import { HeroMinimal } from '@/components/sections/heroes/HeroMinimal';
 import { HeroWarpShader } from '@/components/sections/heroes/HeroWarpShader';
 import { HeroMeshGradient } from '@/components/sections/heroes/HeroMeshGradient';
 import { HeroAurora } from '@/components/sections/heroes/HeroAurora';
+import { HeroShaderGlass } from '@/components/sections/heroes/HeroShaderGlass';
+import { HeroDesignali } from '@/components/sections/heroes/HeroDesignali';
+import { HeroSplitImages } from '@/components/sections/heroes/HeroSplitImages';
+import { HeroFuturistic } from '@/components/sections/heroes/HeroFuturistic';
 
 // Content sections
 import { ValueProps } from '@/components/sections/content/ValueProps';
@@ -60,6 +64,10 @@ export const SECTION_REGISTRY: Record<string, ComponentType<SectionProps>> = {
   HeroWarpShader,
   HeroMeshGradient,
   HeroAurora,
+  HeroShaderGlass,
+  HeroDesignali,
+  HeroSplitImages,
+  HeroFuturistic,
   ValueProps,
   ProductShowcase,
   Testimonials,

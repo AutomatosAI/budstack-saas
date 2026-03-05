@@ -41,6 +41,13 @@ export function HeroMeshGradient({
   const shaderSpeed = Number(sectionConfig?.shaderSpeed) || 0.3;
   const showWireframe = sectionConfig?.wireframe !== false;
 
+  // Color overrides
+  const primaryOverride = sectionConfig?.primaryColor as string | undefined;
+  const accentOverride = sectionConfig?.accentColor as string | undefined;
+  const cssOverrides: Record<string, string> = {};
+  if (primaryOverride) cssOverrides['--tenant-color-primary'] = primaryOverride;
+  if (accentOverride) cssOverrides['--tenant-color-accent'] = accentOverride;
+
   // Use brand colours but keep the dark cinematic palette
   const meshColors = [
     '#000000',
@@ -60,7 +67,7 @@ export function HeroMeshGradient({
   const isCenter = alignment === 'center';
 
   return (
-    <section className="relative min-h-screen overflow-hidden bg-black">
+    <section className="relative min-h-screen overflow-hidden bg-black" style={cssOverrides as React.CSSProperties}>
       {/* SVG Filters */}
       <svg className="absolute inset-0 w-0 h-0" aria-hidden="true">
         <defs>

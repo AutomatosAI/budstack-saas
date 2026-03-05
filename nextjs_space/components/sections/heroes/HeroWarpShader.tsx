@@ -41,6 +41,13 @@ export function HeroWarpShader({
   const shaderSpeed = Number(sectionConfig?.shaderSpeed) || 0.8;
   const shaderSwirl = Number(sectionConfig?.shaderSwirl) || 0.8;
 
+  // Color overrides
+  const primaryOverride = sectionConfig?.primaryColor as string | undefined;
+  const accentOverride = sectionConfig?.accentColor as string | undefined;
+  const cssOverrides: Record<string, string> = {};
+  if (primaryOverride) cssOverrides['--tenant-color-primary'] = primaryOverride;
+  if (accentOverride) cssOverrides['--tenant-color-accent'] = accentOverride;
+
   // Derive shader colours from CSS custom properties with fallbacks
   const shaderColors: [string, string, string, string] = [
     'hsl(var(--tenant-color-primary, 160 84% 39%))',
@@ -50,7 +57,7 @@ export function HeroWarpShader({
   ];
 
   return (
-    <section className="relative min-h-screen overflow-hidden">
+    <section className="relative min-h-screen overflow-hidden" style={cssOverrides as React.CSSProperties}>
       {/* Shader background */}
       <div className="absolute inset-0 z-0">
         <Warp
