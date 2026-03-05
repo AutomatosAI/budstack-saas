@@ -199,51 +199,28 @@ export function ColoursTab({
                           {OVERRIDE_KEYS.map(({ key, label, description }) => {
                             const currentValue = overrides[key] || "";
                             return (
-                              <div key={key}>
-                                <Label className="text-xs">{label}</Label>
-                                <p className="text-[10px] text-muted-foreground mb-1">
-                                  {description}
-                                </p>
-                                <div className="flex gap-1.5 items-center">
-                                  <input
-                                    type="color"
-                                    value={currentValue || "#000000"}
-                                    onChange={(e) =>
-                                      setSectionOverride(
-                                        section.id,
-                                        key,
-                                        e.target.value,
-                                      )
+                              <div key={key} className="relative">
+                                <ColorPicker
+                                  label={label}
+                                  description={description}
+                                  value={currentValue || "#000000"}
+                                  onChange={(v) =>
+                                    setSectionOverride(section.id, key, v)
+                                  }
+                                />
+                                {currentValue && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-0 right-0 h-6 w-6"
+                                    onClick={() =>
+                                      clearSectionOverride(section.id, key)
                                     }
-                                    className="w-8 h-8 p-0.5 cursor-pointer rounded border"
-                                  />
-                                  <input
-                                    type="text"
-                                    value={currentValue}
-                                    onChange={(e) =>
-                                      setSectionOverride(
-                                        section.id,
-                                        key,
-                                        e.target.value,
-                                      )
-                                    }
-                                    placeholder="Global"
-                                    className="flex-1 h-8 px-2 text-xs border rounded-md bg-background"
-                                  />
-                                  {currentValue && (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7 shrink-0"
-                                      onClick={() =>
-                                        clearSectionOverride(section.id, key)
-                                      }
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                </div>
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                )}
                               </div>
                             );
                           })}

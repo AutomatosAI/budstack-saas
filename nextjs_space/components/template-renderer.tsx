@@ -6,6 +6,7 @@ import type { SectionProps } from '@/lib/types/section-props';
 import type { TemplateLayout } from '@/lib/types/template-layout';
 import { motion } from 'framer-motion';
 import { sanitizeCss } from '@/lib/css-utils';
+import { hexToHsl } from '@/lib/color-utils';
 
 interface Props {
   layout: TemplateLayout;
@@ -62,7 +63,12 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
       .map(s => {
         const declarations = Object.entries(s.colorOverrides!)
           .filter(([, v]) => v?.trim())
-          .map(([k, v]) => `--tenant-color-${k}: ${v}`)
+          .map(([k, v]) => {
+            // Convert hex (#abc123) to HSL channel format (H S% L%) so
+            // hsl(var(--tenant-color-*)) works in section components.
+            const hslValue = v!.startsWith('#') ? hexToHsl(v!) : v;
+            return `--tenant-color-${k}: ${hslValue}`;
+          })
           .join('; ');
         if (!declarations) return '';
         // Use CSS.escape when available (browser), fallback to simple escaping (SSR)

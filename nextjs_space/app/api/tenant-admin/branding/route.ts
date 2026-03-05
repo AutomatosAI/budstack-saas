@@ -162,8 +162,9 @@ export async function PUT(req: NextRequest) {
       const incomingSettings = settings as any;
       const hasLayoutSections = Array.isArray(incomingSettings.layoutSections) && incomingSettings.layoutSections.length > 0;
       const hasSectionConfigs = incomingSettings.sectionConfigs && Object.keys(incomingSettings.sectionConfigs).length > 0;
+      const hasSectionColorOverrides = incomingSettings.sectionColorOverrides && Object.keys(incomingSettings.sectionColorOverrides).length > 0;
 
-      if (hasLayoutSections || hasSectionConfigs) {
+      if (hasLayoutSections || hasSectionConfigs || hasSectionColorOverrides) {
         // Read existing layout from S3 so we preserve navigation, footer, settings keys
         let baseLayout: any = {};
         if (currentTemplate?.s3Path) {
@@ -179,7 +180,8 @@ export async function PUT(req: NextRequest) {
           ? incomingSettings.layoutSections
           : (baseLayout.sections || []);
 
-        // Merge sections with config overrides, stripping signed S3 URLs back to relative paths
+        // Merge sections with config overrides + color overrides, stripping signed S3 URLs back to relative paths
+        const sectionColorOverrides = incomingSettings.sectionColorOverrides || {};
         const updatedSections = sourceSections.map((s: any) => {
           const mergedConfig = { ...s.config };
 
@@ -228,7 +230,15 @@ export async function PUT(req: NextRequest) {
             }
           }
 
-          return { ...s, config: mergedConfig };
+          // Merge per-section color overrides
+          const colorOvr = sectionColorOverrides[s.id];
+          const hasColorOverrides = colorOvr && Object.keys(colorOvr).some(k => colorOvr[k]?.trim());
+
+          return {
+            ...s,
+            config: mergedConfig,
+            ...(hasColorOverrides ? { colorOverrides: colorOvr } : { colorOverrides: undefined }),
+          };
         });
 
         const finalLayout = {

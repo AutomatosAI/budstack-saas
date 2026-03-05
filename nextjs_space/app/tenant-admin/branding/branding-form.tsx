@@ -416,10 +416,14 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
     aboutUrl: "#",
     heroImageUrl: heroImage
       ? URL.createObjectURL(heroImage)
-      : ((activeTemplate as any)?.layout?.defaults?.heroImagePath) || undefined,
+      : ((activeTemplate as any)?.layout?.defaults?.heroImagePath)
+        || ((activeTemplate as any)?.signedHeroImageUrl)
+        || undefined,
     logoUrl: logo
       ? URL.createObjectURL(logo)
-      : ((activeTemplate as any)?.layout?.defaults?.logoPath) || undefined,
+      : ((activeTemplate as any)?.layout?.defaults?.logoPath)
+        || ((activeTemplate as any)?.signedLogoUrl)
+        || undefined,
     designSystem: liveDesignSystem,
     pageContent: livePageContent,
     customCss: formData.customCSS,
@@ -526,8 +530,8 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
                 heroImage={heroImage}
                 favicon={favicon}
                 onFileChange={handleFileChange}
-                heroImageUrl={((activeTemplate as any)?.layout?.defaults?.heroImagePath) || undefined}
-                logoUrl={((activeTemplate as any)?.layout?.defaults?.logoPath) || undefined}
+                heroImageUrl={((activeTemplate as any)?.layout?.defaults?.heroImagePath) || ((activeTemplate as any)?.signedHeroImageUrl) || undefined}
+                logoUrl={((activeTemplate as any)?.layout?.defaults?.logoPath) || ((activeTemplate as any)?.signedLogoUrl) || undefined}
               />
             </TabsContent>
 

@@ -98,6 +98,20 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
           // styles.css is optional
         }
 
+        // Sign the DB heroImageUrl and logoUrl fields so they're usable in the editor
+        if (activeTemplate.heroImageUrl && !activeTemplate.heroImageUrl.startsWith('http') && !activeTemplate.heroImageUrl.startsWith('/')) {
+          try {
+            const { getFileUrl } = await import('@/lib/s3');
+            (activeTemplate as any).signedHeroImageUrl = await getFileUrl(activeTemplate.heroImageUrl);
+          } catch { /* leave unsigned */ }
+        }
+        if (activeTemplate.logoUrl && !activeTemplate.logoUrl.startsWith('http') && !activeTemplate.logoUrl.startsWith('/')) {
+          try {
+            const { getFileUrl } = await import('@/lib/s3');
+            (activeTemplate as any).signedLogoUrl = await getFileUrl(activeTemplate.logoUrl);
+          } catch { /* leave unsigned */ }
+        }
+
         (activeTemplate as any).layout = layoutJson;
         (activeTemplate as any).templateCss = templateCss;
       } catch (e) {
