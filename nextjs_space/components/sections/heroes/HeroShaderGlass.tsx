@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { MeshGradient } from '@paper-design/shaders-react';
 import { SectionProps } from '@/lib/types/section-props';
+import { useResolvedColors } from '@/lib/hooks/use-resolved-colors';
 
 /**
  * HeroShaderGlass — Dark glassmorphic hero with MeshGradient + pulsing border accents.
@@ -21,6 +22,7 @@ export function HeroShaderGlass({
   pageContent,
   sectionConfig,
   consultationUrl,
+  designSystem,
 }: SectionProps) {
   const title =
     sectionConfig?.title ||
@@ -46,23 +48,19 @@ export function HeroShaderGlass({
   };
   const glowVar = glowVarMap[glowColor] || glowVarMap.primary;
 
-  // Color overrides — allow per-section HSL values
-  const primaryOverride = sectionConfig?.primaryColor as string | undefined;
-  const accentOverride = sectionConfig?.accentColor as string | undefined;
-  const cssOverrides: Record<string, string> = {};
-  if (primaryOverride) cssOverrides['--tenant-color-primary'] = primaryOverride;
-  if (accentOverride) cssOverrides['--tenant-color-accent'] = accentOverride;
+  // Resolve actual color values for WebGL shader
+  const { ref, colors } = useResolvedColors(designSystem);
 
   const meshColors = [
     '#0a0a0a',
-    'hsl(var(--tenant-color-primary, 160 84% 39%))',
+    colors.primary,
     '#1a1a2e',
-    'hsl(var(--tenant-color-secondary, 160 64% 52%))',
-    'hsl(var(--tenant-color-accent, 160 76% 46%))',
+    colors.secondary,
+    colors.accent,
   ];
 
   return (
-    <section className="relative min-h-screen overflow-hidden bg-black" style={cssOverrides as React.CSSProperties}>
+    <section ref={ref as React.RefObject<HTMLElement>} className="relative min-h-screen overflow-hidden bg-black">
       {/* Shader background */}
       <MeshGradient
         className="absolute inset-0 w-full h-full z-0"

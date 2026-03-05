@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { MeshGradient } from '@paper-design/shaders-react';
 import { SectionProps } from '@/lib/types/section-props';
+import { useResolvedColors } from '@/lib/hooks/use-resolved-colors';
 
 /**
  * HeroMeshGradient — Dark cinematic hero with layered mesh gradient shaders.
@@ -22,6 +23,7 @@ export function HeroMeshGradient({
   pageContent,
   sectionConfig,
   consultationUrl,
+  designSystem,
 }: SectionProps) {
   const title =
     sectionConfig?.title ||
@@ -41,33 +43,28 @@ export function HeroMeshGradient({
   const shaderSpeed = Number(sectionConfig?.shaderSpeed) || 0.3;
   const showWireframe = sectionConfig?.wireframe !== false;
 
-  // Color overrides
-  const primaryOverride = sectionConfig?.primaryColor as string | undefined;
-  const accentOverride = sectionConfig?.accentColor as string | undefined;
-  const cssOverrides: Record<string, string> = {};
-  if (primaryOverride) cssOverrides['--tenant-color-primary'] = primaryOverride;
-  if (accentOverride) cssOverrides['--tenant-color-accent'] = accentOverride;
+  // Resolve actual color values for WebGL shader
+  const { ref, colors } = useResolvedColors(designSystem);
 
-  // Use brand colours but keep the dark cinematic palette
   const meshColors = [
     '#000000',
-    'hsl(var(--tenant-color-primary, 160 84% 39%))',
+    colors.primary,
     '#ffffff',
-    'hsl(var(--tenant-color-secondary, 160 64% 52%))',
-    'hsl(var(--tenant-color-accent, 160 76% 46%))',
+    colors.secondary,
+    colors.accent,
   ];
 
   const overlayColors = [
     '#000000',
     '#ffffff',
-    'hsl(var(--tenant-color-primary, 160 84% 39%))',
+    colors.primary,
     '#000000',
   ];
 
   const isCenter = alignment === 'center';
 
   return (
-    <section className="relative min-h-screen overflow-hidden bg-black" style={cssOverrides as React.CSSProperties}>
+    <section ref={ref as React.RefObject<HTMLElement>} className="relative min-h-screen overflow-hidden bg-black">
       {/* SVG Filters */}
       <svg className="absolute inset-0 w-0 h-0" aria-hidden="true">
         <defs>

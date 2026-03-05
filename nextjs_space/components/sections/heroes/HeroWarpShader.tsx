@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { Warp } from '@paper-design/shaders-react';
 import { SectionProps } from '@/lib/types/section-props';
+import { useResolvedColors } from '@/lib/hooks/use-resolved-colors';
 
 /**
  * HeroWarpShader — Full-screen hero with an animated warp shader background.
@@ -22,6 +23,7 @@ export function HeroWarpShader({
   pageContent,
   sectionConfig,
   consultationUrl,
+  designSystem,
 }: SectionProps) {
   const title =
     sectionConfig?.title ||
@@ -41,23 +43,18 @@ export function HeroWarpShader({
   const shaderSpeed = Number(sectionConfig?.shaderSpeed) || 0.8;
   const shaderSwirl = Number(sectionConfig?.shaderSwirl) || 0.8;
 
-  // Color overrides
-  const primaryOverride = sectionConfig?.primaryColor as string | undefined;
-  const accentOverride = sectionConfig?.accentColor as string | undefined;
-  const cssOverrides: Record<string, string> = {};
-  if (primaryOverride) cssOverrides['--tenant-color-primary'] = primaryOverride;
-  if (accentOverride) cssOverrides['--tenant-color-accent'] = accentOverride;
+  // Resolve actual color values for WebGL shader (CSS var() doesn't work in JS)
+  const { ref, colors } = useResolvedColors(designSystem);
 
-  // Derive shader colours from CSS custom properties with fallbacks
   const shaderColors: [string, string, string, string] = [
-    'hsl(var(--tenant-color-primary, 160 84% 39%))',
-    'hsl(var(--tenant-color-secondary, 160 64% 52%))',
-    'hsl(var(--tenant-color-accent, 160 76% 46%))',
-    'hsl(var(--tenant-color-background, 0 0% 100%) / 0.6)',
+    colors.primary,
+    colors.secondary,
+    colors.accent,
+    colors.background + '99', // ~60% opacity via hex alpha
   ];
 
   return (
-    <section className="relative min-h-screen overflow-hidden" style={cssOverrides as React.CSSProperties}>
+    <section ref={ref as React.RefObject<HTMLElement>} className="relative min-h-screen overflow-hidden">
       {/* Shader background */}
       <div className="absolute inset-0 z-0">
         <Warp
