@@ -118,9 +118,18 @@ export async function submitOrder(params: {
         throw new Error("Cart is empty. Add items before placing an order.");
     }
 
-    const cartItems = cart.items as any[];
+    // Normalize cart items: ensure every item has a top-level `price` and `name`
+    // Items may come from different sources with different shapes:
+    //   - Server-side cart (drgreen-cart.ts): { strainId, quantity, strain: { retailPrice, name } }
+    //   - Client-side cart (checkout): { strainId, quantity, strain: { retailPrice, name } }
+    //   - Flat format (template style): { strainId, quantity, price, name }
+    const cartItems = (cart.items as any[]).map(item => ({
+        ...item,
+        price: item.price || item.strain?.retailPrice || item.retailPrice || 0,
+        name: item.name || item.strain?.name || 'Unknown Product',
+    }));
     log('CART_ITEMS', cartItems.map(i => ({
-        strainId: i.strainId, name: i.strain?.name, qty: i.quantity, price: i.strain?.retailPrice,
+        strainId: i.strainId, name: i.name, qty: i.quantity, price: i.price,
     })));
 
     let orderData: any = null;
@@ -242,11 +251,11 @@ export async function submitOrder(params: {
         if (!orderData) {
             log('STEP_3_FALLBACK: Attempting direct order with items + shippingAddress', { previousStep: stepFailed });
 
-            // Build items with price from cart data
+            // Build items with price — always include price for Dr Green to calculate totals
             const directItems = cartItems.map(item => ({
                 strainId: item.strainId,
                 quantity: item.quantity,
-                ...(item.strain?.retailPrice !== undefined ? { price: item.strain.retailPrice } : {}),
+                price: item.price,
             }));
 
             const directPayload: Record<string, any> = {
@@ -289,9 +298,9 @@ export async function submitOrder(params: {
         throw new Error("User must complete consultation before placing orders");
     }
 
-    // Calculate order totals from cart
+    // Calculate order totals from normalized cart items
     const subtotal = cartItems.reduce((sum, item) => {
-        return sum + (item.strain?.retailPrice || 0) * item.quantity;
+        return sum + (item.price || 0) * item.quantity;
     }, 0);
     const shippingCost = 5.0;
     const total = subtotal + shippingCost;
@@ -331,9 +340,9 @@ export async function submitOrder(params: {
                         create: cartItems.map((item) => ({
                             id: crypto.randomUUID(),
                             productId: item.strainId,
-                            productName: item.strain?.name || "Unknown Product",
+                            productName: item.name,
                             quantity: item.quantity,
-                            price: item.strain?.retailPrice || 0,
+                            price: item.price,
                         })),
                     },
                 },
@@ -387,9 +396,9 @@ export async function submitOrder(params: {
                     create: cartItems.map((item) => ({
                         id: crypto.randomUUID(),
                         productId: item.strainId,
-                        productName: item.strain?.name || "Unknown Product",
+                        productName: item.name,
                         quantity: item.quantity,
-                        price: item.strain?.retailPrice || 0,
+                        price: item.price,
                     })),
                 },
             },

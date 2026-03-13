@@ -291,8 +291,8 @@ function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorG
     ? isAvailableAtAnyLocation
     : (product.isAvailable !== false && totalStock > 0);
 
-  // The /dapp/strains endpoint returns country-specific pricing via countryCode param
-  // retailPrice is already in the tenant's local currency
+  // The /strains endpoint with countryCode param returns prices in local currency
+  // retailPrice is already in the tenant's local currency — no conversion needed
   const price = product.retailPrice || 0;
   const currency = getCurrencySymbol(defaultCurrency);
 
@@ -323,11 +323,13 @@ export async function fetchProducts(
   country: string = "ZA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct[]> {
-  // Use authenticated /dapp/strains endpoint — returns country-specific pricing
+  // Use /strains endpoint with countryCode — returns prices already in local currency
+  // (e.g. ZAR for ZAF, EUR for PRT). No conversion needed.
+  // The template team confirmed /strains?countryCode= returns local-currency retailPrice.
   const alpha3 = toAlpha3(country);
   console.log(`[fetchProducts] country=${country} alpha3=${alpha3}`);
 
-  const response = await doctorGreenRequest<any>('/dapp/strains', {
+  const response = await doctorGreenRequest<any>('/strains', {
     config,
     queryParams: {
       countryCode: alpha3,
