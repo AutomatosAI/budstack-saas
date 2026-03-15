@@ -61,7 +61,7 @@ export default function LoginPage() {
           <SignIn 
             routing="path" 
             path="/auth/login"
-            signUpUrl="/auth/signup"
+            signUpUrl="/onboarding"
             afterSignInUrl="/auth/callback"
             // Allow users to switch accounts
             appearance={{

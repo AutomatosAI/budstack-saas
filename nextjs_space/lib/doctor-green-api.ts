@@ -4,6 +4,7 @@
  */
 
 import { callDrGreenAPI } from '@/lib/drgreen-api-client';
+import { convertFromEUR } from '@/lib/exchange-rates';
 
 const API_URL = process.env.DOCTOR_GREEN_API_URL || 'https://api.drgreennft.com/api/v1';
 
@@ -277,7 +278,7 @@ function resolveImageUrl(raw: string | undefined | null): string | undefined {
   return `${S3_BUCKET_BASE_URL}/${path}`;
 }
 
-function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorGreenProduct {
+async function normalizeProduct(product: DoctorGreenProduct, country: string): Promise<DoctorGreenProduct> {
   const defaultCurrency = getCurrencyByCountry(country);
 
   const fullImageUrl = resolveImageUrl(product.imageUrl);
@@ -291,9 +292,10 @@ function normalizeProduct(product: DoctorGreenProduct, country: string): DoctorG
     ? isAvailableAtAnyLocation
     : (product.isAvailable !== false && totalStock > 0);
 
-  // The /strains endpoint with countryCode param returns prices in local currency
-  // retailPrice is already in the tenant's local currency — no conversion needed
-  const price = product.retailPrice || 0;
+  // Dr Green API returns retailPrice in EUR regardless of countryCode param.
+  // Convert to tenant's local currency using live exchange rates.
+  const eurPrice = product.retailPrice || 0;
+  const price = await convertFromEUR(eurPrice, defaultCurrency);
   const currency = getCurrencySymbol(defaultCurrency);
 
   // Resolve strainImages URLs too

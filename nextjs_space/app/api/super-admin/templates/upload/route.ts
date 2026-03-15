@@ -101,7 +101,23 @@ export async function POST(req: NextRequest) {
       }
 
       const configContent = await fs.readFile(configPath, "utf-8");
-      const config: TemplateConfig = JSON.parse(configContent);
+
+      // Guard against non-JSON config files (e.g. XML error pages saved as .json)
+      const trimmedConfig = configContent.trimStart();
+      if (trimmedConfig.startsWith("<?xml") || trimmedConfig.startsWith("<")) {
+        throw new Error(
+          "template.config.json contains XML/HTML instead of JSON. Check that the GitHub repo is public and the file is valid JSON.",
+        );
+      }
+
+      let config: TemplateConfig;
+      try {
+        config = JSON.parse(configContent);
+      } catch (parseError: any) {
+        throw new Error(
+          `Invalid template.config.json: ${parseError.message}. Content starts with: ${configContent.substring(0, 80)}`,
+        );
+      }
 
       const userProvidedSlug = generateSlug(templateName.trim());
 
@@ -150,17 +166,17 @@ export async function POST(req: NextRequest) {
       console.log(`[Template Upload] Copying files to: ${targetDir}`);
       await fs.cp(extractPath, targetDir, { recursive: true });
 
-      // Upload template files to S3 for persistence
+      // Upload template files to S3 — required for all reads
       console.log(`[Template Upload] Uploading template to S3...`);
+      const s3Prefix = `templates/${config.id}/`;
       try {
-        const s3Prefix = `templates/${config.id}/`;
-        await uploadDirectoryToS3(targetDir, s3Prefix);
-        console.log(`[Template Upload] Template uploaded to S3: ${s3Prefix}`);
+        const uploadCount = await uploadDirectoryToS3(targetDir, s3Prefix);
+        console.log(`[Template Upload] Uploaded ${uploadCount} files to S3: ${s3Prefix}`);
       } catch (s3Error: any) {
         console.error(
-          `[Template Upload] S3 upload failed (non-fatal): ${s3Error.message}`,
+          `[Template Upload] S3 upload failed: ${s3Error.message}`,
         );
-        // Continue - template is in local filesystem, S3 is for persistence only
+        throw new Error(`S3 upload failed: ${s3Error.message}. Check AWS credentials and bucket configuration.`);
       }
 
       const metadataPayload = {

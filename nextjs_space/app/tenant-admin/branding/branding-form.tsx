@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/sonner";
+import Script from "next/script";
 import {
   Layout,
   Palette,
@@ -417,13 +418,13 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
     heroImageUrl: heroImage
       ? URL.createObjectURL(heroImage)
       : ((activeTemplate as any)?.layout?.defaults?.heroImagePath)
-        || ((activeTemplate as any)?.signedHeroImageUrl)
-        || undefined,
+      || ((activeTemplate as any)?.signedHeroImageUrl)
+      || undefined,
     logoUrl: logo
       ? URL.createObjectURL(logo)
       : ((activeTemplate as any)?.layout?.defaults?.logoPath)
-        || ((activeTemplate as any)?.signedLogoUrl)
-        || undefined,
+      || ((activeTemplate as any)?.signedLogoUrl)
+      || undefined,
     designSystem: liveDesignSystem,
     pageContent: livePageContent,
     customCss: formData.customCSS,
@@ -435,23 +436,23 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
   // Build live layout with section configs and color overrides baked into sections
   const liveLayout = (activeTemplate as any)?.layout
     ? {
-        ...((activeTemplate as any).layout as any),
-        navigation: ((activeTemplate as any).layout as any).navigation || "NavDark",
-        footer: ((activeTemplate as any).layout as any).footer || "FooterSimple",
-        sections: formData.layoutSections.map((section: any) => {
-          const mergedConfig = formData.sectionConfigs[section.id]
-            ? { ...section.config, ...formData.sectionConfigs[section.id] }
-            : section.config;
-          const overrides = formData.sectionColorOverrides[section.id];
-          return {
-            ...section,
-            config: mergedConfig,
-            ...(overrides && Object.keys(overrides).length > 0
-              ? { colorOverrides: overrides }
-              : {}),
-          };
-        }),
-      }
+      ...((activeTemplate as any).layout as any),
+      navigation: ((activeTemplate as any).layout as any).navigation || "NavDark",
+      footer: ((activeTemplate as any).layout as any).footer || "FooterSimple",
+      sections: formData.layoutSections.map((section: any) => {
+        const mergedConfig = formData.sectionConfigs[section.id]
+          ? { ...section.config, ...formData.sectionConfigs[section.id] }
+          : section.config;
+        const overrides = formData.sectionColorOverrides[section.id];
+        return {
+          ...section,
+          config: mergedConfig,
+          ...(overrides && Object.keys(overrides).length > 0
+            ? { colorOverrides: overrides }
+            : {}),
+        };
+      }),
+    }
     : null;
 
   // --- Render ---
@@ -581,7 +582,7 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
           "flex-1 bg-muted/20 border-2 rounded-xl border-dashed overflow-hidden relative shadow-inner isolate z-0",
           "hidden lg:block",
           showPreview &&
-            "!block fixed inset-0 z-50 rounded-none border-0 lg:relative lg:z-0 lg:rounded-xl lg:border-2",
+          "!block fixed inset-0 z-50 rounded-none border-0 lg:relative lg:z-0 lg:rounded-xl lg:border-2",
         )}
       >
         {showPreview && (
@@ -638,6 +639,13 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
           )}
         </div>
       </div>
+
+      {/* 🚀 PageAgent Demo Integration */}
+      <Script
+        src="https://cdn.jsdelivr.net/npm/page-agent@1.5.7/dist/iife/page-agent.demo.js"
+        strategy="lazyOnload"
+        crossOrigin="anonymous"
+      />
     </div>
   );
 }

@@ -165,7 +165,22 @@ export async function getJsonFromS3<T = any>(key: string): Promise<T> {
   );
   const bodyStr = await response.Body?.transformToString("utf-8");
   if (!bodyStr) throw new Error(`Empty response for S3 key: ${key}`);
-  return JSON.parse(bodyStr);
+
+  // Guard against S3 returning XML error documents instead of JSON
+  const trimmed = bodyStr.trimStart();
+  if (trimmed.startsWith("<?xml") || trimmed.startsWith("<Error")) {
+    throw new Error(
+      `S3 returned XML instead of JSON for key "${key}". This usually means the file doesn't exist or access was denied. Raw: ${trimmed.substring(0, 200)}`,
+    );
+  }
+
+  try {
+    return JSON.parse(bodyStr);
+  } catch (e: any) {
+    throw new Error(
+      `Failed to parse JSON from S3 key "${key}": ${e.message}. Content starts with: ${bodyStr.substring(0, 100)}`,
+    );
+  }
 }
 
 /**
