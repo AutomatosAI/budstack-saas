@@ -4,7 +4,7 @@
  */
 
 import { callDrGreenAPI } from '@/lib/drgreen-api-client';
-import { convertFromEUR } from './exchange-rates';
+import { convertFromEUR } from '@/lib/exchange-rates';
 
 const API_URL = process.env.DOCTOR_GREEN_API_URL || 'https://api.drgreennft.com/api/v1';
 
