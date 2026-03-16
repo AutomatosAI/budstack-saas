@@ -292,11 +292,31 @@ async function normalizeProduct(product: DoctorGreenProduct, country: string): P
     ? isAvailableAtAnyLocation
     : (product.isAvailable !== false && totalStock > 0);
 
-  // Dr Green API returns retailPrice in EUR regardless of countryCode param.
-  // Convert to tenant's local currency using live exchange rates.
-  const eurPrice = product.retailPrice || 0;
-  const price = await convertFromEUR(eurPrice, defaultCurrency);
-  const currency = getCurrencySymbol(defaultCurrency);
+  // Dr Green local pricing priority (from their implementation doc):
+  //   1. localRetailPrice + localCurrency  (not yet deployed)
+  //   2. strainLocations[0].retailPrice + location.currency  (not yet deployed)
+  //   3. retailPrice (currently EUR) → convert via exchange rates
+  //   4. 0 / "Price unavailable"
+  const loc0 = locations[0] as any;
+  let price: number;
+  let currencyCode: string;
+
+  if ((product as any).localRetailPrice != null) {
+    // Priority 1: Dr Green local pricing fields (future)
+    price = (product as any).localRetailPrice;
+    currencyCode = (product as any).localCurrency || defaultCurrency;
+  } else if (loc0?.retailPrice != null && loc0?.location?.currency) {
+    // Priority 2: strainLocations pricing (future)
+    price = loc0.retailPrice;
+    currencyCode = loc0.location.currency;
+  } else {
+    // Priority 3: retailPrice is EUR — convert to local currency
+    const eurPrice = product.retailPrice || 0;
+    price = await convertFromEUR(eurPrice, defaultCurrency);
+    currencyCode = defaultCurrency;
+  }
+
+  const currency = getCurrencySymbol(currencyCode);
 
   // Resolve strainImages URLs too
   const resolvedStrainImages = product.strainImages?.map((img) => ({
@@ -325,9 +345,9 @@ export async function fetchProducts(
   country: string = "ZA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct[]> {
-  // Use /strains endpoint with countryCode — returns prices already in local currency
-  // (e.g. ZAR for ZAF, EUR for PRT). No conversion needed.
-  // The template team confirmed /strains?countryCode= returns local-currency retailPrice.
+  // Use /strains endpoint with countryCode param.
+  // Currently returns EUR prices — normalizeProduct converts via exchange rates.
+  // When Dr Green deploys localRetailPrice, it will be used automatically.
   const alpha3 = toAlpha3(country);
   console.log(`[fetchProducts] country=${country} alpha3=${alpha3}`);
 
@@ -350,12 +370,12 @@ export async function fetchProducts(
 
   if (products.length > 0) {
     const p = products[0];
-    console.log(`[fetchProducts] First product: "${p.name}" retailPrice=${p.retailPrice} currency=${p.currency} prices=${JSON.stringify(p.prices?.slice?.(0, 2))}`);
+    console.log(`[fetchProducts] First product: "${p.name}" retailPrice=${p.retailPrice} localRetailPrice=${p.localRetailPrice ?? 'N/A'} localCurrency=${p.localCurrency ?? 'N/A'}`);
   } else {
     console.log(`[fetchProducts] No products returned`);
   }
 
-  return products.map((product: DoctorGreenProduct) => normalizeProduct(product, country));
+  return Promise.all(products.map((product: DoctorGreenProduct) => normalizeProduct(product, country)));
 }
 
 export async function fetchProduct(
