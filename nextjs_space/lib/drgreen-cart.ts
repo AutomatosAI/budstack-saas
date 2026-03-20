@@ -86,22 +86,22 @@ export async function addToCart(params: {
   const actualQuantity = quantity * size;
 
   // Call Dr. Green API to add to cart
-  // clientCartId must be the Dr Green clientId (not the cart UUID)
-  // Matches the working pattern from drgreen-orders.ts and the template proxy
+  // Partner flow (from CloudWatch): individual {"strainId"} calls, one per item
+  // First initialize cart with clientId, then add the strain
+  await callDrGreenAPI('/dapp/carts', {
+    method: "POST",
+    apiKey,
+    secretKey,
+    baseUrl: apiUrl,
+    body: { clientId },
+  });
+
   const response = await callDrGreenAPI('/dapp/carts', {
     method: "POST",
     apiKey,
     secretKey,
     baseUrl: apiUrl,
-    body: {
-      items: [
-        {
-          quantity: actualQuantity,
-          strainId,
-        },
-      ],
-      clientCartId: clientId,
-    },
+    body: { strainId },
   });
 
   // Update local cart

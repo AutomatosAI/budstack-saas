@@ -1,11 +1,11 @@
 /**
  * Dr. Green Order Management
  *
- * 3-step atomic order flow (matching reference implementation):
- * Step 1: PATCH /dapp/clients/{id} — update shipping address
- * Step 2: POST /dapp/carts — add items to Dr Green server-side cart
- * Step 3: POST /dapp/orders — create order from cart
- * Fallback: POST /dapp/orders with items[] — direct order creation
+ * 3-step order flow (reverse-engineered from partner's working CloudWatch logs):
+ * Step 1: POST /dapp/carts with {"clientId"} — initialize cart for client
+ * Step 2: POST /dapp/carts with {"strainId"} × N — add items one at a time
+ * Step 3: POST /dapp/orders with {"clientId"} — create order from cart
+ * Fallback: LOCAL order with PENDING_SYNC status
  */
 
 import { prisma } from "@/lib/db";
@@ -138,165 +138,68 @@ export async function submitOrder(params: {
 
     log('CLIENT_ID_ANALYSIS', { clientId, hasRealClientId });
 
-    // ========== 3-STEP ATOMIC ORDER FLOW ==========
+    // ========== ORDER FLOW (matching partner's working CloudWatch pattern) ==========
     if (hasRealClientId) {
-        let stepFailed = '';
         let lastError = '';
-        const countryCode = shippingInfo.countryCode || toAlpha3CountryCode(shippingInfo.country);
 
-        // Step 1: Update client with shipping address on Dr Green
-        // Dr Green's PATCH requires full client fields + nested shipping object
-        // (verified from successful partner payload in AWS CloudWatch logs)
-        const shippingPayload = {
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            email: user.email,
-            shipping: {
-                address1: shippingInfo.address1,
-                address2: shippingInfo.address2 || '',
-                landmark: '',
-                city: shippingInfo.city,
-                state: shippingInfo.state || shippingInfo.city,
-                country: shippingInfo.country,
-                countryCode: countryCode,
-                postalCode: shippingInfo.postalCode,
-            },
-        };
-        log('STEP_1: Updating client shipping address', { clientId, shipping: shippingPayload });
+        // Step 1: Initialize cart on Dr Green with clientId
+        log('STEP_1: Initializing Dr Green cart', { clientId });
         try {
-            const patchResponse = await callDrGreenAPI<any>(`/dapp/clients/${clientId}`, {
+            const initResponse = await callDrGreenAPI("/dapp/carts", {
                 ...apiOpts,
-                method: "PATCH",
-                body: shippingPayload,
+                method: "POST",
+                body: { clientId },
             });
-            // Verify shipping persisted (template checks this for credential scope)
-            const returnedShipping = patchResponse?.data?.shipping || patchResponse?.shipping;
-            if (returnedShipping && returnedShipping.address1) {
-                log('STEP_1: Shipping verified in response', {
-                    address1: returnedShipping.address1,
-                    city: returnedShipping.city,
-                });
-            } else {
-                log('STEP_1: Shipping NOT confirmed in response (credential scope issue)', {
-                    success: patchResponse?.success,
-                    dataKeys: patchResponse?.data ? Object.keys(patchResponse.data) : [],
-                });
-            }
+            log('STEP_1: Cart init response', {
+                success: !!(initResponse as any)?.data || !!(initResponse as any)?.success,
+                keys: Object.keys(initResponse || {}),
+            });
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
-            log('STEP_1: Shipping PATCH failed (non-blocking)', { error: msg });
-            // Non-blocking — continue anyway (same as reference)
+            log('STEP_1: Cart init failed (continuing)', { error: msg });
+            lastError = msg;
         }
 
-        // Wait for propagation (Lovable uses 1500ms)
-        log('STEP_1: Waiting 1500ms for propagation');
-        await sleep(1500);
-
-        // Step 2: Add items to Dr Green server-side cart (with retry)
-        const drGreenCartItems = cartItems.map(item => ({
-            strainId: item.strainId,
-            quantity: item.quantity,
-        }));
-        const cartPayload = { clientCartId: clientId, items: drGreenCartItems };
-
-        log('STEP_2: Adding items to Dr Green cart', { itemCount: drGreenCartItems.length, payload: cartPayload });
-
-        let cartSuccess = false;
-        const maxAttempts = 3;
-
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        // Step 2: Add items one at a time (partner sends individual {"strainId"} calls)
+        let itemsAdded = 0;
+        for (const item of cartItems) {
+            log(`STEP_2: Adding strain ${item.strainId} (qty: ${item.quantity})`);
             try {
                 await callDrGreenAPI("/dapp/carts", {
                     ...apiOpts,
                     method: "POST",
-                    body: cartPayload,
+                    body: { strainId: item.strainId },
                 });
-                log(`STEP_2: Cart add success (attempt ${attempt})`);
-                cartSuccess = true;
-                break;
+                itemsAdded++;
+                log(`STEP_2: Strain added (${itemsAdded}/${cartItems.length})`);
             } catch (e) {
                 const msg = e instanceof Error ? e.message : String(e);
-                log(`STEP_2: Cart add failed (attempt ${attempt})`, { error: msg });
+                log(`STEP_2: Strain add failed`, { strainId: item.strainId, error: msg });
                 lastError = msg;
-
-                if (msg.includes("shipping address not found") && attempt < maxAttempts) {
-                    const delay = attempt * 2000;
-                    log(`STEP_2: Retrying in ${delay}ms (shipping propagation)`);
-                    await sleep(delay);
-                } else if (attempt < maxAttempts) {
-                    await sleep(1000);
-                }
             }
         }
 
+        log('STEP_2: Cart items summary', { added: itemsAdded, total: cartItems.length });
+
         // Step 3: Create order from cart
-        if (cartSuccess) {
-            log('STEP_3: Creating order from cart');
+        if (itemsAdded > 0) {
+            log('STEP_3: Creating order from cart', { clientId });
             try {
                 const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
                     ...apiOpts,
                     method: "POST",
                     body: { clientId },
                 });
-                orderData = (drGreenResponse as any).data || (drGreenResponse as any).order || drGreenResponse;
-                log('STEP_3: Cart-order SUCCESS', orderData);
+                orderData = (drGreenResponse as any)?.data || (drGreenResponse as any)?.order || drGreenResponse;
+                log('STEP_3: Order SUCCESS', orderData);
             } catch (e) {
                 const msg = e instanceof Error ? e.message : String(e);
-                log('STEP_3: Cart-order FAILED', { error: msg });
-                stepFailed = 'cart-order';
+                log('STEP_3: Order FAILED', { error: msg });
                 lastError = msg;
             }
         } else {
-            stepFailed = 'cart-add';
-        }
-
-        // Fallback: Direct order creation with items + shippingAddress in payload
-        // This bypasses the cart flow entirely (which requires shipping saved on client)
-        // Matches Lovable's working fallback pattern
-        if (!orderData) {
-            log('STEP_3_FALLBACK: Attempting direct order with items + shippingAddress', { previousStep: stepFailed });
-
-            // Build items with price — always include price for Dr Green to calculate totals
-            const directItems = cartItems.map(item => ({
-                strainId: item.strainId,
-                quantity: item.quantity,
-                price: item.price,
-            }));
-
-            const directPayload: Record<string, any> = {
-                clientId,
-                items: directItems,
-                shippingAddress: {
-                    address1: shippingInfo.address1,
-                    address2: shippingInfo.address2 || '',
-                    city: shippingInfo.city,
-                    state: shippingInfo.state || shippingInfo.city,
-                    country: shippingInfo.country,
-                    countryCode: countryCode,
-                    postalCode: shippingInfo.postalCode,
-                },
-            };
-
-            log('STEP_3_FALLBACK: Payload', {
-                itemCount: directItems.length,
-                hasShipping: true,
-                country: shippingInfo.country,
-            });
-
-            try {
-                const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
-                    ...apiOpts,
-                    method: "POST",
-                    body: directPayload,
-                });
-                orderData = (drGreenResponse as any).data || (drGreenResponse as any).order || drGreenResponse;
-                log('STEP_3_FALLBACK: Direct order SUCCESS', orderData);
-            } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                log('STEP_3_FALLBACK: Direct order FAILED — will use local fallback', { error: msg });
-                lastError = msg;
-                // Don't throw — fall through to local fallback below
-            }
+            log('STEP_2: No items added to cart — skipping order creation');
+            lastError = lastError || 'Failed to add any items to Dr Green cart';
         }
     } else {
         log('FAIL: No real Dr Green client ID');
