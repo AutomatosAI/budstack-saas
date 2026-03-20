@@ -138,68 +138,100 @@ export async function submitOrder(params: {
 
     log('CLIENT_ID_ANALYSIS', { clientId, hasRealClientId });
 
-    // ========== ORDER FLOW (matching partner's working CloudWatch pattern) ==========
+    // ========== ORDER FLOW ==========
+    // Reverse-engineered from Dr Green's own WordPress dApp theme (drg-dapp-themes-1.6.0):
+    //   dashboard-functions.php → dappAddToBasket() + dappPlaceOrder()
+    //
+    // Step 0: GET /dapp/clients/{clientId} → data.clientCart[0].id = clientCartId
+    //         (clientCartId is NOT the same as clientId — it's the cart's own UUID)
+    // Step 1: POST /dapp/carts with {items: [{quantity, strainId}], clientCartId}
+    // Step 2: POST /dapp/orders with {clientId}
     if (hasRealClientId) {
         let lastError = '';
 
-        // Step 1: Initialize cart on Dr Green with clientId
-        log('STEP_1: Initializing Dr Green cart', { clientId });
+        const drGreenItems = cartItems.map(item => ({
+            strainId: item.strainId,
+            quantity: item.quantity,
+        }));
+
+        // --- Step 0: Get clientCartId from client profile ---
+        let clientCartId: string | null = null;
+        log('STEP_0: Fetching client profile to get clientCartId', { clientId });
         try {
-            const initResponse = await callDrGreenAPI("/dapp/carts", {
+            const clientResponse = await callDrGreenAPI(`/dapp/clients/${clientId}`, {
+                ...apiOpts,
+                method: "GET",
+                signBody: { clientId },
+            });
+            const clientData = (clientResponse as any)?.data || clientResponse;
+            const cartArray = clientData?.clientCart || clientData?.client?.clientCart;
+            if (Array.isArray(cartArray) && cartArray.length > 0) {
+                clientCartId = cartArray[0].id;
+            }
+            log('STEP_0: Client profile SUCCESS', {
+                clientCartId: clientCartId || 'NOT_FOUND',
+                hasShippings: !!(clientData?.shippings?.length || clientData?.client?.shippings?.length),
+            });
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            log('STEP_0: Direct client GET failed, trying list fallback', { error: msg });
+
+            // Fallback: list clients and filter (same as fetchClient in doctor-green-api.ts)
+            try {
+                const listResponse = await callDrGreenAPI("/dapp/clients", {
+                    ...apiOpts,
+                    method: "GET",
+                    queryParams: { take: 200, page: 1, orderBy: 'desc' },
+                });
+                const clients = (listResponse as any)?.data?.clients
+                    || (listResponse as any)?.data?.data
+                    || (listResponse as any)?.data?.items
+                    || [];
+                const match = Array.isArray(clients) ? clients.find((c: any) => c.id === clientId) : null;
+                if (match?.clientCart?.[0]?.id) {
+                    clientCartId = match.clientCart[0].id;
+                }
+                log('STEP_0: List fallback result', { clientCartId: clientCartId || 'NOT_FOUND', clientsSearched: clients.length });
+            } catch (e2) {
+                const msg2 = e2 instanceof Error ? e2.message : String(e2);
+                log('STEP_0: List fallback ALSO failed', { error: msg2 });
+                lastError = msg2;
+            }
+        }
+
+        // --- Step 1: Add items to cart ---
+        if (clientCartId) {
+            log('STEP_1: Adding items to cart', { clientCartId, items: drGreenItems });
+            try {
+                const cartResponse = await callDrGreenAPI("/dapp/carts", {
+                    ...apiOpts,
+                    method: "POST",
+                    body: { items: drGreenItems, clientCartId },
+                });
+                log('STEP_1: Cart add SUCCESS', { keys: Object.keys(cartResponse || {}) });
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                log('STEP_1: Cart add FAILED', { error: msg });
+                lastError = msg;
+            }
+        } else {
+            log('STEP_1: SKIPPED — no clientCartId found, trying direct order');
+        }
+
+        // --- Step 2: Place order ---
+        log('STEP_2: Placing order', { clientId });
+        try {
+            const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
                 ...apiOpts,
                 method: "POST",
                 body: { clientId },
             });
-            log('STEP_1: Cart init response', {
-                success: !!(initResponse as any)?.data || !!(initResponse as any)?.success,
-                keys: Object.keys(initResponse || {}),
-            });
+            orderData = (drGreenResponse as any)?.data || (drGreenResponse as any)?.order || drGreenResponse;
+            log('STEP_2: Order SUCCESS', orderData);
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
-            log('STEP_1: Cart init failed (continuing)', { error: msg });
+            log('STEP_2: Order FAILED', { error: msg });
             lastError = msg;
-        }
-
-        // Step 2: Add items one at a time (partner sends individual {"strainId"} calls)
-        let itemsAdded = 0;
-        for (const item of cartItems) {
-            log(`STEP_2: Adding strain ${item.strainId} (qty: ${item.quantity})`);
-            try {
-                await callDrGreenAPI("/dapp/carts", {
-                    ...apiOpts,
-                    method: "POST",
-                    body: { strainId: item.strainId },
-                });
-                itemsAdded++;
-                log(`STEP_2: Strain added (${itemsAdded}/${cartItems.length})`);
-            } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                log(`STEP_2: Strain add failed`, { strainId: item.strainId, error: msg });
-                lastError = msg;
-            }
-        }
-
-        log('STEP_2: Cart items summary', { added: itemsAdded, total: cartItems.length });
-
-        // Step 3: Create order from cart
-        if (itemsAdded > 0) {
-            log('STEP_3: Creating order from cart', { clientId });
-            try {
-                const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
-                    ...apiOpts,
-                    method: "POST",
-                    body: { clientId },
-                });
-                orderData = (drGreenResponse as any)?.data || (drGreenResponse as any)?.order || drGreenResponse;
-                log('STEP_3: Order SUCCESS', orderData);
-            } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                log('STEP_3: Order FAILED', { error: msg });
-                lastError = msg;
-            }
-        } else {
-            log('STEP_2: No items added to cart — skipping order creation');
-            lastError = lastError || 'Failed to add any items to Dr Green cart';
         }
     } else {
         log('FAIL: No real Dr Green client ID');

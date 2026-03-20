@@ -85,23 +85,55 @@ export async function addToCart(params: {
   // Calculate actual quantity (quantity * size in grams)
   const actualQuantity = quantity * size;
 
-  // Call Dr. Green API to add to cart
-  // Partner flow (from CloudWatch): individual {"strainId"} calls, one per item
-  // First initialize cart with clientId, then add the strain
-  await callDrGreenAPI('/dapp/carts', {
-    method: "POST",
-    apiKey,
-    secretKey,
-    baseUrl: apiUrl,
-    body: { clientId },
-  });
+  // Get clientCartId from client profile (clientCartId != clientId)
+  // From Dr Green WordPress theme: data.clientCart[0].id
+  let clientCartId: string | null = null;
+  try {
+    const clientResponse = await callDrGreenAPI(`/dapp/clients/${clientId}`, {
+      method: "GET",
+      apiKey,
+      secretKey,
+      baseUrl: apiUrl,
+      signBody: { clientId },
+    });
+    const clientData = (clientResponse as any)?.data || clientResponse;
+    const cartArray = clientData?.clientCart || clientData?.client?.clientCart;
+    if (Array.isArray(cartArray) && cartArray.length > 0) {
+      clientCartId = cartArray[0].id;
+    }
+  } catch {
+    try {
+      const listResponse = await callDrGreenAPI("/dapp/clients", {
+        method: "GET",
+        apiKey,
+        secretKey,
+        baseUrl: apiUrl,
+        queryParams: { take: 200, page: 1, orderBy: 'desc' },
+      });
+      const clients = (listResponse as any)?.data?.clients || [];
+      const match = Array.isArray(clients) ? clients.find((c: any) => c.id === clientId) : null;
+      if (match?.clientCart?.[0]?.id) {
+        clientCartId = match.clientCart[0].id;
+      }
+    } catch {
+      // Will fall through
+    }
+  }
 
+  if (!clientCartId) {
+    throw new Error("Could not retrieve cart ID from Dr. Green client profile");
+  }
+
+  // Dr Green WordPress theme: POST /dapp/carts with {items, clientCartId}
   const response = await callDrGreenAPI('/dapp/carts', {
     method: "POST",
     apiKey,
     secretKey,
     baseUrl: apiUrl,
-    body: { strainId },
+    body: {
+      items: [{ quantity: actualQuantity, strainId }],
+      clientCartId,
+    },
   });
 
   // Update local cart
