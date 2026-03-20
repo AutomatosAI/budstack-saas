@@ -82,7 +82,7 @@ export async function submitOrder(params: {
     // Get user's Dr. Green client ID
     const user = await prisma.users.findUnique({
         where: { id: userId },
-        select: { drGreenClientId: true, email: true },
+        select: { drGreenClientId: true, email: true, firstName: true, lastName: true, phone: true },
     });
 
     log('DB_USER', { email: user?.email, drGreenClientId: user?.drGreenClientId || 'NONE' });
@@ -144,16 +144,23 @@ export async function submitOrder(params: {
         let lastError = '';
         const countryCode = shippingInfo.countryCode || toAlpha3CountryCode(shippingInfo.country);
 
-        // Step 1: Update client shipping address on Dr Green
+        // Step 1: Update client with shipping address on Dr Green
+        // Dr Green's PATCH requires full client fields + nested shipping object
+        // (verified from successful partner payload in AWS CloudWatch logs)
         const shippingPayload = {
-            address1: shippingInfo.address1,
-            address2: shippingInfo.address2 || '',
-            landmark: '',
-            city: shippingInfo.city,
-            state: shippingInfo.state || shippingInfo.city,
-            country: shippingInfo.country,
-            countryCode: countryCode,
-            postalCode: shippingInfo.postalCode,
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email,
+            shipping: {
+                address1: shippingInfo.address1,
+                address2: shippingInfo.address2 || '',
+                landmark: '',
+                city: shippingInfo.city,
+                state: shippingInfo.state || shippingInfo.city,
+                country: shippingInfo.country,
+                countryCode: countryCode,
+                postalCode: shippingInfo.postalCode,
+            },
         };
         log('STEP_1: Updating client shipping address', { clientId, shipping: shippingPayload });
         try {
