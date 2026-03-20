@@ -146,16 +146,14 @@ export async function submitOrder(params: {
 
         // Step 1: Update client shipping address on Dr Green
         const shippingPayload = {
-            shipping: {
-                address1: shippingInfo.address1,
-                address2: shippingInfo.address2 || '',
-                landmark: '',
-                city: shippingInfo.city,
-                state: shippingInfo.state || shippingInfo.city,
-                country: shippingInfo.country,
-                countryCode: countryCode,
-                postalCode: shippingInfo.postalCode,
-            }
+            address1: shippingInfo.address1,
+            address2: shippingInfo.address2 || '',
+            landmark: '',
+            city: shippingInfo.city,
+            state: shippingInfo.state || shippingInfo.city,
+            country: shippingInfo.country,
+            countryCode: countryCode,
+            postalCode: shippingInfo.postalCode,
         };
         log('STEP_1: Updating client shipping address', { clientId, shipping: shippingPayload });
         try {
