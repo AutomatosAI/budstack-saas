@@ -38,7 +38,7 @@ export default function CustomerEditForm({ customer }: CustomerEditFormProps) {
 
   const handleSave = async () => {
     if (emailChanged && !window.confirm(
-      `Change email from "${customer.email}" to "${newEmail}"?\n\nRemember to also update this email in the Clerk Admin dashboard.`
+      `Change email from "${customer.email}" to "${newEmail}"?\n\nThis will update the email across BudStacks, Clerk, and Dr Green.`
     )) {
       return;
     }
@@ -63,12 +63,16 @@ export default function CustomerEditForm({ customer }: CustomerEditFormProps) {
         throw new Error(data.error || "Failed to update customer");
       }
 
-      // Show Dr Green sync status if email was changed
-      if (emailChanged && data.drGreenSync) {
-        if (data.drGreenSync.success) {
-          toast.success("Email updated in BudStacks and Dr Green");
+      // Show sync status if email was changed
+      if (emailChanged) {
+        const failures: string[] = [];
+        if (data.clerkSync && !data.clerkSync.success) failures.push("Clerk");
+        if (data.drGreenSync && !data.drGreenSync.success) failures.push("Dr Green");
+
+        if (failures.length > 0) {
+          toast.warning(`Email updated locally but sync failed for: ${failures.join(", ")}`);
         } else {
-          toast.warning(`Email updated locally but Dr Green sync failed: ${data.drGreenSync.error}`);
+          toast.success("Email updated across all systems");
         }
       } else {
         toast.success(data.message || "Customer updated successfully");
@@ -161,8 +165,8 @@ export default function CustomerEditForm({ customer }: CustomerEditFormProps) {
                   onChange={(e) => setNewEmail(e.target.value)}
                 />
                 {emailChanged && (
-                  <p className="text-xs text-amber-600">
-                    Also update in Clerk Admin dashboard after saving
+                  <p className="text-xs text-blue-600">
+                    Will sync to Clerk and Dr Green automatically
                   </p>
                 )}
               </div>

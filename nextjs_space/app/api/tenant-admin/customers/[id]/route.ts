@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { currentUser, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
@@ -194,6 +194,7 @@ export async function PATCH(
     // Handle email change
     const isEmailChange = newEmail && newEmail.toLowerCase().trim() !== existingCustomer.email.toLowerCase().trim();
     let drGreenSyncResult: { success: boolean; error?: string } | null = null;
+    let clerkSyncResult: { success: boolean; error?: string } | null = null;
 
     if (isEmailChange) {
       const normalizedNewEmail = newEmail.toLowerCase().trim();
@@ -215,6 +216,50 @@ export async function PATCH(
         );
       }
 
+      // Sync email change to Clerk
+      try {
+        const clerk = await clerkClient();
+        // Find Clerk user by old email
+        const clerkUsers = await clerk.users.getUserList({
+          emailAddress: [existingCustomer.email],
+          limit: 1,
+        });
+        const clerkUser = clerkUsers.data[0];
+
+        if (clerkUser) {
+          // Add new email address (verified, since admin-initiated)
+          const newEmailObj = await clerk.emailAddresses.createEmailAddress({
+            userId: clerkUser.id,
+            emailAddress: normalizedNewEmail,
+            verified: true,
+            primary: false,
+          });
+
+          // Set new email as primary
+          await clerk.emailAddresses.updateEmailAddress(newEmailObj.id, {
+            primary: true,
+          });
+
+          // Remove old email address
+          const oldEmailObj = clerkUser.emailAddresses.find(
+            (e) => e.emailAddress.toLowerCase() === existingCustomer.email.toLowerCase()
+          );
+          if (oldEmailObj && oldEmailObj.id !== newEmailObj.id) {
+            await clerk.emailAddresses.deleteEmailAddress(oldEmailObj.id);
+          }
+
+          clerkSyncResult = { success: true };
+          console.log(`[Email Change] Clerk user ${clerkUser.id} email updated to ${normalizedNewEmail}`);
+        } else {
+          clerkSyncResult = { success: false, error: "User not found in Clerk" };
+          console.warn(`[Email Change] No Clerk user found for ${existingCustomer.email}`);
+        }
+      } catch (clerkError: any) {
+        clerkSyncResult = { success: false, error: clerkError.message || String(clerkError) };
+        console.error(`[Email Change] Clerk sync failed:`, clerkError.message || clerkError);
+        // Continue with local + Dr Green update — don't block on Clerk failure
+      }
+
       // Sync email change to Dr Green
       if (existingCustomer.tenantId) {
         try {
@@ -224,7 +269,6 @@ export async function PATCH(
           let drGreenClientUUID = existingCustomer.drGreenClientId;
 
           if (!drGreenClientUUID) {
-            // No stored ID — search Dr Green by old email
             const drGreenClient = await fetchClientByEmail(existingCustomer.email, drGreenConfig);
             if (drGreenClient) {
               drGreenClientUUID = drGreenClient.id;
@@ -243,7 +287,6 @@ export async function PATCH(
         } catch (drGreenError: any) {
           drGreenSyncResult = { success: false, error: drGreenError.message };
           console.error(`[Email Change] Dr Green sync failed:`, drGreenError.message);
-          // Continue with local update — don't block on Dr Green failure
         }
       }
     }
@@ -326,6 +369,7 @@ export async function PATCH(
           ...(isEmailChange && {
             oldEmail: existingCustomer.email,
             newEmail: normalizedNewEmail,
+            clerkSync: clerkSyncResult,
             drGreenSync: drGreenSyncResult,
           }),
           changes: body,
@@ -333,16 +377,26 @@ export async function PATCH(
       },
     });
 
-    const message = isEmailChange
-      ? "Email updated successfully" + (drGreenSyncResult && !drGreenSyncResult.success ? " (Dr Green sync failed — update manually)" : "")
-      : verifyKyc
-        ? "Customer verified successfully"
-        : "Customer updated successfully";
+    // Build status message for email changes
+    let message: string;
+    if (isEmailChange) {
+      const failures: string[] = [];
+      if (clerkSyncResult && !clerkSyncResult.success) failures.push("Clerk");
+      if (drGreenSyncResult && !drGreenSyncResult.success) failures.push("Dr Green");
+      message = failures.length > 0
+        ? `Email updated but sync failed for: ${failures.join(", ")}`
+        : "Email updated across all systems";
+    } else {
+      message = verifyKyc ? "Customer verified successfully" : "Customer updated successfully";
+    }
 
     return NextResponse.json({
       message,
       customer: updatedCustomer,
-      ...(isEmailChange && { drGreenSync: drGreenSyncResult }),
+      ...(isEmailChange && {
+        clerkSync: clerkSyncResult,
+        drGreenSync: drGreenSyncResult,
+      }),
     });
   } catch (error) {
     console.error(
