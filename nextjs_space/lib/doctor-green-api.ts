@@ -517,6 +517,111 @@ export async function addToCart(
 }
 
 /**
+ * Find a Dr Green client by email address.
+ * Lists all clients and filters by email match.
+ * Returns the client object (including id) or null if not found.
+ */
+export async function fetchClientByEmail(
+  email: string,
+  config: DoctorGreenConfig,
+): Promise<DoctorGreenClient | null> {
+  const PAGE_SIZE = 200;
+  const MAX_PAGES = 5;
+  const normalizedEmail = email.toLowerCase().trim();
+
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    console.log(`[fetchClientByEmail] Listing clients page ${page}/${MAX_PAGES} to find ${normalizedEmail}`);
+
+    const response = await doctorGreenRequest<any>('/dapp/clients', {
+      config,
+      queryParams: { take: PAGE_SIZE, page, orderBy: 'desc' },
+    });
+
+    // Handle all known response shapes
+    let clients: any[] = [];
+    if (Array.isArray(response)) {
+      clients = response;
+    } else if (Array.isArray(response?.data)) {
+      clients = response.data;
+    } else if (response?.data?.items && Array.isArray(response.data.items)) {
+      clients = response.data.items;
+    } else if (Array.isArray(response?.data?.data)) {
+      clients = response.data.data;
+    } else if (Array.isArray(response?.clients)) {
+      clients = response.clients;
+    } else if (response?.data?.clients && Array.isArray(response.data.clients)) {
+      clients = response.data.clients;
+    }
+
+    if (!clients || clients.length === 0) {
+      break;
+    }
+
+    const match = clients.find(
+      (c: any) => c.email?.toLowerCase().trim() === normalizedEmail
+    );
+    if (match) {
+      console.log(`[fetchClientByEmail] Found client ${match.id} on page ${page}`);
+      return match;
+    }
+
+    if (clients.length < PAGE_SIZE) {
+      break;
+    }
+  }
+
+  console.log(`[fetchClientByEmail] Client not found for email ${normalizedEmail}`);
+  return null;
+}
+
+/**
+ * Update an existing Dr Green client profile.
+ * PATCH /dapp/clients/{clientId}
+ * Confirmed working from Dr Green's own dApp theme (page-profile.php).
+ */
+export async function updateClient(
+  clientId: string,
+  updates: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phoneCode?: string;
+    phoneCountryCode?: string;
+    contactNumber?: string;
+    shipping?: {
+      address1?: string;
+      address2?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      countryCode?: string;
+      postalCode?: string;
+    };
+  },
+  config: DoctorGreenConfig,
+): Promise<any> {
+  // Only include fields that are provided
+  const payload: Record<string, any> = {};
+  if (updates.firstName !== undefined) payload.firstName = updates.firstName;
+  if (updates.lastName !== undefined) payload.lastName = updates.lastName;
+  if (updates.email !== undefined) payload.email = updates.email;
+  if (updates.phoneCode !== undefined) payload.phoneCode = updates.phoneCode;
+  if (updates.phoneCountryCode !== undefined) payload.phoneCountryCode = updates.phoneCountryCode;
+  if (updates.contactNumber !== undefined) payload.contactNumber = updates.contactNumber;
+  if (updates.shipping !== undefined) payload.shipping = updates.shipping;
+
+  console.log(`[updateClient] PATCH /dapp/clients/${clientId}`, Object.keys(payload));
+
+  const response = await doctorGreenRequest<any>(`/dapp/clients/${clientId}`, {
+    method: 'PATCH',
+    body: payload,
+    config,
+  });
+
+  return response;
+}
+
+/**
  * Create a new patient/client record in Dr. Green system
  * Payload must match the specialized structure:
  * - camelCase keys

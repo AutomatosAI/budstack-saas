@@ -14,6 +14,10 @@ interface CustomerEditFormProps {
     id: string;
     email: string;
     name: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    address: any;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -24,26 +28,52 @@ export default function CustomerEditForm({ customer }: CustomerEditFormProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Form state - using only fields currently in database
-  const [name, setName] = useState(customer.name || "");
+  // Form state
+  const [firstName, setFirstName] = useState(customer.firstName || "");
+  const [lastName, setLastName] = useState(customer.lastName || "");
+  const [phone, setPhone] = useState(customer.phone || "");
+  const [newEmail, setNewEmail] = useState(customer.email);
+
+  const emailChanged = newEmail.toLowerCase().trim() !== customer.email.toLowerCase().trim();
 
   const handleSave = async () => {
+    if (emailChanged && !window.confirm(
+      `Change email from "${customer.email}" to "${newEmail}"?\n\nRemember to also update this email in the Clerk Admin dashboard.`
+    )) {
+      return;
+    }
+
     setIsSaving(true);
     try {
+      const payload: Record<string, any> = {};
+      if (firstName !== (customer.firstName || "")) payload.firstName = firstName;
+      if (lastName !== (customer.lastName || "")) payload.lastName = lastName;
+      if (phone !== (customer.phone || "")) payload.phone = phone;
+      if (emailChanged) payload.newEmail = newEmail.trim();
+
       const res = await fetch(`/api/tenant-admin/customers/${customer.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-        }),
+        body: JSON.stringify(payload),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to update customer");
+        throw new Error(data.error || "Failed to update customer");
       }
 
-      toast.success("Customer updated successfully");
+      // Show Dr Green sync status if email was changed
+      if (emailChanged && data.drGreenSync) {
+        if (data.drGreenSync.success) {
+          toast.success("Email updated in BudStacks and Dr Green");
+        } else {
+          toast.warning(`Email updated locally but Dr Green sync failed: ${data.drGreenSync.error}`);
+        }
+      } else {
+        toast.success(data.message || "Customer updated successfully");
+      }
+
       setIsEditing(false);
       router.refresh();
     } catch (error: any) {
@@ -55,7 +85,10 @@ export default function CustomerEditForm({ customer }: CustomerEditFormProps) {
   };
 
   const handleCancel = () => {
-    setName(customer.name || "");
+    setFirstName(customer.firstName || "");
+    setLastName(customer.lastName || "");
+    setPhone(customer.phone || "");
+    setNewEmail(customer.email);
     setIsEditing(false);
   };
 
@@ -86,25 +119,71 @@ export default function CustomerEditForm({ customer }: CustomerEditFormProps) {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-6">
-          {/* Name */}
+          {/* First Name */}
           <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="firstName">First Name</Label>
             {isEditing ? (
               <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Customer Name"
+                id="firstName"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First Name"
               />
             ) : (
-              <p className="text-base">{customer.name || "Not set"}</p>
+              <p className="text-base">{customer.firstName || "Not set"}</p>
             )}
           </div>
 
-          {/* Email (read-only) */}
+          {/* Last Name */}
           <div className="space-y-2">
-            <Label>Email</Label>
-            <p className="text-base text-gray-500">{customer.email}</p>
+            <Label htmlFor="lastName">Last Name</Label>
+            {isEditing ? (
+              <Input
+                id="lastName"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Last Name"
+              />
+            ) : (
+              <p className="text-base">{customer.lastName || "Not set"}</p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            {isEditing ? (
+              <div className="space-y-1">
+                <Input
+                  id="email"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                />
+                {emailChanged && (
+                  <p className="text-xs text-amber-600">
+                    Also update in Clerk Admin dashboard after saving
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-base">{customer.email}</p>
+            )}
+          </div>
+
+          {/* Phone */}
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone</Label>
+            {isEditing ? (
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Phone number"
+              />
+            ) : (
+              <p className="text-base">{customer.phone || "Not set"}</p>
+            )}
           </div>
 
           {/* Created Date (read-only) */}
@@ -122,13 +201,6 @@ export default function CustomerEditForm({ customer }: CustomerEditFormProps) {
               {format(new Date(customer.updatedAt), "MMM d, yyyy")}
             </p>
           </div>
-        </div>
-
-        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p className="text-sm text-yellow-800">
-            <strong>Note:</strong> Additional fields (phone, address) will be
-            available after running the database migration.
-          </p>
         </div>
       </CardContent>
     </Card>
