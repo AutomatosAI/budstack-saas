@@ -25,6 +25,22 @@ export function TeamGrid(props: SectionProps) {
   const heading = sectionConfig?.heading || 'Meet Our Team';
   const subtitle = sectionConfig?.subtitle || 'The experts behind your wellness journey';
   const members: TeamMember[] = sectionConfig?.members || defaultMembers;
+  const avatarShape = sectionConfig?.avatarShape || 'circle'; // 'circle' | 'rounded' | 'square'
+  const avatarSize = sectionConfig?.avatarSize || 'md'; // 'sm' | 'md' | 'lg' | 'xl'
+
+  const avatarSizeMap: Record<string, { container: string; sizes: string }> = {
+    sm: { container: 'w-24 h-24', sizes: '96px' },
+    md: { container: 'w-32 h-32', sizes: '128px' },
+    lg: { container: 'w-40 h-48', sizes: '160px' },
+    xl: { container: 'w-52 h-64', sizes: '208px' },
+  };
+  const avatarShapeMap: Record<string, string> = {
+    circle: 'rounded-full',
+    rounded: 'rounded-xl',
+    square: 'rounded-none',
+  };
+  const sizeClasses = avatarSizeMap[avatarSize] || avatarSizeMap.md;
+  const shapeClass = avatarShapeMap[avatarShape] || avatarShapeMap.circle;
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -67,7 +83,7 @@ export function TeamGrid(props: SectionProps) {
               className="text-center group"
             >
               <div
-                className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden relative"
+                className={`${sizeClasses.container} mx-auto mb-4 ${shapeClass} overflow-hidden relative`}
                 style={{ backgroundColor: 'hsl(var(--tenant-color-primary) / 0.1)' }}
               >
                 {member.avatar ? (
@@ -76,7 +92,7 @@ export function TeamGrid(props: SectionProps) {
                     alt={member.name}
                     fill
                     className="object-cover"
-                    sizes="128px"
+                    sizes={sizeClasses.sizes}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">

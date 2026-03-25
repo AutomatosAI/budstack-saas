@@ -41,6 +41,14 @@ export function BentoGrid(props: SectionProps) {
   const heading = sectionConfig?.heading || 'Why We Stand Out';
   const subtitle = sectionConfig?.subtitle || '';
   const cards: BentoCard[] = sectionConfig?.cards || defaultCards;
+  const columns = sectionConfig?.columns || 3; // 2 | 3 | 4
+  const imageStyle = sectionConfig?.imageStyle || 'background'; // 'background' (opacity-20) | 'cover' (full opacity, no text overlay) | 'featured' (full opacity with text below)
+
+  const colsClass: Record<number, string> = {
+    2: 'md:grid-cols-2',
+    3: 'md:grid-cols-3',
+    4: 'md:grid-cols-4',
+  };
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -73,7 +81,7 @@ export function BentoGrid(props: SectionProps) {
           )}
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-6xl mx-auto auto-rows-[minmax(180px,auto)]">
+        <div className={`grid grid-cols-1 ${colsClass[columns] || 'md:grid-cols-3'} gap-4 max-w-6xl mx-auto auto-rows-[minmax(180px,auto)]`}>
           {cards.map((card, index) => {
             const Icon = iconMap[card.icon] || Sparkles;
             return (
@@ -88,7 +96,7 @@ export function BentoGrid(props: SectionProps) {
                   border: '1px solid hsl(var(--tenant-color-border))',
                 }}
               >
-                {card.imageUrl && (
+                {card.imageUrl && imageStyle === 'background' && (
                   <div className="absolute inset-0 z-0">
                     <Image
                       src={card.imageUrl}
@@ -100,23 +108,40 @@ export function BentoGrid(props: SectionProps) {
                   </div>
                 )}
 
-                <div className="relative z-10">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                    style={{ backgroundColor: 'hsl(var(--tenant-color-primary) / 0.1)' }}
-                  >
-                    <Icon size={24} style={{ color: 'hsl(var(--tenant-color-primary))' }} />
+                {card.imageUrl && (imageStyle === 'cover' || imageStyle === 'featured') && (
+                  <div className={`relative z-0 ${imageStyle === 'cover' ? 'absolute inset-0' : 'w-full aspect-[4/3] mb-4'} overflow-hidden rounded-xl`}>
+                    <Image
+                      src={card.imageUrl}
+                      alt={card.title}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                    {imageStyle === 'cover' && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                    )}
                   </div>
+                )}
+
+                <div className={`relative z-10 ${imageStyle === 'cover' && card.imageUrl ? 'mt-auto' : ''}`}>
+                  {imageStyle !== 'cover' && (
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                      style={{ backgroundColor: 'hsl(var(--tenant-color-primary) / 0.1)' }}
+                    >
+                      <Icon size={24} style={{ color: 'hsl(var(--tenant-color-primary))' }} />
+                    </div>
+                  )}
 
                   <h3
                     className="text-xl font-bold mb-2"
-                    style={{ color: 'hsl(var(--tenant-color-heading))' }}
+                    style={{ color: imageStyle === 'cover' && card.imageUrl ? 'white' : 'hsl(var(--tenant-color-heading))' }}
                   >
                     {card.title}
                   </h3>
                   <p
                     className="text-sm leading-relaxed"
-                    style={{ color: 'hsl(var(--tenant-color-text))' }}
+                    style={{ color: imageStyle === 'cover' && card.imageUrl ? 'rgba(255,255,255,0.8)' : 'hsl(var(--tenant-color-text))' }}
                   >
                     {card.description}
                   </p>

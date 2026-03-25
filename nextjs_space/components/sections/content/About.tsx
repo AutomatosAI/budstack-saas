@@ -28,6 +28,8 @@ export function About(props: SectionProps) {
     `We are dedicated to providing the highest quality medical cannabis products and personalized care. Our team of licensed professionals is committed to helping you find the right wellness solutions for your unique needs.`;
   const imageUrl = sectionConfig?.imageUrl || null;
   const stats: Stat[] = sectionConfig?.stats || defaultStats;
+  const contentPosition = sectionConfig?.contentPosition || 'right'; // 'left' = text left, image right; 'right' = image left, text right
+  const imageFirst = contentPosition === 'right';
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -42,10 +44,10 @@ export function About(props: SectionProps) {
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
           {/* Image */}
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
+            initial={{ opacity: 0, x: imageFirst ? -30 : 30 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.8 }}
-            className="relative aspect-[4/3] rounded-2xl overflow-hidden"
+            className={`relative aspect-[4/3] rounded-2xl overflow-hidden ${imageFirst ? '' : 'lg:order-2'}`}
           >
             {imageUrl ? (
               <Image src={imageUrl} alt={`About ${businessName}`} fill className="object-cover" />
@@ -63,9 +65,10 @@ export function About(props: SectionProps) {
 
           {/* Content */}
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
+            initial={{ opacity: 0, x: imageFirst ? 30 : -30 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.8, delay: 0.2 }}
+            className={imageFirst ? '' : 'lg:order-1'}
           >
             <h2
               className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6"
