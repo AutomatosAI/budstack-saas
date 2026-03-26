@@ -13,6 +13,7 @@ import { HeroShaderGlass } from '@/components/sections/heroes/HeroShaderGlass';
 import { HeroDesignali } from '@/components/sections/heroes/HeroDesignali';
 import { HeroSplitImages } from '@/components/sections/heroes/HeroSplitImages';
 import { HeroFuturistic } from '@/components/sections/heroes/HeroFuturistic';
+import { HeroCollage } from '@/components/sections/heroes/HeroCollage';
 
 // Content sections
 import { ValueProps } from '@/components/sections/content/ValueProps';
@@ -68,6 +69,7 @@ export const SECTION_REGISTRY: Record<string, ComponentType<SectionProps>> = {
   HeroDesignali,
   HeroSplitImages,
   HeroFuturistic,
+  HeroCollage,
   ValueProps,
   ProductShowcase,
   Testimonials,

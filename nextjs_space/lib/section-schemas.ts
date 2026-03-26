@@ -223,6 +223,27 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     ],
   },
 
+  HeroCollage: {
+    label: 'Collage Hero',
+    category: 'hero',
+    description: 'Editorial collage with split images, translucent watermark overlay, and bold typography',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Your Brand' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
+      { key: 'imageUrl', label: 'Left Image', type: 'image', default: '' },
+      { key: 'rightImageUrl', label: 'Right Image (optional)', type: 'image', default: '' },
+      { key: 'watermarkUrl', label: 'Center Watermark', type: 'image', default: '' },
+      { key: 'splitRatio', label: 'Split Ratio (Left/Right)', type: 'select', default: '40/60', options: ['30/70', '40/60', '50/50', '60/40', '70/30'] },
+      { key: 'watermarkOpacity', label: 'Watermark Opacity', type: 'select', default: '0.4', options: ['0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8'] },
+      { key: 'textPosition', label: 'Text Position', type: 'select', default: 'bottom-right', options: ['bottom-right', 'bottom-left', 'center-right', 'center', 'vertical-right'] },
+      { key: 'showVerticalText', label: 'Show Vertical Side Text', type: 'select', default: 'yes', options: ['yes', 'no'] },
+      { key: 'borderWidth', label: 'Border/Frame', type: 'select', default: 'medium', options: ['none', 'thin', 'medium', 'thick'] },
+      { key: 'height', label: 'Height', type: 'select', default: 'large', options: ['medium', 'large', 'full'] },
+      { key: 'ctaText', label: 'CTA Button Text', type: 'text', default: '' },
+      { key: 'ctaHref', label: 'CTA Link', type: 'url', default: '/products' },
+    ],
+  },
+
   // ─── CTAs ──────────────────────────────────────────────────
   Newsletter: {
     label: 'Newsletter Signup',
