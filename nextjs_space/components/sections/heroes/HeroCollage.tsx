@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
 
 const SPLIT_MAP: Record<string, { left: string; right: string; leftPct: number }> = {
@@ -47,36 +46,32 @@ export function HeroCollage(props: SectionProps) {
   const borderClass = borderMap[borderWidth] || borderMap.medium;
   const heightClass = heightMap[height] || heightMap.large;
 
-  // Text positioning — contained within the right panel
+  // Text positioning — constrained within the right panel
   const rightPct = 100 - split.leftPct;
   const textPositionStyles: Record<string, React.CSSProperties> = {
-    'bottom-right': { position: 'absolute', bottom: '2rem', right: '1.5rem', textAlign: 'right', maxWidth: `${rightPct - 8}%` },
-    'bottom-left': { position: 'absolute', bottom: '2rem', left: `${split.leftPct + 2}%`, textAlign: 'left', maxWidth: `${rightPct - 8}%` },
-    'center-right': { position: 'absolute', top: '50%', right: '1.5rem', transform: 'translateY(-50%)', textAlign: 'right', maxWidth: `${rightPct - 8}%` },
-    'center': { position: 'absolute', top: '50%', left: `${split.leftPct + rightPct / 2}%`, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: `${rightPct - 6}%` },
-    'vertical-right': { position: 'absolute', top: '50%', right: '1.5rem', transform: 'translateY(-50%) rotate(180deg)', writingMode: 'vertical-rl' as const, textAlign: 'center' },
+    'bottom-right': { position: 'absolute', bottom: '2rem', right: '1.5rem', textAlign: 'right', maxWidth: `calc(${rightPct}% - 3rem)` },
+    'bottom-left': { position: 'absolute', bottom: '2rem', left: `calc(${split.leftPct}% + 1.5rem)`, textAlign: 'left', maxWidth: `calc(${rightPct}% - 3rem)` },
+    'center-right': { position: 'absolute', top: '50%', right: '1.5rem', transform: 'translateY(-50%)', textAlign: 'right', maxWidth: `calc(${rightPct}% - 3rem)` },
+    'center': { position: 'absolute', top: '50%', left: `calc(${split.leftPct}% + ${rightPct / 2}%)`, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: `calc(${rightPct}% - 2rem)` },
+    'vertical-right': { position: 'absolute', top: '50%', right: '1rem', transform: 'translateY(-50%) rotate(180deg)', writingMode: 'vertical-rl' as const, textAlign: 'center' },
   };
 
-  // Check if images are valid (non-empty, starts with http or /)
-  const isValidSrc = (src: string) => src && (src.startsWith('http') || src.startsWith('/'));
+  const isValidSrc = (src: string) => !!src && (src.startsWith('http') || src.startsWith('/') || src.startsWith('data:'));
 
   return (
     <section
       className={`${borderClass} relative overflow-hidden`}
       style={{ backgroundColor: 'hsl(var(--tenant-color-background, 0 0% 95%))' }}
     >
-      {/* Inner container with the collage */}
       <div className={`relative ${heightClass} overflow-hidden flex`}>
         {/* Left panel — main image */}
-        <div className={`${split.left} relative shrink-0`}>
+        <div className={`${split.left} relative shrink-0 overflow-hidden`}>
           {isValidSrc(leftImage) ? (
-            <Image
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
               src={leftImage}
               alt={heading}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
+              className="absolute inset-0 w-full h-full object-cover"
             />
           ) : (
             <div
@@ -86,15 +81,14 @@ export function HeroCollage(props: SectionProps) {
           )}
         </div>
 
-        {/* Right panel — gradient/color or second image */}
-        <div className={`${split.right} relative shrink-0`}>
+        {/* Right panel — second image or gradient */}
+        <div className={`${split.right} relative shrink-0 overflow-hidden`}>
           {isValidSrc(rightImage) ? (
-            <Image
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
               src={rightImage}
               alt=""
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
+              className="absolute inset-0 w-full h-full object-cover"
             />
           ) : (
             <div
@@ -108,17 +102,17 @@ export function HeroCollage(props: SectionProps) {
           {/* Vertical text on right edge */}
           {showVerticalText && (
             <div
-              className="absolute top-0 right-0 bottom-0 w-12 sm:w-16 flex items-center justify-center pointer-events-none select-none overflow-hidden"
+              className="absolute top-0 right-0 bottom-0 w-10 sm:w-14 flex items-center justify-center pointer-events-none select-none overflow-hidden"
               style={{
                 writingMode: 'vertical-rl',
                 transform: 'rotate(180deg)',
               }}
             >
               <span
-                className="text-lg sm:text-2xl md:text-3xl font-bold tracking-[0.2em] uppercase whitespace-nowrap"
+                className="text-base sm:text-xl md:text-2xl font-bold tracking-[0.25em] uppercase whitespace-nowrap"
                 style={{
                   fontFamily: 'var(--tenant-font-heading, sans-serif)',
-                  color: 'hsl(var(--tenant-color-heading, 0 0% 100%) / 0.2)',
+                  color: 'hsl(var(--tenant-color-heading, 0 0% 100%) / 0.18)',
                 }}
               >
                 {heading}
@@ -139,15 +133,15 @@ export function HeroCollage(props: SectionProps) {
               opacity: watermarkOpacity,
             }}
           >
-            <div className="w-full h-full relative rounded-md overflow-hidden backdrop-blur-sm"
+            <div
+              className="w-full h-full relative rounded-md overflow-hidden backdrop-blur-sm flex items-center justify-center"
               style={{ backgroundColor: 'hsl(var(--tenant-color-background, 0 0% 50%) / 0.3)' }}
             >
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={watermarkImage}
                 alt=""
-                fill
-                className="object-contain p-4"
-                sizes="220px"
+                className="max-w-[80%] max-h-[80%] object-contain"
               />
             </div>
           </div>
@@ -155,18 +149,18 @@ export function HeroCollage(props: SectionProps) {
 
         {/* Main text overlay — constrained to right panel */}
         <div
-          className="z-20 px-4 overflow-hidden"
+          className="z-20 overflow-hidden"
           style={textPositionStyles[textPosition] || textPositionStyles['bottom-right']}
         >
           <h1
-            className={`font-bold mb-2 uppercase leading-[0.95] ${
+            className={`font-bold mb-2 uppercase leading-[0.95] break-words ${
               textPosition === 'vertical-right'
                 ? 'text-xl sm:text-2xl tracking-[0.15em]'
-                : 'text-xl sm:text-3xl md:text-4xl lg:text-5xl'
+                : 'text-2xl sm:text-3xl md:text-4xl lg:text-5xl'
             }`}
             style={{
               fontFamily: 'var(--tenant-font-heading, sans-serif)',
-              color: 'hsl(var(--tenant-color-heading, 0 0% 100%))',
+              color: 'hsl(var(--tenant-color-heading, 0 0% 20%))',
             }}
           >
             {heading}
@@ -174,7 +168,7 @@ export function HeroCollage(props: SectionProps) {
           {subtitle && textPosition !== 'vertical-right' && (
             <p
               className="text-sm sm:text-base mb-3"
-              style={{ color: 'hsl(var(--tenant-color-text, 0 0% 90%))' }}
+              style={{ color: 'hsl(var(--tenant-color-text, 0 0% 30%))' }}
             >
               {subtitle}
             </p>
