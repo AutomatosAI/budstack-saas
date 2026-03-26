@@ -37,8 +37,8 @@ export function HeroFullScreen({
 
   // Map height enum to classes — 'full' accounts for nav bar height
   const heightClass: Record<string, string> = {
-    medium: 'min-h-[500px] py-20',
-    large: 'min-h-[700px] py-32',
+    medium: 'min-h-[60vh] py-20',
+    large: 'min-h-[80vh] py-32',
     full: 'min-h-[calc(100dvh-4rem)]',
   };
 
