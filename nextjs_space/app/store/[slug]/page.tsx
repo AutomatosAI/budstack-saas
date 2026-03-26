@@ -173,14 +173,17 @@ export default async function TenantStorePage({
             signingTasks.push({ target: section.config, key, promise: signAssetUrl(val) });
           }
         }
-        const items = section.config?.items;
-        if (Array.isArray(items)) {
-          for (const item of items) {
-            if (item && typeof item === 'object') {
-              for (const key of assetKeys) {
-                const val = (item as any)[key];
-                if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
-                  signingTasks.push({ target: item, key, promise: signAssetUrl(val) });
+        // Sign asset URLs inside nested arrays (e.g. categories[].imageUrl, logos[].src)
+        if (section.config) {
+          for (const arrKey of Object.keys(section.config)) {
+            if (Array.isArray(section.config[arrKey])) {
+              for (const item of section.config[arrKey]) {
+                if (!item || typeof item !== 'object') continue;
+                for (const itemKey of Object.keys(item)) {
+                  const v = (item as any)[itemKey];
+                  if (v && typeof v === 'string' && !v.startsWith('http') && !v.startsWith('/') && (v.includes('/') || v.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
+                    signingTasks.push({ target: item, key: itemKey, promise: signAssetUrl(v) });
+                  }
                 }
               }
             }

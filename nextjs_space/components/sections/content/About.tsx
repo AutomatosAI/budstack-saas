@@ -27,7 +27,7 @@ export function About(props: SectionProps) {
     pageContent?.aboutMission ||
     `We are dedicated to providing the highest quality medical cannabis products and personalized care. Our team of licensed professionals is committed to helping you find the right wellness solutions for your unique needs.`;
   const imageUrl = sectionConfig?.imageUrl || null;
-  const stats: Stat[] = sectionConfig?.stats || defaultStats;
+  const stats: Stat[] | null = sectionConfig?.stats || null;
   const contentPosition = sectionConfig?.contentPosition || 'right'; // 'left' = text left, image right; 'right' = image left, text right
   const imageFirst = contentPosition === 'right';
 
@@ -86,22 +86,24 @@ export function About(props: SectionProps) {
               {content}
             </p>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
-              {stats.map((stat, index) => (
-                <div key={index} className="text-center">
-                  <p
-                    className="text-3xl font-bold"
-                    style={{ color: 'hsl(var(--tenant-color-primary))' }}
-                  >
-                    {stat.value}
-                  </p>
-                  <p className="text-sm" style={{ color: 'hsl(var(--tenant-color-text))' }}>
-                    {stat.label}
-                  </p>
-                </div>
-              ))}
-            </div>
+            {/* Stats — only render if provided in config */}
+            {stats && stats.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
+                {stats.map((stat, index) => (
+                  <div key={index} className="text-center">
+                    <p
+                      className="text-3xl font-bold"
+                      style={{ color: 'hsl(var(--tenant-color-primary))' }}
+                    >
+                      {stat.value}
+                    </p>
+                    <p className="text-sm" style={{ color: 'hsl(var(--tenant-color-text))' }}>
+                      {stat.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <a
               href={aboutUrl}

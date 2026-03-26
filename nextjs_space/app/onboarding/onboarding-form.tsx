@@ -390,7 +390,7 @@ export default function OnboardingForm({
                 className="w-full h-12 px-4 mt-2 border border-border rounded-xl bg-muted/30 focus:ring-2 focus:ring-accent focus:border-transparent text-foreground"
               >
                 <option value="PT">Portugal 🇵🇹</option>
-                <option value="SA">South Africa 🇿🇦</option>
+                <option value="ZA">South Africa 🇿🇦</option>
                 <option value="GB">United Kingdom 🇬🇧</option>
                 <option value="DE">Germany 🇩🇪</option>
                 <option value="ES">Spain 🇪🇸</option>

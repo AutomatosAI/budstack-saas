@@ -258,8 +258,8 @@ function toAlpha3(code: string): string {
 
 /**
  * Fetch all products from Doctor Green
- * @param country - Two-letter country code (e.g., 'PT' for Portugal, 'SA' for South Africa)
- * @default 'SA' - South Africa (only live site currently)
+ * @param country - Two-letter ISO 3166-1 alpha-2 code (e.g., 'PT' for Portugal, 'ZA' for South Africa)
+ * @default 'ZA' - South Africa
  */
 /**
  * Normalize a Dr Green product: resolve image URLs, calculate stock, map currency.

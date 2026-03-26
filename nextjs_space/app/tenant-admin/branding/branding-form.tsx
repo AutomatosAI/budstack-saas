@@ -609,7 +609,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         </div>
 
         <div
-          className="w-full h-full pt-10 overflow-y-auto preview-scrollbar bg-background relative"
+          className="w-full h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-background relative"
           style={{ transform: "scale(1)" }}
         >
           {automatosApiKey && (

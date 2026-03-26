@@ -62,19 +62,54 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
           // Defaults might not exist
         }
 
-        // Convert relative asset paths to absolute S3 URLs
+        // Convert relative asset paths to absolute S3 URLs (top-level + nested arrays)
         if (layoutJson && (layoutJson as any).sections) {
+          const { getFileUrl } = await import('@/lib/s3');
+          const topKeys = ["imageUrl", "videoUrl", "watermarkUrl"] as const;
+
+          const signVal = async (val: string) => {
+            if (!val || typeof val !== 'string' || val.startsWith('http') || val.startsWith('/')) return val;
+            // Absolute S3 keys (uploaded files) — sign directly
+            if (val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/')) {
+              return getFileUrl(val);
+            }
+            return getFileUrl(`${s3Prefix}/${val}`);
+          };
+
+          const signingTasks: Array<{ target: any; key: string; promise: Promise<string> }> = [];
+
           for (const section of (layoutJson as any).sections) {
-            for (const key of ["imageUrl", "videoUrl", "watermarkUrl"] as const) {
+            // Top-level config keys
+            for (const key of topKeys) {
               const val = section.config?.[key];
-              if (val && typeof val === "string" && !val.startsWith("http") && !val.startsWith("/")) {
-                try {
-                  const { getFileUrl } = await import('@/lib/s3');
-                  section.config[key] = await getFileUrl(`${s3Prefix}/${val}`);
-                } catch { /* leave as-is */ }
+              if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
+                signingTasks.push({ target: section.config, key, promise: signVal(val) });
+              }
+            }
+            // Nested arrays — sign any string value that looks like an S3 key
+            if (section.config) {
+              for (const key of Object.keys(section.config)) {
+                if (Array.isArray(section.config[key])) {
+                  for (const item of section.config[key]) {
+                    if (!item || typeof item !== 'object') continue;
+                    for (const itemKey of Object.keys(item)) {
+                      const v = item[itemKey];
+                      if (v && typeof v === 'string' && !v.startsWith('http') && !v.startsWith('/') && (v.includes('/') || v.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
+                        signingTasks.push({ target: item, key: itemKey, promise: signVal(v) });
+                      }
+                    }
+                  }
+                }
               }
             }
           }
+
+          const results = await Promise.allSettled(signingTasks.map(t => t.promise));
+          results.forEach((result, i) => {
+            if (result.status === 'fulfilled') {
+              signingTasks[i].target[signingTasks[i].key] = result.value;
+            }
+          });
         }
 
         // Attach defaults to layout so BrandingForm can extract heroImage and logo
@@ -121,7 +156,7 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full max-w-full overflow-hidden">
       {/* Branding Form (now a full-screen Live Editor) */}
       <BrandingForm tenant={localUser.tenants as any} activeTemplate={activeTemplate} />
     </div>

@@ -108,8 +108,8 @@ export function BentoGrid(props: SectionProps) {
                   </div>
                 )}
 
-                {card.imageUrl && (imageStyle === 'cover' || imageStyle === 'featured') && (
-                  <div className={`relative z-0 ${imageStyle === 'cover' ? 'absolute inset-0' : 'w-full aspect-[4/3] mb-4'} overflow-hidden rounded-xl`}>
+                {card.imageUrl && imageStyle === 'cover' && (
+                  <div className="absolute inset-0 z-0 overflow-hidden">
                     <Image
                       src={card.imageUrl}
                       alt={card.title}
@@ -117,9 +117,19 @@ export function BentoGrid(props: SectionProps) {
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
                       sizes="(max-width: 768px) 100vw, 33vw"
                     />
-                    {imageStyle === 'cover' && (
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                  </div>
+                )}
+
+                {card.imageUrl && imageStyle === 'featured' && (
+                  <div className="relative w-full aspect-[4/3] mb-4 overflow-hidden rounded-xl">
+                    <Image
+                      src={card.imageUrl}
+                      alt={card.title}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
                   </div>
                 )}
 
