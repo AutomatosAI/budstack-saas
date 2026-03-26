@@ -583,7 +583,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
       {/* RIGHT: Live Preview Pane */}
       <div
         className={cn(
-          "flex-1 bg-muted/20 border-2 rounded-xl border-dashed overflow-hidden relative shadow-inner isolate z-0",
+          "flex-1 min-w-0 bg-muted/20 border-2 rounded-xl border-dashed overflow-hidden relative shadow-inner isolate z-0",
           "hidden lg:block",
           showPreview &&
           "!block fixed inset-0 z-50 rounded-none border-0 lg:relative lg:z-0 lg:rounded-xl lg:border-2",
@@ -609,7 +609,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         </div>
 
         <div
-          className="w-full h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-background relative"
+          className="w-full max-w-full h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-background relative"
           style={{ transform: "scale(1)" }}
         >
           {automatosApiKey && (
