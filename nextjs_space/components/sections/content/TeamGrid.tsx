@@ -25,8 +25,10 @@ export function TeamGrid(props: SectionProps) {
   const heading = sectionConfig?.heading || 'Meet Our Team';
   const subtitle = sectionConfig?.subtitle || 'The experts behind your wellness journey';
   const members: TeamMember[] = sectionConfig?.members || defaultMembers;
-  const avatarShape = sectionConfig?.avatarShape || 'circle'; // 'circle' | 'rounded' | 'square'
-  const avatarSize = sectionConfig?.avatarSize || 'md'; // 'sm' | 'md' | 'lg' | 'xl'
+  const avatarShape = sectionConfig?.avatarShape || 'circle';
+  const avatarSize = sectionConfig?.avatarSize || 'md';
+  const backgroundImage = sectionConfig?.imageUrl || '';
+  const overlayOpacity = sectionConfig?.overlayOpacity ?? 0.6;
 
   const avatarSizeMap: Record<string, { container: string; sizes: string }> = {
     sm: { container: 'w-24 h-24', sizes: '96px' },
@@ -44,13 +46,29 @@ export function TeamGrid(props: SectionProps) {
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
+  const sectionStyle: React.CSSProperties = {
+    backgroundColor: 'hsl(var(--tenant-color-background, var(--tenant-color-surface)))',
+  };
+  if (backgroundImage) {
+    sectionStyle.backgroundImage = `url(${backgroundImage})`;
+    sectionStyle.backgroundSize = 'cover';
+    sectionStyle.backgroundPosition = 'center';
+  }
+
   return (
     <section
       ref={ref}
-      className="py-8 sm:py-10"
-      style={{ backgroundColor: 'hsl(var(--tenant-color-surface))' }}
+      className="py-8 sm:py-10 relative overflow-hidden"
+      style={sectionStyle}
     >
-      <div className="container mx-auto px-6">
+      {/* Dark overlay when background image is set */}
+      {backgroundImage && (
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: `hsl(var(--tenant-color-background, 0 0% 0%) / ${overlayOpacity})` }}
+        />
+      )}
+      <div className="container mx-auto px-6 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
@@ -80,7 +98,8 @@ export function TeamGrid(props: SectionProps) {
               initial={{ opacity: 0, y: 30 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: index * 0.08 }}
-              className="text-center group"
+              className={`text-center group ${backgroundImage ? 'backdrop-blur-sm rounded-xl p-4' : ''}`}
+              style={backgroundImage ? { backgroundColor: 'hsl(var(--tenant-color-surface, 0 0% 100%) / 0.15)' } : undefined}
             >
               <div
                 className={`${sizeClasses.container} mx-auto mb-4 ${shapeClass} overflow-hidden relative`}

@@ -455,6 +455,8 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Meet Our Team' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'The experts behind your wellness journey' },
+      { key: 'imageUrl', label: 'Background Image', type: 'image', default: '' },
+      { key: 'overlayOpacity', label: 'Overlay Opacity', type: 'select', default: '0.6', options: ['0', '0.2', '0.4', '0.6', '0.8', '1'] },
       { key: 'members', label: 'Members', type: 'array', default: '', itemLabel: 'Member', itemFields: [
         { key: 'name', label: 'Name', type: 'text', default: 'Team Member' },
         { key: 'role', label: 'Role', type: 'text', default: '' },
