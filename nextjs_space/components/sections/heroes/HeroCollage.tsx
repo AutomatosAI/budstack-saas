@@ -4,20 +4,12 @@ import React from 'react';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
 
-const SPLIT_MAP: Record<string, { left: string; right: string }> = {
-  '30/70': { left: 'w-[30%]', right: 'w-[70%]' },
-  '40/60': { left: 'w-[40%]', right: 'w-[60%]' },
-  '50/50': { left: 'w-[50%]', right: 'w-[50%]' },
-  '60/40': { left: 'w-[60%]', right: 'w-[40%]' },
-  '70/30': { left: 'w-[70%]', right: 'w-[30%]' },
-};
-
-const TEXT_POSITION_STYLES: Record<string, React.CSSProperties> = {
-  'bottom-right': { position: 'absolute', bottom: '2rem', right: '2rem', textAlign: 'right' },
-  'bottom-left': { position: 'absolute', bottom: '2rem', left: '2rem', textAlign: 'left' },
-  'center-right': { position: 'absolute', top: '50%', right: '2rem', transform: 'translateY(-50%)', textAlign: 'right' },
-  'center': { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' },
-  'vertical-right': { position: 'absolute', top: '50%', right: '1.5rem', transform: 'translateY(-50%) rotate(180deg)', writingMode: 'vertical-rl', textAlign: 'center' },
+const SPLIT_MAP: Record<string, { left: string; right: string; leftPct: number }> = {
+  '30/70': { left: 'w-[30%]', right: 'w-[70%]', leftPct: 30 },
+  '40/60': { left: 'w-[40%]', right: 'w-[60%]', leftPct: 40 },
+  '50/50': { left: 'w-[50%]', right: 'w-[50%]', leftPct: 50 },
+  '60/40': { left: 'w-[60%]', right: 'w-[40%]', leftPct: 60 },
+  '70/30': { left: 'w-[70%]', right: 'w-[30%]', leftPct: 70 },
 };
 
 export function HeroCollage(props: SectionProps) {
@@ -55,16 +47,29 @@ export function HeroCollage(props: SectionProps) {
   const borderClass = borderMap[borderWidth] || borderMap.medium;
   const heightClass = heightMap[height] || heightMap.large;
 
+  // Text positioning — contained within the right panel
+  const rightPct = 100 - split.leftPct;
+  const textPositionStyles: Record<string, React.CSSProperties> = {
+    'bottom-right': { position: 'absolute', bottom: '2rem', right: '1.5rem', textAlign: 'right', maxWidth: `${rightPct - 8}%` },
+    'bottom-left': { position: 'absolute', bottom: '2rem', left: `${split.leftPct + 2}%`, textAlign: 'left', maxWidth: `${rightPct - 8}%` },
+    'center-right': { position: 'absolute', top: '50%', right: '1.5rem', transform: 'translateY(-50%)', textAlign: 'right', maxWidth: `${rightPct - 8}%` },
+    'center': { position: 'absolute', top: '50%', left: `${split.leftPct + rightPct / 2}%`, transform: 'translate(-50%, -50%)', textAlign: 'center', maxWidth: `${rightPct - 6}%` },
+    'vertical-right': { position: 'absolute', top: '50%', right: '1.5rem', transform: 'translateY(-50%) rotate(180deg)', writingMode: 'vertical-rl' as const, textAlign: 'center' },
+  };
+
+  // Check if images are valid (non-empty, starts with http or /)
+  const isValidSrc = (src: string) => src && (src.startsWith('http') || src.startsWith('/'));
+
   return (
     <section
-      className={`${borderClass} relative`}
+      className={`${borderClass} relative overflow-hidden`}
       style={{ backgroundColor: 'hsl(var(--tenant-color-background, 0 0% 95%))' }}
     >
       {/* Inner container with the collage */}
       <div className={`relative ${heightClass} overflow-hidden flex`}>
         {/* Left panel — main image */}
         <div className={`${split.left} relative shrink-0`}>
-          {leftImage ? (
+          {isValidSrc(leftImage) ? (
             <Image
               src={leftImage}
               alt={heading}
@@ -83,7 +88,7 @@ export function HeroCollage(props: SectionProps) {
 
         {/* Right panel — gradient/color or second image */}
         <div className={`${split.right} relative shrink-0`}>
-          {rightImage ? (
+          {isValidSrc(rightImage) ? (
             <Image
               src={rightImage}
               alt=""
@@ -103,17 +108,17 @@ export function HeroCollage(props: SectionProps) {
           {/* Vertical text on right edge */}
           {showVerticalText && (
             <div
-              className="absolute top-0 right-0 bottom-0 w-16 sm:w-20 flex items-center justify-center pointer-events-none select-none"
+              className="absolute top-0 right-0 bottom-0 w-12 sm:w-16 flex items-center justify-center pointer-events-none select-none overflow-hidden"
               style={{
                 writingMode: 'vertical-rl',
                 transform: 'rotate(180deg)',
               }}
             >
               <span
-                className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-[0.2em] uppercase whitespace-nowrap"
+                className="text-lg sm:text-2xl md:text-3xl font-bold tracking-[0.2em] uppercase whitespace-nowrap"
                 style={{
                   fontFamily: 'var(--tenant-font-heading, sans-serif)',
-                  color: 'hsl(var(--tenant-color-heading, 0 0% 100%) / 0.25)',
+                  color: 'hsl(var(--tenant-color-heading, 0 0% 100%) / 0.2)',
                 }}
               >
                 {heading}
@@ -123,14 +128,14 @@ export function HeroCollage(props: SectionProps) {
         </div>
 
         {/* Center watermark — overlapping both panels */}
-        {watermarkImage && (
+        {isValidSrc(watermarkImage) && (
           <div
             className="absolute z-10 pointer-events-none"
             style={{
-              left: `calc(${parseInt(splitRatio) || 40}% - 4rem)`,
-              top: '25%',
-              width: 'clamp(120px, 20vw, 240px)',
-              height: 'clamp(160px, 28vw, 320px)',
+              left: `calc(${split.leftPct}% - 4rem)`,
+              top: '20%',
+              width: 'clamp(100px, 18vw, 220px)',
+              height: 'clamp(140px, 25vw, 300px)',
               opacity: watermarkOpacity,
             }}
           >
@@ -139,26 +144,26 @@ export function HeroCollage(props: SectionProps) {
             >
               <Image
                 src={watermarkImage}
-                alt="Watermark"
+                alt=""
                 fill
                 className="object-contain p-4"
-                sizes="240px"
+                sizes="220px"
               />
             </div>
           </div>
         )}
 
-        {/* Main text overlay */}
+        {/* Main text overlay — constrained to right panel */}
         <div
-          className="z-20 max-w-lg px-4"
-          style={TEXT_POSITION_STYLES[textPosition] || TEXT_POSITION_STYLES['bottom-right']}
+          className="z-20 px-4 overflow-hidden"
+          style={textPositionStyles[textPosition] || textPositionStyles['bottom-right']}
         >
           <h1
-            className={`font-bold mb-2 ${
+            className={`font-bold mb-2 uppercase leading-[0.95] ${
               textPosition === 'vertical-right'
-                ? 'text-3xl sm:text-5xl tracking-[0.15em]'
-                : 'text-3xl sm:text-5xl md:text-6xl lg:text-7xl'
-            } uppercase`}
+                ? 'text-xl sm:text-2xl tracking-[0.15em]'
+                : 'text-xl sm:text-3xl md:text-4xl lg:text-5xl'
+            }`}
             style={{
               fontFamily: 'var(--tenant-font-heading, sans-serif)',
               color: 'hsl(var(--tenant-color-heading, 0 0% 100%))',
@@ -168,7 +173,7 @@ export function HeroCollage(props: SectionProps) {
           </h1>
           {subtitle && textPosition !== 'vertical-right' && (
             <p
-              className="text-base sm:text-lg mb-4"
+              className="text-sm sm:text-base mb-3"
               style={{ color: 'hsl(var(--tenant-color-text, 0 0% 90%))' }}
             >
               {subtitle}
@@ -177,7 +182,7 @@ export function HeroCollage(props: SectionProps) {
           {ctaText && textPosition !== 'vertical-right' && (
             <a
               href={ctaHref}
-              className="inline-block px-6 py-3 text-sm font-semibold uppercase tracking-wider rounded transition-opacity hover:opacity-90"
+              className="inline-block px-5 py-2.5 text-xs sm:text-sm font-semibold uppercase tracking-wider rounded transition-opacity hover:opacity-90"
               style={{
                 backgroundColor: 'hsl(var(--tenant-color-primary))',
                 color: 'hsl(var(--tenant-color-background, 0 0% 100%))',

@@ -50,7 +50,7 @@ export default async function SuperAdminTemplateEditPage({ params }: { params: {
       }
       return getFileUrl(`${s3Prefix}/${val}`);
     };
-    const topKeys = ['imageUrl', 'videoUrl', 'watermarkUrl'] as const;
+    const topKeys = ['imageUrl', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const;
     const signingTasks: Array<{ target: any; key: string; promise: Promise<string> }> = [];
 
     for (const section of layoutJson.sections) {

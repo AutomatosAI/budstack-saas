@@ -65,7 +65,7 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
         // Convert relative asset paths to absolute S3 URLs (top-level + nested arrays)
         if (layoutJson && (layoutJson as any).sections) {
           const { getFileUrl } = await import('@/lib/s3');
-          const topKeys = ["imageUrl", "videoUrl", "watermarkUrl"] as const;
+          const topKeys = ["imageUrl", "videoUrl", "watermarkUrl", "rightImageUrl"] as const;
 
           const signVal = async (val: string) => {
             if (!val || typeof val !== 'string' || val.startsWith('http') || val.startsWith('/')) return val;
