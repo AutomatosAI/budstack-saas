@@ -12,6 +12,8 @@ export function CTAWithImage(props: SectionProps) {
   const heading = sectionConfig?.heading || 'Start Your Wellness Journey';
   const subtitle = sectionConfig?.subtitle || 'Our licensed specialists are ready to help you find the right path';
   const ctaText = sectionConfig?.ctaText || 'Book Free Consultation';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
+  const showButton = sectionConfig?.showButton !== 'no';
   const imageUrl = sectionConfig?.imageUrl || heroImageUrl;
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.2 });
@@ -71,13 +73,15 @@ export function CTAWithImage(props: SectionProps) {
           animate={inView ? { opacity: 1, scale: 1 } : {}}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <a
-            href={consultationUrl}
-            className="inline-block px-12 py-4 text-lg font-bold bg-white rounded-full hover:scale-105 transition-all"
-            style={{ color: 'hsl(var(--tenant-color-primary))' }}
-          >
-            {ctaText}
-          </a>
+          {showButton && (
+            <a
+              href={ctaHref}
+              className="inline-block px-12 py-4 text-lg font-bold bg-white rounded-full hover:scale-105 transition-all"
+              style={{ color: 'hsl(var(--tenant-color-primary))' }}
+            >
+              {ctaText}
+            </a>
+          )}
         </motion.div>
       </div>
     </section>

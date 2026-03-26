@@ -19,6 +19,8 @@ export function CTASplit(props: SectionProps) {
   const heading = sectionConfig?.heading || 'Ready to Get Started?';
   const subtitle = sectionConfig?.subtitle || 'Three simple steps to begin your wellness journey';
   const ctaText = sectionConfig?.ctaText || 'Book Free Consultation';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
+  const showButton = sectionConfig?.showButton !== 'no';
   const imageUrl = sectionConfig?.imageUrl || heroImageUrl;
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
@@ -81,13 +83,15 @@ export function CTASplit(props: SectionProps) {
               })}
             </div>
 
-            <a
-              href={consultationUrl}
-              className="inline-block px-10 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-105"
-              style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
-            >
-              {ctaText}
-            </a>
+            {showButton && (
+              <a
+                href={ctaHref}
+                className="inline-block px-10 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-105"
+                style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
+              >
+                {ctaText}
+              </a>
+            )}
           </motion.div>
 
           {/* Image */}

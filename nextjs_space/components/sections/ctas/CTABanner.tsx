@@ -11,6 +11,8 @@ export function CTABanner(props: SectionProps) {
   const heading = sectionConfig?.heading || 'Ready to Get Started?';
   const subtitle = sectionConfig?.subtitle || 'Book your free consultation with our medical cannabis specialists today';
   const ctaText = sectionConfig?.ctaText || 'Book Free Consultation';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
+  const showButton = sectionConfig?.showButton !== 'no';
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.2 });
 
@@ -44,22 +46,24 @@ export function CTABanner(props: SectionProps) {
           {subtitle}
         </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <a
-            href={consultationUrl}
-            className="inline-block px-10 py-4 text-lg font-semibold rounded-full transition-all hover:scale-105"
-            style={{
-              backgroundColor: 'white',
-              color: 'hsl(var(--tenant-color-primary))',
-            }}
+        {showButton && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.6, delay: 0.2 }}
           >
-            {ctaText}
-          </a>
-        </motion.div>
+            <a
+              href={ctaHref}
+              className="inline-block px-10 py-4 text-lg font-semibold rounded-full transition-all hover:scale-105"
+              style={{
+                backgroundColor: 'white',
+                color: 'hsl(var(--tenant-color-primary))',
+              }}
+            >
+              {ctaText}
+            </a>
+          </motion.div>
+        )}
 
         <motion.p
           initial={{ opacity: 0 }}
