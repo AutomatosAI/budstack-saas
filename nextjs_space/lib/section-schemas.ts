@@ -299,7 +299,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'categories', label: 'Categories', type: 'array', default: '', itemLabel: 'Category', itemFields: [
         { key: 'title', label: 'Title', type: 'text', default: 'Category' },
         { key: 'description', label: 'Description', type: 'text', default: '' },
-        { key: 'href', label: 'Link', type: 'url', default: '/products' },
+        { key: 'href', label: 'Link', type: 'text', default: '/products' },
         { key: 'imageUrl', label: 'Image', type: 'image', default: '' },
       ]},
       { key: 'ctaText', label: 'Button Text', type: 'text', default: 'View All Products' },
