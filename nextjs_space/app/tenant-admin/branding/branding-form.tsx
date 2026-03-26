@@ -83,9 +83,13 @@ interface BrandingFormProps {
     settings: any;
   };
   activeTemplate?: tenant_templates | null;
+  /** Override the API endpoint for saving (e.g. super-admin marketplace editing) */
+  apiEndpoint?: string;
+  /** Label for the publish button */
+  publishLabel?: string;
 }
 
-export default function BrandingForm({ tenant, activeTemplate }: BrandingFormProps) {
+export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publishLabel }: BrandingFormProps) {
   const templateCss = (activeTemplate as any)?.templateCss as string | null;
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -317,7 +321,7 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
       if (heroImage) formDataToSend.append("heroImage", heroImage);
       if (favicon) formDataToSend.append("favicon", favicon);
 
-      const res = await fetch(`/api/tenant-admin/branding`, { method: "POST", body: formDataToSend });
+      const res = await fetch(apiEndpoint || `/api/tenant-admin/branding`, { method: "POST", body: formDataToSend });
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || "Failed to update branding");
@@ -482,7 +486,7 @@ export default function BrandingForm({ tenant, activeTemplate }: BrandingFormPro
                 <Eye className="h-4 w-4" />
               </Button>
               <Button type="submit" disabled={isLoading} size="sm">
-                {isLoading ? "Publishing..." : "Publish Site"}
+                {isLoading ? "Publishing..." : (publishLabel || "Publish Site")}
               </Button>
             </div>
           </div>

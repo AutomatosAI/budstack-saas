@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { getFileUrl } from '@/lib/s3';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, Layout, ClipboardList, ImageIcon } from 'lucide-react';
+import { Eye, Layout, ClipboardList, ImageIcon, Paintbrush, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { UploadTemplateDialog } from './upload-dialog';
 import { TemplateActions } from './template-actions';
@@ -61,8 +61,14 @@ export default async function TemplatesManagementPage() {
         <p className="mt-3 text-muted-foreground">
           Manage home page templates for tenants. Templates define the visual layout of each store.
         </p>
-        <div className="mt-6">
+        <div className="mt-6 flex gap-3 justify-center">
           <UploadTemplateDialog />
+          <Link href="/api/super-admin/templates/create-blank" prefetch={false}>
+            <Button variant="outline" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create New Template
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -188,6 +194,14 @@ export default async function TemplatesManagementPage() {
             </div>
             {/* Actions — single row */}
             <div className="flex flex-wrap gap-2 p-4 border-t border-slate-100 bg-slate-50/50">
+              {template.slug && (
+                <Link href={`/super-admin/templates/${template.id}/edit`}>
+                  <Button variant="default" size="sm" className="gap-1.5">
+                    <Paintbrush className="h-3.5 w-3.5" />
+                    Customize
+                  </Button>
+                </Link>
+              )}
               <TemplateActions
                 templateId={template.id}
                 templateName={template.name}
