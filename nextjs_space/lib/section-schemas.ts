@@ -418,10 +418,13 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Features' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'What we offer' },
+      { key: 'imageUrl', label: 'Background Image', type: 'image', default: '' },
+      { key: 'overlayOpacity', label: 'Overlay Opacity', type: 'select', default: '0.7', options: ['0.3', '0.5', '0.6', '0.7', '0.8', '0.9'] },
       { key: 'items', label: 'Items', type: 'array', default: '', itemLabel: 'Feature', itemFields: [
         { key: 'title', label: 'Title', type: 'text', default: 'Feature' },
         { key: 'description', label: 'Description', type: 'textarea', default: '' },
         { key: 'icon', label: 'Icon', type: 'text', default: 'Star', placeholder: 'Lucide icon name' },
+        { key: 'imageUrl', label: 'Card Background Image', type: 'image', default: '' },
       ]},
     ],
   },

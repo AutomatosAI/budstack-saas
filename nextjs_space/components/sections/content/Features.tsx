@@ -14,6 +14,7 @@ interface Feature {
   title: string;
   description: string;
   icon: string;
+  imageUrl?: string;
 }
 
 const defaultItems: Feature[] = [
@@ -25,21 +26,43 @@ const defaultItems: Feature[] = [
   { title: 'Health Focused', description: 'Wellness-first approach with expert guidance.', icon: 'HeartPulse' },
 ];
 
+const isValidSrc = (src?: string) => !!src && (src.startsWith('http') || src.startsWith('/') || src.startsWith('data:'));
+
 export function Features(props: SectionProps) {
   const { sectionConfig } = props;
   const heading = sectionConfig?.heading || 'What Sets Us Apart';
   const subtitle = sectionConfig?.subtitle || 'Built on trust, quality, and a genuine commitment to your wellness';
   const items: Feature[] = sectionConfig?.items || defaultItems;
+  const backgroundImage = sectionConfig?.imageUrl;
+  const overlayOpacity = parseFloat(sectionConfig?.overlayOpacity ?? '0.7');
+
+  const hasSectionBg = isValidSrc(backgroundImage);
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
   return (
     <section
       ref={ref}
-      className="py-8 sm:py-10"
+      className="py-12 sm:py-16 relative overflow-hidden"
       style={{ backgroundColor: 'hsl(var(--tenant-color-background))' }}
     >
-      <div className="container mx-auto px-6">
+      {/* Section background image */}
+      {hasSectionBg && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={backgroundImage}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: `hsl(var(--tenant-color-background) / ${overlayOpacity})` }}
+          />
+        </>
+      )}
+
+      <div className="container mx-auto px-6 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
@@ -63,6 +86,49 @@ export function Features(props: SectionProps) {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
           {items.map((item, index) => {
             const Icon = iconMap[item.icon] || Shield;
+            const hasCardBg = isValidSrc(item.imageUrl);
+
+            if (hasCardBg) {
+              // Image card style — full background image with title overlay
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={inView ? { opacity: 1, y: 0 } : {}}
+                  transition={{ duration: 0.5, delay: index * 0.08 }}
+                  className="relative rounded-xl overflow-hidden group cursor-pointer"
+                  style={{ minHeight: '220px' }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.imageUrl!}
+                    alt={item.title}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  {/* Content at bottom */}
+                  <div className="absolute inset-0 flex flex-col justify-end p-5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon size={18} className="text-white/80" />
+                      <h3
+                        className="text-lg font-bold text-white"
+                        style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
+                      >
+                        {item.title}
+                      </h3>
+                    </div>
+                    {item.description && (
+                      <p className="text-sm text-white/80 leading-relaxed line-clamp-2">
+                        {item.description}
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            }
+
+            // Default card style — icon + text
             return (
               <motion.div
                 key={index}
@@ -71,8 +137,11 @@ export function Features(props: SectionProps) {
                 transition={{ duration: 0.5, delay: index * 0.08 }}
                 className="flex gap-4 p-6 rounded-xl transition-all duration-300 hover:shadow-md"
                 style={{
-                  backgroundColor: 'hsl(var(--tenant-color-surface))',
+                  backgroundColor: hasSectionBg
+                    ? 'hsl(var(--tenant-color-surface) / 0.85)'
+                    : 'hsl(var(--tenant-color-surface))',
                   border: '1px solid hsl(var(--tenant-color-border))',
+                  backdropFilter: hasSectionBg ? 'blur(8px)' : undefined,
                 }}
               >
                 <div
