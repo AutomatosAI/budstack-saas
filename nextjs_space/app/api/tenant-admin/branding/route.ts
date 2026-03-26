@@ -176,9 +176,11 @@ export async function PUT(req: NextRequest) {
       if (hasLayoutSections || hasSectionConfigs || hasSectionColorOverrides) {
         // Read existing layout from S3 so we preserve navigation, footer, settings keys
         let baseLayout: any = {};
-        if (currentTemplate?.s3Path) {
+        const existingS3Path = currentTemplate?.s3Path
+          || (currentTemplate?.templates?.slug ? `templates/${currentTemplate.templates.slug}` : null);
+        if (existingS3Path) {
           try {
-            baseLayout = await getJsonFromS3(`${currentTemplate.s3Path}/layout.json`);
+            baseLayout = await getJsonFromS3(`${existingS3Path}/layout.json`) || {};
           } catch {
             baseLayout = {};
           }
@@ -257,32 +259,38 @@ export async function PUT(req: NextRequest) {
           sections: updatedSections,
         };
 
-        if (currentTemplate?.s3Path) {
-          try {
-            const { createS3Client, getBucketConfig } = await import("@/lib/aws-config");
-            const { PutObjectCommand } = await import("@aws-sdk/client-s3");
-            const s3Client = await createS3Client();
-            const { bucketName } = await getBucketConfig();
-
-            console.log("[branding] Writing layout.json with", updatedSections.length, "sections to S3");
-            const layoutKey = `${currentTemplate.s3Path}/layout.json`;
-            await s3Client.send(
-              new PutObjectCommand({
-                Bucket: bucketName,
-                Key: layoutKey,
-                Body: Buffer.from(JSON.stringify(finalLayout, null, 2)),
-                ContentType: "application/json",
-              })
-            );
-            console.log(`[branding] Successfully rewrote layout.json to ${layoutKey}`);
-          } catch (s3Error) {
-            console.error("[branding] Failed to rewrite layout.json to S3:", s3Error);
-          }
-        } else {
-          console.warn("[branding] WARNING: s3Path is missing on tenant template — layout sections cannot be saved!", {
-            templateId: activeTemplateId,
-            sectionsCount: updatedSections.length,
+        // Auto-generate s3Path if missing so layout sections can be saved
+        let s3Path = currentTemplate?.s3Path;
+        if (!s3Path) {
+          const folderPrefix = process.env.AWS_FOLDER_PREFIX || "";
+          const timestamp = Date.now().toString();
+          s3Path = `${folderPrefix}tenants/${tenantId}/templates/${timestamp}`;
+          await prisma.tenant_templates.update({
+            where: { id: activeTemplateId },
+            data: { s3Path },
           });
+          console.log(`[branding] Auto-created s3Path: ${s3Path}`);
+        }
+
+        try {
+          const { createS3Client, getBucketConfig } = await import("@/lib/aws-config");
+          const { PutObjectCommand } = await import("@aws-sdk/client-s3");
+          const s3Client = await createS3Client();
+          const { bucketName } = await getBucketConfig();
+
+          console.log("[branding] Writing layout.json with", updatedSections.length, "sections to S3");
+          const layoutKey = `${s3Path}/layout.json`;
+          await s3Client.send(
+            new PutObjectCommand({
+              Bucket: bucketName,
+              Key: layoutKey,
+              Body: Buffer.from(JSON.stringify(finalLayout, null, 2)),
+              ContentType: "application/json",
+            })
+          );
+          console.log(`[branding] Successfully rewrote layout.json to ${layoutKey}`);
+        } catch (s3Error) {
+          console.error("[branding] Failed to rewrite layout.json to S3:", s3Error);
         }
       }
 
