@@ -43,7 +43,7 @@ export function Features(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-12 sm:py-16 relative overflow-hidden"
+      className="py-16 sm:py-20 lg:py-24 relative overflow-hidden"
       style={{ backgroundColor: 'hsl(var(--tenant-color-background))' }}
     >
       {/* Section background image */}

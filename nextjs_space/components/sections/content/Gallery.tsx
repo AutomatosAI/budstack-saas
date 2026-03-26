@@ -39,7 +39,7 @@ export function Gallery(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-8 sm:py-10"
+      className="py-16 sm:py-20 lg:py-24"
       style={{ backgroundColor: 'hsl(var(--tenant-color-background))' }}
     >
       <div className="container mx-auto px-6">

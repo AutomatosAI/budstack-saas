@@ -41,7 +41,7 @@ export function LogoMarquee(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-8 sm:py-10 overflow-hidden"
+      className="py-16 sm:py-20 lg:py-24 overflow-hidden"
       style={{ backgroundColor: 'hsl(var(--tenant-color-surface))' }}
     >
       <div className="container mx-auto px-6">

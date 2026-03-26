@@ -58,7 +58,7 @@ export function TeamGrid(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-12 sm:py-16 relative overflow-hidden"
+      className="py-16 sm:py-20 lg:py-24 relative overflow-hidden"
       style={sectionStyle}
     >
       {/* Dark overlay when background image is set */}

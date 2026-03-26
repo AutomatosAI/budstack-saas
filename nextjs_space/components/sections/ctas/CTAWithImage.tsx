@@ -19,7 +19,7 @@ export function CTAWithImage(props: SectionProps) {
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.2 });
 
   return (
-    <section ref={ref} className="relative py-8 sm:py-10 overflow-hidden">
+    <section ref={ref} className="relative py-16 sm:py-20 lg:py-24 overflow-hidden">
       {/* Background Image */}
       {imageUrl ? (
         <div className="absolute inset-0 z-0">

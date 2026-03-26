@@ -26,7 +26,7 @@ export function Newsletter(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-8 sm:py-10"
+      className="py-16 sm:py-20 lg:py-24"
       style={{
         background: `linear-gradient(135deg,
           hsl(var(--tenant-color-primary)) 0%,
