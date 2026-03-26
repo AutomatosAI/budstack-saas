@@ -164,6 +164,15 @@ export async function PUT(req: NextRequest) {
       const hasSectionConfigs = incomingSettings.sectionConfigs && Object.keys(incomingSettings.sectionConfigs).length > 0;
       const hasSectionColorOverrides = incomingSettings.sectionColorOverrides && Object.keys(incomingSettings.sectionColorOverrides).length > 0;
 
+      console.log("[branding] Layout debug:", {
+        hasLayoutSections,
+        layoutSectionsCount: Array.isArray(incomingSettings.layoutSections) ? incomingSettings.layoutSections.length : "not-array",
+        hasSectionConfigs,
+        sectionConfigKeys: incomingSettings.sectionConfigs ? Object.keys(incomingSettings.sectionConfigs).length : 0,
+        hasSectionColorOverrides,
+        s3Path: currentTemplate?.s3Path || "MISSING",
+      });
+
       if (hasLayoutSections || hasSectionConfigs || hasSectionColorOverrides) {
         // Read existing layout from S3 so we preserve navigation, footer, settings keys
         let baseLayout: any = {};
@@ -255,6 +264,7 @@ export async function PUT(req: NextRequest) {
             const s3Client = await createS3Client();
             const { bucketName } = await getBucketConfig();
 
+            console.log("[branding] Writing layout.json with", updatedSections.length, "sections to S3");
             const layoutKey = `${currentTemplate.s3Path}/layout.json`;
             await s3Client.send(
               new PutObjectCommand({
@@ -268,6 +278,11 @@ export async function PUT(req: NextRequest) {
           } catch (s3Error) {
             console.error("[branding] Failed to rewrite layout.json to S3:", s3Error);
           }
+        } else {
+          console.warn("[branding] WARNING: s3Path is missing on tenant template — layout sections cannot be saved!", {
+            templateId: activeTemplateId,
+            sectionsCount: updatedSections.length,
+          });
         }
       }
 
