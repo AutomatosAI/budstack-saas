@@ -81,10 +81,27 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
       .join('\n');
   }, [layout.sections]);
 
-  // Section padding: removed the !important CSS override system.
-  // Padding is now handled entirely by each section component's own Tailwind classes.
-  // layout.settings.sectionPadding is intentionally ignored — it was overriding
-  // component padding with tiny values and causing squashed layouts.
+  // Generate section padding overrides from layout.settings.sectionPadding
+  // This is rendered server-side so it doesn't depend on S3 CSS loading
+  const sectionPaddingCss = useMemo(() => {
+    const padding = layout.settings?.sectionPadding;
+    if (!padding) return '';
+    const heroTypes = ['HeroFullScreen', 'HeroSplit', 'HeroVideo', 'HeroMinimal', 'HeroCollage'];
+    const selectors = layout.sections
+      .filter(s => s.visible !== false && s.id && !heroTypes.includes(s.type))
+      .map(s => `#${s.id} > section, #${s.id} > div`);
+    if (selectors.length === 0) return '';
+    // Support responsive: "2rem" or "2rem/3rem/3.5rem" (mobile/sm/md)
+    const parts = padding.split('/').map((p: string) => p.trim());
+    let css = `${selectors.join(',\n')} {\n  padding-top: ${parts[0]} !important;\n  padding-bottom: ${parts[0]} !important;\n}`;
+    if (parts[1]) {
+      css += `\n@media (min-width: 640px) {\n  ${selectors.join(',\n  ')} {\n    padding-top: ${parts[1]} !important;\n    padding-bottom: ${parts[1]} !important;\n  }\n}`;
+    }
+    if (parts[2]) {
+      css += `\n@media (min-width: 768px) {\n  ${selectors.join(',\n  ')} {\n    padding-top: ${parts[2]} !important;\n    padding-bottom: ${parts[2]} !important;\n  }\n}`;
+    }
+    return css;
+  }, [layout]);
 
   return (
     <div className={showChrome ? `min-h-screen ${layout.settings?.wrapperClass || ''}` : (layout.settings?.wrapperClass || '')}>
@@ -96,6 +113,9 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
       {/* Must use dangerouslySetInnerHTML — React escapes > to \u003e in JSX children, breaking CSS child combinators */}
       {sanitizedCss && (
         <style dangerouslySetInnerHTML={{ __html: sanitizedCss }} />
+      )}
+      {sectionPaddingCss && (
+        <style dangerouslySetInnerHTML={{ __html: sectionPaddingCss }} />
       )}
       {sectionColorCss && (
         <style dangerouslySetInnerHTML={{ __html: sanitizeCss(sectionColorCss) || '' }} />
