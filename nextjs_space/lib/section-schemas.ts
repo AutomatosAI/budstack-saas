@@ -299,8 +299,12 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'categories', label: 'Categories', type: 'array', default: '', itemLabel: 'Category', itemFields: [
         { key: 'title', label: 'Title', type: 'text', default: 'Category' },
         { key: 'description', label: 'Description', type: 'text', default: '' },
+        { key: 'href', label: 'Link', type: 'url', default: '/products' },
         { key: 'imageUrl', label: 'Image', type: 'image', default: '' },
       ]},
+      { key: 'ctaText', label: 'Button Text', type: 'text', default: 'View All Products' },
+      { key: 'ctaHref', label: 'Button Link', type: 'url', default: '', placeholder: 'Leave empty to use products page' },
+      { key: 'showButton', label: 'Show Button', type: 'select', default: 'yes', options: ['yes', 'no'] },
     ],
   },
   Testimonials: {
@@ -407,8 +411,8 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Trusted By' },
       { key: 'logos', label: 'Logos', type: 'array', default: '', itemLabel: 'Logo', itemFields: [
-        { key: 'name', label: 'Brand Name', type: 'text', default: '' },
-        { key: 'imageUrl', label: 'Logo Image', type: 'image', default: '' },
+        { key: 'alt', label: 'Brand Name', type: 'text', default: 'Brand' },
+        { key: 'src', label: 'Logo Image', type: 'image', default: '' },
       ]},
       { key: 'speed', label: 'Speed (1-100)', type: 'number', default: 60 },
       { key: 'reverse', label: 'Reverse Direction', type: 'select', default: 'false', options: ['false', 'true'] },

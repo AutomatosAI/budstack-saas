@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { ArrowRight } from 'lucide-react';
@@ -10,7 +11,8 @@ import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
 interface Category {
   title: string;
   description: string;
-  href: string;
+  href?: string;
+  imageUrl?: string;
 }
 
 const defaultCategories: Category[] = [
@@ -26,8 +28,11 @@ export function ProductShowcase(props: SectionProps) {
   const prefixHref = (href: string) => prefixTenantHref(href, basePath);
   const heading = sectionConfig?.heading || 'Our Products';
   const subtitle = sectionConfig?.subtitle || 'Explore our carefully curated selection of premium cannabis products';
+  const ctaText = sectionConfig?.ctaText || 'View All Products';
+  const ctaHref = sectionConfig?.ctaHref || productsUrl;
+  const showButton = sectionConfig?.showButton !== 'no';
   const rawCategories: Category[] = sectionConfig?.categories || defaultCategories;
-  const categories = rawCategories.map((c) => ({ ...c, href: prefixHref(c.href) }));
+  const categories = rawCategories.map((c) => ({ ...c, href: c.href ? prefixHref(c.href) : prefixHref('/products') }));
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -66,48 +71,57 @@ export function ProductShowcase(props: SectionProps) {
               initial={{ opacity: 0, y: 30 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="group p-8 rounded-2xl transition-all duration-300 hover:-translate-y-1"
+              className="group rounded-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
               style={{
                 backgroundColor: 'hsl(var(--tenant-color-surface))',
                 border: '1px solid hsl(var(--tenant-color-border))',
               }}
             >
-              <h3
-                className="text-xl font-bold mb-3"
-                style={{ color: 'hsl(var(--tenant-color-heading))' }}
-              >
-                {cat.title}
-              </h3>
-              <p className="mb-4" style={{ color: 'hsl(var(--tenant-color-text))' }}>
-                {cat.description}
-              </p>
-              <span
-                className="inline-flex items-center gap-1 text-sm font-medium group-hover:gap-2 transition-all"
-                style={{ color: 'hsl(var(--tenant-color-primary))' }}
-              >
-                Browse <ArrowRight size={14} />
-              </span>
+              {cat.imageUrl && (
+                <div className="relative w-full aspect-[4/3]">
+                  <Image src={cat.imageUrl} alt={cat.title} fill className="object-cover" />
+                </div>
+              )}
+              <div className="p-8">
+                <h3
+                  className="text-xl font-bold mb-3"
+                  style={{ color: 'hsl(var(--tenant-color-heading))' }}
+                >
+                  {cat.title}
+                </h3>
+                <p className="mb-4" style={{ color: 'hsl(var(--tenant-color-text))' }}>
+                  {cat.description}
+                </p>
+                <span
+                  className="inline-flex items-center gap-1 text-sm font-medium group-hover:gap-2 transition-all"
+                  style={{ color: 'hsl(var(--tenant-color-primary))' }}
+                >
+                  Browse <ArrowRight size={14} />
+                </span>
+              </div>
             </motion.a>
           ))}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="text-center mt-12"
-        >
-          <a
-            href={productsUrl}
-            className="inline-flex items-center gap-2 px-8 py-3 text-base font-semibold rounded-full transition-all hover:gap-3"
-            style={{
-              backgroundColor: 'hsl(var(--tenant-color-primary))',
-              color: 'white',
-            }}
+        {showButton && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={inView ? { opacity: 1 } : {}}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="text-center mt-12"
           >
-            View All Products <ArrowRight size={16} />
-          </a>
-        </motion.div>
+            <a
+              href={ctaHref}
+              className="inline-flex items-center gap-2 px-8 py-3 text-base font-semibold rounded-full transition-all hover:gap-3"
+              style={{
+                backgroundColor: 'hsl(var(--tenant-color-primary))',
+                color: 'white',
+              }}
+            >
+              {ctaText} <ArrowRight size={16} />
+            </a>
+          </motion.div>
+        )}
       </div>
     </section>
   );

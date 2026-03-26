@@ -23,15 +23,20 @@ const defaultLogos: LogoItem[] = [
 export function LogoMarquee(props: SectionProps) {
   const { sectionConfig } = props;
   const heading = sectionConfig?.heading || 'Trusted By';
-  const logos: LogoItem[] = sectionConfig?.logos || defaultLogos;
+  const rawLogos: any[] = sectionConfig?.logos || defaultLogos;
+  // Normalize: schema uses { src, alt } but older data may use { imageUrl, name }
+  const logos: LogoItem[] = rawLogos.map((l) => ({
+    src: l.src || l.imageUrl || '',
+    alt: l.alt || l.name || 'Logo',
+  })).filter((l) => l.src || l.alt);
   const speed = sectionConfig?.speed || 60;
   const reverse = sectionConfig?.reverse || false;
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
   // Double the logos for seamless loop
-  const loopLogos = [...logos, ...logos];
-  const duration = logos.length * (100 / speed);
+  const loopLogos = logos.length > 0 ? [...logos, ...logos] : [];
+  const duration = logos.length > 0 ? logos.length * (100 / speed) : 10;
 
   return (
     <section
@@ -83,7 +88,7 @@ export function LogoMarquee(props: SectionProps) {
               key={index}
               className="shrink-0 h-10 w-32 relative grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
             >
-              {logo.src.startsWith('/logos/') ? (
+              {!logo.src || logo.src.startsWith('/logos/') ? (
                 <div
                   className="w-full h-full rounded-lg flex items-center justify-center text-xs font-medium"
                   style={{
