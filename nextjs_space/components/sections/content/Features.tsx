@@ -67,7 +67,7 @@ export function Features(props: SectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center max-w-3xl mx-auto mb-8"
+          className="text-center max-w-3xl mx-auto mb-12"
         >
           <h2
             className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6"
@@ -83,7 +83,7 @@ export function Features(props: SectionProps) {
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
           {items.map((item, index) => {
             const Icon = iconMap[item.icon] || Shield;
             const hasCardBg = isValidSrc(item.imageUrl);

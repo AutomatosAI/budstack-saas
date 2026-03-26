@@ -83,10 +83,10 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
 
   // Generate section padding overrides from layout.settings.sectionPadding
   // This is rendered server-side so it doesn't depend on S3 CSS loading
+  // Default: 4rem/5rem/6rem if not explicitly set in layout.json
   const sectionPaddingCss = useMemo(() => {
-    const padding = layout.settings?.sectionPadding;
-    if (!padding) return '';
-    const heroTypes = ['HeroFullScreen', 'HeroSplit', 'HeroVideo', 'HeroMinimal'];
+    const padding = layout.settings?.sectionPadding || '4rem/5rem/6rem';
+    const heroTypes = ['HeroFullScreen', 'HeroSplit', 'HeroVideo', 'HeroMinimal', 'HeroCollage'];
     const selectors = layout.sections
       .filter(s => s.visible !== false && s.id && !heroTypes.includes(s.type))
       .map(s => `#${s.id} > section, #${s.id} > div`);
