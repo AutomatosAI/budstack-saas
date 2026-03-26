@@ -157,8 +157,24 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
             ? configImage
             : undefined;
 
+          // Build inline CSS variable overrides for per-section colors
+          const colorOverrideStyle: React.CSSProperties = {};
+          if (section.colorOverrides) {
+            for (const [k, v] of Object.entries(section.colorOverrides)) {
+              if (v && typeof v === 'string' && v.trim()) {
+                const hslValue = v.startsWith('#') ? hexToHsl(v) : v;
+                (colorOverrideStyle as any)[`--tenant-color-${k}`] = hslValue;
+              }
+            }
+          }
+
           const sectionElement = (
-            <section key={section.id || `section-${i}`} id={section.id} className="relative">
+            <section
+              key={section.id || `section-${i}`}
+              id={section.id}
+              className="relative"
+              style={Object.keys(colorOverrideStyle).length > 0 ? colorOverrideStyle : undefined}
+            >
               <Component
                 {...sectionProps}
                 sectionId={section.id}
