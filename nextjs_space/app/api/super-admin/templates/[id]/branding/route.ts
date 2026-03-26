@@ -144,24 +144,38 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           Object.assign(mergedConfig, settings.sectionConfigs[s.id]);
         }
 
-        // Strip signed S3 URLs back to relative paths
-        for (const key of ['imageUrl', 'videoUrl', 'watermarkUrl'] as const) {
-          const val = mergedConfig[key];
-          if (val && typeof val === 'string' && val.startsWith('http')) {
-            const s3Match = val.split('?')[0].match(/\.amazonaws\.com\/(.+)$/);
-            if (s3Match) {
-              const fullKey = decodeURIComponent(s3Match[1]);
-              const prefix = s3Prefix;
-              const idx = fullKey.indexOf(prefix);
-              if (idx !== -1) {
-                const relative = fullKey.slice(idx + prefix.length + 1);
-                if (relative && !relative.includes('//')) {
-                  mergedConfig[key] = relative;
-                  continue;
+        // Strip signed S3 URLs back to raw S3 keys
+        const stripSignedUrl = (val: string): string => {
+          if (!val || typeof val !== 'string' || !val.startsWith('http')) return val;
+          const s3Match = val.split('?')[0].match(/\.amazonaws\.com\/(.+)$/);
+          if (!s3Match) return val;
+          const fullKey = decodeURIComponent(s3Match[1]);
+          const idx = fullKey.indexOf(s3Prefix);
+          if (idx !== -1) {
+            const relative = fullKey.slice(idx + s3Prefix.length + 1);
+            if (relative && !relative.includes('//')) return relative;
+          }
+          return fullKey;
+        };
+
+        // Top-level asset keys
+        for (const key of ['imageUrl', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const) {
+          if (mergedConfig[key]) mergedConfig[key] = stripSignedUrl(mergedConfig[key]);
+        }
+
+        // Nested arrays (e.g. categories[].imageUrl, logos[].src)
+        for (const key of Object.keys(mergedConfig)) {
+          if (Array.isArray(mergedConfig[key])) {
+            mergedConfig[key] = mergedConfig[key].map((item: any) => {
+              if (!item || typeof item !== 'object') return item;
+              const cleaned = { ...item };
+              for (const itemKey of Object.keys(cleaned)) {
+                if (typeof cleaned[itemKey] === 'string' && cleaned[itemKey].includes('.amazonaws.com/')) {
+                  cleaned[itemKey] = stripSignedUrl(cleaned[itemKey]);
                 }
               }
-              mergedConfig[key] = fullKey;
-            }
+              return cleaned;
+            });
           }
         }
 

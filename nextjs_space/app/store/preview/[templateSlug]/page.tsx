@@ -115,18 +115,49 @@ export default async function TemplatePreviewPage({
       }
     }
 
-    // Sign section-level asset URLs (imageUrl, videoUrl, watermarkUrl)
+    // Sign section-level asset URLs (top-level + nested arrays)
     if (layout.sections) {
+      const topKeys = ["imageUrl", "videoUrl", "watermarkUrl", "rightImageUrl"] as const;
+
+      function signAssetUrl(val: string): Promise<string> {
+        const isAbsoluteKey = val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/');
+        return getFileUrl(isAbsoluteKey ? val : `${s3Prefix}/${val}`);
+      }
+
+      const signingTasks: Array<{ target: any; key: string; promise: Promise<string> }> = [];
+
       for (const section of layout.sections) {
-        for (const key of ["imageUrl", "videoUrl", "watermarkUrl"] as const) {
+        // Top-level config keys
+        for (const key of topKeys) {
           const val = section.config?.[key];
-          if (val && typeof val === "string" && !val.startsWith("http") && !val.startsWith("/")) {
-            try {
-              (section.config as any)[key] = await getFileUrl(`${s3Prefix}/${val}`);
-            } catch { /* leave as-is */ }
+          if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
+            signingTasks.push({ target: section.config, key, promise: signAssetUrl(val) });
+          }
+        }
+        // Nested arrays — sign any string value that looks like an S3 key
+        if (section.config) {
+          for (const arrKey of Object.keys(section.config)) {
+            if (Array.isArray(section.config[arrKey])) {
+              for (const item of section.config[arrKey]) {
+                if (!item || typeof item !== 'object') continue;
+                for (const itemKey of Object.keys(item)) {
+                  const v = (item as any)[itemKey];
+                  if (v && typeof v === 'string' && !v.startsWith('http') && !v.startsWith('/') && (v.includes('/') || v.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
+                    signingTasks.push({ target: item, key: itemKey, promise: signAssetUrl(v) });
+                  }
+                }
+              }
+            }
           }
         }
       }
+
+      const results = await Promise.allSettled(signingTasks.map(t => t.promise));
+      results.forEach((result, i) => {
+        if (result.status === 'fulfilled') {
+          signingTasks[i].target[signingTasks[i].key] = result.value;
+        }
+      });
     }
 
     const sectionProps = {
