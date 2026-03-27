@@ -39,6 +39,8 @@ import { TabsShowcase } from '@/components/sections/content/TabsShowcase';
 import { VideoGallery } from '@/components/sections/content/VideoGallery';
 import { ProcessSteps } from '@/components/sections/content/ProcessSteps';
 import { StatsCounter } from '@/components/sections/content/StatsCounter';
+import { TextMarquee } from '@/components/sections/content/TextMarquee';
+import { FeaturesShowcase } from '@/components/sections/content/FeaturesShowcase';
 
 // CTAs
 import { CTABanner } from '@/components/sections/ctas/CTABanner';
@@ -94,6 +96,8 @@ export const SECTION_REGISTRY: Record<string, ComponentType<SectionProps>> = {
   VideoGallery,
   ProcessSteps,
   StatsCounter,
+  TextMarquee,
+  FeaturesShowcase,
   CTABanner,
   CTAWithImage,
   CTASplit,
