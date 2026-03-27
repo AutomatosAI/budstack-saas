@@ -9,6 +9,8 @@ import { Tenant } from "@/types/client";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import PreviewToolbar from "./preview-toolbar";
 
+export const dynamic = 'force-dynamic';
+
 // Mock tenant for preview mode — no database needed
 const mockTenant: Tenant = {
   id: "preview-000",
