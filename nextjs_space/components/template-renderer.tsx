@@ -86,7 +86,7 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
   const sectionPaddingCss = useMemo(() => {
     const padding = layout.settings?.sectionPadding;
     if (!padding) return '';
-    const heroTypes = ['HeroFullScreen', 'HeroSplit', 'HeroVideo', 'HeroMinimal', 'HeroCollage'];
+    const heroTypes = ['HeroFullScreen', 'HeroSplit', 'HeroVideo', 'HeroMinimal', 'HeroCollage', 'HeroFramed'];
     const selectors = layout.sections
       .filter(s => s.visible !== false && s.id && !heroTypes.includes(s.type))
       .map(s => `#${s.id} > section, #${s.id} > div`);

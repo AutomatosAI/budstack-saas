@@ -14,6 +14,7 @@ import { HeroDesignali } from '@/components/sections/heroes/HeroDesignali';
 import { HeroSplitImages } from '@/components/sections/heroes/HeroSplitImages';
 import { HeroFuturistic } from '@/components/sections/heroes/HeroFuturistic';
 import { HeroCollage } from '@/components/sections/heroes/HeroCollage';
+import { HeroFramed } from '@/components/sections/heroes/HeroFramed';
 
 // Content sections
 import { ValueProps } from '@/components/sections/content/ValueProps';
@@ -70,6 +71,7 @@ export const SECTION_REGISTRY: Record<string, ComponentType<SectionProps>> = {
   HeroSplitImages,
   HeroFuturistic,
   HeroCollage,
+  HeroFramed,
   ValueProps,
   ProductShowcase,
   Testimonials,

@@ -244,6 +244,27 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     ],
   },
 
+  HeroFramed: {
+    label: 'Framed Hero',
+    category: 'hero',
+    description: 'Full background image with a text frame panel (left or right) for readability',
+    fields: [
+      { key: 'title', label: 'Title', type: 'text', default: 'Welcome' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Your tagline here' },
+      { key: 'description', label: 'Description', type: 'textarea', default: '' },
+      { key: 'ctaText', label: 'CTA Button Text', type: 'text', default: 'Shop Now' },
+      { key: 'ctaHref', label: 'CTA Link', type: 'url', default: '/products' },
+      { key: 'secondaryCtaText', label: 'Secondary CTA Text', type: 'text', default: '' },
+      { key: 'secondaryCtaHref', label: 'Secondary CTA Link', type: 'url', default: '' },
+      { key: 'imageUrl', label: 'Background Image', type: 'image', default: '' },
+      { key: 'framePosition', label: 'Frame Position', type: 'select', default: 'left', options: ['left', 'right'] },
+      { key: 'frameStyle', label: 'Frame Style', type: 'select', default: 'solid', options: ['solid', 'glass', 'gradient'] },
+      { key: 'frameOpacity', label: 'Frame Opacity', type: 'select', default: '0.85', options: ['0.5', '0.6', '0.7', '0.8', '0.85', '0.9', '0.95', '1'] },
+      { key: 'overlayOpacity', label: 'Image Overlay Darkness', type: 'select', default: '0.3', options: ['0', '0.1', '0.2', '0.3', '0.4', '0.5', '0.6'] },
+      { key: 'heroHeight', label: 'Hero Height', type: 'select', default: 'large', options: ['medium', 'large', 'full'] },
+    ],
+  },
+
   // ─── CTAs ──────────────────────────────────────────────────
   Newsletter: {
     label: 'Newsletter Signup',
