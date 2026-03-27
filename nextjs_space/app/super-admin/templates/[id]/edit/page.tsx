@@ -87,11 +87,19 @@ export default async function SuperAdminTemplateEditPage({ params }: { params: {
 
   // Sign asset URLs in defaults
   if (defaultsJson) {
-    if (defaultsJson.heroImagePath && !defaultsJson.heroImagePath.startsWith('http') && !defaultsJson.heroImagePath.startsWith('/')) {
-      try { defaultsJson.heroImagePath = await getFileUrl(`${s3Prefix}/${defaultsJson.heroImagePath}`); } catch {}
+    const signDefaultAsset = async (val: string) => {
+      if (!val || val.startsWith('http') || val.startsWith('/')) return val;
+      // Absolute S3 keys (uploaded files) — sign directly without prefixing
+      if (val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/')) {
+        return getFileUrl(val);
+      }
+      return getFileUrl(`${s3Prefix}/${val}`);
+    };
+    if (defaultsJson.heroImagePath) {
+      try { defaultsJson.heroImagePath = await signDefaultAsset(defaultsJson.heroImagePath); } catch {}
     }
-    if (defaultsJson.logoPath && !defaultsJson.logoPath.startsWith('http') && !defaultsJson.logoPath.startsWith('/')) {
-      try { defaultsJson.logoPath = await getFileUrl(`${s3Prefix}/${defaultsJson.logoPath}`); } catch {}
+    if (defaultsJson.logoPath) {
+      try { defaultsJson.logoPath = await signDefaultAsset(defaultsJson.logoPath); } catch {}
     }
     if (layoutJson) {
       layoutJson.defaults = defaultsJson;

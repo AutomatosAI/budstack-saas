@@ -115,11 +115,19 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
         // Attach defaults to layout so BrandingForm can extract heroImage and logo
         if (defaultsJson) {
           const { getFileUrl } = await import('@/lib/s3');
-          if (defaultsJson.heroImagePath && !defaultsJson.heroImagePath.startsWith("http") && !defaultsJson.heroImagePath.startsWith("/")) {
-            try { defaultsJson.heroImagePath = await getFileUrl(`${s3Prefix}/${defaultsJson.heroImagePath}`); } catch { }
+          const signDefaultAsset = async (val: string) => {
+            if (!val || val.startsWith('http') || val.startsWith('/')) return val;
+            // Absolute S3 keys (uploaded files) — sign directly without prefixing
+            if (val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/')) {
+              return getFileUrl(val);
+            }
+            return getFileUrl(`${s3Prefix}/${val}`);
+          };
+          if (defaultsJson.heroImagePath) {
+            try { defaultsJson.heroImagePath = await signDefaultAsset(defaultsJson.heroImagePath); } catch { }
           }
-          if (defaultsJson.logoPath && !defaultsJson.logoPath.startsWith("http") && !defaultsJson.logoPath.startsWith("/")) {
-            try { defaultsJson.logoPath = await getFileUrl(`${s3Prefix}/${defaultsJson.logoPath}`); } catch { }
+          if (defaultsJson.logoPath) {
+            try { defaultsJson.logoPath = await signDefaultAsset(defaultsJson.logoPath); } catch { }
           }
 
           (layoutJson as any).defaults = defaultsJson;

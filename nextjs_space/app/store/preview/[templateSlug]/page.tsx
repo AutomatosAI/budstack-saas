@@ -95,7 +95,9 @@ export default async function TemplatePreviewPage({
       const heroPath = defaults.heroImagePath;
       if (!heroPath.startsWith("http") && !heroPath.startsWith("/")) {
         try {
-          heroImageUrl = await getFileUrl(`${s3Prefix}/${heroPath}`);
+          // Absolute S3 keys (uploaded files) — sign directly without prefixing
+          const isAbsolute = heroPath.startsWith('development/') || heroPath.startsWith('tenants/') || heroPath.startsWith('templates/');
+          heroImageUrl = await getFileUrl(isAbsolute ? heroPath : `${s3Prefix}/${heroPath}`);
         } catch { /* fallback to null */ }
       } else {
         heroImageUrl = heroPath;
@@ -108,7 +110,8 @@ export default async function TemplatePreviewPage({
       const logoPath = defaults.logoPath;
       if (!logoPath.startsWith("http") && !logoPath.startsWith("/")) {
         try {
-          logoUrl = await getFileUrl(`${s3Prefix}/${logoPath}`);
+          const isAbsolute = logoPath.startsWith('development/') || logoPath.startsWith('tenants/') || logoPath.startsWith('templates/');
+          logoUrl = await getFileUrl(isAbsolute ? logoPath : `${s3Prefix}/${logoPath}`);
         } catch { /* fallback to null */ }
       } else {
         logoUrl = logoPath;

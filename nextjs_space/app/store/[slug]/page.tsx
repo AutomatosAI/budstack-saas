@@ -92,7 +92,10 @@ export default async function TenantStorePage({
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
     const fallbackS3Path = normalizedS3Path || baseS3Path;
     if (!heroImageUrl && defaults?.heroImagePath && fallbackS3Path) {
-      heroImageUrl = `${fallbackS3Path}/${defaults.heroImagePath}`;
+      // Absolute S3 keys (uploaded files) — use directly without prefixing
+      const hp = defaults.heroImagePath;
+      const isAbsoluteHero = hp.startsWith('development/') || hp.startsWith('tenants/') || hp.startsWith('templates/');
+      heroImageUrl = isAbsoluteHero ? hp : `${fallbackS3Path}/${hp}`;
     }
 
     let logoUrl = tenantTemplate.logoUrl || null;
