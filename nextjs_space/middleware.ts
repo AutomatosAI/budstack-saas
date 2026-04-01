@@ -18,6 +18,12 @@ const isPublicRoute = createRouteMatcher([
   "/marketplace", // Public template marketplace
   "/learn", // Public learning center
   "/learn/(.*)", // Learning center articles
+  "/blog", // Public blog
+  "/blog/(.*)", // Blog articles
+  "/contact", // Contact page
+  "/terms", // Terms of service
+  "/privacy", // Privacy policy
+  "/cookies", // Cookie policy
 ]);
 
 // Define routes that require Tenant Context but might be public (like Storefront)
