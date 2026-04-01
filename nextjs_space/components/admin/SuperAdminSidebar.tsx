@@ -9,6 +9,7 @@ import {
   Layout,
   Settings,
   Mail,
+  GraduationCap,
 } from "lucide-react";
 import { AdminSidebar, type AdminMenuItem } from "./AdminSidebar";
 
@@ -22,6 +23,7 @@ export enum PanelType {
   ANALYTICS = "analytics",
   BRANDING = "branding",
   TEMPLATES = "templates",
+  LEARNING = "learning",
   EMAILS = "emails",
   SETTINGS = "settings",
 }
@@ -67,6 +69,12 @@ const superAdminMenuItems: AdminMenuItem[] = [
     label: "Store Templates",
     icon: Layout,
     href: "/super-admin/templates",
+  },
+  {
+    id: PanelType.LEARNING,
+    label: "Learning Center",
+    icon: GraduationCap,
+    href: "/super-admin/learning",
   },
   {
     id: PanelType.EMAILS,

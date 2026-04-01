@@ -578,6 +578,27 @@ enum PaymentStatus {
   UNDERPAID
 }
 
+model learning_resources {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  description String?
+  content     String?  // Markdown body
+  category    String   // e.g. "getting-started", "templates", "orders", "integrations"
+  type        String   @default("article") // "article", "video", "guide"
+  videoUrl    String?  // YouTube/Vimeo embed URL
+  docUrl      String?  // S3 key or external link for downloadable docs
+  coverImage  String?  // S3 key for cover image
+  tags        String[] @default([])
+  isPublished Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category, isPublished])
+  @@index([sortOrder])
+}
+
 enum Role {
   PATIENT
   TENANT_ADMIN

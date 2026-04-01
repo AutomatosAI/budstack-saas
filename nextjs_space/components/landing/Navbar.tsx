@@ -70,6 +70,13 @@ export default function Navbar() {
                 Marketplace
             </Link>
             <Link
+                href="/learn"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => setOpen(false)}
+            >
+                Docs
+            </Link>
+            <Link
                 href="/blog"
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 onClick={() => setOpen(false)}
