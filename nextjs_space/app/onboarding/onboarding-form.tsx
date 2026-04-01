@@ -146,7 +146,7 @@ export default function OnboardingForm({
     { number: 1, title: "Business Info", icon: Store },
     { number: 2, title: "Account Setup", icon: Mail },
     { number: 3, title: "Verification", icon: Hash },
-    { number: 4, title: "Choose Template", icon: Palette },
+    { number: 4, title: "Choose Theme", icon: Palette },
   ];
 
   const renderStepIndicator = () => {
@@ -417,7 +417,7 @@ export default function OnboardingForm({
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-display font-bold text-foreground mb-4">Choose Your Store Template</h3>
+              <h3 className="text-lg font-display font-bold text-foreground mb-4">Choose Your Store Theme</h3>
               <div className="grid grid-cols-2 gap-4">
                 {templates.map((template) => (
                   <button

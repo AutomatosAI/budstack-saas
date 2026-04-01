@@ -67,7 +67,7 @@ const menuItems = [
   },
   {
     id: PanelType.TEMPLATES,
-    label: "Templates",
+    label: "Themes",
     icon: Layout,
     href: "/super-admin/templates",
   },

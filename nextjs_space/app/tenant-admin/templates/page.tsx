@@ -104,10 +104,10 @@ export default async function TemplatesPage() {
             <div className="text-center max-w-2xl mx-auto">
                 <div className="section-badge mb-4 inline-flex">
                     <Layout className="h-4 w-4" />
-                    Templates
+                    Themes
                 </div>
                 <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                    Template Management
+                    Theme Management
                 </h1>
                 <p className="mt-3 text-muted-foreground">
                     Manage your store&apos;s design and layout.
@@ -120,13 +120,13 @@ export default async function TemplatesPage() {
                         value="my-templates"
                         className="rounded-lg data-[state=active]:bg-accent data-[state=active]:text-white"
                     >
-                        My Templates
+                        My Themes
                     </TabsTrigger>
                     <TabsTrigger
                         value="marketplace"
                         className="rounded-lg data-[state=active]:bg-accent data-[state=active]:text-white"
                     >
-                        Template Marketplace
+                        Theme Marketplace
                     </TabsTrigger>
                 </TabsList>
 
@@ -143,13 +143,13 @@ export default async function TemplatesPage() {
                                     <Palette className="h-6 w-6 text-white" />
                                 </div>
                                 <h3 className="font-display text-lg font-bold text-foreground mb-2">
-                                    No Templates Found
+                                    No Themes Found
                                 </h3>
                                 <p className="text-muted-foreground mb-4">
-                                    You don&apos;t have any templates yet.
+                                    You don&apos;t have any themes yet.
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                    Create a new template or browse the Marketplace to get started.
+                                    Create a new theme or browse the Marketplace to get started.
                                 </p>
                             </div>
                         )}
@@ -369,7 +369,7 @@ export default async function TemplatesPage() {
                                             )}
                                             <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
                                                 {template.description ||
-                                                    "A professional template for your store."}
+                                                    "A professional theme for your store."}
                                             </p>
                                         </div>
                                         <div className="flex gap-1 flex-shrink-0">

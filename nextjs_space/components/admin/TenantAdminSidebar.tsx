@@ -64,7 +64,7 @@ const tenantAdminMenuItems: AdminMenuItem[] = [
   { id: "seo", label: "SEO Manager", icon: Search, href: "/tenant-admin/seo" },
   {
     id: "templates",
-    label: "Store Templates",
+    label: "Store Themes",
     icon: Layout,
     href: "/tenant-admin/templates",
   },

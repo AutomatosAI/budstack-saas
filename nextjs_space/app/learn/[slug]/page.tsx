@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, BookOpen, Play, FileText, Download, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
+import { Navbar, Footer } from "@/components/landing";
 import { LearnChatbot } from "../learn-chatbot";
 import { MarkdownContent } from "./markdown-content";
 
@@ -76,6 +77,7 @@ export default async function LearnArticlePage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <Navbar />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-24">
         {/* Back link */}
         <Link
@@ -166,6 +168,8 @@ export default async function LearnArticlePage({
           </div>
         )}
       </div>
+
+      <Footer />
 
       {/* Automatos Widget */}
       {platformSettings?.automatosApiKey && (

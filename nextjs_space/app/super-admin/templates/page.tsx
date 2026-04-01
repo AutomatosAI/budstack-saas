@@ -53,20 +53,20 @@ export default async function TemplatesManagementPage() {
       <div className="text-center max-w-2xl mx-auto">
         <div className="section-badge mb-4 inline-flex">
           <Layout className="h-4 w-4" />
-          Templates
+          Themes
         </div>
         <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Store Templates
+          Store Themes
         </h1>
         <p className="mt-3 text-muted-foreground">
-          Manage home page templates for tenants. Templates define the visual layout of each store.
+          Manage storefront themes for tenants. Themes define the visual layout of each store.
         </p>
         <div className="mt-6 flex gap-3 justify-center">
           <UploadTemplateDialog />
           <Link href="/api/super-admin/templates/create-blank" prefetch={false}>
             <Button variant="outline" className="gap-2">
               <Plus className="h-4 w-4" />
-              Create New Template
+              Create New Theme
             </Button>
           </Link>
         </div>
@@ -78,7 +78,7 @@ export default async function TemplatesManagementPage() {
             value="templates"
             className="rounded-lg data-[state=active]:bg-accent data-[state=active]:text-white"
           >
-            All Templates
+            All Themes
           </TabsTrigger>
           <TabsTrigger
             value="submissions"
@@ -221,10 +221,10 @@ export default async function TemplatesManagementPage() {
             <Layout className="h-6 w-6 text-white" />
           </div>
           <h3 className="font-display text-lg font-bold text-foreground mb-2">
-            No Templates Found
+            No Themes Found
           </h3>
           <p className="text-muted-foreground">
-            Upload your first template to get started.
+            Upload your first theme to get started.
           </p>
         </div>
       )}

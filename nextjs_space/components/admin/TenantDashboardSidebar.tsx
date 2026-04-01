@@ -66,7 +66,7 @@ const menuItems = [
   },
   {
     id: "templates",
-    label: "Templates",
+    label: "Themes",
     icon: Layout,
     href: "/tenant-admin/templates",
   },

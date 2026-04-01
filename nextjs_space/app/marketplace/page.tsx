@@ -4,12 +4,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Layout, Palette, Eye, Sparkles } from "lucide-react";
+import { Navbar, Footer } from "@/components/landing";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Template Marketplace | BudStacks",
+  title: "Theme Marketplace | BudStacks",
   description:
-    "Browse professional storefront templates for your cannabis business. Preview and choose the perfect design.",
+    "Browse professional storefront themes for your cannabis business. Preview and choose the perfect design.",
 };
 
 /** Sign an S3 key to a URL, or pass through if already a URL */
@@ -40,19 +41,20 @@ export default async function MarketplacePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <Navbar />
       {/* Header */}
       <div className="pt-32 pb-16 px-4">
         <div className="text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent text-sm font-medium mb-6">
             <Sparkles className="h-4 w-4" />
-            Template Marketplace
+            Theme Marketplace
           </div>
           <h1 className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-            Browse Templates
+            Browse Themes
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
             Professional storefront designs ready for your cannabis business.
-            Preview any template and get started in minutes.
+            Preview any theme and get started in minutes.
           </p>
         </div>
       </div>
@@ -70,7 +72,7 @@ export default async function MarketplacePage() {
                 {template.signedPreviewUrl ? (
                   <img
                     src={template.signedPreviewUrl}
-                    alt={`${template.name} template preview`}
+                    alt={`${template.name} theme preview`}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -132,7 +134,7 @@ export default async function MarketplacePage() {
                       )}
                     <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
                       {template.description ||
-                        "A professional template for your store."}
+                        "A professional theme for your store."}
                     </p>
                   </div>
                 </div>
@@ -166,7 +168,7 @@ export default async function MarketplacePage() {
                     className="w-full rounded-xl"
                   >
                     <Eye className="mr-2 h-4 w-4" />
-                    Preview Template
+                    Preview Theme
                   </Button>
                 </Link>
               </div>
@@ -182,12 +184,13 @@ export default async function MarketplacePage() {
                 Coming Soon
               </h3>
               <p className="text-muted-foreground">
-                Templates are being prepared. Check back soon!
+                Themes are being prepared. Check back soon!
               </p>
             </div>
           )}
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

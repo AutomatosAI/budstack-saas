@@ -11,6 +11,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import type { Metadata } from "next";
+import { Navbar, Footer } from "@/components/landing";
 import { LearnSearch } from "./learn-search";
 import { LearnChatbot } from "./learn-chatbot";
 
@@ -109,6 +110,7 @@ export default async function LearnPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <Navbar />
       {/* Header */}
       <div className="pt-32 pb-12 px-4">
         <div className="text-center max-w-2xl mx-auto">
@@ -227,6 +229,8 @@ export default async function LearnPage() {
           );
         })}
       </div>
+
+      <Footer />
 
       {/* Automatos Widget for docs assistance */}
       {platformSettings?.automatosApiKey && (

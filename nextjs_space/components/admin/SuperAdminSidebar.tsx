@@ -66,7 +66,7 @@ const superAdminMenuItems: AdminMenuItem[] = [
   },
   {
     id: PanelType.TEMPLATES,
-    label: "Store Templates",
+    label: "Store Themes",
     icon: Layout,
     href: "/super-admin/templates",
   },
