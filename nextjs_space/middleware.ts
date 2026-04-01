@@ -15,6 +15,7 @@ const isPublicRoute = createRouteMatcher([
   "/onboarding", // Customer onboarding wizard
   "/api/onboarding", // Public onboarding validation/submission
   "/api/consultation(.*)", // Public consultation submission
+  "/marketplace", // Public template marketplace
 ]);
 
 // Define routes that require Tenant Context but might be public (like Storefront)

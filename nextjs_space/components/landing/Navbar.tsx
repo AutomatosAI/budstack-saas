@@ -63,6 +63,13 @@ export default function Navbar() {
                 Pricing
             </a>
             <Link
+                href="/marketplace"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => setOpen(false)}
+            >
+                Marketplace
+            </Link>
+            <Link
                 href="/blog"
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 onClick={() => setOpen(false)}
