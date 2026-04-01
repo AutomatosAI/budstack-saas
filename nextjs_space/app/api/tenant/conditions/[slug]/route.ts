@@ -31,10 +31,11 @@ export async function GET(
       },
     });
 
-    // If not found and this isn't already the master tenant, fallback to healingbuds
-    if (!condition) {
+    // If not found and a master tenant is configured, fallback to shared conditions
+    const masterSlug = process.env.PLATFORM_MASTER_TENANT_SLUG;
+    if (!condition && masterSlug) {
       const masterTenant = await prisma.tenants.findUnique({
-        where: { subdomain: "healingbuds" },
+        where: { subdomain: masterSlug },
         select: { id: true },
       });
 

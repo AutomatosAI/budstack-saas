@@ -90,7 +90,14 @@ export async function checkRateLimit(
       };
     }
   } catch (error) {
-    console.warn('[RateLimit] Redis error, allowing request:', error);
+    console.error('[RateLimit] Redis unavailable — blocking request for safety:', error);
+    return {
+      success: false,
+      response: NextResponse.json(
+        { error: 'Service temporarily unavailable', message: 'Rate limiting service is down. Please try again shortly.' },
+        { status: 503, headers: { 'Retry-After': '30' } },
+      ),
+    };
   }
 
   return { success: true };

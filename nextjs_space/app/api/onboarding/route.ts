@@ -3,6 +3,36 @@ import { prisma } from "@/lib/db";
 import { clerkClient } from "@clerk/nextjs/server";
 import { sendEmail, emailTemplates } from "@/lib/email";
 import crypto from "crypto";
+import { z } from "zod";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+const onboardingSchema = z.object({
+  businessName: z.string().min(1).max(100),
+  email: z.string().email().max(254),
+  password: z.string().min(8).max(128),
+  subdomain: z.string().min(2).max(30).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, "Invalid subdomain format"),
+  nftTokenId: z.string().min(1).max(200),
+  contactInfo: z.object({
+    phone: z.string().max(20).optional(),
+    address: z.string().max(500).optional(),
+  }).optional(),
+  countryCode: z.string().length(2).regex(/^[A-Z]{2}$/),
+  templateId: z.string().max(100).optional(),
+});
+
+/** Reserved subdomains that cannot be registered */
+const RESERVED_SUBDOMAINS = new Set([
+  'www', 'api', 'admin', 'super-admin', 'mail', 'smtp', 'ftp',
+  'app', 'dashboard', 'help', 'support', 'status', 'docs',
+  'blog', 'store', 'shop', 'cdn', 'assets', 'static', 'media',
+  'auth', 'login', 'signup', 'register', 'account', 'billing',
+  'budstacks', 'budstack',
+]);
+
+/** Validate subdomain format: lowercase alphanumeric + hyphens, 2-30 chars */
+function isValidSubdomain(subdomain: string): boolean {
+  return /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/.test(subdomain) && !subdomain.includes('--');
+}
 
 const TEMPLATE_PRESETS = {
   modern: {
@@ -33,7 +63,26 @@ const TEMPLATE_PRESETS = {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const rawBody = await req.json();
+
+    // Rate limit by IP — public endpoint that creates orgs + users
+    const forwarded = req.headers.get('x-forwarded-for');
+    const ip = forwarded?.split(',')[0]?.trim() || 'unknown';
+    const rateLimitResult = await checkRateLimit(`onboarding:${ip}`, { maxRequests: 3, windowMs: 60000 });
+    if (!rateLimitResult.success) {
+      return rateLimitResult.response;
+    }
+
+    // Zod validation
+    const parseResult = onboardingSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.errors[0];
+      return NextResponse.json(
+        { error: `Validation error: ${firstError.path.join('.')} — ${firstError.message}` },
+        { status: 400 },
+      );
+    }
+
     const {
       businessName,
       email,
@@ -43,19 +92,19 @@ export async function POST(req: NextRequest) {
       contactInfo,
       countryCode,
       templateId,
-    } = body;
+    } = parseResult.data;
 
-    // Validation
-    if (
-      !businessName ||
-      !email ||
-      !password ||
-      !subdomain ||
-      !nftTokenId ||
-      !countryCode
-    ) {
+    // Subdomain format validation
+    const normalizedSubdomain = subdomain.toLowerCase().trim();
+    if (!isValidSubdomain(normalizedSubdomain)) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only" },
+        { status: 400 },
+      );
+    }
+    if (RESERVED_SUBDOMAINS.has(normalizedSubdomain)) {
+      return NextResponse.json(
+        { error: "This subdomain is reserved. Please choose another." },
         { status: 400 },
       );
     }
@@ -165,23 +214,19 @@ export async function POST(req: NextRequest) {
         : null;
 
       if (!dbTemplate) {
+        // Try platform default template if configured, otherwise grab any active template
+        const defaultSlug = process.env.PLATFORM_DEFAULT_TEMPLATE_SLUG;
         dbTemplate = await prisma.templates.findFirst({
-          where: { slug: "healingbuds" },
+          where: defaultSlug ? { slug: defaultSlug } : { isActive: true },
+          orderBy: { createdAt: 'desc' },
         });
       }
 
       if (!dbTemplate) {
-        dbTemplate = await prisma.templates.create({
-          data: {
-            name: "HealingBuds Default",
-            slug: "healingbuds",
-            description: "Default medical cannabis template",
-            category: "medical",
-            version: "1.0.0",
-            author: "BudStacks",
-            isActive: true,
-          },
-        });
+        return NextResponse.json(
+          { error: "No templates available. Please contact platform admin." },
+          { status: 500 },
+        );
       }
 
       const template =

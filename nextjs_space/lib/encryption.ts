@@ -36,6 +36,13 @@ function isMigrationAllowed(options?: DecryptOptions): boolean {
   return Date.now() < deadlineDate.getTime();
 }
 
+export class DecryptionError extends Error {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(message);
+    this.name = "DecryptionError";
+  }
+}
+
 /**
  * Encrypts a string using AES-256-GCM
  * Returns format: iv:authTag:ciphertext (hex encoded)
@@ -57,6 +64,7 @@ export function encrypt(text: string): string {
 
 /**
  * Decrypts a string (iv:authTag:ciphertext)
+ * Throws DecryptionError on failure instead of returning empty string.
  */
 export function decrypt(text: string, options?: DecryptOptions): string {
   if (!text) return "";
@@ -66,7 +74,7 @@ export function decrypt(text: string, options?: DecryptOptions): string {
     if (isMigrationAllowed(options)) {
       return text;
     }
-    throw new Error("Encrypted value is not in the expected format.");
+    throw new DecryptionError("Encrypted value is not in the expected format.");
   }
 
   const [ivHex, authTagHex, encryptedHex] = parts;
@@ -87,7 +95,6 @@ export function decrypt(text: string, options?: DecryptOptions): string {
     if (isMigrationAllowed(options)) {
       return text;
     }
-    console.error("Decryption failed:", error);
-    return "";
+    throw new DecryptionError("Decryption failed — key may have been rotated or data corrupted.", error);
   }
 }

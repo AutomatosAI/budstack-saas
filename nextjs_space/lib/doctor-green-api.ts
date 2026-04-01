@@ -207,54 +207,8 @@ export interface DoctorGreenOrder {
 
 // Professional product image fallbacks (AI-generated medical-grade images)
 // Doctor Green staging API returns image paths but files are not hosted (404 errors)
-// Country code conversion (Alpha-2 to Alpha-3 ISO codes)
-const COUNTRY_CODE_MAP: Record<string, string> = {
-  PT: 'PRT',
-  GB: 'GBR',
-  UK: 'GBR',
-  ZA: 'ZAF',
-  SA: 'SAU',
-  TH: 'THA',
-  US: 'USA',
-  DE: 'DEU',
-  FR: 'FRA',
-  ES: 'ESP',
-  IT: 'ITA',
-  NL: 'NLD',
-  BE: 'BEL',
-  IE: 'IRL',
-  GR: 'GRC',
-  CA: 'CAN',
-  AU: 'AUS',
-  NZ: 'NZL',
-  CH: 'CHE',
-  SE: 'SWE',
-  NO: 'NOR',
-  DK: 'DNK',
-  PL: 'POL',
-  CZ: 'CZE',
-  IL: 'ISR',
-  BR: 'BRA',
-  MX: 'MEX',
-  AR: 'ARG',
-  CL: 'CHL',
-  CO: 'COL',
-  MY: 'MYS',
-  SG: 'SGP',
-  IN: 'IND',
-  PK: 'PAK',
-  PH: 'PHL',
-  ID: 'IDN',
-  JP: 'JPN',
-  KR: 'KOR',
-  CN: 'CHN',
-  HK: 'HKG',
-  TW: 'TWN',
-};
-
-function toAlpha3(code: string): string {
-  return COUNTRY_CODE_MAP[code.toUpperCase()] || code;
-}
+// Country code conversion — consolidated in lib/country-codes.ts
+import { toAlpha3 } from './country-codes';
 
 /**
  * Fetch all products from Doctor Green
@@ -378,13 +332,27 @@ export async function fetchProducts(
   return Promise.all(products.map((product: DoctorGreenProduct) => normalizeProduct(product, country)));
 }
 
+// In-memory product cache to avoid re-fetching all products for single lookups
+const productCache = new Map<string, { products: DoctorGreenProduct[]; expiresAt: number }>();
+const PRODUCT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export async function fetchProduct(
   productId: string,
   country: string = "ZA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct> {
-  // /strains/{id} requires auth that doesn't work — use the public list and filter
-  const allProducts = await fetchProducts(country, config);
+  // /strains/{id} requires auth that doesn't work — use the cached product list
+  const cacheKey = `${country}:${config.apiUrl}`;
+  const cached = productCache.get(cacheKey);
+  let allProducts: DoctorGreenProduct[];
+
+  if (cached && cached.expiresAt > Date.now()) {
+    allProducts = cached.products;
+  } else {
+    allProducts = await fetchProducts(country, config);
+    productCache.set(cacheKey, { products: allProducts, expiresAt: Date.now() + PRODUCT_CACHE_TTL_MS });
+  }
+
   const product = allProducts.find(p => p.id === productId);
   if (!product) {
     throw new Error(`Product ${productId} not found`);

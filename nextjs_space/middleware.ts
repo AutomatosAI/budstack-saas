@@ -55,10 +55,15 @@ export default clerkMiddleware(async (auth, req) => {
     const subdomain = currentHost.replace(`.${baseDomain}`, '');
     requestHeaders.set('x-tenant-subdomain', subdomain);
 
-    // API routes: don't rewrite path — APIs already include slug in their URL
-    // (e.g. /api/store/slug/products, /api/tenant/slug). Each route handles
-    // its own auth internally so skipping the middleware auth check is safe.
+    // API routes: don't rewrite path — APIs already include slug in their URL.
+    // But still run auth check below (don't return early).
     if (pathname.startsWith('/api/')) {
+      if (!isPublicRoute(req)) {
+        const { userId, redirectToSignIn } = await auth();
+        if (!userId) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+      }
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
 
@@ -75,7 +80,7 @@ export default clerkMiddleware(async (auth, req) => {
   // PRIORITY 2: Custom domain routing (also public storefront)
   if (
     !isLocalhost &&
-    !currentHost.includes('.abacusai.app') &&
+    !(process.env.NODE_ENV === 'development' && currentHost.includes('.abacusai.app')) &&
     !currentHost.endsWith(`.${baseDomain}`) &&
     currentHost !== baseDomain &&
     !currentHost.startsWith('www.')

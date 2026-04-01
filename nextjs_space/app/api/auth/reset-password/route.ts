@@ -28,20 +28,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Generate reset token
+    // Generate reset token — store SHA-256 hash in DB, send raw token to user
     const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
     const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
 
-    // Save token to database
+    // Save hashed token to database
     await prisma.users.update({
       where: { id: user.id },
       data: {
-        resetToken,
+        resetToken: resetTokenHash,
         resetTokenExpiry,
       },
     });
 
-    // Create reset link
+    // Create reset link with raw (unhashed) token
     const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/reset-password/${resetToken}`;
 
     // Send password reset email

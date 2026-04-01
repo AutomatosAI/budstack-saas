@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ steps }, { status: 500 });
     }
 
-    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "TENANT_ADMIN")) {
+    if (!user || user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized", steps }, { status: 401 });
     }
 

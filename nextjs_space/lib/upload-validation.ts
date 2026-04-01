@@ -7,7 +7,7 @@ const ALLOWED_IMAGE_TYPES = new Set([
   'image/png',
   'image/gif',
   'image/webp',
-  'image/svg+xml',
+  // SVG removed — can contain embedded JavaScript (stored XSS vector)
 ]);
 
 const ALLOWED_DOCUMENT_TYPES = new Set([

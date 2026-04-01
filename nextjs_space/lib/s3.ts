@@ -61,12 +61,8 @@ export async function fileExistsInS3(key: string): Promise<boolean> {
  * that may live in the base template path rather than the tenant's clone path.
  */
 export async function getFileUrlWithFallback(primaryKey: string, fallbackKey: string): Promise<string> {
-  // Check existence and pre-generate fallback URL in parallel to avoid sequential round-trips
-  const [exists, fallbackUrl] = await Promise.all([
-    fileExistsInS3(primaryKey),
-    getFileUrl(fallbackKey),
-  ]);
-  return exists ? await getFileUrl(primaryKey) : fallbackUrl;
+  const exists = await fileExistsInS3(primaryKey);
+  return exists ? await getFileUrl(primaryKey) : await getFileUrl(fallbackKey);
 }
 
 export async function deleteFile(key: string): Promise<void> {

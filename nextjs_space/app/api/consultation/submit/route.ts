@@ -9,31 +9,56 @@ import { callDrGreenAPI } from "@/lib/drgreen-api-client";
 import { prisma } from "@/lib/db";
 import { mapMedicalConditionsForDrGreen } from '@/lib/dr-green-mapping';
 import crypto from "crypto";
+import { z } from "zod";
 
-/**
- * Convert ISO 3166-1 Alpha-2 to Alpha-3 country codes
- * Dr Green API requires Alpha-3 codes
- */
-function convertToAlpha3CountryCode(alpha2: string): string {
-  const mapping: Record<string, string> = {
-    PT: "PRT", // Portugal
-    GB: "GBR", // United Kingdom
-    IE: "IRL", // Ireland
-    ES: "ESP", // Spain
-    FR: "FRA", // France
-    DE: "DEU", // Germany
-    IT: "ITA", // Italy
-    NL: "NLD", // Netherlands
-    BE: "BEL", // Belgium
-    US: "USA", // United States
-    // Add more as needed
-  };
-  return mapping[alpha2.toUpperCase()] || alpha2;
-}
+import { toAlpha3 as convertToAlpha3CountryCode } from '@/lib/country-codes';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const consultationSchema = z.object({
+  email: z.string().email().max(254),
+  password: z.string().min(8).max(128),
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  tenantId: z.string().uuid(),
+  countryCode: z.string().min(2).max(3),
+  dateOfBirth: z.string().optional(),
+  phone: z.string().max(20).optional(),
+  conditions: z.array(z.string().max(200)).optional(),
+  medications: z.array(z.string().max(200)).optional(),
+  allergies: z.string().max(1000).optional(),
+  nftTokenId: z.string().max(200).optional(),
+  address: z.object({
+    street: z.string().max(300).optional(),
+    city: z.string().max(100).optional(),
+    state: z.string().max(100).optional(),
+    postalCode: z.string().max(20).optional(),
+    country: z.string().max(100).optional(),
+  }).optional(),
+}).passthrough(); // Allow additional fields from the consultation form
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Rate limit by IP — public endpoint that creates accounts
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded?.split(',')[0]?.trim() || 'unknown';
+    const rateLimitResult = await checkRateLimit(`consultation:${ip}`, { maxRequests: 5, windowMs: 60000 });
+    if (!rateLimitResult.success) {
+      return rateLimitResult.response;
+    }
+
+    const rawBody = await request.json();
+
+    // Validate core fields
+    const parseResult = consultationSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.errors[0];
+      return NextResponse.json(
+        { error: `Validation error: ${firstError.path.join('.')} — ${firstError.message}` },
+        { status: 400 },
+      );
+    }
+
+    const body = rawBody; // Use raw body since form has many dynamic fields, but core fields are validated
 
     // 1. Create Clerk User (Auth)
     let clerkUser;

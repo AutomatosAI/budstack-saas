@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { uploadFile, getJsonFromS3 } from "@/lib/s3";
+import { validateUpload } from "@/lib/upload-validation";
 import { TenantSettings } from "@/lib/types";
 import { deepMerge } from "@/lib/utils";
 
@@ -46,9 +47,13 @@ export async function PUT(req: NextRequest) {
 
     const settings: TenantSettings = JSON.parse(settingsJSON);
 
-    // Handle file uploads
+    // Handle file uploads with server-side validation
     const logo = formData.get("logo") as File;
     if (logo && logo.size > 0) {
+      const validation = validateUpload(logo);
+      if (!validation.valid) {
+        return NextResponse.json({ error: `Logo: ${validation.error}` }, { status: 400 });
+      }
       const buffer = Buffer.from(await logo.arrayBuffer());
       const fileName = `logo-${Date.now()}-${logo.name}`;
       settings.logoPath = await uploadFile(buffer, fileName);
@@ -56,6 +61,10 @@ export async function PUT(req: NextRequest) {
 
     const heroImage = formData.get("heroImage") as File;
     if (heroImage && heroImage.size > 0) {
+      const validation = validateUpload(heroImage);
+      if (!validation.valid) {
+        return NextResponse.json({ error: `Hero image: ${validation.error}` }, { status: 400 });
+      }
       const buffer = Buffer.from(await heroImage.arrayBuffer());
       const fileName = `hero-${Date.now()}-${heroImage.name}`;
       settings.heroImagePath = await uploadFile(buffer, fileName);
@@ -63,6 +72,10 @@ export async function PUT(req: NextRequest) {
 
     const favicon = formData.get("favicon") as File;
     if (favicon && favicon.size > 0) {
+      const validation = validateUpload(favicon);
+      if (!validation.valid) {
+        return NextResponse.json({ error: `Favicon: ${validation.error}` }, { status: 400 });
+      }
       const buffer = Buffer.from(await favicon.arrayBuffer());
       const fileName = `favicon-${Date.now()}-${favicon.name}`;
       settings.faviconPath = await uploadFile(buffer, fileName);

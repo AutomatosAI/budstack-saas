@@ -78,9 +78,7 @@ export async function POST(
     log('DR_GREEN_CONFIG', {
       apiUrl: drGreenConfig.apiUrl || 'DEFAULT',
       hasApiKey: !!drGreenConfig.apiKey,
-      apiKeyPrefix: drGreenConfig.apiKey?.slice(0, 6) || 'NONE',
       hasSecretKey: !!drGreenConfig.secretKey,
-      secretKeyIsBase64: drGreenConfig.secretKey?.includes('BEGIN') ? 'PEM' : 'base64-or-raw',
     });
 
     // Check local verification (manual admin override)

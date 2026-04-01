@@ -263,15 +263,8 @@ export default async function TenantStoreLayout({
     return <Footer tenant={tenantWithTemplate} logoUrl={logoUrl} />;
   };
 
-  // Wrapper class from layout settings or legacy mapping
-  const wrapperClass = layout?.settings?.wrapperClass || (() => {
-    switch (templateSlug) {
-      case "wellness-nature": return "wellness-template";
-      case "gta-cannabis": return "gta-template";
-      case "healingbuds": return "template-healingbuds";
-      default: return "";
-    }
-  })();
+  // Wrapper class from layout settings (legacy hardcoded mapping removed)
+  const wrapperClass = layout?.settings?.wrapperClass || "";
 
   const mergedDesignSystem = deepMerge(defaults?.designSystem || null, activeTemplate?.designSystem || null);
 

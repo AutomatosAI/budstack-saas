@@ -55,8 +55,7 @@ export async function POST(req: Request) {
     const { id } = evt.data;
     const eventType = evt.type;
 
-    console.log(`Webhook with and ID of ${id} and type of ${eventType}`);
-    console.log("Webhook body:", body);
+    console.log(`Clerk webhook received: id=${id} type=${eventType}`);
 
     if (eventType === "user.created" || eventType === "user.updated") {
         const { id, email_addresses, first_name, last_name, primary_email_address_id } = evt.data;

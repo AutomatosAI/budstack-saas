@@ -14,11 +14,14 @@ export default async function ConditionsPage({
     notFound();
   }
 
-  // 1. Get the master tenant (healingbuds) to fetch shared conditions
-  const masterTenant = await prisma.tenants.findUnique({
-    where: { subdomain: "healingbuds" },
-    select: { id: true },
-  });
+  // 1. Get the master tenant to fetch shared conditions (if configured)
+  const masterSlug = process.env.PLATFORM_MASTER_TENANT_SLUG;
+  const masterTenant = masterSlug
+    ? await prisma.tenants.findUnique({
+        where: { subdomain: masterSlug },
+        select: { id: true },
+      })
+    : null;
 
   const tenantIdsToFetch = [tenant.id];
   if (masterTenant && masterTenant.id !== tenant.id) {

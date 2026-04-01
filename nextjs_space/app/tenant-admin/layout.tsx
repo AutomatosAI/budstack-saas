@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { TenantAdminSidebar } from "@/components/admin/TenantAdminSidebar";
 import { AccessibleAdminLayout } from "@/components/admin/AccessibleAdminLayout";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
-import { generateMockNotifications } from "@/lib/mock-data";
+import crypto from "crypto";
 
 import { HeaderProfile } from "@/components/admin/HeaderProfile";
 
@@ -66,7 +66,7 @@ export default async function TenantAdminLayout({
           where: { email: email! },
           update: { tenantId: tenantByOrg[0].id, role: "TENANT_ADMIN", updatedAt: new Date() },
           create: {
-            id: require("crypto").randomUUID(),
+            id: crypto.randomUUID(),
             email: email!,
             password: "CLERK_MANAGED_ACCOUNT",
             name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Admin",
@@ -108,8 +108,8 @@ export default async function TenantAdminLayout({
     );
   }
 
-  // Generate mock notifications for demo
-  const mockNotifications = generateMockNotifications(8);
+  // TODO: Replace with real notifications from DB
+  const mockNotifications: Array<{ id: string; type: "SYSTEM_ALERT"; title: string; message: string; timestamp: Date; isRead: boolean }> = [];
 
   return (
     <div className="flex min-h-screen canvas-bg">
