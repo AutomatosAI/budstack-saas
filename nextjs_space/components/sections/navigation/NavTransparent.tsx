@@ -41,6 +41,21 @@ export function NavTransparent(props: SectionProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // When nav color overrides exist, use CSS vars even in unscrolled state.
+  // Otherwise, fall back to white (readable on dark hero backgrounds).
+  const hasOverrides = sectionConfig?.colorOverrides && Object.keys(sectionConfig.colorOverrides).length > 0;
+
+  const textColor = scrolled || hasOverrides
+    ? 'hsl(var(--tenant-color-text))'
+    : 'white';
+  const headingColor = scrolled || hasOverrides
+    ? 'hsl(var(--tenant-color-heading))'
+    : 'white';
+  const ctaBgColor = 'hsl(var(--tenant-color-accent, var(--tenant-color-primary)))';
+  const ctaStyle = scrolled || hasOverrides
+    ? { backgroundColor: ctaBgColor, color: 'white' }
+    : { backgroundColor: 'white', color: ctaBgColor };
+
   return (
     <nav
       className="fixed top-0 left-0 right-0 z-50 py-4 transition-all duration-300"
@@ -63,7 +78,7 @@ export function NavTransparent(props: SectionProps) {
               {showName && (
                 <span
                   className="text-xl font-bold transition-colors duration-300"
-                  style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: scrolled ? 'hsl(var(--tenant-color-heading))' : 'white' }}
+                  style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: headingColor }}
                 >
                   {businessName}
                 </span>
@@ -73,7 +88,7 @@ export function NavTransparent(props: SectionProps) {
           {(navPos === 'center' || navPos === 'right') && (
             <div className="flex items-center gap-8">
               {links.map((link: { label: string; href: string }) => (
-                <a key={link.href} href={link.href} className="text-sm font-medium transition-colors duration-300" style={{ color: scrolled ? 'hsl(var(--tenant-color-text))' : 'white' }}>
+                <a key={link.href} href={link.href} className="text-sm font-medium transition-colors duration-300" style={{ color: textColor }}>
                   {link.label}
                 </a>
               ))}
@@ -93,7 +108,7 @@ export function NavTransparent(props: SectionProps) {
               {showName && (
                 <span
                   className="text-xl font-bold transition-colors duration-300"
-                  style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: scrolled ? 'hsl(var(--tenant-color-heading))' : 'white' }}
+                  style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: headingColor }}
                 >
                   {businessName}
                 </span>
@@ -103,7 +118,7 @@ export function NavTransparent(props: SectionProps) {
           {navPos === 'left' && (
             <div className="flex items-center gap-8">
               {links.map((link: { label: string; href: string }) => (
-                <a key={link.href} href={link.href} className="text-sm font-medium transition-colors duration-300" style={{ color: scrolled ? 'hsl(var(--tenant-color-text))' : 'white' }}>
+                <a key={link.href} href={link.href} className="text-sm font-medium transition-colors duration-300" style={{ color: textColor }}>
                   {link.label}
                 </a>
               ))}
@@ -123,7 +138,7 @@ export function NavTransparent(props: SectionProps) {
               {showName && (
                 <span
                   className="text-xl font-bold transition-colors duration-300"
-                  style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: scrolled ? 'hsl(var(--tenant-color-heading))' : 'white' }}
+                  style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: headingColor }}
                 >
                   {businessName}
                 </span>
@@ -133,10 +148,7 @@ export function NavTransparent(props: SectionProps) {
           <a
             href={ctaHref}
             className="px-6 py-2 text-sm font-semibold rounded-full transition-all"
-            style={{
-              backgroundColor: scrolled ? 'hsl(var(--tenant-color-accent, var(--tenant-color-primary)))' : 'white',
-              color: scrolled ? 'white' : 'hsl(var(--tenant-color-accent, var(--tenant-color-primary)))',
-            }}
+            style={ctaStyle}
           >
             {ctaLabel}
           </a>
@@ -152,7 +164,7 @@ export function NavTransparent(props: SectionProps) {
           {showName && (
             <span
               className="text-xl font-bold transition-colors duration-300"
-              style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: scrolled ? 'hsl(var(--tenant-color-heading))' : 'white' }}
+              style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)', color: headingColor }}
             >
               {businessName}
             </span>
@@ -164,9 +176,9 @@ export function NavTransparent(props: SectionProps) {
           aria-label="Toggle menu"
         >
           {mobileOpen ? (
-            <X size={24} style={{ color: scrolled ? 'hsl(var(--tenant-color-text))' : 'white' }} />
+            <X size={24} style={{ color: textColor }} />
           ) : (
-            <Menu size={24} style={{ color: scrolled ? 'hsl(var(--tenant-color-text))' : 'white' }} />
+            <Menu size={24} style={{ color: textColor }} />
           )}
         </button>
       </div>
@@ -191,7 +203,7 @@ export function NavTransparent(props: SectionProps) {
           <a
             href={ctaHref}
             className="block text-center px-6 py-3 text-sm font-semibold text-white rounded-full mt-3"
-            style={{ backgroundColor: 'hsl(var(--tenant-color-accent, var(--tenant-color-primary)))' }}
+            style={{ backgroundColor: ctaBgColor }}
             onClick={() => setMobileOpen(false)}
           >
             {ctaLabel}
