@@ -134,8 +134,8 @@ export function NavTransparent(props: SectionProps) {
             href={ctaHref}
             className="px-6 py-2 text-sm font-semibold rounded-full transition-all"
             style={{
-              backgroundColor: scrolled ? 'hsl(var(--tenant-color-primary))' : 'white',
-              color: scrolled ? 'white' : 'hsl(var(--tenant-color-primary))',
+              backgroundColor: scrolled ? 'hsl(var(--tenant-color-accent, var(--tenant-color-primary)))' : 'white',
+              color: scrolled ? 'white' : 'hsl(var(--tenant-color-accent, var(--tenant-color-primary)))',
             }}
           >
             {ctaLabel}
@@ -191,7 +191,7 @@ export function NavTransparent(props: SectionProps) {
           <a
             href={ctaHref}
             className="block text-center px-6 py-3 text-sm font-semibold text-white rounded-full mt-3"
-            style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
+            style={{ backgroundColor: 'hsl(var(--tenant-color-accent, var(--tenant-color-primary)))' }}
             onClick={() => setMobileOpen(false)}
           >
             {ctaLabel}

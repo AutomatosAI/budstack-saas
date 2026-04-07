@@ -20,16 +20,33 @@ import { SECTION_SCHEMAS } from "@/lib/section-schemas";
 import { ColorPicker } from "./shared";
 import type { EditorFormData, SetFormData } from "./types";
 
-const OVERRIDE_KEYS = [
-  { key: "primary", label: "Primary", description: "Buttons, headers" },
-  { key: "secondary", label: "Secondary", description: "Secondary elements" },
-  { key: "accent", label: "Accent", description: "CTA highlights" },
-  { key: "background", label: "Background", description: "Section bg" },
-  { key: "surface", label: "Surface", description: "Card backgrounds" },
-  { key: "text", label: "Text", description: "Body text" },
-  { key: "heading", label: "Heading", description: "Heading text" },
-  { key: "border", label: "Border", description: "Border color" },
-] as const;
+const OVERRIDE_GROUPS = [
+  {
+    heading: "Buttons & Actions",
+    keys: [
+      { key: "primary", label: "Button Color", description: "Main buttons and interactive elements" },
+      { key: "accent", label: "Call-to-Action Color", description: "CTA buttons like 'Book Now' or 'Check Eligibility'" },
+      { key: "secondary", label: "Links & Highlights", description: "Links, secondary buttons, gradients" },
+    ],
+  },
+  {
+    heading: "Text",
+    keys: [
+      { key: "heading", label: "Heading Text", description: "Page titles and section headings" },
+      { key: "text", label: "Body Text", description: "Paragraphs and general content" },
+    ],
+  },
+  {
+    heading: "Backgrounds & Layout",
+    keys: [
+      { key: "background", label: "Page Background", description: "Main page background" },
+      { key: "surface", label: "Card Background", description: "Cards, panels, and content boxes" },
+      { key: "border", label: "Borders & Dividers", description: "Lines, borders, and separators" },
+    ],
+  },
+];
+
+const OVERRIDE_KEYS = OVERRIDE_GROUPS.flatMap((g) => g.keys);
 
 interface ColoursTabProps {
   formData: EditorFormData;
@@ -132,40 +149,40 @@ export function ColoursTab({
         <CardContent>
           <div className="grid grid-cols-2 gap-6">
             <ColorPicker
-              label="Primary Color"
-              description="Main brand color (buttons, headers)"
+              label="Button Color"
+              description="Main buttons and interactive elements"
               value={formData.primaryColor}
               onChange={(v) => setGlobalColor("primaryColor", v)}
             />
             <ColorPicker
-              label="Secondary Color"
-              description="Secondary elements, links"
-              value={formData.secondaryColor}
-              onChange={(v) => setGlobalColor("secondaryColor", v)}
-            />
-            <ColorPicker
-              label="Accent Color"
-              description="Call-to-action highlights"
+              label="Call-to-Action Color"
+              description="CTA buttons like 'Book Now' or 'Check Eligibility'"
               value={formData.accentColor}
               onChange={(v) => setGlobalColor("accentColor", v)}
             />
             <ColorPicker
-              label="Background Color"
-              description="Page background"
+              label="Links & Highlights"
+              description="Links, secondary buttons, gradients"
+              value={formData.secondaryColor}
+              onChange={(v) => setGlobalColor("secondaryColor", v)}
+            />
+            <ColorPicker
+              label="Page Background"
+              description="Main page background"
               value={formData.backgroundColor}
               onChange={(v) => setGlobalColor("backgroundColor", v)}
             />
             <ColorPicker
-              label="Text Color"
-              description="Body text"
-              value={formData.textColor}
-              onChange={(v) => setGlobalColor("textColor", v)}
-            />
-            <ColorPicker
-              label="Heading Color"
-              description="Heading text"
+              label="Heading Text"
+              description="Page titles and section headings"
               value={formData.headingColor}
               onChange={(v) => setGlobalColor("headingColor", v)}
+            />
+            <ColorPicker
+              label="Body Text"
+              description="Paragraphs and general content"
+              value={formData.textColor}
+              onChange={(v) => setGlobalColor("textColor", v)}
             />
           </div>
         </CardContent>
@@ -212,31 +229,38 @@ export function ColoursTab({
                       </Button>
                     </div>
                   )}
-                  <div className="grid grid-cols-2 gap-4">
-                    {OVERRIDE_KEYS.map(({ key, label, description }) => {
-                      const currentValue = formData.navColorOverrides[key] || "";
-                      return (
-                        <div key={key} className="relative">
-                          <ColorPicker
-                            label={label}
-                            description={description}
-                            value={currentValue || "#000000"}
-                            onChange={(v) => setNavOverride(key, v)}
-                          />
-                          {currentValue && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute top-0 right-0 h-6 w-6"
-                              onClick={() => clearNavOverride(key)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          )}
+                  <div className="space-y-4">
+                    {OVERRIDE_GROUPS.map((group) => (
+                      <div key={group.heading}>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{group.heading}</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          {group.keys.map(({ key, label, description }) => {
+                            const currentValue = formData.navColorOverrides[key] || "";
+                            return (
+                              <div key={key} className="relative">
+                                <ColorPicker
+                                  label={label}
+                                  description={description}
+                                  value={currentValue || "#000000"}
+                                  onChange={(v) => setNavOverride(key, v)}
+                                />
+                                {currentValue && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-0 right-0 h-6 w-6"
+                                    onClick={() => clearNavOverride(key)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </AccordionContent>
@@ -272,31 +296,38 @@ export function ColoursTab({
                       </Button>
                     </div>
                   )}
-                  <div className="grid grid-cols-2 gap-4">
-                    {OVERRIDE_KEYS.map(({ key, label, description }) => {
-                      const currentValue = formData.footerColorOverrides[key] || "";
-                      return (
-                        <div key={key} className="relative">
-                          <ColorPicker
-                            label={label}
-                            description={description}
-                            value={currentValue || "#000000"}
-                            onChange={(v) => setFooterOverride(key, v)}
-                          />
-                          {currentValue && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute top-0 right-0 h-6 w-6"
-                              onClick={() => clearFooterOverride(key)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          )}
+                  <div className="space-y-4">
+                    {OVERRIDE_GROUPS.map((group) => (
+                      <div key={group.heading}>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{group.heading}</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          {group.keys.map(({ key, label, description }) => {
+                            const currentValue = formData.footerColorOverrides[key] || "";
+                            return (
+                              <div key={key} className="relative">
+                                <ColorPicker
+                                  label={label}
+                                  description={description}
+                                  value={currentValue || "#000000"}
+                                  onChange={(v) => setFooterOverride(key, v)}
+                                />
+                                {currentValue && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-0 right-0 h-6 w-6"
+                                    onClick={() => clearFooterOverride(key)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </AccordionContent>
@@ -360,35 +391,42 @@ export function ColoursTab({
                             </Button>
                           </div>
                         )}
-                        <div className="grid grid-cols-2 gap-4">
-                          {OVERRIDE_KEYS.map(({ key, label, description }) => {
-                            const currentValue = overrides[key] || "";
-                            return (
-                              <div key={key} className="relative">
-                                <ColorPicker
-                                  label={label}
-                                  description={description}
-                                  value={currentValue || "#000000"}
-                                  onChange={(v) =>
-                                    setSectionOverride(section.id, key, v)
-                                  }
-                                />
-                                {currentValue && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-0 right-0 h-6 w-6"
-                                    onClick={() =>
-                                      clearSectionOverride(section.id, key)
-                                    }
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                )}
+                        <div className="space-y-4">
+                          {OVERRIDE_GROUPS.map((group) => (
+                            <div key={group.heading}>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{group.heading}</p>
+                              <div className="grid grid-cols-2 gap-4">
+                                {group.keys.map(({ key, label, description }) => {
+                                  const currentValue = overrides[key] || "";
+                                  return (
+                                    <div key={key} className="relative">
+                                      <ColorPicker
+                                        label={label}
+                                        description={description}
+                                        value={currentValue || "#000000"}
+                                        onChange={(v) =>
+                                          setSectionOverride(section.id, key, v)
+                                        }
+                                      />
+                                      {currentValue && (
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="absolute top-0 right-0 h-6 w-6"
+                                          onClick={() =>
+                                            clearSectionOverride(section.id, key)
+                                          }
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            );
-                          })}
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </AccordionContent>

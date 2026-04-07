@@ -141,7 +141,7 @@ export function NavFull(props: SectionProps) {
           <a
             href={ctaHref}
             className="px-6 py-2 text-sm font-semibold text-white rounded-full transition-all hover:opacity-90"
-            style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
+            style={{ backgroundColor: 'hsl(var(--tenant-color-accent, var(--tenant-color-primary)))' }}
           >
             {ctaLabel}
           </a>
@@ -197,7 +197,7 @@ export function NavFull(props: SectionProps) {
             <a
               href={ctaHref}
               className="flex-1 text-center px-6 py-3 text-sm font-semibold text-white rounded-full"
-              style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
+              style={{ backgroundColor: 'hsl(var(--tenant-color-accent, var(--tenant-color-primary)))' }}
               onClick={() => setMobileOpen(false)}
             >
               {ctaLabel}
