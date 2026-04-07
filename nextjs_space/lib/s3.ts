@@ -12,6 +12,18 @@ import { createS3Client, getBucketConfig } from "./aws-config";
 import { promises as fs } from "fs";
 import path from "path";
 
+// Map MIME types to file extensions for files uploaded without an extension
+const mimeToExt: Record<string, string> = {
+  'video/mp4': '.mp4',
+  'video/webm': '.webm',
+  'video/quicktime': '.mov',
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+  'image/svg+xml': '.svg',
+};
+
 export async function uploadFile(
   buffer: Buffer,
   fileName: string,
@@ -19,7 +31,15 @@ export async function uploadFile(
 ): Promise<string> {
   const s3Client = await createS3Client();
   const { bucketName, folderPrefix } = await getBucketConfig();
-  const key = `${folderPrefix}uploads/${Date.now()}-${fileName}`;
+
+  // Ensure filename has an extension — critical for video/image content type inference on signed URLs
+  let finalName = fileName;
+  const hasExt = /\.\w+$/.test(fileName);
+  if (!hasExt && contentType && mimeToExt[contentType]) {
+    finalName = `${fileName}${mimeToExt[contentType]}`;
+  }
+
+  const key = `${folderPrefix}uploads/${Date.now()}-${finalName}`;
 
   await s3Client.send(
     new PutObjectCommand({
@@ -33,7 +53,7 @@ export async function uploadFile(
   return key; // Return the cloud_storage_path
 }
 
-export async function getFileUrl(key: string): Promise<string> {
+export async function getFileUrl(key: string, contentTypeHint?: string): Promise<string> {
   const s3Client = await createS3Client();
   const { bucketName } = await getBucketConfig();
 
@@ -45,7 +65,7 @@ export async function getFileUrl(key: string): Promise<string> {
     '.mov': 'video/quicktime',
   };
   const ext = key.match(/\.\w+$/)?.[0]?.toLowerCase() || '';
-  const responseContentType = videoTypes[ext];
+  const responseContentType = videoTypes[ext] || contentTypeHint || undefined;
 
   const command = new GetObjectCommand({
     Bucket: bucketName,
@@ -73,9 +93,9 @@ export async function fileExistsInS3(key: string): Promise<boolean> {
  * to an alternative path if the primary doesn't exist. Useful for tenant assets
  * that may live in the base template path rather than the tenant's clone path.
  */
-export async function getFileUrlWithFallback(primaryKey: string, fallbackKey: string): Promise<string> {
+export async function getFileUrlWithFallback(primaryKey: string, fallbackKey: string, contentTypeHint?: string): Promise<string> {
   const exists = await fileExistsInS3(primaryKey);
-  return exists ? await getFileUrl(primaryKey) : await getFileUrl(fallbackKey);
+  return exists ? await getFileUrl(primaryKey, contentTypeHint) : await getFileUrl(fallbackKey, contentTypeHint);
 }
 
 export async function deleteFile(key: string): Promise<void> {

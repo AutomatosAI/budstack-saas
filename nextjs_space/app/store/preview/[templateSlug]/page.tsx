@@ -135,9 +135,9 @@ export default async function TemplatePreviewPage({
     if (layout.sections) {
       const topKeys = ["imageUrl", "videoUrl", "watermarkUrl", "rightImageUrl"] as const;
 
-      function signAssetUrl(val: string): Promise<string> {
+      function signAssetUrl(val: string, contentTypeHint?: string): Promise<string> {
         const isAbsoluteKey = val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/');
-        return getFileUrl(isAbsoluteKey ? val : `${s3Prefix}/${val}`);
+        return getFileUrl(isAbsoluteKey ? val : `${s3Prefix}/${val}`, contentTypeHint);
       }
 
       const signingTasks: Array<{ target: any; key: string; promise: Promise<string> }> = [];
@@ -147,7 +147,9 @@ export default async function TemplatePreviewPage({
         for (const key of topKeys) {
           const val = section.config?.[key];
           if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
-            signingTasks.push({ target: section.config, key, promise: signAssetUrl(val) });
+            // For videoUrl keys without a file extension, hint the content type so the signed URL works
+            const hint = key === 'videoUrl' && !/\.\w+$/.test(val) ? 'video/mp4' : undefined;
+            signingTasks.push({ target: section.config, key, promise: signAssetUrl(val, hint) });
           }
         }
         // Nested arrays — sign any string value that looks like an S3 key

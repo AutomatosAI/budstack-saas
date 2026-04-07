@@ -153,18 +153,18 @@ export default async function TenantStorePage({
     if (layout?.sections && assetS3Path) {
       const assetKeys = ['imageUrl', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const;
 
-      function signAssetUrl(val: string): Promise<string> {
+      function signAssetUrl(val: string, contentTypeHint?: string): Promise<string> {
         // Uploaded files are stored as absolute S3 keys (e.g. "development/uploads/...")
         // rather than relative to the template path. Sign them directly.
         const isAbsoluteKey = val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/');
         if (isAbsoluteKey) {
-          return getFileUrl(val);
+          return getFileUrl(val, contentTypeHint);
         }
         const primaryKey = `${assetS3Path}/${val}`;
         const fallbackKey = `${baseS3Path}/${val}`;
         return needsFallback
           ? getFileUrlWithFallback(primaryKey, fallbackKey)
-          : getFileUrl(primaryKey);
+          : getFileUrl(primaryKey, contentTypeHint);
       }
 
       // Collect all signing tasks, then execute in parallel
@@ -173,7 +173,9 @@ export default async function TenantStorePage({
         for (const key of assetKeys) {
           const val = section.config?.[key];
           if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
-            signingTasks.push({ target: section.config, key, promise: signAssetUrl(val) });
+            // For videoUrl keys without a file extension, hint video/mp4 content type
+            const hint = key === 'videoUrl' && !/\.\w+$/.test(val) ? 'video/mp4' : undefined;
+            signingTasks.push({ target: section.config, key, promise: signAssetUrl(val, hint) });
           }
         }
         // Sign asset URLs inside nested arrays (e.g. categories[].imageUrl, logos[].src)
