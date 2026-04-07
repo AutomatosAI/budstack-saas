@@ -67,7 +67,10 @@ function matchOption(value: any, options: string[]): string | undefined {
   return options.includes(value) ? value : undefined;
 }
 
-const FONT_SIZES = ["small", "medium", "large"];
+// Convert legacy preset names to px values
+const FONT_SIZE_TO_PX: Record<string, string> = { small: "14", medium: "16", large: "18" };
+const HEADING_SIZE_TO_PX: Record<string, string> = { small: "30", medium: "36", large: "42", xlarge: "48" };
+
 const BUTTON_STYLES = ["rounded", "square", "pill"];
 const BORDER_RADII = ["none", "small", "medium", "large"];
 const SPACINGS = ["compact", "normal", "comfortable"];
@@ -162,12 +165,14 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
     headingFontFamily:
       resolveFontId(getVal(["typography", "fontFamily", "heading"], undefined)) ||
       settings.headingFontFamily || settings.fontFamily || "inter",
-    fontSize:
-      matchOption(getVal(["typography", "fontSize", "base"], undefined), FONT_SIZES) ||
-      settings.fontSize || "medium",
-    headingFontSize:
-      getVal(["typography", "fontSize", "heading"], undefined) ||
-      settings.headingFontSize || "medium",
+    fontSize: (() => {
+      const raw = getVal(["typography", "fontSize", "base"], undefined) || settings.fontSize || "medium";
+      return FONT_SIZE_TO_PX[raw] || (isNaN(Number(raw)) ? "16" : raw);
+    })(),
+    headingFontSize: (() => {
+      const raw = getVal(["typography", "fontSize", "heading"], undefined) || settings.headingFontSize || "medium";
+      return HEADING_SIZE_TO_PX[raw] || (isNaN(Number(raw)) ? "36" : raw);
+    })(),
     fontWeight: getVal(["typography", "fontWeight", "body"], undefined) || settings.fontWeight || "400",
     headingFontWeight: getVal(["typography", "fontWeight", "heading"], undefined) || settings.headingFontWeight || "700",
     letterSpacingPreset: getVal(["typography", "letterSpacing"], undefined) || settings.letterSpacingPreset || "normal",

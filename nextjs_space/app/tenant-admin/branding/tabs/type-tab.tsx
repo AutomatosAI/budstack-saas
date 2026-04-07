@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -98,37 +99,30 @@ export function TypeTab({ formData, setFormData }: TypeTabProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Body Font Size</Label>
-              <Select
+              <Label>Body Font Size (px)</Label>
+              <Input
+                type="number"
+                min={12}
+                max={24}
                 value={formData.fontSize}
-                onValueChange={(v) => update("fontSize", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="small">Small (14px)</SelectItem>
-                  <SelectItem value="medium">Medium (16px)</SelectItem>
-                  <SelectItem value="large">Large (18px)</SelectItem>
-                </SelectContent>
-              </Select>
+                onChange={(e) => update("fontSize", e.target.value)}
+                placeholder="16"
+                className="mt-1"
+              />
+              <span className="text-xs text-muted-foreground mt-1 block">12–24px (default 16)</span>
             </div>
             <div>
-              <Label>Heading Font Size</Label>
-              <Select
+              <Label>Heading Font Size (px)</Label>
+              <Input
+                type="number"
+                min={18}
+                max={72}
                 value={formData.headingFontSize}
-                onValueChange={(v) => update("headingFontSize", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="small">Small</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="large">Large</SelectItem>
-                  <SelectItem value="xlarge">Extra Large</SelectItem>
-                </SelectContent>
-              </Select>
+                onChange={(e) => update("headingFontSize", e.target.value)}
+                placeholder="36"
+                className="mt-1"
+              />
+              <span className="text-xs text-muted-foreground mt-1 block">18–72px — h1 base size (default 36)</span>
             </div>
           </div>
         </CardContent>

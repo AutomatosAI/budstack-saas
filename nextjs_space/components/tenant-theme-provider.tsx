@@ -368,30 +368,21 @@ function applyThemeToContainer(
       letterSpacingMap[dsLetterSpacing] || letterSpacingMap[settings.letterSpacingPreset || "normal"] || "0",
     );
 
-    // Font size scale — designSystem.typography.fontSize.base OR settings.fontSize
-    const fontSizeMap: Record<string, string> = {
-      small: "0.875rem",
-      medium: "1rem",
-      large: "1.125rem",
-    };
+    // Font size — accepts px number (e.g. "16") or legacy preset (small/medium/large)
+    const fontSizePresetMap: Record<string, string> = { small: "14", medium: "16", large: "18" };
     const dsFontSize = designSystem.typography?.fontSize?.base;
-    root.style.setProperty(
-      "--tenant-font-size-base",
-      fontSizeMap[dsFontSize] || fontSizeMap[settings.fontSize || "medium"] || "1rem",
-    );
+    const rawBodySize = dsFontSize || settings.fontSize || "16";
+    const bodyPx = fontSizePresetMap[rawBodySize] || (isNaN(Number(rawBodySize)) ? "16" : rawBodySize);
+    root.style.setProperty("--tenant-font-size-base", `${bodyPx}px`);
 
-    // Heading font size scale — separate from body
-    const headingFontSizeMap: Record<string, string> = {
-      small: "0.85",
-      medium: "1",
-      large: "1.15",
-      xlarge: "1.3",
-    };
+    // Heading font size — accepts px number (e.g. "36") or legacy preset
+    const headingPresetMap: Record<string, string> = { small: "30", medium: "36", large: "42", xlarge: "48" };
     const dsHeadingFontSize = designSystem.typography?.fontSize?.heading;
-    root.style.setProperty(
-      "--tenant-heading-scale",
-      headingFontSizeMap[dsHeadingFontSize] || headingFontSizeMap[settings.headingFontSize || "medium"] || "1",
-    );
+    const rawHeadingSize = dsHeadingFontSize || settings.headingFontSize || "36";
+    const headingPx = headingPresetMap[rawHeadingSize] || (isNaN(Number(rawHeadingSize)) ? "36" : rawHeadingSize);
+    // Compute scale relative to default h1 (36px) for proportional h1–h6 sizing
+    const headingScale = Number(headingPx) / 36;
+    root.style.setProperty("--tenant-heading-scale", String(headingScale));
 
     // === BORDER RADIUS ===
     const borderRadiusMap: Record<string, string> = {

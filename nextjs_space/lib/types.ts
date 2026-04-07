@@ -48,8 +48,8 @@ export interface TenantSettings {
   // === TYPOGRAPHY ===
   fontFamily?: string;
   headingFontFamily?: string;
-  fontSize?: "small" | "medium" | "large";
-  headingFontSize?: "small" | "medium" | "large" | "xlarge";
+  fontSize?: string; // px value (e.g. "16") or legacy preset
+  headingFontSize?: string; // px value (e.g. "36") or legacy preset
   fontWeight?: string;
   headingFontWeight?: string;
   letterSpacingPreset?: "tight" | "normal" | "wide" | "wider";
