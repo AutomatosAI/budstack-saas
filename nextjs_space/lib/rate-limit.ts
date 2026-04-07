@@ -90,14 +90,10 @@ export async function checkRateLimit(
       };
     }
   } catch (error) {
-    console.error('[RateLimit] Redis unavailable — blocking request for safety:', error);
-    return {
-      success: false,
-      response: NextResponse.json(
-        { error: 'Service temporarily unavailable', message: 'Rate limiting service is down. Please try again shortly.' },
-        { status: 503, headers: { 'Retry-After': '30' } },
-      ),
-    };
+    // Fail-open: allow the request through when Redis is unavailable.
+    // Blocking legitimate users is worse than temporarily losing rate limiting.
+    console.warn('[RateLimit] Redis unavailable — allowing request through (fail-open):', error instanceof Error ? error.message : error);
+    return { success: true };
   }
 
   return { success: true };
