@@ -362,8 +362,12 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
 
       const res = await fetch(apiEndpoint || `/api/tenant-admin/branding`, { method: "POST", body: formDataToSend });
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to update branding");
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Failed to update branding");
+        }
+        throw new Error(`Server error (${res.status}). Check deploy logs.`);
       }
 
       toast.success("Branding updated successfully! Changes applied to all pages.");

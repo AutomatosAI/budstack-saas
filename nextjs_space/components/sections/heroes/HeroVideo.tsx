@@ -19,26 +19,21 @@ export function HeroVideo({
   const subtitle = sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Elevated Experience';
   const ctaText = sectionConfig?.ctaText || 'Book Consultation';
   const videoUrl = sectionConfig?.videoUrl;
-  const textAlign = sectionConfig?.textAlign || 'center';
   const watermarkUrl = sectionConfig?.watermarkUrl;
 
-  // Resolve hero type and overlay settings
-  // Priority: sectionConfig (template-level) > auto-detect (videoUrl) > tenant settings > fallback
-  // This ensures templates with a videoUrl actually play video, even if the tenant's
-  // branding settings have heroType defaulted to "gradient-image".
+  // Resolve hero type — sectionConfig wins, then auto-detect from videoUrl, then legacy fallbacks
   const settings = (tenant.settings as any) || {};
   const heroType = sectionConfig?.heroType || (videoUrl ? 'video' : null) || settings.heroType || 'gradient-image';
-  const overlayOpacity = settings.heroOverlayOpacity || sectionConfig?.overlayOpacity || 0.55;
 
-  // Text alignment — from tenant settings or layout.json sectionConfig
-  const heroAlignment = pageContent?.home?.heroAlignment || sectionConfig?.textAlign || 'left';
+  // Text alignment — sectionConfig wins over legacy pageContent
+  const heroAlignment = sectionConfig?.textAlign || pageContent?.home?.heroAlignment || 'center';
   const isLeft = heroAlignment === 'left';
   const isRight = heroAlignment === 'right';
   const isCenter = heroAlignment === 'center' || (!isLeft && !isRight);
 
-  // Advanced configurations from tenant settings
+  // Overlay — sectionConfig wins over legacy pageContent/settings
+  const heroOverlayOpacity = sectionConfig?.overlayOpacity ?? pageContent?.home?.heroOverlayOpacity ?? 55;
   const heroOverlayStyle = pageContent?.home?.heroOverlayStyle || 'gradient-dark';
-  const heroOverlayOpacity = pageContent?.home?.heroOverlayOpacity ?? 55;
   const heroHeight = sectionConfig?.heroHeight || pageContent?.home?.heroHeight || 'large';
 
   // Logo placement
@@ -77,11 +72,10 @@ export function HeroVideo({
           muted
           loop
           playsInline
+          src={videoUrl}
           className="absolute inset-0 w-full h-full object-cover z-0"
           poster={heroImageUrl || undefined}
-        >
-          <source src={videoUrl} type="video/mp4" />
-        </video>
+        />
       ) : (heroType === 'image' || heroType === 'gradient-image') && heroImageUrl ? (
         <div className="absolute inset-0 z-0">
           <Image src={heroImageUrl} alt="Hero Background" fill className="object-cover" priority />
