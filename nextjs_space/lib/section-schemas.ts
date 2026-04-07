@@ -5,7 +5,7 @@
  * Drives the Store Editor form rendering and section type migration.
  */
 
-export type FieldType = 'text' | 'textarea' | 'image' | 'url' | 'select' | 'number' | 'array';
+export type FieldType = 'text' | 'textarea' | 'image' | 'video' | 'url' | 'select' | 'number' | 'array';
 
 /** Shape of a single sub-field inside an array item (e.g. title, description inside a feature) */
 export interface ArrayItemField {
@@ -32,7 +32,7 @@ export interface FieldSchema {
 
 export interface SectionSchema {
   label: string;
-  category: 'hero' | 'cta' | 'content';
+  category: 'hero' | 'cta' | 'content' | 'navigation' | 'footer';
   description: string;
   fields: FieldSchema[];
 }
@@ -78,7 +78,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'title', label: 'Title', type: 'text', default: 'Watch This' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Your tagline here' },
       { key: 'ctaText', label: 'CTA Button Text', type: 'text', default: 'Learn More' },
-      { key: 'videoUrl', label: 'Video URL', type: 'url', default: '' },
+      { key: 'videoUrl', label: 'Video', type: 'video', default: '' },
       { key: 'imageUrl', label: 'Fallback Image', type: 'image', default: '' },
       { key: 'watermarkUrl', label: 'Watermark Image', type: 'image', default: '' },
       { key: 'textAlign', label: 'Text Alignment', type: 'select', default: 'center', options: ['left', 'center', 'right'] },
@@ -641,6 +641,70 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     ],
   },
 };
+
+// ─── Navigation & Footer Schemas (separate from section schemas) ──
+
+export const NAV_STYLES: { type: string; label: string; description: string }[] = [
+  { type: 'NavMinimal', label: 'Minimal', description: 'Clean, flat navigation bar' },
+  { type: 'NavDark', label: 'Dark Glass', description: 'Premium floating glassmorphic bar' },
+  { type: 'NavTransparent', label: 'Transparent', description: 'Fades in on scroll, hero-friendly' },
+  { type: 'NavFull', label: 'Full', description: 'Standard sticky with cart icon' },
+  { type: 'NavHealingBuds', label: 'Full Featured', description: 'Auth, KYC badge, cart & user menu' },
+];
+
+export const FOOTER_STYLES: { type: string; label: string; description: string }[] = [
+  { type: 'FooterSimple', label: 'Simple', description: 'Minimal one-line copyright + links' },
+  { type: 'FooterBrand', label: 'Brand', description: 'Premium dark with columns & contact' },
+  { type: 'FooterFull', label: 'Full', description: 'Comprehensive multi-column layout' },
+];
+
+export const DEFAULT_NAV_LINKS = [
+  { label: 'About Us', href: '/about' },
+  { label: 'Research', href: '/conditions' },
+  { label: 'The Wire', href: '/the-wire' },
+  { label: 'Eligibility', href: '/consultation' },
+  { label: 'Strains', href: '/products' },
+  { label: 'Support', href: '/support' },
+];
+
+export const DEFAULT_FOOTER_SECTIONS = [
+  {
+    title: 'Company',
+    links: [
+      { label: 'About Us', href: '/about' },
+      { label: 'Products', href: '/products' },
+      { label: 'The Wire', href: '/the-wire' },
+      { label: 'Contact', href: '/contact' },
+    ],
+  },
+  {
+    title: 'Resources',
+    links: [
+      { label: 'Patient Access', href: '/consultation' },
+      { label: 'Conditions', href: '/conditions' },
+      { label: 'FAQ', href: '/faq' },
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      { label: 'Privacy Policy', href: '/privacy' },
+      { label: 'Terms of Service', href: '/terms' },
+      { label: 'Regulatory', href: '/regulatory' },
+    ],
+  },
+];
+
+export const SOCIAL_PLATFORMS = [
+  'facebook', 'instagram', 'x', 'tiktok', 'youtube', 'linkedin', 'pinterest', 'snapchat',
+] as const;
+
+export type SocialPlatform = typeof SOCIAL_PLATFORMS[number];
+
+export interface SocialLink {
+  platform: SocialPlatform;
+  url: string;
+}
 
 // ─── Helper Functions ────────────────────────────────────────
 

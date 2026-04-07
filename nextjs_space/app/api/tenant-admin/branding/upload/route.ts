@@ -23,7 +23,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const validation = validateUpload(file);
+    const allowVideos = req.nextUrl.searchParams.get("type") === "video";
+    const validation = validateUpload(file, { allowVideos });
     if (!validation.valid) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }

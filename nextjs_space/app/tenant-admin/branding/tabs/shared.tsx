@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, Video } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
 export const FONTS = [
@@ -87,6 +87,82 @@ export function FileUpload({
           )}
         </label>
       </div>
+    </div>
+  );
+}
+
+export function SectionVideoUploader({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/tenant-admin/branding/upload?type=video", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Upload failed");
+      }
+
+      const data = await res.json();
+      if (data.url) onChange(data.url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload video");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="mt-1 space-y-2">
+      <div className="flex gap-2 items-center">
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Upload or paste video URL..."
+          className="flex-1"
+        />
+        <div className="relative border rounded-md p-1.5 flex h-10 w-10 items-center justify-center bg-muted/50 hover:bg-muted cursor-pointer shrink-0 transition-colors">
+          <input
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onChange={handleUpload}
+            disabled={isUploading}
+          />
+          {isUploading ? (
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          ) : (
+            <Video className="w-4 h-4 text-muted-foreground" />
+          )}
+        </div>
+      </div>
+      {value && (
+        <video
+          src={value}
+          controls
+          muted
+          className="w-full max-h-32 rounded-md border object-cover"
+        />
+      )}
+      <p className="text-xs text-muted-foreground">
+        MP4, WebM, or MOV — max 100MB
+      </p>
     </div>
   );
 }

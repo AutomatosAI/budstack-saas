@@ -176,6 +176,8 @@ export async function PUT(req: NextRequest) {
       const hasLayoutSections = Array.isArray(incomingSettings.layoutSections) && incomingSettings.layoutSections.length > 0;
       const hasSectionConfigs = incomingSettings.sectionConfigs && Object.keys(incomingSettings.sectionConfigs).length > 0;
       const hasSectionColorOverrides = incomingSettings.sectionColorOverrides && Object.keys(incomingSettings.sectionColorOverrides).length > 0;
+      const hasNavFooterConfig = !!incomingSettings.navigationStyle || !!incomingSettings.navigationConfig
+        || !!incomingSettings.footerStyle || !!incomingSettings.footerConfig;
 
       console.log("[branding] Layout debug:", {
         hasLayoutSections,
@@ -183,10 +185,11 @@ export async function PUT(req: NextRequest) {
         hasSectionConfigs,
         sectionConfigKeys: incomingSettings.sectionConfigs ? Object.keys(incomingSettings.sectionConfigs).length : 0,
         hasSectionColorOverrides,
+        hasNavFooterConfig,
         s3Path: currentTemplate?.s3Path || "MISSING",
       });
 
-      if (hasLayoutSections || hasSectionConfigs || hasSectionColorOverrides) {
+      if (hasLayoutSections || hasSectionConfigs || hasSectionColorOverrides || hasNavFooterConfig) {
         // Read existing layout from S3 so we preserve navigation, footer, settings keys
         let baseLayout: any = {};
         const existingS3Path = currentTemplate?.s3Path
@@ -270,8 +273,10 @@ export async function PUT(req: NextRequest) {
 
         const finalLayout = {
           ...baseLayout,
-          navigation: baseLayout.navigation || "NavDark",
-          footer: baseLayout.footer || "FooterSimple",
+          navigation: incomingSettings.navigationStyle || baseLayout.navigation || "NavDark",
+          navigationConfig: incomingSettings.navigationConfig || baseLayout.navigationConfig || undefined,
+          footer: incomingSettings.footerStyle || baseLayout.footer || "FooterSimple",
+          footerConfig: incomingSettings.footerConfig || baseLayout.footerConfig || undefined,
           sections: updatedSections,
         };
 

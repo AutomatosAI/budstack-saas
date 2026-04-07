@@ -3,6 +3,7 @@
 import React from 'react';
 import { SectionProps } from '@/lib/types/section-props';
 import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
+import { SocialIcons } from './social-icons';
 
 export function FooterSimple(props: SectionProps) {
   const { tenant, footer, sectionConfig, contactUrl } = props;
@@ -19,6 +20,7 @@ export function FooterSimple(props: SectionProps) {
   const prefixHref = (href: string) => prefixTenantHref(href, basePath);
   const rawLinks = sectionConfig?.links || footer?.links || defaultLinks;
   const links = rawLinks.map((l: any) => ({ ...l, href: prefixHref(l.href) }));
+  const socialLinks = sectionConfig?.socialLinks || footer?.socialLinks || [];
 
   const year = new Date().getFullYear();
 
@@ -45,6 +47,7 @@ export function FooterSimple(props: SectionProps) {
               {link.label}
             </a>
           ))}
+          <SocialIcons links={socialLinks} />
         </div>
       </div>
     </footer>

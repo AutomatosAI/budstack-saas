@@ -210,7 +210,7 @@ export default async function TenantStoreLayout({
     if (layout?.navigation) {
       const NavComponent = getSectionComponent(layout.navigation);
       if (NavComponent) {
-        return <NavComponent {...sectionProps} />;
+        return <NavComponent {...sectionProps} sectionConfig={layout.navigationConfig} />;
       }
     }
 
@@ -239,7 +239,7 @@ export default async function TenantStoreLayout({
     if (layout?.footer) {
       const FooterComponent = getSectionComponent(layout.footer);
       if (FooterComponent) {
-        return <FooterComponent {...sectionProps} />;
+        return <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig} />;
       }
     }
 

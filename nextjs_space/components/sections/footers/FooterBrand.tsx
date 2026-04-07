@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Leaf, MapPin, Mail } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
 import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
+import { SocialIcons } from './social-icons';
 
 interface FooterSection {
   title: string;
@@ -69,6 +70,7 @@ export function FooterBrand(props: SectionProps) {
     links: s.links.map((l) => ({ ...l, href: prefixHref(l.href) })),
   }));
   const disclaimer = sectionConfig?.disclaimer || footer?.disclaimer || '';
+  const socialLinks = sectionConfig?.socialLinks || footer?.socialLinks || [];
 
   const showFooterLogo = props.pageContent?.logoPlacement?.footerShowLogo ?? true;
   const year = new Date().getFullYear();
@@ -115,6 +117,8 @@ export function FooterBrand(props: SectionProps) {
                 </a>
               </div>
             )}
+
+            <SocialIcons links={socialLinks} className="mt-4" />
           </div>
 
           {/* Link Columns */}

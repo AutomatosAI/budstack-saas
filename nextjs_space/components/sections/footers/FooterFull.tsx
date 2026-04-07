@@ -4,6 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
 import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
+import { SocialIcons } from './social-icons';
 
 interface FooterSection {
   title: string;
@@ -53,6 +54,7 @@ export function FooterFull(props: SectionProps) {
     links: s.links.map((l) => ({ ...l, href: prefixHref(l.href) })),
   }));
   const disclaimer = sectionConfig?.disclaimer || footer?.disclaimer || 'Medical cannabis should only be used under the guidance of a licensed healthcare professional.';
+  const socialLinks = sectionConfig?.socialLinks || footer?.socialLinks || [];
 
   const year = new Date().getFullYear();
 
@@ -82,6 +84,7 @@ export function FooterFull(props: SectionProps) {
               </span>
             </div>
             <p className="text-white/70 text-sm leading-relaxed max-w-sm">{tagline}</p>
+            <SocialIcons links={socialLinks} className="mt-4" />
           </div>
 
           {/* Link Columns */}

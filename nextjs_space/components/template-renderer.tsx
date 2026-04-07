@@ -120,7 +120,7 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
       {sectionColorCss && (
         <style dangerouslySetInnerHTML={{ __html: sanitizeCss(sectionColorCss) || '' }} />
       )}
-      {NavComponent && <NavComponent {...sectionProps} />}
+      {NavComponent && <NavComponent {...sectionProps} sectionConfig={layout.navigationConfig || sectionProps.sectionConfig} />}
       {layout.sections
         .filter(s => s.visible !== false)
         .map((section, i, arr) => {
@@ -219,7 +219,7 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
 
           return wrapper;
         })}
-      {FooterComponent && <FooterComponent {...sectionProps} />}
+      {FooterComponent && <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig || sectionProps.sectionConfig} />}
     </div>
   );
 }

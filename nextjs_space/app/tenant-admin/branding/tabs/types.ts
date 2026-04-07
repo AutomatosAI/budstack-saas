@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
+import type { SocialLink } from "@/lib/section-schemas";
 
 export interface LogoPlacement {
   // Navigation
@@ -59,8 +60,23 @@ export interface EditorFormData {
   dividerStyle: string;
   buttonHoverEffect: string;
 
-  // Hero
-  heroType: string;
+  // Navigation & Footer
+  navigationStyle: string;
+  navigationConfig: {
+    links: { label: string; href: string }[];
+    cta: { label: string; href: string };
+    cta2?: { label: string; href: string };
+    showCart: boolean;
+  };
+  footerStyle: string;
+  footerConfig: {
+    tagline: string;
+    sections: { title: string; links: { label: string; href: string }[] }[];
+    socialLinks: SocialLink[];
+    disclaimer: string;
+    address: string;
+    email: string;
+  };
 
   // Interactive
   educationHotspots: any[];

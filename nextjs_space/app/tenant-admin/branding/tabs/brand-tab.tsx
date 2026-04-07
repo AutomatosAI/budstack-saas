@@ -12,13 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   AlignLeft,
@@ -33,10 +26,8 @@ interface BrandTabProps {
   formData: EditorFormData;
   setFormData: SetFormData;
   logo: File | null;
-  heroImage: File | null;
   favicon: File | null;
-  onFileChange: (file: File | null, type: "logo" | "heroImage" | "favicon") => void;
-  heroImageUrl?: string | null;
+  onFileChange: (file: File | null, type: "logo" | "favicon") => void;
   logoUrl?: string | null;
 }
 
@@ -77,10 +68,8 @@ export function BrandTab({
   formData,
   setFormData,
   logo,
-  heroImage,
   favicon,
   onFileChange,
-  heroImageUrl,
   logoUrl,
 }: BrandTabProps) {
   const lp = formData.logoPlacement;
@@ -130,7 +119,6 @@ export function BrandTab({
   );
 
   // Resolve preview image URL
-  const previewHeroUrl = heroImage ? URL.createObjectURL(heroImage) : heroImageUrl;
   const previewLogoUrl = logo ? URL.createObjectURL(logo) : logoUrl;
 
   // Hero logo size mapping (px)
@@ -175,7 +163,7 @@ export function BrandTab({
         <CardHeader>
           <CardTitle>Brand Images</CardTitle>
           <CardDescription>
-            Upload your logo, hero image, and favicon
+            Upload your logo and favicon
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -186,36 +174,6 @@ export function BrandTab({
             onChange={(file) => onFileChange(file, "logo")}
             file={logo}
           />
-
-          <div>
-            <Label>Hero Section Type</Label>
-            <Select
-              value={formData.heroType}
-              onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, heroType: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gradient">Gradient Background</SelectItem>
-                <SelectItem value="gradient-image">Gradient Image Background</SelectItem>
-                <SelectItem value="image">Image Background</SelectItem>
-                <SelectItem value="video">Video Background</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {(formData.heroType === "image" || formData.heroType === "gradient-image") && (
-            <FileUpload
-              label="Hero Image"
-              description="Recommended: 1920x1080px, JPG/PNG"
-              accept="image/*"
-              onChange={(file) => onFileChange(file, "heroImage")}
-              file={heroImage}
-            />
-          )}
 
           <FileUpload
             label="Favicon"
@@ -336,9 +294,7 @@ export function BrandTab({
                     onMouseDown={handleMouseDown}
                     className="relative w-full aspect-[16/9] rounded-lg overflow-hidden border-2 border-dashed border-muted-foreground/30 cursor-crosshair select-none"
                     style={{
-                      background: previewHeroUrl
-                        ? `url(${previewHeroUrl}) center/cover`
-                        : "linear-gradient(135deg, hsl(var(--primary)/0.2), hsl(var(--muted)))",
+                      background: "linear-gradient(135deg, hsl(var(--primary)/0.2), hsl(var(--muted)))",
                     }}
                   >
                     {/* Overlay for contrast */}

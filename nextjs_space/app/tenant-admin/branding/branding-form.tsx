@@ -36,6 +36,7 @@ import { TypeTab } from "./tabs/type-tab";
 import { EducationTab } from "./tabs/education-tab";
 import { AdvancedTab } from "./tabs/advanced-tab";
 import type { EditorFormData } from "./tabs/types";
+import { DEFAULT_NAV_LINKS, DEFAULT_FOOTER_SECTIONS } from "@/lib/section-schemas";
 
 // --- Constants ---
 
@@ -94,7 +95,6 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [logo, setLogo] = useState<File | null>(null);
-  const [heroImage, setHeroImage] = useState<File | null>(null);
   const [favicon, setFavicon] = useState<File | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [dirtyColors, setDirtyColors] = useState<Set<string>>(new Set());
@@ -185,7 +185,44 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
     animationType: getVal(["animationType"], undefined) || settings.animationType || "none",
     dividerStyle: getVal(["dividerStyle"], undefined) || settings.dividerStyle || "none",
     buttonHoverEffect: getVal(["buttonHoverEffect"], undefined) || (settings as any).buttonHoverEffect || "none",
-    heroType: settings.heroType || "gradient-image",
+
+    // Navigation & Footer — read from layout.json data on template
+    navigationStyle: (activeTemplate as any)?.layout?.navigation || "NavDark",
+    navigationConfig: {
+      links: (activeTemplate as any)?.layout?.navigationConfig?.links
+        || (activeTemplate?.navigation as any)?.links
+        || DEFAULT_NAV_LINKS,
+      cta: (activeTemplate as any)?.layout?.navigationConfig?.cta
+        || (activeTemplate?.navigation as any)?.cta
+        || { label: "Check Eligibility", href: "/consultation" },
+      cta2: (activeTemplate as any)?.layout?.navigationConfig?.cta2
+        || (activeTemplate?.navigation as any)?.cta2
+        || undefined,
+      showCart: (activeTemplate as any)?.layout?.navigationConfig?.showCart
+        ?? (activeTemplate?.navigation as any)?.showCart
+        ?? true,
+    },
+    footerStyle: (activeTemplate as any)?.layout?.footer || "FooterBrand",
+    footerConfig: {
+      tagline: (activeTemplate as any)?.layout?.footerConfig?.tagline
+        || (activeTemplate?.footer as any)?.tagline
+        || "",
+      sections: (activeTemplate as any)?.layout?.footerConfig?.sections
+        || (activeTemplate?.footer as any)?.sections
+        || DEFAULT_FOOTER_SECTIONS,
+      socialLinks: (activeTemplate as any)?.layout?.footerConfig?.socialLinks
+        || (activeTemplate?.footer as any)?.socialLinks
+        || [],
+      disclaimer: (activeTemplate as any)?.layout?.footerConfig?.disclaimer
+        || (activeTemplate?.footer as any)?.disclaimer
+        || "",
+      address: (activeTemplate as any)?.layout?.footerConfig?.address
+        || (activeTemplate?.footer as any)?.address
+        || "",
+      email: (activeTemplate as any)?.layout?.footerConfig?.email
+        || (activeTemplate?.footer as any)?.email
+        || "",
+    },
 
     educationHotspots: settingsContent.educationHotspots || [],
 
@@ -318,7 +355,6 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
       }));
 
       if (logo) formDataToSend.append("logo", logo);
-      if (heroImage) formDataToSend.append("heroImage", heroImage);
       if (favicon) formDataToSend.append("favicon", favicon);
 
       const res = await fetch(apiEndpoint || `/api/tenant-admin/branding`, { method: "POST", body: formDataToSend });
@@ -338,9 +374,8 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
     }
   };
 
-  const handleFileChange = (file: File | null, type: "logo" | "heroImage" | "favicon") => {
+  const handleFileChange = (file: File | null, type: "logo" | "favicon") => {
     if (type === "logo") setLogo(file);
-    if (type === "heroImage") setHeroImage(file);
     if (type === "favicon") setFavicon(file);
   };
 
@@ -419,9 +454,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
     productsUrl: "#",
     contactUrl: "#",
     aboutUrl: "#",
-    heroImageUrl: heroImage
-      ? URL.createObjectURL(heroImage)
-      : ((activeTemplate as any)?.layout?.defaults?.heroImagePath)
+    heroImageUrl: ((activeTemplate as any)?.layout?.defaults?.heroImagePath)
       || ((activeTemplate as any)?.signedHeroImageUrl)
       || undefined,
     logoUrl: logo
@@ -432,8 +465,8 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
     designSystem: liveDesignSystem,
     pageContent: livePageContent,
     customCss: formData.customCSS,
-    navigation: "NavDark",
-    footer: "FooterBrand",
+    navigation: formData.navigationConfig,
+    footer: formData.footerConfig,
     valueProps: ((activeTemplate?.pageContent as any)?.valueProps) || [],
   };
 
@@ -441,8 +474,10 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
   const liveLayout = (activeTemplate as any)?.layout
     ? {
       ...((activeTemplate as any).layout as any),
-      navigation: ((activeTemplate as any).layout as any).navigation || "NavDark",
-      footer: ((activeTemplate as any).layout as any).footer || "FooterSimple",
+      navigation: formData.navigationStyle,
+      navigationConfig: formData.navigationConfig,
+      footer: formData.footerStyle,
+      footerConfig: formData.footerConfig,
       sections: formData.layoutSections.map((section: any) => {
         const mergedConfig = formData.sectionConfigs[section.id]
           ? { ...section.config, ...formData.sectionConfigs[section.id] }
@@ -532,10 +567,8 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 formData={formData}
                 setFormData={setFormData}
                 logo={logo}
-                heroImage={heroImage}
                 favicon={favicon}
                 onFileChange={handleFileChange}
-                heroImageUrl={((activeTemplate as any)?.layout?.defaults?.heroImagePath) || ((activeTemplate as any)?.signedHeroImageUrl) || undefined}
                 logoUrl={((activeTemplate as any)?.layout?.defaults?.logoPath) || ((activeTemplate as any)?.signedLogoUrl) || undefined}
               />
             </TabsContent>

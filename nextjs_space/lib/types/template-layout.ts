@@ -20,8 +20,10 @@ export interface LayoutSection {
 export interface TemplateLayout {
   version: string;
   navigation: string;
+  navigationConfig?: Record<string, any>;
   sections: LayoutSection[];
   footer: string;
+  footerConfig?: Record<string, any>;
   settings?: {
     wrapperClass?: string;
     googleFontsUrl?: string;

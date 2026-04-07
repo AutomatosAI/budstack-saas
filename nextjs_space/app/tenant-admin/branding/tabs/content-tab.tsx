@@ -24,7 +24,7 @@ import {
   migrateSectionConfig,
 } from "@/lib/section-schemas";
 import type { FieldSchema, ArrayItemField } from "@/lib/section-schemas";
-import { SectionImageUploader } from "./shared";
+import { SectionImageUploader, SectionVideoUploader } from "./shared";
 import type { EditorFormData, SetFormData } from "./types";
 
 interface ContentTabProps {
@@ -372,7 +372,12 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
                     <div key={`${section.id}-${field.key}`}>
                       <Label>{field.label}</Label>
 
-                      {field.type === "image" ? (
+                      {field.type === "video" ? (
+                        <SectionVideoUploader
+                          value={String(fieldValue || "")}
+                          onChange={(url) => updateField(field.key, url)}
+                        />
+                      ) : field.type === "image" ? (
                         <SectionImageUploader
                           value={String(fieldValue || "")}
                           onChange={(url) => updateField(field.key, url)}
