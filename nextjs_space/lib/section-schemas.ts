@@ -640,6 +640,42 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'overlayStyle', label: 'Overlay Style', type: 'select', default: 'gradient', options: ['gradient', 'solid', 'none'] },
     ],
   },
+  TextMarquee: {
+    label: 'Text Marquee',
+    category: 'content',
+    description: 'Scrolling text banner with optional icon separator',
+    fields: [
+      { key: 'text', label: 'Marquee Text', type: 'text', default: 'Premium wellness products crafted with care' },
+      { key: 'icon', label: 'Separator Icon', type: 'select', default: 'leaf', options: ['leaf', 'cannabis', 'droplet', 'sparkle'] },
+      { key: 'logoUrl', label: 'Separator Image', type: 'image', default: '' },
+      { key: 'speed', label: 'Scroll Speed', type: 'number', default: 40 },
+      { key: 'reverse', label: 'Reverse Direction', type: 'select', default: 'false', options: ['false', 'true'] },
+      { key: 'fontSize', label: 'Text Size', type: 'select', default: 'lg', options: ['sm', 'md', 'lg', 'xl'] },
+      { key: 'fontStyle', label: 'Font Style', type: 'select', default: 'italic-serif', options: ['serif', 'sans', 'italic-serif'] },
+      { key: 'repeat', label: 'Repeat Count', type: 'number', default: 4 },
+    ],
+  },
+  FeaturesShowcase: {
+    label: 'Features Showcase',
+    category: 'content',
+    description: 'Split layout with center image and feature cards on each side',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: '' },
+      { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
+      { key: 'imageUrl', label: 'Center Image', type: 'image', default: '' },
+      { key: 'imageAlt', label: 'Image Alt Text', type: 'text', default: 'Product showcase' },
+      { key: 'leftFeatures', label: 'Left Features', type: 'array', default: '', itemLabel: 'Feature', itemFields: [
+        { key: 'icon', label: 'Icon', type: 'select', default: 'leaf', options: ['leaf', 'cannabis', 'heart', 'shield', 'brain', 'sleep', 'pain', 'anxiety', 'appetite', 'muscle', 'blood-pressure', 'droplet', 'sun', 'flower', 'pill', 'dna'] },
+        { key: 'title', label: 'Title', type: 'text', default: 'Feature' },
+        { key: 'description', label: 'Description', type: 'textarea', default: '' },
+      ]},
+      { key: 'rightFeatures', label: 'Right Features', type: 'array', default: '', itemLabel: 'Feature', itemFields: [
+        { key: 'icon', label: 'Icon', type: 'select', default: 'leaf', options: ['leaf', 'cannabis', 'heart', 'shield', 'brain', 'sleep', 'pain', 'anxiety', 'appetite', 'muscle', 'blood-pressure', 'droplet', 'sun', 'flower', 'pill', 'dna'] },
+        { key: 'title', label: 'Title', type: 'text', default: 'Feature' },
+        { key: 'description', label: 'Description', type: 'textarea', default: '' },
+      ]},
+    ],
+  },
 };
 
 // ─── Navigation & Footer Schemas (separate from section schemas) ──
