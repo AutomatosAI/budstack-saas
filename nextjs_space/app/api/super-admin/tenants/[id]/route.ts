@@ -280,6 +280,13 @@ export async function DELETE(
       }
     }
 
+    // Null out activeTenantTemplateId first to break circular FK
+    // (tenants -> tenant_templates -> tenants cascade would deadlock otherwise)
+    await prisma.tenants.update({
+      where: { id: params.id },
+      data: { activeTenantTemplateId: null },
+    });
+
     // Delete tenant from DB (cascade handles related records)
     await prisma.tenants.delete({
       where: { id: params.id },
