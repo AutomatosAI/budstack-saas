@@ -12,10 +12,13 @@ const onboardingSchema = z.object({
   password: z.string().min(8).max(128),
   subdomain: z.string().min(2).max(30).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, "Invalid subdomain format"),
   nftTokenId: z.string().min(1).max(200),
-  contactInfo: z.object({
-    phone: z.string().max(20).optional(),
-    address: z.string().max(500).optional(),
-  }).optional(),
+  contactInfo: z.union([
+    z.string().max(1000),
+    z.object({
+      phone: z.string().max(20).optional(),
+      address: z.string().max(500).optional(),
+    }),
+  ]).optional(),
   countryCode: z.string().length(2).regex(/^[A-Z]{2}$/),
   templateId: z.string().max(100).optional(),
 });
