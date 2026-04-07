@@ -53,14 +53,8 @@ const TEMPLATES = [
   { id: "bold", name: "Bold", description: "Vibrant and eye-catching" },
 ];
 
-const FONTS = [
-  { id: "inter", name: "Inter", description: "Modern sans-serif" },
-  { id: "roboto", name: "Roboto", description: "Classic sans-serif" },
-  { id: "lato", name: "Lato", description: "Friendly sans-serif" },
-  { id: "montserrat", name: "Montserrat", description: "Geometric sans-serif" },
-  { id: "poppins", name: "Poppins", description: "Rounded sans-serif" },
-  { id: "playfair", name: "Playfair Display", description: "Elegant serif" },
-];
+// Import shared font list — single source of truth
+import { FONTS } from "@/app/tenant-admin/branding/tabs/shared";
 
 export default function PlatformBrandingForm({
   settings,
@@ -621,7 +615,7 @@ export default function PlatformBrandingForm({
                             {font.name}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            {font.description}
+                            {font.category}
                           </p>
                         </div>
                         {formData.fontFamily === font.id && (
@@ -656,7 +650,7 @@ export default function PlatformBrandingForm({
                             {font.name}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            {font.description}
+                            {font.category}
                           </p>
                         </div>
                         {formData.headingFontFamily === font.id && (

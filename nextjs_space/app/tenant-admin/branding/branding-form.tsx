@@ -165,6 +165,9 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
     fontSize:
       matchOption(getVal(["typography", "fontSize", "base"], undefined), FONT_SIZES) ||
       settings.fontSize || "medium",
+    headingFontSize:
+      getVal(["typography", "fontSize", "heading"], undefined) ||
+      settings.headingFontSize || "medium",
     fontWeight: getVal(["typography", "fontWeight", "body"], undefined) || settings.fontWeight || "400",
     headingFontWeight: getVal(["typography", "fontWeight", "heading"], undefined) || settings.headingFontWeight || "700",
     letterSpacingPreset: getVal(["typography", "letterSpacing"], undefined) || settings.letterSpacingPreset || "normal",
@@ -404,7 +407,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         base: formData.fontFamily || "inter",
         heading: formData.headingFontFamily || formData.fontFamily || "inter",
       },
-      fontSize: { base: formData.fontSize },
+      fontSize: { base: formData.fontSize, heading: formData.headingFontSize },
       fontWeight: { body: formData.fontWeight, heading: formData.headingFontWeight },
       letterSpacing: formData.letterSpacingPreset,
     },

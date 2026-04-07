@@ -46,6 +46,7 @@ export interface EditorFormData {
   fontFamily: string;
   headingFontFamily: string;
   fontSize: string;
+  headingFontSize: string;
   fontWeight: string;
   headingFontWeight: string;
   letterSpacingPreset: string;

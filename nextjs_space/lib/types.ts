@@ -46,21 +46,10 @@ export interface TenantSettings {
   headingColor?: string; // Heading text color
 
   // === TYPOGRAPHY ===
-  fontFamily?:
-  | "inter"
-  | "playfair"
-  | "roboto"
-  | "montserrat"
-  | "lato"
-  | "poppins";
-  headingFontFamily?:
-  | "inter"
-  | "playfair"
-  | "roboto"
-  | "montserrat"
-  | "lato"
-  | "poppins";
+  fontFamily?: string;
+  headingFontFamily?: string;
   fontSize?: "small" | "medium" | "large";
+  headingFontSize?: "small" | "medium" | "large" | "xlarge";
   fontWeight?: string;
   headingFontWeight?: string;
   letterSpacingPreset?: "tight" | "normal" | "wide" | "wider";

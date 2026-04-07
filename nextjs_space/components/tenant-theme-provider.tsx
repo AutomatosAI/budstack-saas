@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Tenant } from "@/types/client";
 import { TenantSettings } from "@/lib/types";
 import { sanitizeCss } from "@/lib/css-utils";
@@ -55,11 +55,40 @@ export function TenantThemeProvider({
   const hoverEffect = designSystem?.buttonHoverEffect || settings.buttonHoverEffect || "none";
   const glassEffectVal = designSystem?.glassEffect || settings.glassEffect || "none";
 
+  // Auto-generate Google Fonts URL from designSystem font IDs when no explicit URL is provided
+  const fontIdToGoogleName: Record<string, string> = {
+    inter: "Inter", roboto: "Roboto", lato: "Lato", montserrat: "Montserrat",
+    poppins: "Poppins", outfit: "Outfit", nunito: "Nunito",
+    "open-sans": "Open+Sans", raleway: "Raleway", "work-sans": "Work+Sans",
+    "dm-sans": "DM+Sans", "source-sans-3": "Source+Sans+3", manrope: "Manrope",
+    "space-grotesk": "Space+Grotesk", "plus-jakarta-sans": "Plus+Jakarta+Sans",
+    sora: "Sora", urbanist: "Urbanist", figtree: "Figtree",
+    playfair: "Playfair+Display", merriweather: "Merriweather", lora: "Lora",
+    "dm-serif-display": "DM+Serif+Display", "cormorant-garamond": "Cormorant+Garamond",
+    "libre-baskerville": "Libre+Baskerville", "eb-garamond": "EB+Garamond",
+    "crimson-text": "Crimson+Text", bitter: "Bitter",
+    oswald: "Oswald", "bebas-neue": "Bebas+Neue", antonio: "Antonio", righteous: "Righteous",
+  };
+  const autoFontsUrl = useMemo(() => {
+    if (googleFontsUrl) return null; // explicit URL takes precedence
+    const dsTypo = designSystem?.typography?.fontFamily;
+    const bodyId = dsTypo?.body || dsTypo?.base || (settings as any).fontFamily;
+    const headingId = dsTypo?.heading || (settings as any).headingFontFamily;
+    const ids = new Set<string>();
+    if (bodyId && fontIdToGoogleName[bodyId]) ids.add(bodyId);
+    if (headingId && headingId !== "same" && fontIdToGoogleName[headingId]) ids.add(headingId);
+    if (ids.size === 0) return null;
+    const families = Array.from(ids).map(
+      (id) => `family=${fontIdToGoogleName[id]}:wght@300;400;500;600;700;800`,
+    );
+    return `https://fonts.googleapis.com/css2?${families.join("&")}&display=swap`;
+  }, [googleFontsUrl, designSystem, settings]);
+
   return (
     <>
       {/* Load Google Fonts at runtime */}
-      {googleFontsUrl && (
-        <link href={googleFontsUrl} rel="stylesheet" />
+      {(googleFontsUrl || autoFontsUrl) && (
+        <link href={googleFontsUrl || autoFontsUrl!} rel="stylesheet" />
       )}
 
       {/* Scoped design system CSS — static rules that read CSS variables set by applyThemeToContainer.
@@ -108,6 +137,12 @@ const TENANT_SCOPED_CSS = `
   font-family: var(--tenant-font-heading);
   font-weight: var(--tenant-font-weight-heading);
 }
+.tenant-theme-container h1 { font-size: calc(2.25rem * var(--tenant-heading-scale, 1)); }
+.tenant-theme-container h2 { font-size: calc(1.875rem * var(--tenant-heading-scale, 1)); }
+.tenant-theme-container h3 { font-size: calc(1.5rem * var(--tenant-heading-scale, 1)); }
+.tenant-theme-container h4 { font-size: calc(1.25rem * var(--tenant-heading-scale, 1)); }
+.tenant-theme-container h5 { font-size: calc(1.125rem * var(--tenant-heading-scale, 1)); }
+.tenant-theme-container h6 { font-size: calc(1rem * var(--tenant-heading-scale, 1)); }
 
 /* === BUTTONS (CTA-style within sections) === */
 .tenant-theme-container section a[class*="rounded"],
@@ -249,14 +284,40 @@ function applyThemeToContainer(
 
     // === TYPOGRAPHY ===
     const fontMap: Record<string, string> = {
+      // Sans-serif
       inter: "'Inter', sans-serif",
-      playfair: "'Playfair Display', serif",
       roboto: "'Roboto', sans-serif",
-      montserrat: "'Montserrat', sans-serif",
       lato: "'Lato', sans-serif",
+      montserrat: "'Montserrat', sans-serif",
       poppins: "'Poppins', sans-serif",
       outfit: "'Outfit', sans-serif",
       nunito: "'Nunito', sans-serif",
+      "open-sans": "'Open Sans', sans-serif",
+      raleway: "'Raleway', sans-serif",
+      "work-sans": "'Work Sans', sans-serif",
+      "dm-sans": "'DM Sans', sans-serif",
+      "source-sans-3": "'Source Sans 3', sans-serif",
+      manrope: "'Manrope', sans-serif",
+      "space-grotesk": "'Space Grotesk', sans-serif",
+      "plus-jakarta-sans": "'Plus Jakarta Sans', sans-serif",
+      sora: "'Sora', sans-serif",
+      urbanist: "'Urbanist', sans-serif",
+      figtree: "'Figtree', sans-serif",
+      // Serif
+      playfair: "'Playfair Display', serif",
+      merriweather: "'Merriweather', serif",
+      lora: "'Lora', serif",
+      "dm-serif-display": "'DM Serif Display', serif",
+      "cormorant-garamond": "'Cormorant Garamond', serif",
+      "libre-baskerville": "'Libre Baskerville', serif",
+      "eb-garamond": "'EB Garamond', serif",
+      "crimson-text": "'Crimson Text', serif",
+      bitter: "'Bitter', serif",
+      // Display
+      oswald: "'Oswald', sans-serif",
+      "bebas-neue": "'Bebas Neue', sans-serif",
+      antonio: "'Antonio', sans-serif",
+      righteous: "'Righteous', sans-serif",
     };
 
     // === TYPOGRAPHY ===
@@ -317,6 +378,19 @@ function applyThemeToContainer(
     root.style.setProperty(
       "--tenant-font-size-base",
       fontSizeMap[dsFontSize] || fontSizeMap[settings.fontSize || "medium"] || "1rem",
+    );
+
+    // Heading font size scale — separate from body
+    const headingFontSizeMap: Record<string, string> = {
+      small: "0.85",
+      medium: "1",
+      large: "1.15",
+      xlarge: "1.3",
+    };
+    const dsHeadingFontSize = designSystem.typography?.fontSize?.heading;
+    root.style.setProperty(
+      "--tenant-heading-scale",
+      headingFontSizeMap[dsHeadingFontSize] || headingFontSizeMap[settings.headingFontSize || "medium"] || "1",
     );
 
     // === BORDER RADIUS ===

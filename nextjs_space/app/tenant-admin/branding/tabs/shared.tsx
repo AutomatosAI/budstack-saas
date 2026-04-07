@@ -7,14 +7,40 @@ import { Upload, Loader2, Video } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
 export const FONTS = [
-  { id: "inter", name: "Inter", description: "Modern sans-serif" },
-  { id: "roboto", name: "Roboto", description: "Classic sans-serif" },
-  { id: "lato", name: "Lato", description: "Friendly sans-serif" },
-  { id: "montserrat", name: "Montserrat", description: "Geometric sans-serif" },
-  { id: "poppins", name: "Poppins", description: "Rounded sans-serif" },
-  { id: "playfair", name: "Playfair Display", description: "Elegant serif" },
-  { id: "outfit", name: "Outfit", description: "Modern geometric sans-serif" },
-  { id: "nunito", name: "Nunito", description: "Rounded friendly sans-serif" },
+  // Sans-serif
+  { id: "inter", name: "Inter", category: "Sans-serif" },
+  { id: "roboto", name: "Roboto", category: "Sans-serif" },
+  { id: "lato", name: "Lato", category: "Sans-serif" },
+  { id: "montserrat", name: "Montserrat", category: "Sans-serif" },
+  { id: "poppins", name: "Poppins", category: "Sans-serif" },
+  { id: "outfit", name: "Outfit", category: "Sans-serif" },
+  { id: "nunito", name: "Nunito", category: "Sans-serif" },
+  { id: "open-sans", name: "Open Sans", category: "Sans-serif" },
+  { id: "raleway", name: "Raleway", category: "Sans-serif" },
+  { id: "work-sans", name: "Work Sans", category: "Sans-serif" },
+  { id: "dm-sans", name: "DM Sans", category: "Sans-serif" },
+  { id: "source-sans-3", name: "Source Sans 3", category: "Sans-serif" },
+  { id: "manrope", name: "Manrope", category: "Sans-serif" },
+  { id: "space-grotesk", name: "Space Grotesk", category: "Sans-serif" },
+  { id: "plus-jakarta-sans", name: "Plus Jakarta Sans", category: "Sans-serif" },
+  { id: "sora", name: "Sora", category: "Sans-serif" },
+  { id: "urbanist", name: "Urbanist", category: "Sans-serif" },
+  { id: "figtree", name: "Figtree", category: "Sans-serif" },
+  // Serif
+  { id: "playfair", name: "Playfair Display", category: "Serif" },
+  { id: "merriweather", name: "Merriweather", category: "Serif" },
+  { id: "lora", name: "Lora", category: "Serif" },
+  { id: "dm-serif-display", name: "DM Serif Display", category: "Serif" },
+  { id: "cormorant-garamond", name: "Cormorant Garamond", category: "Serif" },
+  { id: "libre-baskerville", name: "Libre Baskerville", category: "Serif" },
+  { id: "eb-garamond", name: "EB Garamond", category: "Serif" },
+  { id: "crimson-text", name: "Crimson Text", category: "Serif" },
+  { id: "bitter", name: "Bitter", category: "Serif" },
+  // Display / Decorative
+  { id: "oswald", name: "Oswald", category: "Display" },
+  { id: "bebas-neue", name: "Bebas Neue", category: "Display" },
+  { id: "antonio", name: "Antonio", category: "Display" },
+  { id: "righteous", name: "Righteous", category: "Display" },
 ];
 
 export function ColorPicker({
