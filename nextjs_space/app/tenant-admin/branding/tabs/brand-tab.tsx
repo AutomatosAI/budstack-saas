@@ -246,8 +246,8 @@ export function BrandTab({
                     <div
                       className="rounded bg-muted-foreground/20"
                       style={{
-                        width: size === "small" ? 20 : size === "medium" ? 26 : 32,
-                        height: size === "small" ? 20 : size === "medium" ? 26 : 32,
+                        width: size === "small" ? 28 : size === "medium" ? 40 : 56,
+                        height: size === "small" ? 28 : size === "medium" ? 40 : 56,
                       }}
                     />
                   </StyleOption>

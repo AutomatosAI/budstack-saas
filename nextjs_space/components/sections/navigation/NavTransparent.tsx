@@ -17,8 +17,8 @@ export function NavTransparent(props: SectionProps) {
   const navPos = logoPlacement?.navPosition || 'left';
   const navSize = logoPlacement?.navSize || 'medium';
   const showName = logoPlacement?.showBusinessName ?? true;
-  const navSizeMap: Record<string, string> = { small: '32px', medium: '40px', large: '48px' };
-  const logoSizePx = navSizeMap[navSize] || '40px';
+  const navSizeMap: Record<string, string> = { small: '36px', medium: '52px', large: '72px' };
+  const logoSizePx = navSizeMap[navSize] || '52px';
 
   const defaultLinks = [
     { label: 'Products', href: productsUrl || `${basePath}/products` },

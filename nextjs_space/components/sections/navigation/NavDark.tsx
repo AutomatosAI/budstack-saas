@@ -30,9 +30,9 @@ export function NavDark(props: SectionProps) {
   const navSize = logoPlacement?.navSize || 'medium';
   const showName = logoPlacement?.showBusinessName ?? true;
   const navSizeMap: Record<string, { normal: string; scrolled: string }> = {
-    small:  { normal: '32px', scrolled: '28px' },
-    medium: { normal: '48px', scrolled: '36px' },
-    large:  { normal: '56px', scrolled: '40px' },
+    small:  { normal: '36px', scrolled: '28px' },
+    medium: { normal: '56px', scrolled: '40px' },
+    large:  { normal: '76px', scrolled: '52px' },
   };
   const logoSizes = navSizeMap[navSize] || navSizeMap.medium;
 

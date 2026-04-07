@@ -17,8 +17,8 @@ export function NavMinimal(props: SectionProps) {
   const navPos = logoPlacement?.navPosition || 'left';
   const navSize = logoPlacement?.navSize || 'medium';
   const showName = logoPlacement?.showBusinessName ?? true;
-  const navSizeMap: Record<string, string> = { small: '24px', medium: '32px', large: '40px' };
-  const logoSizePx = navSizeMap[navSize] || '32px';
+  const navSizeMap: Record<string, string> = { small: '32px', medium: '44px', large: '60px' };
+  const logoSizePx = navSizeMap[navSize] || '44px';
 
   const defaultLinks = [
     { label: 'Products', href: productsUrl || `${basePath}/products` },
