@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
     const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const fileName = `${timestamp}-${originalName}`;
 
-    // Upload to S3
-    const cloudStoragePath = await uploadFile(buffer, fileName);
+    // Upload to S3 with correct content type (critical for video playback)
+    const cloudStoragePath = await uploadFile(buffer, fileName, file.type || undefined);
 
     // Return both the raw S3 key (for saving) and a signed URL (for preview display)
     const signedUrl = await getFileUrl(cloudStoragePath);

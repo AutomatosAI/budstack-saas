@@ -15,6 +15,7 @@ import path from "path";
 export async function uploadFile(
   buffer: Buffer,
   fileName: string,
+  contentType?: string,
 ): Promise<string> {
   const s3Client = await createS3Client();
   const { bucketName, folderPrefix } = await getBucketConfig();
@@ -25,6 +26,7 @@ export async function uploadFile(
       Bucket: bucketName,
       Key: key,
       Body: buffer,
+      ...(contentType ? { ContentType: contentType } : {}),
     }),
   );
 
@@ -35,9 +37,20 @@ export async function getFileUrl(key: string): Promise<string> {
   const s3Client = await createS3Client();
   const { bucketName } = await getBucketConfig();
 
+  // Infer content type for video files so browsers can play them
+  // (fixes files uploaded before ContentType was set on PutObject)
+  const videoTypes: Record<string, string> = {
+    '.mp4': 'video/mp4',
+    '.webm': 'video/webm',
+    '.mov': 'video/quicktime',
+  };
+  const ext = key.match(/\.\w+$/)?.[0]?.toLowerCase() || '';
+  const responseContentType = videoTypes[ext];
+
   const command = new GetObjectCommand({
     Bucket: bucketName,
     Key: key,
+    ...(responseContentType ? { ResponseContentType: responseContentType } : {}),
   });
 
   return await getSignedUrl(s3Client, command, { expiresIn: 3600 });

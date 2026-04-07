@@ -56,7 +56,7 @@ export async function PUT(req: NextRequest) {
       }
       const buffer = Buffer.from(await logo.arrayBuffer());
       const fileName = `logo-${Date.now()}-${logo.name}`;
-      settings.logoPath = await uploadFile(buffer, fileName);
+      settings.logoPath = await uploadFile(buffer, fileName, logo.type || undefined);
     }
 
     const heroImage = formData.get("heroImage") as File;
@@ -67,7 +67,7 @@ export async function PUT(req: NextRequest) {
       }
       const buffer = Buffer.from(await heroImage.arrayBuffer());
       const fileName = `hero-${Date.now()}-${heroImage.name}`;
-      settings.heroImagePath = await uploadFile(buffer, fileName);
+      settings.heroImagePath = await uploadFile(buffer, fileName, heroImage.type || undefined);
     }
 
     const favicon = formData.get("favicon") as File;
@@ -78,7 +78,7 @@ export async function PUT(req: NextRequest) {
       }
       const buffer = Buffer.from(await favicon.arrayBuffer());
       const fileName = `favicon-${Date.now()}-${favicon.name}`;
-      settings.faviconPath = await uploadFile(buffer, fileName);
+      settings.faviconPath = await uploadFile(buffer, fileName, favicon.type || undefined);
     }
 
     // Accept optional templateId override — allows saving to non-active templates (e.g. blank canvas drafts)
