@@ -257,17 +257,14 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
 
           return wrapper;
         })}
-      {FooterComponent && (() => {
-        const isDarkFooter = layout.footer === 'FooterBrand' || layout.footer === 'FooterFull';
-        return (
-          <div style={buildColorOverrideStyle(
-            layout.footerConfig?.colorOverrides,
-            isDarkFooter ? DARK_FOOTER_DEFAULTS : undefined,
-          )}>
-            <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig || sectionProps.sectionConfig} />
-          </div>
-        );
-      })()}
+      {FooterComponent && (
+        <div style={buildColorOverrideStyle(
+          layout.footerConfig?.colorOverrides,
+          (layout.footer === 'FooterBrand' || layout.footer === 'FooterFull') ? DARK_FOOTER_DEFAULTS : undefined,
+        )}>
+          <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig || sectionProps.sectionConfig} />
+        </div>
+      )}
     </div>
   );
 }

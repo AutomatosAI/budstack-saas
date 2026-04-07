@@ -21,9 +21,10 @@ export function HeroVideo({
   const videoUrl = sectionConfig?.videoUrl;
   const watermarkUrl = sectionConfig?.watermarkUrl;
 
-  // Resolve hero type — sectionConfig wins, then auto-detect from videoUrl, then legacy fallbacks
+  // Resolve hero type — if a video URL exists, always play it (this IS the Video Hero).
+  // heroType controls fallback when no video is uploaded yet.
   const settings = (tenant.settings as any) || {};
-  const heroType = sectionConfig?.heroType || (videoUrl ? 'video' : null) || settings.heroType || 'gradient-image';
+  const heroType = videoUrl ? 'video' : (sectionConfig?.heroType || settings.heroType || 'gradient-image');
 
   // Text alignment — sectionConfig wins over legacy pageContent
   const heroAlignment = sectionConfig?.textAlign || pageContent?.home?.heroAlignment || 'center';
