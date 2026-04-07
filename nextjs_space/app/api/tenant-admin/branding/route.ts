@@ -129,6 +129,8 @@ export async function PUT(req: NextRequest) {
       });
       const fontSizeOverrides = defined({
         base: settings.fontSize,
+        hero: settings.heroFontSize,
+        section: settings.sectionFontSize,
       });
 
       // Font weight overrides

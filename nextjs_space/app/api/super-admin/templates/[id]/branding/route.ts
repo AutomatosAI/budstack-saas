@@ -86,7 +86,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     const typoOverrides = defined({ body: settings.fontFamily, heading: settings.headingFontFamily });
-    const fontSizeOverrides = defined({ base: settings.fontSize, heading: settings.headingFontSize });
+    const fontSizeOverrides = defined({ base: settings.fontSize, hero: settings.heroFontSize, section: settings.sectionFontSize });
     const fontWeightOverrides = defined({ body: settings.fontWeight, heading: settings.headingFontWeight });
 
     if (Object.keys(typoOverrides).length > 0 || Object.keys(fontSizeOverrides).length > 0 || Object.keys(fontWeightOverrides).length > 0) {

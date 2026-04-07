@@ -69,7 +69,8 @@ function matchOption(value: any, options: string[]): string | undefined {
 
 // Convert legacy preset names to px values
 const FONT_SIZE_TO_PX: Record<string, string> = { small: "14", medium: "16", large: "18" };
-const HEADING_SIZE_TO_PX: Record<string, string> = { small: "30", medium: "36", large: "42", xlarge: "48" };
+const HERO_SIZE_TO_PX: Record<string, string> = { small: "30", medium: "36", large: "42", xlarge: "48" };
+const SECTION_SIZE_TO_PX: Record<string, string> = { small: "24", medium: "30", large: "36", xlarge: "42" };
 
 const BUTTON_STYLES = ["rounded", "square", "pill"];
 const BORDER_RADII = ["none", "small", "medium", "large"];
@@ -169,9 +170,16 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
       const raw = getVal(["typography", "fontSize", "base"], undefined) || settings.fontSize || "medium";
       return FONT_SIZE_TO_PX[raw] || (isNaN(Number(raw)) ? "16" : raw);
     })(),
-    headingFontSize: (() => {
-      const raw = getVal(["typography", "fontSize", "heading"], undefined) || settings.headingFontSize || "medium";
-      return HEADING_SIZE_TO_PX[raw] || (isNaN(Number(raw)) ? "36" : raw);
+    heroFontSize: (() => {
+      const raw = getVal(["typography", "fontSize", "hero"], undefined) ||
+        getVal(["typography", "fontSize", "heading"], undefined) ||
+        settings.heroFontSize || settings.headingFontSize || "36";
+      return HERO_SIZE_TO_PX[raw] || (isNaN(Number(raw)) ? "36" : raw);
+    })(),
+    sectionFontSize: (() => {
+      const raw = getVal(["typography", "fontSize", "section"], undefined) ||
+        settings.sectionFontSize || "30";
+      return SECTION_SIZE_TO_PX[raw] || (isNaN(Number(raw)) ? "30" : raw);
     })(),
     fontWeight: getVal(["typography", "fontWeight", "body"], undefined) || settings.fontWeight || "400",
     headingFontWeight: getVal(["typography", "fontWeight", "heading"], undefined) || settings.headingFontWeight || "700",
@@ -412,7 +420,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         base: formData.fontFamily || "inter",
         heading: formData.headingFontFamily || formData.fontFamily || "inter",
       },
-      fontSize: { base: formData.fontSize, heading: formData.headingFontSize },
+      fontSize: { base: formData.fontSize, hero: formData.heroFontSize, section: formData.sectionFontSize },
       fontWeight: { body: formData.fontWeight, heading: formData.headingFontWeight },
       letterSpacing: formData.letterSpacingPreset,
     },

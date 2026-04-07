@@ -97,7 +97,7 @@ export function TypeTab({ formData, setFormData }: TypeTabProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label>Body Font Size (px)</Label>
               <Input
@@ -109,20 +109,33 @@ export function TypeTab({ formData, setFormData }: TypeTabProps) {
                 placeholder="16"
                 className="mt-1"
               />
-              <span className="text-xs text-muted-foreground mt-1 block">12–24px (default 16)</span>
+              <span className="text-xs text-muted-foreground mt-1 block">Paragraphs & content (default 16)</span>
             </div>
             <div>
-              <Label>Heading Font Size (px)</Label>
+              <Label>Hero Title Size (px)</Label>
               <Input
                 type="number"
-                min={18}
-                max={72}
-                value={formData.headingFontSize}
-                onChange={(e) => update("headingFontSize", e.target.value)}
+                min={24}
+                max={96}
+                value={formData.heroFontSize}
+                onChange={(e) => update("heroFontSize", e.target.value)}
                 placeholder="36"
                 className="mt-1"
               />
-              <span className="text-xs text-muted-foreground mt-1 block">18–72px — h1 base size (default 36)</span>
+              <span className="text-xs text-muted-foreground mt-1 block">Hero banner headline (default 36)</span>
+            </div>
+            <div>
+              <Label>Section Heading Size (px)</Label>
+              <Input
+                type="number"
+                min={18}
+                max={56}
+                value={formData.sectionFontSize}
+                onChange={(e) => update("sectionFontSize", e.target.value)}
+                placeholder="30"
+                className="mt-1"
+              />
+              <span className="text-xs text-muted-foreground mt-1 block">Section titles like Features, FAQ (default 30)</span>
             </div>
           </div>
         </CardContent>

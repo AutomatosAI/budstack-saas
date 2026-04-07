@@ -137,12 +137,12 @@ const TENANT_SCOPED_CSS = `
   font-family: var(--tenant-font-heading);
   font-weight: var(--tenant-font-weight-heading);
 }
-.tenant-theme-container h1 { font-size: calc(2.25rem * var(--tenant-heading-scale, 1)); }
-.tenant-theme-container h2 { font-size: calc(1.875rem * var(--tenant-heading-scale, 1)); }
-.tenant-theme-container h3 { font-size: calc(1.5rem * var(--tenant-heading-scale, 1)); }
-.tenant-theme-container h4 { font-size: calc(1.25rem * var(--tenant-heading-scale, 1)); }
-.tenant-theme-container h5 { font-size: calc(1.125rem * var(--tenant-heading-scale, 1)); }
-.tenant-theme-container h6 { font-size: calc(1rem * var(--tenant-heading-scale, 1)); }
+.tenant-theme-container h1 { font-size: calc(2.25rem * var(--tenant-hero-scale, 1)); }
+.tenant-theme-container h2 { font-size: calc(1.875rem * var(--tenant-section-heading-scale, 1)); }
+.tenant-theme-container h3 { font-size: calc(1.5rem * var(--tenant-section-heading-scale, 1)); }
+.tenant-theme-container h4 { font-size: calc(1.25rem * var(--tenant-section-heading-scale, 1)); }
+.tenant-theme-container h5 { font-size: calc(1.125rem * var(--tenant-section-heading-scale, 1)); }
+.tenant-theme-container h6 { font-size: calc(1rem * var(--tenant-section-heading-scale, 1)); }
 
 /* === BUTTONS (CTA-style within sections) === */
 .tenant-theme-container section a[class*="rounded"],
@@ -375,14 +375,19 @@ function applyThemeToContainer(
     const bodyPx = fontSizePresetMap[rawBodySize] || (isNaN(Number(rawBodySize)) ? "16" : rawBodySize);
     root.style.setProperty("--tenant-font-size-base", `${bodyPx}px`);
 
-    // Heading font size — accepts px number (e.g. "36") or legacy preset
-    const headingPresetMap: Record<string, string> = { small: "30", medium: "36", large: "42", xlarge: "48" };
-    const dsHeadingFontSize = designSystem.typography?.fontSize?.heading;
-    const rawHeadingSize = dsHeadingFontSize || settings.headingFontSize || "36";
-    const headingPx = headingPresetMap[rawHeadingSize] || (isNaN(Number(rawHeadingSize)) ? "36" : rawHeadingSize);
-    // Compute scale relative to default h1 (36px) for proportional h1–h6 sizing
-    const headingScale = Number(headingPx) / 36;
-    root.style.setProperty("--tenant-heading-scale", String(headingScale));
+    // Hero title size (h1) — accepts px number or legacy preset
+    const heroPresetMap: Record<string, string> = { small: "30", medium: "36", large: "42", xlarge: "48" };
+    const dsHeroFontSize = designSystem.typography?.fontSize?.hero || designSystem.typography?.fontSize?.heading;
+    const rawHeroSize = dsHeroFontSize || settings.heroFontSize || settings.headingFontSize || "36";
+    const heroPx = heroPresetMap[rawHeroSize] || (isNaN(Number(rawHeroSize)) ? "36" : rawHeroSize);
+    root.style.setProperty("--tenant-hero-scale", String(Number(heroPx) / 36));
+
+    // Section heading size (h2–h6) — independent from hero
+    const sectionPresetMap: Record<string, string> = { small: "24", medium: "30", large: "36", xlarge: "42" };
+    const dsSectionFontSize = designSystem.typography?.fontSize?.section;
+    const rawSectionSize = dsSectionFontSize || settings.sectionFontSize || "30";
+    const sectionPx = sectionPresetMap[rawSectionSize] || (isNaN(Number(rawSectionSize)) ? "30" : rawSectionSize);
+    root.style.setProperty("--tenant-section-heading-scale", String(Number(sectionPx) / 30));
 
     // === BORDER RADIUS ===
     const borderRadiusMap: Record<string, string> = {

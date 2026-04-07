@@ -49,7 +49,9 @@ export interface TenantSettings {
   fontFamily?: string;
   headingFontFamily?: string;
   fontSize?: string; // px value (e.g. "16") or legacy preset
-  headingFontSize?: string; // px value (e.g. "36") or legacy preset
+  headingFontSize?: string; // deprecated — use heroFontSize/sectionFontSize
+  heroFontSize?: string; // px value for hero h1 (e.g. "48")
+  sectionFontSize?: string; // px value for section h2-h6 (e.g. "30")
   fontWeight?: string;
   headingFontWeight?: string;
   letterSpacingPreset?: "tight" | "normal" | "wide" | "wider";
