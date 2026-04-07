@@ -86,8 +86,10 @@ const DARK_FOOTER_DEFAULTS: Record<string, string> = {
 
 export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome = true }: Props) {
   const showChrome = renderChrome;
-  const NavComponent = showChrome ? getSectionComponent(layout.navigation) : null;
-  const FooterComponent = showChrome ? getSectionComponent(layout.footer) : null;
+  const navType = layout.navigation || 'NavDark';
+  const footerType = layout.footer || 'FooterBrand';
+  const NavComponent = showChrome ? getSectionComponent(navType) : null;
+  const FooterComponent = showChrome ? getSectionComponent(footerType) : null;
   const sanitizedCss = useMemo(() => sanitizeCss(customCss), [customCss]);
 
   // Generate per-section color override CSS from layout sections
@@ -260,7 +262,7 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
       {FooterComponent && (
         <div style={buildColorOverrideStyle(
           layout.footerConfig?.colorOverrides,
-          (layout.footer === 'FooterBrand' || layout.footer === 'FooterFull') ? DARK_FOOTER_DEFAULTS : undefined,
+          (footerType === 'FooterBrand' || footerType === 'FooterFull') ? DARK_FOOTER_DEFAULTS : undefined,
         )}>
           <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig || sectionProps.sectionConfig} />
         </div>
