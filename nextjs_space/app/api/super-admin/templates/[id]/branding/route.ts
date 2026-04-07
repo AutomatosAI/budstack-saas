@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       if (!file || file.size === 0) return null;
       const buffer = Buffer.from(await file.arrayBuffer());
       const fileName = `${prefix}-${Date.now()}-${file.name}`;
-      return await uploadFile(buffer, fileName);
+      return await uploadFile(buffer, fileName, file.type || undefined);
     };
 
     const newLogoPath = await uploadAsset("logo", "logo");
@@ -192,7 +192,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       updatedLayout = {
         ...existingLayout,
         navigation: existingLayout.navigation || "NavDark",
-        footer: existingLayout.footer || "FooterSimple",
+        footer: existingLayout.footer || "FooterBrand",
         sections: updatedSections,
       };
     }
