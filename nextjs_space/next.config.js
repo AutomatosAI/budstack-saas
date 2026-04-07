@@ -72,7 +72,7 @@ const nextConfig = {
           { key: 'X-DNS-Prefetch-Control', value: 'on' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.amazonaws.com https://img.clerk.com https://stage-api.drgreennft.com https://api.drgreennft.com https://cdn.abacus.ai; connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.com https://*.drgreennft.com wss://*.clerk.accounts.dev; frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev;" },
+          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.amazonaws.com https://img.clerk.com https://stage-api.drgreennft.com https://api.drgreennft.com https://cdn.abacus.ai; media-src 'self' blob: https://*.amazonaws.com; connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.com https://*.drgreennft.com wss://*.clerk.accounts.dev; frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev;" },
         ],
       },
     ];
