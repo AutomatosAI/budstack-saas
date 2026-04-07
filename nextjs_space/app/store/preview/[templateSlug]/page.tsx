@@ -89,6 +89,17 @@ export default async function TemplatePreviewPage({
   }
 
   if (layout) {
+    console.log(`[preview] Loaded layout.json for "${templateSlug}":`, JSON.stringify({
+      navigation: layout.navigation,
+      footer: layout.footer,
+      hasNavigationConfig: !!(layout as any).navigationConfig,
+      hasFooterConfig: !!(layout as any).footerConfig,
+      sectionCount: layout.sections?.length || 0,
+      sectionTypes: (layout.sections || []).map(s => s.type),
+      sectionVideoUrls: (layout.sections || [])
+        .filter(s => s.config?.videoUrl)
+        .map(s => ({ id: s.id, videoUrl: (s.config?.videoUrl as string)?.substring(0, 80) })),
+    }));
     const s3Prefix = `templates/${templateSlug}`;
 
     // Sign hero image from defaults

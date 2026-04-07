@@ -124,12 +124,69 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       updatedDefaults.pageContent = { ...(existingDefaults.pageContent || {}), ...settings.pageContent };
     }
 
+    // ── Strip signed S3 URLs back to raw S3 keys ───────────────
+    const stripSignedUrl = (val: string): string => {
+      if (!val || typeof val !== 'string' || !val.startsWith('http')) return val;
+      const s3Match = val.split('?')[0].match(/\.amazonaws\.com\/(.+)$/);
+      if (!s3Match) return val;
+      const fullKey = decodeURIComponent(s3Match[1]);
+      const idx = fullKey.indexOf(s3Prefix);
+      if (idx !== -1) {
+        const relative = fullKey.slice(idx + s3Prefix.length + 1);
+        if (relative && !relative.includes('//')) return relative;
+      }
+      return fullKey;
+    };
+
     // ── Handle layout sections ──────────────────────────────────
     const hasLayoutSections = Array.isArray(settings.layoutSections) && settings.layoutSections.length > 0;
     const hasSectionConfigs = settings.sectionConfigs && Object.keys(settings.sectionConfigs).length > 0;
     const hasSectionColorOverrides = settings.sectionColorOverrides && Object.keys(settings.sectionColorOverrides).length > 0;
 
-    let updatedLayout = existingLayout;
+    let updatedLayout = { ...existingLayout };
+
+    // Always save navigation/footer type and config from the form
+    if (settings.navigationStyle) {
+      updatedLayout.navigation = settings.navigationStyle;
+    } else if (!updatedLayout.navigation) {
+      updatedLayout.navigation = "NavDark";
+    }
+
+    if (settings.footerStyle) {
+      updatedLayout.footer = settings.footerStyle;
+    } else if (!updatedLayout.footer) {
+      updatedLayout.footer = "FooterBrand";
+    }
+
+    // Save navigation config (links, logo placement, etc.)
+    if (settings.navigationConfig) {
+      updatedLayout.navigationConfig = {
+        ...(updatedLayout.navigationConfig || {}),
+        ...settings.navigationConfig,
+      };
+    }
+    // Merge nav color overrides into navigationConfig
+    if (settings.navColorOverrides && Object.keys(settings.navColorOverrides).length > 0) {
+      updatedLayout.navigationConfig = {
+        ...(updatedLayout.navigationConfig || {}),
+        colorOverrides: settings.navColorOverrides,
+      };
+    }
+
+    // Save footer config (tagline, sections, disclaimer, etc.)
+    if (settings.footerConfig) {
+      updatedLayout.footerConfig = {
+        ...(updatedLayout.footerConfig || {}),
+        ...settings.footerConfig,
+      };
+    }
+    // Merge footer color overrides into footerConfig
+    if (settings.footerColorOverrides && Object.keys(settings.footerColorOverrides).length > 0) {
+      updatedLayout.footerConfig = {
+        ...(updatedLayout.footerConfig || {}),
+        colorOverrides: settings.footerColorOverrides,
+      };
+    }
 
     if (hasLayoutSections || hasSectionConfigs || hasSectionColorOverrides) {
       const sourceSections = hasLayoutSections
@@ -143,20 +200,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         if (hasSectionConfigs && settings.sectionConfigs[s.id]) {
           Object.assign(mergedConfig, settings.sectionConfigs[s.id]);
         }
-
-        // Strip signed S3 URLs back to raw S3 keys
-        const stripSignedUrl = (val: string): string => {
-          if (!val || typeof val !== 'string' || !val.startsWith('http')) return val;
-          const s3Match = val.split('?')[0].match(/\.amazonaws\.com\/(.+)$/);
-          if (!s3Match) return val;
-          const fullKey = decodeURIComponent(s3Match[1]);
-          const idx = fullKey.indexOf(s3Prefix);
-          if (idx !== -1) {
-            const relative = fullKey.slice(idx + s3Prefix.length + 1);
-            if (relative && !relative.includes('//')) return relative;
-          }
-          return fullKey;
-        };
 
         // Top-level asset keys
         for (const key of ['imageUrl', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const) {
@@ -189,13 +232,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         };
       });
 
-      updatedLayout = {
-        ...existingLayout,
-        navigation: existingLayout.navigation || "NavDark",
-        footer: existingLayout.footer || "FooterBrand",
-        sections: updatedSections,
-      };
+      updatedLayout.sections = updatedSections;
     }
+
+    // Debug: log what we're about to save
+    console.log(`[super-admin] Saving layout.json:`, JSON.stringify({
+      navigation: updatedLayout.navigation,
+      footer: updatedLayout.footer,
+      hasNavigationConfig: !!updatedLayout.navigationConfig,
+      hasFooterConfig: !!updatedLayout.footerConfig,
+      sectionCount: updatedLayout.sections?.length || 0,
+      sectionTypes: (updatedLayout.sections || []).map((s: any) => s.type),
+      sectionVideoUrls: (updatedLayout.sections || [])
+        .filter((s: any) => s.config?.videoUrl)
+        .map((s: any) => ({ id: s.id, videoUrl: s.config.videoUrl?.substring(0, 60) })),
+    }));
 
     // ── Write to S3 ─────────────────────────────────────────────
     const writeJson = async (key: string, data: any) => {

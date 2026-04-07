@@ -120,6 +120,7 @@ export function SectionVideoUploader({
       }
 
       const data = await res.json();
+      // Use signed URL for display/preview; API strips back to key on save
       if (data.url) onChange(data.url);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to upload video");
