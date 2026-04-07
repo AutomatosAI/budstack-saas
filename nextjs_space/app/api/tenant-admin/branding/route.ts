@@ -240,7 +240,7 @@ export async function PUT(req: NextRequest) {
           };
 
           // Strip top-level asset URLs
-          for (const key of ['imageUrl', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const) {
+          for (const key of ['imageUrl', 'imageUrl2', 'imageUrl3', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const) {
             if (mergedConfig[key]) mergedConfig[key] = stripSignedUrl(mergedConfig[key]);
           }
 
@@ -248,6 +248,10 @@ export async function PUT(req: NextRequest) {
           for (const key of Object.keys(mergedConfig)) {
             if (Array.isArray(mergedConfig[key])) {
               mergedConfig[key] = mergedConfig[key].map((item: any) => {
+                // Handle flat string arrays (e.g. SocialProof avatars[])
+                if (typeof item === 'string' && item.includes('.amazonaws.com/')) {
+                  return stripSignedUrl(item);
+                }
                 if (!item || typeof item !== 'object') return item;
                 const cleaned = { ...item };
                 for (const itemKey of Object.keys(cleaned)) {

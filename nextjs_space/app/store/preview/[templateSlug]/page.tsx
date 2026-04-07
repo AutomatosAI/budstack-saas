@@ -138,7 +138,7 @@ export default async function TemplatePreviewPage({
 
     // Sign section-level asset URLs (top-level + nested arrays)
     if (layout.sections) {
-      const topKeys = ["imageUrl", "videoUrl", "watermarkUrl", "rightImageUrl"] as const;
+      const topKeys = ["imageUrl", "imageUrl2", "imageUrl3", "videoUrl", "watermarkUrl", "rightImageUrl"] as const;
 
       function signAssetUrl(val: string, contentTypeHint?: string): Promise<string> {
         const isAbsoluteKey = val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/');
@@ -161,7 +161,13 @@ export default async function TemplatePreviewPage({
         if (section.config) {
           for (const arrKey of Object.keys(section.config)) {
             if (Array.isArray(section.config[arrKey])) {
-              for (const item of section.config[arrKey]) {
+              for (let idx = 0; idx < section.config[arrKey].length; idx++) {
+                const item = section.config[arrKey][idx];
+                // Handle flat string arrays (e.g. SocialProof avatars[])
+                if (typeof item === 'string' && !item.startsWith('http') && !item.startsWith('/') && (item.includes('/') || item.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
+                  signingTasks.push({ target: section.config[arrKey], key: String(idx), promise: signAssetUrl(item) });
+                  continue;
+                }
                 if (!item || typeof item !== 'object') continue;
                 for (const itemKey of Object.keys(item)) {
                   const v = (item as any)[itemKey];

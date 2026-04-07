@@ -151,7 +151,7 @@ export default async function TenantStorePage({
     const assetS3Path = normalizedS3Path || baseS3Path;
     const needsFallback = assetS3Path && assetS3Path !== baseS3Path;
     if (layout?.sections && assetS3Path) {
-      const assetKeys = ['imageUrl', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const;
+      const assetKeys = ['imageUrl', 'imageUrl2', 'imageUrl3', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const;
 
       function signAssetUrl(val: string, contentTypeHint?: string): Promise<string> {
         // Uploaded files are stored as absolute S3 keys (e.g. "development/uploads/...")
@@ -182,7 +182,13 @@ export default async function TenantStorePage({
         if (section.config) {
           for (const arrKey of Object.keys(section.config)) {
             if (Array.isArray(section.config[arrKey])) {
-              for (const item of section.config[arrKey]) {
+              for (let idx = 0; idx < section.config[arrKey].length; idx++) {
+                const item = section.config[arrKey][idx];
+                // Handle flat string arrays (e.g. SocialProof avatars[])
+                if (typeof item === 'string' && !item.startsWith('http') && !item.startsWith('/') && (item.includes('/') || item.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
+                  signingTasks.push({ target: section.config[arrKey], key: String(idx), promise: signAssetUrl(item) });
+                  continue;
+                }
                 if (!item || typeof item !== 'object') continue;
                 for (const itemKey of Object.keys(item)) {
                   const v = (item as any)[itemKey];

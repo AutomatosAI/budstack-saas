@@ -50,7 +50,7 @@ export default async function SuperAdminTemplateEditPage({ params }: { params: {
       }
       return getFileUrl(`${s3Prefix}/${val}`);
     };
-    const topKeys = ['imageUrl', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const;
+    const topKeys = ['imageUrl', 'imageUrl2', 'imageUrl3', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const;
     const signingTasks: Array<{ target: any; key: string; promise: Promise<string> }> = [];
 
     for (const section of layoutJson.sections) {
@@ -63,7 +63,13 @@ export default async function SuperAdminTemplateEditPage({ params }: { params: {
       if (section.config) {
         for (const arrKey of Object.keys(section.config)) {
           if (Array.isArray(section.config[arrKey])) {
-            for (const item of section.config[arrKey]) {
+            for (let idx = 0; idx < section.config[arrKey].length; idx++) {
+              const item = section.config[arrKey][idx];
+              // Handle flat string arrays (e.g. SocialProof avatars[])
+              if (typeof item === 'string' && !item.startsWith('http') && !item.startsWith('/') && (item.includes('/') || item.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
+                signingTasks.push({ target: section.config[arrKey], key: String(idx), promise: signVal(item) });
+                continue;
+              }
               if (!item || typeof item !== 'object') continue;
               for (const itemKey of Object.keys(item)) {
                 const v = item[itemKey];
