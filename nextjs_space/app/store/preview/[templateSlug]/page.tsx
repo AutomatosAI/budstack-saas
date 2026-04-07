@@ -174,8 +174,17 @@ export default async function TemplatePreviewPage({
       results.forEach((result, i) => {
         if (result.status === 'fulfilled') {
           signingTasks[i].target[signingTasks[i].key] = result.value;
+        } else {
+          console.error(`[preview] Failed to sign ${signingTasks[i].key}:`, result.reason);
         }
       });
+
+      // Debug: log signed video URLs
+      for (const section of layout.sections) {
+        if (section.config?.videoUrl) {
+          console.log(`[preview] Section ${section.id} videoUrl after signing:`, section.config.videoUrl.substring(0, 120));
+        }
+      }
     }
 
     const sectionProps = {
