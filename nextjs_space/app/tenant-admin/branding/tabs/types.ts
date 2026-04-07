@@ -4,14 +4,14 @@ import type { SocialLink } from "@/lib/section-schemas";
 export interface LogoPlacement {
   // Navigation
   navPosition: "left" | "center" | "right";
-  navSize: "small" | "medium" | "large";
+  navSize: number | string;  // px value (24–120), legacy "small"|"medium"|"large" accepted by components
   showBusinessName: boolean;
 
   // Hero
   heroShowLogo: boolean;
   heroX: number;       // 0-100 percentage
   heroY: number;       // 0-100 percentage
-  heroSize: "small" | "medium" | "large" | "watermark";
+  heroSize: number | string;  // px value (24–400), legacy string values accepted by components
   heroStyle: "plain" | "circular" | "badge";
 
   // Footer

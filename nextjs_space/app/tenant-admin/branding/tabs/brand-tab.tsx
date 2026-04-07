@@ -19,8 +19,17 @@ import {
   AlignRight,
   Move,
 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { FileUpload } from "./shared";
 import type { EditorFormData, SetFormData, LogoPlacement } from "./types";
+
+/** Convert legacy string sizes to px numbers */
+const NAV_SIZE_LEGACY: Record<string, number> = { small: 36, medium: 52, large: 72 };
+const HERO_SIZE_LEGACY: Record<string, number> = { small: 48, medium: 80, large: 120, watermark: 200 };
+function resolveSize(val: number | string, legacy: Record<string, number>, fallback: number): number {
+  if (typeof val === 'number') return val;
+  return legacy[val] ?? fallback;
+}
 
 interface BrandTabProps {
   formData: EditorFormData;
@@ -121,9 +130,8 @@ export function BrandTab({
   // Resolve preview image URL
   const previewLogoUrl = logo ? URL.createObjectURL(logo) : logoUrl;
 
-  // Hero logo size mapping (px)
-  const heroSizeMap: Record<string, number> = { small: 48, medium: 80, large: 120, watermark: 160 };
-  const heroSizePx = heroSizeMap[lp.heroSize] || 80;
+  // Hero logo size (px) — resolve legacy string values
+  const heroSizePx = resolveSize(lp.heroSize, HERO_SIZE_LEGACY, 80);
 
   return (
     <div className="space-y-6">
@@ -233,25 +241,17 @@ export function BrandTab({
 
             {/* Size */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Logo Size</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["small", "medium", "large"] as const).map((size) => (
-                  <StyleOption
-                    key={size}
-                    label={size.charAt(0).toUpperCase() + size.slice(1)}
-                    value={size}
-                    selected={lp.navSize === size}
-                    onSelect={(v) => updatePlacement({ navSize: v as LogoPlacement["navSize"] })}
-                  >
-                    <div
-                      className="rounded bg-muted-foreground/20"
-                      style={{
-                        width: size === "small" ? 28 : size === "medium" ? 40 : 56,
-                        height: size === "small" ? 28 : size === "medium" ? 40 : 56,
-                      }}
-                    />
-                  </StyleOption>
-                ))}
+              <Label className="text-xs">Logo Size — {resolveSize(lp.navSize, NAV_SIZE_LEGACY, 52)}px</Label>
+              <Slider
+                min={24}
+                max={120}
+                step={2}
+                value={[resolveSize(lp.navSize, NAV_SIZE_LEGACY, 52)]}
+                onValueChange={([v]) => updatePlacement({ navSize: v })}
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>24px</span>
+                <span>120px</span>
               </div>
             </div>
 
@@ -316,7 +316,7 @@ export function BrandTab({
                             lp.heroStyle === "circular" && "rounded-full",
                             lp.heroStyle === "badge" && "rounded-xl bg-white/90 p-1",
                             lp.heroStyle === "plain" && "rounded",
-                            lp.heroSize === "watermark" && "opacity-30",
+                            heroSizePx >= 200 && "opacity-30",
                           )}
                           style={{
                             width: Math.min(heroSizePx * 0.5, 80),
@@ -378,28 +378,17 @@ export function BrandTab({
 
                 {/* Hero Logo Size */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Size</Label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {(["small", "medium", "large", "watermark"] as const).map((size) => (
-                      <StyleOption
-                        key={size}
-                        label={size === "watermark" ? "Watermark" : size.charAt(0).toUpperCase() + size.slice(1)}
-                        value={size}
-                        selected={lp.heroSize === size}
-                        onSelect={(v) => updatePlacement({ heroSize: v as LogoPlacement["heroSize"] })}
-                      >
-                        <div
-                          className={cn(
-                            "rounded bg-muted-foreground/20",
-                            size === "watermark" && "opacity-30",
-                          )}
-                          style={{
-                            width: size === "small" ? 16 : size === "medium" ? 22 : size === "large" ? 28 : 34,
-                            height: size === "small" ? 16 : size === "medium" ? 22 : size === "large" ? 28 : 34,
-                          }}
-                        />
-                      </StyleOption>
-                    ))}
+                  <Label className="text-xs">Size — {heroSizePx}px</Label>
+                  <Slider
+                    min={24}
+                    max={400}
+                    step={4}
+                    value={[heroSizePx]}
+                    onValueChange={([v]) => updatePlacement({ heroSize: v })}
+                  />
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>24px</span>
+                    <span>400px</span>
                   </div>
                 </div>
 

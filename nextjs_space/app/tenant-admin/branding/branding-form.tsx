@@ -231,12 +231,12 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
 
     logoPlacement: templateContent.logoPlacement || settingsContent.logoPlacement || {
       navPosition: "left",
-      navSize: "medium",
+      navSize: 52,
       showBusinessName: true,
       heroShowLogo: true,
       heroX: 50,
       heroY: 20,
-      heroSize: "medium",
+      heroSize: 80,
       heroStyle: "circular",
       footerShowLogo: true,
     },

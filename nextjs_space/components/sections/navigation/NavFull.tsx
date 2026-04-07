@@ -17,8 +17,8 @@ export function NavFull(props: SectionProps) {
   const navPos = logoPlacement?.navPosition || 'left';
   const navSize = logoPlacement?.navSize || 'medium';
   const showName = logoPlacement?.showBusinessName ?? true;
-  const navSizeMap: Record<string, string> = { small: '36px', medium: '52px', large: '72px' };
-  const logoSizePx = navSizeMap[navSize] || '52px';
+  const navSizeLegacy: Record<string, number> = { small: 36, medium: 52, large: 72 };
+  const logoSizePx = `${typeof navSize === 'number' ? navSize : (navSizeLegacy[navSize] || 52)}px`;
 
   const defaultLinks = [
     { label: 'Products', href: productsUrl || `${basePath}/products` },

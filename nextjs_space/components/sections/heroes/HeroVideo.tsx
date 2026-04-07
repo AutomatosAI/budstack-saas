@@ -44,10 +44,10 @@ export function HeroVideo({
   const heroLogoY = logoPlacement?.heroY ?? 20;
   const heroLogoSize = logoPlacement?.heroSize || 'medium';
   const heroLogoStyle = logoPlacement?.heroStyle || 'circular';
-  const heroSizeMap: Record<string, string> = { small: '48px', medium: '80px', large: '120px', watermark: '40vw' };
-  const heroSizeMaxMap: Record<string, string> = { small: '48px', medium: '80px', large: '120px', watermark: '500px' };
-  const heroLogoSizePx = heroSizeMap[heroLogoSize] || '80px';
-  const heroLogoMaxPx = heroSizeMaxMap[heroLogoSize] || '80px';
+  const heroSizeLegacy: Record<string, number> = { small: 48, medium: 80, large: 120, watermark: 300 };
+  const resolvedHeroSize = typeof heroLogoSize === 'number' ? heroLogoSize : (heroSizeLegacy[heroLogoSize] || 80);
+  const heroLogoSizePx = `${resolvedHeroSize}px`;
+  const heroLogoMaxPx = `${resolvedHeroSize}px`;
 
   // Map height enum to classes — 'full' accounts for nav bar height
   const heightClass: Record<string, string> = {

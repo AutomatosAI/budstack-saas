@@ -29,12 +29,9 @@ export function NavDark(props: SectionProps) {
   const navPos = logoPlacement?.navPosition || 'left';
   const navSize = logoPlacement?.navSize || 'medium';
   const showName = logoPlacement?.showBusinessName ?? true;
-  const navSizeMap: Record<string, { normal: string; scrolled: string }> = {
-    small:  { normal: '36px', scrolled: '28px' },
-    medium: { normal: '56px', scrolled: '40px' },
-    large:  { normal: '76px', scrolled: '52px' },
-  };
-  const logoSizes = navSizeMap[navSize] || navSizeMap.medium;
+  const navSizeLegacy: Record<string, number> = { small: 36, medium: 56, large: 76 };
+  const resolvedNavPx = typeof navSize === 'number' ? navSize : (navSizeLegacy[navSize] || 56);
+  const logoSizes = { normal: `${resolvedNavPx}px`, scrolled: `${Math.round(resolvedNavPx * 0.7)}px` };
 
   const defaultLinks = [
     { label: 'Products', href: productsUrl || `${basePath}/products` },

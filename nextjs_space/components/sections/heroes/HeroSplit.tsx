@@ -26,8 +26,8 @@ export function HeroSplit({
   const showHeroLogo = logoPlacement?.heroShowLogo ?? true;
   const heroLogoSize = logoPlacement?.heroSize || 'medium';
   const heroLogoStyle = logoPlacement?.heroStyle || 'plain';
-  const heroSizeMap: Record<string, string> = { small: '48px', medium: '64px', large: '96px', watermark: '200px' };
-  const heroLogoSizePx = heroSizeMap[heroLogoSize] || '64px';
+  const heroSizeLegacy: Record<string, number> = { small: 48, medium: 64, large: 96, watermark: 200 };
+  const heroLogoSizePx = `${typeof heroLogoSize === 'number' ? heroLogoSize : (heroSizeLegacy[heroLogoSize] || 64)}px`;
 
   return (
     <section
