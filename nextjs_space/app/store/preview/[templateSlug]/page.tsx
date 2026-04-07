@@ -99,6 +99,11 @@ export default async function TemplatePreviewPage({
       sectionVideoUrls: (layout.sections || [])
         .filter(s => s.config?.videoUrl)
         .map(s => ({ id: s.id, videoUrl: (s.config?.videoUrl as string)?.substring(0, 80) })),
+      sectionImageUrls: (layout.sections || [])
+        .filter(s => s.config?.imageUrl)
+        .map(s => ({ id: s.id, type: s.type, imageUrl: (s.config?.imageUrl as string)?.substring(0, 80) })),
+      defaultsHeroImagePath: defaults?.heroImagePath?.substring(0, 80) || null,
+      defaultsLogoPath: defaults?.logoPath?.substring(0, 80) || null,
     }));
     const s3Prefix = `templates/${templateSlug}`;
 
@@ -179,13 +184,19 @@ export default async function TemplatePreviewPage({
         }
       });
 
-      // Debug: log signed video URLs
+      // Debug: log signed asset URLs
       for (const section of layout.sections) {
         if (section.config?.videoUrl) {
           console.log(`[preview] Section ${section.id} videoUrl after signing:`, section.config.videoUrl.substring(0, 120));
         }
+        if (section.config?.imageUrl) {
+          console.log(`[preview] Section ${section.id} imageUrl after signing:`, section.config.imageUrl.substring(0, 120));
+        }
       }
     }
+
+    console.log(`[preview] heroImageUrl from defaults:`, heroImageUrl?.substring(0, 100) || 'null');
+    console.log(`[preview] logoUrl from defaults:`, logoUrl?.substring(0, 100) || 'null');
 
     const sectionProps = {
       tenant: { ...mockTenant, subdomain: mockTenant.slug },
