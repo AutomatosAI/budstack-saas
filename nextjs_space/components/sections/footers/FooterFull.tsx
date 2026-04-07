@@ -62,8 +62,8 @@ export function FooterFull(props: SectionProps) {
     <footer
       className="pt-16 pb-8"
       style={{
-        backgroundColor: 'hsl(var(--tenant-color-surface, var(--tenant-color-background, 220 15% 10%)))',
-        color: 'hsl(var(--tenant-color-heading, 0 0% 100%))',
+        backgroundColor: 'hsl(var(--tenant-color-background))',
+        color: 'hsl(var(--tenant-color-text))',
       }}
     >
       <div className="container mx-auto px-6">
@@ -83,14 +83,14 @@ export function FooterFull(props: SectionProps) {
                 {businessName}
               </span>
             </div>
-            <p className="text-white/70 text-sm leading-relaxed max-w-sm">{tagline}</p>
+            <p className="opacity-70 text-sm leading-relaxed max-w-sm">{tagline}</p>
             <SocialIcons links={socialLinks} className="mt-4" />
           </div>
 
           {/* Link Columns */}
           {sections.map((section) => (
             <div key={section.title}>
-              <h4 className="font-bold text-sm uppercase tracking-wider mb-4 text-white/90">
+              <h4 className="font-bold text-sm uppercase tracking-wider mb-4 opacity-90">
                 {section.title}
               </h4>
               <ul className="space-y-2">
@@ -98,7 +98,7 @@ export function FooterFull(props: SectionProps) {
                   <li key={link.href}>
                     <a
                       href={link.href}
-                      className="text-sm text-white/60 hover:text-white transition-colors"
+                      className="text-sm opacity-60 hover:opacity-100 transition-colors"
                     >
                       {link.label}
                     </a>
@@ -111,18 +111,18 @@ export function FooterFull(props: SectionProps) {
 
         {/* Disclaimer */}
         {disclaimer && (
-          <p className="text-xs text-white/40 mb-8 max-w-3xl">{disclaimer}</p>
+          <p className="text-xs opacity-40 mb-8 max-w-3xl">{disclaimer}</p>
         )}
 
         {/* Bottom Bar */}
         <div
           className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}
+          style={{ borderTop: '1px solid hsl(var(--tenant-color-border, var(--tenant-color-text)) / 0.15)' }}
         >
-          <p className="text-sm text-white/50" suppressHydrationWarning>
+          <p className="text-sm opacity-50" suppressHydrationWarning>
             &copy; {year} {businessName}. All rights reserved.
           </p>
-          <p className="text-xs text-white/30">
+          <p className="text-xs opacity-30">
             Powered by BudStacks
           </p>
         </div>

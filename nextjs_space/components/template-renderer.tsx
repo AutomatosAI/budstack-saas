@@ -50,18 +50,39 @@ function CurveDivider({ fill = "var(--tenant-bg, #ffffff)", className = "" }: { 
 // --- End SVG Helpers ---
 
 
-/** Build inline CSS variable overrides from a colorOverrides object */
-function buildColorOverrideStyle(overrides?: Record<string, string>): React.CSSProperties {
-  if (!overrides) return {};
+/** Build inline CSS variable overrides from a colorOverrides object.
+ *  Optional `defaults` are applied first, then overrides layer on top. */
+function buildColorOverrideStyle(
+  overrides?: Record<string, string>,
+  defaults?: Record<string, string>,
+): React.CSSProperties {
   const style: Record<string, string> = {};
-  for (const [k, v] of Object.entries(overrides)) {
-    if (v && typeof v === 'string' && v.trim()) {
-      const hslValue = v.startsWith('#') ? hexToHsl(v) : v;
-      style[`--tenant-color-${k}`] = hslValue;
+  // Apply defaults first
+  if (defaults) {
+    for (const [k, v] of Object.entries(defaults)) {
+      if (v) style[`--tenant-color-${k}`] = v;
+    }
+  }
+  // Apply explicit overrides on top
+  if (overrides) {
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v && typeof v === 'string' && v.trim()) {
+        const hslValue = v.startsWith('#') ? hexToHsl(v) : v;
+        style[`--tenant-color-${k}`] = hslValue;
+      }
     }
   }
   return style;
 }
+
+/** Dark defaults for FooterBrand / FooterFull — prevents white-on-white
+ *  when no footer color overrides are set. */
+const DARK_FOOTER_DEFAULTS: Record<string, string> = {
+  background: '220 15% 10%',
+  text: '0 0% 100%',
+  heading: '0 0% 100%',
+  border: '0 0% 100%',
+};
 
 export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome = true }: Props) {
   const showChrome = renderChrome;
@@ -236,11 +257,17 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
 
           return wrapper;
         })}
-      {FooterComponent && (
-        <div style={buildColorOverrideStyle(layout.footerConfig?.colorOverrides)}>
-          <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig || sectionProps.sectionConfig} />
-        </div>
-      )}
+      {FooterComponent && (() => {
+        const isDarkFooter = layout.footer === 'FooterBrand' || layout.footer === 'FooterFull';
+        return (
+          <div style={buildColorOverrideStyle(
+            layout.footerConfig?.colorOverrides,
+            isDarkFooter ? DARK_FOOTER_DEFAULTS : undefined,
+          )}>
+            <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig || sectionProps.sectionConfig} />
+          </div>
+        );
+      })()}
     </div>
   );
 }

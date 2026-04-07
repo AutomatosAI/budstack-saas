@@ -252,16 +252,21 @@ export default async function TenantStoreLayout({
     if (layout?.footer) {
       const FooterComponent = getSectionComponent(layout.footer);
       if (FooterComponent) {
+        const isDarkFooter = layout.footer === 'FooterBrand' || layout.footer === 'FooterFull';
+        const darkDefaults: Record<string, string> = isDarkFooter
+          ? { '--tenant-color-background': '220 15% 10%', '--tenant-color-text': '0 0% 100%', '--tenant-color-heading': '0 0% 100%', '--tenant-color-border': '0 0% 100%' }
+          : {};
         const footerOverrides = layout.footerConfig?.colorOverrides;
-        const footerStyle = footerOverrides
+        const overrideEntries = footerOverrides
           ? Object.fromEntries(
               Object.entries(footerOverrides)
                 .filter(([, v]) => v && typeof v === 'string' && v.trim())
                 .map(([k, v]) => [`--tenant-color-${k}`, (v as string).startsWith('#') ? hexToHsl(v as string) : v])
             )
-          : undefined;
+          : {};
+        const footerStyle = { ...darkDefaults, ...overrideEntries };
         return (
-          <div style={footerStyle}>
+          <div style={Object.keys(footerStyle).length > 0 ? footerStyle : undefined}>
             <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig} />
           </div>
         );

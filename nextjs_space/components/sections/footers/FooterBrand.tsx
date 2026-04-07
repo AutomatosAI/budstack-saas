@@ -79,8 +79,8 @@ export function FooterBrand(props: SectionProps) {
     <footer
       className="pt-16 pb-8"
       style={{
-        backgroundColor: 'hsl(var(--tenant-color-surface, var(--tenant-color-background, 220 15% 10%)))',
-        color: 'hsl(var(--tenant-color-heading, 0 0% 100%))',
+        backgroundColor: 'hsl(var(--tenant-color-background))',
+        color: 'hsl(var(--tenant-color-text))',
       }}
     >
       <div className="container mx-auto px-6">
@@ -100,19 +100,19 @@ export function FooterBrand(props: SectionProps) {
                 {businessName}
               </span>
             </div>
-            <p className="text-white/70 text-sm leading-relaxed max-w-sm mb-6">{tagline}</p>
+            <p className="opacity-70 text-sm leading-relaxed max-w-sm mb-6">{tagline}</p>
 
             {/* Contact Info */}
             {address && (
               <div className="flex items-start gap-2.5 mb-3 group">
-                <MapPin size={16} className="text-white/40 group-hover:text-white/70 transition-colors mt-0.5 shrink-0" />
-                <span className="text-sm text-white/60">{address}</span>
+                <MapPin size={16} className="opacity-40 group-hover:opacity-70 transition-colors mt-0.5 shrink-0" />
+                <span className="text-sm opacity-60">{address}</span>
               </div>
             )}
             {email && (
               <div className="flex items-center gap-2.5 group">
-                <Mail size={16} className="text-white/40 group-hover:text-white/70 transition-colors shrink-0" />
-                <a href={`mailto:${email}`} className="text-sm text-white/60 hover:text-white transition-colors">
+                <Mail size={16} className="opacity-40 group-hover:opacity-70 transition-colors shrink-0" />
+                <a href={`mailto:${email}`} className="text-sm opacity-60 hover:opacity-100 transition-colors">
                   {email}
                 </a>
               </div>
@@ -125,7 +125,7 @@ export function FooterBrand(props: SectionProps) {
           <div className="lg:col-span-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {sections.map((section) => (
               <div key={section.title}>
-                <h4 className="flex items-center gap-2 font-semibold text-sm uppercase tracking-wider text-white/90 mb-4">
+                <h4 className="flex items-center gap-2 font-semibold text-sm uppercase tracking-wider opacity-90 mb-4">
                   <Leaf size={14} style={{ color: 'hsl(var(--tenant-color-accent, 164 48% 53%))' }} />
                   {section.title}
                 </h4>
@@ -134,7 +134,7 @@ export function FooterBrand(props: SectionProps) {
                     <li key={link.href}>
                       <a
                         href={link.href}
-                        className="text-sm text-white/60 hover:text-white hover:translate-x-1 transform transition-all duration-200 inline-block"
+                        className="text-sm opacity-60 hover:opacity-100 hover:translate-x-1 transform transition-all duration-200 inline-block"
                       >
                         {link.label}
                       </a>
@@ -148,18 +148,18 @@ export function FooterBrand(props: SectionProps) {
 
         {/* Disclaimer */}
         {disclaimer && (
-          <p className="text-xs text-white/40 mb-8 max-w-3xl">{disclaimer}</p>
+          <p className="text-xs opacity-40 mb-8 max-w-3xl">{disclaimer}</p>
         )}
 
         {/* Bottom Bar */}
         <div
           className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}
+          style={{ borderTop: '1px solid hsl(var(--tenant-color-border, var(--tenant-color-text)) / 0.15)' }}
         >
-          <p className="text-sm text-white/50" suppressHydrationWarning>
+          <p className="text-sm opacity-50" suppressHydrationWarning>
             &copy; {year} {businessName}. All rights reserved.
           </p>
-          <p className="text-xs text-white/30">
+          <p className="text-xs opacity-30">
             Powered by BudStacks
           </p>
         </div>
