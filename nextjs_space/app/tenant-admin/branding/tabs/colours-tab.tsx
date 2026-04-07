@@ -88,6 +88,37 @@ export function ColoursTab({
     });
   };
 
+  // Nav/footer color override helpers
+  const setNavOverride = (key: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      navColorOverrides: { ...prev.navColorOverrides, [key]: value },
+    }));
+  };
+
+  const clearNavOverride = (key: string) => {
+    setFormData((prev) => {
+      const overrides = { ...prev.navColorOverrides };
+      delete overrides[key];
+      return { ...prev, navColorOverrides: overrides };
+    });
+  };
+
+  const setFooterOverride = (key: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      footerColorOverrides: { ...prev.footerColorOverrides, [key]: value },
+    }));
+  };
+
+  const clearFooterOverride = (key: string) => {
+    setFormData((prev) => {
+      const overrides = { ...prev.footerColorOverrides };
+      delete overrides[key];
+      return { ...prev, footerColorOverrides: overrides };
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Global Brand Colors */}
@@ -137,6 +168,140 @@ export function ColoursTab({
               onChange={(v) => setGlobalColor("headingColor", v)}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Navigation & Footer Color Overrides */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Header & Footer Colors</CardTitle>
+          <CardDescription>
+            Override global colors for navigation and footer. Leave empty to
+            use global defaults.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Accordion type="multiple" className="w-full">
+            <AccordionItem value="nav-colors">
+              <AccordionTrigger className="text-sm">
+                <span className="flex items-center gap-2">
+                  {Object.keys(formData.navColorOverrides).length > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                  )}
+                  Navigation
+                  {Object.keys(formData.navColorOverrides).length > 0 && (
+                    <span className="text-xs text-muted-foreground font-normal">
+                      ({Object.keys(formData.navColorOverrides).length} override
+                      {Object.keys(formData.navColorOverrides).length !== 1 ? "s" : ""})
+                    </span>
+                  )}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 pt-2">
+                  {Object.keys(formData.navColorOverrides).length > 0 && (
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-muted-foreground"
+                        onClick={() => setFormData((prev) => ({ ...prev, navColorOverrides: {} }))}
+                      >
+                        Clear all overrides
+                      </Button>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    {OVERRIDE_KEYS.map(({ key, label, description }) => {
+                      const currentValue = formData.navColorOverrides[key] || "";
+                      return (
+                        <div key={key} className="relative">
+                          <ColorPicker
+                            label={label}
+                            description={description}
+                            value={currentValue || "#000000"}
+                            onChange={(v) => setNavOverride(key, v)}
+                          />
+                          {currentValue && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-0 right-0 h-6 w-6"
+                              onClick={() => clearNavOverride(key)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="footer-colors">
+              <AccordionTrigger className="text-sm">
+                <span className="flex items-center gap-2">
+                  {Object.keys(formData.footerColorOverrides).length > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                  )}
+                  Footer
+                  {Object.keys(formData.footerColorOverrides).length > 0 && (
+                    <span className="text-xs text-muted-foreground font-normal">
+                      ({Object.keys(formData.footerColorOverrides).length} override
+                      {Object.keys(formData.footerColorOverrides).length !== 1 ? "s" : ""})
+                    </span>
+                  )}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 pt-2">
+                  {Object.keys(formData.footerColorOverrides).length > 0 && (
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-muted-foreground"
+                        onClick={() => setFormData((prev) => ({ ...prev, footerColorOverrides: {} }))}
+                      >
+                        Clear all overrides
+                      </Button>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    {OVERRIDE_KEYS.map(({ key, label, description }) => {
+                      const currentValue = formData.footerColorOverrides[key] || "";
+                      return (
+                        <div key={key} className="relative">
+                          <ColorPicker
+                            label={label}
+                            description={description}
+                            value={currentValue || "#000000"}
+                            onChange={(v) => setFooterOverride(key, v)}
+                          />
+                          {currentValue && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-0 right-0 h-6 w-6"
+                              onClick={() => clearFooterOverride(key)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </CardContent>
       </Card>
 

@@ -152,6 +152,9 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
 
     sectionColorOverrides: initialColorOverrides,
 
+    navColorOverrides: (activeTemplate as any)?.layout?.navigationConfig?.colorOverrides || {},
+    footerColorOverrides: (activeTemplate as any)?.layout?.footerConfig?.colorOverrides || {},
+
     fontFamily:
       resolveFontId(getVal(["typography", "fontFamily", "base"], undefined)) ||
       resolveFontId(getVal(["typography", "fontFamily", "body"], undefined)) ||
@@ -475,9 +478,19 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
     ? {
       ...((activeTemplate as any).layout as any),
       navigation: formData.navigationStyle,
-      navigationConfig: formData.navigationConfig,
+      navigationConfig: {
+        ...formData.navigationConfig,
+        ...(Object.keys(formData.navColorOverrides).length > 0
+          ? { colorOverrides: formData.navColorOverrides }
+          : {}),
+      },
       footer: formData.footerStyle,
-      footerConfig: formData.footerConfig,
+      footerConfig: {
+        ...formData.footerConfig,
+        ...(Object.keys(formData.footerColorOverrides).length > 0
+          ? { colorOverrides: formData.footerColorOverrides }
+          : {}),
+      },
       sections: formData.layoutSections.map((section: any) => {
         const mergedConfig = formData.sectionConfigs[section.id]
           ? { ...section.config, ...formData.sectionConfigs[section.id] }

@@ -16,6 +16,7 @@ import { getTenantBasePath } from "@/lib/tenant-utils";
 import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrapper";
 import { deepMerge } from "@/lib/utils";
 import { sanitizeCss } from "@/lib/css-utils";
+import { hexToHsl } from "@/lib/color-utils";
 
 // Extract runtime-safe CSS from a template's styles.css on disk
 // Keeps :root vars, class rules, @keyframes — strips @tailwind/@layer/@apply/body/* selectors
@@ -210,7 +211,19 @@ export default async function TenantStoreLayout({
     if (layout?.navigation) {
       const NavComponent = getSectionComponent(layout.navigation);
       if (NavComponent) {
-        return <NavComponent {...sectionProps} sectionConfig={layout.navigationConfig} />;
+        const navOverrides = layout.navigationConfig?.colorOverrides;
+        const navStyle = navOverrides
+          ? Object.fromEntries(
+              Object.entries(navOverrides)
+                .filter(([, v]) => v && typeof v === 'string' && v.trim())
+                .map(([k, v]) => [`--tenant-color-${k}`, (v as string).startsWith('#') ? hexToHsl(v as string) : v])
+            )
+          : undefined;
+        return (
+          <div style={navStyle}>
+            <NavComponent {...sectionProps} sectionConfig={layout.navigationConfig} />
+          </div>
+        );
       }
     }
 
@@ -239,7 +252,19 @@ export default async function TenantStoreLayout({
     if (layout?.footer) {
       const FooterComponent = getSectionComponent(layout.footer);
       if (FooterComponent) {
-        return <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig} />;
+        const footerOverrides = layout.footerConfig?.colorOverrides;
+        const footerStyle = footerOverrides
+          ? Object.fromEntries(
+              Object.entries(footerOverrides)
+                .filter(([, v]) => v && typeof v === 'string' && v.trim())
+                .map(([k, v]) => [`--tenant-color-${k}`, (v as string).startsWith('#') ? hexToHsl(v as string) : v])
+            )
+          : undefined;
+        return (
+          <div style={footerStyle}>
+            <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig} />
+          </div>
+        );
       }
     }
 

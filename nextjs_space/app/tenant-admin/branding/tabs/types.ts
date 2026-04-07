@@ -38,6 +38,10 @@ export interface EditorFormData {
   // Per-section color overrides (sectionId -> { colorKey -> hex })
   sectionColorOverrides: Record<string, Record<string, string>>;
 
+  // Nav/footer color overrides
+  navColorOverrides: Record<string, string>;
+  footerColorOverrides: Record<string, string>;
+
   // Typography
   fontFamily: string;
   headingFontFamily: string;

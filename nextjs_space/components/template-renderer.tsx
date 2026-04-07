@@ -50,6 +50,19 @@ function CurveDivider({ fill = "var(--tenant-bg, #ffffff)", className = "" }: { 
 // --- End SVG Helpers ---
 
 
+/** Build inline CSS variable overrides from a colorOverrides object */
+function buildColorOverrideStyle(overrides?: Record<string, string>): React.CSSProperties {
+  if (!overrides) return {};
+  const style: Record<string, string> = {};
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v && typeof v === 'string' && v.trim()) {
+      const hslValue = v.startsWith('#') ? hexToHsl(v) : v;
+      style[`--tenant-color-${k}`] = hslValue;
+    }
+  }
+  return style;
+}
+
 export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome = true }: Props) {
   const showChrome = renderChrome;
   const NavComponent = showChrome ? getSectionComponent(layout.navigation) : null;
@@ -120,7 +133,11 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
       {sectionColorCss && (
         <style dangerouslySetInnerHTML={{ __html: sanitizeCss(sectionColorCss) || '' }} />
       )}
-      {NavComponent && <NavComponent {...sectionProps} sectionConfig={layout.navigationConfig || sectionProps.sectionConfig} />}
+      {NavComponent && (
+        <div style={buildColorOverrideStyle(layout.navigationConfig?.colorOverrides)}>
+          <NavComponent {...sectionProps} sectionConfig={layout.navigationConfig || sectionProps.sectionConfig} />
+        </div>
+      )}
       {layout.sections
         .filter(s => s.visible !== false)
         .map((section, i, arr) => {
@@ -219,7 +236,11 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
 
           return wrapper;
         })}
-      {FooterComponent && <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig || sectionProps.sectionConfig} />}
+      {FooterComponent && (
+        <div style={buildColorOverrideStyle(layout.footerConfig?.colorOverrides)}>
+          <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig || sectionProps.sectionConfig} />
+        </div>
+      )}
     </div>
   );
 }
