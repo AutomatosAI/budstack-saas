@@ -93,7 +93,7 @@ export default function PreviewToolbar({
             }}
           >
             <iframe
-              src={`${window.location.pathname}?embed=true`}
+              src={`${window.location.pathname}${window.location.search ? window.location.search + '&' : '?'}embed=true`}
               className="w-full h-full border-0"
               title={`${device.label} preview`}
             />
