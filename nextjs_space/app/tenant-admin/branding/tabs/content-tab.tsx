@@ -710,6 +710,16 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
 
                   return (
                     <div key={`${section.id}-${field.key}`}>
+                      {field.type === "boolean" ? (
+                        <div className="flex items-center justify-between mt-1">
+                          <Label>{field.label}</Label>
+                          <Switch
+                            checked={!!fieldValue}
+                            onCheckedChange={(checked) => updateField(field.key, checked)}
+                          />
+                        </div>
+                      ) : (
+                      <>
                       <Label>{field.label}</Label>
 
                       {field.type === "video" ? (
@@ -773,6 +783,8 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
                               : undefined)
                           }
                         />
+                      )}
+                      </>
                       )}
                     </div>
                   );

@@ -48,11 +48,11 @@ export function TextMarquee(props: SectionProps) {
   const customLogoUrl = sectionConfig?.logoUrl || null; // only explicit custom logo
   const icon = sectionConfig?.icon || 'leaf';
   const speed = sectionConfig?.speed || 40;
-  const reverse = sectionConfig?.reverse === true || sectionConfig?.reverse === 'true';
+  const reverse = !!sectionConfig?.reverse;
   const fontSize = sectionConfig?.fontSize || 'lg';
   const fontStyle = sectionConfig?.fontStyle || 'italic-serif';
   const repeat = sectionConfig?.repeat || 4;
-  const showBorder = sectionConfig?.showBorder === true || sectionConfig?.showBorder === 'true';
+  const showBorder = !!sectionConfig?.showBorder;
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -111,13 +111,12 @@ export function TextMarquee(props: SectionProps) {
       ref={ref}
       className="py-1"
       style={{
-        contain: 'inline-size',
-        overflow: 'clip',
         backgroundColor: bgColor,
         borderTop: showBorder ? `1px solid ${borderColor}` : undefined,
         borderBottom: showBorder ? `1px solid ${borderColor}` : undefined,
       }}
     >
+      <div style={{ contain: 'inline-size', overflow: 'clip' }}>
       <div className="relative w-full" style={{ overflow: 'clip', height: trackHeight }}>
         <div
           className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
@@ -151,6 +150,7 @@ export function TextMarquee(props: SectionProps) {
           <span className="inline-flex items-center">{blocks}</span>
           <span className="inline-flex items-center">{blocks}</span>
         </motion.div>
+      </div>
       </div>
 
       <style jsx>{`

@@ -5,7 +5,7 @@
  * Drives the Store Editor form rendering and section type migration.
  */
 
-export type FieldType = 'text' | 'textarea' | 'image' | 'video' | 'url' | 'select' | 'number' | 'array';
+export type FieldType = 'text' | 'textarea' | 'image' | 'video' | 'url' | 'select' | 'number' | 'array' | 'boolean';
 
 /** Shape of a single sub-field inside an array item (e.g. title, description inside a feature) */
 export interface ArrayItemField {
@@ -652,10 +652,10 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'icon', label: 'Separator Icon', type: 'select', default: 'leaf', options: ['leaf', 'cannabis', 'droplet', 'sparkle', 'none'] },
       { key: 'logoUrl', label: 'Custom Separator Image (overrides icon)', type: 'image', default: '' },
       { key: 'speed', label: 'Scroll Speed', type: 'number', default: 40 },
-      { key: 'reverse', label: 'Reverse Direction', type: 'select', default: 'false', options: ['false', 'true'] },
+      { key: 'reverse', label: 'Reverse Direction', type: 'boolean', default: '' },
       { key: 'fontSize', label: 'Text Size', type: 'select', default: 'lg', options: ['sm', 'md', 'lg', 'xl'] },
       { key: 'fontStyle', label: 'Font Style', type: 'select', default: 'italic-serif', options: ['serif', 'sans', 'italic-serif', 'italic-sans', 'mono', 'uppercase-sans', 'uppercase-serif', 'light-serif', 'light-sans', 'bold-sans'] },
-      { key: 'showBorder', label: 'Show Top/Bottom Border', type: 'select', default: 'false', options: ['false', 'true'] },
+      { key: 'showBorder', label: 'Show Top/Bottom Border', type: 'boolean', default: '' },
       { key: 'repeat', label: 'Repeat Count', type: 'number', default: 4 },
     ],
   },
