@@ -59,7 +59,7 @@ export function LogoMarquee(props: SectionProps) {
       </div>
 
       {/* Marquee track */}
-      <div className="relative">
+      <div className="relative overflow-hidden">
         {/* Edge fade masks */}
         <div
           className="absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none"

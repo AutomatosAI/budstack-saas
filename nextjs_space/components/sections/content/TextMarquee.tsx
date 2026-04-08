@@ -96,7 +96,7 @@ export function TextMarquee(props: SectionProps) {
       style={{ backgroundColor: sectionConfig?.bgColor || 'hsl(var(--tenant-color-surface))' }}
     >
       {/* Edge fades */}
-      <div className="relative">
+      <div className="relative overflow-hidden">
         <div
           className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
           style={{
