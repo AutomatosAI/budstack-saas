@@ -21,6 +21,12 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, ChevronDown, ChevronUp, Check } from "lucide-react";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   SECTION_SCHEMAS,
   getEditableFields,
   migrateSectionConfig,
@@ -533,14 +539,16 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <Accordion type="multiple" defaultValue={["navigation"]} className="w-full">
+
       {/* ─── Navigation ─────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Navigation</CardTitle>
-          <CardDescription>Choose a header style and configure menu links</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <AccordionItem value="navigation">
+        <AccordionTrigger className="text-base font-semibold">
+          Navigation
+        </AccordionTrigger>
+        <AccordionContent>
+        <div className="space-y-4 pt-2">
           <div>
             <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">Style</Label>
             <div className="grid grid-cols-2 gap-2">
@@ -599,21 +607,11 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        </AccordionContent>
+      </AccordionItem>
 
       {/* ─── Section Content ─────────────────────── */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">
-          Section Content
-        </h4>
-        <p className="text-sm text-blue-800">
-          The fields below are dynamically generated based on your selected
-          template&apos;s layout. Editing them here will instantly update the preview
-          on the right.
-        </p>
-      </div>
-
       {formData.layoutSections.map((section: any) => {
         if (!section.id) return null;
 
@@ -643,22 +641,36 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
           }));
         };
 
+        const sectionLabel = schema?.label || section.type.replace(/([A-Z])/g, " $1").trim();
+        const hasEdits = Object.keys(formData.sectionConfigs[section.id] || {}).length > 0;
+
         return (
-          <Card key={section.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-base">
-                  {schema?.label ||
-                    section.type.replace(/([A-Z])/g, " $1").trim()}
-                </CardTitle>
-                {sameCategory.length > 0 && (
+          <AccordionItem key={section.id} value={section.id}>
+            <AccordionTrigger className="text-sm">
+              <span className="flex items-center gap-2">
+                {hasEdits && (
+                  <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                )}
+                {sectionLabel}
+                {hasEdits && (
+                  <span className="text-xs text-muted-foreground font-normal">
+                    (edited)
+                  </span>
+                )}
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
+            <div className="space-y-4 pt-2">
+              {sameCategory.length > 0 && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Swap variant</Label>
                   <Select
                     value={section.type}
                     onValueChange={(newType) =>
                       handleChangeSectionType(section.id, newType)
                     }
                   >
-                    <SelectTrigger className="w-[180px] h-8 text-xs">
+                    <SelectTrigger className="mt-1 h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -672,10 +684,8 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+                </div>
+              )}
               {editableFields.length > 0 ? (
                 editableFields.map((field: FieldSchema) => {
                   const fieldValue = configValues[field.key] ?? field.default;
@@ -770,18 +780,19 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
                   No editable fields defined for this section type.
                 </p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+            </AccordionContent>
+          </AccordionItem>
         );
       })}
 
       {/* ─── Footer ─────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Footer</CardTitle>
-          <CardDescription>Choose a footer style and configure content</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <AccordionItem value="footer">
+        <AccordionTrigger className="text-base font-semibold">
+          Footer
+        </AccordionTrigger>
+        <AccordionContent>
+        <div className="space-y-4 pt-2">
           <div>
             <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">Style</Label>
             <div className="grid grid-cols-3 gap-2">
@@ -855,8 +866,11 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
               onChange={(socialLinks) => updateFooterConfig({ socialLinks: socialLinks as EditorFormData["footerConfig"]["socialLinks"] })}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      </Accordion>
     </div>
   );
 }
