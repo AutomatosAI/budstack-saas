@@ -6,22 +6,6 @@ import { useInView } from 'react-intersection-observer';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
 
-/**
- * TextMarquee — infinitely scrolling text with optional logo/icon between words.
- *
- * sectionConfig:
- *   text       — the marquee text (e.g. "used for a range of health products that benefit body and mind")
- *   logoUrl    — optional image inserted between repeated text (e.g. a cannabis leaf)
- *   icon       — fallback SVG icon key if no logoUrl (default: "leaf")
- *   speed      — scroll speed multiplier, 1-100 (default: 40)
- *   reverse    — scroll right-to-left when false (default), left-to-right when true
- *   fontSize   — text size: "sm" | "md" | "lg" | "xl" (default: "lg")
- *   fontStyle  — "serif" | "sans" | "italic-serif" (default: "italic-serif")
- *   textColor  — override text color, or uses --tenant-color-text
- *   bgColor    — override bg, or uses --tenant-color-surface
- *   repeat     — how many times to repeat the text block (default: 4)
- */
-
 // Hardcoded SVG icons — safe for dangerouslySetInnerHTML (no user input)
 const ICON_SVGS: Record<string, string> = {
   leaf: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 1 8-1.5 5.5-4 8-9 10z"/><path d="M10.7 20.7c1.5-4.5 0-8.5-3.7-11.7"/></svg>`,
@@ -37,10 +21,24 @@ const FONT_SIZE_MAP: Record<string, string> = {
   xl: 'text-4xl sm:text-5xl md:text-6xl lg:text-7xl',
 };
 
+const HEIGHT_MAP: Record<string, string> = {
+  sm: '2.5rem',
+  md: '3.5rem',
+  lg: '4.5rem',
+  xl: '6rem',
+};
+
 const FONT_STYLE_MAP: Record<string, string> = {
   serif: 'font-serif',
   sans: 'font-sans',
   'italic-serif': 'font-serif italic',
+  'italic-sans': 'font-sans italic',
+  mono: 'font-mono',
+  'uppercase-sans': 'font-sans uppercase tracking-widest',
+  'uppercase-serif': 'font-serif uppercase tracking-wider',
+  'light-serif': 'font-serif font-light',
+  'light-sans': 'font-sans font-light',
+  'bold-sans': 'font-sans font-bold',
 };
 
 export function TextMarquee(props: SectionProps) {
@@ -54,15 +52,20 @@ export function TextMarquee(props: SectionProps) {
   const fontSize = sectionConfig?.fontSize || 'lg';
   const fontStyle = sectionConfig?.fontStyle || 'italic-serif';
   const repeat = sectionConfig?.repeat || 4;
+  const showBorder = sectionConfig?.showBorder === true || sectionConfig?.showBorder === 'true';
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
   const sizeClass = FONT_SIZE_MAP[fontSize] || FONT_SIZE_MAP.lg;
   const styleClass = FONT_STYLE_MAP[fontStyle] || FONT_STYLE_MAP['italic-serif'];
+  const trackHeight = HEIGHT_MAP[fontSize] || HEIGHT_MAP.lg;
   const duration = Math.max(10, (100 - speed) * 0.6);
 
   // Only use hardcoded SVGs — no user-supplied HTML
   const iconSvg = ICON_SVGS[icon] || ICON_SVGS.leaf;
+
+  const bgColor = sectionConfig?.bgColor || 'hsl(var(--tenant-color-surface))';
+  const borderColor = 'hsl(var(--tenant-color-border))';
 
   const renderSeparator = () => {
     if (logoUrl) {
@@ -92,21 +95,23 @@ export function TextMarquee(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-8 sm:py-12"
-      style={{ contain: 'inline-size', overflow: 'clip', backgroundColor: sectionConfig?.bgColor || 'hsl(var(--tenant-color-surface))' }}
+      className="py-3 sm:py-4"
+      style={{
+        contain: 'inline-size',
+        overflow: 'clip',
+        backgroundColor: bgColor,
+        borderTop: showBorder ? `1px solid ${borderColor}` : undefined,
+        borderBottom: showBorder ? `1px solid ${borderColor}` : undefined,
+      }}
     >
-      <div className="relative w-full" style={{ overflow: 'clip', height: fontSize === 'xl' ? '5rem' : fontSize === 'md' ? '3rem' : fontSize === 'sm' ? '2.5rem' : '4rem' }}>
+      <div className="relative w-full" style={{ overflow: 'clip', height: trackHeight }}>
         <div
           className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
-          style={{
-            background: `linear-gradient(to right, ${sectionConfig?.bgColor || 'hsl(var(--tenant-color-surface))'}, transparent)`,
-          }}
+          style={{ background: `linear-gradient(to right, ${bgColor}, transparent)` }}
         />
         <div
           className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
-          style={{
-            background: `linear-gradient(to left, ${sectionConfig?.bgColor || 'hsl(var(--tenant-color-surface))'}, transparent)`,
-          }}
+          style={{ background: `linear-gradient(to left, ${bgColor}, transparent)` }}
         />
 
         <motion.div
@@ -122,7 +127,10 @@ export function TextMarquee(props: SectionProps) {
             width: 'max-content',
             color: sectionConfig?.textColor || 'hsl(var(--tenant-color-text))',
             animation: `text-marquee-scroll ${duration}s linear infinite ${reverse ? 'reverse' : ''}`,
-            fontFamily: fontStyle === 'sans' ? 'var(--tenant-font-body, sans-serif)' : 'var(--tenant-font-heading, serif)',
+            fontFamily: fontStyle === 'sans' || fontStyle === 'italic-sans' || fontStyle === 'uppercase-sans' || fontStyle === 'light-sans' || fontStyle === 'bold-sans'
+              ? 'var(--tenant-font-body, sans-serif)'
+              : fontStyle === 'mono' ? 'ui-monospace, monospace'
+              : 'var(--tenant-font-heading, serif)',
           }}
         >
           {/* Double for seamless loop */}
