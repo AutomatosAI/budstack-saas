@@ -145,7 +145,7 @@ const TENANT_SCOPED_CSS = `
 .tenant-theme-container h6 { font-size: calc(1rem * var(--tenant-section-heading-scale, 1)); }
 
 /* === BUTTONS (CTA-style within sections) === */
-.tenant-theme-container section a[class*="rounded"],
+/* Only target inline CTA links (with bg color), not card wrappers that use rounded + overflow-hidden */
 .tenant-theme-container section button[class*="bg-"],
 .tenant-theme-container section a[class*="bg-"] {
   border-radius: var(--tenant-button-radius) !important;
