@@ -34,7 +34,7 @@ export function HeroSplitImages({
     pageContent?.home?.heroDescription ||
     'Discover our curated selection of premium products designed to elevate your experience.';
   const ctaText = sectionConfig?.ctaText || 'Get Started';
-  const secondaryCtaText = sectionConfig?.secondaryCtaText || 'Book a Call';
+  const secondaryCtaText = sectionConfig?.secondaryCtaText || '';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '/contact';
   const badgeText = (sectionConfig?.badgeText as string) || sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || '';
   const layout = (sectionConfig?.layout as string) || 'left';

@@ -21,7 +21,7 @@ export function HeroFullScreen({
   const subtitle = sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Elevated Experience';
   const description = sectionConfig?.description || pageContent?.home?.heroDescription || pageContent?.homeHeroDescription;
   const ctaText = sectionConfig?.ctaText || 'Book Consultation';
-  const secondaryCtaText = sectionConfig?.secondaryCtaText || 'Learn More';
+  const secondaryCtaText = sectionConfig?.secondaryCtaText || '';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '#about';
 
   // Text alignment — from tenant settings or layout.json sectionConfig
@@ -176,12 +176,12 @@ export function HeroFullScreen({
       )}
 
       {/* Content */}
-      <div className={`relative z-10 container mx-auto px-6 ${isLeft ? 'text-left' : 'text-center'}`}>
+      <div className={`relative z-10 container mx-auto px-6 ${isLeft ? 'text-left' : isRight ? 'text-right' : 'text-center'}`}>
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className={`text-3xl sm:text-5xl md:text-7xl font-bold text-white mb-4 sm:mb-6 ${isLeft ? 'max-w-3xl' : ''}`}
+          className={`text-3xl sm:text-5xl md:text-7xl font-bold text-white mb-4 sm:mb-6 ${isLeft ? 'max-w-3xl' : isRight ? 'max-w-3xl ml-auto' : ''}`}
           style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
         >
           {title}
@@ -191,7 +191,7 @@ export function HeroFullScreen({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className={`text-base sm:text-xl md:text-2xl text-white/90 mb-4 max-w-2xl ${isLeft ? '' : 'mx-auto'}`}
+          className={`text-base sm:text-xl md:text-2xl text-white/90 mb-4 max-w-2xl ${isRight ? 'ml-auto' : isLeft ? '' : 'mx-auto'}`}
         >
           {subtitle}
         </motion.p>
@@ -201,7 +201,7 @@ export function HeroFullScreen({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className={`text-sm sm:text-lg text-white/75 mb-6 sm:mb-10 max-w-xl ${isLeft ? '' : 'mx-auto'}`}
+            className={`text-sm sm:text-lg text-white/75 mb-6 sm:mb-10 max-w-xl ${isRight ? 'ml-auto' : isLeft ? '' : 'mx-auto'}`}
           >
             {description}
           </motion.p>
@@ -223,12 +223,14 @@ export function HeroFullScreen({
           >
             {ctaText}
           </a>
-          <a
-            href={secondaryCtaHref}
-            className="px-8 py-3 text-base font-semibold border-2 border-white text-white rounded-full hover:bg-white/10 transition-all"
-          >
-            {secondaryCtaText}
-          </a>
+          {secondaryCtaText && (
+            <a
+              href={secondaryCtaHref}
+              className="px-8 py-3 text-base font-semibold border-2 border-white text-white rounded-full hover:bg-white/10 transition-all"
+            >
+              {secondaryCtaText}
+            </a>
+          )}
         </motion.div>
       </div>
 

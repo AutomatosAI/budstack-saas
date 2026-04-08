@@ -18,7 +18,7 @@ export function HeroSplit({
   const subtitle = sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Delivered';
   const description = sectionConfig?.description || pageContent?.home?.heroDescription || pageContent?.homeHeroDescription;
   const ctaText = sectionConfig?.ctaText || 'Book Consultation';
-  const secondaryCtaText = sectionConfig?.secondaryCtaText || 'Learn More';
+  const secondaryCtaText = sectionConfig?.secondaryCtaText || '';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '#about';
 
   // Logo placement
@@ -85,16 +85,18 @@ export function HeroSplit({
               >
                 {ctaText}
               </a>
-              <a
-                href={secondaryCtaHref}
-                className="px-8 py-3 text-base font-semibold rounded-lg border-2 transition-all hover:opacity-80"
-                style={{
-                  borderColor: 'hsl(var(--tenant-color-primary))',
-                  color: 'hsl(var(--tenant-color-primary))',
-                }}
-              >
-                {secondaryCtaText}
-              </a>
+              {secondaryCtaText && (
+                <a
+                  href={secondaryCtaHref}
+                  className="px-8 py-3 text-base font-semibold rounded-lg border-2 transition-all hover:opacity-80"
+                  style={{
+                    borderColor: 'hsl(var(--tenant-color-primary))',
+                    color: 'hsl(var(--tenant-color-primary))',
+                  }}
+                >
+                  {secondaryCtaText}
+                </a>
+              )}
             </div>
           </motion.div>
 
