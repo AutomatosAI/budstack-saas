@@ -41,8 +41,8 @@ export function LogoMarquee(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-16 sm:py-20 lg:py-24 max-w-[100vw]"
-      style={{ overflow: 'clip', backgroundColor: 'hsl(var(--tenant-color-surface))' }}
+      className="py-16 sm:py-20 lg:py-24"
+      style={{ contain: 'inline-size', overflow: 'clip', backgroundColor: 'hsl(var(--tenant-color-surface))' }}
     >
       <div className="container mx-auto px-6">
         {heading && (
@@ -58,8 +58,7 @@ export function LogoMarquee(props: SectionProps) {
         )}
       </div>
 
-      {/* Marquee track — max-w-full + overflow-clip prevents page width blowout */}
-      <div className="relative max-w-full" style={{ overflow: 'clip' }}>
+      <div className="relative w-full" style={{ overflow: 'clip' }}>
         {/* Edge fade masks */}
         <div
           className="absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none"

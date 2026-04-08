@@ -92,11 +92,10 @@ export function TextMarquee(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-8 sm:py-12 max-w-[100vw]"
-      style={{ overflow: 'clip', backgroundColor: sectionConfig?.bgColor || 'hsl(var(--tenant-color-surface))' }}
+      className="py-8 sm:py-12"
+      style={{ contain: 'inline-size', overflow: 'clip', backgroundColor: sectionConfig?.bgColor || 'hsl(var(--tenant-color-surface))' }}
     >
-      {/* Marquee track — max-w-full + overflow-clip prevents page width blowout */}
-      <div className="relative max-w-full" style={{ overflow: 'clip' }}>
+      <div className="relative w-full" style={{ overflow: 'clip' }}>
         <div
           className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
           style={{
