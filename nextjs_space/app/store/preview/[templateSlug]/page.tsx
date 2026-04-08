@@ -158,18 +158,31 @@ export default async function TemplatePreviewPage({
     const baseSlug = tenantTemplate.templates?.slug || templateSlug;
     const baseS3Path = `templates/${baseSlug}`;
 
-    console.log(`[preview] Tenant preview for tenantTemplateId=${tenantTemplateId}`, {
+    console.log(`[preview] Tenant preview for tenantTemplateId=${tenantTemplateId}`, JSON.stringify({
       tenantS3Path,
       baseS3Path,
       businessName: tenantTemplate.tenant?.businessName,
-    });
+      dbLogoUrl: tenantTemplate.logoUrl?.substring(0, 80) || 'NULL',
+      dbHeroImageUrl: tenantTemplate.heroImageUrl?.substring(0, 80) || 'NULL',
+      hasDesignSystem: !!tenantTemplate.designSystem,
+      hasPageContent: !!tenantTemplate.pageContent,
+    }));
 
     // Load layout, defaults, CSS — same fallback logic as the live store
     const { layout, defaults, customCss } = await getTemplateAssets(tenantS3Path, baseS3Path);
 
     if (!layout) {
+      console.error(`[preview] No layout.json found for tenantTemplateId=${tenantTemplateId}`);
       notFound();
     }
+
+    console.log(`[preview] Loaded assets:`, JSON.stringify({
+      layoutNav: layout.navigation,
+      layoutNavConfigCta: (layout as any).navigationConfig?.cta || 'NONE',
+      defaultsLogoPath: defaults?.logoPath?.substring(0, 80) || 'NULL',
+      defaultsNavCta: defaults?.navigation?.cta || 'NONE',
+      sectionCount: layout.sections?.length || 0,
+    }));
 
     // Merge design system: base defaults + tenant overrides
     const mergedDesignSystem = deepMerge(defaults?.designSystem || null, tenantTemplate.designSystem || null);
@@ -195,6 +208,12 @@ export default async function TemplatePreviewPage({
     if (!logoUrl) {
       logoUrl = await signDefaultAsset(defaults?.logoPath, s3Prefix);
     }
+
+    console.log(`[preview] Resolved assets:`, JSON.stringify({
+      logoUrl: logoUrl?.substring(0, 80) || 'NULL',
+      logoSource: tenantTemplate.logoUrl ? 'DB' : (defaults?.logoPath ? 'defaults.json' : 'NONE'),
+      heroImageUrl: heroImageUrl?.substring(0, 80) || 'NULL',
+    }));
 
     const tenantData = tenantTemplate.tenant;
     const previewTenant: Tenant = tenantData
