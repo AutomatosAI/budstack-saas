@@ -41,12 +41,11 @@ export function About(props: SectionProps) {
       className="relative py-16 sm:py-20 lg:py-24"
       style={{ backgroundColor: 'hsl(var(--tenant-color-background))' }}
     >
-      {/* Optional background image */}
+      {/* Optional background image — uses img instead of next/image to avoid domain whitelist issues with signed URLs */}
       {backgroundImageUrl && (
         <>
-          <div className="absolute inset-0 z-0">
-            <Image src={backgroundImageUrl} alt="" fill className="object-cover" />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={backgroundImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover z-0" />
           <div
             className="absolute inset-0 z-0"
             style={{ backgroundColor: 'hsl(var(--tenant-color-background) / 0.85)' }}

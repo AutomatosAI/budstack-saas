@@ -92,6 +92,10 @@ export function HeroFullScreen({
               glassEffect={glassEffect as any}
               className="w-full h-full object-cover min-h-[500px]"
             />
+          ) : heroImageUrl!.includes('X-Amz-') ? (
+            /* Signed S3 URLs bypass next/image to avoid optimization proxy issues in the editor */
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={heroImageUrl!} alt="Hero Background" className="absolute inset-0 w-full h-full object-cover" />
           ) : (
             <Image
               src={heroImageUrl!}

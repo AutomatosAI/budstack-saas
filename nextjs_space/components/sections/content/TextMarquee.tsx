@@ -92,11 +92,11 @@ export function TextMarquee(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-8 sm:py-12"
+      className="py-8 sm:py-12 max-w-[100vw]"
       style={{ overflow: 'clip', backgroundColor: sectionConfig?.bgColor || 'hsl(var(--tenant-color-surface))' }}
     >
-      {/* Edge fades — overflow-clip prevents the animated content from expanding the page */}
-      <div className="relative" style={{ overflow: 'clip' }}>
+      {/* Marquee track — max-w-full + overflow-clip prevents page width blowout */}
+      <div className="relative max-w-full" style={{ overflow: 'clip' }}>
         <div
           className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
           style={{
@@ -114,8 +114,10 @@ export function TextMarquee(props: SectionProps) {
           initial={{ opacity: 0 }}
           animate={inView ? { opacity: 1 } : {}}
           transition={{ duration: 0.8 }}
-          className={`flex items-center ${sizeClass} ${styleClass}`}
+          className={`items-center ${sizeClass} ${styleClass}`}
           style={{
+            display: 'flex',
+            width: 'max-content',
             color: sectionConfig?.textColor || 'hsl(var(--tenant-color-text))',
             animation: `text-marquee-scroll ${duration}s linear infinite ${reverse ? 'reverse' : ''}`,
             fontFamily: fontStyle === 'sans' ? 'var(--tenant-font-body, sans-serif)' : 'var(--tenant-font-heading, serif)',
