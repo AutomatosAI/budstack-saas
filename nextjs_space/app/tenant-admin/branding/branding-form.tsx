@@ -559,19 +559,18 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 <Eye className="h-4 w-4" />
               </Button>
               {(() => {
-                const previewSlug = (activeTemplate as any)?.templates?.slug || (activeTemplate as any)?.slug || tenant.subdomain;
-                return previewSlug ? (
-                  <a
-                    href={`/store/preview/${previewSlug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                // Tenant admins → their live store; Super admins → template preview
+                const previewHref = publishLabel
+                  ? `/store/preview/${(activeTemplate as any)?.templates?.slug || tenant.subdomain}`
+                  : `/store/${tenant.subdomain}`;
+                return (
+                  <a href={previewHref} target="_blank" rel="noopener noreferrer">
                     <Button type="button" variant="outline" size="sm" className="gap-1.5">
                       <ExternalLink className="h-3.5 w-3.5" />
                       Preview
                     </Button>
                   </a>
-                ) : null;
+                );
               })()}
               <Button type="submit" disabled={isLoading} size="sm">
                 {isLoading ? "Publishing..." : (publishLabel || "Publish Site")}
@@ -716,45 +715,70 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
           </div>
         </div>
 
-        <div
-          className={cn(
-            "h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-background relative mx-auto transition-all duration-300",
-            previewDevice === "desktop" && "w-full max-w-full",
-            previewDevice === "tablet" && "w-[768px] max-w-full",
-            previewDevice === "mobile" && "w-[375px] max-w-full",
-          )}
-          style={previewDevice !== "desktop" ? { boxShadow: "0 0 0 1px hsl(var(--border))" } : undefined}
-        >
-          {automatosApiKey && (
-            <div className="absolute top-4 right-4 z-50">
-              <StoreEditorHelperBot
-                apiKey={automatosApiKey}
-                agentId={automatosHelperAgentId ? Number(automatosHelperAgentId) : undefined}
-                editorContext={aiContext}
-                onAction={handleAutomatosAction}
-              />
-            </div>
-          )}
+        {/* Desktop: inline React preview */}
+        {previewDevice === "desktop" && (
+          <div
+            className="w-full h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-background relative"
+            style={{ transform: "scale(1)" }}
+          >
+            {automatosApiKey && (
+              <div className="absolute top-4 right-4 z-50">
+                <StoreEditorHelperBot
+                  apiKey={automatosApiKey}
+                  agentId={automatosHelperAgentId ? Number(automatosHelperAgentId) : undefined}
+                  editorContext={aiContext}
+                  onAction={handleAutomatosAction}
+                />
+              </div>
+            )}
 
-          {liveLayout ? (
-            <TenantThemeProvider
-              tenant={tenant as any}
-              tenantTemplate={{ designSystem: liveDesignSystem, customCss: formData.customCSS }}
+            {liveLayout ? (
+              <TenantThemeProvider
+                tenant={tenant as any}
+                tenantTemplate={{ designSystem: liveDesignSystem, customCss: formData.customCSS }}
+              >
+                <TemplateRenderer
+                  layout={liveLayout as any}
+                  sectionProps={liveSectionProps}
+                  customCss={[templateCss, formData.customCSS].filter(Boolean).join("\n")}
+                  renderChrome={true}
+                />
+              </TenantThemeProvider>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground flex-col gap-4">
+                <Layout className="w-12 h-12 opacity-20" />
+                <p>No valid template layout selected.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tablet/Mobile: iframe with real viewport width so media queries fire */}
+        {previewDevice !== "desktop" && (
+          <div
+            className="flex justify-center bg-slate-100 dark:bg-slate-900 pt-10"
+            style={{ height: "100%" }}
+          >
+            <div
+              className="bg-white shadow-2xl overflow-hidden"
+              style={{
+                width: previewDevice === "tablet" ? "768px" : "375px",
+                maxWidth: "100%",
+                height: "calc(100% - 2.5rem)",
+                borderRadius: previewDevice === "mobile" ? "0 0 2rem 2rem" : undefined,
+              }}
             >
-              <TemplateRenderer
-                layout={liveLayout as any}
-                sectionProps={liveSectionProps}
-                customCss={[templateCss, formData.customCSS].filter(Boolean).join("\n")}
-                renderChrome={true}
+              <iframe
+                src={publishLabel
+                  ? `/store/preview/${(activeTemplate as any)?.templates?.slug || tenant.subdomain}`
+                  : `/store/${tenant.subdomain}`
+                }
+                className="w-full h-full border-0"
+                title={`${previewDevice === "tablet" ? "Tablet" : "Mobile"} preview`}
               />
-            </TenantThemeProvider>
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground flex-col gap-4">
-              <Layout className="w-12 h-12 opacity-20" />
-              <p>No valid template layout selected.</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* 🚀 PageAgent Demo Integration */}
