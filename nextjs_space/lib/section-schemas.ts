@@ -355,6 +355,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'ctaText', label: 'Button Text', type: 'text', default: 'View All Products' },
       { key: 'ctaHref', label: 'Button Link', type: 'url', default: '', placeholder: 'Leave empty to use products page' },
       { key: 'showButton', label: 'Show Button', type: 'select', default: 'yes', options: ['yes', 'no'] },
+      { key: 'imageMode', label: 'Image Fit', type: 'select', default: 'cover', options: ['cover', 'contain'] },
       ...BG_IMAGE_FIELDS,
     ],
   },

@@ -33,6 +33,7 @@ export function ProductShowcase(props: SectionProps) {
   const backgroundImageUrl = sectionConfig?.backgroundImageUrl || null;
   const overlayOpacity = parseFloat(sectionConfig?.overlayOpacity ?? '0.5');
   const showButton = sectionConfig?.showButton !== 'no';
+  const imageMode = sectionConfig?.imageMode || 'cover'; // 'cover' for photos, 'contain' for product cutouts
   const rawCategories: Category[] = sectionConfig?.categories || defaultCategories;
   const categories = rawCategories.map((c) => ({ ...c, href: c.href ? prefixHref(c.href) : prefixHref('/products') }));
 
@@ -96,10 +97,16 @@ export function ProductShowcase(props: SectionProps) {
             >
               {cat.imageUrl && (
                 <div className="relative w-full h-48 sm:h-56">
-                  <Image src={cat.imageUrl} alt={cat.title} fill className="object-contain p-4" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                  <Image
+                    src={cat.imageUrl}
+                    alt={cat.title}
+                    fill
+                    className={imageMode === 'contain' ? 'object-contain p-4' : 'object-cover'}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  />
                 </div>
               )}
-              <div className="p-6">
+              <div className="p-5">
                 <h3
                   className="text-xl font-bold mb-3"
                   style={{ color: 'hsl(var(--tenant-color-heading))' }}
