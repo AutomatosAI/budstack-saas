@@ -105,13 +105,15 @@ export function About(props: SectionProps) {
               </div>
             )}
 
-            <a
-              href={aboutUrl}
-              className="inline-block px-8 py-3 text-base font-semibold text-white rounded-lg transition-all hover:opacity-90"
-              style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
-            >
-              Learn More About Us
-            </a>
+            {(sectionConfig?.ctaText !== '') && (
+              <a
+                href={aboutUrl}
+                className="inline-block px-8 py-3 text-base font-semibold text-white rounded-lg transition-all hover:opacity-90"
+                style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
+              >
+                {sectionConfig?.ctaText || 'Learn More About Us'}
+              </a>
+            )}
           </motion.div>
         </div>
       </div>
