@@ -41,8 +41,8 @@ export function LogoMarquee(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-16 sm:py-20 lg:py-24 overflow-hidden"
-      style={{ backgroundColor: 'hsl(var(--tenant-color-surface))' }}
+      className="py-16 sm:py-20 lg:py-24"
+      style={{ overflow: 'clip', backgroundColor: 'hsl(var(--tenant-color-surface))' }}
     >
       <div className="container mx-auto px-6">
         {heading && (
@@ -58,8 +58,8 @@ export function LogoMarquee(props: SectionProps) {
         )}
       </div>
 
-      {/* Marquee track */}
-      <div className="relative overflow-hidden">
+      {/* Marquee track — overflow-clip prevents the animated content from expanding the page */}
+      <div className="relative" style={{ overflow: 'clip' }}>
         {/* Edge fade masks */}
         <div
           className="absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none"

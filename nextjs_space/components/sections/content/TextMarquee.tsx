@@ -92,11 +92,11 @@ export function TextMarquee(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-8 sm:py-12 overflow-hidden"
-      style={{ backgroundColor: sectionConfig?.bgColor || 'hsl(var(--tenant-color-surface))' }}
+      className="py-8 sm:py-12"
+      style={{ overflow: 'clip', backgroundColor: sectionConfig?.bgColor || 'hsl(var(--tenant-color-surface))' }}
     >
-      {/* Edge fades */}
-      <div className="relative overflow-hidden">
+      {/* Edge fades — overflow-clip prevents the animated content from expanding the page */}
+      <div className="relative" style={{ overflow: 'clip' }}>
         <div
           className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
           style={{
