@@ -68,10 +68,13 @@ function resolvePublicAsset(
 
 export default async function TemplatePreviewPage({
   params,
+  searchParams,
 }: {
   params: { templateSlug: string };
+  searchParams: { embed?: string };
 }) {
   const { templateSlug } = params;
+  const isEmbed = searchParams.embed === "true";
 
   // PATH 1: Try data-driven template (layout.json in S3)
   let layout: TemplateLayout | null = null;
@@ -228,13 +231,15 @@ export default async function TemplatePreviewPage({
             : undefined
         }
       >
-        <PreviewToolbar templateName={defaults?.template || templateSlug} />
-        <TemplateRenderer
-          layout={layout}
-          sectionProps={sectionProps}
-          customCss={customCss}
-          renderChrome={true}
-        />
+        {!isEmbed && <PreviewToolbar templateName={defaults?.template || templateSlug} />}
+        <div className="preview-content">
+          <TemplateRenderer
+            layout={layout}
+            sectionProps={sectionProps}
+            customCss={customCss}
+            renderChrome={true}
+          />
+        </div>
       </TenantThemeProvider>
     );
   }
@@ -271,8 +276,10 @@ export default async function TemplatePreviewPage({
           : undefined
       }
     >
-      <PreviewToolbar templateName={localDefaults?.template || templateSlug} />
-      <TemplateComponent {...templateProps} />
+      {!isEmbed && <PreviewToolbar templateName={localDefaults?.template || templateSlug} />}
+      <div className="preview-content">
+        <TemplateComponent {...templateProps} />
+      </div>
     </TenantThemeProvider>
   );
 }

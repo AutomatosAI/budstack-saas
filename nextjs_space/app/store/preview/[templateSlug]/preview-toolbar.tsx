@@ -20,77 +20,86 @@ export default function PreviewToolbar({
 }) {
   const [activeDevice, setActiveDevice] = useState<DeviceId>("desktop");
 
-  // Apply width constraint to the template wrapper div (class="template-{slug}")
+  const device = devices.find((d) => d.id === activeDevice)!;
+  const showIframe = activeDevice !== "desktop";
+
+  // Hide/show the server-rendered .preview-content when iframe is active
   useEffect(() => {
-    const container = document.querySelector(
-      '.tenant-theme-container'
-    ) as HTMLElement | null;
-    if (!container) return;
-
-    const device = devices.find((d) => d.id === activeDevice);
-    if (activeDevice === "desktop") {
-      container.style.maxWidth = "";
-      container.style.marginLeft = "";
-      container.style.marginRight = "";
-      container.style.boxShadow = "";
-    } else {
-      container.style.maxWidth = device?.width || "100%";
-      container.style.marginLeft = "auto";
-      container.style.marginRight = "auto";
-      container.style.boxShadow = "0 0 40px rgba(0,0,0,0.15)";
+    const content = document.querySelector(".preview-content") as HTMLElement | null;
+    if (content) {
+      content.style.display = showIframe ? "none" : "";
     }
-
-    return () => {
-      if (container) {
-        container.style.maxWidth = "";
-        container.style.marginLeft = "";
-        container.style.marginRight = "";
-        container.style.boxShadow = "";
-      }
-    };
-  }, [activeDevice]);
+  }, [showIframe]);
 
   return (
-    <div
-      className="sticky top-0 z-[100] flex items-center justify-between px-6 py-3 border-b"
-      style={{
-        backgroundColor: "#1a1a2e",
-        borderColor: "#2d2d44",
-        color: "white",
-      }}
-    >
-      <div className="flex items-center gap-3">
-        <Eye size={18} className="text-purple-400" />
-        <span className="text-sm font-medium">
-          Preview Mode —{" "}
-          <span className="text-purple-300">{templateName}</span>
+    <>
+      {/* Toolbar */}
+      <div
+        className="sticky top-0 z-[100] flex items-center justify-between px-6 py-3 border-b"
+        style={{
+          backgroundColor: "#1a1a2e",
+          borderColor: "#2d2d44",
+          color: "white",
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <Eye size={18} className="text-purple-400" />
+          <span className="text-sm font-medium">
+            Preview Mode —{" "}
+            <span className="text-purple-300">{templateName}</span>
+          </span>
+        </div>
+
+        {/* Device Toggle */}
+        <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1">
+          {devices.map((d) => {
+            const Icon = deviceIcons[d.id];
+            return (
+              <button
+                key={d.id}
+                onClick={() => setActiveDevice(d.id)}
+                className={`p-2 rounded-md transition-all ${
+                  activeDevice === d.id
+                    ? "bg-purple-500 text-white"
+                    : "text-white/60 hover:text-white hover:bg-white/10"
+                }`}
+                title={d.label}
+              >
+                <Icon size={16} />
+              </button>
+            );
+          })}
+        </div>
+
+        <span className="text-xs text-white/40">
+          {showIframe ? `${device.width} viewport` : "Dev only — not for production"}
         </span>
       </div>
 
-      {/* Device Toggle */}
-      <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1">
-        {devices.map((device) => {
-          const Icon = deviceIcons[device.id];
-          return (
-            <button
-              key={device.id}
-              onClick={() => setActiveDevice(device.id)}
-              className={`p-2 rounded-md transition-all ${
-                activeDevice === device.id
-                  ? "bg-purple-500 text-white"
-                  : "text-white/60 hover:text-white hover:bg-white/10"
-              }`}
-              title={device.label}
-            >
-              <Icon size={16} />
-            </button>
-          );
-        })}
-      </div>
-
-      <span className="text-xs text-white/40">
-        Dev only — not for production
-      </span>
-    </div>
+      {/* Iframe for mobile/tablet — real viewport width so media queries work */}
+      {showIframe && (
+        <div
+          className="flex justify-center bg-slate-200 dark:bg-slate-900"
+          style={{ minHeight: "calc(100vh - 52px)" }}
+        >
+          <div
+            className="bg-white shadow-2xl"
+            style={{
+              width: device.width,
+              maxWidth: device.width,
+              height: "calc(100vh - 52px)",
+              borderRadius: activeDevice === "mobile" ? "0 0 2rem 2rem" : undefined,
+              overflow: "hidden",
+            }}
+          >
+            <iframe
+              src={`${window.location.pathname}?embed=true`}
+              className="w-full h-full border-0"
+              title={`${device.label} preview`}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
