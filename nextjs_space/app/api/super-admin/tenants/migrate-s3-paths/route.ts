@@ -98,8 +98,16 @@ export async function POST(req: NextRequest) {
             const defaults = await getJsonFromS3<any>(`${tenantPath}/defaults.json`);
             if (defaults) {
               const updates: Record<string, any> = {};
-              if (!tt.logoUrl && defaults.logoPath) updates.logoUrl = `${tenantPath}/${defaults.logoPath}`;
-              if (!tt.heroImageUrl && defaults.heroImagePath) updates.heroImageUrl = `${tenantPath}/${defaults.heroImagePath}`;
+              if (!tt.logoUrl && defaults.logoPath) {
+                const lp = defaults.logoPath;
+                const isAbsLogo = lp.startsWith('development/') || lp.startsWith('tenants/') || lp.startsWith('templates/');
+                updates.logoUrl = isAbsLogo ? lp : `${tenantPath}/${lp}`;
+              }
+              if (!tt.heroImageUrl && defaults.heroImagePath) {
+                const hp = defaults.heroImagePath;
+                const isAbsHero = hp.startsWith('development/') || hp.startsWith('tenants/') || hp.startsWith('templates/');
+                updates.heroImageUrl = isAbsHero ? hp : `${tenantPath}/${hp}`;
+              }
               if (Object.keys(updates).length > 0) {
                 await prisma.tenant_templates.update({ where: { id: tt.id }, data: updates });
               }

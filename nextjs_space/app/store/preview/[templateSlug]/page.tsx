@@ -134,12 +134,13 @@ export default async function TemplatePreviewPage({
   params,
   searchParams,
 }: {
-  params: { templateSlug: string };
-  searchParams: { embed?: string; tenantTemplateId?: string };
+  params: Promise<{ templateSlug: string }>;
+  searchParams: Promise<{ embed?: string; tenantTemplateId?: string }>;
 }) {
-  const { templateSlug } = params;
-  const isEmbed = searchParams.embed === "true";
-  const tenantTemplateId = searchParams.tenantTemplateId;
+  const { templateSlug } = await params;
+  const resolvedSearchParams = await searchParams;
+  const isEmbed = resolvedSearchParams.embed === "true";
+  const tenantTemplateId = resolvedSearchParams.tenantTemplateId;
 
   // ─── PATH 0: Tenant-specific preview (tenantTemplateId provided) ───
   // Loads the tenant's CUSTOMIZED template from DB + their S3 path, with fallback to base template.
@@ -364,13 +365,14 @@ export default async function TemplatePreviewPage({
   );
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { templateSlug: string };
+  params: Promise<{ templateSlug: string }>;
 }) {
+  const { templateSlug } = await params;
   return {
-    title: `Preview: ${params.templateSlug} | BudStacks Templates`,
-    description: `Template preview for ${params.templateSlug}`,
+    title: `Preview: ${templateSlug} | BudStacks Templates`,
+    description: `Template preview for ${templateSlug}`,
   };
 }

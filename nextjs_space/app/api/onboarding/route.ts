@@ -288,8 +288,16 @@ export async function POST(req: NextRequest) {
           if (defaults.pageContent) seedData.pageContent = defaults.pageContent;
           if (defaults.navigation) seedData.navigation = defaults.navigation;
           if (defaults.footer) seedData.footer = defaults.footer;
-          if (defaults.heroImagePath) seedData.heroImageUrl = `${destS3Dir}${defaults.heroImagePath}`;
-          if (defaults.logoPath) seedData.logoUrl = `${destS3Dir}${defaults.logoPath}`;
+          if (defaults.heroImagePath) {
+            const hp = defaults.heroImagePath;
+            const isAbsHero = hp.startsWith('development/') || hp.startsWith('tenants/') || hp.startsWith('templates/');
+            seedData.heroImageUrl = isAbsHero ? hp : `${destS3Dir}${hp}`;
+          }
+          if (defaults.logoPath) {
+            const lp = defaults.logoPath;
+            const isAbsLogo = lp.startsWith('development/') || lp.startsWith('tenants/') || lp.startsWith('templates/');
+            seedData.logoUrl = isAbsLogo ? lp : `${destS3Dir}${lp}`;
+          }
         }
       } catch (err) {
         console.error("[onboarding] S3 copy failed, template will need manual setup:", err);
