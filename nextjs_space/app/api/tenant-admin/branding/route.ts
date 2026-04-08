@@ -242,7 +242,7 @@ export async function PUT(req: NextRequest) {
           };
 
           // Strip top-level asset URLs
-          for (const key of ['imageUrl', 'imageUrl2', 'imageUrl3', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const) {
+          for (const key of ['imageUrl', 'imageUrl2', 'imageUrl3', 'videoUrl', 'watermarkUrl', 'rightImageUrl', 'backgroundImageUrl'] as const) {
             if (mergedConfig[key]) mergedConfig[key] = stripSignedUrl(mergedConfig[key]);
           }
 

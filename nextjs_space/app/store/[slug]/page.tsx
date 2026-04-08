@@ -151,7 +151,7 @@ export default async function TenantStorePage({
     const assetS3Path = normalizedS3Path || baseS3Path;
     const needsFallback = assetS3Path && assetS3Path !== baseS3Path;
     if (layout?.sections && assetS3Path) {
-      const assetKeys = ['imageUrl', 'imageUrl2', 'imageUrl3', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const;
+      const assetKeys = ['imageUrl', 'imageUrl2', 'imageUrl3', 'videoUrl', 'watermarkUrl', 'rightImageUrl', 'backgroundImageUrl'] as const;
 
       function signAssetUrl(val: string, contentTypeHint?: string): Promise<string> {
         // Uploaded files are stored as absolute S3 keys (e.g. "development/uploads/...")
