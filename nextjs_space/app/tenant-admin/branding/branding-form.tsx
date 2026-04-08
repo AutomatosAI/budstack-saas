@@ -757,9 +757,15 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         {/* Tablet/Mobile: iframe with real viewport width so media queries fire */}
         {previewDevice !== "desktop" && (() => {
           const baseSlug = (activeTemplate as any)?.templates?.slug || tenant.subdomain;
-          const iframeSrc = activeTemplate?.id
-            ? `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}&embed=true`
-            : `/store/preview/${baseSlug}?embed=true`;
+          if (!activeTemplate?.id) {
+            return (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <p>No active template selected.</p>
+              </div>
+            );
+          }
+          const iframeSrc = `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}&embed=true&t=${Date.now()}`;
+          console.log('[branding-form] iframe src:', iframeSrc);
           return (
             <div
               className="flex justify-center bg-slate-100 dark:bg-slate-900 pt-10"
@@ -775,6 +781,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 }}
               >
                 <iframe
+                  key={`${previewDevice}-${activeTemplate.id}`}
                   src={iframeSrc}
                   className="w-full h-full border-0"
                   title={`${previewDevice === "tablet" ? "Tablet" : "Mobile"} preview`}
