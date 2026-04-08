@@ -296,7 +296,9 @@ export async function PUT(req: NextRequest) {
           sections: updatedSections,
         };
 
-        // Auto-generate s3Path if missing so layout sections can be saved
+        // Auto-generate s3Path if missing so layout sections can be saved.
+        // Also copy defaults.json + styles.css from base template so the tenant
+        // has their own complete copy (no fallback to base template needed).
         let s3Path = currentTemplate?.s3Path;
         if (!s3Path) {
           const folderPrefix = process.env.AWS_FOLDER_PREFIX || "";
@@ -307,6 +309,31 @@ export async function PUT(req: NextRequest) {
             data: { s3Path },
           });
           console.log(`[branding] Auto-created s3Path: ${s3Path}`);
+
+          // Copy defaults.json and styles.css from base template so tenant is self-contained
+          const baseSlug = currentTemplate?.templates?.slug;
+          if (baseSlug) {
+            const { createS3Client, getBucketConfig } = await import("@/lib/aws-config");
+            const { CopyObjectCommand, HeadObjectCommand } = await import("@aws-sdk/client-s3");
+            const s3 = await createS3Client();
+            const { bucketName } = await getBucketConfig();
+            const basePrefix = `templates/${baseSlug}`;
+
+            for (const file of ["defaults.json", "styles.css"]) {
+              try {
+                // Check if file exists at base
+                await s3.send(new HeadObjectCommand({ Bucket: bucketName, Key: `${basePrefix}/${file}` }));
+                await s3.send(new CopyObjectCommand({
+                  Bucket: bucketName,
+                  CopySource: `${bucketName}/${basePrefix}/${file}`,
+                  Key: `${s3Path}/${file}`,
+                }));
+                console.log(`[branding] Copied ${file} from ${basePrefix} to ${s3Path}`);
+              } catch {
+                console.log(`[branding] No ${file} at ${basePrefix} to copy`);
+              }
+            }
+          }
         }
 
         try {
