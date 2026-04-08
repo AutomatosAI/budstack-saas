@@ -28,6 +28,7 @@ export function About(props: SectionProps) {
     `We are dedicated to providing the highest quality medical cannabis products and personalized care. Our team of licensed professionals is committed to helping you find the right wellness solutions for your unique needs.`;
   const imageUrl = sectionConfig?.imageUrl || null;
   const backgroundImageUrl = sectionConfig?.backgroundImageUrl || null;
+  const overlayOpacity = parseFloat(sectionConfig?.overlayOpacity ?? '0.4');
   const stats: Stat[] | null = sectionConfig?.stats || null;
   const contentPosition = sectionConfig?.contentPosition || 'right'; // 'left' = text left, image right; 'right' = image left, text right
   const imageFirst = contentPosition === 'right';
@@ -48,7 +49,7 @@ export function About(props: SectionProps) {
           <img src={backgroundImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover z-0" />
           <div
             className="absolute inset-0 z-[1]"
-            style={{ backgroundColor: 'hsl(var(--tenant-color-background) / 0.4)' }}
+            style={{ backgroundColor: `hsl(var(--tenant-color-background) / ${overlayOpacity})` }}
           />
         </>
       )}

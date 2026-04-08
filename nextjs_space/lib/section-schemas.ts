@@ -373,6 +373,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'content', label: 'Content', type: 'textarea', default: 'Our story' },
       { key: 'imageUrl', label: 'Featured Image', type: 'image', default: '' },
       { key: 'backgroundImageUrl', label: 'Background Image (optional)', type: 'image', default: '' },
+      { key: 'overlayOpacity', label: 'Background Overlay Opacity', type: 'select', default: '0.4', options: ['0', '0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9'] },
       { key: 'contentPosition', label: 'Layout', type: 'select', default: 'right', options: ['left', 'right'] },
       { key: 'ctaText', label: 'Button Text', type: 'text', default: 'Learn More About Us' },
       { key: 'stats', label: 'Stats', type: 'array', default: '', itemLabel: 'Stat', itemFields: [
