@@ -197,15 +197,6 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
             ? configImage
             : undefined;
 
-          // DEBUG: trace image override pipeline (remove after fix confirmed)
-          if (section.type.startsWith('Hero') && section.config?.imageUrl) {
-            console.log(`[TemplateRenderer DEBUG] section=${section.type} id=${section.id}`, {
-              'config.imageUrl': section.config?.imageUrl?.substring(0, 80),
-              heroImageOverride: heroImageOverride?.substring(0, 80),
-              'sectionProps.heroImageUrl': (sectionProps.heroImageUrl || '(none)')?.substring(0, 80),
-            });
-          }
-
           // Build inline CSS variable overrides for per-section colors
           const colorOverrideStyle: React.CSSProperties = {};
           if (section.colorOverrides) {

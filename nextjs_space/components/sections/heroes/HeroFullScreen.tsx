@@ -48,14 +48,6 @@ export function HeroFullScreen({
   const heroType = sectionConfig?.heroType || (tenant as any).settings?.heroType || 'gradient-image';
   const showImage = heroImageUrl && (heroType === 'image' || heroType === 'gradient-image');
 
-  // DEBUG: trace image rendering (remove after fix confirmed)
-  console.log('[HeroFullScreen DEBUG]', {
-    heroImageUrl: heroImageUrl?.substring(0, 80) || '(none)',
-    heroType,
-    showImage,
-    'sectionConfig.imageUrl': sectionConfig?.imageUrl?.substring(0, 80) || '(none)',
-    'sectionConfig.heroType': sectionConfig?.heroType || '(none)',
-  });
   const showGradientOverlay = heroType === 'gradient' || heroType === 'gradient-image';
 
   // Extract interactive hotspots if configured and filter by target section

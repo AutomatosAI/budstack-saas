@@ -540,6 +540,8 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
 
   return (
     <div className="space-y-4">
+      <Card>
+        <CardContent className="pt-4">
       <Accordion type="multiple" defaultValue={["navigation"]} className="w-full">
 
       {/* ─── Navigation ─────────────────────────── */}
@@ -871,6 +873,8 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
       </AccordionItem>
 
       </Accordion>
+        </CardContent>
+      </Card>
     </div>
   );
 }

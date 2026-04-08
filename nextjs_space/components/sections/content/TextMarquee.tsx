@@ -95,7 +95,7 @@ export function TextMarquee(props: SectionProps) {
       className="py-8 sm:py-12"
       style={{ contain: 'inline-size', overflow: 'clip', backgroundColor: sectionConfig?.bgColor || 'hsl(var(--tenant-color-surface))' }}
     >
-      <div className="relative w-full" style={{ overflow: 'clip' }}>
+      <div className="relative w-full" style={{ overflow: 'clip', height: fontSize === 'xl' ? '5rem' : fontSize === 'md' ? '3rem' : fontSize === 'sm' ? '2.5rem' : '4rem' }}>
         <div
           className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
           style={{
@@ -115,6 +115,9 @@ export function TextMarquee(props: SectionProps) {
           transition={{ duration: 0.8 }}
           className={`items-center ${sizeClass} ${styleClass}`}
           style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
             display: 'flex',
             width: 'max-content',
             color: sectionConfig?.textColor || 'hsl(var(--tenant-color-text))',

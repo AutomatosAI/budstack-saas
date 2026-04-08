@@ -58,7 +58,7 @@ export function LogoMarquee(props: SectionProps) {
         )}
       </div>
 
-      <div className="relative w-full" style={{ overflow: 'clip' }}>
+      <div className="relative w-full" style={{ overflow: 'clip', height: '3.5rem' }}>
         {/* Edge fade masks */}
         <div
           className="absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
@@ -79,6 +79,9 @@ export function LogoMarquee(props: SectionProps) {
           transition={{ duration: 0.6 }}
           className="items-center gap-12"
           style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
             display: 'flex',
             width: 'max-content',
             animation: `marquee-scroll ${duration}s linear infinite ${reverse ? 'reverse' : ''}`,
