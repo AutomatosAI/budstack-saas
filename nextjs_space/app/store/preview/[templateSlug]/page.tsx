@@ -142,9 +142,8 @@ export default async function TemplatePreviewPage({
   const isEmbed = resolvedSearchParams.embed === "true";
   const tenantTemplateId = resolvedSearchParams.tenantTemplateId;
 
-  // ─── PATH 0: Tenant-specific preview (tenantTemplateId provided) ───
-  // Loads the tenant's CUSTOMIZED template from DB + their S3 path, with fallback to base template.
-  // This is what tenant admins use — same preview tool as super admin but with their edits.
+  // ─── Tenant-specific preview (tenantTemplateId provided) ───
+  // Loads the tenant's CUSTOMIZED template from DB + their S3 path. No fallback.
   if (tenantTemplateId) {
     const tenantTemplate = await prisma.tenant_templates.findUnique({
       where: { id: tenantTemplateId },
@@ -184,7 +183,11 @@ export default async function TemplatePreviewPage({
 
     // Merge design system: base defaults + tenant overrides
     const mergedDesignSystem = deepMerge(defaults?.designSystem || null, tenantTemplate.designSystem || null);
-    const s3Prefix = tenantS3Path || `templates/${tenantTemplate.templates?.slug || templateSlug}`;
+    if (!tenantS3Path) {
+      console.error(`[preview] No s3Path for tenantTemplateId=${tenantTemplateId}`);
+      notFound();
+    }
+    const s3Prefix = tenantS3Path;
 
     // Sign section assets
     await signLayoutAssets(layout, s3Prefix);
@@ -214,19 +217,21 @@ export default async function TemplatePreviewPage({
     }));
 
     const tenantData = tenantTemplate.tenant;
-    const previewTenant: Tenant = tenantData
-      ? {
-          id: tenantData.id,
-          businessName: tenantData.businessName,
-          slug: tenantData.subdomain,
-          domain: tenantData.customDomain,
-          isActive: tenantData.isActive,
-          createdAt: tenantData.createdAt?.toISOString() || new Date().toISOString(),
-          updatedAt: tenantData.updatedAt?.toISOString() || new Date().toISOString(),
-          subdomain: tenantData.subdomain,
-          settings: (tenantData.settings as any) || {},
-        }
-      : { ...mockTenant, businessName: tenantTemplate.templates?.name || "Preview" };
+    if (!tenantData) {
+      console.error(`[preview] No tenant found for tenantTemplateId=${tenantTemplateId}`);
+      notFound();
+    }
+    const previewTenant: Tenant = {
+      id: tenantData.id,
+      businessName: tenantData.businessName,
+      slug: tenantData.subdomain,
+      domain: tenantData.customDomain,
+      isActive: tenantData.isActive,
+      createdAt: tenantData.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: tenantData.updatedAt?.toISOString() || new Date().toISOString(),
+      subdomain: tenantData.subdomain,
+      settings: (tenantData.settings as any) || {},
+    };
 
     const sectionProps = {
       tenant: { ...previewTenant, subdomain: previewTenant.subdomain || previewTenant.slug || "preview" },
@@ -265,7 +270,7 @@ export default async function TemplatePreviewPage({
     );
   }
 
-  // ─── PATH 1: Base template preview (super admin / marketplace) ───
+  // ─── Marketplace preview (no tenantTemplateId — base template only) ───
   let layout: TemplateLayout | null = null;
   let customCss: string | null = null;
   let defaults: any = null;
@@ -325,7 +330,7 @@ export default async function TemplatePreviewPage({
     );
   }
 
-  // ─── PATH 2: Legacy React template (bundled at build time) ───
+  // ─── Marketplace legacy React template (bundled at build time) ───
   const TemplateComponent = TEMPLATE_COMPONENTS[templateSlug];
   if (!TemplateComponent) {
     notFound();
