@@ -52,10 +52,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Define S3 paths
-    const sourceS3Prefix = `templates/${baseTemplate.slug || baseTemplateId}/`;
-    const timestamp = Date.now();
-    const destS3Prefix = `tenants/${tenantId}/templates/${timestamp}`;
+    // 4. Define S3 paths — tenant owns tenants/{id}/templates/{slug}/
+    const templateSlug = baseTemplate.slug || baseTemplateId;
+    const sourceS3Prefix = `templates/${templateSlug}/`;
+    const destS3Prefix = `tenants/${tenantId}/templates/${templateSlug}`;
     const destS3Dir = `${destS3Prefix}/`; // trailing slash needed for S3 copy operations
 
     console.log(`Cloning template from ${sourceS3Prefix} to ${destS3Dir}`);

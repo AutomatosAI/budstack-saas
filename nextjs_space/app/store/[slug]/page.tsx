@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/lib/tenant";
 import { getTenantUrl, getTenantBasePath } from "@/lib/tenant-utils";
 import { prisma } from "@/lib/db";
-import { getFileUrl, getFileUrlWithFallback } from "@/lib/s3";
+import { getFileUrl } from "@/lib/s3";
 
 export const dynamic = 'force-dynamic';
 
@@ -82,20 +82,18 @@ export default async function TenantStorePage({
 
     const templateSlug = baseTemplate.slug;
 
-    // Load template assets from S3 (cached — shared with layout.tsx, no duplicate fetches)
-    const baseS3Path = `templates/${templateSlug}`;
-    const normalizedS3Path = tenantTemplate.s3Path?.replace(/\/+$/, '') || null;
+    // Load template assets from tenant's own S3 path (cached — shared with layout.tsx)
+    const tenantS3Path = tenantTemplate.s3Path?.replace(/\/+$/, '') || null;
 
     console.log(`[store] Tenant ${tenant.id} (${(tenant as any).businessName}) loading template:`, {
       activeTenantTemplateId: (tenantWithTemplate as any).activeTenantTemplateId,
       tenantTemplateId: tenantTemplate.id,
-      tenantS3Path: normalizedS3Path,
-      baseS3Path,
+      tenantS3Path,
       templateSlug,
       isPreview,
     });
 
-    const templateAssets = await getTemplateAssets(normalizedS3Path, baseS3Path);
+    const templateAssets = await getTemplateAssets(tenantS3Path);
     const { layout, customCss, defaults } = templateAssets;
 
     console.log(`[store] Template assets loaded:`, {
@@ -105,29 +103,21 @@ export default async function TenantStorePage({
       hasCss: !!customCss,
     });
 
-    // Sign hero image and logo URLs in parallel
+    // Sign hero image and logo URLs in parallel — tenant's own S3 path only
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
-    const fallbackS3Path = normalizedS3Path || baseS3Path;
-    if (!heroImageUrl && defaults?.heroImagePath && fallbackS3Path) {
-      // Absolute S3 keys (uploaded files) — use directly without prefixing
+    if (!heroImageUrl && defaults?.heroImagePath && tenantS3Path) {
       const hp = defaults.heroImagePath;
       const isAbsoluteHero = hp.startsWith('development/') || hp.startsWith('tenants/') || hp.startsWith('templates/');
-      heroImageUrl = isAbsoluteHero ? hp : `${fallbackS3Path}/${hp}`;
+      heroImageUrl = isAbsoluteHero ? hp : `${tenantS3Path}/${hp}`;
     }
 
     let logoUrl = tenantTemplate.logoUrl || null;
 
-    // Sign both in parallel (independent operations)
     const [signedHero, signedLogo] = await Promise.all([
       (async () => {
         if (!heroImageUrl || heroImageUrl.startsWith("/") || heroImageUrl.startsWith("http")) return heroImageUrl;
-        try {
-          const heroFallbackKey = normalizedS3Path && defaults?.heroImagePath
-            ? `${baseS3Path}/${defaults.heroImagePath}` : null;
-          return heroFallbackKey
-            ? await getFileUrlWithFallback(heroImageUrl, heroFallbackKey)
-            : await getFileUrl(heroImageUrl);
-        } catch { return heroImageUrl; }
+        try { return await getFileUrl(heroImageUrl); }
+        catch { return heroImageUrl; }
       })(),
       (async () => {
         if (!logoUrl || logoUrl.startsWith("/") || logoUrl.startsWith("http")) return logoUrl;
@@ -161,27 +151,16 @@ export default async function TenantStorePage({
     };
 
     // Sign section-level asset URLs in layout.json configs
-    // Templates can reference assets by relative filename (e.g. "assets/about-photo.jpg")
-    // which need to be resolved to signed S3 URLs before rendering.
-    // Cloned tenants have layout.json at their S3 path but assets may only exist
-    // in the base template path, so we fall back to baseS3Path when needed.
-    const assetS3Path = normalizedS3Path || baseS3Path;
-    const needsFallback = assetS3Path && assetS3Path !== baseS3Path;
-    if (layout?.sections && assetS3Path) {
+    // Assets are at the tenant's own S3 path — no fallback needed
+    if (layout?.sections && tenantS3Path) {
       const assetKeys = SECTION_ASSET_KEYS;
 
       function signAssetUrl(val: string, contentTypeHint?: string): Promise<string> {
-        // Uploaded files are stored as absolute S3 keys (e.g. "development/uploads/...")
-        // rather than relative to the template path. Sign them directly.
         const isAbsoluteKey = val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/');
         if (isAbsoluteKey) {
           return getFileUrl(val, contentTypeHint);
         }
-        const primaryKey = `${assetS3Path}/${val}`;
-        const fallbackKey = `${baseS3Path}/${val}`;
-        return needsFallback
-          ? getFileUrlWithFallback(primaryKey, fallbackKey)
-          : getFileUrl(primaryKey, contentTypeHint);
+        return getFileUrl(`${tenantS3Path}/${val}`, contentTypeHint);
       }
 
       // Collect all signing tasks, then execute in parallel

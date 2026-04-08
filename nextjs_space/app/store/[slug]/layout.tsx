@@ -156,27 +156,15 @@ export default async function TenantStoreLayout({
   const address = settings.address || "Your Business Address";
   const socialLinks = settings.socialMedia || {};
 
-  // Load template assets from S3 (cached — shared with page.tsx)
+  // Load template assets from tenant's own S3 path (cached — shared with page.tsx)
   const tenantS3Path = activeTemplate?.s3Path?.replace(/\/+$/, '') || null;
-  const baseS3Path = templateSlug ? `templates/${templateSlug}` : null;
-  const { layout, defaults, customCss } = await getTemplateAssets(tenantS3Path, baseS3Path);
+  const { layout, defaults, customCss } = await getTemplateAssets(tenantS3Path);
 
   // 3. Fallback to defaults.json logoPath when DB logoUrl is null
-  if (!logoUrl && defaults?.logoPath) {
-    const logoS3Base = tenantS3Path || baseS3Path;
-    if (logoS3Base) {
-      const logoKey = `${logoS3Base}/${defaults.logoPath}`;
-      try {
-        logoUrl = await getFileUrl(logoKey);
-      } catch {
-        // Try base template path if tenant path failed
-        if (tenantS3Path && baseS3Path) {
-          try {
-            logoUrl = await getFileUrl(`${baseS3Path}/${defaults.logoPath}`);
-          } catch { /* no logo available */ }
-        }
-      }
-    }
+  if (!logoUrl && defaults?.logoPath && tenantS3Path) {
+    try {
+      logoUrl = await getFileUrl(`${tenantS3Path}/${defaults.logoPath}`);
+    } catch { /* no logo available */ }
   }
 
   // Legacy templates (in TEMPLATE_COMPONENTS) bundle their own nav/footer in index.tsx

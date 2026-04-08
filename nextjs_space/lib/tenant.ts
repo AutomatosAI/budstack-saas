@@ -80,38 +80,25 @@ export const getTenantWithTemplate = cache(async (tenantId: string) => {
 
 /**
  * Load template assets (layout.json, defaults.json, styles.css) from S3.
- * Tries tenant-specific S3 path first, falls back to base template path.
+ * Reads from a single S3 path — no fallback. Each tenant owns their full copy.
  * Cached per request — safe to call from both layout.tsx and page.tsx.
  */
 export const getTemplateAssets = cache(async (
-  tenantS3Path: string | null,
-  baseS3Path: string | null,
+  s3Path: string | null,
 ): Promise<{ layout: TemplateLayout | null; defaults: any; customCss: string | null }> => {
-  for (const s3Prefix of [tenantS3Path, baseS3Path].filter(Boolean)) {
-    try {
-      const layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
-      if (layout) {
-        let [customCss, defaults] = await Promise.all([
-          getTextFromS3(`${s3Prefix}/styles.css`).catch(() => null),
-          getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null),
-        ]);
+  if (!s3Path) return { layout: null, defaults: null, customCss: null };
 
-        // If defaults.json or styles.css weren't found at the tenant path,
-        // fall back to the base template path (these files aren't copied on clone)
-        if (baseS3Path && s3Prefix !== baseS3Path && (!defaults || !customCss)) {
-          const [fallbackCss, fallbackDefaults] = await Promise.all([
-            !customCss ? getTextFromS3(`${baseS3Path}/styles.css`).catch(() => null) : Promise.resolve(customCss),
-            !defaults ? getJsonFromS3(`${baseS3Path}/defaults.json`).catch(() => null) : Promise.resolve(defaults),
-          ]);
-          customCss = customCss || fallbackCss;
-          defaults = defaults || fallbackDefaults;
-        }
-
-        return { layout, defaults, customCss };
-      }
-    } catch {
-      // No layout.json at this prefix — try next
+  try {
+    const layout = await getJsonFromS3<TemplateLayout>(`${s3Path}/layout.json`);
+    if (layout) {
+      const [customCss, defaults] = await Promise.all([
+        getTextFromS3(`${s3Path}/styles.css`).catch(() => null),
+        getJsonFromS3(`${s3Path}/defaults.json`).catch(() => null),
+      ]);
+      return { layout, defaults, customCss };
     }
+  } catch {
+    // No layout.json at this path
   }
   return { layout: null, defaults: null, customCss: null };
 });

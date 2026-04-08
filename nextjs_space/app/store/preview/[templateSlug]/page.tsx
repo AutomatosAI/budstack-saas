@@ -155,12 +155,9 @@ export default async function TemplatePreviewPage({
     }
 
     const tenantS3Path = tenantTemplate.s3Path?.replace(/\/+$/, '') || null;
-    const baseSlug = tenantTemplate.templates?.slug || templateSlug;
-    const baseS3Path = `templates/${baseSlug}`;
 
     console.log(`[preview] Tenant preview for tenantTemplateId=${tenantTemplateId}`, JSON.stringify({
       tenantS3Path,
-      baseS3Path,
       businessName: tenantTemplate.tenant?.businessName,
       dbLogoUrl: tenantTemplate.logoUrl?.substring(0, 80) || 'NULL',
       dbHeroImageUrl: tenantTemplate.heroImageUrl?.substring(0, 80) || 'NULL',
@@ -168,8 +165,8 @@ export default async function TemplatePreviewPage({
       hasPageContent: !!tenantTemplate.pageContent,
     }));
 
-    // Load layout, defaults, CSS — same fallback logic as the live store
-    const { layout, defaults, customCss } = await getTemplateAssets(tenantS3Path, baseS3Path);
+    // Load layout, defaults, CSS from tenant's own S3 path
+    const { layout, defaults, customCss } = await getTemplateAssets(tenantS3Path);
 
     if (!layout) {
       console.error(`[preview] No layout.json found for tenantTemplateId=${tenantTemplateId}`);
@@ -186,7 +183,7 @@ export default async function TemplatePreviewPage({
 
     // Merge design system: base defaults + tenant overrides
     const mergedDesignSystem = deepMerge(defaults?.designSystem || null, tenantTemplate.designSystem || null);
-    const s3Prefix = tenantS3Path || baseS3Path;
+    const s3Prefix = tenantS3Path || `templates/${tenantTemplate.templates?.slug || templateSlug}`;
 
     // Sign section assets
     await signLayoutAssets(layout, s3Prefix);

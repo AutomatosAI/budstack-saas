@@ -69,16 +69,10 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
     if (s3Prefix) {
       try {
         const layoutJson = await getJsonFromS3(`${s3Prefix}/layout.json`);
-        const baseS3Path = activeTemplate.templates?.slug ? `templates/${activeTemplate.templates.slug}` : null;
         let defaultsJson: any = null;
         try {
           defaultsJson = await getJsonFromS3(`${s3Prefix}/defaults.json`);
-        } catch {
-          // Fall back to base template path for defaults.json
-          if (baseS3Path && s3Prefix !== baseS3Path) {
-            try { defaultsJson = await getJsonFromS3(`${baseS3Path}/defaults.json`); } catch { /* optional */ }
-          }
-        }
+        } catch { /* defaults.json is optional */ }
 
         // Convert relative asset paths to absolute S3 URLs (top-level + nested arrays)
         if (layoutJson && (layoutJson as any).sections) {
@@ -155,12 +149,7 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
         let templateCss: string | null = null;
         try {
           templateCss = await getTextFromS3(`${s3Prefix}/styles.css`);
-        } catch {
-          // Fall back to base template path for styles.css
-          if (baseS3Path && s3Prefix !== baseS3Path) {
-            try { templateCss = await getTextFromS3(`${baseS3Path}/styles.css`); } catch { /* optional */ }
-          }
-        }
+        } catch { /* styles.css is optional */ }
 
         // Sign the DB heroImageUrl and logoUrl fields so they're usable in the editor
         if (activeTemplate.heroImageUrl && !activeTemplate.heroImageUrl.startsWith('http') && !activeTemplate.heroImageUrl.startsWith('/')) {

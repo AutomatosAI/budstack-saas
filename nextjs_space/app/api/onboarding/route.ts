@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { clerkClient } from "@clerk/nextjs/server";
 import { sendEmail, emailTemplates } from "@/lib/email";
+import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
 import crypto from "crypto";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -268,6 +269,32 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // Copy ALL base template files to tenant's own S3 path
+      const templateSlug = dbTemplate.slug || dbTemplate.id;
+      const sourceS3Prefix = `templates/${templateSlug}/`;
+      const destS3Prefix = `tenants/${tenantId}/templates/${templateSlug}`;
+      const destS3Dir = `${destS3Prefix}/`;
+
+      let filesCopied = 0;
+      let seedData: Record<string, any> = {};
+      try {
+        filesCopied = await copyS3Directory(sourceS3Prefix, destS3Dir);
+        console.log(`[onboarding] Copied ${filesCopied} files from ${sourceS3Prefix} to ${destS3Dir}`);
+
+        // Read defaults.json to seed DB fields
+        const defaults = await getJsonFromS3<any>(`${destS3Dir}defaults.json`);
+        if (defaults) {
+          if (defaults.designSystem) seedData.designSystem = defaults.designSystem;
+          if (defaults.pageContent) seedData.pageContent = defaults.pageContent;
+          if (defaults.navigation) seedData.navigation = defaults.navigation;
+          if (defaults.footer) seedData.footer = defaults.footer;
+          if (defaults.heroImagePath) seedData.heroImageUrl = `${destS3Dir}${defaults.heroImagePath}`;
+          if (defaults.logoPath) seedData.logoUrl = `${destS3Dir}${defaults.logoPath}`;
+        }
+      } catch (err) {
+        console.error("[onboarding] S3 copy failed, template will need manual setup:", err);
+      }
+
       const tenantTemplateId = crypto.randomUUID();
       await prisma.tenant_templates.create({
         data: {
@@ -275,8 +302,10 @@ export async function POST(req: NextRequest) {
           tenantId: tenant.id,
           baseTemplateId: dbTemplate.id,
           templateName: dbTemplate.name,
+          s3Path: destS3Prefix,
           isActive: true,
           updatedAt: new Date(),
+          ...seedData,
         },
       });
 

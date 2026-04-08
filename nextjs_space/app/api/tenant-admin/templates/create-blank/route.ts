@@ -66,11 +66,10 @@ export async function POST(request: NextRequest) {
     // 4. Get or create custom-base FK
     const customBase = await getOrCreateCustomBase();
 
-    // 5. Generate S3 path and write starter files
+    // 5. Generate S3 path and write starter files — tenants/{id}/templates/{slug}/
     const slug = generateSlug(trimmedName);
-    const timestamp = Date.now();
-    const { folderPrefix, bucketName } = await getBucketConfig();
-    const s3Path = `${folderPrefix}tenants/${tenantId}/custom-templates/${slug}-${timestamp}`;
+    const { bucketName } = await getBucketConfig();
+    const s3Path = `tenants/${tenantId}/templates/${slug}`;
 
     const s3Client = await createS3Client();
 

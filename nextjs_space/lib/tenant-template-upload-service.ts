@@ -7,7 +7,6 @@
 
 import { prisma } from "./db";
 import { uploadDirectoryToS3 } from "./s3";
-import { getBucketConfig } from "./aws-config";
 import {
   downloadGitHubRepo,
   validateTemplateFiles,
@@ -81,9 +80,8 @@ export async function uploadFromGitHub(
       defaults = { designSystem: {}, pageContent: {}, navigation: {}, footer: {} };
     }
 
-    // Upload to tenant's private S3 space
-    const { folderPrefix } = await getBucketConfig();
-    const s3Path = `${folderPrefix}tenants/${tenantId}/custom-templates/${slug}`;
+    // Upload to tenant's S3 space — tenants/{id}/templates/{slug}/
+    const s3Path = `tenants/${tenantId}/templates/${slug}`;
     await uploadDirectoryToS3(extractPath, `${s3Path}/`);
 
     // Create TenantTemplate record
