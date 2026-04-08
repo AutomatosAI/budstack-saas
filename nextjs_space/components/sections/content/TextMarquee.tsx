@@ -45,10 +45,10 @@ export function TextMarquee(props: SectionProps) {
   const { sectionConfig, logoUrl: propLogoUrl } = props;
 
   const text = sectionConfig?.text || 'Premium wellness products crafted with care';
-  const logoUrl = sectionConfig?.logoUrl || propLogoUrl || null;
+  const customLogoUrl = sectionConfig?.logoUrl || null; // only explicit custom logo
   const icon = sectionConfig?.icon || 'leaf';
   const speed = sectionConfig?.speed || 40;
-  const reverse = sectionConfig?.reverse || false;
+  const reverse = sectionConfig?.reverse === true || sectionConfig?.reverse === 'true';
   const fontSize = sectionConfig?.fontSize || 'lg';
   const fontStyle = sectionConfig?.fontStyle || 'italic-serif';
   const repeat = sectionConfig?.repeat || 4;
@@ -68,21 +68,35 @@ export function TextMarquee(props: SectionProps) {
   const borderColor = 'hsl(var(--tenant-color-border))';
 
   const renderSeparator = () => {
-    if (logoUrl) {
+    // 1. Explicit custom logo image from section config
+    if (customLogoUrl) {
       return (
         <span className="inline-block mx-4 sm:mx-6 align-middle relative w-8 h-8 sm:w-10 sm:h-10">
-          <Image src={logoUrl} alt="" fill className="object-contain" sizes="40px" />
+          <Image src={customLogoUrl} alt="" fill className="object-contain" sizes="40px" />
         </span>
       );
     }
-    return (
-      <span
-        className="inline-block mx-4 sm:mx-6 align-middle w-8 h-8 sm:w-10 sm:h-10 opacity-70"
-        style={{ color: 'hsl(var(--tenant-color-text))' }}
-        // Safe: iconSvg is from hardcoded ICON_SVGS map, never user input
-        dangerouslySetInnerHTML={{ __html: iconSvg }}
-      />
-    );
+    // 2. SVG icon from icon field (default behavior)
+    if (icon !== 'none') {
+      return (
+        <span
+          className="inline-block mx-4 sm:mx-6 align-middle w-8 h-8 sm:w-10 sm:h-10 opacity-70"
+          style={{ color: 'hsl(var(--tenant-color-text))' }}
+          // Safe: iconSvg is from hardcoded ICON_SVGS map, never user input
+          dangerouslySetInnerHTML={{ __html: iconSvg }}
+        />
+      );
+    }
+    // 3. Fallback to tenant logo if icon is 'none'
+    if (propLogoUrl) {
+      return (
+        <span className="inline-block mx-4 sm:mx-6 align-middle relative w-8 h-8 sm:w-10 sm:h-10">
+          <Image src={propLogoUrl} alt="" fill className="object-contain" sizes="40px" />
+        </span>
+      );
+    }
+    // 4. No separator at all
+    return <span className="mx-4 sm:mx-6" />;
   };
 
   const blocks = Array.from({ length: repeat }, (_, i) => (
@@ -95,7 +109,7 @@ export function TextMarquee(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-3 sm:py-4"
+      className="py-1"
       style={{
         contain: 'inline-size',
         overflow: 'clip',

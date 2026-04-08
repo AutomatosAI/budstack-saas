@@ -649,8 +649,8 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     description: 'Scrolling text banner with optional icon separator',
     fields: [
       { key: 'text', label: 'Marquee Text', type: 'text', default: 'Premium wellness products crafted with care' },
-      { key: 'icon', label: 'Separator Icon', type: 'select', default: 'leaf', options: ['leaf', 'cannabis', 'droplet', 'sparkle'] },
-      { key: 'logoUrl', label: 'Separator Image', type: 'image', default: '' },
+      { key: 'icon', label: 'Separator Icon', type: 'select', default: 'leaf', options: ['leaf', 'cannabis', 'droplet', 'sparkle', 'none'] },
+      { key: 'logoUrl', label: 'Custom Separator Image (overrides icon)', type: 'image', default: '' },
       { key: 'speed', label: 'Scroll Speed', type: 'number', default: 40 },
       { key: 'reverse', label: 'Reverse Direction', type: 'select', default: 'false', options: ['false', 'true'] },
       { key: 'fontSize', label: 'Text Size', type: 'select', default: 'lg', options: ['sm', 'md', 'lg', 'xl'] },
