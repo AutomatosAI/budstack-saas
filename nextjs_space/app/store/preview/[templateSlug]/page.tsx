@@ -147,7 +147,7 @@ export default async function TemplatePreviewPage({
   if (tenantTemplateId) {
     const tenantTemplate = await prisma.tenant_templates.findUnique({
       where: { id: tenantTemplateId },
-      include: { templates: true, tenants: true },
+      include: { templates: true, tenant: true },
     });
 
     if (!tenantTemplate) {
@@ -161,7 +161,7 @@ export default async function TemplatePreviewPage({
     console.log(`[preview] Tenant preview for tenantTemplateId=${tenantTemplateId}`, {
       tenantS3Path,
       baseS3Path,
-      businessName: tenantTemplate.tenants?.businessName,
+      businessName: tenantTemplate.tenant?.businessName,
     });
 
     // Load layout, defaults, CSS — same fallback logic as the live store
@@ -196,7 +196,7 @@ export default async function TemplatePreviewPage({
       logoUrl = await signDefaultAsset(defaults?.logoPath, s3Prefix);
     }
 
-    const tenantData = tenantTemplate.tenants;
+    const tenantData = tenantTemplate.tenant;
     const previewTenant: Tenant = tenantData
       ? {
           id: tenantData.id,
