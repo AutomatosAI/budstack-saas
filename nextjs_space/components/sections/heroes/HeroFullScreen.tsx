@@ -24,8 +24,8 @@ export function HeroFullScreen({
   const secondaryCtaText = sectionConfig?.secondaryCtaText || '';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '#about';
 
-  // Text alignment — from tenant settings or layout.json sectionConfig
-  const heroAlignment = pageContent?.home?.heroAlignment || sectionConfig?.textAlign || 'left';
+  // Text alignment — sectionConfig (editor) wins over legacy pageContent
+  const heroAlignment = sectionConfig?.textAlign || pageContent?.home?.heroAlignment || 'left';
   const isLeft = heroAlignment === 'left';
   const isRight = heroAlignment === 'right';
   const isCenter = heroAlignment === 'center' || (!isLeft && !isRight);
