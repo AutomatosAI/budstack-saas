@@ -83,11 +83,11 @@ export function ProductShowcase(props: SectionProps) {
               }}
             >
               {cat.imageUrl && (
-                <div className="relative w-full aspect-square p-4">
-                  <Image src={cat.imageUrl} alt={cat.title} fill className="object-contain" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                <div className="relative w-full h-48 sm:h-56">
+                  <Image src={cat.imageUrl} alt={cat.title} fill className="object-contain p-4" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
                 </div>
               )}
-              <div className="p-8">
+              <div className="p-6">
                 <h3
                   className="text-xl font-bold mb-3"
                   style={{ color: 'hsl(var(--tenant-color-heading))' }}
