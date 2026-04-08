@@ -73,6 +73,61 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  try {
+    const user = await currentUser();
+    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const template = await prisma.templates.findUnique({
+      where: { id: params.id },
+    });
+    if (!template) {
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    }
+
+    const body = await req.json();
+
+    if (typeof body.isActive === "boolean") {
+      await prisma.templates.update({
+        where: { id: params.id },
+        data: { isActive: body.isActive, updatedAt: new Date() },
+      });
+
+      const email = user.emailAddresses[0]?.emailAddress;
+      await createAuditLog({
+        action: body.isActive ? AUDIT_ACTIONS.TEMPLATE.UPDATED : AUDIT_ACTIONS.TEMPLATE.UPDATED,
+        entityType: "template",
+        entityId: params.id,
+        userId: user.id,
+        userEmail: email!,
+        metadata: {
+          templateName: template.name,
+          action: body.isActive ? "activated" : "deactivated",
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Template "${template.name}" ${body.isActive ? "activated" : "deactivated"}`,
+        isActive: body.isActive,
+      });
+    }
+
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+  } catch (error: any) {
+    console.error("[Template PATCH] Error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to update template" },
+      { status: 500 },
+    );
+  }
+}
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } },

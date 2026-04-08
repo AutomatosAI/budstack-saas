@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Loader2 } from "lucide-react";
+import { Edit, Trash2, Loader2, Power } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -25,6 +25,7 @@ interface TemplateActionsProps {
   previewUrl: string | null;
   slug: string | null;
   metadata: Record<string, any> | null;
+  isActive: boolean;
 }
 
 export function TemplateActions({
@@ -33,12 +34,33 @@ export function TemplateActions({
   usageCount,
   previewUrl,
   slug,
+  isActive,
   metadata,
 }: TemplateActionsProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const router = useRouter();
+
+  const handleToggleActive = async () => {
+    setIsToggling(true);
+    try {
+      const response = await fetch(`/api/super-admin/templates/${templateId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !isActive }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to update");
+      toast.success(data.message);
+      router.refresh();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to toggle template status");
+    } finally {
+      setIsToggling(false);
+    }
+  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -67,6 +89,21 @@ export function TemplateActions({
 
   return (
     <>
+      <Button
+        variant={isActive ? "outline" : "default"}
+        size="sm"
+        onClick={handleToggleActive}
+        disabled={isToggling}
+        title={isActive ? "Deactivate from marketplace" : "Activate on marketplace"}
+        className={`rounded-full gap-1.5 ${!isActive ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
+      >
+        {isToggling ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Power className="h-3.5 w-3.5" />
+        )}
+        {isActive ? "Deactivate" : "Activate"}
+      </Button>
       <Button
         variant="outline"
         size="sm"

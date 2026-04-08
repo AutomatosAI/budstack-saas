@@ -209,6 +209,7 @@ export default async function TemplatesManagementPage() {
                 previewUrl={template.signedPreviewUrl}
                 slug={template.slug}
                 metadata={template.metadata as Record<string, any> | null}
+                isActive={template.isActive}
               />
             </div>
           </div>
