@@ -371,7 +371,8 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'About Us' },
       { key: 'content', label: 'Content', type: 'textarea', default: 'Our story' },
-      { key: 'imageUrl', label: 'Image', type: 'image', default: '' },
+      { key: 'imageUrl', label: 'Featured Image', type: 'image', default: '' },
+      { key: 'backgroundImageUrl', label: 'Background Image (optional)', type: 'image', default: '' },
       { key: 'contentPosition', label: 'Layout', type: 'select', default: 'right', options: ['left', 'right'] },
       { key: 'ctaText', label: 'Button Text', type: 'text', default: 'Learn More About Us' },
       { key: 'stats', label: 'Stats', type: 'array', default: '', itemLabel: 'Stat', itemFields: [

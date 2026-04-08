@@ -27,6 +27,7 @@ export function About(props: SectionProps) {
     pageContent?.aboutMission ||
     `We are dedicated to providing the highest quality medical cannabis products and personalized care. Our team of licensed professionals is committed to helping you find the right wellness solutions for your unique needs.`;
   const imageUrl = sectionConfig?.imageUrl || null;
+  const backgroundImageUrl = sectionConfig?.backgroundImageUrl || null;
   const stats: Stat[] | null = sectionConfig?.stats || null;
   const contentPosition = sectionConfig?.contentPosition || 'right'; // 'left' = text left, image right; 'right' = image left, text right
   const imageFirst = contentPosition === 'right';
@@ -37,10 +38,22 @@ export function About(props: SectionProps) {
     <section
       ref={ref}
       id="about"
-      className="py-16 sm:py-20 lg:py-24"
+      className="relative py-16 sm:py-20 lg:py-24"
       style={{ backgroundColor: 'hsl(var(--tenant-color-background))' }}
     >
-      <div className="container mx-auto px-6">
+      {/* Optional background image */}
+      {backgroundImageUrl && (
+        <>
+          <div className="absolute inset-0 z-0">
+            <Image src={backgroundImageUrl} alt="" fill className="object-cover" />
+          </div>
+          <div
+            className="absolute inset-0 z-0"
+            style={{ backgroundColor: 'hsl(var(--tenant-color-background) / 0.85)' }}
+          />
+        </>
+      )}
+      <div className="relative z-10 container mx-auto px-6">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
           {/* Image */}
           <motion.div
