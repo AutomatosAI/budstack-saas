@@ -217,7 +217,7 @@ export default async function TenantStorePage({
 
       const mergedTenantTemplate = {
         ...signedTenantTemplate,
-        designSystem: signedTenantTemplate.designSystem || defaults?.designSystem || null,
+        designSystem: signedTenantTemplate.designSystem || null,
       };
 
       return (

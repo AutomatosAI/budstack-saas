@@ -14,7 +14,6 @@ import type { TemplateLayout } from "@/lib/types/template-layout";
 import { CartProvider } from "./_contexts/CartContext";
 import { getTenantBasePath } from "@/lib/tenant-utils";
 import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrapper";
-import { deepMerge } from "@/lib/utils";
 import { sanitizeCss } from "@/lib/css-utils";
 import { hexToHsl } from "@/lib/color-utils";
 
@@ -284,7 +283,8 @@ export default async function TenantStoreLayout({
   // Wrapper class from layout settings (legacy hardcoded mapping removed)
   const wrapperClass = layout?.settings?.wrapperClass || "";
 
-  const mergedDesignSystem = deepMerge(defaults?.designSystem || null, activeTemplate?.designSystem || null);
+  // Tenant's DB designSystem only — no merging with base template defaults
+  const mergedDesignSystem = activeTemplate?.designSystem || null;
 
   let widgetThemeOverrides: Record<string, string> | undefined = undefined;
   if ((mergedDesignSystem as any)?.colors) {

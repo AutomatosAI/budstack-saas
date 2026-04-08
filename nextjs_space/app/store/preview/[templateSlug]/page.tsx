@@ -9,7 +9,6 @@ import { Tenant } from "@/types/client";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import { prisma } from "@/lib/db";
 import { getTemplateAssets } from "@/lib/tenant";
-import { deepMerge } from "@/lib/utils";
 import PreviewToolbar from "./preview-toolbar";
 
 export const dynamic = 'force-dynamic';
@@ -181,8 +180,8 @@ export default async function TemplatePreviewPage({
       sectionCount: layout.sections?.length || 0,
     }));
 
-    // Merge design system: base defaults + tenant overrides
-    const mergedDesignSystem = deepMerge(defaults?.designSystem || null, tenantTemplate.designSystem || null);
+    // Tenant's DB designSystem only — no merging with base template defaults
+    const mergedDesignSystem = tenantTemplate.designSystem || null;
     if (!tenantS3Path) {
       console.error(`[preview] No s3Path for tenantTemplateId=${tenantTemplateId}`);
       notFound();
