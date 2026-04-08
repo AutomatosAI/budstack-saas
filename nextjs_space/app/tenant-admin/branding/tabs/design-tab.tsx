@@ -294,67 +294,8 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
         </CardContent>
       </Card>
 
-      {/* === HERO CONFIGURATION === */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Hero Section</CardTitle>
-          <CardDescription>Customize your homepage hero banner</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Alignment</Label>
-              <Select value={formData.homeHeroAlignment} onValueChange={(v) => update("homeHeroAlignment", v)}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Height</Label>
-              <Select value={formData.homeHeroHeight} onValueChange={(v) => update("homeHeroHeight", v)}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="large">Large</SelectItem>
-                  <SelectItem value="full">Full Screen</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Overlay Style</Label>
-              <Select value={formData.homeHeroOverlayStyle} onValueChange={(v) => update("homeHeroOverlayStyle", v)}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Overlay</SelectItem>
-                  <SelectItem value="dark">Dark Scrim</SelectItem>
-                  <SelectItem value="gradient-dark">Dark Gradient</SelectItem>
-                  <SelectItem value="gradient-primary">Brand Gradient</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Overlay Opacity</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={formData.homeHeroOverlayOpacity}
-                  onChange={(e) => update("homeHeroOverlayOpacity", Number(e.target.value))}
-                  className="h-9 flex-1"
-                />
-                <span className="text-xs text-muted-foreground w-8 text-right">{formData.homeHeroOverlayOpacity}%</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Hero Section removed — alignment, height, overlay style and opacity
+         are now per-section fields in the Content tab via section schemas */}
     </div>
   );
 }

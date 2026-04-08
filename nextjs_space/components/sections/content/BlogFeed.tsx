@@ -81,10 +81,11 @@ export function BlogFeed(props: SectionProps) {
               initial={{ opacity: 0, y: 30 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="group rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+              className="group overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
               style={{
                 backgroundColor: 'hsl(var(--tenant-color-background))',
                 border: '1px solid hsl(var(--tenant-color-border))',
+                borderRadius: '0.75rem',
               }}
             >
               {/* Placeholder image area */}
