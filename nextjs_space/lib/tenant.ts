@@ -91,10 +91,22 @@ export const getTemplateAssets = cache(async (
     try {
       const layout = await getJsonFromS3<TemplateLayout>(`${s3Prefix}/layout.json`);
       if (layout) {
-        const [customCss, defaults] = await Promise.all([
+        let [customCss, defaults] = await Promise.all([
           getTextFromS3(`${s3Prefix}/styles.css`).catch(() => null),
           getJsonFromS3(`${s3Prefix}/defaults.json`).catch(() => null),
         ]);
+
+        // If defaults.json or styles.css weren't found at the tenant path,
+        // fall back to the base template path (these files aren't copied on clone)
+        if (baseS3Path && s3Prefix !== baseS3Path && (!defaults || !customCss)) {
+          const [fallbackCss, fallbackDefaults] = await Promise.all([
+            !customCss ? getTextFromS3(`${baseS3Path}/styles.css`).catch(() => null) : Promise.resolve(customCss),
+            !defaults ? getJsonFromS3(`${baseS3Path}/defaults.json`).catch(() => null) : Promise.resolve(defaults),
+          ]);
+          customCss = customCss || fallbackCss;
+          defaults = defaults || fallbackDefaults;
+        }
+
         return { layout, defaults, customCss };
       }
     } catch {

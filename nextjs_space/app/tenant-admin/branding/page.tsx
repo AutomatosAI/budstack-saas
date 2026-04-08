@@ -41,6 +41,12 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
 
   const templateIdToEdit = searchParams.templateId || localUser.tenants.activeTenantTemplateId;
 
+  console.log(`[branding-page] Tenant: ${localUser.tenants.businessName} (${localUser.tenants.id})`, {
+    activeTenantTemplateId: localUser.tenants.activeTenantTemplateId,
+    templateIdToEdit,
+    searchParamTemplateId: searchParams.templateId || null,
+  });
+
   // Fetch active tenant template
   let activeTemplate = templateIdToEdit
     ? await prisma.tenant_templates.findUnique({
@@ -53,14 +59,25 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
     // Prefer tenant's own s3Path (includes previous edits), fall back to base template
     const s3Prefix = activeTemplate.s3Path || `templates/${activeTemplate.templates?.slug}`;
 
+    console.log(`[branding-page] Loading template:`, {
+      templateId: activeTemplate.id,
+      s3Path: activeTemplate.s3Path,
+      resolvedS3Prefix: s3Prefix,
+      baseSlug: activeTemplate.templates?.slug,
+    });
+
     if (s3Prefix) {
       try {
         const layoutJson = await getJsonFromS3(`${s3Prefix}/layout.json`);
+        const baseS3Path = activeTemplate.templates?.slug ? `templates/${activeTemplate.templates.slug}` : null;
         let defaultsJson: any = null;
         try {
           defaultsJson = await getJsonFromS3(`${s3Prefix}/defaults.json`);
         } catch {
-          // Defaults might not exist
+          // Fall back to base template path for defaults.json
+          if (baseS3Path && s3Prefix !== baseS3Path) {
+            try { defaultsJson = await getJsonFromS3(`${baseS3Path}/defaults.json`); } catch { /* optional */ }
+          }
         }
 
         // Convert relative asset paths to absolute S3 URLs (top-level + nested arrays)
@@ -139,7 +156,10 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
         try {
           templateCss = await getTextFromS3(`${s3Prefix}/styles.css`);
         } catch {
-          // styles.css is optional
+          // Fall back to base template path for styles.css
+          if (baseS3Path && s3Prefix !== baseS3Path) {
+            try { templateCss = await getTextFromS3(`${baseS3Path}/styles.css`); } catch { /* optional */ }
+          }
         }
 
         // Sign the DB heroImageUrl and logoUrl fields so they're usable in the editor

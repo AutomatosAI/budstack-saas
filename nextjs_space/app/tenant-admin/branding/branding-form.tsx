@@ -16,6 +16,10 @@ import {
   Brush,
   GraduationCap,
   Store,
+  Monitor,
+  Tablet,
+  Smartphone,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TenantSettings } from "@/lib/types";
@@ -102,6 +106,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
   const [favicon, setFavicon] = useState<File | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [dirtyColors, setDirtyColors] = useState<Set<string>>(new Set());
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
 
   const settings = (tenant.settings as TenantSettings) || {};
   const automatosApiKey = settings?.automatosApiKey;
@@ -553,6 +558,21 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
               >
                 <Eye className="h-4 w-4" />
               </Button>
+              {(() => {
+                const previewSlug = (activeTemplate as any)?.templates?.slug || (activeTemplate as any)?.slug || tenant.subdomain;
+                return previewSlug ? (
+                  <a
+                    href={`/store/preview/${previewSlug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Preview
+                    </Button>
+                  </a>
+                ) : null;
+              })()}
               <Button type="submit" disabled={isLoading} size="sm">
                 {isLoading ? "Publishing..." : (publishLabel || "Publish Site")}
               </Button>
@@ -672,11 +692,38 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
             </div>
             <span>Live Preview &mdash; {formData.businessName || tenant.businessName}</span>
           </div>
+          <div className="flex items-center gap-1 bg-background/60 rounded-lg p-0.5">
+            {([
+              { id: "desktop" as const, icon: Monitor, label: "Desktop" },
+              { id: "tablet" as const, icon: Tablet, label: "Tablet" },
+              { id: "mobile" as const, icon: Smartphone, label: "Mobile" },
+            ]).map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => setPreviewDevice(d.id)}
+                className={cn(
+                  "p-1.5 rounded-md transition-all",
+                  previewDevice === d.id
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                )}
+                title={d.label}
+              >
+                <d.icon size={14} />
+              </button>
+            ))}
+          </div>
         </div>
 
         <div
-          className="w-full max-w-full h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-background relative"
-          style={{ transform: "scale(1)" }}
+          className={cn(
+            "h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-background relative mx-auto transition-all duration-300",
+            previewDevice === "desktop" && "w-full max-w-full",
+            previewDevice === "tablet" && "w-[768px] max-w-full",
+            previewDevice === "mobile" && "w-[375px] max-w-full",
+          )}
+          style={previewDevice !== "desktop" ? { boxShadow: "0 0 0 1px hsl(var(--border))" } : undefined}
         >
           {automatosApiKey && (
             <div className="absolute top-4 right-4 z-50">

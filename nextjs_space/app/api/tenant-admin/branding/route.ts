@@ -102,6 +102,15 @@ export async function PUT(req: NextRequest) {
 
     const activeTemplateId = saveTargetId;
 
+    console.log(`[branding] Save target:`, {
+      tenantId: tenant.id,
+      tenantName: (tenant as any).businessName,
+      activeTenantTemplateId: tenant.activeTenantTemplateId,
+      explicitTemplateId,
+      resolvedSaveTargetId: activeTemplateId,
+      match: tenant.activeTenantTemplateId === activeTemplateId,
+    });
+
     if (activeTemplateId) {
       // Fetch current template (with base template for slug-based URL fallback)
       const currentTemplate = await prisma.tenant_templates.findUnique({

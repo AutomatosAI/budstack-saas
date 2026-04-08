@@ -85,8 +85,25 @@ export default async function TenantStorePage({
     // Load template assets from S3 (cached — shared with layout.tsx, no duplicate fetches)
     const baseS3Path = `templates/${templateSlug}`;
     const normalizedS3Path = tenantTemplate.s3Path?.replace(/\/+$/, '') || null;
+
+    console.log(`[store] Tenant ${tenant.id} (${(tenant as any).businessName}) loading template:`, {
+      activeTenantTemplateId: (tenantWithTemplate as any).activeTenantTemplateId,
+      tenantTemplateId: tenantTemplate.id,
+      tenantS3Path: normalizedS3Path,
+      baseS3Path,
+      templateSlug,
+      isPreview,
+    });
+
     const templateAssets = await getTemplateAssets(normalizedS3Path, baseS3Path);
     const { layout, customCss, defaults } = templateAssets;
+
+    console.log(`[store] Template assets loaded:`, {
+      hasLayout: !!layout,
+      sectionCount: layout?.sections?.length || 0,
+      hasDefaults: !!defaults,
+      hasCss: !!customCss,
+    });
 
     // Sign hero image and logo URLs in parallel
     let heroImageUrl = tenantTemplate.heroImageUrl || null;
