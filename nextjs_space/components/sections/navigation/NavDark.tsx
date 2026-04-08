@@ -46,10 +46,10 @@ export function NavDark(props: SectionProps) {
   const rawLinks = sectionConfig?.links || navigation?.links || defaultLinks;
   const links = rawLinks.map((l: any) => ({ ...l, href: prefixHref(l.href) }));
 
-  // Primary CTA
-  const cta1Label = sectionConfig?.ctaLabel || navigation?.cta?.label || 'Check Eligibility';
+  // Primary CTA — check both flat (ctaLabel) and nested (cta.label) shapes
+  const cta1Label = sectionConfig?.ctaLabel || sectionConfig?.cta?.label || navigation?.cta?.label || 'Check Eligibility';
   const cta1Href = prefixHref(
-    sectionConfig?.ctaHref || navigation?.cta?.href || consultationUrl || `${basePath}/consultation`,
+    sectionConfig?.ctaHref || sectionConfig?.cta?.href || navigation?.cta?.href || consultationUrl || `${basePath}/consultation`,
   );
 
   // Secondary CTA (optional)

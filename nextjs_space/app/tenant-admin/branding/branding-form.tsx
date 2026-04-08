@@ -559,10 +559,11 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 <Eye className="h-4 w-4" />
               </Button>
               {(() => {
-                // Tenant admins → their live store; Super admins → template preview
-                const previewHref = publishLabel
-                  ? `/store/preview/${(activeTemplate as any)?.templates?.slug || tenant.subdomain}`
-                  : `/store/${tenant.subdomain}`;
+                // Both tenant admins and super admins use the same preview tool
+                const baseSlug = (activeTemplate as any)?.templates?.slug || tenant.subdomain;
+                const previewHref = activeTemplate?.id
+                  ? `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}`
+                  : `/store/preview/${baseSlug}`;
                 return (
                   <a href={previewHref} target="_blank" rel="noopener noreferrer">
                     <Button type="button" variant="outline" size="sm" className="gap-1.5">
@@ -754,31 +755,34 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         )}
 
         {/* Tablet/Mobile: iframe with real viewport width so media queries fire */}
-        {previewDevice !== "desktop" && (
-          <div
-            className="flex justify-center bg-slate-100 dark:bg-slate-900 pt-10"
-            style={{ height: "100%" }}
-          >
+        {previewDevice !== "desktop" && (() => {
+          const baseSlug = (activeTemplate as any)?.templates?.slug || tenant.subdomain;
+          const iframeSrc = activeTemplate?.id
+            ? `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}&embed=true`
+            : `/store/preview/${baseSlug}?embed=true`;
+          return (
             <div
-              className="bg-white shadow-2xl overflow-hidden"
-              style={{
-                width: previewDevice === "tablet" ? "768px" : "375px",
-                maxWidth: "100%",
-                height: "calc(100% - 2.5rem)",
-                borderRadius: previewDevice === "mobile" ? "0 0 2rem 2rem" : undefined,
-              }}
+              className="flex justify-center bg-slate-100 dark:bg-slate-900 pt-10"
+              style={{ height: "100%" }}
             >
-              <iframe
-                src={publishLabel
-                  ? `/store/preview/${(activeTemplate as any)?.templates?.slug || tenant.subdomain}`
-                  : `/store/${tenant.subdomain}`
-                }
-                className="w-full h-full border-0"
-                title={`${previewDevice === "tablet" ? "Tablet" : "Mobile"} preview`}
-              />
+              <div
+                className="bg-white shadow-2xl overflow-hidden"
+                style={{
+                  width: previewDevice === "tablet" ? "768px" : "375px",
+                  maxWidth: "100%",
+                  height: "calc(100% - 2.5rem)",
+                  borderRadius: previewDevice === "mobile" ? "0 0 2rem 2rem" : undefined,
+                }}
+              >
+                <iframe
+                  src={iframeSrc}
+                  className="w-full h-full border-0"
+                  title={`${previewDevice === "tablet" ? "Tablet" : "Mobile"} preview`}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* 🚀 PageAgent Demo Integration */}

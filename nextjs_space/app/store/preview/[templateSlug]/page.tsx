@@ -7,6 +7,9 @@ import { getJsonFromS3, getTextFromS3, getFileUrl } from "@/lib/s3";
 import { SECTION_ASSET_KEYS, type TemplateLayout } from "@/lib/types/template-layout";
 import { Tenant } from "@/types/client";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
+import { prisma } from "@/lib/db";
+import { getTemplateAssets } from "@/lib/tenant";
+import { deepMerge } from "@/lib/utils";
 import PreviewToolbar from "./preview-toolbar";
 
 export const dynamic = 'force-dynamic';
@@ -66,17 +69,186 @@ function resolvePublicAsset(
   return fs.existsSync(fullPath) ? assetPath : null;
 }
 
+/** Sign an S3 key, handling both absolute and prefix-relative paths */
+async function signS3Path(val: string, s3Prefix: string, contentTypeHint?: string): Promise<string> {
+  const isAbsolute = val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/');
+  return getFileUrl(isAbsolute ? val : `${s3Prefix}/${val}`, contentTypeHint);
+}
+
+/** Sign all asset URLs in layout sections */
+async function signLayoutAssets(layout: TemplateLayout, s3Prefix: string) {
+  if (!layout.sections) return;
+
+  const signingTasks: Array<{ target: any; key: string; promise: Promise<string> }> = [];
+
+  for (const section of layout.sections) {
+    for (const key of SECTION_ASSET_KEYS) {
+      const val = section.config?.[key];
+      if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
+        const hint = key === 'videoUrl' && !/\.\w+$/.test(val) ? 'video/mp4' : undefined;
+        signingTasks.push({ target: section.config, key, promise: signS3Path(val, s3Prefix, hint) });
+      }
+    }
+    if (section.config) {
+      for (const arrKey of Object.keys(section.config)) {
+        if (Array.isArray(section.config[arrKey])) {
+          for (let idx = 0; idx < section.config[arrKey].length; idx++) {
+            const item = section.config[arrKey][idx];
+            if (typeof item === 'string' && !item.startsWith('http') && !item.startsWith('/') && (item.includes('/') || item.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
+              signingTasks.push({ target: section.config[arrKey], key: String(idx), promise: signS3Path(item, s3Prefix) });
+              continue;
+            }
+            if (!item || typeof item !== 'object') continue;
+            for (const itemKey of Object.keys(item)) {
+              const v = (item as any)[itemKey];
+              if (v && typeof v === 'string' && !v.startsWith('http') && !v.startsWith('/') && (v.includes('/') || v.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
+                signingTasks.push({ target: item, key: itemKey, promise: signS3Path(v, s3Prefix) });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const results = await Promise.allSettled(signingTasks.map(t => t.promise));
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled') {
+      signingTasks[i].target[signingTasks[i].key] = result.value;
+    }
+  });
+}
+
+/** Sign a defaults asset path (hero image or logo) */
+async function signDefaultAsset(assetPath: string | undefined, s3Prefix: string): Promise<string | null> {
+  if (!assetPath) return null;
+  if (assetPath.startsWith("http") || assetPath.startsWith("/")) return assetPath;
+  try {
+    return await signS3Path(assetPath, s3Prefix);
+  } catch {
+    return null;
+  }
+}
+
 export default async function TemplatePreviewPage({
   params,
   searchParams,
 }: {
   params: { templateSlug: string };
-  searchParams: { embed?: string };
+  searchParams: { embed?: string; tenantTemplateId?: string };
 }) {
   const { templateSlug } = params;
   const isEmbed = searchParams.embed === "true";
+  const tenantTemplateId = searchParams.tenantTemplateId;
 
-  // PATH 1: Try data-driven template (layout.json in S3)
+  // ─── PATH 0: Tenant-specific preview (tenantTemplateId provided) ───
+  // Loads the tenant's CUSTOMIZED template from DB + their S3 path, with fallback to base template.
+  // This is what tenant admins use — same preview tool as super admin but with their edits.
+  if (tenantTemplateId) {
+    const tenantTemplate = await prisma.tenant_templates.findUnique({
+      where: { id: tenantTemplateId },
+      include: { templates: true, tenants: true },
+    });
+
+    if (!tenantTemplate) {
+      notFound();
+    }
+
+    const tenantS3Path = tenantTemplate.s3Path?.replace(/\/+$/, '') || null;
+    const baseSlug = tenantTemplate.templates?.slug || templateSlug;
+    const baseS3Path = `templates/${baseSlug}`;
+
+    console.log(`[preview] Tenant preview for tenantTemplateId=${tenantTemplateId}`, {
+      tenantS3Path,
+      baseS3Path,
+      businessName: tenantTemplate.tenants?.businessName,
+    });
+
+    // Load layout, defaults, CSS — same fallback logic as the live store
+    const { layout, defaults, customCss } = await getTemplateAssets(tenantS3Path, baseS3Path);
+
+    if (!layout) {
+      notFound();
+    }
+
+    // Merge design system: base defaults + tenant overrides
+    const mergedDesignSystem = deepMerge(defaults?.designSystem || null, tenantTemplate.designSystem || null);
+    const s3Prefix = tenantS3Path || baseS3Path;
+
+    // Sign section assets
+    await signLayoutAssets(layout, s3Prefix);
+
+    // Sign hero image — tenant DB first, then defaults
+    let heroImageUrl: string | null = null;
+    if (tenantTemplate.heroImageUrl) {
+      heroImageUrl = await signDefaultAsset(tenantTemplate.heroImageUrl, s3Prefix);
+    }
+    if (!heroImageUrl) {
+      heroImageUrl = await signDefaultAsset(defaults?.heroImagePath, s3Prefix);
+    }
+
+    // Sign logo — tenant DB first, then defaults
+    let logoUrl: string | null = null;
+    if (tenantTemplate.logoUrl) {
+      logoUrl = await signDefaultAsset(tenantTemplate.logoUrl, s3Prefix);
+    }
+    if (!logoUrl) {
+      logoUrl = await signDefaultAsset(defaults?.logoPath, s3Prefix);
+    }
+
+    const tenantData = tenantTemplate.tenants;
+    const previewTenant: Tenant = tenantData
+      ? {
+          id: tenantData.id,
+          businessName: tenantData.businessName,
+          slug: tenantData.subdomain,
+          domain: tenantData.customDomain,
+          isActive: tenantData.isActive,
+          createdAt: tenantData.createdAt?.toISOString() || new Date().toISOString(),
+          updatedAt: tenantData.updatedAt?.toISOString() || new Date().toISOString(),
+          subdomain: tenantData.subdomain,
+          settings: (tenantData.settings as any) || {},
+        }
+      : { ...mockTenant, businessName: tenantTemplate.templates?.name || "Preview" };
+
+    const sectionProps = {
+      tenant: { ...previewTenant, subdomain: previewTenant.subdomain || previewTenant.slug || "preview" },
+      consultationUrl: "#consultation",
+      productsUrl: "#products",
+      contactUrl: "#contact",
+      aboutUrl: "#about",
+      heroImageUrl,
+      logoUrl,
+      designSystem: mergedDesignSystem,
+      pageContent: (tenantTemplate.pageContent as any) || defaults?.pageContent || {},
+      navigation: defaults?.navigation || {},
+      footer: defaults?.footer || {},
+      valueProps: defaults?.valueProps || [],
+    };
+
+    return (
+      <TenantThemeProvider
+        tenant={previewTenant}
+        tenantTemplate={
+          mergedDesignSystem
+            ? { designSystem: mergedDesignSystem, customCss: tenantTemplate.customCss || null }
+            : undefined
+        }
+      >
+        {!isEmbed && <PreviewToolbar templateName={previewTenant.businessName || templateSlug} />}
+        <div className="preview-content">
+          <TemplateRenderer
+            layout={layout}
+            sectionProps={sectionProps}
+            customCss={customCss}
+            renderChrome={true}
+          />
+        </div>
+      </TenantThemeProvider>
+    );
+  }
+
+  // ─── PATH 1: Base template preview (super admin / marketplace) ───
   let layout: TemplateLayout | null = null;
   let customCss: string | null = null;
   let defaults: any = null;
@@ -92,120 +264,12 @@ export default async function TemplatePreviewPage({
   }
 
   if (layout) {
-    console.log(`[preview] Loaded layout.json for "${templateSlug}":`, JSON.stringify({
-      navigation: layout.navigation,
-      footer: layout.footer,
-      hasNavigationConfig: !!(layout as any).navigationConfig,
-      hasFooterConfig: !!(layout as any).footerConfig,
-      sectionCount: layout.sections?.length || 0,
-      sectionTypes: (layout.sections || []).map(s => s.type),
-      sectionVideoUrls: (layout.sections || [])
-        .filter(s => s.config?.videoUrl)
-        .map(s => ({ id: s.id, videoUrl: (s.config?.videoUrl as string)?.substring(0, 80) })),
-      sectionImageUrls: (layout.sections || [])
-        .filter(s => s.config?.imageUrl)
-        .map(s => ({ id: s.id, type: s.type, imageUrl: (s.config?.imageUrl as string)?.substring(0, 80) })),
-      defaultsHeroImagePath: defaults?.heroImagePath?.substring(0, 80) || null,
-      defaultsLogoPath: defaults?.logoPath?.substring(0, 80) || null,
-    }));
     const s3Prefix = `templates/${templateSlug}`;
 
-    // Sign hero image from defaults
-    let heroImageUrl: string | null = null;
-    if (defaults?.heroImagePath) {
-      const heroPath = defaults.heroImagePath;
-      if (!heroPath.startsWith("http") && !heroPath.startsWith("/")) {
-        try {
-          // Absolute S3 keys (uploaded files) — sign directly without prefixing
-          const isAbsolute = heroPath.startsWith('development/') || heroPath.startsWith('tenants/') || heroPath.startsWith('templates/');
-          heroImageUrl = await getFileUrl(isAbsolute ? heroPath : `${s3Prefix}/${heroPath}`);
-        } catch { /* fallback to null */ }
-      } else {
-        heroImageUrl = heroPath;
-      }
-    }
-
-    // Sign logo from defaults
-    let logoUrl: string | null = null;
-    if (defaults?.logoPath) {
-      const logoPath = defaults.logoPath;
-      if (!logoPath.startsWith("http") && !logoPath.startsWith("/")) {
-        try {
-          const isAbsolute = logoPath.startsWith('development/') || logoPath.startsWith('tenants/') || logoPath.startsWith('templates/');
-          logoUrl = await getFileUrl(isAbsolute ? logoPath : `${s3Prefix}/${logoPath}`);
-        } catch { /* fallback to null */ }
-      } else {
-        logoUrl = logoPath;
-      }
-    }
-
-    // Sign section-level asset URLs (top-level + nested arrays)
-    if (layout.sections) {
-      const topKeys = SECTION_ASSET_KEYS;
-
-      function signAssetUrl(val: string, contentTypeHint?: string): Promise<string> {
-        const isAbsoluteKey = val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/');
-        return getFileUrl(isAbsoluteKey ? val : `${s3Prefix}/${val}`, contentTypeHint);
-      }
-
-      const signingTasks: Array<{ target: any; key: string; promise: Promise<string> }> = [];
-
-      for (const section of layout.sections) {
-        // Top-level config keys
-        for (const key of topKeys) {
-          const val = section.config?.[key];
-          if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
-            // For videoUrl keys without a file extension, hint the content type so the signed URL works
-            const hint = key === 'videoUrl' && !/\.\w+$/.test(val) ? 'video/mp4' : undefined;
-            signingTasks.push({ target: section.config, key, promise: signAssetUrl(val, hint) });
-          }
-        }
-        // Nested arrays — sign any string value that looks like an S3 key
-        if (section.config) {
-          for (const arrKey of Object.keys(section.config)) {
-            if (Array.isArray(section.config[arrKey])) {
-              for (let idx = 0; idx < section.config[arrKey].length; idx++) {
-                const item = section.config[arrKey][idx];
-                // Handle flat string arrays (e.g. SocialProof avatars[])
-                if (typeof item === 'string' && !item.startsWith('http') && !item.startsWith('/') && (item.includes('/') || item.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
-                  signingTasks.push({ target: section.config[arrKey], key: String(idx), promise: signAssetUrl(item) });
-                  continue;
-                }
-                if (!item || typeof item !== 'object') continue;
-                for (const itemKey of Object.keys(item)) {
-                  const v = (item as any)[itemKey];
-                  if (v && typeof v === 'string' && !v.startsWith('http') && !v.startsWith('/') && (v.includes('/') || v.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
-                    signingTasks.push({ target: item, key: itemKey, promise: signAssetUrl(v) });
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      const results = await Promise.allSettled(signingTasks.map(t => t.promise));
-      results.forEach((result, i) => {
-        if (result.status === 'fulfilled') {
-          signingTasks[i].target[signingTasks[i].key] = result.value;
-        } else {
-          console.error(`[preview] Failed to sign ${signingTasks[i].key}:`, result.reason);
-        }
-      });
-
-      // Debug: log signed asset URLs
-      for (const section of layout.sections) {
-        if (section.config?.videoUrl) {
-          console.log(`[preview] Section ${section.id} videoUrl after signing:`, section.config.videoUrl.substring(0, 120));
-        }
-        if (section.config?.imageUrl) {
-          console.log(`[preview] Section ${section.id} imageUrl after signing:`, section.config.imageUrl.substring(0, 120));
-        }
-      }
-    }
-
-    console.log(`[preview] heroImageUrl from defaults:`, heroImageUrl?.substring(0, 100) || 'null');
-    console.log(`[preview] logoUrl from defaults:`, logoUrl?.substring(0, 100) || 'null');
+    // Sign assets
+    await signLayoutAssets(layout, s3Prefix);
+    const heroImageUrl = await signDefaultAsset(defaults?.heroImagePath, s3Prefix);
+    const logoUrl = await signDefaultAsset(defaults?.logoPath, s3Prefix);
 
     const sectionProps = {
       tenant: { ...mockTenant, subdomain: mockTenant.slug },
@@ -244,7 +308,7 @@ export default async function TemplatePreviewPage({
     );
   }
 
-  // PATH 2: Legacy React template (bundled at build time)
+  // ─── PATH 2: Legacy React template (bundled at build time) ───
   const TemplateComponent = TEMPLATE_COMPONENTS[templateSlug];
   if (!TemplateComponent) {
     notFound();

@@ -29,8 +29,8 @@ export function NavTransparent(props: SectionProps) {
   const prefixHref = (href: string) => prefixTenantHref(href, basePath);
   const rawLinks = sectionConfig?.links || navigation?.links || defaultLinks;
   const links = rawLinks.map((l: any) => ({ ...l, href: prefixHref(l.href) }));
-  const ctaLabel = sectionConfig?.ctaLabel || navigation?.cta?.label || navigation?.ctaLabel || 'Book Consultation';
-  const ctaHref = prefixHref(sectionConfig?.ctaHref || navigation?.cta?.href || consultationUrl || `${basePath}/consultation`);
+  const ctaLabel = sectionConfig?.ctaLabel || sectionConfig?.cta?.label || navigation?.cta?.label || navigation?.ctaLabel || 'Book Consultation';
+  const ctaHref = prefixHref(sectionConfig?.ctaHref || sectionConfig?.cta?.href || navigation?.cta?.href || consultationUrl || `${basePath}/consultation`);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
