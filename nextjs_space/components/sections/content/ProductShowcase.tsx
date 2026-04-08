@@ -63,7 +63,12 @@ export function ProductShowcase(props: SectionProps) {
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className={`grid gap-6 ${
+          categories.length === 1 ? 'grid-cols-1 max-w-md mx-auto' :
+          categories.length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto' :
+          categories.length === 3 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
+          'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+        }`}>
           {categories.map((cat, index) => (
             <motion.a
               key={index}
@@ -78,8 +83,8 @@ export function ProductShowcase(props: SectionProps) {
               }}
             >
               {cat.imageUrl && (
-                <div className="relative w-full aspect-[4/3]">
-                  <Image src={cat.imageUrl} alt={cat.title} fill className="object-cover" />
+                <div className="relative w-full aspect-square p-4">
+                  <Image src={cat.imageUrl} alt={cat.title} fill className="object-contain" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
                 </div>
               )}
               <div className="p-8">
