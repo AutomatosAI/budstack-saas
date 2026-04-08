@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
-import { copyS3Directory } from "@/lib/s3";
+import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
 
 /**
- * Migration endpoint: copies tenant S3 files from old timestamp-based paths
- * to new slug-based paths (tenants/{id}/templates/{slug}/) and updates DB.
+ * Migration endpoint with two modes:
  *
- * Non-destructive — old S3 files are NOT deleted.
+ * 1. PATH MIGRATION (default): copies tenant S3 files from old timestamp-based
+ *    paths to new slug-based paths and updates DB.
+ *
+ * 2. BACKFILL: copies missing base template files (defaults.json, styles.css,
+ *    assets/) to tenant paths that are incomplete. Preserves tenant's layout.json.
  *
  * POST /api/super-admin/tenants/migrate-s3-paths
- * Body: { tenantId?: string, dryRun?: boolean }
- *   - tenantId: migrate a single tenant (optional — omit to migrate all)
- *   - dryRun: if true, just report what would change without copying/updating
+ * Body: { tenantId?: string, dryRun?: boolean, backfill?: boolean }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +25,99 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const targetTenantId = body.tenantId || null;
     const dryRun = body.dryRun === true;
+    const backfill = body.backfill === true;
 
+    // ─── BACKFILL MODE ───
+    // Copies base template files to tenant paths that are missing defaults.json/styles.css/assets.
+    // Preserves tenant's customized layout.json by saving it first, then restoring after copy.
+    if (backfill) {
+      const whereClause: any = { s3Path: { not: null } };
+      if (targetTenantId) whereClause.tenantId = targetTenantId;
+
+      const tenantTemplates = await prisma.tenant_templates.findMany({
+        where: whereClause,
+        include: { templates: true, tenant: true },
+      });
+
+      const results: Array<{ tenantName: string; s3Path: string; baseTemplate: string; status: string; filesCopied?: number }> = [];
+
+      for (const tt of tenantTemplates) {
+        const tenantPath = tt.s3Path!;
+        const baseSlug = tt.templates?.slug;
+        const tenantName = (tt.tenant as any)?.businessName || "Unknown";
+
+        if (!baseSlug) {
+          results.push({ tenantName, s3Path: tenantPath, baseTemplate: "NONE", status: "SKIPPED_NO_BASE" });
+          continue;
+        }
+
+        // Check if defaults.json exists at tenant path
+        let hasDefaults = false;
+        try {
+          const d = await getJsonFromS3(`${tenantPath}/defaults.json`);
+          hasDefaults = !!d;
+        } catch { /* missing */ }
+
+        if (hasDefaults) {
+          results.push({ tenantName, s3Path: tenantPath, baseTemplate: baseSlug, status: "ALREADY_COMPLETE" });
+          continue;
+        }
+
+        if (dryRun) {
+          results.push({ tenantName, s3Path: tenantPath, baseTemplate: baseSlug, status: "WOULD_BACKFILL" });
+          continue;
+        }
+
+        try {
+          // 1. Save tenant's layout.json before overwrite
+          let tenantLayout: any = null;
+          try {
+            tenantLayout = await getJsonFromS3(`${tenantPath}/layout.json`);
+          } catch { /* no layout yet */ }
+
+          // 2. Copy ALL base template files to tenant path
+          const basePrefix = `templates/${baseSlug}/`;
+          const filesCopied = await copyS3Directory(basePrefix, `${tenantPath}/`);
+
+          // 3. Restore tenant's layout.json (their customizations win)
+          if (tenantLayout) {
+            const { createS3Client, getBucketConfig } = await import("@/lib/aws-config");
+            const { PutObjectCommand } = await import("@aws-sdk/client-s3");
+            const s3 = await createS3Client();
+            const { bucketName } = await getBucketConfig();
+            await s3.send(new PutObjectCommand({
+              Bucket: bucketName,
+              Key: `${tenantPath}/layout.json`,
+              Body: Buffer.from(JSON.stringify(tenantLayout, null, 2)),
+              ContentType: "application/json",
+            }));
+          }
+
+          // 4. Seed DB fields from defaults.json if not already set
+          try {
+            const defaults = await getJsonFromS3<any>(`${tenantPath}/defaults.json`);
+            if (defaults) {
+              const updates: Record<string, any> = {};
+              if (!tt.logoUrl && defaults.logoPath) updates.logoUrl = `${tenantPath}/${defaults.logoPath}`;
+              if (!tt.heroImageUrl && defaults.heroImagePath) updates.heroImageUrl = `${tenantPath}/${defaults.heroImagePath}`;
+              if (Object.keys(updates).length > 0) {
+                await prisma.tenant_templates.update({ where: { id: tt.id }, data: updates });
+              }
+            }
+          } catch { /* optional */ }
+
+          results.push({ tenantName, s3Path: tenantPath, baseTemplate: baseSlug, status: "BACKFILLED", filesCopied });
+          console.log(`[backfill] ${tenantName}: copied ${filesCopied} files from templates/${baseSlug}/ to ${tenantPath}/`);
+        } catch (err) {
+          results.push({ tenantName, s3Path: tenantPath, baseTemplate: baseSlug, status: `ERROR: ${err instanceof Error ? err.message : "Unknown"}` });
+          console.error(`[backfill] Failed for ${tenantName}:`, err);
+        }
+      }
+
+      return NextResponse.json({ success: true, dryRun, backfill: true, results });
+    }
+
+    // ─── PATH MIGRATION MODE ───
     // Find all tenant_templates that have an s3Path
     const whereClause: any = {
       s3Path: { not: null },
