@@ -47,8 +47,8 @@ export function About(props: SectionProps) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={backgroundImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover z-0" />
           <div
-            className="absolute inset-0 z-0"
-            style={{ backgroundColor: 'hsl(var(--tenant-color-background) / 0.85)' }}
+            className="absolute inset-0 z-[1]"
+            style={{ backgroundColor: 'hsl(var(--tenant-color-background) / 0.4)' }}
           />
         </>
       )}
