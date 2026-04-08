@@ -6,6 +6,7 @@ import { Breadcrumbs } from '@/components/admin/shared';
 import { Sparkles } from 'lucide-react';
 
 import { getJsonFromS3, getTextFromS3 } from '@/lib/s3';
+import { SECTION_ASSET_KEYS } from '@/lib/types/template-layout';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +66,7 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
         // Convert relative asset paths to absolute S3 URLs (top-level + nested arrays)
         if (layoutJson && (layoutJson as any).sections) {
           const { getFileUrl } = await import('@/lib/s3');
-          const topKeys = ["imageUrl", "videoUrl", "watermarkUrl", "rightImageUrl"] as const;
+          const topKeys = SECTION_ASSET_KEYS;
 
           const signVal = async (val: string) => {
             if (!val || typeof val !== 'string' || val.startsWith('http') || val.startsWith('/')) return val;

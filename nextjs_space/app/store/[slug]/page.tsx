@@ -11,7 +11,7 @@ import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
 
 // Import section-based renderer (data-driven templates)
 import { TemplateRenderer } from "@/components/template-renderer";
-import type { TemplateLayout } from "@/lib/types/template-layout";
+import { SECTION_ASSET_KEYS, type TemplateLayout } from "@/lib/types/template-layout";
 
 // Import existing homepage components (fallback)
 import { HeroSection } from "@/components/home/hero-section";
@@ -151,7 +151,7 @@ export default async function TenantStorePage({
     const assetS3Path = normalizedS3Path || baseS3Path;
     const needsFallback = assetS3Path && assetS3Path !== baseS3Path;
     if (layout?.sections && assetS3Path) {
-      const assetKeys = ['imageUrl', 'imageUrl2', 'imageUrl3', 'videoUrl', 'watermarkUrl', 'rightImageUrl', 'backgroundImageUrl'] as const;
+      const assetKeys = SECTION_ASSET_KEYS;
 
       function signAssetUrl(val: string, contentTypeHint?: string): Promise<string> {
         // Uploaded files are stored as absolute S3 keys (e.g. "development/uploads/...")

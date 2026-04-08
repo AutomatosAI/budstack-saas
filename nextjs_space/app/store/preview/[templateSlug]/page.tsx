@@ -4,7 +4,7 @@ import path from "path";
 import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
 import { TemplateRenderer } from "@/components/template-renderer";
 import { getJsonFromS3, getTextFromS3, getFileUrl } from "@/lib/s3";
-import type { TemplateLayout } from "@/lib/types/template-layout";
+import { SECTION_ASSET_KEYS, type TemplateLayout } from "@/lib/types/template-layout";
 import { Tenant } from "@/types/client";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import PreviewToolbar from "./preview-toolbar";
@@ -138,7 +138,7 @@ export default async function TemplatePreviewPage({
 
     // Sign section-level asset URLs (top-level + nested arrays)
     if (layout.sections) {
-      const topKeys = ["imageUrl", "imageUrl2", "imageUrl3", "videoUrl", "watermarkUrl", "rightImageUrl"] as const;
+      const topKeys = SECTION_ASSET_KEYS;
 
       function signAssetUrl(val: string, contentTypeHint?: string): Promise<string> {
         const isAbsoluteKey = val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/');

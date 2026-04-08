@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getJsonFromS3, uploadFile } from "@/lib/s3";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
 
 /**
  * Super Admin Marketplace Template Branding API
@@ -202,7 +203,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         }
 
         // Top-level asset keys
-        for (const key of ['imageUrl', 'imageUrl2', 'imageUrl3', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const) {
+        for (const key of SECTION_ASSET_KEYS) {
           if (mergedConfig[key]) mergedConfig[key] = stripSignedUrl(mergedConfig[key]);
         }
 

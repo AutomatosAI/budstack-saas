@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import BrandingForm from '@/app/tenant-admin/branding/branding-form';
 import { getJsonFromS3, getTextFromS3, getFileUrl } from '@/lib/s3';
+import { SECTION_ASSET_KEYS } from '@/lib/types/template-layout';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
@@ -50,7 +51,7 @@ export default async function SuperAdminTemplateEditPage({ params }: { params: {
       }
       return getFileUrl(`${s3Prefix}/${val}`);
     };
-    const topKeys = ['imageUrl', 'imageUrl2', 'imageUrl3', 'videoUrl', 'watermarkUrl', 'rightImageUrl'] as const;
+    const topKeys = SECTION_ASSET_KEYS;
     const signingTasks: Array<{ target: any; key: string; promise: Promise<string> }> = [];
 
     for (const section of layoutJson.sections) {

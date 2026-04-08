@@ -17,6 +17,17 @@ export interface LayoutSection {
   colorOverrides?: SectionColorOverrides;
 }
 
+/**
+ * S3 asset keys that appear in section configs and need signing/stripping.
+ * Single source of truth — used by store page, editor page, preview page,
+ * and both branding API routes. Add new asset fields here only.
+ */
+export const SECTION_ASSET_KEYS = [
+  'imageUrl', 'imageUrl2', 'imageUrl3',
+  'videoUrl', 'watermarkUrl', 'rightImageUrl',
+  'backgroundImageUrl',
+] as const;
+
 export interface TemplateLayout {
   version: string;
   navigation: string;

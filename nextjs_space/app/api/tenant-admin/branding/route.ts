@@ -5,6 +5,7 @@ import { uploadFile, getJsonFromS3 } from "@/lib/s3";
 import { validateUpload } from "@/lib/upload-validation";
 import { TenantSettings } from "@/lib/types";
 import { deepMerge } from "@/lib/utils";
+import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
 
 export async function PUT(req: NextRequest) {
   try {
@@ -242,7 +243,7 @@ export async function PUT(req: NextRequest) {
           };
 
           // Strip top-level asset URLs
-          for (const key of ['imageUrl', 'imageUrl2', 'imageUrl3', 'videoUrl', 'watermarkUrl', 'rightImageUrl', 'backgroundImageUrl'] as const) {
+          for (const key of SECTION_ASSET_KEYS) {
             if (mergedConfig[key]) mergedConfig[key] = stripSignedUrl(mergedConfig[key]);
           }
 
