@@ -482,13 +482,13 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
     productsUrl: "#",
     contactUrl: "#",
     aboutUrl: "#",
-    heroImageUrl: ((activeTemplate as any)?.layout?.defaults?.heroImagePath)
-      || ((activeTemplate as any)?.signedHeroImageUrl)
+    heroImageUrl: ((activeTemplate as any)?.signedHeroImageUrl)
+      || ((activeTemplate as any)?.layout?.defaults?.heroImagePath)
       || undefined,
     logoUrl: logo
       ? URL.createObjectURL(logo)
-      : ((activeTemplate as any)?.layout?.defaults?.logoPath)
-      || ((activeTemplate as any)?.signedLogoUrl)
+      : ((activeTemplate as any)?.signedLogoUrl)
+      || ((activeTemplate as any)?.layout?.defaults?.logoPath)
       || undefined,
     designSystem: liveDesignSystem,
     pageContent: livePageContent,
@@ -622,7 +622,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 logo={logo}
                 favicon={favicon}
                 onFileChange={handleFileChange}
-                logoUrl={((activeTemplate as any)?.layout?.defaults?.logoPath) || ((activeTemplate as any)?.signedLogoUrl) || undefined}
+                logoUrl={((activeTemplate as any)?.signedLogoUrl) || ((activeTemplate as any)?.layout?.defaults?.logoPath) || undefined}
               />
             </TabsContent>
 
