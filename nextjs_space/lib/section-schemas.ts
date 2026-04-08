@@ -7,6 +7,12 @@
 
 export type FieldType = 'text' | 'textarea' | 'image' | 'video' | 'url' | 'select' | 'number' | 'array' | 'boolean';
 
+/** Reusable background image + overlay fields for sections that support optional bg images */
+const BG_IMAGE_FIELDS = [
+  { key: 'backgroundImageUrl', label: 'Background Image (optional)', type: 'image' as const, default: '' },
+  { key: 'overlayOpacity', label: 'Background Overlay Opacity', type: 'select' as const, default: '0.5', options: ['0', '0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9'] },
+];
+
 /** Shape of a single sub-field inside an array item (e.g. title, description inside a feature) */
 export interface ArrayItemField {
   key: string;
@@ -275,6 +281,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Get the latest news and offers delivered to your inbox.' },
       { key: 'placeholder', label: 'Input Placeholder', type: 'text', default: 'you@example.com' },
       { key: 'buttonText', label: 'Button Text', type: 'text', default: 'Subscribe' },
+      ...BG_IMAGE_FIELDS,
     ],
   },
   CTABanner: {
@@ -287,6 +294,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'ctaText', label: 'Button Text', type: 'text', default: 'Start Now' },
       { key: 'ctaHref', label: 'Button Link', type: 'url', default: '', placeholder: 'Leave empty to use consultation URL' },
       { key: 'showButton', label: 'Show Button', type: 'select', default: 'yes', options: ['yes', 'no'] },
+      ...BG_IMAGE_FIELDS,
     ],
   },
   CTASplit: {
@@ -347,6 +355,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'ctaText', label: 'Button Text', type: 'text', default: 'View All Products' },
       { key: 'ctaHref', label: 'Button Link', type: 'url', default: '', placeholder: 'Leave empty to use products page' },
       { key: 'showButton', label: 'Show Button', type: 'select', default: 'yes', options: ['yes', 'no'] },
+      ...BG_IMAGE_FIELDS,
     ],
   },
   Testimonials: {
@@ -362,6 +371,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
         { key: 'role', label: 'Role / Title', type: 'text', default: '' },
         { key: 'rating', label: 'Rating (1-5)', type: 'number', default: 5 },
       ]},
+      ...BG_IMAGE_FIELDS,
     ],
   },
   About: {
@@ -405,6 +415,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
         { key: 'label', label: 'Label', type: 'text', default: 'Stat' },
         { key: 'value', label: 'Value', type: 'text', default: '100+' },
       ]},
+      ...BG_IMAGE_FIELDS,
     ],
   },
   FAQ: {
@@ -418,6 +429,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
         { key: 'question', label: 'Question', type: 'text', default: 'Question?' },
         { key: 'answer', label: 'Answer', type: 'textarea', default: '' },
       ]},
+      ...BG_IMAGE_FIELDS,
     ],
   },
   BlogFeed: {
@@ -495,6 +507,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
         { key: 'description', label: 'Description', type: 'text', default: '' },
         { key: 'cta', label: 'CTA Text', type: 'text', default: 'Get Started' },
       ]},
+      ...BG_IMAGE_FIELDS,
     ],
   },
   TeamGrid: {
@@ -570,6 +583,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'avatars', label: 'Avatar URLs', type: 'array', default: '', itemLabel: 'Avatar', itemFields: [
         { key: 'imageUrl', label: 'Avatar Image', type: 'image', default: '' },
       ]},
+      ...BG_IMAGE_FIELDS,
     ],
   },
   TabsShowcase: {
@@ -615,6 +629,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
         { key: 'description', label: 'Description', type: 'textarea', default: '' },
         { key: 'icon', label: 'Icon', type: 'text', default: 'CheckCircle', placeholder: 'Lucide icon name' },
       ]},
+      ...BG_IMAGE_FIELDS,
     ],
   },
   StatsCounter: {
@@ -629,6 +644,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
         { key: 'suffix', label: 'Suffix', type: 'text', default: '+', placeholder: '+, %, k, etc.' },
         { key: 'icon', label: 'Icon', type: 'text', default: 'TrendingUp', placeholder: 'Lucide icon name' },
       ]},
+      ...BG_IMAGE_FIELDS,
     ],
   },
   ImageShowcase: {

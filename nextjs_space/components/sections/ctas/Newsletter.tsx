@@ -12,6 +12,8 @@ export function Newsletter(props: SectionProps) {
   const subtitle = sectionConfig?.subtitle || 'Get the latest news, offers, and wellness tips delivered to your inbox.';
   const placeholder = sectionConfig?.placeholder || 'you@example.com';
   const buttonText = sectionConfig?.buttonText || 'Subscribe';
+  const backgroundImageUrl = sectionConfig?.backgroundImageUrl || null;
+  const overlayOpacity = parseFloat(sectionConfig?.overlayOpacity ?? '0.5');
 
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -26,14 +28,24 @@ export function Newsletter(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-16 sm:py-20 lg:py-24"
+      className="relative py-16 sm:py-20 lg:py-24"
       style={{
         background: `linear-gradient(135deg,
           hsl(var(--tenant-color-primary)) 0%,
           hsl(var(--tenant-color-secondary)) 100%)`,
       }}
     >
-      <div className="container mx-auto px-6">
+      {backgroundImageUrl && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={backgroundImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover z-0" />
+          <div
+            className="absolute inset-0 z-[1]"
+            style={{ backgroundColor: `hsl(var(--tenant-color-background) / ${overlayOpacity})` }}
+          />
+        </>
+      )}
+      <div className="relative z-10 container mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}

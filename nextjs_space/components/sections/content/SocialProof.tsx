@@ -18,6 +18,8 @@ export function SocialProof(props: SectionProps) {
   const { sectionConfig } = props;
   const heading = sectionConfig?.heading || '';
   const avatars: string[] = sectionConfig?.avatars || defaultAvatars;
+  const backgroundImageUrl = sectionConfig?.backgroundImageUrl || null;
+  const overlayOpacity = parseFloat(sectionConfig?.overlayOpacity ?? '0.5');
   const count = sectionConfig?.count || 10000;
   const label = sectionConfig?.label || 'Happy Customers';
   const rating = sectionConfig?.rating || 4.9;
@@ -33,10 +35,20 @@ export function SocialProof(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-16 sm:py-20 lg:py-24"
+      className="relative py-16 sm:py-20 lg:py-24"
       style={{ backgroundColor: 'hsl(var(--tenant-color-surface))' }}
     >
-      <div className="container mx-auto px-6">
+      {backgroundImageUrl && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={backgroundImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover z-0" />
+          <div
+            className="absolute inset-0 z-[1]"
+            style={{ backgroundColor: `hsl(var(--tenant-color-background) / ${overlayOpacity})` }}
+          />
+        </>
+      )}
+      <div className="relative z-10 container mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}

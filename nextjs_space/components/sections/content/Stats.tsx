@@ -49,6 +49,8 @@ function AnimatedNumber({ value, suffix = '', prefix = '', inView }: StatItem & 
 export function Stats(props: SectionProps) {
   const { sectionConfig } = props;
   const heading = sectionConfig?.heading || 'By the Numbers';
+  const backgroundImageUrl = sectionConfig?.backgroundImageUrl || null;
+  const overlayOpacity = parseFloat(sectionConfig?.overlayOpacity ?? '0.5');
   const items: StatItem[] = sectionConfig?.items || defaultItems;
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.2 });
@@ -56,14 +58,24 @@ export function Stats(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-16 sm:py-20 lg:py-24"
+      className="relative py-16 sm:py-20 lg:py-24"
       style={{
         background: `linear-gradient(135deg,
           hsl(var(--tenant-color-primary)) 0%,
           hsl(var(--tenant-color-secondary)) 100%)`,
       }}
     >
-      <div className="container mx-auto px-6">
+      {backgroundImageUrl && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={backgroundImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover z-0" />
+          <div
+            className="absolute inset-0 z-[1]"
+            style={{ backgroundColor: `hsl(var(--tenant-color-background) / ${overlayOpacity})` }}
+          />
+        </>
+      )}
+      <div className="relative z-10 container mx-auto px-6">
         {heading && (
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
