@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update display order for each product
-    await Promise.all(
+    // Update display order in a single transaction (atomic, reduces round trips)
+    await prisma.$transaction(
       products.map((product: { id: string; displayOrder: number }) =>
         prisma.products.update({
           where: { id: product.id },

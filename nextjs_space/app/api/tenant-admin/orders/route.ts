@@ -136,13 +136,11 @@ export async function GET(req: NextRequest) {
     };
 
     // Get filtered count, paginated orders, and status badge counts in parallel
+    // Uses groupBy for status counts (1 query instead of 4)
     const [
       filteredCount,
       orders,
-      pendingCount,
-      processingCount,
-      completedCount,
-      cancelledCount,
+      statusGroups,
     ] = await Promise.all([
       prisma.orders.count({ where: whereClause }),
       prisma.orders.findMany({
@@ -175,10 +173,21 @@ export async function GET(req: NextRequest) {
         skip,
         take: pageSize,
       }),
-      ...["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"].map(
-        (status) => prisma.orders.count({ where: { ...baseFilter, status } })
-      ),
+      prisma.orders.groupBy({
+        by: ["status"],
+        where: baseFilter,
+        _count: { id: true },
+      }),
     ]);
+
+    // Build status count map from single groupBy result
+    const statusCountMap = Object.fromEntries(
+      statusGroups.map((g: any) => [g.status, g._count.id])
+    );
+    const pendingCount = statusCountMap["PENDING"] || 0;
+    const processingCount = statusCountMap["PROCESSING"] || 0;
+    const completedCount = statusCountMap["COMPLETED"] || 0;
+    const cancelledCount = statusCountMap["CANCELLED"] || 0;
 
     // Transform orders to match expected format (rename order_items to items, users to user)
     const transformedOrders = orders.map((order: any) => ({

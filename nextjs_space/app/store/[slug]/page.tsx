@@ -4,7 +4,9 @@ import { getTenantUrl, getTenantBasePath, getTenantBaseUrl } from "@/lib/tenant-
 import { prisma } from "@/lib/db";
 import { getFileUrl } from "@/lib/s3";
 
-export const dynamic = 'force-dynamic';
+// Revalidate every 60 seconds — template/product data doesn't change frequently
+// This avoids hitting S3 + DB on every single request
+export const revalidate = 60;
 
 // Import template registry (legacy React templates)
 import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
