@@ -1,34 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { getCurrentTenant } from '@/lib/tenant';
+import { getTenantBaseUrl } from '@/lib/tenant-utils';
 
-interface RouteParams {
-    params: Promise<{ slug: string }>;
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
-    const { slug } = await params;
-
-    // Find tenant by subdomain
-    const tenant = await prisma.tenants.findUnique({
-        where: { subdomain: slug },
-        select: {
-            subdomain: true,
-            customDomain: true,
-            isActive: true,
-        },
-    });
+export async function GET() {
+    const tenant = await getCurrentTenant();
 
     if (!tenant || !tenant.isActive) {
         return new NextResponse('Tenant not found', { status: 404 });
     }
 
-    // Build base URL - use custom domain if set, otherwise subdomain
-    const baseUrl = tenant.customDomain
-        ? `https://${tenant.customDomain}`
-        : `https://${tenant.subdomain}.budstacks.io`;
+    const baseUrl = getTenantBaseUrl(tenant);
 
-    // Build robots.txt content
-    const robotsTxt = `# Robots.txt for ${tenant.customDomain || tenant.subdomain + '.budstacks.io'}
+    const robotsTxt = `# Robots.txt for ${tenant.customDomain || tenant.subdomain}
 # Generated dynamically by BudStacks
 
 User-agent: *

@@ -118,7 +118,7 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                 disabled
                 className="flex-1 rounded-xl bg-slate-50"
               />
-              <span className="ml-3 font-medium text-muted-foreground">.budstacks.io</span>
+              <span className="ml-3 font-medium text-muted-foreground">.{process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io'}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               This is your permanent subdomain

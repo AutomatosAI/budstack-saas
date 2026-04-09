@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { getNamecheapClient } from "@/lib/namecheap-api";
+import { addCustomDomain, removeCustomDomain } from "@/lib/railway-api";
 import { clerkClient } from "@clerk/nextjs/server";
 import crypto from "crypto";
 
@@ -125,6 +126,8 @@ export async function PATCH(
       }
     }
 
+    const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io';
+
     // If activating a tenant for the first time, create subdomain via Namecheap API
     if (isActive && !existingTenant.isActive && namecheapUsername) {
       try {
@@ -145,7 +148,7 @@ export async function PATCH(
         }
 
         console.log(
-          `✅ Created subdomain: ${existingTenant.subdomain}.budstacks.io`,
+          `✅ Created subdomain: ${existingTenant.subdomain}.${baseDomain}`,
         );
       } catch (error) {
         console.error("Namecheap API error:", error);
@@ -171,7 +174,7 @@ export async function PATCH(
         const namecheap = getNamecheapClient(namecheapUsername);
         await namecheap.deleteTenantSubdomain(existingTenant.subdomain);
         console.log(
-          `🗑️ Deleted subdomain: ${existingTenant.subdomain}.budstacks.io`,
+          `🗑️ Deleted subdomain: ${existingTenant.subdomain}.${baseDomain}`,
         );
       } catch (error) {
         console.error("Error deleting subdomain:", error);
@@ -179,14 +182,60 @@ export async function PATCH(
       }
     }
 
+    // Custom domain provisioning (Railway only — Clerk uses proxy mode via /__clerk rewrite)
+    const existingSettings = (existingTenant.settings as Record<string, unknown>) || {};
+    let railwayDomainId = (existingSettings.railwayDomainId as string) || null;
+    let domainVerification = existingSettings.domainVerification ?? null;
+
+    if (customDomain !== undefined && customDomain !== existingTenant.customDomain) {
+      // Remove old domain from Railway if one was provisioned
+      if (existingTenant.customDomain && railwayDomainId) {
+        try {
+          await removeCustomDomain(railwayDomainId);
+          console.log(`🗑️ Removed Railway domain: ${existingTenant.customDomain}`);
+        } catch (error) {
+          console.error("Railway domain removal error:", error);
+        }
+        railwayDomainId = null;
+        domainVerification = null;
+      }
+
+      // Add new domain to Railway
+      if (customDomain) {
+        try {
+          const railwayDomain = await addCustomDomain(customDomain);
+          railwayDomainId = railwayDomain.id;
+          domainVerification = { status: "pending", checkedAt: new Date().toISOString(), expected: null, found: null };
+          console.log(`✅ Added Railway domain: ${customDomain} (id: ${railwayDomain.id})`);
+        } catch (error) {
+          console.error("Railway domain creation error:", error);
+          return NextResponse.json(
+            {
+              error: "Failed to provision custom domain on Railway. The domain was not saved.",
+              details: error instanceof Error ? error.message : "Unknown error",
+            },
+            { status: 500 },
+          );
+        }
+      }
+    }
+
     // Build update data object
     const updateData: any = {};
     if (businessName !== undefined) updateData.businessName = businessName;
     if (subdomain !== undefined) updateData.subdomain = subdomain;
-    if (customDomain !== undefined) updateData.customDomain = customDomain;
+    if (customDomain !== undefined) updateData.customDomain = customDomain || null;
     if (countryCode !== undefined) updateData.countryCode = countryCode;
     if (isActive !== undefined) updateData.isActive = isActive;
-    if (settings !== undefined) updateData.settings = settings;
+
+    // Merge settings: preserve existing, overlay caller's settings, then overlay domain metadata
+    const mergedSettings = {
+      ...existingSettings,
+      ...(settings || {}),
+      railwayDomainId,
+      domainVerification,
+    };
+    updateData.settings = mergedSettings;
 
     // Update tenant
     const tenant = await prisma.tenants.update({
@@ -275,6 +324,19 @@ export async function DELETE(
         }
       } catch (error: any) {
         const msg = `Failed to delete Clerk user ${tenantUser.email}: ${error.message}`;
+        console.error(msg);
+        cleanupErrors.push(msg);
+      }
+    }
+
+    // Clean up Railway custom domain (best-effort)
+    const railwayDomainId = (tenant.settings as any)?.railwayDomainId;
+    if (railwayDomainId) {
+      try {
+        await removeCustomDomain(railwayDomainId);
+        console.log(`🗑️ Removed Railway domain for tenant: ${tenant.customDomain}`);
+      } catch (error: any) {
+        const msg = `Failed to remove Railway domain ${railwayDomainId}: ${error.message}`;
         console.error(msg);
         cleanupErrors.push(msg);
       }

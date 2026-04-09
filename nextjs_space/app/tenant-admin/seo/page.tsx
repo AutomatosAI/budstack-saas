@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getTenantBaseUrl } from "@/lib/tenant-utils";
 import { Search } from "lucide-react";
 import { SeoPageClient } from "./seo-page-client";
 
@@ -72,10 +73,7 @@ export default async function SeoPage() {
     redirect("/tenant-admin");
   }
 
-  // Build base URL for previews
-  const baseUrl = tenant.customDomain
-    ? `https://${tenant.customDomain}`
-    : `https://${tenant.subdomain}.budstacks.io`;
+  const baseUrl = getTenantBaseUrl(tenant);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">

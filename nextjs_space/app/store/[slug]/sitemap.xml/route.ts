@@ -1,40 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getCurrentTenant } from '@/lib/tenant';
+import { getTenantBaseUrl } from '@/lib/tenant-utils';
 
-interface RouteParams {
-    params: Promise<{ slug: string }>;
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
-    const { slug } = await params;
-
-    // Find tenant by subdomain
-    const tenant = await prisma.tenants.findUnique({
-        where: { subdomain: slug },
-        include: {
-            products: {
-                select: { slug: true, updatedAt: true },
-            },
-            posts: {
-                where: { published: true },
-                select: { slug: true, updatedAt: true },
-            },
-        },
-    });
+export async function GET() {
+    const tenant = await getCurrentTenant();
 
     if (!tenant || !tenant.isActive) {
         return new NextResponse('Tenant not found', { status: 404 });
     }
 
-    // Build base URL - use custom domain if set, otherwise subdomain
-    const baseUrl = tenant.customDomain
-        ? `https://${tenant.customDomain}`
-        : `https://${tenant.subdomain}.budstacks.io`;
+    // Fetch products and posts for this tenant
+    const [products, posts] = await Promise.all([
+        prisma.products.findMany({
+            where: { tenantId: tenant.id },
+            select: { slug: true, updatedAt: true },
+        }),
+        prisma.posts.findMany({
+            where: { tenantId: tenant.id, published: true },
+            select: { slug: true, updatedAt: true },
+        }),
+    ]);
 
-    // Format date for sitemap
+    const baseUrl = getTenantBaseUrl(tenant);
+
     const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-    // Build sitemap XML
     const staticPages = [
         { path: '', priority: '1.0', changefreq: 'daily' },
         { path: '/about', priority: '0.8', changefreq: 'monthly' },
@@ -53,14 +44,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
   </url>`).join('')}
-  ${tenant.products.map((product: { slug: string; updatedAt: Date }) => `
+  ${products.map((product) => `
   <url>
     <loc>${baseUrl}/products/${product.slug}</loc>
     <lastmod>${formatDate(product.updatedAt)}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`).join('')}
-  ${tenant.posts.map((post: { slug: string; updatedAt: Date }) => `
+  ${posts.map((post) => `
   <url>
     <loc>${baseUrl}/the-wire/${post.slug}</loc>
     <lastmod>${formatDate(post.updatedAt)}</lastmod>

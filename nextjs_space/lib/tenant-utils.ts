@@ -47,6 +47,24 @@ export function prefixTenantHref(href: string, basePath: string): string {
   return href;
 }
 
+/**
+ * Canonical base URL for a tenant — the single source of truth for
+ * generating tenant-facing URLs (SEO, emails, sitemap, robots.txt, OG tags).
+ *
+ * Returns `https://{customDomain}` when set, otherwise
+ * `https://{subdomain}.{baseDomain}`.
+ *
+ * Unlike getTenantUrl(), this ALWAYS returns an absolute URL (never a
+ * path-based fallback) — use it wherever you need a full public URL.
+ */
+export function getTenantBaseUrl(tenant: TenantUrlData): string {
+  if (tenant.customDomain) {
+    return `https://${tenant.customDomain}`;
+  }
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io';
+  return `https://${tenant.subdomain}.${baseDomain}`;
+}
+
 export function getTenantUrl(tenant: TenantUrlData): string {
   // If custom domain is configured, use it
   if (tenant.customDomain) {

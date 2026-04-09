@@ -54,3 +54,6 @@ backups/
 
 # Uploads
 uploads/
+
+# Graphify knowledge graph outputs
+graphify-out/

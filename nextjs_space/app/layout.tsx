@@ -10,6 +10,7 @@ import { QueryProvider } from '@/components/query-provider';
 import { SessionExpirationChecker } from '@/components/session-expiration-checker';
 import { GlobalPlatformChatbot } from '@/components/landing/GlobalPlatformChatbot';
 import { prisma } from '@/lib/db';
+import { headers } from 'next/headers';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
@@ -103,6 +104,13 @@ export default async function RootLayout({
     console.error("Failed to load platform settings in root layout", e);
   }
 
+  // Detect custom domain requests — use Clerk proxy mode so auth works
+  // on any domain without extra DNS records. The /__clerk rewrite in
+  // next.config.js forwards auth API calls to Clerk's frontend API.
+  const headersList = headers();
+  const customDomain = headersList.get('x-tenant-custom-domain');
+  const clerkProxyUrl = customDomain ? `https://${customDomain}/__clerk` : undefined;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
@@ -112,6 +120,7 @@ export default async function RootLayout({
               // Ensure consistent styling
             },
           }}
+          {...(clerkProxyUrl ? { proxyUrl: clerkProxyUrl } : {})}
         >
           <QueryProvider>
             <LanguageProvider>

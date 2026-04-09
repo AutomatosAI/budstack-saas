@@ -192,19 +192,38 @@ export async function getTenantFromRequest(
       setTenantContext(null);
     }
 
-    // Extract subdomain from host
     const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
-    const subdomain = host.split(".")[0];
+    const currentHost = host.replace(/:\d+$/, '');
 
-    // Check if it's a subdomain request
+    // Check if it's a subdomain request (slug.budstacks.io)
+    if (currentHost.endsWith(`.${baseDomain}`)) {
+      const subdomain = currentHost.replace(`.${baseDomain}`, '');
+      if (subdomain && subdomain !== 'www') {
+        const tenant = await prisma.tenants.findFirst({
+          where: {
+            subdomain,
+            isActive: true,
+          },
+        });
+
+        if (tenant) {
+          setTenantContext(tenant.id);
+          return tenant;
+        }
+        setTenantContext(null);
+      }
+    }
+
+    // Custom domain lookup — host is not a budstacks.io subdomain
     if (
-      host.includes(baseDomain) &&
-      subdomain &&
-      subdomain !== baseDomain.split(".")[0]
+      !currentHost.endsWith(`.${baseDomain}`) &&
+      currentHost !== baseDomain &&
+      !currentHost.includes('localhost') &&
+      !currentHost.includes('127.0.0.1')
     ) {
       const tenant = await prisma.tenants.findFirst({
         where: {
-          subdomain: subdomain,
+          customDomain: currentHost,
           isActive: true,
         },
       });
