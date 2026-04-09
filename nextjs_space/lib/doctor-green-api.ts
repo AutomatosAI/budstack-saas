@@ -361,28 +361,6 @@ export async function fetchProduct(
 }
 
 /**
- * Verify NFT ownership
- */
-export async function verifyNFT(
-  tokenId: string,
-  config: DoctorGreenConfig,
-): Promise<any> {
-  return doctorGreenRequest(`/nfts/${tokenId}/verify`, { config });
-}
-
-/**
- * Get client information by NFT token
- */
-export async function getClientByNFT(
-  tokenId: string,
-  config: DoctorGreenConfig,
-): Promise<DoctorGreenClient> {
-  return doctorGreenRequest<DoctorGreenClient>(`/clients/nft/${tokenId}`, {
-    config,
-  });
-}
-
-/**
  * Get client information by Client ID
  *
  * GET /dapp/clients/{id} returns 401 — this is a known Dr Green API limitation.
@@ -452,34 +430,6 @@ export async function createOrder(
   return doctorGreenRequest<DoctorGreenOrder>("/orders", {
     method: "POST",
     body: orderData,
-    config,
-  });
-}
-
-/**
- * Fetch client orders
- */
-export async function fetchClientOrders(
-  clientId: string,
-  config: DoctorGreenConfig,
-): Promise<DoctorGreenOrder[]> {
-  return doctorGreenRequest<DoctorGreenOrder[]>(`/clients/${clientId}/orders`, {
-    config,
-  });
-}
-
-/**
- * Add product to cart
- */
-export async function addToCart(
-  clientId: string,
-  productId: string,
-  quantity: number,
-  config: DoctorGreenConfig,
-): Promise<any> {
-  return doctorGreenRequest(`/clients/${clientId}/cart`, {
-    method: "POST",
-    body: { product_id: productId, quantity },
     config,
   });
 }
