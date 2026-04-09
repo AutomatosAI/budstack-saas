@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 
 export async function GET(
@@ -12,7 +13,12 @@ export async function GET(
       return NextResponse.json({ error: "Slug is required" }, { status: 400 });
     }
 
-    // Find tenant by subdomain
+    // Require authentication — this route exposes settings and branding
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const tenant = await prisma.tenants.findUnique({
       where: {
         subdomain: slug,
@@ -25,6 +31,11 @@ export async function GET(
 
     if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    }
+
+    // Only allow access to own tenant (or super admin)
+    if (user.role !== "SUPER_ADMIN" && user.tenantId !== tenant.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json({

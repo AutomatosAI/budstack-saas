@@ -28,6 +28,7 @@ export async function uploadFile(
   buffer: Buffer,
   fileName: string,
   contentType?: string,
+  tenantPrefix?: string,
 ): Promise<string> {
   const s3Client = await createS3Client();
   const { bucketName, folderPrefix } = await getBucketConfig();
@@ -39,7 +40,9 @@ export async function uploadFile(
     finalName = `${fileName}${mimeToExt[contentType]}`;
   }
 
-  const key = `${folderPrefix}uploads/${Date.now()}-${finalName}`;
+  // Tenant-scoped path: {folderPrefix}{tenantPrefix}uploads/{timestamp}-{filename}
+  const scopedPrefix = tenantPrefix ? `${folderPrefix}${tenantPrefix}` : `${folderPrefix}`;
+  const key = `${scopedPrefix}uploads/${Date.now()}-${finalName}`;
 
   await s3Client.send(
     new PutObjectCommand({

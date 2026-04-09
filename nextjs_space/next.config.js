@@ -67,29 +67,54 @@ const nextConfig = {
       },
     ];
   },
-  // Disable static optimization for API routes
+  // Security headers — CSP, framing, transport security
   async headers() {
+    // Base CSP without unsafe-eval — Clerk needs unsafe-inline for now
+    const baseCSP = "default-src 'self'; script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.amazonaws.com https://img.clerk.com https://stage-api.drgreennft.com https://api.drgreennft.com https://cdn.abacus.ai; media-src 'self' blob: https://*.amazonaws.com; connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.com https://*.drgreennft.com wss://*.clerk.accounts.dev; frame-src 'self' https://challenges.cloudflare.com https://*.clerk.accounts.dev;";
+
+    // Admin analytics pages need unsafe-eval for plotly.js charting library
+    const adminCSP = baseCSP.replace(
+      "script-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    );
+
+    const securityHeaders = [
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      { key: 'X-DNS-Prefetch-Control', value: 'on' },
+      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+      { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+    ];
+
     return [
-      // All other pages: block framing (listed FIRST so preview rule overrides)
+      // All pages: block framing + base CSP (no unsafe-eval)
       {
         source: '/(.*)',
         headers: [
+          ...securityHeaders,
           { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'X-DNS-Prefetch-Control', value: 'on' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.amazonaws.com https://img.clerk.com https://stage-api.drgreennft.com https://api.drgreennft.com https://cdn.abacus.ai; media-src 'self' blob: https://*.amazonaws.com; connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.com https://*.drgreennft.com wss://*.clerk.accounts.dev; frame-src 'self' https://challenges.cloudflare.com https://*.clerk.accounts.dev;" },
+          { key: 'Content-Security-Policy', value: baseCSP },
+        ],
+      },
+      // Admin analytics: allow unsafe-eval for plotly.js
+      {
+        source: '/tenant-admin/analytics',
+        headers: [
+          { key: 'Content-Security-Policy', value: adminCSP },
+        ],
+      },
+      {
+        source: '/super-admin/analytics',
+        headers: [
+          { key: 'Content-Security-Policy', value: adminCSP },
         ],
       },
       // Store pages: allow self-framing for iframe-based viewport switcher in editor
-      // Listed AFTER catch-all so these values override X-Frame-Options: DENY
       {
         source: '/store/:path*',
         headers: [
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.amazonaws.com https://img.clerk.com https://stage-api.drgreennft.com https://api.drgreennft.com https://cdn.abacus.ai; media-src 'self' blob: https://*.amazonaws.com; connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.com https://*.drgreennft.com wss://*.clerk.accounts.dev; frame-src 'self' https://challenges.cloudflare.com https://*.clerk.accounts.dev; frame-ancestors 'self';" },
+          { key: 'Content-Security-Policy', value: baseCSP + " frame-ancestors 'self';" },
         ],
       },
     ];

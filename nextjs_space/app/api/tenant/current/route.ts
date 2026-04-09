@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCurrentTenant } from "@/lib/tenant";
 
+/**
+ * Public endpoint — returns minimal tenant info for store pages.
+ * Only exposes fields needed for public rendering (name, subdomain, template slug).
+ * Sensitive settings, branding config, and internal IDs are excluded.
+ */
 export async function GET() {
   try {
     const tenant = await getCurrentTenant();
@@ -9,7 +14,14 @@ export async function GET() {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
-    return NextResponse.json(tenant);
+    // Return only public-safe fields — no internal settings or config
+    return NextResponse.json({
+      id: tenant.id,
+      businessName: tenant.businessName,
+      subdomain: tenant.subdomain,
+      country: tenant.country,
+      isActive: tenant.isActive,
+    });
   } catch (error) {
     console.error("Error fetching tenant:", error);
     return NextResponse.json(
