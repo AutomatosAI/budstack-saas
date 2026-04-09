@@ -52,18 +52,8 @@ export function NavAuthButton({
 
   const isDark = variant === 'dark';
 
-  // --- Loading skeleton ---
-  if (!isLoaded) {
-    return (
-      <div
-        className="w-8 h-8 rounded-full animate-pulse"
-        style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'hsl(var(--tenant-color-border))' }}
-      />
-    );
-  }
-
   // --- Signed in: avatar + dropdown ---
-  if (isSignedIn) {
+  if (isLoaded && isSignedIn) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
