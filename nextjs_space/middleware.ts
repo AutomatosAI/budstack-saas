@@ -110,6 +110,11 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
 
+    // Clerk proxy: /__clerk/* must reach next.config.js rewrite, not get rewritten to /store/_cd/
+    if (pathname.startsWith('/__clerk')) {
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+
     // Platform routes: don't rewrite
     if (pathname.startsWith('/auth/') || pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin') || pathname.startsWith('/onboarding')) {
       return NextResponse.next({ request: { headers: requestHeaders } });
