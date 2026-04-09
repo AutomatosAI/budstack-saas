@@ -1,50 +1,29 @@
-"use client";
-
-import { useState, Suspense } from "react";
-import { useRouter, useSearchParams, useParams } from "next/navigation";
-import { SignIn } from "@clerk/nextjs";
-import Link from "next/link";
-import Image from "next/image";
-import { motion } from "framer-motion";
-import {
-  ArrowRight,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { notFound } from "next/navigation";
+import { getCurrentTenant } from "@/lib/tenant";
+import { prisma } from "@/lib/db";
 import { getTenantBasePath } from "@/lib/tenant-utils";
+import { TenantLoginForm } from "./login-form";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+export default async function TenantLoginPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const tenant = await getCurrentTenant();
+  if (!tenant) notFound();
 
-function TenantLoginForm() {
-  const params = useParams();
-  const slug = params?.slug as string;
-  const basePath = getTenantBasePath(slug);
+  const branding = await prisma.tenant_branding.findUnique({
+    where: { tenantId: tenant.id },
+    select: { logoUrl: true },
+  });
+
+  const basePath = getTenantBasePath(tenant.subdomain);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <SignIn
-        appearance={{
-          elements: {
-            rootBox: "mx-auto",
-            card: "shadow-xl border border-gray-200 rounded-2xl"
-          }
-        }}
-        fallbackRedirectUrl={`${basePath}/dashboard`}
-        signUpUrl={`${basePath}/register`}
-      />
-    </div>
-  );
-}
-
-export default function TenantLoginPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        </div>
-      }
-    >
-      <TenantLoginForm />
-    </Suspense>
+    <TenantLoginForm
+      businessName={tenant.businessName}
+      logoUrl={branding?.logoUrl || null}
+      basePath={basePath}
+    />
   );
 }
