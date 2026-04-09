@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
 import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
+import { NavAuthButton } from './NavAuthButton';
 
 export function NavMinimal(props: SectionProps) {
   const { tenant, logoUrl, productsUrl, aboutUrl, contactUrl, navigation, sectionConfig } = props;
@@ -29,6 +30,8 @@ export function NavMinimal(props: SectionProps) {
   const prefixHref = (href: string) => prefixTenantHref(href, basePath);
   const rawLinks = sectionConfig?.links || navigation?.links || defaultLinks;
   const links = rawLinks.map((l: any) => ({ ...l, href: prefixHref(l.href) }));
+  const loginStyle = sectionConfig?.loginStyle || navigation?.loginStyle || 'icon';
+  const signedOutLabel = sectionConfig?.signedOutLabel || navigation?.signedOutLabel || 'Login';
 
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -111,6 +114,12 @@ export function NavMinimal(props: SectionProps) {
               )}
             </a>
           )}
+          <NavAuthButton
+            basePath={basePath}
+            variant="light"
+            loginStyle={loginStyle}
+            signedOutLabel={signedOutLabel}
+          />
         </div>
 
         {/* Mobile: logo left + hamburger right */}
@@ -159,6 +168,14 @@ export function NavMinimal(props: SectionProps) {
               {link.label}
             </a>
           ))}
+          <div className="pt-3">
+            <NavAuthButton
+              basePath={basePath}
+              variant="light"
+              loginStyle="button"
+              signedOutLabel={signedOutLabel}
+            />
+          </div>
         </div>
       )}
     </nav>

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Menu, X, ShoppingCart } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
 import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
+import { NavAuthButton } from './NavAuthButton';
 
 /**
  * NavDark — Premium dark glassmorphic floating navigation bar.
@@ -58,6 +59,8 @@ export function NavDark(props: SectionProps) {
   const cta2Href = cta2?.href ? prefixHref(cta2.href) : undefined;
 
   const showCart = sectionConfig?.showCart !== false && navigation?.showCart !== false;
+  const loginStyle = sectionConfig?.loginStyle || navigation?.loginStyle || 'button';
+  const signedOutLabel = sectionConfig?.signedOutLabel || navigation?.signedOutLabel || 'Login';
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -264,6 +267,13 @@ export function NavDark(props: SectionProps) {
                 {cta2Label}
               </a>
             )}
+
+            <NavAuthButton
+              basePath={basePath}
+              variant="dark"
+              loginStyle={loginStyle}
+              signedOutLabel={signedOutLabel}
+            />
           </div>
 
           {/* Mobile: always show logo left + hamburger right */}
@@ -342,6 +352,14 @@ export function NavDark(props: SectionProps) {
                   {cta2Label}
                 </a>
               )}
+              <div className="flex justify-center pt-2">
+                <NavAuthButton
+                  basePath={basePath}
+                  variant="dark"
+                  loginStyle="button"
+                  signedOutLabel={signedOutLabel}
+                />
+              </div>
             </div>
           </div>
         )}
