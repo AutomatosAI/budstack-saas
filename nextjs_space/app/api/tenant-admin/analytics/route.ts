@@ -83,53 +83,38 @@ export async function GET(req: NextRequest) {
     // Get average order value
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    // Get revenue by day
+    // Get revenue and order counts by day in a single query using raw groupBy
     const dateRange = eachDayOfInterval({ start: startDate, end: new Date() });
-    const revenueByDayData = await Promise.all(
-      dateRange.map(async (date: Date) => {
-        const dayStart = startOfDay(date);
-        const dayEnd = startOfDay(subDays(date, -1));
+    const ordersByDay = await prisma.orders.groupBy({
+      by: ["createdAt"],
+      where: {
+        tenantId,
+        createdAt: { gte: startDate },
+      },
+      _sum: { total: true },
+      _count: { id: true },
+    });
 
-        const result = await prisma.orders.aggregate({
-          where: {
-            tenantId,
-            createdAt: {
-              gte: dayStart,
-              lt: dayEnd,
-            },
-          },
-          _sum: { total: true },
-        });
+    // Build a date-keyed map for O(1) lookup
+    const dayMap = new Map<string, { revenue: number; orders: number }>();
+    for (const row of ordersByDay) {
+      const key = format(startOfDay(row.createdAt), "yyyy-MM-dd");
+      const existing = dayMap.get(key) || { revenue: 0, orders: 0 };
+      dayMap.set(key, {
+        revenue: existing.revenue + (Number(row._sum.total) || 0),
+        orders: existing.orders + (row._count.id || 0),
+      });
+    }
 
-        return {
-          date: format(date, "MMM dd"),
-          revenue: result._sum.total || 0,
-        };
-      }),
-    );
+    const revenueByDayData = dateRange.map((date: Date) => {
+      const key = format(date, "yyyy-MM-dd");
+      return { date: format(date, "MMM dd"), revenue: dayMap.get(key)?.revenue || 0 };
+    });
 
-    // Get orders by day
-    const ordersByDayData = await Promise.all(
-      dateRange.map(async (date: Date) => {
-        const dayStart = startOfDay(date);
-        const dayEnd = startOfDay(subDays(date, -1));
-
-        const count = await prisma.orders.count({
-          where: {
-            tenantId,
-            createdAt: {
-              gte: dayStart,
-              lt: dayEnd,
-            },
-          },
-        });
-
-        return {
-          date: format(date, "MMM dd"),
-          orders: count,
-        };
-      }),
-    );
+    const ordersByDayData = dateRange.map((date: Date) => {
+      const key = format(date, "yyyy-MM-dd");
+      return { date: format(date, "MMM dd"), orders: dayMap.get(key)?.orders || 0 };
+    });
 
     // Get top selling products
     const topProducts = await prisma.order_items.groupBy({
@@ -155,45 +140,45 @@ export async function GET(req: NextRequest) {
       take: 5,
     });
 
-    // Get product details for top products
-    const topProductsWithDetails = await Promise.all(
-      topProducts.map(async (item: any) => {
-        const product = await prisma.products.findUnique({
-          where: { id: item.productId },
-        });
-        return {
-          id: product?.id,
-          name: product?.name || "Unknown Product",
-          quantity: item._sum.quantity || 0,
-          revenue: item._sum.price || 0,
-          orders: item._count.id,
-        };
-      }),
-    );
+    // Batch fetch product details (single query instead of N+1)
+    const productIds = topProducts.map((item: any) => item.productId).filter(Boolean);
+    const products = productIds.length > 0
+      ? await prisma.products.findMany({
+          where: { id: { in: productIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const productMap = new Map(products.map((p: { id: string; name: string }) => [p.id, p.name]));
 
-    // Get customer growth by day
-    const customerGrowthData = await Promise.all(
-      dateRange.map(async (date: Date) => {
-        const dayStart = startOfDay(date);
-        const dayEnd = startOfDay(subDays(date, -1));
+    const topProductsWithDetails = topProducts.map((item: any) => ({
+      id: item.productId,
+      name: productMap.get(item.productId) || "Unknown Product",
+      quantity: item._sum.quantity || 0,
+      revenue: item._sum.price || 0,
+      orders: item._count.id,
+    }));
 
-        const count = await prisma.users.count({
-          where: {
-            tenantId,
-            role: "PATIENT",
-            createdAt: {
-              gte: dayStart,
-              lt: dayEnd,
-            },
-          },
-        });
+    // Get customer growth by day (single groupBy instead of N queries)
+    const customersByDay = await prisma.users.groupBy({
+      by: ["createdAt"],
+      where: {
+        tenantId,
+        role: "PATIENT",
+        createdAt: { gte: startDate },
+      },
+      _count: { id: true },
+    });
 
-        return {
-          date: format(date, "MMM dd"),
-          customers: count,
-        };
-      }),
-    );
+    const customerDayMap = new Map<string, number>();
+    for (const row of customersByDay) {
+      const key = format(startOfDay(row.createdAt), "yyyy-MM-dd");
+      customerDayMap.set(key, (customerDayMap.get(key) || 0) + (row._count.id || 0));
+    }
+
+    const customerGrowthData = dateRange.map((date: Date) => {
+      const key = format(date, "yyyy-MM-dd");
+      return { date: format(date, "MMM dd"), customers: customerDayMap.get(key) || 0 };
+    });
 
     // Get order status distribution
     const orderStatusData = await prisma.orders.groupBy({
