@@ -63,7 +63,7 @@ const nextConfig = {
       // The Clerk SDK sends requests to /__clerk/* when proxyUrl is set.
       {
         source: '/__clerk/:path*',
-        destination: `${process.env.NEXT_PUBLIC_CLERK_FRONTEND_API || 'https://flying-jennet-34.clerk.accounts.dev'}/__clerk/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_CLERK_FRONTEND_API || 'https://flying-jennet-34.clerk.accounts.dev'}/:path*`,
       },
     ];
   },
