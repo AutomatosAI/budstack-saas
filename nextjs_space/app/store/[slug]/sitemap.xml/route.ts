@@ -44,14 +44,14 @@ export async function GET() {
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
   </url>`).join('')}
-  ${products.map((product) => `
+  ${products.map((product: { slug: string; updatedAt: Date }) => `
   <url>
     <loc>${baseUrl}/products/${product.slug}</loc>
     <lastmod>${formatDate(product.updatedAt)}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`).join('')}
-  ${posts.map((post) => `
+  ${posts.map((post: { slug: string; updatedAt: Date }) => `
   <url>
     <loc>${baseUrl}/the-wire/${post.slug}</loc>
     <lastmod>${formatDate(post.updatedAt)}</lastmod>
