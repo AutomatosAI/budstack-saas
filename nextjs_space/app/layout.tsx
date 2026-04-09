@@ -104,12 +104,9 @@ export default async function RootLayout({
     console.error("Failed to load platform settings in root layout", e);
   }
 
-  // Detect custom domain requests — use Clerk proxy mode so auth works
-  // on any domain without extra DNS records. The /__clerk rewrite in
-  // next.config.js forwards auth API calls to Clerk's frontend API.
-  const headersList = headers();
-  const customDomain = headersList.get('x-tenant-custom-domain');
-  const clerkProxyUrl = customDomain ? `https://${customDomain}/__clerk` : undefined;
+  // Clerk proxy mode requires each domain registered in Clerk Dashboard —
+  // doesn't scale for per-tenant custom domains. Instead, let Clerk use its
+  // standard auth flow (redirect to accounts.dev and back). Works on any domain.
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -120,7 +117,6 @@ export default async function RootLayout({
               // Ensure consistent styling
             },
           }}
-          {...(clerkProxyUrl ? { proxyUrl: clerkProxyUrl } : {})}
         >
           <QueryProvider>
             <LanguageProvider>
