@@ -3,6 +3,7 @@
  *
  * Required env vars:
  *   RAILWAY_API_TOKEN        – Bearer token with project-level access
+ *   RAILWAY_PROJECT_ID       – Project ID for budstack-saas
  *   RAILWAY_SERVICE_ID       – Service ID for budstack-saas
  *   RAILWAY_ENVIRONMENT_ID   – Target environment (staging / production)
  */
@@ -11,14 +12,16 @@ const RAILWAY_API_URL = 'https://backboard.railway.com/graphql/v2';
 
 function getConfig() {
   const token = process.env.RAILWAY_API_TOKEN;
+  const projectId = process.env.RAILWAY_PROJECT_ID;
   const serviceId = process.env.RAILWAY_SERVICE_ID;
   const environmentId = process.env.RAILWAY_ENVIRONMENT_ID;
 
   if (!token) throw new Error('RAILWAY_API_TOKEN is not set');
+  if (!projectId) throw new Error('RAILWAY_PROJECT_ID is not set');
   if (!serviceId) throw new Error('RAILWAY_SERVICE_ID is not set');
   if (!environmentId) throw new Error('RAILWAY_ENVIRONMENT_ID is not set');
 
-  return { token, serviceId, environmentId };
+  return { token, projectId, serviceId, environmentId };
 }
 
 interface GraphQLResponse<T> {
@@ -85,7 +88,7 @@ export interface RailwayDomainListItem {
 export async function addCustomDomain(
   domain: string,
 ): Promise<RailwayDomain> {
-  const { serviceId, environmentId } = getConfig();
+  const { projectId, serviceId, environmentId } = getConfig();
 
   const mutation = `
     mutation CustomDomainCreate($input: CustomDomainCreateInput!) {
@@ -101,6 +104,7 @@ export async function addCustomDomain(
     {
       input: {
         domain,
+        projectId,
         serviceId,
         environmentId,
       },
