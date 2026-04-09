@@ -197,7 +197,7 @@ Enable tenants to upload their own templates (via GitHub repo URL) to their priv
 **Acceptance Criteria:**
 - [ ] Community templates in the marketplace show "By {businessName}" under the template name
 - [ ] "Community" badge distinguishes from platform-created templates
-- [ ] Platform templates show "By BudStack Platform" (or no attribution)
+- [ ] Platform templates show "By BudStacks Platform" (or no attribution)
 - [ ] Clicking the author name does NOT navigate anywhere (no tenant profile page in v1)
 
 #### US-015: Filter Marketplace by Source
@@ -483,7 +483,7 @@ All existing template clone, activate, delete, and customize routes remain uncha
 ├───────────────────────────────────────────────────────┤
 │                                                       │
 │  Your template will be submitted for review by the    │
-│  BudStack team. Once approved, it will appear in the  │
+│  BudStacks team. Once approved, it will appear in the  │
 │  marketplace for all tenants to use.                  │
 │                                                       │
 │  Template: My Custom Design                           │

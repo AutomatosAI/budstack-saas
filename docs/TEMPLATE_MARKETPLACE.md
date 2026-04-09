@@ -2,7 +2,7 @@
 
 ## Overview
 
-BudStacks's template marketplace supports **semi-automated hot template uploads** with automatic registry syncing and optional deployment triggers.
+BudStacks' template marketplace supports **semi-automated hot template uploads** with automatic registry syncing and optional deployment triggers.
 
 ## How It Works
 
