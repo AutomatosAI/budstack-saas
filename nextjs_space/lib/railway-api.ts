@@ -67,14 +67,6 @@ async function railwayGraphQL<T>(
 export interface RailwayDomain {
   id: string;
   domain: string;
-  status: {
-    dnsRecords: Array<{
-      hostlabel: string;
-      requiredValue: string;
-      type: string;
-      status: string;
-    }>;
-  };
 }
 
 export interface RailwayDomainListItem {
@@ -100,14 +92,6 @@ export async function addCustomDomain(
       customDomainCreate(input: $input) {
         id
         domain
-        status {
-          dnsRecords {
-            hostlabel
-            requiredValue
-            type
-            status
-          }
-        }
       }
     }
   `;
