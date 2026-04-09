@@ -67,9 +67,16 @@ async function railwayGraphQL<T>(
 // Types
 // ---------------------------------------------------------------------------
 
+export interface RailwayDnsRecord {
+  hostlabel: string;
+  requiredValue: string;
+  status: string;
+}
+
 export interface RailwayDomain {
   id: string;
   domain: string;
+  dnsRecords: RailwayDnsRecord[];
 }
 
 export interface RailwayDomainListItem {
@@ -95,11 +102,19 @@ export async function addCustomDomain(
       customDomainCreate(input: $input) {
         id
         domain
+        status {
+          dnsRecords {
+            hostlabel
+            requiredValue
+            status
+          }
+        }
       }
     }
   `;
 
-  const data = await railwayGraphQL<{ customDomainCreate: RailwayDomain }>(
+  // Railway nests dnsRecords under status — flatten for our interface
+  const data = await railwayGraphQL<{ customDomainCreate: { id: string; domain: string; status: { dnsRecords: RailwayDnsRecord[] } } }>(
     mutation,
     {
       input: {
@@ -111,7 +126,12 @@ export async function addCustomDomain(
     },
   );
 
-  return data.customDomainCreate;
+  const result = data.customDomainCreate;
+  return {
+    id: result.id,
+    domain: result.domain,
+    dnsRecords: result.status?.dnsRecords || [],
+  };
 }
 
 /**

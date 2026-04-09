@@ -185,6 +185,7 @@ export async function PATCH(
     // Custom domain provisioning (Railway only — Clerk uses proxy mode via /__clerk rewrite)
     const existingSettings = (existingTenant.settings as Record<string, unknown>) || {};
     let railwayDomainId = (existingSettings.railwayDomainId as string) || null;
+    let railwayDnsRecords = (existingSettings.railwayDnsRecords as Array<{ hostlabel: string; requiredValue: string; status: string }>) || null;
     let domainVerification = existingSettings.domainVerification ?? null;
 
     if (customDomain !== undefined && customDomain !== existingTenant.customDomain) {
@@ -197,6 +198,7 @@ export async function PATCH(
           console.error("Railway domain removal error:", error);
         }
         railwayDomainId = null;
+        railwayDnsRecords = null;
         domainVerification = null;
       }
 
@@ -205,8 +207,9 @@ export async function PATCH(
         try {
           const railwayDomain = await addCustomDomain(customDomain);
           railwayDomainId = railwayDomain.id;
+          railwayDnsRecords = railwayDomain.dnsRecords;
           domainVerification = { status: "pending", checkedAt: new Date().toISOString(), expected: null, found: null };
-          console.log(`✅ Added Railway domain: ${customDomain} (id: ${railwayDomain.id})`);
+          console.log(`✅ Added Railway domain: ${customDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
         } catch (error) {
           console.error("Railway domain creation error:", error);
           return NextResponse.json(
@@ -233,6 +236,7 @@ export async function PATCH(
       ...existingSettings,
       ...(settings || {}),
       railwayDomainId,
+      railwayDnsRecords,
       domainVerification,
     };
     updateData.settings = mergedSettings;

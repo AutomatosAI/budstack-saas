@@ -269,55 +269,41 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                 </div>
               )}
 
-              {/* DNS Instructions */}
+              {/* DNS Instructions — show actual records from Railway */}
               <div className="space-y-2">
-                <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">DNS Instructions</h5>
+                <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">DNS Records Required</h5>
                 {(() => {
-                  const domain = tenant.customDomain!;
-                  const isApex = domain.split(".").length <= 2;
-                  const cnameTarget = domainVerification?.cnameTarget || process.env.NEXT_PUBLIC_RAILWAY_CNAME_TARGET || "budstack-saas-production.up.railway.app";
+                  const dnsRecords = (tenant.settings as any)?.railwayDnsRecords as Array<{ hostlabel: string; requiredValue: string; status: string }> | undefined;
 
-                  if (isApex) {
+                  if (!dnsRecords || dnsRecords.length === 0) {
                     return (
-                      <div className="space-y-2 text-sm">
-                        <p className="text-gray-600">
-                          <strong>{domain}</strong> is a root/apex domain. Add one of these records at the registrar:
-                        </p>
-                        <div className="rounded-lg bg-white border p-3 font-mono text-xs space-y-1">
-                          <p><span className="text-gray-400">Type:</span> ALIAS or ANAME (preferred)</p>
-                          <p><span className="text-gray-400">Host:</span> @</p>
-                          <div className="flex items-center gap-2">
-                            <p><span className="text-gray-400">Value:</span> {cnameTarget}</p>
-                            <button onClick={() => copyToClipboard(cnameTarget)} className="text-gray-400 hover:text-gray-600">
-                              <Copy className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                          <p><span className="text-gray-400">TTL:</span> 300 (increase to 3600 after verified)</p>
-                        </div>
-                        <p className="text-xs text-gray-400">
-                          If the registrar doesn&apos;t support ALIAS/ANAME, use an A record pointing to the resolved IP. Note that CNAME on root domains is not universally supported.
-                        </p>
-                      </div>
+                      <p className="text-sm text-gray-500">
+                        DNS records not available yet. Try saving the domain again.
+                      </p>
                     );
                   }
 
-                  const hostPart = domain.split(".").slice(0, -2).join(".");
                   return (
-                    <div className="space-y-2 text-sm">
-                      <p className="text-gray-600">
-                        Add this CNAME record at the registrar for <strong>{domain}</strong>:
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-600">
+                        Add these records at the registrar for <strong>{tenant.customDomain}</strong>:
                       </p>
-                      <div className="rounded-lg bg-white border p-3 font-mono text-xs space-y-1">
-                        <p><span className="text-gray-400">Type:</span> CNAME</p>
-                        <p><span className="text-gray-400">Host:</span> {hostPart}</p>
-                        <div className="flex items-center gap-2">
-                          <p><span className="text-gray-400">Value:</span> {cnameTarget}</p>
-                          <button onClick={() => copyToClipboard(cnameTarget)} className="text-gray-400 hover:text-gray-600">
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <p><span className="text-gray-400">TTL:</span> 300 (increase to 3600 after verified)</p>
-                      </div>
+                      {dnsRecords.map((record, i) => {
+                        const isTxt = record.hostlabel.startsWith('_');
+                        const recordType = isTxt ? 'TXT' : 'CNAME';
+                        return (
+                          <div key={i} className="rounded-lg bg-white border p-3 font-mono text-xs space-y-1">
+                            <p><span className="text-gray-400">Type:</span> {recordType}{!isTxt && tenant.customDomain!.split(".").length <= 2 ? ' (or ALIAS/ANAME for apex)' : ''}</p>
+                            <p><span className="text-gray-400">Host:</span> {record.hostlabel || '@'}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="break-all"><span className="text-gray-400">Value:</span> {record.requiredValue}</p>
+                              <button onClick={() => copyToClipboard(record.requiredValue)} className="text-gray-400 hover:text-gray-600 shrink-0">
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })()}
@@ -327,13 +313,13 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                   size="sm"
                   className="text-xs"
                   onClick={() => {
-                    const domain = tenant.customDomain!;
-                    const isApex = domain.split(".").length <= 2;
-                    const cnameTarget = domainVerification?.cnameTarget || process.env.NEXT_PUBLIC_RAILWAY_CNAME_TARGET || "budstack-saas-production.up.railway.app";
-                    const hostPart = isApex ? "@" : domain.split(".").slice(0, -2).join(".");
-                    const type = isApex ? "ALIAS/ANAME" : "CNAME";
-                    const text = `DNS Record for ${domain}\n\nType: ${type}\nHost: ${hostPart}\nValue: ${cnameTarget}\nTTL: 300`;
-                    copyToClipboard(text);
+                    const dnsRecords = (tenant.settings as any)?.railwayDnsRecords as Array<{ hostlabel: string; requiredValue: string }> | undefined;
+                    if (!dnsRecords) return;
+                    const lines = dnsRecords.map((r, i) => {
+                      const isTxt = r.hostlabel.startsWith('_');
+                      return `${i + 1}. ${isTxt ? 'TXT' : 'CNAME'}\n   Host: ${r.hostlabel || '@'}\n   Value: ${r.requiredValue}`;
+                    });
+                    copyToClipboard(`DNS Records for ${tenant.customDomain}\n\n${lines.join('\n\n')}`);
                   }}
                 >
                   <Copy className="h-3 w-3 mr-1" /> Copy full instructions
