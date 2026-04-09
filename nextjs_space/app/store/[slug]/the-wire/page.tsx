@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Newspaper } from "lucide-react";
 import { posts } from "@prisma/client";
 import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getCurrentTenant } from "@/lib/tenant";
 
 export const revalidate = 60;
 
@@ -31,13 +32,10 @@ function getCategoryStyle(category?: string | null) {
 
 export default async function TheWirePage({ params }: TheWirePageProps) {
   const { slug } = params;
-  const basePath = getTenantBasePath(slug);
-
-  const tenant = await prisma.tenants.findUnique({
-    where: { subdomain: slug },
-  });
-
+  const tenant = await getCurrentTenant();
   if (!tenant) notFound();
+
+  const basePath = getTenantBasePath(tenant.subdomain);
 
   const postsList = await prisma.posts.findMany({
     where: {

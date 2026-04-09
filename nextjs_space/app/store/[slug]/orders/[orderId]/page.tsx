@@ -6,6 +6,7 @@ import { CheckCircle, Clock, Package, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getCurrentTenant } from "@/lib/tenant";
 
 // Extended types for orders with currency field (not in Prisma schema)
 interface OrderWithCurrency {
@@ -16,18 +17,11 @@ interface OrderItemWithCurrency extends order_items {
   currency?: string;
 }
 
-async function getOrder(orderId: string, slug: string) {
-  const tenant = await prisma.tenants.findUnique({
-    where: { subdomain: slug },
-    select: { id: true },
-  });
-
-  if (!tenant) return null;
-
+async function getOrder(orderId: string, tenantId: string) {
   const order = await prisma.orders.findFirst({
     where: {
       id: orderId,
-      tenantId: tenant.id,
+      tenantId,
     },
     include: {
       order_items: true,
@@ -42,11 +36,11 @@ export default async function OrderConfirmationPage({
 }: {
   params: { slug: string; orderId: string };
 }) {
-  const order = await getOrder(params.orderId, params.slug);
+  const tenant = await getCurrentTenant();
+  if (!tenant) notFound();
 
-  if (!order) {
-    notFound();
-  }
+  const order = await getOrder(params.orderId, tenant.id);
+  if (!order) notFound();
 
   const getStatusIcon = (paymentStatus: string) => {
     switch (paymentStatus) {
