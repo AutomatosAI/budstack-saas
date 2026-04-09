@@ -73,75 +73,79 @@ For a subdomain like `shop.yourdomain.com`:
 
 ### Phase A: Setup & Provisioning
 
-- [ ] **A1.** Set the 4 new Railway env vars (token, CNAME target, base domain, Clerk frontend API)
-- [ ] **A2.** Push the `template-editor` branch and wait for deploy (~5 min)
-- [ ] **A3.** Add DNS record at your registrar (single ALIAS/ANAME or CNAME pointing to Railway)
-- [ ] **A4.** Wait for DNS propagation — check with `dig onetree.com A` or `dig shop.yourdomain.com CNAME` (should resolve within minutes for low TTL)
+- [ ] **A1.** Set the 4 Railway env vars (token, CNAME target, base domain, Clerk frontend API) — already done
+- [ ] **A2.** Push the `template-editor` branch and wait for deploy (~5 min) — already done
 
-### Phase B: Domain Assignment
+### Phase B: Domain Assignment (do this BEFORE DNS)
 
 - [ ] **B1.** Go to super-admin → Tenants → pick a test tenant → Edit
-- [ ] **B2.** Enter the test domain in Custom Domain field (e.g., `shop.yourdomain.com`)
+- [ ] **B2.** Enter the test domain in Custom Domain field (e.g., `onetree.com`)
 - [ ] **B3.** Click Save
 - [ ] **B4.** Verify success toast — no Railway errors
 - [ ] **B5.** Verify in tenant settings JSON: `railwayDomainId` is populated
-- [ ] **B6.** Verify DNS instructions panel appears with single DNS record (no clerk CNAME)
+- [ ] **B6.** Verify DNS instructions panel appears with single DNS record
 
-### Phase C: DNS Verification
+### Phase C: DNS Setup (after domain is assigned)
 
-- [ ] **C1.** Click "Verify DNS" button in tenant edit form
-- [ ] **C2.** If DNS has propagated: status should show **Verified** (green badge)
-- [ ] **C3.** If DNS hasn't propagated yet: status shows **Pending** (yellow badge) — wait and retry
-- [ ] **C4.** Test misconfigured state: temporarily point domain to wrong target, verify shows **Misconfigured** (red badge) with expected vs found values
+- [ ] **C1.** Copy the DNS instructions from the panel (shows the exact record type, host, and CNAME target)
+- [ ] **C2.** Add the DNS record at the registrar (single ALIAS/ANAME for apex, or CNAME for subdomain)
+- [ ] **C3.** Wait for DNS propagation — check with `dig onetree.com A` or `dig shop.yourdomain.com CNAME`
 
-### Phase D: Storefront Rendering
+### Phase D: DNS Verification
 
-- [ ] **D1.** Visit `https://shop.yourdomain.com` in browser
-- [ ] **D2.** Verify SSL certificate is valid (padlock icon, no warnings)
-- [ ] **D3.** Verify homepage renders identically to `{slug}.budstacks.io`
-- [ ] **D4.** Verify template/theme loads correctly (correct colors, logo, sections)
-- [ ] **D5.** Navigate to `/products` — page loads, products displayed
-- [ ] **D6.** Navigate to `/about` — page loads
-- [ ] **D7.** Navigate to `/contact` — page loads
-- [ ] **D8.** Navigate to `/consultation` — form loads
-- [ ] **D9.** Check browser URL bar — all navigation stays on `shop.yourdomain.com`, no redirect to `budstacks.io`
-- [ ] **D10.** View page source / inspect OG tags — URLs use `shop.yourdomain.com`, not `budstacks.io`
-- [ ] **D11.** Visit `https://shop.yourdomain.com/robots.txt` — correct domain in content
-- [ ] **D12.** Visit `https://shop.yourdomain.com/sitemap.xml` — URLs use custom domain
+- [ ] **D1.** Click "Verify DNS" button in tenant edit form
+- [ ] **D2.** If DNS has propagated: status should show **Verified** (green badge)
+- [ ] **D3.** If DNS hasn't propagated yet: status shows **Pending** (yellow badge) — wait and retry
+- [ ] **D4.** Test misconfigured state: temporarily point domain to wrong target, verify shows **Misconfigured** (red badge) with expected vs found values
 
-### Phase E: Authentication on Custom Domain
+### Phase E: Storefront Rendering
 
-- [ ] **E1.** Visit `https://onetree.com` and click Login/Sign In
-- [ ] **E2.** Verify Clerk auth works on the custom domain via proxy (`/__clerk` rewrite)
-- [ ] **E3.** Complete login — should stay on `onetree.com` (no redirect to budstacks.io)
-- [ ] **E4.** Verify session is active — user name/avatar visible, protected routes accessible
-- [ ] **E5.** Navigate to tenant-admin dashboard from custom domain — verify access
-- [ ] **E6.** Click Logout — verify signed out on custom domain
-- [ ] **E7.** Visit `https://budstacks.io` — verify also signed out (sign-out propagates)
+- [ ] **E1.** Visit `https://onetree.com` in browser
+- [ ] **E2.** Verify SSL certificate is valid (padlock icon, no warnings)
+- [ ] **E3.** Verify homepage renders identically to `{slug}.budstacks.io`
+- [ ] **E4.** Verify template/theme loads correctly (correct colors, logo, sections)
+- [ ] **E5.** Navigate to `/products` — page loads, products displayed
+- [ ] **E6.** Navigate to `/about` — page loads
+- [ ] **E7.** Navigate to `/contact` — page loads
+- [ ] **E8.** Navigate to `/consultation` — form loads
+- [ ] **E9.** Check browser URL bar — all navigation stays on `onetree.com`, no redirect to `budstacks.io`
+- [ ] **E10.** View page source / inspect OG tags — URLs use `onetree.com`, not `budstacks.io`
+- [ ] **E11.** Visit `https://onetree.com/robots.txt` — correct domain in content
+- [ ] **E12.** Visit `https://onetree.com/sitemap.xml` — URLs use custom domain
 
-### Phase F: Domain Change
+### Phase F: Authentication on Custom Domain
 
-- [ ] **F1.** Go back to super-admin → tenant edit form
-- [ ] **F2.** Change custom domain to a different value (or clear it)
-- [ ] **F3.** Click Save
-- [ ] **F4.** Verify old domain no longer resolves to the storefront (may take time for SSL revocation)
-- [ ] **F5.** Verify `railwayDomainId` updated in settings
-- [ ] **F6.** If set to new domain: verify new domain works after DNS propagation
+- [ ] **F1.** Visit `https://onetree.com` and click Login/Sign In
+- [ ] **F2.** Verify Clerk auth works on the custom domain via proxy (`/__clerk` rewrite)
+- [ ] **F3.** Complete login — should stay on `onetree.com` (no redirect to budstacks.io)
+- [ ] **F4.** Verify session is active — user name/avatar visible, protected routes accessible
+- [ ] **F5.** Navigate to tenant-admin dashboard from custom domain — verify access
+- [ ] **F6.** Click Logout — verify signed out on custom domain
+- [ ] **F7.** Visit `https://budstacks.io` — verify also signed out (sign-out propagates)
 
-### Phase G: Domain Removal
+### Phase G: Domain Change
 
-- [ ] **G1.** Clear the Custom Domain field and Save
-- [ ] **G2.** Verify Railway domain removed (check Railway dashboard → Networking)
-- [ ] **G3.** Verify `railwayDomainId` is null in settings
-- [ ] **G5.** Verify `domainVerification` is null in settings
-- [ ] **G6.** Verify tenant still accessible via `{slug}.budstacks.io`
+- [ ] **G1.** Go back to super-admin → tenant edit form
+- [ ] **G2.** Change custom domain to a different value (or clear it)
+- [ ] **G3.** Click Save
+- [ ] **G4.** Verify old domain no longer resolves to the storefront (may take time for SSL revocation)
+- [ ] **G5.** Verify `railwayDomainId` updated in settings
+- [ ] **G6.** If set to new domain: verify new domain works after DNS propagation
 
-### Phase H: Tenant Deletion with Custom Domain
+### Phase I: Domain Removal
 
-- [ ] **H1.** Re-assign custom domain to a test tenant
-- [ ] **H2.** Delete the tenant via super-admin
-- [ ] **H3.** Verify Railway domain cleaned up (check Railway dashboard)
-- [ ] **H4.** Check audit log — deletion recorded with cleanup errors (if any)
+- [ ] **I1.** Clear the Custom Domain field and Save
+- [ ] **I2.** Verify Railway domain removed (check Railway dashboard → Networking)
+- [ ] **I3.** Verify `railwayDomainId` is null in settings
+- [ ] **I4.** Verify `domainVerification` is null in settings
+- [ ] **I5.** Verify tenant still accessible via `{slug}.budstacks.io`
+
+### Phase J: Tenant Deletion with Custom Domain
+
+- [ ] **J1.** Re-assign custom domain to a test tenant
+- [ ] **J2.** Delete the tenant via super-admin
+- [ ] **J3.** Verify Railway domain cleaned up (check Railway dashboard)
+- [ ] **J4.** Check audit log — deletion recorded with cleanup errors (if any)
 
 ---
 

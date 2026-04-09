@@ -185,7 +185,7 @@ export async function PATCH(
     // Custom domain provisioning (Railway only — Clerk uses proxy mode via /__clerk rewrite)
     const existingSettings = (existingTenant.settings as Record<string, unknown>) || {};
     let railwayDomainId = (existingSettings.railwayDomainId as string) || null;
-    let railwayDnsRecords = (existingSettings.railwayDnsRecords as Array<{ hostlabel: string; requiredValue: string; status: string }>) || null;
+    let railwayDnsRecords: Array<{ hostlabel: string; requiredValue: string; status: string }> | null = (existingSettings.railwayDnsRecords as Array<{ hostlabel: string; requiredValue: string; status: string }>) || null;
     let domainVerification = existingSettings.domainVerification ?? null;
 
     if (customDomain !== undefined && customDomain !== existingTenant.customDomain) {
