@@ -10,6 +10,7 @@ import { QueryProvider } from '@/components/query-provider';
 import { SessionExpirationChecker } from '@/components/session-expiration-checker';
 import { GlobalPlatformChatbot } from '@/components/landing/GlobalPlatformChatbot';
 import { prisma } from '@/lib/db';
+import { headers } from 'next/headers';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
@@ -102,6 +103,10 @@ export default async function RootLayout({
   } catch (e) {
     console.error("Failed to load platform settings in root layout", e);
   }
+
+  // Clerk proxy mode requires each domain registered in Clerk Dashboard —
+  // doesn't scale for per-tenant custom domains. Instead, let Clerk use its
+  // standard auth flow (redirect to accounts.dev and back). Works on any domain.
 
   return (
     <html lang="en" suppressHydrationWarning>

@@ -130,7 +130,6 @@ export async function requireTenant(): Promise<Tenant> {
  */
 export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
   try {
-    // Try exact match first
     let tenant = await prisma.tenants.findFirst({
       where: {
         subdomain: slug,
@@ -138,22 +137,13 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
       },
     });
 
-    // If not found, try finding by matching lowercased subdomain
-    if (!tenant) {
-      // Fetch all active tenants and filter in memory (efficient enough for small number of tenants)
-      // or try to find by normalized slug if we suspect casing mismatch
-      // For now, let's just log and fail if exact match doesn't work, but we can try to find ignoring case
-      // by fetching candidate? No, that's inefficient.
-
-      // Attempt to find by lowercase slug if the original wasn't lowercase
-      if (slug !== slug.toLowerCase()) {
-        tenant = await prisma.tenants.findFirst({
-          where: {
-            subdomain: slug.toLowerCase(),
-            isActive: true,
-          },
-        });
-      }
+    if (!tenant && slug !== slug.toLowerCase()) {
+      tenant = await prisma.tenants.findFirst({
+        where: {
+          subdomain: slug.toLowerCase(),
+          isActive: true,
+        },
+      });
     }
 
     return tenant;
@@ -192,19 +182,38 @@ export async function getTenantFromRequest(
       setTenantContext(null);
     }
 
-    // Extract subdomain from host
     const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
-    const subdomain = host.split(".")[0];
+    const currentHost = host.replace(/:\d+$/, '');
 
-    // Check if it's a subdomain request
+    // Check if it's a subdomain request (slug.budstacks.io)
+    if (currentHost.endsWith(`.${baseDomain}`)) {
+      const subdomain = currentHost.replace(`.${baseDomain}`, '');
+      if (subdomain && subdomain !== 'www') {
+        const tenant = await prisma.tenants.findFirst({
+          where: {
+            subdomain,
+            isActive: true,
+          },
+        });
+
+        if (tenant) {
+          setTenantContext(tenant.id);
+          return tenant;
+        }
+        setTenantContext(null);
+      }
+    }
+
+    // Custom domain lookup — host is not a budstacks.io subdomain
     if (
-      host.includes(baseDomain) &&
-      subdomain &&
-      subdomain !== baseDomain.split(".")[0]
+      !currentHost.endsWith(`.${baseDomain}`) &&
+      currentHost !== baseDomain &&
+      !currentHost.includes('localhost') &&
+      !currentHost.includes('127.0.0.1')
     ) {
       const tenant = await prisma.tenants.findFirst({
         where: {
-          subdomain: subdomain,
+          customDomain: currentHost,
           isActive: true,
         },
       });

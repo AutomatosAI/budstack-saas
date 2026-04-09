@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Menu, X, ShoppingCart } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
 import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
+import { NavAuthButton } from './NavAuthButton';
 
 export function NavFull(props: SectionProps) {
   const { tenant, logoUrl, consultationUrl, productsUrl, aboutUrl, contactUrl, navigation, sectionConfig } = props;
@@ -34,6 +35,8 @@ export function NavFull(props: SectionProps) {
   const links = rawLinks.map((l: any) => ({ ...l, href: prefixHref(l.href) }));
   const ctaLabel = sectionConfig?.ctaLabel || sectionConfig?.cta?.label || navigation?.cta?.label || navigation?.ctaLabel || 'Book Consultation';
   const ctaHref = prefixHref(sectionConfig?.ctaHref || sectionConfig?.cta?.href || navigation?.cta?.href || consultationUrl || `${basePath}/consultation`);
+  const loginStyle = sectionConfig?.loginStyle || navigation?.loginStyle || 'button';
+  const signedOutLabel = sectionConfig?.signedOutLabel || navigation?.signedOutLabel || 'Login';
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -145,6 +148,12 @@ export function NavFull(props: SectionProps) {
           >
             {ctaLabel}
           </a>
+          <NavAuthButton
+            basePath={basePath}
+            variant="light"
+            loginStyle={loginStyle}
+            signedOutLabel={signedOutLabel}
+          />
         </div>
 
         {/* Mobile: logo left + hamburger right */}
@@ -202,6 +211,14 @@ export function NavFull(props: SectionProps) {
             >
               {ctaLabel}
             </a>
+          </div>
+          <div className="pt-2">
+            <NavAuthButton
+              basePath={basePath}
+              variant="light"
+              loginStyle="button"
+              signedOutLabel={signedOutLabel}
+            />
           </div>
         </div>
       )}

@@ -56,9 +56,16 @@ const nextConfig = {
       },
     ],
   },
-  // Skip pre-rendering for all API routes to avoid Prisma initialization during build
   async rewrites() {
-    return [];
+    return [
+      // Clerk proxy: route auth API calls through the current domain so
+      // custom domains work without a separate clerk.{domain} CNAME.
+      // The Clerk SDK sends requests to /__clerk/* when proxyUrl is set.
+      {
+        source: '/__clerk/:path*',
+        destination: `${process.env.NEXT_PUBLIC_CLERK_FRONTEND_API || 'https://flying-jennet-34.clerk.accounts.dev'}/:path*`,
+      },
+    ];
   },
   // Disable static optimization for API routes
   async headers() {

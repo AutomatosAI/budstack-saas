@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/lib/tenant";
-import { getTenantUrl, getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantUrl, getTenantBasePath, getTenantBaseUrl } from "@/lib/tenant-utils";
 import { prisma } from "@/lib/db";
 import { getFileUrl } from "@/lib/s3";
 
@@ -384,10 +384,10 @@ export async function generateMetadata() {
     `Premium medical cannabis products and consultations from ${tenant.businessName}`;
 
   // Build base URL for OG images
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
-  const baseUrl = tenantWithSeo?.customDomain
-    ? `https://${tenantWithSeo.customDomain}`
-    : `https://${tenantWithSeo?.subdomain || tenant.subdomain}.${baseDomain}`;
+  const baseUrl = getTenantBaseUrl({
+    subdomain: tenantWithSeo?.subdomain || tenant.subdomain,
+    customDomain: tenantWithSeo?.customDomain ?? null,
+  });
 
   return {
     title,

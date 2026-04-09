@@ -1,6 +1,6 @@
 import { ConsultationForm } from "@/components/consultation/consultation-form";
 import { notFound } from "next/navigation";
-import { getTenantBySlug } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantBasePath } from "@/lib/tenant-utils";
 import ConsultationContent from "./consultation-content";
 
@@ -9,13 +9,13 @@ export default async function ConsultationPage({
 }: {
   params: { slug: string };
 }) {
-  const tenant = await getTenantBySlug(params.slug);
+  const tenant = await getCurrentTenant();
 
   if (!tenant) {
     notFound();
   }
 
-  const basePath = getTenantBasePath(params.slug);
+  const basePath = getTenantBasePath(tenant.subdomain);
 
   return (
     <div
@@ -39,7 +39,7 @@ export default async function ConsultationPage({
                 Start Your Consultation
               </h2>
               <ConsultationForm
-                tenantSlug={params.slug}
+                tenantSlug={tenant.subdomain}
                 tenantId={tenant.id}
               />
             </div>

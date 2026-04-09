@@ -86,7 +86,10 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 
-  // PRIORITY 2: Custom domain routing (also public storefront)
+  // PRIORITY 2: Custom domain routing (REWRITE)
+  // Rewrite example.com/products -> /store/_cd/products so Next.js file routing
+  // matches app/store/[slug]/. The _cd placeholder slug is never used for DB
+  // lookups — getCurrentTenant() resolves via the x-tenant-custom-domain header.
   if (
     !isLocalhost &&
     !(process.env.NODE_ENV === 'development' && currentHost.includes('.abacusai.app')) &&
@@ -95,7 +98,31 @@ export default clerkMiddleware(async (auth, req) => {
     !currentHost.startsWith('www.')
   ) {
     requestHeaders.set('x-tenant-custom-domain', currentHost);
-    return NextResponse.next({ request: { headers: requestHeaders } });
+
+    // API routes: don't rewrite path, just forward the header
+    if (pathname.startsWith('/api/')) {
+      if (!isPublicRoute(req)) {
+        const { userId } = await auth();
+        if (!userId) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+      }
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+
+    // Clerk proxy: /__clerk/* must reach next.config.js rewrite, not get rewritten to /store/_cd/
+    if (pathname.startsWith('/__clerk')) {
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+
+    // Platform routes: don't rewrite
+    if (pathname.startsWith('/auth/') || pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin') || pathname.startsWith('/onboarding')) {
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+
+    // Page routes: rewrite to internal store route with placeholder slug
+    url.pathname = `/store/_cd${pathname}`;
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 
   // 2. Authentication Check (only for non-subdomain, non-custom-domain requests)

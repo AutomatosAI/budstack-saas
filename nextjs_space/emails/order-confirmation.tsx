@@ -30,6 +30,7 @@ interface OrderConfirmationEmailProps {
     total: number;
     shippingAddress: string;
     tenantName: string;
+    storeUrl?: string;
     logoUrl?: string;
     primaryColor?: string;
 }
@@ -44,9 +45,12 @@ export const OrderConfirmationEmail = ({
     total = 130,
     shippingAddress = '123 Main St, Anytown, AT',
     tenantName = 'BudStacks',
+    storeUrl,
     logoUrl,
     primaryColor = '#10b981',
 }: OrderConfirmationEmailProps) => {
+    const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io';
+    const trackingBaseUrl = storeUrl || `https://${tenantName.toLowerCase()}.${baseDomain}`;
     return (
         <Html>
             <Head />
@@ -96,7 +100,7 @@ export const OrderConfirmationEmail = ({
                             <Link
                                 className="p-3 rounded text-white text-[12px] font-semibold no-underline text-center"
                                 style={{ backgroundColor: primaryColor }}
-                                href={`https://${tenantName.toLowerCase()}.budstacks.io/orders/${orderNumber}`}
+                                href={`${trackingBaseUrl}/orders/${orderNumber}`}
                             >
                                 Track Order
                             </Link>

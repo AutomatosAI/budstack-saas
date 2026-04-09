@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getTenantBySlug } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantBasePath } from "@/lib/tenant-utils";
 import SupportContent from "../support/support-content";
 import ContactClient from "./contact-client";
@@ -9,13 +9,13 @@ export default async function ContactPage({
 }: {
   params: { slug: string };
 }) {
-  const tenant = await getTenantBySlug(params.slug);
+  const tenant = await getCurrentTenant();
 
   if (!tenant) {
     notFound();
   }
 
-  const basePath = getTenantBasePath(params.slug);
+  const basePath = getTenantBasePath(tenant.subdomain);
   const pageContent = (tenant as any).pageContent?.support;
 
   return (

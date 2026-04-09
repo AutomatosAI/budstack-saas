@@ -247,13 +247,13 @@ export default function OnboardingForm({
                   className="flex-1 h-12 rounded-xl border-border bg-muted/30"
                 />
                 <span className="ml-3 text-muted-foreground font-medium">
-                  .budstacks.io
+                  .{process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io'}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 Your unique store address:{" "}
                 <span className="font-mono text-accent">
-                  {formData.subdomain || "yourstore"}.budstacks.io
+                  {formData.subdomain || "yourstore"}.{process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io'}
                 </span>
               </p>
             </div>

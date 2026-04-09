@@ -17,6 +17,7 @@ interface TenantWelcomeEmailProps {
     adminName: string;
     tenantName: string;
     subdomain: string;
+    customDomain?: string | null;
     loginUrl: string;
 }
 
@@ -24,10 +25,14 @@ export const TenantWelcomeEmail = ({
     adminName = 'Admin',
     tenantName = 'My Store',
     subdomain = 'mystore',
+    customDomain,
     loginUrl = 'https://budstacks.io/login',
 }: TenantWelcomeEmailProps) => {
-    const storeUrl = `https://${subdomain}.budstacks.io`;
-    const dashboardUrl = `https://${subdomain}.budstacks.io/tenant-admin`;
+    const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io';
+    const storeUrl = customDomain
+        ? `https://${customDomain}`
+        : `https://${subdomain}.${baseDomain}`;
+    const dashboardUrl = `${storeUrl}/tenant-admin`;
 
     return (
         <Html>

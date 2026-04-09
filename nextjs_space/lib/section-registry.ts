@@ -54,6 +54,7 @@ import { NavFull } from '@/components/sections/navigation/NavFull';
 import { NavTransparent } from '@/components/sections/navigation/NavTransparent';
 import { NavDark } from '@/components/sections/navigation/NavDark';
 import { NavHealingBuds } from '@/components/sections/navigation/NavHealingBuds';
+import { NavPill } from '@/components/sections/navigation/NavPill';
 
 // Footers
 import { FooterSimple } from '@/components/sections/footers/FooterSimple';
@@ -107,6 +108,7 @@ export const SECTION_REGISTRY: Record<string, ComponentType<SectionProps>> = {
   NavTransparent,
   NavDark,
   NavHealingBuds,
+  NavPill,
   FooterSimple,
   FooterFull,
   FooterBrand,

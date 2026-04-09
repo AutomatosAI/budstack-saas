@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getTenantBySlug } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
 import ConditionsClient from "./conditions-client";
 
@@ -8,7 +8,7 @@ export default async function ConditionsPage({
 }: {
   params: { slug: string };
 }) {
-  const tenant = await getTenantBySlug(params.slug);
+  const tenant = await getCurrentTenant();
 
   if (!tenant) {
     notFound();

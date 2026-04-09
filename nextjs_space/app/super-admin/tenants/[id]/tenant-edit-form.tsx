@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/sonner";
 import { format } from "date-fns";
+import { CheckCircle2, AlertCircle, Clock, Copy, RefreshCw } from "lucide-react";
 
 interface TenantEditFormProps {
   tenant: {
@@ -43,6 +44,43 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
   const [address, setAddress] = useState(
     (tenant.settings as any)?.address || "",
   );
+
+  // DNS verification state
+  const [verifying, setVerifying] = useState(false);
+  const [domainVerification, setDomainVerification] = useState<{
+    status: "verified" | "pending" | "misconfigured";
+    checkedAt: string;
+    expected: string;
+    found: string | null;
+    domain?: string;
+    isApex?: boolean;
+    cnameTarget?: string;
+  } | null>((tenant.settings as any)?.domainVerification || null);
+
+  const handleVerifyDomain = useCallback(async () => {
+    setVerifying(true);
+    try {
+      const res = await fetch(
+        `/api/super-admin/tenants/${tenant.id}/verify-domain`,
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Verification failed");
+      }
+      const result = await res.json();
+      setDomainVerification(result);
+      toast.success(`Domain status: ${result.status}`);
+    } catch (error: any) {
+      toast.error(error.message || "DNS verification failed");
+    } finally {
+      setVerifying(false);
+    }
+  }, [tenant.id]);
+
+  const copyToClipboard = useCallback((text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
+  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -149,11 +187,11 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                   onChange={(e) => setSubdomain(e.target.value.toLowerCase())}
                 />
                 <span className="text-sm text-gray-500 whitespace-nowrap">
-                  .budstacks.io
+                  .{process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io'}
                 </span>
               </div>
             ) : (
-              <p className="text-base">{tenant.subdomain}.budstacks.io</p>
+              <p className="text-base">{tenant.subdomain}.{process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io'}</p>
             )}
           </div>
 
@@ -179,6 +217,116 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
               <p className="text-base">{tenant.customDomain || "None"}</p>
             )}
           </div>
+
+          {/* DNS Verification & Instructions (shown when custom domain is set) */}
+          {tenant.customDomain && (
+            <div className="col-span-2 space-y-4 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Domain Verification</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleVerifyDomain}
+                  disabled={verifying}
+                  className="rounded-full gap-1.5"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${verifying ? "animate-spin" : ""}`} />
+                  {verifying ? "Checking..." : "Verify DNS"}
+                </Button>
+              </div>
+
+              {/* Status badge */}
+              {domainVerification && (
+                <div className="flex items-center gap-2">
+                  {domainVerification.status === "verified" && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Verified
+                    </span>
+                  )}
+                  {domainVerification.status === "pending" && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700">
+                      <Clock className="h-3.5 w-3.5" /> Pending
+                    </span>
+                  )}
+                  {domainVerification.status === "misconfigured" && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700">
+                      <AlertCircle className="h-3.5 w-3.5" /> Misconfigured
+                    </span>
+                  )}
+                  {domainVerification.checkedAt && (
+                    <span className="text-xs text-gray-400">
+                      Last checked: {format(new Date(domainVerification.checkedAt), "MMM d, HH:mm")}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Misconfigured details */}
+              {domainVerification?.status === "misconfigured" && (
+                <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm">
+                  <p><span className="font-medium">Expected:</span> {domainVerification.expected}</p>
+                  <p><span className="font-medium">Found:</span> {domainVerification.found || "—"}</p>
+                </div>
+              )}
+
+              {/* DNS Instructions — show actual records from Railway */}
+              <div className="space-y-2">
+                <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">DNS Records Required</h5>
+                {(() => {
+                  const dnsRecords = (tenant.settings as any)?.railwayDnsRecords as Array<{ hostlabel: string; requiredValue: string; status: string }> | undefined;
+
+                  if (!dnsRecords || dnsRecords.length === 0) {
+                    return (
+                      <p className="text-sm text-gray-500">
+                        DNS records not available yet. Try saving the domain again.
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-600">
+                        Add these records at the registrar for <strong>{tenant.customDomain}</strong>:
+                      </p>
+                      {dnsRecords.map((record, i) => {
+                        const isTxt = record.hostlabel.startsWith('_');
+                        const recordType = isTxt ? 'TXT' : 'CNAME';
+                        return (
+                          <div key={i} className="rounded-lg bg-white border p-3 font-mono text-xs space-y-1">
+                            <p><span className="text-gray-400">Type:</span> {recordType}{!isTxt && tenant.customDomain!.split(".").length <= 2 ? ' (or ALIAS/ANAME for apex)' : ''}</p>
+                            <p><span className="text-gray-400">Host:</span> {record.hostlabel || '@'}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="break-all"><span className="text-gray-400">Value:</span> {record.requiredValue}</p>
+                              <button onClick={() => copyToClipboard(record.requiredValue)} className="text-gray-400 hover:text-gray-600 shrink-0">
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => {
+                    const dnsRecords = (tenant.settings as any)?.railwayDnsRecords as Array<{ hostlabel: string; requiredValue: string }> | undefined;
+                    if (!dnsRecords) return;
+                    const lines = dnsRecords.map((r, i) => {
+                      const isTxt = r.hostlabel.startsWith('_');
+                      return `${i + 1}. ${isTxt ? 'TXT' : 'CNAME'}\n   Host: ${r.hostlabel || '@'}\n   Value: ${r.requiredValue}`;
+                    });
+                    copyToClipboard(`DNS Records for ${tenant.customDomain}\n\n${lines.join('\n\n')}`);
+                  }}
+                >
+                  <Copy className="h-3 w-3 mr-1" /> Copy full instructions
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Country Code */}
           <div className="space-y-2">

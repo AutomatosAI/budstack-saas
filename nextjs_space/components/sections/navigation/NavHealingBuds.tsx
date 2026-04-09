@@ -3,24 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
-  Menu, X, ShoppingCart, ChevronDown, LogOut, Store, LayoutDashboard, Shield,
+  Menu, X, ShoppingCart,
   FileText, Newspaper, ClipboardCheck, Leaf, Headphones, Users, Info, Heart,
-  type LucideIcon,
+  Shield, Store, type LucideIcon,
 } from 'lucide-react';
-import { useUser, useClerk } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import { SectionProps } from '@/lib/types/section-props';
 import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
 import { useCartStore } from '@/lib/cart-store';
 import { checkUserKycStatus, type KycStatus } from '@/app/actions/kyc-check';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { NavAuthButton } from './NavAuthButton';
 
 /**
  * NavHealingBuds — Dark edge-to-edge navigation with Clerk auth, KYC badge & cart.
@@ -41,7 +35,6 @@ export function NavHealingBuds(props: SectionProps) {
 
   const businessName = tenant.businessName;
   const basePath = getTenantBasePath(tenant.subdomain);
-  const router = useRouter();
   const pathname = usePathname();
 
   // --- Config from defaults.json / sectionConfig ---
@@ -89,8 +82,6 @@ export function NavHealingBuds(props: SectionProps) {
 
   // --- Clerk auth ---
   const { user, isLoaded, isSignedIn } = useUser();
-  const { signOut } = useClerk();
-  const role = (user?.publicMetadata as any)?.role as string | undefined;
 
   // --- KYC status ---
   const [kyc, setKyc] = useState<KycStatus | null>(null);
@@ -104,15 +95,7 @@ export function NavHealingBuds(props: SectionProps) {
   }, [isLoaded, isSignedIn]);
 
   const kycVerified = kyc?.kycVerified === true;
-
-  const handleSignOut = async () => {
-    await signOut({ redirectUrl: '/' });
-  };
-
-  // Truncate email for display
-  const userEmail = user?.primaryEmailAddress?.emailAddress || '';
-  const displayEmail = userEmail.length > 24 ? userEmail.slice(0, 22) + '...' : userEmail;
-  const userInitial = user?.firstName?.[0] || userEmail[0]?.toUpperCase() || 'U';
+  const loginStyle = config.loginStyle || navigation?.loginStyle || 'button';
 
   // Dynamic colors — use config overrides or CSS variables from TenantThemeProvider
   const navBg = bgColor || 'hsl(var(--tenant-color-primary, 178 48% 16%))';
@@ -233,74 +216,12 @@ export function NavHealingBuds(props: SectionProps) {
             </Link>
           )}
 
-          {/* Auth: User Dropdown or Connect button */}
-          {!isLoaded ? (
-            <div className="w-8 h-8 rounded-full bg-white/10 animate-pulse" />
-          ) : isSignedIn ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/10 transition-colors outline-none">
-                  <div className="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-semibold">
-                    {userInitial}
-                  </div>
-                  <span className="text-xs text-white/80 max-w-[120px] truncate hidden xl:inline">
-                    {displayEmail}
-                  </span>
-                  <ChevronDown size={14} className="text-white/50" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="px-3 py-2">
-                  <p className="text-sm font-medium">{user?.fullName || 'User'}</p>
-                  <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
-                  {role && (
-                    <span
-                      className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider"
-                      style={{
-                        backgroundColor: role === 'SUPER_ADMIN' ? 'rgba(239,68,68,0.1)' : role === 'TENANT_ADMIN' ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)',
-                        color: role === 'SUPER_ADMIN' ? '#EF4444' : role === 'TENANT_ADMIN' ? '#3B82F6' : '#10B981',
-                      }}
-                    >
-                      {role === 'TENANT_ADMIN' ? 'Admin' : role?.replace('_', ' ') || 'Patient'}
-                    </span>
-                  )}
-                </div>
-                <DropdownMenuSeparator />
-                {role === 'SUPER_ADMIN' && (
-                  <DropdownMenuItem onClick={() => router.push('/super-admin')} className="cursor-pointer">
-                    <Shield className="w-4 h-4 mr-2" />
-                    Super Admin
-                  </DropdownMenuItem>
-                )}
-                {(role === 'TENANT_ADMIN' || role === 'SUPER_ADMIN') && (
-                  <DropdownMenuItem onClick={() => router.push('/tenant-admin')} className="cursor-pointer">
-                    <Store className="w-4 h-4 mr-2" />
-                    Store Dashboard
-                  </DropdownMenuItem>
-                )}
-                {(role === 'TENANT_ADMIN' || role === 'SUPER_ADMIN') && <DropdownMenuSeparator />}
-                <DropdownMenuItem onClick={() => router.push(`${basePath}/dashboard`)} className="cursor-pointer">
-                  <LayoutDashboard className="w-4 h-4 mr-2" />
-                  My Account
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Link
-              href={`${basePath}/login`}
-              className="px-4 py-2 text-xs font-semibold rounded-full text-white transition-all hover:bg-white/10"
-              style={{
-                border: '1.5px solid rgba(255,255,255,0.4)',
-              }}
-            >
-              {signedOutLabel}
-            </Link>
-          )}
+          <NavAuthButton
+            basePath={basePath}
+            variant="dark"
+            loginStyle={loginStyle}
+            signedOutLabel={signedOutLabel}
+          />
         </div>
 
         {/* Mobile Toggle */}
@@ -393,45 +314,14 @@ export function NavHealingBuds(props: SectionProps) {
                 </Link>
               )}
 
-              {isSignedIn ? (
-                <div className="space-y-1 pt-2">
-                  <div className="px-3 py-2">
-                    <p className="text-sm font-medium text-white">{user?.fullName || 'User'}</p>
-                    <p className="text-xs text-white/60 truncate">{userEmail}</p>
-                  </div>
-                  {(role === 'TENANT_ADMIN' || role === 'SUPER_ADMIN') && (
-                    <Link
-                      href="/tenant-admin"
-                      className="block text-sm text-white/80 py-2 px-3 rounded-lg hover:bg-white/10 transition-colors"
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      Store Dashboard
-                    </Link>
-                  )}
-                  <Link
-                    href={`${basePath}/dashboard`}
-                    className="block text-sm text-white/80 py-2 px-3 rounded-lg hover:bg-white/10 transition-colors"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    My Account
-                  </Link>
-                  <button
-                    onClick={() => { handleSignOut(); setMobileOpen(false); }}
-                    className="w-full text-left text-sm text-red-400 py-2 px-3 rounded-lg hover:bg-white/10 transition-colors"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  href={`${basePath}/login`}
-                  className="block w-full text-center px-6 py-3 text-sm font-semibold text-white rounded-full transition-all"
-                  style={{ border: '1.5px solid rgba(255,255,255,0.4)' }}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {signedOutLabel}
-                </Link>
-              )}
+              <div className="pt-2">
+                <NavAuthButton
+                  basePath={basePath}
+                  variant="dark"
+                  loginStyle="button"
+                  signedOutLabel={signedOutLabel}
+                />
+              </div>
             </div>
           </div>
         </div>

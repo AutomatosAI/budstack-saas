@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getTenantBasePath } from "@/lib/tenant-utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ConsultationSuccessPage() {
@@ -319,14 +320,14 @@ export default function ConsultationSuccessPage() {
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
             <Button
-              onClick={() => router.push(`/products`)}
+              onClick={() => router.push(`${getTenantBasePath(slug)}/products`)}
               className="flex-1"
               variant="outline"
             >
               View Products
             </Button>
             <Button
-              onClick={() => router.push("/dashboard")}
+              onClick={() => router.push(`${getTenantBasePath(slug)}/dashboard`)}
               className="flex-1"
               style={{
                 backgroundColor: "var(--tenant-color-primary)",

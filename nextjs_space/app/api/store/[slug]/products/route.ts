@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchProducts } from "@/lib/doctor-green-api";
-import { getTenantBySlug } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 
 /**
@@ -19,7 +19,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("id");
 
-    tenant = await getTenantBySlug(slug);
+    tenant = await getCurrentTenant();
 
     if (!tenant) {
       return NextResponse.json(

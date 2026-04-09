@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, User } from "lucide-react";
 import sanitizeHtml from "sanitize-html";
+import { getCurrentTenant } from "@/lib/tenant";
 
 interface ArticlePageProps {
   params: {
@@ -13,10 +14,8 @@ interface ArticlePageProps {
 }
 
 export async function generateMetadata({ params }: ArticlePageProps) {
-  const { slug, postSlug } = params;
-  const tenant = await prisma.tenants.findUnique({
-    where: { subdomain: slug },
-  });
+  const { postSlug } = params;
+  const tenant = await getCurrentTenant();
   if (!tenant) return { title: "Not Found" };
 
   const post = await prisma.posts.findUnique({
@@ -37,9 +36,7 @@ export async function generateMetadata({ params }: ArticlePageProps) {
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug, postSlug } = params;
 
-  const tenant = await prisma.tenants.findUnique({
-    where: { subdomain: slug },
-  });
+  const tenant = await getCurrentTenant();
   if (!tenant) notFound();
 
   const post = await prisma.posts.findUnique({
@@ -84,7 +81,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     <div className="min-h-screen bg-background text-foreground pt-36 pb-12">
       <div className="container px-4 mx-auto max-w-4xl">
         <Link
-          href={`/store/${slug}/the-wire`}
+          href={`/store/${tenant.subdomain}/the-wire`}
           className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-8"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

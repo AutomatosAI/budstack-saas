@@ -706,8 +706,9 @@ export const NAV_STYLES: { type: string; label: string; description: string }[] 
   { type: 'NavMinimal', label: 'Minimal', description: 'Clean, flat navigation bar' },
   { type: 'NavDark', label: 'Dark Glass', description: 'Premium floating glassmorphic bar' },
   { type: 'NavTransparent', label: 'Transparent', description: 'Fades in on scroll, hero-friendly' },
-  { type: 'NavFull', label: 'Full', description: 'Standard sticky with cart icon' },
-  { type: 'NavHealingBuds', label: 'Full Featured', description: 'Auth, KYC badge, cart & user menu' },
+  { type: 'NavFull', label: 'Full', description: 'Standard sticky with cart & CTA' },
+  { type: 'NavHealingBuds', label: 'Full Featured', description: 'KYC badge, cart & icon nav links' },
+  { type: 'NavPill', label: 'Pill', description: 'Compact centered floating capsule' },
 ];
 
 export const FOOTER_STYLES: { type: string; label: string; description: string }[] = [
