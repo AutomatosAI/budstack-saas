@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { submitOrder } from "@/lib/drgreen-orders";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
@@ -64,12 +65,9 @@ export async function POST(
       );
     }
 
-    const tenant = await prisma.tenants.findUnique({
-      where: { subdomain: params.slug },
-      select: { id: true },
-    });
+    const tenant = await getCurrentTenant();
     if (!tenant) {
-      log('FAIL: Tenant not found', { slug: params.slug });
+      log('FAIL: Tenant not found');
       return NextResponse.json({ error: "Store not found" }, { status: 404 });
     }
     log('TENANT', { tenantId: tenant.id });

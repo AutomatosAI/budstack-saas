@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
-import { prisma } from "@/lib/db";
+import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { getCart } from "@/lib/drgreen-cart";
 
@@ -15,11 +15,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get tenant by slug
-    const tenant = await prisma.tenants.findUnique({
-      where: { subdomain: params.slug },
-      select: { id: true },
-    });
+    // Resolve tenant from middleware headers (works for subdomain, path, and custom domain routing)
+    const tenant = await getCurrentTenant();
 
     if (!tenant) {
       return NextResponse.json({ error: "Store not found" }, { status: 404 });

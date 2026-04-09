@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { getTenantBySlug } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant";
 
 export async function GET(
   req: NextRequest,
@@ -27,8 +27,7 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const slug = params.slug;
-    const tenant = await getTenantBySlug(slug);
+    const tenant = await getCurrentTenant();
 
     if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });

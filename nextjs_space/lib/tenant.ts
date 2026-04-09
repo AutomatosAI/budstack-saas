@@ -130,7 +130,6 @@ export async function requireTenant(): Promise<Tenant> {
  */
 export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
   try {
-    // Try exact match first
     let tenant = await prisma.tenants.findFirst({
       where: {
         subdomain: slug,
@@ -138,22 +137,13 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
       },
     });
 
-    // If not found, try finding by matching lowercased subdomain
-    if (!tenant) {
-      // Fetch all active tenants and filter in memory (efficient enough for small number of tenants)
-      // or try to find by normalized slug if we suspect casing mismatch
-      // For now, let's just log and fail if exact match doesn't work, but we can try to find ignoring case
-      // by fetching candidate? No, that's inefficient.
-
-      // Attempt to find by lowercase slug if the original wasn't lowercase
-      if (slug !== slug.toLowerCase()) {
-        tenant = await prisma.tenants.findFirst({
-          where: {
-            subdomain: slug.toLowerCase(),
-            isActive: true,
-          },
-        });
-      }
+    if (!tenant && slug !== slug.toLowerCase()) {
+      tenant = await prisma.tenants.findFirst({
+        where: {
+          subdomain: slug.toLowerCase(),
+          isActive: true,
+        },
+      });
     }
 
     return tenant;
