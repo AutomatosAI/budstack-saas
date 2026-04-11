@@ -9,9 +9,7 @@ import Script from "next/script";
 import {
   Layout,
   FileText,
-  Settings,
   Eye,
-  GraduationCap,
   Store,
   Monitor,
   Tablet,
@@ -34,8 +32,8 @@ import { DesignTab } from "./tabs/design-tab";
 import { ColoursTab } from "./tabs/colours-tab";
 import { ContentTab } from "./tabs/content-tab";
 import { TypeTab } from "./tabs/type-tab";
-import { EducationTab } from "./tabs/education-tab";
-import { AdvancedTab } from "./tabs/advanced-tab";
+// EducationTab and AdvancedTab imports removed while those tabs are hidden —
+// restore them together with the TabsTrigger/TabsContent blocks when re-enabling.
 import type { EditorFormData } from "./tabs/types";
 import { DEFAULT_NAV_LINKS, DEFAULT_FOOTER_SECTIONS } from "@/lib/section-schemas";
 
@@ -616,7 +614,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
           </div>
 
           <Tabs defaultValue="brand" className="space-y-4 lg:space-y-6">
-            <TabsList className="grid w-full h-auto grid-cols-4 gap-1">
+            <TabsList className="grid w-full h-auto grid-cols-2 gap-1">
               <TabsTrigger value="brand" className="text-xs px-2">
                 <Store className="w-4 h-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Brand</span>
@@ -625,14 +623,9 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 <FileText className="w-4 h-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Content</span>
               </TabsTrigger>
-              <TabsTrigger value="education" className="text-xs px-2">
-                <GraduationCap className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Education</span>
-              </TabsTrigger>
-              <TabsTrigger value="advanced" className="text-xs px-2">
-                <Settings className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Advanced</span>
-              </TabsTrigger>
+              {/* Education and Advanced tabs hidden for now — keeping it
+                  simple for early users. Re-enable by restoring the
+                  TabsTrigger and TabsContent blocks below. */}
             </TabsList>
 
             {/* BRAND — identity + global colours + global design tokens + global typography */}
@@ -668,17 +661,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
               />
             </TabsContent>
 
-            <TabsContent value="education">
-              <EducationTab formData={formData} setFormData={setFormData} />
-            </TabsContent>
-
-            <TabsContent value="advanced">
-              <AdvancedTab
-                formData={formData}
-                setFormData={setFormData}
-                tenant={tenant}
-              />
-            </TabsContent>
+            {/* Education and Advanced TabsContent hidden — see note above. */}
           </Tabs>
         </form>
       </div>
