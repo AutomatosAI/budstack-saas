@@ -53,6 +53,9 @@ interface ColoursTabProps {
   setFormData: SetFormData;
   dirtyColors: Set<string>;
   setDirtyColors: React.Dispatch<React.SetStateAction<Set<string>>>;
+  /** Hide the per-section overrides card (used when rendered inside the Brand
+   *  tab — per-section colours live in the Content tab accordion instead). */
+  showPerSection?: boolean;
 }
 
 export function ColoursTab({
@@ -60,6 +63,7 @@ export function ColoursTab({
   setFormData,
   dirtyColors,
   setDirtyColors,
+  showPerSection = true,
 }: ColoursTabProps) {
   const setGlobalColor = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -337,7 +341,7 @@ export function ColoursTab({
       </Card>
 
       {/* Per-Section Color Overrides */}
-      {formData.layoutSections.length > 0 && (
+      {showPerSection && formData.layoutSections.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Section Color Overrides</CardTitle>

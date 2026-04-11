@@ -7,13 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/sonner";
 import Script from "next/script";
 import {
-  Layout,
-  Palette,
-  Type,
   FileText,
   Settings,
   Eye,
-  Brush,
   GraduationCap,
   Store,
   Monitor,
@@ -580,30 +576,14 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
           </div>
 
           <Tabs defaultValue="brand" className="space-y-4 lg:space-y-6">
-            <TabsList className="grid w-full h-auto grid-cols-4 grid-rows-2 gap-1">
+            <TabsList className="grid w-full h-auto grid-cols-4 gap-1">
               <TabsTrigger value="brand" className="text-xs px-2">
                 <Store className="w-4 h-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Brand</span>
               </TabsTrigger>
-              <TabsTrigger value="layout" className="text-xs px-2">
-                <Layout className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Layout</span>
-              </TabsTrigger>
-              <TabsTrigger value="design" className="text-xs px-2">
-                <Brush className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Design</span>
-              </TabsTrigger>
-              <TabsTrigger value="colours" className="text-xs px-2">
-                <Palette className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Colours</span>
-              </TabsTrigger>
               <TabsTrigger value="content" className="text-xs px-2">
                 <FileText className="w-4 h-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Content</span>
-              </TabsTrigger>
-              <TabsTrigger value="type" className="text-xs px-2">
-                <Type className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Type</span>
               </TabsTrigger>
               <TabsTrigger value="education" className="text-xs px-2">
                 <GraduationCap className="w-4 h-4 sm:mr-1.5" />
@@ -615,7 +595,8 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="brand">
+            {/* BRAND — identity + global colours + global design tokens + global typography */}
+            <TabsContent value="brand" className="space-y-6">
               <BrandTab
                 formData={formData}
                 setFormData={setFormData}
@@ -624,31 +605,23 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 onFileChange={handleFileChange}
                 logoUrl={((activeTemplate as any)?.signedLogoUrl) || ((activeTemplate as any)?.layout?.defaults?.logoPath) || undefined}
               />
-            </TabsContent>
-
-            <TabsContent value="layout">
-              <LayoutTab formData={formData} setFormData={setFormData} />
-            </TabsContent>
-
-            <TabsContent value="design">
-              <DesignTab formData={formData} setFormData={setFormData} />
-            </TabsContent>
-
-            <TabsContent value="colours">
               <ColoursTab
                 formData={formData}
                 setFormData={setFormData}
                 dirtyColors={dirtyColors}
                 setDirtyColors={setDirtyColors}
+                showPerSection={false}
               />
-            </TabsContent>
-
-            <TabsContent value="content">
-              <ContentTab formData={formData} setFormData={setFormData} />
-            </TabsContent>
-
-            <TabsContent value="type">
+              <DesignTab formData={formData} setFormData={setFormData} />
               <TypeTab formData={formData} setFormData={setFormData} />
+            </TabsContent>
+
+            {/* CONTENT — layout (section list) + per-section content forms.
+                Phase 3 will replace this with a single accordion that hosts
+                per-section Content and Colour sub-tabs. */}
+            <TabsContent value="content" className="space-y-6">
+              <LayoutTab formData={formData} setFormData={setFormData} />
+              <ContentTab formData={formData} setFormData={setFormData} />
             </TabsContent>
 
             <TabsContent value="education">
