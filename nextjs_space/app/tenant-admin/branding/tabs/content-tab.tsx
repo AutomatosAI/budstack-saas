@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import {
   Card,
   CardContent,
@@ -45,6 +46,9 @@ import type { EditorFormData, SetFormData } from "./types";
 interface ContentTabProps {
   formData: EditorFormData;
   setFormData: SetFormData;
+  /** Called when an accordion item is opened. Used by the parent form to
+   *  scroll the live preview and pulse the selected section. */
+  onSectionSelect?: (sectionId: string) => void;
 }
 
 // ─── Style Picker Card ────────────────────────────────────────
@@ -494,7 +498,22 @@ function ArrayFieldEditor({
 
 // ─── Main Content Tab ────────────────────────────────────────
 
-export function ContentTab({ formData, setFormData }: ContentTabProps) {
+export function ContentTab({ formData, setFormData, onSectionSelect }: ContentTabProps) {
+  // Track which accordion items are currently open so we can detect
+  // newly-opened ones (and only fire onSectionSelect when a NEW section
+  // expands, not when one collapses).
+  const openSectionsRef = useRef<string[]>(["navigation"]);
+
+  const handleAccordionChange = (value: string[]) => {
+    const previous = openSectionsRef.current;
+    const opened = value.find((v) => !previous.includes(v));
+    openSectionsRef.current = value;
+    // Only scroll for real section IDs — skip the static "navigation"/"footer"
+    // items since they aren't data-section-id targets in the renderer.
+    if (opened && opened !== "navigation" && opened !== "footer") {
+      onSectionSelect?.(opened);
+    }
+  };
   // Nav/footer helpers
   const updateNavConfig = (patch: Partial<EditorFormData["navigationConfig"]>) => {
     setFormData((prev) => ({
@@ -544,7 +563,12 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
     <div className="space-y-4">
       <Card>
         <CardContent className="pt-4">
-      <Accordion type="multiple" defaultValue={["navigation"]} className="w-full">
+      <Accordion
+        type="multiple"
+        defaultValue={["navigation"]}
+        onValueChange={handleAccordionChange}
+        className="w-full"
+      >
 
       {/* ─── Navigation ─────────────────────────── */}
       <AccordionItem value="navigation">

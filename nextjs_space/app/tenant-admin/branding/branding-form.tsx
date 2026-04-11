@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -104,6 +104,45 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
   const [showPreview, setShowPreview] = useState(false);
   const [dirtyColors, setDirtyColors] = useState<Set<string>>(new Set());
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+
+  /** Scrollable container that wraps the inline desktop preview. Used by
+   *  scrollPreviewToSection to scroll/pulse a section when the user selects
+   *  it in the Content accordion. */
+  const previewScrollRef = useRef<HTMLDivElement>(null);
+
+  /** Scroll the preview pane to a section and pulse a brief highlight.
+   *  Desktop only — tablet/mobile render in an iframe and are skipped.
+   *  Respects prefers-reduced-motion. */
+  const scrollPreviewToSection = useCallback((sectionId: string) => {
+    if (previewDevice !== "desktop") return;
+    const container = previewScrollRef.current;
+    if (!container) return;
+    // Querying with CSS.escape isn't strictly needed for [attr="..."] selectors
+    const target = container.querySelector<HTMLElement>(
+      `[data-section-id="${sectionId}"]`,
+    );
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    const reduced = typeof window !== "undefined"
+      && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+
+    // Outline pulse via Web Animations API — no CSS dependency
+    try {
+      target.animate(
+        [
+          { outline: "0 solid hsl(var(--tenant-color-accent, 270 60% 50%) / 0.8)", outlineOffset: "-0px" },
+          { outline: "4px solid hsl(var(--tenant-color-accent, 270 60% 50%) / 0.7)", outlineOffset: "-4px" },
+          { outline: "0 solid hsl(var(--tenant-color-accent, 270 60% 50%) / 0)", outlineOffset: "-0px" },
+        ],
+        { duration: 1200, easing: "ease-out" },
+      );
+    } catch {
+      // Older browsers without multi-prop Web Animations support — skip silently
+    }
+  }, [previewDevice]);
 
   const settings = (tenant.settings as TenantSettings) || {};
   const automatosApiKey = settings?.automatosApiKey;
@@ -617,12 +656,17 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
               <TypeTab formData={formData} setFormData={setFormData} />
             </TabsContent>
 
-            {/* CONTENT — layout (section list) + per-section content forms.
-                Phase 3 will replace this with a single accordion that hosts
-                per-section Content and Colour sub-tabs. */}
+            {/* CONTENT — section list (reorder/add/remove) above the
+                per-section accordion. Each accordion item expands to Content
+                and Colour sub-tabs. Selecting a section scrolls and pulses
+                the live preview. */}
             <TabsContent value="content" className="space-y-6">
               <LayoutTab formData={formData} setFormData={setFormData} />
-              <ContentTab formData={formData} setFormData={setFormData} />
+              <ContentTab
+                formData={formData}
+                setFormData={setFormData}
+                onSectionSelect={scrollPreviewToSection}
+              />
             </TabsContent>
 
             <TabsContent value="education">
@@ -693,6 +737,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         {/* Desktop: inline React preview */}
         {previewDevice === "desktop" && (
           <div
+            ref={previewScrollRef}
             className="w-full h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-background relative"
             style={{ transform: "scale(1)" }}
           >
