@@ -650,7 +650,6 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 setFormData={setFormData}
                 dirtyColors={dirtyColors}
                 setDirtyColors={setDirtyColors}
-                showPerSection={false}
               />
               <DesignTab formData={formData} setFormData={setFormData} />
               <TypeTab formData={formData} setFormData={setFormData} />
