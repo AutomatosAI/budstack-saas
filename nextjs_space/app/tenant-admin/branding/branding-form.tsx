@@ -614,10 +614,14 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
           </div>
 
           <Tabs defaultValue="brand" className="space-y-4 lg:space-y-6">
-            <TabsList className="grid w-full h-auto grid-cols-2 gap-1">
+            <TabsList className="grid w-full h-auto grid-cols-3 gap-1">
               <TabsTrigger value="brand" className="text-xs px-2">
                 <Store className="w-4 h-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Brand</span>
+              </TabsTrigger>
+              <TabsTrigger value="layout" className="text-xs px-2">
+                <Layout className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Layout</span>
               </TabsTrigger>
               <TabsTrigger value="content" className="text-xs px-2">
                 <FileText className="w-4 h-4 sm:mr-1.5" />
@@ -648,12 +652,15 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
               <TypeTab formData={formData} setFormData={setFormData} />
             </TabsContent>
 
-            {/* CONTENT — section list (reorder/add/remove) above the
-                per-section accordion. Each accordion item expands to Content
+            {/* LAYOUT — section list: reorder, add, remove, show/hide. */}
+            <TabsContent value="layout" className="space-y-6">
+              <LayoutTab formData={formData} setFormData={setFormData} />
+            </TabsContent>
+
+            {/* CONTENT — per-section accordion. Each item expands to Content
                 and Colour sub-tabs. Selecting a section scrolls and pulses
                 the live preview. */}
             <TabsContent value="content" className="space-y-6">
-              <LayoutTab formData={formData} setFormData={setFormData} />
               <ContentTab
                 formData={formData}
                 setFormData={setFormData}
