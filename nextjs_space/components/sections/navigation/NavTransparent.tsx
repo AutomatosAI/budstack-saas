@@ -183,6 +183,11 @@ export function NavTransparent(props: SectionProps) {
           className="md:hidden"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle menu"
+          style={{
+            // Drop shadow keeps the icon readable over bright hero frames
+            // (e.g. sky in a video) while the nav is still transparent.
+            filter: scrolled || hasOverrides ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
+          }}
         >
           {mobileOpen ? (
             <X size={24} style={{ color: textColor }} />
@@ -192,18 +197,24 @@ export function NavTransparent(props: SectionProps) {
         </button>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu — always renders on a SOLID panel so it never clashes
+          with the transparent nav's hero background. Fallbacks to opaque
+          white / dark text so it stays readable even when the tenant hasn't
+          set --tenant-color-background / --tenant-color-text. */}
       {mobileOpen && (
         <div
-          className="md:hidden px-6 py-4 space-y-3 mt-2"
-          style={{ backgroundColor: 'hsl(var(--tenant-color-background) / 0.98)' }}
+          className="md:hidden mt-2 mx-4 rounded-xl border shadow-2xl px-6 py-4 space-y-3"
+          style={{
+            backgroundColor: 'hsl(var(--tenant-color-background, 0 0% 100%))',
+            borderColor: 'hsl(var(--tenant-color-border, 0 0% 88%))',
+          }}
         >
           {links.map((link: { label: string; href: string }) => (
             <a
               key={link.href}
               href={link.href}
               className="block text-base font-medium py-2"
-              style={{ color: 'hsl(var(--tenant-color-text))' }}
+              style={{ color: 'hsl(var(--tenant-color-text, 220 15% 15%))' }}
               onClick={() => setMobileOpen(false)}
             >
               {link.label}
