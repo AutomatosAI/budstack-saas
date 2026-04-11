@@ -37,6 +37,8 @@ import {
 } from "@/lib/section-schemas";
 import type { FieldSchema, ArrayItemField, SocialPlatform } from "@/lib/section-schemas";
 import { SectionImageUploader, SectionVideoUploader } from "./shared";
+import { SectionColourPanel } from "./section-colour-panel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { EditorFormData, SetFormData } from "./types";
 
@@ -662,6 +664,12 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
               </span>
             </AccordionTrigger>
             <AccordionContent>
+            <Tabs defaultValue="content" className="pt-2">
+              <TabsList className="grid w-full grid-cols-2 h-8">
+                <TabsTrigger value="content" className="text-xs">Content</TabsTrigger>
+                <TabsTrigger value="colour" className="text-xs">Colour</TabsTrigger>
+              </TabsList>
+              <TabsContent value="content" className="mt-3">
             <div className="space-y-4 pt-2">
               {sameCategory.length > 0 && (
                 <div>
@@ -795,6 +803,15 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
                 </p>
               )}
             </div>
+              </TabsContent>
+              <TabsContent value="colour" className="mt-3">
+                <SectionColourPanel
+                  sectionId={section.id}
+                  formData={formData}
+                  setFormData={setFormData}
+                />
+              </TabsContent>
+            </Tabs>
             </AccordionContent>
           </AccordionItem>
         );
