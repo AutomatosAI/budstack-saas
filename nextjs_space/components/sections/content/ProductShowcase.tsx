@@ -170,12 +170,11 @@ export function ProductShowcase(props: SectionProps) {
                 >
                   {img && (
                     <div className="relative w-full h-48 sm:h-56">
-                      <Image
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
                         src={img}
                         alt={product.name}
-                        fill
-                        className={imageMode === 'contain' ? 'object-contain p-4' : 'object-cover'}
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        className={`w-full h-full ${imageMode === 'contain' ? 'object-contain p-4' : 'object-cover'}`}
                       />
                     </div>
                   )}

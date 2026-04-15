@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchProducts } from "@/lib/doctor-green-api";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getTenantBySlug } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 
 /**
@@ -26,7 +26,8 @@ export async function GET(
       return NextResponse.json({ success: true, data: [] });
     }
 
-    const tenant = await getCurrentTenant();
+    const { slug } = params;
+    const tenant = await getTenantBySlug(slug);
     if (!tenant) {
       return NextResponse.json(
         { success: false, error: "Tenant not found", data: [] },
