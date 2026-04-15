@@ -5,7 +5,7 @@
  * Drives the Store Editor form rendering and section type migration.
  */
 
-export type FieldType = 'text' | 'textarea' | 'image' | 'video' | 'url' | 'select' | 'number' | 'array' | 'boolean';
+export type FieldType = 'text' | 'textarea' | 'image' | 'video' | 'url' | 'select' | 'number' | 'array' | 'boolean' | 'product-picker';
 
 /** Reusable background image + overlay fields for sections that support optional bg images */
 const BG_IMAGE_FIELDS = [
@@ -342,10 +342,12 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
   ProductShowcase: {
     label: 'Product Showcase',
     category: 'content',
-    description: 'Display product categories from your store',
+    description: 'Display real products or manual categories from your store',
     fields: [
       { key: 'heading', label: 'Heading', type: 'text', default: 'Our Products' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Explore our range' },
+      { key: 'dataSource', label: 'Data Source', type: 'select', default: 'manual', options: ['manual', 'products'] },
+      { key: 'productIds', label: 'Select Products', type: 'product-picker' as FieldType, default: '' },
       { key: 'categories', label: 'Categories', type: 'array', default: '', itemLabel: 'Category', itemFields: [
         { key: 'title', label: 'Title', type: 'text', default: 'Category' },
         { key: 'description', label: 'Description', type: 'text', default: '' },

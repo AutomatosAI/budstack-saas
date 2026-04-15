@@ -39,6 +39,7 @@ import {
 import type { FieldSchema, ArrayItemField, SocialPlatform } from "@/lib/section-schemas";
 import { SectionImageUploader, SectionVideoUploader } from "./shared";
 import { SectionColourPanel } from "./section-colour-panel";
+import { ProductPicker } from "./product-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { EditorFormData, SetFormData } from "./types";
@@ -723,6 +724,25 @@ export function ContentTab({ formData, setFormData, onSectionSelect }: ContentTa
               {editableFields.length > 0 ? (
                 editableFields.map((field: FieldSchema) => {
                   const fieldValue = configValues[field.key] ?? field.default;
+
+                  // Conditional visibility for ProductShowcase data source toggle:
+                  // Hide "categories" array when using real products, hide "productIds" when manual
+                  const dataSource = configValues.dataSource || "manual";
+                  if (field.key === "categories" && dataSource === "products") return null;
+                  if (field.key === "productIds" && dataSource !== "products") return null;
+
+                  // Product picker field
+                  if (field.type === "product-picker") {
+                    return (
+                      <div key={`${section.id}-${field.key}`}>
+                        <Label>{field.label}</Label>
+                        <ProductPicker
+                          value={String(fieldValue || "")}
+                          onChange={(val) => updateField(field.key, val)}
+                        />
+                      </div>
+                    );
+                  }
 
                   // Array field with item schema — render inline item editor
                   if (field.type === "array" && field.itemFields) {
