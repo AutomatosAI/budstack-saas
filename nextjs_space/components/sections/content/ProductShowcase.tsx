@@ -175,14 +175,14 @@ export function ProductShowcase(props: SectionProps) {
                 >
                   {img && (
                     <div
-                      className="relative w-full h-56 sm:h-64 md:h-72 overflow-hidden"
+                      className="relative w-full h-56 sm:h-64 md:h-72 overflow-hidden flex items-center justify-center p-6"
                       style={{ backgroundColor: 'hsl(var(--tenant-color-primary) / 0.04)' }}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={img}
                         alt={product.name}
-                        className={`w-full h-full ${imageMode === 'cover' ? 'object-cover' : 'object-contain p-4'}`}
+                        className="max-w-[80%] max-h-[80%] object-contain"
                       />
                     </div>
                   )}
@@ -239,15 +239,14 @@ export function ProductShowcase(props: SectionProps) {
               >
                 {cat.imageUrl && (
                   <div
-                    className="relative w-full h-56 sm:h-64 md:h-72 overflow-hidden"
+                    className="relative w-full h-56 sm:h-64 md:h-72 overflow-hidden flex items-center justify-center p-6"
                     style={{ backgroundColor: 'hsl(var(--tenant-color-primary) / 0.04)' }}
                   >
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={cat.imageUrl}
                       alt={cat.title}
-                      fill
-                      className={imageMode === 'cover' ? 'object-cover' : 'object-contain p-4'}
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="max-w-[80%] max-h-[80%] object-contain"
                     />
                   </div>
                 )}
