@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Typecheck · Lint · Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nextjs_space
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('nextjs_space/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
+        env:
+          DATABASE_URL: "postgresql://stub:stub@localhost:5432/stub"
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_stub"
+          CLERK_SECRET_KEY: "sk_test_stub"
+          NEXT_PUBLIC_BASE_DOMAIN: "localhost"
+          NEXTAUTH_SECRET: "stub"
+          ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
