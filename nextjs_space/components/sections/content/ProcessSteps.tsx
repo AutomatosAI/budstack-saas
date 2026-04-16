@@ -75,7 +75,7 @@ export function ProcessSteps(props: SectionProps) {
           )}
         </motion.div>
 
-        <div className={`relative ${isHorizontal ? 'flex flex-col md:flex-row items-start justify-center gap-0' : 'flex flex-col items-start max-w-2xl mx-auto gap-0'}`}>
+        <div className={`relative ${isHorizontal ? 'flex flex-col md:flex-row items-center md:items-start justify-center gap-10 md:gap-0' : 'flex flex-col items-start max-w-2xl mx-auto gap-0'}`}>
           {steps.map((step, index) => {
             const Icon = iconMap[step.icon] || CheckCircle;
             const isLast = index === steps.length - 1;
