@@ -170,7 +170,10 @@ export function ProductShowcase(props: SectionProps) {
                   }}
                 >
                   {img && (
-                    <div className="relative w-full h-48 sm:h-56">
+                    <div
+                      className="relative w-full aspect-square overflow-hidden"
+                      style={{ backgroundColor: 'hsl(var(--tenant-color-primary) / 0.04)' }}
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={img}
@@ -231,7 +234,10 @@ export function ProductShowcase(props: SectionProps) {
                 }}
               >
                 {cat.imageUrl && (
-                  <div className="relative w-full h-48 sm:h-56">
+                  <div
+                    className="relative w-full aspect-square overflow-hidden"
+                    style={{ backgroundColor: 'hsl(var(--tenant-color-primary) / 0.04)' }}
+                  >
                     <Image
                       src={cat.imageUrl}
                       alt={cat.title}

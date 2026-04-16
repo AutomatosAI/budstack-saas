@@ -679,7 +679,7 @@ export default function ProductsPage() {
           {/* Effect filter */}
           {allEffects.length > 0 && (
             <div>
-              <h3
+              <div
                 className="text-[11px] font-semibold uppercase tracking-widest mb-3"
                 style={{
                   color: "hsl(var(--tenant-color-text) / 0.5)",
@@ -687,7 +687,7 @@ export default function ProductsPage() {
                 }}
               >
                 Filter by Effect
-              </h3>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {allEffects.map((effect) => {
                   const active = selectedEffects.includes(effect);
@@ -720,7 +720,7 @@ export default function ProductsPage() {
           {/* Terpene / Flavour filter */}
           {allFlavours.length > 0 && (
             <div>
-              <h3
+              <div
                 className="text-[11px] font-semibold uppercase tracking-widest mb-3"
                 style={{
                   color: "hsl(var(--tenant-color-text) / 0.5)",
@@ -728,7 +728,7 @@ export default function ProductsPage() {
                 }}
               >
                 Filter by Terpene
-              </h3>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {allFlavours.map((flavour) => {
                   const active = selectedFlavours.includes(flavour);
