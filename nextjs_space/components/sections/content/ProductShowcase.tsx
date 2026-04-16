@@ -25,6 +25,7 @@ interface FeaturedProduct {
   price?: number;
   isAvailable?: boolean;
   currency?: string;
+  currencyCode?: string;
 }
 
 const defaultCategories: Category[] = [
@@ -196,7 +197,7 @@ export function ProductShowcase(props: SectionProps) {
                         style={{ color: 'hsl(var(--tenant-color-primary))' }}
                       >
                         {price > 0
-                          ? new Intl.NumberFormat(undefined, { style: 'currency', currency: product.currency || 'ZAR' }).format(price)
+                          ? new Intl.NumberFormat(undefined, { style: 'currency', currency: product.currencyCode || 'ZAR' }).format(price)
                           : 'Price on request'}
                       </span>
                       <span
