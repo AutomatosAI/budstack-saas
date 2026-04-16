@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
@@ -20,6 +20,30 @@ export function HeroVideo({
   const ctaText = sectionConfig?.ctaText || 'Book Consultation';
   const videoUrl = sectionConfig?.videoUrl;
   const watermarkUrl = sectionConfig?.watermarkUrl;
+
+  // iOS Safari blocks autoplay unless `muted` is set as an HTML attribute at
+  // the moment playback starts. React applies `muted` as a property post-
+  // hydration, so the first play attempt fails and a play button appears.
+  // Imperatively set the flags and kick play() ourselves.
+  const videoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = true;
+    v.playsInline = true;
+    v.loop = true;
+    const tryPlay = () => {
+      v.play().catch(() => {
+        // Some browsers require a user gesture — fall back to the next tap.
+      });
+    };
+    if (v.readyState >= 2) {
+      tryPlay();
+    } else {
+      v.addEventListener('loadeddata', tryPlay, { once: true });
+      return () => v.removeEventListener('loadeddata', tryPlay);
+    }
+  }, [videoUrl]);
 
   // Resolve hero type — if a video URL exists, always play it (this IS the Video Hero).
   // heroType controls fallback when no video is uploaded yet.
@@ -69,12 +93,16 @@ export function HeroVideo({
       {/* Background: Video → Image → Gradient fallback */}
       {heroType === 'video' && videoUrl ? (
         <video
+          ref={videoRef}
           autoPlay
           muted
           loop
           playsInline
+          preload="auto"
+          disablePictureInPicture
+          controls={false}
           src={videoUrl}
-          className="absolute inset-0 w-full h-full object-cover z-0"
+          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
           poster={heroImageUrl || undefined}
         />
       ) : (heroType === 'image' || heroType === 'gradient-image') && heroImageUrl ? (

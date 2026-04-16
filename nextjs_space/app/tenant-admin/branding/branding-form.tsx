@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,13 +8,8 @@ import { toast } from "@/components/ui/sonner";
 import Script from "next/script";
 import {
   Layout,
-  Palette,
-  Type,
   FileText,
-  Settings,
   Eye,
-  Brush,
-  GraduationCap,
   Store,
   Monitor,
   Tablet,
@@ -37,8 +32,8 @@ import { DesignTab } from "./tabs/design-tab";
 import { ColoursTab } from "./tabs/colours-tab";
 import { ContentTab } from "./tabs/content-tab";
 import { TypeTab } from "./tabs/type-tab";
-import { EducationTab } from "./tabs/education-tab";
-import { AdvancedTab } from "./tabs/advanced-tab";
+// EducationTab and AdvancedTab imports removed while those tabs are hidden —
+// restore them together with the TabsTrigger/TabsContent blocks when re-enabling.
 import type { EditorFormData } from "./tabs/types";
 import { DEFAULT_NAV_LINKS, DEFAULT_FOOTER_SECTIONS } from "@/lib/section-schemas";
 
@@ -107,6 +102,45 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
   const [showPreview, setShowPreview] = useState(false);
   const [dirtyColors, setDirtyColors] = useState<Set<string>>(new Set());
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+
+  /** Scrollable container that wraps the inline desktop preview. Used by
+   *  scrollPreviewToSection to scroll/pulse a section when the user selects
+   *  it in the Content accordion. */
+  const previewScrollRef = useRef<HTMLDivElement>(null);
+
+  /** Scroll the preview pane to a section and pulse a brief highlight.
+   *  Desktop only — tablet/mobile render in an iframe and are skipped.
+   *  Respects prefers-reduced-motion. */
+  const scrollPreviewToSection = useCallback((sectionId: string) => {
+    if (previewDevice !== "desktop") return;
+    const container = previewScrollRef.current;
+    if (!container) return;
+    // Querying with CSS.escape isn't strictly needed for [attr="..."] selectors
+    const target = container.querySelector<HTMLElement>(
+      `[data-section-id="${sectionId}"]`,
+    );
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    const reduced = typeof window !== "undefined"
+      && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+
+    // Outline pulse via Web Animations API — no CSS dependency
+    try {
+      target.animate(
+        [
+          { outline: "0 solid hsl(var(--tenant-color-accent, 270 60% 50%) / 0.8)", outlineOffset: "-0px" },
+          { outline: "4px solid hsl(var(--tenant-color-accent, 270 60% 50%) / 0.7)", outlineOffset: "-4px" },
+          { outline: "0 solid hsl(var(--tenant-color-accent, 270 60% 50%) / 0)", outlineOffset: "-0px" },
+        ],
+        { duration: 1200, easing: "ease-out" },
+      );
+    } catch {
+      // Older browsers without multi-prop Web Animations support — skip silently
+    }
+  }, [previewDevice]);
 
   const settings = (tenant.settings as TenantSettings) || {};
   const automatosApiKey = settings?.automatosApiKey;
@@ -580,7 +614,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
           </div>
 
           <Tabs defaultValue="brand" className="space-y-4 lg:space-y-6">
-            <TabsList className="grid w-full h-auto grid-cols-4 grid-rows-2 gap-1">
+            <TabsList className="grid w-full h-auto grid-cols-3 gap-1">
               <TabsTrigger value="brand" className="text-xs px-2">
                 <Store className="w-4 h-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Brand</span>
@@ -589,33 +623,17 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 <Layout className="w-4 h-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Layout</span>
               </TabsTrigger>
-              <TabsTrigger value="design" className="text-xs px-2">
-                <Brush className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Design</span>
-              </TabsTrigger>
-              <TabsTrigger value="colours" className="text-xs px-2">
-                <Palette className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Colours</span>
-              </TabsTrigger>
               <TabsTrigger value="content" className="text-xs px-2">
                 <FileText className="w-4 h-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Content</span>
               </TabsTrigger>
-              <TabsTrigger value="type" className="text-xs px-2">
-                <Type className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Type</span>
-              </TabsTrigger>
-              <TabsTrigger value="education" className="text-xs px-2">
-                <GraduationCap className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Education</span>
-              </TabsTrigger>
-              <TabsTrigger value="advanced" className="text-xs px-2">
-                <Settings className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Advanced</span>
-              </TabsTrigger>
+              {/* Education and Advanced tabs hidden for now — keeping it
+                  simple for early users. Re-enable by restoring the
+                  TabsTrigger and TabsContent blocks below. */}
             </TabsList>
 
-            <TabsContent value="brand">
+            {/* BRAND — identity + global colours + global design tokens + global typography */}
+            <TabsContent value="brand" className="space-y-6">
               <BrandTab
                 formData={formData}
                 setFormData={setFormData}
@@ -624,44 +642,33 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 onFileChange={handleFileChange}
                 logoUrl={((activeTemplate as any)?.signedLogoUrl) || ((activeTemplate as any)?.layout?.defaults?.logoPath) || undefined}
               />
-            </TabsContent>
-
-            <TabsContent value="layout">
-              <LayoutTab formData={formData} setFormData={setFormData} />
-            </TabsContent>
-
-            <TabsContent value="design">
-              <DesignTab formData={formData} setFormData={setFormData} />
-            </TabsContent>
-
-            <TabsContent value="colours">
               <ColoursTab
                 formData={formData}
                 setFormData={setFormData}
                 dirtyColors={dirtyColors}
                 setDirtyColors={setDirtyColors}
               />
-            </TabsContent>
-
-            <TabsContent value="content">
-              <ContentTab formData={formData} setFormData={setFormData} />
-            </TabsContent>
-
-            <TabsContent value="type">
+              <DesignTab formData={formData} setFormData={setFormData} />
               <TypeTab formData={formData} setFormData={setFormData} />
             </TabsContent>
 
-            <TabsContent value="education">
-              <EducationTab formData={formData} setFormData={setFormData} />
+            {/* LAYOUT — section list: reorder, add, remove, show/hide. */}
+            <TabsContent value="layout" className="space-y-6">
+              <LayoutTab formData={formData} setFormData={setFormData} />
             </TabsContent>
 
-            <TabsContent value="advanced">
-              <AdvancedTab
+            {/* CONTENT — per-section accordion. Each item expands to Content
+                and Colour sub-tabs. Selecting a section scrolls and pulses
+                the live preview. */}
+            <TabsContent value="content" className="space-y-6">
+              <ContentTab
                 formData={formData}
                 setFormData={setFormData}
-                tenant={tenant}
+                onSectionSelect={scrollPreviewToSection}
               />
             </TabsContent>
+
+            {/* Education and Advanced TabsContent hidden — see note above. */}
           </Tabs>
         </form>
       </div>
@@ -719,6 +726,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         {/* Desktop: inline React preview */}
         {previewDevice === "desktop" && (
           <div
+            ref={previewScrollRef}
             className="w-full h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-background relative"
             style={{ transform: "scale(1)" }}
           >

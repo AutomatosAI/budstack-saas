@@ -2,7 +2,15 @@ import { currentUser } from "@clerk/nextjs/server";
 import { resolveTenantIdFromClerkOrg } from "./resolve-tenant-id";
 
 export async function getCurrentUser() {
-    const user = await currentUser();
+    let user;
+    try {
+        user = await currentUser();
+    } catch (error) {
+        // Clerk throws when the session token is expired/invalid/malformed.
+        // Return null so callers get a clean 401 instead of a caught 500.
+        console.warn("[auth-helper] currentUser() threw — likely expired token:", error);
+        return null;
+    }
 
     if (!user) {
         return null;

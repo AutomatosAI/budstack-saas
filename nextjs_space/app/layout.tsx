@@ -7,7 +7,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { ClerkProvider } from '@clerk/nextjs';
 import { LanguageProvider } from '@/lib/i18n';
 import { QueryProvider } from '@/components/query-provider';
-import { SessionExpirationChecker } from '@/components/session-expiration-checker';
+import { SessionKeepAlive } from '@/components/session-keep-alive';
 import { GlobalPlatformChatbot } from '@/components/landing/GlobalPlatformChatbot';
 import { prisma } from '@/lib/db';
 import { headers } from 'next/headers';
@@ -126,7 +126,7 @@ export default async function RootLayout({
                 enableSystem
                 disableTransitionOnChange
               >
-                <SessionExpirationChecker />
+                <SessionKeepAlive />
                 {children}
                 {platformApiKey && (
                   <GlobalPlatformChatbot

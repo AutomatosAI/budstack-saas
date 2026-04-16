@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import {
   Card,
   CardContent,
@@ -37,12 +38,18 @@ import {
 } from "@/lib/section-schemas";
 import type { FieldSchema, ArrayItemField, SocialPlatform } from "@/lib/section-schemas";
 import { SectionImageUploader, SectionVideoUploader } from "./shared";
+import { SectionColourPanel } from "./section-colour-panel";
+import { ProductPicker } from "./product-picker";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { EditorFormData, SetFormData } from "./types";
 
 interface ContentTabProps {
   formData: EditorFormData;
   setFormData: SetFormData;
+  /** Called when an accordion item is opened. Used by the parent form to
+   *  scroll the live preview and pulse the selected section. */
+  onSectionSelect?: (sectionId: string) => void;
 }
 
 // ─── Style Picker Card ────────────────────────────────────────
@@ -492,7 +499,22 @@ function ArrayFieldEditor({
 
 // ─── Main Content Tab ────────────────────────────────────────
 
-export function ContentTab({ formData, setFormData }: ContentTabProps) {
+export function ContentTab({ formData, setFormData, onSectionSelect }: ContentTabProps) {
+  // Track which accordion items are currently open so we can detect
+  // newly-opened ones (and only fire onSectionSelect when a NEW section
+  // expands, not when one collapses).
+  const openSectionsRef = useRef<string[]>(["navigation"]);
+
+  const handleAccordionChange = (value: string[]) => {
+    const previous = openSectionsRef.current;
+    const opened = value.find((v) => !previous.includes(v));
+    openSectionsRef.current = value;
+    // Only scroll for real section IDs — skip the static "navigation"/"footer"
+    // items since they aren't data-section-id targets in the renderer.
+    if (opened && opened !== "navigation" && opened !== "footer") {
+      onSectionSelect?.(opened);
+    }
+  };
   // Nav/footer helpers
   const updateNavConfig = (patch: Partial<EditorFormData["navigationConfig"]>) => {
     setFormData((prev) => ({
@@ -542,7 +564,12 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
     <div className="space-y-4">
       <Card>
         <CardContent className="pt-4">
-      <Accordion type="multiple" defaultValue={["navigation"]} className="w-full">
+      <Accordion
+        type="multiple"
+        defaultValue={["navigation"]}
+        onValueChange={handleAccordionChange}
+        className="w-full"
+      >
 
       {/* ─── Navigation ─────────────────────────── */}
       <AccordionItem value="navigation">
@@ -662,6 +689,12 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
               </span>
             </AccordionTrigger>
             <AccordionContent>
+            <Tabs defaultValue="content" className="pt-2">
+              <TabsList className="grid w-full grid-cols-2 h-8">
+                <TabsTrigger value="content" className="text-xs">Content</TabsTrigger>
+                <TabsTrigger value="colour" className="text-xs">Colour</TabsTrigger>
+              </TabsList>
+              <TabsContent value="content" className="mt-3">
             <div className="space-y-4 pt-2">
               {sameCategory.length > 0 && (
                 <div>
@@ -691,6 +724,25 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
               {editableFields.length > 0 ? (
                 editableFields.map((field: FieldSchema) => {
                   const fieldValue = configValues[field.key] ?? field.default;
+
+                  // Conditional visibility for ProductShowcase data source toggle:
+                  // Hide "categories" array when using real products, hide "productIds" when manual
+                  const dataSource = configValues.dataSource || "manual";
+                  if (field.key === "categories" && dataSource === "products") return null;
+                  if (field.key === "productIds" && dataSource !== "products") return null;
+
+                  // Product picker field
+                  if (field.type === "product-picker") {
+                    return (
+                      <div key={`${section.id}-${field.key}`}>
+                        <Label>{field.label}</Label>
+                        <ProductPicker
+                          value={String(fieldValue || "")}
+                          onChange={(val) => updateField(field.key, val)}
+                        />
+                      </div>
+                    );
+                  }
 
                   // Array field with item schema — render inline item editor
                   if (field.type === "array" && field.itemFields) {
@@ -795,6 +847,15 @@ export function ContentTab({ formData, setFormData }: ContentTabProps) {
                 </p>
               )}
             </div>
+              </TabsContent>
+              <TabsContent value="colour" className="mt-3">
+                <SectionColourPanel
+                  sectionId={section.id}
+                  formData={formData}
+                  setFormData={setFormData}
+                />
+              </TabsContent>
+            </Tabs>
             </AccordionContent>
           </AccordionItem>
         );

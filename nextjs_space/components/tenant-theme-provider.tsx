@@ -258,9 +258,12 @@ function applyThemeToContainer(
       const background = designSystem.colors.background;
       const text = designSystem.colors.text;
 
-      // Helper to strip "hsl(" and ")" if present
+      // Normalize to raw HSL channels. Accepts hex (#rgb / #rrggbb),
+      // `hsl(...)` wrappers, or raw channels. shadcn components consume
+      // these via `hsl(var(--primary))`, so anything else breaks.
       const toChannels = (val: string) => {
         if (!val) return null;
+        if (val.startsWith("#")) return hexToHslChannels(val);
         if (val.startsWith("hsl("))
           return val.replace("hsl(", "").replace(")", "");
         return val;

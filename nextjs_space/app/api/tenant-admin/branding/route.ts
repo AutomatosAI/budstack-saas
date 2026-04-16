@@ -6,6 +6,22 @@ import { validateUpload } from "@/lib/upload-validation";
 import { TenantSettings } from "@/lib/types";
 import { deepMerge } from "@/lib/utils";
 import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
+import { hexToHsl } from "@/lib/color-utils";
+
+/** Normalize a brand color input to raw HSL channels (`H S% L%`).
+ *  Accepts hex (#rgb / #rrggbb), `hsl(...)` wrappers, or raw channels.
+ *  TenantThemeProvider expects raw channels so that `hsl(var(--primary))`
+ *  resolves correctly in shadcn components on store sub-pages. */
+function toHslChannels(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("#")) return hexToHsl(trimmed);
+  if (trimmed.startsWith("hsl(") && trimmed.endsWith(")")) {
+    return trimmed.slice(4, -1).trim();
+  }
+  return trimmed;
+}
 
 export async function PUT(req: NextRequest) {
   try {
@@ -125,13 +141,15 @@ export async function PUT(req: NextRequest) {
         Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined && v !== null && v !== ''));
 
       // Merge new settings into Design System — preserve ALL existing keys (primary-scale, gradients, custom shadows, etc.)
+      // Normalize to raw HSL channels so shadcn vars (--primary etc.)
+      // work with hsl(var(--primary)) across every store sub-page.
       const colorOverrides = defined({
-        primary: settings.primaryColor,
-        secondary: settings.secondaryColor,
-        accent: settings.accentColor,
-        background: settings.backgroundColor,
-        text: settings.textColor,
-        heading: settings.headingColor,
+        primary: toHslChannels(settings.primaryColor),
+        secondary: toHslChannels(settings.secondaryColor),
+        accent: toHslChannels(settings.accentColor),
+        background: toHslChannels(settings.backgroundColor),
+        text: toHslChannels(settings.textColor),
+        heading: toHslChannels(settings.headingColor),
       });
       const typoOverrides = defined({
         body: settings.fontFamily,

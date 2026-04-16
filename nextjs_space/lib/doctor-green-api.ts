@@ -150,6 +150,7 @@ export interface DoctorGreenProduct {
   cbd_content?: number;
   price?: number;
   currency?: string;
+  currencyCode?: string;
   in_stock?: boolean;
   stock_quantity?: number;
   image_url?: string;
@@ -285,6 +286,7 @@ async function normalizeProduct(product: DoctorGreenProduct, country: string): P
     cbd_content: product.cbd || 0,
     price,
     currency,
+    currencyCode,
     in_stock: isAvailable && totalStock > 0,
     isAvailable: isAvailable && totalStock > 0,
     stock_quantity: totalStock,

@@ -242,6 +242,8 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
           const wrapper = isAnimated ? (
             <motion.div
               key={section.id || `section-wrapper-${i}`}
+              data-section-id={section.id}
+              data-section-type={section.type}
               initial={initial}
               whileInView={whileInView}
               viewport={viewport}
@@ -251,7 +253,11 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
               {sectionElement}
             </motion.div>
           ) : (
-            <div key={section.id || `section-wrapper-${i}`}>
+            <div
+              key={section.id || `section-wrapper-${i}`}
+              data-section-id={section.id}
+              data-section-type={section.type}
+            >
               {dividerElement}
               {sectionElement}
             </div>
