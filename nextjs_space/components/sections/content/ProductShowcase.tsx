@@ -26,6 +26,7 @@ interface FeaturedProduct {
   isAvailable?: boolean;
   currency?: string;
   currencyCode?: string;
+  priceUnit?: string;
 }
 
 const defaultCategories: Category[] = [
@@ -153,7 +154,10 @@ export function ProductShowcase(props: SectionProps) {
           <div className={`grid gap-6 ${gridCols}`}>
             {products.map((product, index) => {
               const img = product.imageUrl || product.image_url;
-              const price = product.retailPrice ?? product.price ?? 0;
+              // Mirror /products page: prefer .price (per-gram) over .retailPrice
+              const price = product.price ?? product.retailPrice ?? 0;
+              // Use the symbol ("R") not the ISO code ("ZAR")
+              const currency = product.currency || 'R';
               const productHref = prefixHref(`/products?id=${product.id}`);
 
               return (
@@ -200,7 +204,7 @@ export function ProductShowcase(props: SectionProps) {
                         style={{ color: 'hsl(var(--tenant-color-primary))' }}
                       >
                         {price > 0
-                          ? new Intl.NumberFormat(undefined, { style: 'currency', currency: product.currencyCode || 'ZAR' }).format(price)
+                          ? `${currency} ${price.toFixed(2)}`
                           : 'Price on request'}
                       </span>
                       <span

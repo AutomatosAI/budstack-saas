@@ -688,14 +688,14 @@ export default function ProductsPage() {
               >
                 Filter by Effect
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20">
                 {allEffects.map((effect) => {
                   const active = selectedEffects.includes(effect);
                   return (
                     <button
                       key={effect}
                       onClick={() => toggleEffect(effect)}
-                      className="px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all duration-150"
+                      className="shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all duration-150"
                       style={{
                         backgroundColor: active
                           ? "hsl(var(--tenant-color-primary))"
@@ -729,14 +729,14 @@ export default function ProductsPage() {
               >
                 Filter by Terpene
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20">
                 {allFlavours.map((flavour) => {
                   const active = selectedFlavours.includes(flavour);
                   return (
                     <button
                       key={flavour}
                       onClick={() => toggleFlavour(flavour)}
-                      className="px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all duration-150"
+                      className="shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all duration-150"
                       style={{
                         backgroundColor: active
                           ? "hsl(var(--tenant-color-primary))"
