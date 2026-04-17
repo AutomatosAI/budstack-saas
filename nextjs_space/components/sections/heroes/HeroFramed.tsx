@@ -70,12 +70,15 @@ export function HeroFramed({
     <section className={`relative ${selectedHeight} flex items-center overflow-hidden`}>
       {/* Background Image */}
       {bgImage ? (
-        <div className="absolute inset-0 z-0">
+        <div
+          className="absolute inset-0 z-0"
+          style={{ backgroundColor: 'hsl(var(--tenant-color-background))' }}
+        >
           <Image
             src={bgImage}
             alt="Hero Background"
             fill
-            className="object-cover"
+            className="object-contain"
             priority
           />
         </div>

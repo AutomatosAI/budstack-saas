@@ -97,18 +97,19 @@ export function Features(props: SectionProps) {
                   animate={inView ? { opacity: 1, y: 0 } : {}}
                   transition={{ duration: 0.5, delay: index * 0.08 }}
                   className="relative rounded-xl overflow-hidden group cursor-pointer"
-                  style={{ minHeight: '220px' }}
+                  style={{
+                    minHeight: '220px',
+                    backgroundColor: 'hsl(var(--tenant-color-primary) / 0.06)',
+                  }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={item.imageUrl!}
                     alt={item.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                   />
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  {/* Content at bottom */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-5">
+                  {/* Bottom text strip — solid dark bar just tall enough for title + desc */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/85 via-black/70 to-transparent pt-10 pb-5 px-5">
                     <div className="flex items-center gap-2 mb-1">
                       <Icon size={18} className="text-white/80" />
                       <h3
