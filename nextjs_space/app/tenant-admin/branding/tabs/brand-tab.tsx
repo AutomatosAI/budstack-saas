@@ -444,6 +444,162 @@ export function BrandTab({
           </div>
         </CardContent>
       </Card>
+
+      {/* === PAGE CONTENT === */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Page Content</CardTitle>
+          <CardDescription>
+            Edit the text shown on your About and Contact pages
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* --- About Page --- */}
+          <div className="space-y-3">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+              About Page
+            </Label>
+
+            <div>
+              <Label htmlFor="aboutHeroTitle" className="text-xs">Hero Title</Label>
+              <Input
+                id="aboutHeroTitle"
+                value={formData.aboutHeroTitle}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, aboutHeroTitle: e.target.value }))
+                }
+                placeholder={`About ${formData.businessName || "Us"}`}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="aboutHeroSubtitle" className="text-xs">Hero Subtitle</Label>
+              <Textarea
+                id="aboutHeroSubtitle"
+                value={formData.aboutHeroSubtitle}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, aboutHeroSubtitle: e.target.value }))
+                }
+                placeholder="Setting new standards in medical cannabis excellence"
+                rows={2}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="aboutMissionTitle" className="text-xs">Mission Title</Label>
+              <Input
+                id="aboutMissionTitle"
+                value={formData.aboutMissionTitle}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, aboutMissionTitle: e.target.value }))
+                }
+                placeholder="Our Mission"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="aboutMissionParagraphs" className="text-xs">
+                Mission Paragraphs
+              </Label>
+              <Textarea
+                id="aboutMissionParagraphs"
+                value={formData.aboutMissionParagraphs}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, aboutMissionParagraphs: e.target.value }))
+                }
+                placeholder="First paragraph of your mission story...&#10;&#10;Second paragraph — separate paragraphs with a blank line."
+                rows={8}
+                className="mt-1"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Separate paragraphs with a blank line.
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t" />
+
+          {/* --- Contact Page --- */}
+          <div className="space-y-3">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+              Contact Page
+            </Label>
+
+            <div>
+              <Label htmlFor="contactTitle" className="text-xs">Page Title</Label>
+              <Input
+                id="contactTitle"
+                value={formData.contactTitle}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, contactTitle: e.target.value }))
+                }
+                placeholder="Get in Touch"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="contactDescription" className="text-xs">Description</Label>
+              <Textarea
+                id="contactDescription"
+                value={formData.contactDescription}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, contactDescription: e.target.value }))
+                }
+                placeholder="Have questions? We are here to help."
+                rows={2}
+                className="mt-1"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label htmlFor="contactEmail" className="text-xs">Email</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  value={formData.contactEmail}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, contactEmail: e.target.value }))
+                  }
+                  placeholder="hello@example.com"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="contactPhone" className="text-xs">Phone</Label>
+                <Input
+                  id="contactPhone"
+                  type="tel"
+                  value={formData.contactPhone}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, contactPhone: e.target.value }))
+                  }
+                  placeholder="+44 20 1234 5678"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="contactAddress" className="text-xs">Address</Label>
+              <Textarea
+                id="contactAddress"
+                value={formData.contactAddress}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, contactAddress: e.target.value }))
+                }
+                placeholder="123 High Street&#10;London&#10;UK"
+                rows={3}
+                className="mt-1"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

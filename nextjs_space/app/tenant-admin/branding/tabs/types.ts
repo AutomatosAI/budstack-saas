@@ -99,9 +99,11 @@ export interface EditorFormData {
   homeHeroOverlayStyle: string;
   homeHeroOverlayOpacity: number;
 
-  // Page Content - About
-  aboutTitle: string;
-  aboutContent: string;
+  // Page Content - About (field names match what AboutContent reads)
+  aboutHeroTitle: string;
+  aboutHeroSubtitle: string;
+  aboutMissionTitle: string;
+  aboutMissionParagraphs: string; // newline-separated; split into array on save
 
   // Page Content - Contact
   contactTitle: string;

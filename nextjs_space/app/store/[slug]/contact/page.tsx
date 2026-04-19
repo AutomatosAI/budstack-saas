@@ -16,7 +16,17 @@ export default async function ContactPage({
   }
 
   const basePath = getTenantBasePath(tenant.subdomain);
-  const pageContent = (tenant as any).pageContent?.support;
+  const fullPageContent = (tenant as any).pageContent || {};
+  const contactInfo = fullPageContent.contact || {};
+  const supportContent = fullPageContent.support || {};
+
+  // Merge contact info into support content so SupportContent's
+  // "Still Need Help?" section picks up editor-saved email/phone.
+  const mergedSupportContent = {
+    ...supportContent,
+    contactEmail: contactInfo.email || supportContent.contactEmail,
+    contactPhone: contactInfo.phone || supportContent.contactPhone,
+  };
 
   return (
     <div
@@ -27,13 +37,51 @@ export default async function ContactPage({
         <SupportContent
           basePath={basePath}
           businessName={tenant.businessName}
-          pageContent={pageContent}
+          pageContent={mergedSupportContent}
         />
 
         {/* Contact Form Section */}
         <section className="py-16 md:py-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
+              {(contactInfo.title || contactInfo.description || contactInfo.address) && (
+                <div className="mb-10 text-center">
+                  {contactInfo.title && (
+                    <h2
+                      className="text-2xl md:text-3xl font-semibold mb-3 tracking-tight"
+                      style={{
+                        color: "hsl(var(--tenant-color-heading))",
+                        fontFamily: "var(--tenant-font-heading, sans-serif)",
+                      }}
+                    >
+                      {contactInfo.title}
+                    </h2>
+                  )}
+                  {contactInfo.description && (
+                    <p
+                      className="max-w-2xl mx-auto text-base"
+                      style={{
+                        color: "hsl(var(--tenant-color-text))",
+                        fontFamily: "var(--tenant-font-base, sans-serif)",
+                      }}
+                    >
+                      {contactInfo.description}
+                    </p>
+                  )}
+                  {contactInfo.address && (
+                    <p
+                      className="mt-4 text-sm whitespace-pre-line"
+                      style={{
+                        color: "hsl(var(--tenant-color-text))",
+                        fontFamily: "var(--tenant-font-base, sans-serif)",
+                        opacity: 0.85,
+                      }}
+                    >
+                      {contactInfo.address}
+                    </p>
+                  )}
+                </div>
+              )}
               <h2
                 className="text-2xl md:text-3xl font-semibold mb-8 text-center tracking-tight"
                 style={{
