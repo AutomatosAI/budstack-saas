@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth-helper';
 import { prisma } from '@/lib/db';
 import { encrypt } from '@/lib/encryption';
 import { AUDIT_ACTIONS, createAuditLog, getClientInfo } from '@/lib/audit-log';
+import { generateDrGreenSignature } from '@/lib/drgreen-api-client';
 
 export async function POST(req: NextRequest) {
   try {
@@ -81,6 +82,18 @@ export async function POST(req: NextRequest) {
 
     // Only update secret key if a new one is provided (non-empty)
     if (drGreenSecretKey && drGreenSecretKey.trim() !== "") {
+      // Validate format by dry-run signing — prevents garbage being stored
+      try {
+        generateDrGreenSignature("validation_test", drGreenSecretKey);
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : "could not parse";
+        return NextResponse.json(
+          {
+            error: `Secret key format invalid: ${reason}. Please re-paste the Dr Green secret key — ensure nothing is truncated and no extra characters snuck in.`,
+          },
+          { status: 400 },
+        );
+      }
       console.log("Encrypting new secret key...");
       try {
         dataToUpdate.drGreenSecretKey = encrypt(drGreenSecretKey);
