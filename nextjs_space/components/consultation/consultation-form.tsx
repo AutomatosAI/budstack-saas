@@ -103,7 +103,7 @@ export function ConsultationForm({
     city: "",
     state: "",
     postalCode: "",
-    country: "",
+    country: "United Kingdom",
     countryCode: "GB",
 
     businessType: "",

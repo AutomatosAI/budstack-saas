@@ -132,6 +132,7 @@ export function ContactDetailsStep({
               onUpdate({
                 phoneCode: value,
                 countryCode: country?.code || "GB",
+                country: country?.label || "",
               });
             }}
           >
