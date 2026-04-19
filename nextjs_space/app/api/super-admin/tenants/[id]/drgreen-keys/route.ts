@@ -29,7 +29,8 @@ function normalizeDrGreenKey(raw: string): string {
 }
 
 function isEncryptedValue(value: string): boolean {
-  return value.split(":").length === 3;
+  const parts = value.split(":");
+  return parts.length === 3 || (parts.length === 4 && parts[0] === "v2");
 }
 
 function inspect(label: string, encrypted: string | null | undefined) {
