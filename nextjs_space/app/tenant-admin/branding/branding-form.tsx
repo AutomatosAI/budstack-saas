@@ -304,13 +304,49 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
     homeHeroOverlayStyle: templateContent.home?.heroOverlayStyle || settingsContent.home?.heroOverlayStyle || "gradient-dark",
     homeHeroOverlayOpacity: templateContent.home?.heroOverlayOpacity ?? settingsContent.home?.heroOverlayOpacity ?? 70,
 
-    aboutTitle: templateContent.about?.title || templateContent.aboutTitle || settingsContent.about?.title || "About Us",
-    aboutContent: templateContent.about?.content || templateContent.aboutContent || templateContent.aboutMission || settingsContent.about?.content || "We are dedicated to providing high-quality medical cannabis products...",
+    // About — read the keys AboutContent actually uses, with legacy fallbacks
+    aboutHeroTitle:
+      templateContent.about?.heroTitle
+      || templateContent.about?.title
+      || templateContent.aboutTitle
+      || settingsContent.about?.heroTitle
+      || settingsContent.about?.title
+      || "",
+    aboutHeroSubtitle:
+      templateContent.about?.heroSubtitle
+      || settingsContent.about?.heroSubtitle
+      || "",
+    aboutMissionTitle:
+      templateContent.about?.missionTitle
+      || settingsContent.about?.missionTitle
+      || "Our Mission",
+    aboutMissionParagraphs: (() => {
+      const paras =
+        templateContent.about?.missionParagraphs
+        || settingsContent.about?.missionParagraphs;
+      if (Array.isArray(paras)) return paras.join("\n\n");
+      // Fallback: legacy free-form content field
+      return (
+        templateContent.about?.content
+        || templateContent.aboutContent
+        || templateContent.aboutMission
+        || settingsContent.about?.content
+        || ""
+      );
+    })(),
 
     contactTitle: templateContent.contact?.title || settingsContent.contact?.title || "Get in Touch",
     contactDescription: templateContent.contact?.description || settingsContent.contact?.description || "Have questions? We are here to help.",
-    contactEmail: templateContent.contact?.email || settingsContent.contact?.email || "",
-    contactPhone: templateContent.contact?.phone || settingsContent.contact?.phone || "",
+    contactEmail:
+      templateContent.contact?.email
+      || templateContent.support?.contactEmail
+      || settingsContent.contact?.email
+      || "",
+    contactPhone:
+      templateContent.contact?.phone
+      || templateContent.support?.contactPhone
+      || settingsContent.contact?.phone
+      || "",
     contactAddress: templateContent.contact?.address || settingsContent.contact?.address || "",
 
     customCSS: activeTemplate?.customCss || settings.customCSS || "",
@@ -387,13 +423,27 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
             heroOverlayStyle: formData.homeHeroOverlayStyle,
             heroOverlayOpacity: formData.homeHeroOverlayOpacity,
           },
-          about: { title: formData.aboutTitle, content: formData.aboutContent },
+          about: {
+            heroTitle: formData.aboutHeroTitle,
+            heroSubtitle: formData.aboutHeroSubtitle,
+            missionTitle: formData.aboutMissionTitle,
+            missionParagraphs: formData.aboutMissionParagraphs
+              .split(/\n{2,}/)
+              .map((p) => p.trim())
+              .filter(Boolean),
+          },
           contact: {
             title: formData.contactTitle,
             description: formData.contactDescription,
             email: formData.contactEmail,
             phone: formData.contactPhone,
             address: formData.contactAddress,
+          },
+          // Mirror into support.* so the /contact route (which reads pageContent.support)
+          // renders the stored email/phone without any further template change.
+          support: {
+            contactEmail: formData.contactEmail,
+            contactPhone: formData.contactPhone,
           },
         },
         homeHeroTitle: undefined,
@@ -403,8 +453,10 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         homeHeroHeight: undefined,
         homeHeroOverlayStyle: undefined,
         homeHeroOverlayOpacity: undefined,
-        aboutTitle: undefined,
-        aboutContent: undefined,
+        aboutHeroTitle: undefined,
+        aboutHeroSubtitle: undefined,
+        aboutMissionTitle: undefined,
+        aboutMissionParagraphs: undefined,
         contactTitle: undefined,
         contactDescription: undefined,
         contactEmail: undefined,
@@ -490,13 +542,26 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
       heroOverlayStyle: formData.homeHeroOverlayStyle,
       heroOverlayOpacity: formData.homeHeroOverlayOpacity,
     },
-    about: { title: formData.aboutTitle, content: formData.aboutContent },
+    about: {
+      heroTitle: formData.aboutHeroTitle,
+      heroSubtitle: formData.aboutHeroSubtitle,
+      missionTitle: formData.aboutMissionTitle,
+      missionParagraphs: formData.aboutMissionParagraphs
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean),
+    },
     contact: {
       title: formData.contactTitle,
       description: formData.contactDescription,
       email: formData.contactEmail,
       phone: formData.contactPhone,
       address: formData.contactAddress,
+    },
+    support: {
+      ...((activeTemplate?.pageContent as any)?.support || {}),
+      contactEmail: formData.contactEmail,
+      contactPhone: formData.contactPhone,
     },
   };
 
