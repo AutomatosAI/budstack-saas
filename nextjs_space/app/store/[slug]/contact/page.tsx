@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant";
 import { getTenantBasePath } from "@/lib/tenant-utils";
 import SupportContent from "../support/support-content";
 import ContactClient from "./contact-client";
@@ -16,7 +16,9 @@ export default async function ContactPage({
   }
 
   const basePath = getTenantBasePath(tenant.subdomain);
-  const fullPageContent = (tenant as any).pageContent || {};
+  const tenantWithTemplate = await getTenantWithTemplate(tenant.id);
+  const fullPageContent =
+    (tenantWithTemplate?.activeTenantTemplate?.pageContent as any) || {};
   const contactInfo = fullPageContent.contact || {};
   const supportContent = fullPageContent.support || {};
 
