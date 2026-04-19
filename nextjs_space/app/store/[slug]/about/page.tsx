@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant";
 import { getTenantBasePath } from "@/lib/tenant-utils";
 import AboutContent from "./about-content";
 
@@ -15,7 +15,9 @@ export default async function AboutPage({
   }
 
   const basePath = getTenantBasePath(tenant.subdomain);
-  const pageContent = (tenant as any).pageContent?.about;
+  const tenantWithTemplate = await getTenantWithTemplate(tenant.id);
+  const pageContent =
+    (tenantWithTemplate?.activeTenantTemplate?.pageContent as any)?.about;
 
   return (
     <div
