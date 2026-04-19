@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchProducts } from "@/lib/doctor-green-api";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 
 /**
@@ -36,6 +36,12 @@ export async function GET(
     const country = tenant.countryCode || "ZA";
     const doctorGreenConfig = await getTenantDrGreenConfig(tenant.id);
 
+    // pageContent lives on tenant_templates, not tenants — expose it so
+    // the client products page picks up editor-saved hero title/subtitle.
+    const tenantWithTemplate = await getTenantWithTemplate(tenant.id);
+    const pageContent =
+      (tenantWithTemplate?.activeTenantTemplate?.pageContent as any) || {};
+
     // Single product: fetch all products once, find the one we need + similar
     if (productId) {
       const allProducts = await fetchProducts(country, doctorGreenConfig);
@@ -57,7 +63,11 @@ export async function GET(
         data: product,
         similarProducts,
         country,
-        tenant: { businessName: tenant.businessName, subdomain: tenant.subdomain },
+        tenant: {
+          businessName: tenant.businessName,
+          subdomain: tenant.subdomain,
+          pageContent,
+        },
         source: "api",
       });
     }
@@ -72,6 +82,7 @@ export async function GET(
       tenant: {
         businessName: tenant.businessName,
         subdomain: tenant.subdomain,
+        pageContent,
       },
       source: "api",
     });

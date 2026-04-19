@@ -1,6 +1,6 @@
 import { ConsultationForm } from "@/components/consultation/consultation-form";
 import { notFound } from "next/navigation";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant";
 import { getTenantBasePath } from "@/lib/tenant-utils";
 import ConsultationContent from "./consultation-content";
 
@@ -16,6 +16,9 @@ export default async function ConsultationPage({
   }
 
   const basePath = getTenantBasePath(tenant.subdomain);
+  const tenantWithTemplate = await getTenantWithTemplate(tenant.id);
+  const consultationContent =
+    (tenantWithTemplate?.activeTenantTemplate?.pageContent as any)?.consultation;
 
   return (
     <div
@@ -23,7 +26,7 @@ export default async function ConsultationPage({
       style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
       <main>
-        <ConsultationContent basePath={basePath} pageContent={(tenant as any).pageContent?.consultation} />
+        <ConsultationContent basePath={basePath} pageContent={consultationContent} />
 
         {/* Consultation Form */}
         <section className="py-16 md:py-24">

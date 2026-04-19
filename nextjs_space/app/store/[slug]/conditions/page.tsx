@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
 import ConditionsClient from "./conditions-client";
 
@@ -58,5 +58,12 @@ export default async function ConditionsPage({
     (a: any, b: any) => a.name.localeCompare(b.name),
   );
 
-  return <ConditionsClient tenant={tenant} conditions={uniqueConditions} />;
+  // pageContent lives on tenant_templates, not tenants — merge it in so the
+  // client component's (tenant as any).pageContent?.conditions reads editor data.
+  const tenantWithTemplate = await getTenantWithTemplate(tenant.id);
+  const pageContent =
+    (tenantWithTemplate?.activeTenantTemplate?.pageContent as any) || {};
+  const tenantWithPageContent = { ...tenant, pageContent } as any;
+
+  return <ConditionsClient tenant={tenantWithPageContent} conditions={uniqueConditions} />;
 }
