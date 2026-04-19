@@ -5,6 +5,20 @@ import { encrypt } from '@/lib/encryption';
 import { AUDIT_ACTIONS, createAuditLog, getClientInfo } from '@/lib/audit-log';
 import { generateDrGreenSignature } from '@/lib/drgreen-api-client';
 
+/**
+ * Normalize Dr Green keys to the stored format the signer expects:
+ * base64(PEM text). If the user pasted raw PEM (starts with -----BEGIN),
+ * base64-encode it. If they pasted the base64 blob Dr Green hands out
+ * (starts with LS0tLS...), leave it alone.
+ */
+function normalizeDrGreenKey(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("-----BEGIN")) {
+    return Buffer.from(trimmed, "utf-8").toString("base64");
+  }
+  return trimmed;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -82,9 +96,10 @@ export async function POST(req: NextRequest) {
 
     // Only update secret key if a new one is provided (non-empty)
     if (drGreenSecretKey && drGreenSecretKey.trim() !== "") {
+      const normalizedSecret = normalizeDrGreenKey(drGreenSecretKey);
       // Validate format by dry-run signing — prevents garbage being stored
       try {
-        generateDrGreenSignature("validation_test", drGreenSecretKey);
+        generateDrGreenSignature("validation_test", normalizedSecret);
       } catch (err) {
         const reason = err instanceof Error ? err.message : "could not parse";
         return NextResponse.json(
@@ -96,7 +111,7 @@ export async function POST(req: NextRequest) {
       }
       console.log("Encrypting new secret key...");
       try {
-        dataToUpdate.drGreenSecretKey = encrypt(drGreenSecretKey);
+        dataToUpdate.drGreenSecretKey = encrypt(normalizedSecret);
       } catch (e) {
         console.error("Encryption failed:", e);
         throw e;
@@ -104,8 +119,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (drGreenApiKey && drGreenApiKey.trim() !== '') {
+      const normalizedApiKey = normalizeDrGreenKey(drGreenApiKey);
       try {
-        dataToUpdate.drGreenApiKey = encrypt(drGreenApiKey);
+        dataToUpdate.drGreenApiKey = encrypt(normalizedApiKey);
       } catch (e) {
         console.error('Encryption failed:', e);
         throw e;

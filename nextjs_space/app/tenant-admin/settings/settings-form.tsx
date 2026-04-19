@@ -80,12 +80,16 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
         body: JSON.stringify(formData),
       });
 
-      if (!res.ok) throw new Error("Failed to update settings");
+      const payload = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(payload?.error || "Failed to update settings");
+      }
 
       toast.success("Settings updated successfully");
       router.refresh();
-    } catch (error) {
-      toast.error("Failed to update settings");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update settings");
       console.error(error);
     } finally {
       setIsLoading(false);
