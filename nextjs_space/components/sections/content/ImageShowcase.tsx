@@ -134,10 +134,10 @@ export function ImageShowcase(props: SectionProps) {
                             initial={{ opacity: 0, y: 20 }}
                             animate={inView ? { opacity: 1, y: 0 } : {}}
                             transition={{ duration: 0.6, delay: 0.2 }}
-                            className={`text-2xl sm:text-4xl md:text-5xl font-semibold mb-4 sm:mb-6 tracking-tight leading-tight ${isLightTheme ? '' : 'text-white'}`}
+                            className="text-2xl sm:text-4xl md:text-5xl font-semibold mb-4 sm:mb-6 tracking-tight leading-tight"
                             style={{
                                 fontFamily: 'var(--tenant-font-heading, sans-serif)',
-                                ...(isLightTheme ? { color: 'hsl(var(--tenant-color-heading))' } : {}),
+                                color: `hsl(var(--tenant-color-heading, ${isLightTheme ? '0 0% 10%' : '0 0% 100%'}))`,
                             }}
                         >
                             {heading}
@@ -147,8 +147,11 @@ export function ImageShowcase(props: SectionProps) {
                             initial={{ opacity: 0, y: 20 }}
                             animate={inView ? { opacity: 1, y: 0 } : {}}
                             transition={{ duration: 0.6, delay: 0.3 }}
-                            className={`text-sm sm:text-base md:text-lg leading-relaxed mb-6 sm:mb-8 ${isLightTheme ? '' : 'text-white/75'}`}
-                            style={isLightTheme ? { color: 'hsl(var(--tenant-color-text))' } : {}}
+                            className="text-sm sm:text-base md:text-lg leading-relaxed mb-6 sm:mb-8"
+                            style={{
+                                color: `hsl(var(--tenant-color-text, ${isLightTheme ? '0 0% 25%' : '0 0% 92%'}))`,
+                                opacity: isLightTheme ? 1 : 0.85,
+                            }}
                         >
                             {content}
                         </motion.p>

@@ -62,6 +62,14 @@ export default async function TenantDetailPage({
             <p className="text-slate-600 mt-2">
               Manage tenant details and configuration
             </p>
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                Tenant ID
+              </span>
+              <code className="select-all rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-800 border border-slate-200">
+                {tenant.id}
+              </code>
+            </div>
           </div>
           {tenant.isActive ? (
             <Badge className="bg-emerald-500 hover:bg-emerald-600 text-lg px-4 py-1.5">

@@ -130,6 +130,7 @@ export const COUNTRY_CODES = [
   { code: "CA", label: "Canada", phoneCode: "+1" },
   { code: "AU", label: "Australia", phoneCode: "+61" },
   { code: "NZ", label: "New Zealand", phoneCode: "+64" },
+  { code: "ZA", label: "South Africa", phoneCode: "+27" },
 ] as const;
 
 // Cannabis frequency options
