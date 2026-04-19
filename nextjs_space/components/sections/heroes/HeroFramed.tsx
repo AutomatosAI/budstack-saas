@@ -78,7 +78,7 @@ export function HeroFramed({
             src={bgImage}
             alt="Hero Background"
             fill
-            className="object-contain"
+            className="object-cover md:object-contain object-center"
             priority
           />
         </div>
