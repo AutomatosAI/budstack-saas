@@ -688,7 +688,7 @@ export default function ProductsPage() {
               >
                 Filter by Effect
               </div>
-              <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20">
+              <div className="flex flex-wrap gap-2 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto sm:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {allEffects.map((effect) => {
                   const active = selectedEffects.includes(effect);
                   return (
@@ -710,47 +710,6 @@ export default function ProductsPage() {
                       }}
                     >
                       {effect}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Terpene / Flavour filter */}
-          {allFlavours.length > 0 && (
-            <div>
-              <div
-                className="text-[11px] font-semibold uppercase tracking-widest mb-3"
-                style={{
-                  color: "hsl(var(--tenant-color-text) / 0.5)",
-                  fontFamily: "var(--tenant-font-base, sans-serif)",
-                }}
-              >
-                Filter by Terpene
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20">
-                {allFlavours.map((flavour) => {
-                  const active = selectedFlavours.includes(flavour);
-                  return (
-                    <button
-                      key={flavour}
-                      onClick={() => toggleFlavour(flavour)}
-                      className="shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all duration-150"
-                      style={{
-                        backgroundColor: active
-                          ? "hsl(var(--tenant-color-primary))"
-                          : "transparent",
-                        color: active
-                          ? "white"
-                          : "hsl(var(--tenant-color-text))",
-                        borderColor: active
-                          ? "hsl(var(--tenant-color-primary))"
-                          : "hsl(var(--tenant-color-primary) / 0.2)",
-                        fontFamily: "var(--tenant-font-base, sans-serif)",
-                      }}
-                    >
-                      {flavour}
                     </button>
                   );
                 })}
