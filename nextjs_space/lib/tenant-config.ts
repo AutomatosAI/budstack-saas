@@ -31,7 +31,13 @@ export async function getTenantDrGreenConfig(
 
   if (tenant.drGreenApiKey && tenant.drGreenSecretKey) {
     // Tenant has their own keys — use them
-    const isEncryptedValue = (value: string) => value.split(":").length === 3;
+    // Encrypted values are either legacy (iv:authTag:ciphertext, 3 parts)
+    // or v2 (v2:iv:authTag:ciphertext, 4 parts with v2 prefix). Both
+    // must be decrypted; a raw v2 string treated as plaintext breaks signing.
+    const isEncryptedValue = (value: string) => {
+      const parts = value.split(":");
+      return parts.length === 3 || (parts.length === 4 && parts[0] === "v2");
+    };
     const decryptedApiKey = isEncryptedValue(tenant.drGreenApiKey)
       ? decrypt(tenant.drGreenApiKey)
       : tenant.drGreenApiKey;
