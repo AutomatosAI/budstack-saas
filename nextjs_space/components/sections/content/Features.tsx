@@ -98,7 +98,7 @@ export function Features(props: SectionProps) {
                   transition={{ duration: 0.5, delay: index * 0.08 }}
                   className="relative rounded-xl overflow-hidden group cursor-pointer"
                   style={{
-                    minHeight: '220px',
+                    minHeight: '260px',
                     backgroundColor: 'hsl(var(--tenant-color-primary) / 0.06)',
                   }}
                 >
@@ -108,19 +108,25 @@ export function Features(props: SectionProps) {
                     alt={item.title}
                     className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                   />
-                  {/* Bottom text strip — solid dark bar just tall enough for title + desc */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/85 via-black/70 to-transparent pt-10 pb-5 px-5">
+                  {/* Bottom text strip — slim bar just tall enough for title + desc */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/55 to-transparent pt-5 pb-3 px-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <Icon size={18} className="text-white/80" />
+                      <Icon size={16} style={{ color: 'hsl(var(--tenant-color-heading))', opacity: 0.85 }} />
                       <h3
-                        className="text-lg font-bold text-white"
-                        style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
+                        className="text-base font-bold"
+                        style={{
+                          fontFamily: 'var(--tenant-font-heading, sans-serif)',
+                          color: 'hsl(var(--tenant-color-heading))',
+                        }}
                       >
                         {item.title}
                       </h3>
                     </div>
                     {item.description && (
-                      <p className="text-sm text-white/80 leading-relaxed line-clamp-2">
+                      <p
+                        className="text-xs leading-relaxed line-clamp-2"
+                        style={{ color: 'hsl(var(--tenant-color-text))', opacity: 0.9 }}
+                      >
                         {item.description}
                       </p>
                     )}
