@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant";
 import { getTenantBasePath } from "@/lib/tenant-utils";
 import SupportContent from "./support-content";
 
@@ -15,7 +15,17 @@ export default async function SupportPage({
   }
 
   const basePath = getTenantBasePath(tenant.subdomain);
-  const pageContent = (tenant as any).pageContent?.support;
+  const tenantWithTemplate = await getTenantWithTemplate(tenant.id);
+  const fullPageContent =
+    (tenantWithTemplate?.activeTenantTemplate?.pageContent as any) || {};
+  const contactInfo = fullPageContent.contact || {};
+  const supportContent = fullPageContent.support || {};
+  // Merge contact info so /support "Still Need Help?" picks up editor-saved email/phone
+  const pageContent = {
+    ...supportContent,
+    contactEmail: contactInfo.email || supportContent.contactEmail,
+    contactPhone: contactInfo.phone || supportContent.contactPhone,
+  };
 
   return (
     <div
