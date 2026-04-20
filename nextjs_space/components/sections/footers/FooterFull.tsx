@@ -122,9 +122,16 @@ export function FooterFull(props: SectionProps) {
           <p className="text-sm opacity-50" suppressHydrationWarning>
             &copy; {year} {businessName}. All rights reserved.
           </p>
-          <p className="text-xs opacity-30">
-            Powered by BudStacks
-          </p>
+          <div className="flex items-center gap-2 text-xs opacity-50">
+            <span>Powered by BudStacks · Official partner to</span>
+            <Image
+              src="/drgreen-logo.png"
+              alt="Dr Green"
+              width={64}
+              height={20}
+              className="h-4 w-auto"
+            />
+          </div>
         </div>
       </div>
     </footer>
