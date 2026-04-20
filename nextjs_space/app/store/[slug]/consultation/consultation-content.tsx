@@ -369,9 +369,9 @@ export default function ConsultationContent({
                     className="text-center"
                     variants={fadeInUp}
                   >
-                    <div className="relative mb-5">
+                    <div className="relative mb-5 w-16 h-16 mx-auto">
                       <div
-                        className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto"
+                        className="w-16 h-16 rounded-2xl flex items-center justify-center"
                         style={{
                           backgroundColor:
                             "hsl(var(--tenant-color-primary) / 0.1)",
@@ -385,7 +385,7 @@ export default function ConsultationContent({
                         />
                       </div>
                       <span
-                        className="absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                        className="absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md"
                         style={{
                           backgroundColor:
                             "hsl(var(--tenant-color-primary))",
