@@ -375,7 +375,7 @@ export async function fetchClient(
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenClient> {
   const PAGE_SIZE = 200;
-  const MAX_PAGES = 3;
+  const MAX_PAGES = 20;
 
   for (let page = 1; page <= MAX_PAGES; page++) {
     console.log(`[fetchClient] Listing clients page ${page}/${MAX_PAGES} to find ${clientId}`);
@@ -446,7 +446,7 @@ export async function fetchClientByEmail(
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenClient | null> {
   const PAGE_SIZE = 200;
-  const MAX_PAGES = 5;
+  const MAX_PAGES = 20;
   const normalizedEmail = email.toLowerCase().trim();
 
   for (let page = 1; page <= MAX_PAGES; page++) {
