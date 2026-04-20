@@ -119,6 +119,29 @@ export function FooterBrand(props: SectionProps) {
             )}
 
             <SocialIcons links={socialLinks} className="mt-4" />
+
+            {/* Official Partner — Dr Green */}
+            <div className="mt-8">
+              <p className="text-xs uppercase tracking-[0.2em] opacity-60 mb-3">
+                Official Partner
+              </p>
+              <div className="flex items-center gap-3">
+                <Image
+                  src="/drgreen-skull.png"
+                  alt="Dr Green"
+                  width={56}
+                  height={56}
+                  className="h-12 w-auto"
+                />
+                <Image
+                  src="/drgreen-logo.png"
+                  alt="Dr Green"
+                  width={160}
+                  height={48}
+                  className="h-10 w-auto"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Link Columns */}
@@ -159,16 +182,7 @@ export function FooterBrand(props: SectionProps) {
           <p className="text-sm opacity-50" suppressHydrationWarning>
             &copy; {year} {businessName}. All rights reserved.
           </p>
-          <div className="flex items-center gap-2 text-xs opacity-50">
-            <span>Powered by BudStacks · Official partner to</span>
-            <Image
-              src="/drgreen-logo.png"
-              alt="Dr Green"
-              width={64}
-              height={20}
-              className="h-4 w-auto"
-            />
-          </div>
+          <p className="text-xs opacity-40">Powered by BudStacks</p>
         </div>
       </div>
     </footer>
