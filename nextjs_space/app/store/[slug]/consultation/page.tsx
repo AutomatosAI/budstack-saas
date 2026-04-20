@@ -39,7 +39,7 @@ export default async function ConsultationPage({
                   fontFamily: "var(--tenant-font-heading, sans-serif)",
                 }}
               >
-                Start Your Consultation
+                Register here
               </h2>
               <ConsultationForm
                 tenantSlug={tenant.subdomain}

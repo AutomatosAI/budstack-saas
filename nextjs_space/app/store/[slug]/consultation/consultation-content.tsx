@@ -13,6 +13,8 @@ import {
   UserCheck,
   MessageSquare,
   FileCheck,
+  ShoppingBag,
+  Smile,
   AlertTriangle,
 } from "lucide-react";
 import {
@@ -104,27 +106,27 @@ const specialties = [
 const steps = [
   {
     icon: ClipboardList,
-    title: "Complete Assessment",
+    title: "Fill Out Details",
     description:
-      "Fill out our comprehensive medical questionnaire about your condition and symptoms.",
+      "Complete the registration form with your personal and medical information.",
   },
   {
-    icon: UserCheck,
-    title: "Eligibility Review",
+    icon: ShieldCheck,
+    title: "AML Check",
     description:
-      "Our medical team reviews your submission to determine eligibility for treatment.",
+      "We verify your identity and run the required anti-money-laundering checks.",
   },
   {
-    icon: MessageSquare,
-    title: "Doctor Consultation",
+    icon: ShoppingBag,
+    title: "Shop",
     description:
-      "Connect with a licensed prescriber for a private medical consultation.",
+      "Once verified, browse our catalogue and order the products you need.",
   },
   {
-    icon: FileCheck,
-    title: "Receive Prescription",
+    icon: Smile,
+    title: "Enjoy",
     description:
-      "If approved, receive your prescription and begin your treatment journey.",
+      "Receive your delivery and enjoy your personalised treatment.",
   },
 ];
 
@@ -357,7 +359,7 @@ export default function ConsultationContent({
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {contentSteps.map((step: any, index: number) => {
-                const stepIconMap: Record<string, any> = { ClipboardList, UserCheck, MessageSquare, FileCheck };
+                const stepIconMap: Record<string, any> = { ClipboardList, UserCheck, MessageSquare, FileCheck, ShieldCheck, ShoppingBag, Smile };
                 const StepIcon = typeof step.icon === "string"
                   ? stepIconMap[step.icon] || ClipboardList
                   : step.icon;
