@@ -94,9 +94,10 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             const client = await fetchClient(dbUser.drGreenClientId, config);
 
             // Dr Green API returns: isActive (bool), isKYCVerified (bool), adminApproval (string)
-            // User can shop if active AND (KYC verified OR admin approved)
-            const isVerified = client.isActive === true &&
-                (client.isKYCVerified === true || client.adminApproval === 'VERIFIED');
+            // Dashboard shows "Verified" as soon as Dr Green has approved the client.
+            // isActive alone is not required — Dr Green may approve KYC before flipping active.
+            const isVerified =
+                client.isKYCVerified === true || client.adminApproval === 'VERIFIED';
 
             console.log(`[KYC] ${clerkUser.email}: isActive=${client.isActive} isKYCVerified=${client.isKYCVerified} adminApproval=${client.adminApproval} → verified=${isVerified}`);
 
@@ -116,8 +117,10 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                 console.log(`✅ KYC verified for ${clerkUser.email}, cached locally`);
             }
 
-            // Map Dr Green fields to our status format
-            const status = client.isActive ? 'ACTIVE' : 'INACTIVE';
+            // Map Dr Green fields to our status format.
+            // ACTIVE if approved (even if Dr Green hasn't flipped isActive yet),
+            // otherwise reflect the client's active state.
+            const status = isVerified ? 'ACTIVE' : (client.isActive ? 'ACTIVE' : 'INACTIVE');
 
             return {
                 isLoggedIn: true,
