@@ -180,6 +180,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         <div className="container mx-auto px-4 max-w-lg">
           <Card
             style={{
+              backgroundColor: "hsl(var(--tenant-color-background))",
               borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
             }}
           >
@@ -397,6 +398,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               <Card
                 className="sticky top-24"
                 style={{
+                  backgroundColor: "hsl(var(--tenant-color-background))",
                   borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
                 }}
               >
@@ -486,6 +488,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               {/* Shipping Address */}
               <Card
                 style={{
+                  backgroundColor: "hsl(var(--tenant-color-background))",
                   borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
                 }}
               >
@@ -617,7 +620,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <Label
                             htmlFor="city"
@@ -660,7 +663,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <Label
                             htmlFor="postalCode"
@@ -710,6 +713,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               {/* Place Order */}
               <Card
                 style={{
+                  backgroundColor: "hsl(var(--tenant-color-background))",
                   borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
                 }}
               >
