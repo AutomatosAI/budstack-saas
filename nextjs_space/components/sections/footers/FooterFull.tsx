@@ -91,20 +91,20 @@ export function FooterFull(props: SectionProps) {
               <p className="text-xs uppercase tracking-[0.2em] opacity-60 mb-3">
                 Official Partner
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col items-start gap-2">
                 <Image
                   src="/drgreen-skull.png"
                   alt="Dr Green"
-                  width={56}
-                  height={56}
-                  className="h-12 w-auto"
+                  width={96}
+                  height={96}
+                  className="h-20 w-auto"
                 />
                 <Image
                   src="/drgreen-logo.png"
                   alt="Dr Green"
-                  width={160}
-                  height={48}
-                  className="h-10 w-auto"
+                  width={200}
+                  height={64}
+                  className="h-14 w-auto"
                 />
               </div>
             </div>
