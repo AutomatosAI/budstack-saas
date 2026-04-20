@@ -128,86 +128,100 @@ export default function CartPage() {
                 >
                   <Card
                     style={{
+                      backgroundColor: "hsl(var(--tenant-color-background))",
                       borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
                     }}
                   >
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        {/* Item info */}
-                        <div className="flex-1 min-w-0">
-                          <h3
-                            className="font-semibold truncate"
-                            style={{
-                              color: "hsl(var(--tenant-color-heading))",
-                              fontFamily: "var(--tenant-font-heading, sans-serif)",
-                            }}
-                          >
-                            {item.name}
-                          </h3>
-                          <p
-                            className="text-sm mt-0.5"
-                            style={{
-                              color: "hsl(var(--tenant-color-text))",
-                              fontFamily: "var(--tenant-font-base, sans-serif)",
-                            }}
-                          >
-                            {currency}
-                            {item.price.toFixed(2)} per gram
-                          </p>
-                        </div>
-
-                        {/* Weight selector (2g, 5g, 10g) */}
-                        <div
-                          className="flex items-center gap-1 rounded-lg p-1"
-                          style={{
-                            backgroundColor: "hsl(var(--tenant-color-primary) / 0.06)",
-                          }}
-                        >
-                          {WEIGHT_OPTIONS.map((w) => (
-                            <Button
-                              key={w}
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 px-2.5 text-xs font-bold rounded-md"
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                        {/* Item info + remove (mobile row 1) */}
+                        <div className="flex items-start justify-between gap-3 sm:flex-1 sm:min-w-0">
+                          <div className="flex-1 min-w-0">
+                            <h3
+                              className="font-semibold truncate"
                               style={{
-                                backgroundColor:
-                                  item.quantity === w
-                                    ? "hsl(var(--tenant-color-primary))"
-                                    : "transparent",
-                                color:
-                                  item.quantity === w
-                                    ? "white"
-                                    : "hsl(var(--tenant-color-text))",
+                                color: "hsl(var(--tenant-color-heading))",
+                                fontFamily: "var(--tenant-font-heading, sans-serif)",
                               }}
-                              onClick={() =>
-                                updateQuantity(item.productId, w)
-                              }
                             >
-                              {w}g
-                            </Button>
-                          ))}
-                        </div>
-
-                        {/* Price + remove */}
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="font-bold whitespace-nowrap"
-                            style={{
-                              color: "hsl(var(--tenant-color-heading))",
-                              fontFamily: "var(--tenant-font-heading, sans-serif)",
-                            }}
-                          >
-                            {currency}
-                            {(item.price * item.quantity).toFixed(2)}
-                          </span>
+                              {item.name}
+                            </h3>
+                            <p
+                              className="text-sm mt-0.5"
+                              style={{
+                                color: "hsl(var(--tenant-color-text))",
+                                fontFamily: "var(--tenant-font-base, sans-serif)",
+                              }}
+                            >
+                              {currency}
+                              {item.price.toFixed(2)} per gram
+                            </p>
+                          </div>
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-50"
+                            className="h-8 w-8 flex-shrink-0 text-red-400 hover:text-red-500 hover:bg-red-50 sm:hidden"
                             onClick={() => removeItem(item.productId)}
+                            aria-label="Remove item"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
+                        </div>
+
+                        {/* Weight selector + price row (mobile row 2) */}
+                        <div className="flex items-center justify-between gap-3 sm:justify-end">
+                          <div
+                            className="flex items-center gap-1 rounded-lg p-1"
+                            style={{
+                              backgroundColor: "hsl(var(--tenant-color-primary) / 0.06)",
+                            }}
+                          >
+                            {WEIGHT_OPTIONS.map((w) => (
+                              <Button
+                                key={w}
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2.5 text-xs font-bold rounded-md"
+                                style={{
+                                  backgroundColor:
+                                    item.quantity === w
+                                      ? "hsl(var(--tenant-color-primary))"
+                                      : "transparent",
+                                  color:
+                                    item.quantity === w
+                                      ? "white"
+                                      : "hsl(var(--tenant-color-text))",
+                                }}
+                                onClick={() =>
+                                  updateQuantity(item.productId, w)
+                                }
+                              >
+                                {w}g
+                              </Button>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="font-bold whitespace-nowrap"
+                              style={{
+                                color: "hsl(var(--tenant-color-heading))",
+                                fontFamily: "var(--tenant-font-heading, sans-serif)",
+                              }}
+                            >
+                              {currency}
+                              {(item.price * item.quantity).toFixed(2)}
+                            </span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="hidden sm:inline-flex h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-50"
+                              onClick={() => removeItem(item.productId)}
+                              aria-label="Remove item"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -222,6 +236,7 @@ export default function CartPage() {
             <Card
               className="sticky top-24"
               style={{
+                backgroundColor: "hsl(var(--tenant-color-background))",
                 borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
               }}
             >
@@ -279,7 +294,7 @@ export default function CartPage() {
                     Shipping
                   </span>
                   <span
-                    className="text-sm font-medium"
+                    className="text-sm font-medium whitespace-nowrap"
                     style={{
                       color: "hsl(var(--tenant-color-primary))",
                       fontFamily: "var(--tenant-font-base, sans-serif)",
