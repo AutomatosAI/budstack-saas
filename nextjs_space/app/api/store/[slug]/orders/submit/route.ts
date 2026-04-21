@@ -5,6 +5,7 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { submitOrder } from "@/lib/drgreen-orders";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
+import { checkUserKycStatus } from "@/app/actions/kyc-check";
 
 export async function POST(
   request: NextRequest,
@@ -79,139 +80,21 @@ export async function POST(
       hasSecretKey: !!drGreenConfig.secretKey,
     });
 
-    // Check local verification (manual admin override)
-    const localQuestionnaire = await prisma.consultation_questionnaires.findFirst({
-      where: {
-        AND: [
-          { tenantId: tenant.id },
-          { email: { equals: dbUser.email, mode: 'insensitive' } },
-          { isKycVerified: true }
-        ]
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    // KYC verification — reuse the exact same function the dashboard uses.
+    // If the dashboard shows this user as Verified, this call returns ACTIVE
+    // from the local cache without hitting Dr Green. No duplicated logic, no
+    // second Dr Green scan at checkout.
+    const kyc = await checkUserKycStatus();
+    log('KYC_STATUS', { status: kyc.status, verified: kyc.kycVerified });
 
-    log('LOCAL_KYC', {
-      found: !!localQuestionnaire,
-      questionnaireId: localQuestionnaire?.id || 'NONE',
-      isKycVerified: localQuestionnaire?.isKycVerified || false,
-    });
-
-    // KYC verification step
-    if (!localQuestionnaire) {
-      log('KYC_PATH: No local override, checking Dr Green API');
-
-      if (!dbUser.drGreenClientId) {
-        log('FAIL: No drGreenClientId');
-        return NextResponse.json(
-          { error: "Account verification incomplete (Missing ID)." },
-          { status: 403 },
-        );
-      }
-
-      const { fetchClient, fetchClientByEmail } = await import("@/lib/doctor-green-api");
-
-      let client: any = null;
-      let lookupSource = 'id';
-
-      try {
-        log('FETCHING_CLIENT', { clientId: dbUser.drGreenClientId });
-        client = await fetchClient(dbUser.drGreenClientId, drGreenConfig);
-      } catch (idLookupErr) {
-        const msg = idLookupErr instanceof Error ? idLookupErr.message : String(idLookupErr);
-        log('CLIENT_ID_LOOKUP_FAILED — trying email fallback', { message: msg });
-
-        if (dbUser.email) {
-          try {
-            const byEmail = await fetchClientByEmail(dbUser.email, drGreenConfig);
-            if (byEmail) {
-              client = byEmail;
-              lookupSource = 'email';
-              log('CLIENT_FOUND_BY_EMAIL', {
-                storedClientId: dbUser.drGreenClientId,
-                drGreenClientId: byEmail.id,
-                mismatch: dbUser.drGreenClientId !== byEmail.id,
-              });
-
-              // Backfill the correct clientId so next checkout skips the fallback
-              if (dbUser.drGreenClientId !== byEmail.id) {
-                try {
-                  await prisma.users.update({
-                    where: { id: dbUser.id },
-                    data: { drGreenClientId: byEmail.id },
-                  });
-                  log('CLIENT_ID_BACKFILLED', { newClientId: byEmail.id });
-                } catch (updateErr) {
-                  log('CLIENT_ID_BACKFILL_FAILED', {
-                    message: updateErr instanceof Error ? updateErr.message : String(updateErr),
-                  });
-                }
-              }
-            }
-          } catch (emailLookupErr) {
-            log('CLIENT_EMAIL_LOOKUP_FAILED', {
-              message: emailLookupErr instanceof Error ? emailLookupErr.message : String(emailLookupErr),
-            });
-          }
-        }
-
-        if (!client) {
-          log('KYC_API_ERROR', { message: msg, emailFallbackTried: !!dbUser.email });
-          return NextResponse.json(
-            { error: "Could not verify account status. Please try again." },
-            { status: 500 },
-          );
-        }
-      }
-
-      log('CLIENT_RESPONSE', {
-        source: lookupSource,
-        rawKeys: Object.keys(client),
-        isActive: client.isActive,
-        isKYCVerified: client.isKYCVerified,
-        adminApproval: client.adminApproval,
-        id: client.id,
-        email: client.email,
-      });
-
-      const isVerified = client.isActive === true &&
-        (client.isKYCVerified === true || client.adminApproval === 'VERIFIED');
-      if (!isVerified) {
-        log('FAIL: Client not verified', { isActive: client.isActive, isKYCVerified: client.isKYCVerified, adminApproval: client.adminApproval });
-        return NextResponse.json(
-          { error: "Medical verification required. Please complete your profile verification." },
-          { status: 403 },
-        );
-      }
-      log('KYC_PASSED via Dr Green API', { source: lookupSource });
-
-      // Cache Dr Green verification locally so the next order skips the
-      // paginated client-list scan (/dapp/clients/{id} returns 401 upstream,
-      // so we have to list + filter — that fails past ~4k clients).
-      // Writing to consultation_questionnaires makes the local-override
-      // branch above pick up on subsequent orders.
-      try {
-        const updated = await prisma.consultation_questionnaires.updateMany({
-          where: {
-            tenantId: tenant.id,
-            email: { equals: dbUser.email, mode: 'insensitive' },
-          },
-          data: {
-            isKycVerified: true,
-            adminApproval: 'VERIFIED',
-            drGreenClientId: client.id,
-            updatedAt: new Date(),
-          },
-        });
-        log('LOCAL_KYC_CACHED', { rowsUpdated: updated.count, clientId: client.id });
-      } catch (cacheErr) {
-        log('LOCAL_KYC_CACHE_FAILED', {
-          message: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
-        });
-        // Non-blocking — the current order still proceeds.
-      }
-    } else {
-      log('KYC_PATH: Using local admin override — skipping Dr Green API check');
+    if (!kyc.kycVerified) {
+      log('FAIL: KYC not verified', { status: kyc.status, message: kyc.message });
+      const message =
+        kyc.status === 'API_ERROR'
+          ? "Could not verify account status. Please try again."
+          : "Medical verification required. Please complete your profile verification.";
+      const httpStatus = kyc.status === 'API_ERROR' ? 500 : 403;
+      return NextResponse.json({ error: message }, { status: httpStatus });
     }
 
     // Submit order

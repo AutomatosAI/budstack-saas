@@ -121,9 +121,16 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
 
             console.log(`[KYC] ${clerkUser.email}: isActive=${client.isActive} isKYCVerified=${client.isKYCVerified} adminApproval=${client.adminApproval} → verified=${isVerified}`);
 
-            // Persist verified status locally so we never need to check again
-            if (isVerified && questionnaire && !questionnaire.isKycVerified) {
-                await prisma.consultation_questionnaires.updateMany({
+            // Persist verified status locally so we never need to check again.
+            //
+            // If there's no questionnaire row under the user's current tenant
+            // (e.g. the user was moved between flagship stores — their
+            // consultation still lives under the original tenant), migrate the
+            // row to the current tenant so the cache actually writes. Without
+            // this, checkout keeps hitting the Dr Green paginated scan and
+            // fails once the client list exceeds a few thousand.
+            if (isVerified) {
+                const current = await prisma.consultation_questionnaires.updateMany({
                     where: {
                         tenantId: dbUser.tenantId,
                         email: { equals: clerkUser.email, mode: 'insensitive' },
@@ -134,7 +141,37 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                         updatedAt: new Date(),
                     },
                 });
-                console.log(`✅ KYC verified for ${clerkUser.email}, cached locally`);
+
+                if (current.count === 0) {
+                    // No row under the current tenant. Find the user's
+                    // questionnaire under any tenant by email and move it.
+                    const orphan = await prisma.consultation_questionnaires.findFirst({
+                        where: { email: { equals: clerkUser.email, mode: 'insensitive' } },
+                        orderBy: [{ isKycVerified: 'desc' }, { createdAt: 'desc' }],
+                        select: { id: true, tenantId: true },
+                    });
+
+                    if (orphan) {
+                        await prisma.consultation_questionnaires.update({
+                            where: { id: orphan.id },
+                            data: {
+                                tenantId: dbUser.tenantId,
+                                isKycVerified: true,
+                                adminApproval: "APPROVED",
+                                updatedAt: new Date(),
+                            },
+                        });
+                        console.log(
+                            `🔁 Migrated questionnaire for ${clerkUser.email} from tenant ${orphan.tenantId} → ${dbUser.tenantId}`
+                        );
+                    } else {
+                        console.log(
+                            `⚠️ KYC verified for ${clerkUser.email} but no questionnaire row exists in any tenant — cache will not persist`
+                        );
+                    }
+                } else {
+                    console.log(`✅ KYC verified for ${clerkUser.email}, cached locally`);
+                }
             }
 
             // Map Dr Green fields to our status format.
