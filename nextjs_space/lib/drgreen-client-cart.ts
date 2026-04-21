@@ -9,7 +9,7 @@
  */
 
 import Redis from "ioredis";
-import { callDrGreenAPI } from "@/lib/drgreen-api-client";
+import { fetchClient } from "@/lib/doctor-green-api";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 const CACHE_TTL_SECONDS = 300; // 5 minutes
@@ -90,46 +90,39 @@ export async function invalidateClientCartId(clientId: string): Promise<void> {
 }
 
 /**
- * Fetch clientCartId from Dr Green API with fallback strategies.
+ * Fetch clientCartId from Dr Green API.
+ *
+ * Delegates to fetchClient() which already handles both the /dapp/clients/{id}
+ * 401 bug (via the bidirectional multi-page list scan) and the email fallback.
+ * Previously this function only scanned page 1 of 200 — clients with older
+ * records (or anyone past the first page) would fail with "cart not found",
+ * surfacing as the misleading "complete your consultation" error.
  */
 async function fetchClientCartIdFromAPI(
     clientId: string,
     apiOpts: { apiKey: string; secretKey: string; baseUrl?: string },
 ): Promise<string | null> {
-    // Strategy 1: GET /dapp/clients/{clientId}
     try {
-        const response = await callDrGreenAPI(`/dapp/clients/${clientId}`, {
-            ...apiOpts,
-            method: "GET",
-            signBody: { clientId },
+        const client = await fetchClient(clientId, {
+            apiKey: apiOpts.apiKey,
+            secretKey: apiOpts.secretKey,
+            apiUrl: apiOpts.baseUrl,
         });
-        const data = (response as any)?.data || response;
-        const cartArray = data?.clientCart || data?.client?.clientCart;
-        if (Array.isArray(cartArray) && cartArray.length > 0) {
+
+        const cartArray = client?.clientCart || client?.client?.clientCart;
+        if (Array.isArray(cartArray) && cartArray.length > 0 && cartArray[0]?.id) {
             return cartArray[0].id;
         }
-    } catch (e) {
-        console.warn(`[ClientCart] Direct GET failed for ${clientId}:`, e instanceof Error ? e.message : e);
-    }
 
-    // Strategy 2: List all clients and filter
-    try {
-        const response = await callDrGreenAPI("/dapp/clients", {
-            ...apiOpts,
-            method: "GET",
-            queryParams: { take: 200, page: 1, orderBy: "desc" },
-        });
-        const clients =
-            (response as any)?.data?.clients ||
-            (response as any)?.data?.data ||
-            (response as any)?.data?.items ||
-            [];
-        const match = Array.isArray(clients) ? clients.find((c: any) => c.id === clientId) : null;
-        if (match?.clientCart?.[0]?.id) {
-            return match.clientCart[0].id;
-        }
+        console.warn(
+            `[ClientCart] fetchClient returned no clientCart for ${clientId}`,
+            { keys: client ? Object.keys(client) : [] }
+        );
     } catch (e) {
-        console.warn(`[ClientCart] List fallback failed for ${clientId}:`, e instanceof Error ? e.message : e);
+        console.warn(
+            `[ClientCart] fetchClient failed for ${clientId}:`,
+            e instanceof Error ? e.message : e
+        );
     }
 
     return null;
