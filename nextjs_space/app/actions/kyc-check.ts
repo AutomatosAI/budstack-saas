@@ -3,7 +3,7 @@
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
-import { fetchClient } from "@/lib/doctor-green-api";
+import { fetchClient, fetchClientByEmail } from "@/lib/doctor-green-api";
 
 export type KycStatus = {
     isLoggedIn: boolean;
@@ -22,14 +22,14 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
         // Fetch full user from DB to get drGreenClientId
         let dbUser = await prisma.users.findUnique({
             where: { id: clerkUser.id },
-            select: { drGreenClientId: true, tenantId: true }
+            select: { id: true, drGreenClientId: true, tenantId: true }
         });
 
         // Fallback: If user not found by ID (e.g. legacy/local user with different UUID), find by email
         if (!dbUser && clerkUser.email) {
             dbUser = await prisma.users.findUnique({
                 where: { email: clerkUser.email },
-                select: { drGreenClientId: true, tenantId: true }
+                select: { id: true, drGreenClientId: true, tenantId: true }
             });
         }
 
@@ -90,8 +90,28 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
         try {
             const config = await getTenantDrGreenConfig(dbUser.tenantId);
 
-            // Fetch Client from API
-            const client = await fetchClient(dbUser.drGreenClientId, config);
+            // Fetch Client from API — fall back to email lookup if ID is stale/unknown
+            let client;
+            try {
+                client = await fetchClient(dbUser.drGreenClientId, config);
+            } catch (idErr) {
+                console.warn(`[KYC] ID lookup failed for ${clerkUser.email} (${dbUser.drGreenClientId}), trying email fallback:`, idErr instanceof Error ? idErr.message : idErr);
+                const byEmail = clerkUser.email ? await fetchClientByEmail(clerkUser.email, config) : null;
+                if (!byEmail) throw idErr;
+                client = byEmail;
+                // Backfill stored clientId if it drifted
+                if (byEmail.id && byEmail.id !== dbUser.drGreenClientId) {
+                    try {
+                        await prisma.users.update({
+                            where: { id: dbUser.id },
+                            data: { drGreenClientId: byEmail.id },
+                        });
+                        console.log(`[KYC] Backfilled drGreenClientId for ${clerkUser.email}: ${dbUser.drGreenClientId} → ${byEmail.id}`);
+                    } catch (updateErr) {
+                        console.error(`[KYC] Failed to backfill drGreenClientId:`, updateErr);
+                    }
+                }
+            }
 
             // Dr Green API returns: isActive (bool), isKYCVerified (bool), adminApproval (string)
             // Dashboard shows "Verified" as soon as Dr Green has approved the client.
