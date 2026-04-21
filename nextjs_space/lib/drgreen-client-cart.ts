@@ -109,7 +109,7 @@ async function fetchClientCartIdFromAPI(
             apiUrl: apiOpts.baseUrl,
         });
 
-        const cartArray = client?.clientCart || client?.client?.clientCart;
+        const cartArray = (client as any)?.clientCart;
         if (Array.isArray(cartArray) && cartArray.length > 0 && cartArray[0]?.id) {
             return cartArray[0].id;
         }
