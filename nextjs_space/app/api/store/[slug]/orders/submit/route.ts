@@ -109,38 +109,81 @@ export async function POST(
         );
       }
 
-      const { fetchClient } = await import("@/lib/doctor-green-api");
+      const { fetchClient, fetchClientByEmail } = await import("@/lib/doctor-green-api");
+
+      let client: any = null;
+      let lookupSource = 'id';
+
       try {
         log('FETCHING_CLIENT', { clientId: dbUser.drGreenClientId });
-        const client = await fetchClient(dbUser.drGreenClientId, drGreenConfig);
-        log('CLIENT_RESPONSE', {
-          rawKeys: Object.keys(client),
-          isActive: client.isActive,
-          isKYCVerified: client.isKYCVerified,
-          adminApproval: client.adminApproval,
-          id: client.id,
-          email: client.email,
-        });
+        client = await fetchClient(dbUser.drGreenClientId, drGreenConfig);
+      } catch (idLookupErr) {
+        const msg = idLookupErr instanceof Error ? idLookupErr.message : String(idLookupErr);
+        log('CLIENT_ID_LOOKUP_FAILED — trying email fallback', { message: msg });
 
-        const isVerified = client.isActive === true &&
-          (client.isKYCVerified === true || client.adminApproval === 'VERIFIED');
-        if (!isVerified) {
-          log('FAIL: Client not verified', { isActive: client.isActive, isKYCVerified: client.isKYCVerified, adminApproval: client.adminApproval });
+        if (dbUser.email) {
+          try {
+            const byEmail = await fetchClientByEmail(dbUser.email, drGreenConfig);
+            if (byEmail) {
+              client = byEmail;
+              lookupSource = 'email';
+              log('CLIENT_FOUND_BY_EMAIL', {
+                storedClientId: dbUser.drGreenClientId,
+                drGreenClientId: byEmail.id,
+                mismatch: dbUser.drGreenClientId !== byEmail.id,
+              });
+
+              // Backfill the correct clientId so next checkout skips the fallback
+              if (dbUser.drGreenClientId !== byEmail.id) {
+                try {
+                  await prisma.users.update({
+                    where: { id: dbUser.id },
+                    data: { drGreenClientId: byEmail.id },
+                  });
+                  log('CLIENT_ID_BACKFILLED', { newClientId: byEmail.id });
+                } catch (updateErr) {
+                  log('CLIENT_ID_BACKFILL_FAILED', {
+                    message: updateErr instanceof Error ? updateErr.message : String(updateErr),
+                  });
+                }
+              }
+            }
+          } catch (emailLookupErr) {
+            log('CLIENT_EMAIL_LOOKUP_FAILED', {
+              message: emailLookupErr instanceof Error ? emailLookupErr.message : String(emailLookupErr),
+            });
+          }
+        }
+
+        if (!client) {
+          log('KYC_API_ERROR', { message: msg, emailFallbackTried: !!dbUser.email });
           return NextResponse.json(
-            { error: "Medical verification required. Please complete your profile verification." },
-            { status: 403 },
+            { error: "Could not verify account status. Please try again." },
+            { status: 500 },
           );
         }
-        log('KYC_PASSED via Dr Green API');
-      } catch (apiError) {
-        log('KYC_API_ERROR', {
-          message: apiError instanceof Error ? apiError.message : String(apiError),
-        });
+      }
+
+      log('CLIENT_RESPONSE', {
+        source: lookupSource,
+        rawKeys: Object.keys(client),
+        isActive: client.isActive,
+        isKYCVerified: client.isKYCVerified,
+        adminApproval: client.adminApproval,
+        id: client.id,
+        email: client.email,
+      });
+
+      const isVerified = client.isActive === true &&
+        (client.isKYCVerified === true || client.adminApproval === 'VERIFIED');
+      if (!isVerified) {
+        log('FAIL: Client not verified', { isActive: client.isActive, isKYCVerified: client.isKYCVerified, adminApproval: client.adminApproval });
         return NextResponse.json(
-          { error: "Could not verify account status. Please try again." },
-          { status: 500 },
+          { error: "Medical verification required. Please complete your profile verification." },
+          { status: 403 },
         );
       }
+      log('KYC_PASSED via Dr Green API', { source: lookupSource });
     } else {
       log('KYC_PATH: Using local admin override — skipping Dr Green API check');
     }
