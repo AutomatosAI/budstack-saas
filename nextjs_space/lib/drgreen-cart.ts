@@ -73,14 +73,12 @@ export async function addToCart(params: {
   // Get/ensure client ID
   const clientId = await ensureClientId(userId, tenantId, apiKey, secretKey);
 
-  // Get user's cart
+  // Get user's cart. drgreen_carts.userId is globally unique (one cart per
+  // user), so look up by userId alone. The compound (userId, tenantId)
+  // lookup would miss the row if the user moved between flagship stores —
+  // the cart stays stamped with the old tenantId until we refresh it below.
   let cart = await prisma.drgreen_carts.findUnique({
-    where: {
-      userId_tenantId: {
-        userId,
-        tenantId,
-      },
-    },
+    where: { userId },
   });
 
   // Calculate actual quantity (quantity * size in grams)
@@ -121,10 +119,12 @@ export async function addToCart(params: {
     }));
 
     if (cart) {
-      // Update existing cart
+      // Update existing cart — also refresh tenantId in case the user
+      // moved between flagship stores since the row was created.
       cart = await prisma.drgreen_carts.update({
         where: { id: cart.id },
         data: {
+          tenantId,
           drGreenCartId: cartData.id,
           items: items,
           updatedAt: new Date(),
@@ -195,14 +195,11 @@ export async function getCart(params: {
         },
       }));
 
-      // Update local cart
+      // Update local cart. Look up / upsert by userId only (globally unique)
+      // and refresh tenantId on every write so a stale value doesn't pin
+      // the cart to the wrong store after a user move.
       await prisma.drgreen_carts.upsert({
-        where: {
-          userId_tenantId: {
-            userId,
-            tenantId,
-          },
-        },
+        where: { userId },
         create: {
           id: crypto.randomUUID(),
           userId,
@@ -212,6 +209,7 @@ export async function getCart(params: {
           updatedAt: new Date(),
         },
         update: {
+          tenantId,
           drGreenCartId: cartData.id,
           items,
           updatedAt: new Date(),
@@ -261,14 +259,9 @@ export async function removeFromCart(params: {
   // Get client ID
   const clientId = await ensureClientId(userId, tenantId, apiKey, secretKey);
 
-  // Get user's cart
+  // Get user's cart — userId is globally unique on drgreen_carts.
   const cart = await prisma.drgreen_carts.findUnique({
-    where: {
-      userId_tenantId: {
-        userId,
-        tenantId,
-      },
-    },
+    where: { userId },
   });
 
   if (!cart?.drGreenCartId) {
@@ -304,12 +297,7 @@ export async function clearCart(params: {
   const { userId, tenantId, apiKey, secretKey, apiUrl } = params;
 
   const cart = await prisma.drgreen_carts.findUnique({
-    where: {
-      userId_tenantId: {
-        userId,
-        tenantId,
-      },
-    },
+    where: { userId },
   });
 
   if (cart?.drGreenCartId) {
@@ -323,11 +311,9 @@ export async function clearCart(params: {
     });
   }
 
-  // Delete local cart record
+  // Delete local cart record — drop by userId alone (globally unique)
+  // so we don't leave a stale row if the tenantId on it is stale.
   await prisma.drgreen_carts.deleteMany({
-    where: {
-      userId,
-      tenantId,
-    },
+    where: { userId },
   });
 }
