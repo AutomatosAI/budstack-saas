@@ -72,24 +72,34 @@ export async function submitOrder(params: {
         throw new Error("User must complete consultation before placing orders");
     }
 
-    // Check server-side cart first
+    // Check server-side cart. drgreen_carts.userId is globally unique
+    // (one cart per user), so look up by userId alone — not the compound
+    // (userId, tenantId) key. This handles the case where a user moved
+    // between flagship stores: their cart row is stamped with the old
+    // tenantId and the compound lookup would miss it, then the upsert
+    // below would fail with "Record not found" trying to create a second
+    // row for the same userId.
     let cart = await prisma.drgreen_carts.findUnique({
-        where: { userId_tenantId: { userId, tenantId } },
+        where: { userId },
     });
 
     log('SERVER_CART', {
         found: !!cart,
+        storedTenantId: cart?.tenantId || 'NONE',
+        currentTenantId: tenantId,
         itemCount: cart?.items ? (cart.items as any[]).length : 0,
         drGreenCartId: cart?.drGreenCartId || 'NONE',
     });
 
-    // If server-side cart is empty but client sent cart items, sync them to DB
+    // If server-side cart is empty but client sent cart items, sync them to DB.
+    // Refresh tenantId on every save so a stale value from a previous store
+    // doesn't pin the cart to the wrong tenant.
     if ((!cart || !cart.items || (cart.items as any[]).length === 0) && clientCartItems?.length) {
         log('SYNCING_CLIENT_CART_TO_DB', { itemCount: clientCartItems.length });
         cart = await prisma.drgreen_carts.upsert({
-            where: { userId_tenantId: { userId, tenantId } },
+            where: { userId },
             create: { id: crypto.randomUUID(), userId, tenantId, items: clientCartItems, updatedAt: new Date() },
-            update: { items: clientCartItems, updatedAt: new Date() },
+            update: { tenantId, items: clientCartItems, updatedAt: new Date() },
         });
     }
 
