@@ -363,63 +363,95 @@ export async function fetchProduct(
 }
 
 /**
+ * Parse the /dapp/clients response into a clients[] array.
+ * Dr Green's API returns several nestings across versions — handle them all.
+ */
+function extractClientsFromResponse(response: any): any[] {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.data?.items)) return response.data.items;
+  if (Array.isArray(response?.data?.data)) return response.data.data;
+  if (Array.isArray(response?.clients)) return response.clients;
+  if (Array.isArray(response?.data?.clients)) return response.data.clients;
+  return [];
+}
+
+/**
+ * Scan Dr Green's client list to find a match.
+ *
+ * Alternates between `desc` (newest-first) and `asc` (oldest-first)
+ * pagination so users at EITHER end of the list are found quickly.
+ * /dapp/clients/{id} returns 401 upstream, so we're forced to list-and-filter.
+ *
+ * Returns the matching client, or null if not found within the page budget.
+ * Each direction is budgeted MAX_PAGES pages independently, so the total
+ * reach is PAGE_SIZE * MAX_PAGES * 2 clients.
+ */
+async function scanClientList(
+  predicate: (c: any) => boolean,
+  config: DoctorGreenConfig,
+  label: string,
+): Promise<any | null> {
+  const PAGE_SIZE = 200;
+  const MAX_PAGES = 40;
+  const DIRECTIONS: Array<'desc' | 'asc'> = ['desc', 'asc'];
+
+  // Track per-direction exhaustion so we don't keep hitting dead pages.
+  const exhausted: Record<string, boolean> = { desc: false, asc: false };
+
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    for (const orderBy of DIRECTIONS) {
+      if (exhausted[orderBy]) continue;
+
+      console.log(`[${label}] Scanning ${orderBy} page ${page}/${MAX_PAGES}`);
+
+      const response = await doctorGreenRequest<any>('/dapp/clients', {
+        config,
+        queryParams: { take: PAGE_SIZE, page, orderBy },
+      });
+
+      const clients = extractClientsFromResponse(response);
+      if (clients.length === 0) {
+        exhausted[orderBy] = true;
+        continue;
+      }
+
+      const match = clients.find(predicate);
+      if (match) {
+        console.log(`[${label}] Matched on ${orderBy} page ${page} (${clients.length} on page)`);
+        return match;
+      }
+
+      if (clients.length < PAGE_SIZE) {
+        exhausted[orderBy] = true;
+      }
+    }
+
+    if (exhausted.desc && exhausted.asc) break;
+  }
+
+  return null;
+}
+
+/**
  * Get client information by Client ID
  *
  * GET /dapp/clients/{id} returns 401 — this is a known Dr Green API limitation.
- * Both green-go-remix (production) and southhealing confirm this.
- * Workaround: List all clients via GET /dapp/clients and filter by ID.
- * Signs the query string for GET requests (matches green-go-remix pattern).
+ * Workaround: scan the list endpoint from both ends.
  */
 export async function fetchClient(
   clientId: string,
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenClient> {
-  const PAGE_SIZE = 200;
-  const MAX_PAGES = 20;
-
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    console.log(`[fetchClient] Listing clients page ${page}/${MAX_PAGES} to find ${clientId}`);
-
-    const response = await doctorGreenRequest<any>('/dapp/clients', {
-      config,
-      queryParams: { take: PAGE_SIZE, page, orderBy: 'desc' },
-    });
-
-    // Handle all known response shapes (API returns various nestings)
-    let clients: any[] = [];
-    if (Array.isArray(response)) {
-      clients = response;
-    } else if (Array.isArray(response?.data)) {
-      clients = response.data;
-    } else if (response?.data?.items && Array.isArray(response.data.items)) {
-      clients = response.data.items;
-    } else if (Array.isArray(response?.data?.data)) {
-      clients = response.data.data;
-    } else if (Array.isArray(response?.clients)) {
-      clients = response.clients;
-    } else if (response?.data?.clients && Array.isArray(response.data.clients)) {
-      clients = response.data.clients;
-    }
-
-    if (!clients || clients.length === 0) {
-      console.log(`[fetchClient] No more clients on page ${page}`);
-      break;
-    }
-
-    const match = clients.find((c: any) => c.id === clientId);
-    if (match) {
-      console.log(`[fetchClient] Found client on page ${page} (${clients.length} clients on page)`);
-      return match;
-    }
-
-    // Stop if last page (fewer results than page size)
-    if (clients.length < PAGE_SIZE) {
-      console.log(`[fetchClient] Last page reached (page ${page}, ${clients.length} clients)`);
-      break;
-    }
+  const match = await scanClientList(
+    (c: any) => c.id === clientId,
+    config,
+    `fetchClient:${clientId}`,
+  );
+  if (!match) {
+    throw new Error(`Client ${clientId} not found after bidirectional scan`);
   }
-
-  throw new Error(`Client ${clientId} not found after searching ${MAX_PAGES} pages`);
+  return match;
 }
 
 /**
@@ -445,53 +477,17 @@ export async function fetchClientByEmail(
   email: string,
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenClient | null> {
-  const PAGE_SIZE = 200;
-  const MAX_PAGES = 20;
   const normalizedEmail = email.toLowerCase().trim();
-
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    console.log(`[fetchClientByEmail] Listing clients page ${page}/${MAX_PAGES} to find ${normalizedEmail}`);
-
-    const response = await doctorGreenRequest<any>('/dapp/clients', {
-      config,
-      queryParams: { take: PAGE_SIZE, page, orderBy: 'desc' },
-    });
-
-    // Handle all known response shapes
-    let clients: any[] = [];
-    if (Array.isArray(response)) {
-      clients = response;
-    } else if (Array.isArray(response?.data)) {
-      clients = response.data;
-    } else if (response?.data?.items && Array.isArray(response.data.items)) {
-      clients = response.data.items;
-    } else if (Array.isArray(response?.data?.data)) {
-      clients = response.data.data;
-    } else if (Array.isArray(response?.clients)) {
-      clients = response.clients;
-    } else if (response?.data?.clients && Array.isArray(response.data.clients)) {
-      clients = response.data.clients;
-    }
-
-    if (!clients || clients.length === 0) {
-      break;
-    }
-
-    const match = clients.find(
-      (c: any) => c.email?.toLowerCase().trim() === normalizedEmail
-    );
-    if (match) {
-      console.log(`[fetchClientByEmail] Found client ${match.id} on page ${page}`);
-      return match;
-    }
-
-    if (clients.length < PAGE_SIZE) {
-      break;
-    }
+  const match = await scanClientList(
+    (c: any) => c.email?.toLowerCase().trim() === normalizedEmail,
+    config,
+    `fetchClientByEmail:${normalizedEmail}`,
+  );
+  if (!match) {
+    console.log(`[fetchClientByEmail] Client not found for email ${normalizedEmail}`);
+    return null;
   }
-
-  console.log(`[fetchClientByEmail] Client not found for email ${normalizedEmail}`);
-  return null;
+  return match;
 }
 
 /**

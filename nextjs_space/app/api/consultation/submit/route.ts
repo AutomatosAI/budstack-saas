@@ -341,8 +341,20 @@ export async function POST(request: NextRequest) {
         body: drGreenPayload,
       });
 
+      // Diagnostic: log the raw Dr Green response so we can see which extractor
+      // path is hit and confirm the returned id matches what /dapp/clients list returns.
+      // Remove once the registration-ID mismatch bug is resolved.
+      console.log(
+        `[Consultation] RAW_DRGREEN_RESPONSE email=${body.email} top_keys=${Object.keys(drGreenResponse || {}).join(',')} body=${JSON.stringify(drGreenResponse).slice(0, 2000)}`,
+      );
+
       // Extract KYC link and client ID from response
       // Dr Green API nests client under data.client (confirmed from live response)
+      const clientIdPath =
+        drGreenResponse.data?.client?.id ? 'data.client.id' :
+        drGreenResponse.data?.id ? 'data.id' :
+        drGreenResponse.client?.id ? 'client.id' :
+        drGreenResponse.id ? 'id' : 'NONE';
       const clientId =
         drGreenResponse.data?.client?.id ||
         drGreenResponse.data?.id ||
@@ -354,7 +366,9 @@ export async function POST(request: NextRequest) {
         drGreenResponse.client?.kycLink ||
         drGreenResponse.kycLink || null;
 
-      console.log(`[Consultation] Result: clientId=${clientId ? 'OK' : 'MISSING'} | kycLink=${kycLink ? 'OK' : 'NONE'}`);
+      console.log(
+        `[Consultation] Result: email=${body.email} clientId=${clientId || 'MISSING'} extractedFrom=${clientIdPath} kycLink=${kycLink ? 'OK' : 'NONE'}`,
+      );
 
       if (!clientId) {
         console.error("Dr. Green API response missing client ID:", JSON.stringify(drGreenResponse));
