@@ -112,7 +112,10 @@ export async function submitOrder(params: {
     log('STEP_0: clientCartId', { clientCartId: clientCartId || 'NOT_FOUND' });
 
     if (!clientCartId) {
-        throw new Error("Could not retrieve cart from Dr. Green. Please ensure your consultation is complete.");
+        throw new Error(
+            `Could not retrieve clientCartId from Dr Green for client ${clientId}. ` +
+            `Client record could not be found via /dapp/clients/{id} or list scan.`
+        );
     }
 
     // ========== Step 1: Add items to cart ==========
