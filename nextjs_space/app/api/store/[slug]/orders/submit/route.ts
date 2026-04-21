@@ -184,6 +184,32 @@ export async function POST(
         );
       }
       log('KYC_PASSED via Dr Green API', { source: lookupSource });
+
+      // Cache Dr Green verification locally so the next order skips the
+      // paginated client-list scan (/dapp/clients/{id} returns 401 upstream,
+      // so we have to list + filter — that fails past ~4k clients).
+      // Writing to consultation_questionnaires makes the local-override
+      // branch above pick up on subsequent orders.
+      try {
+        const updated = await prisma.consultation_questionnaires.updateMany({
+          where: {
+            tenantId: tenant.id,
+            email: { equals: dbUser.email, mode: 'insensitive' },
+          },
+          data: {
+            isKycVerified: true,
+            adminApproval: 'VERIFIED',
+            drGreenClientId: client.id,
+            updatedAt: new Date(),
+          },
+        });
+        log('LOCAL_KYC_CACHED', { rowsUpdated: updated.count, clientId: client.id });
+      } catch (cacheErr) {
+        log('LOCAL_KYC_CACHE_FAILED', {
+          message: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+        });
+        // Non-blocking — the current order still proceeds.
+      }
     } else {
       log('KYC_PATH: Using local admin override — skipping Dr Green API check');
     }
