@@ -169,17 +169,25 @@ export function NavFull(props: SectionProps) {
             </span>
           )}
         </a>
-        <button
-          className="lg:hidden"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle menu"
-        >
-          {mobileOpen ? (
-            <X size={24} style={{ color: 'hsl(var(--tenant-color-text))' }} />
-          ) : (
-            <Menu size={24} style={{ color: 'hsl(var(--tenant-color-text))' }} />
-          )}
-        </button>
+        <div className="lg:hidden flex items-center gap-2">
+          <a
+            href={`${basePath}/cart`}
+            aria-label="Cart"
+            className="p-2"
+          >
+            <ShoppingCart size={22} style={{ color: 'hsl(var(--tenant-color-text))' }} />
+          </a>
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? (
+              <X size={24} style={{ color: 'hsl(var(--tenant-color-text))' }} />
+            ) : (
+              <Menu size={24} style={{ color: 'hsl(var(--tenant-color-text))' }} />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu */}

@@ -298,17 +298,28 @@ export function NavDark(props: SectionProps) {
               </span>
             )}
           </a>
-          <button
-            className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Toggle menu"
-          >
-            {mobileOpen ? (
-              <X size={24} className="text-white" />
-            ) : (
-              <Menu size={24} className="text-white" />
+          <div className="lg:hidden flex items-center gap-1">
+            {showCart && (
+              <a
+                href={`${basePath}/cart`}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                aria-label="Cart"
+              >
+                <ShoppingCart size={22} className="text-white" />
+              </a>
             )}
-          </button>
+            <button
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? (
+                <X size={24} className="text-white" />
+              ) : (
+                <Menu size={24} className="text-white" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
