@@ -364,10 +364,10 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
   return (
     <div
-      className="min-h-screen pt-36 pb-20"
+      className="min-h-screen pt-36 pb-20 overflow-x-hidden"
       style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto px-4 max-w-4xl w-full">
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
           <Link href={`${basePath}/cart`}>
@@ -405,7 +405,10 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                 <CardHeader className="pb-3">
                   <CardTitle
                     className="text-base"
-                    style={{ fontFamily: "var(--tenant-font-heading, sans-serif)" }}
+                    style={{
+                      color: "hsl(var(--tenant-color-heading))",
+                      fontFamily: "var(--tenant-font-heading, sans-serif)",
+                    }}
                   >
                     Order Summary
                   </CardTitle>
@@ -496,10 +499,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <MapPin
                       className="w-4 h-4"
-                      style={{ color: "hsl(var(--tenant-color-text))" }}
+                      style={{ color: "hsl(var(--tenant-color-heading))" }}
                     />
                     <span
-                      style={{ fontFamily: "var(--tenant-font-heading, sans-serif)" }}
+                      style={{
+                        color: "hsl(var(--tenant-color-heading))",
+                        fontFamily: "var(--tenant-font-heading, sans-serif)",
+                      }}
                     >
                       Shipping Address
                     </span>
@@ -721,10 +727,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <CreditCard
                       className="w-4 h-4"
-                      style={{ color: "hsl(var(--tenant-color-text))" }}
+                      style={{ color: "hsl(var(--tenant-color-heading))" }}
                     />
                     <span
-                      style={{ fontFamily: "var(--tenant-font-heading, sans-serif)" }}
+                      style={{
+                        color: "hsl(var(--tenant-color-heading))",
+                        fontFamily: "var(--tenant-font-heading, sans-serif)",
+                      }}
                     >
                       Payment
                     </span>
