@@ -136,11 +136,23 @@ export default function DashboardPage() {
 
           <div className="saas-card border-0 p-6">
             <div className="mb-4 flex items-center justify-between">
-              <div className="rounded-full bg-amber-100 p-2">
-                <CheckCircle2 className="h-5 w-5 text-amber-600" />
+              <div
+                className={`rounded-full p-2 ${
+                  kycStatus?.kycVerified ? "bg-green-100" : "bg-amber-100"
+                }`}
+              >
+                <CheckCircle2
+                  className={`h-5 w-5 ${
+                    kycStatus?.kycVerified ? "text-green-600" : "text-amber-600"
+                  }`}
+                />
               </div>
-              <span className="text-2xl font-semibold text-slate-900">
-                Pending
+              <span
+                className={`text-2xl font-semibold ${
+                  kycStatus?.kycVerified ? "text-green-700" : "text-slate-900"
+                }`}
+              >
+                {kycStatus?.kycVerified ? "Verified" : "Pending"}
               </span>
             </div>
             <h3 className="text-sm font-medium text-slate-500">

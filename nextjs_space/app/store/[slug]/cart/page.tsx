@@ -88,10 +88,10 @@ export default function CartPage() {
 
   return (
     <div
-      className="min-h-screen pt-36 pb-20"
+      className="min-h-screen pt-36 pb-20 overflow-x-hidden"
       style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto px-4 max-w-4xl w-full">
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
           <Button
@@ -127,6 +127,7 @@ export default function CartPage() {
                   exit={{ opacity: 0, scale: 0.95 }}
                 >
                   <Card
+                    className="overflow-hidden"
                     style={{
                       backgroundColor: "hsl(var(--tenant-color-background))",
                       borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
@@ -135,13 +136,14 @@ export default function CartPage() {
                     <CardContent className="p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                         {/* Item info + remove (mobile row 1) */}
-                        <div className="flex items-start justify-between gap-3 sm:flex-1 sm:min-w-0">
+                        <div className="flex items-start justify-between gap-3 min-w-0 sm:flex-1">
                           <div className="flex-1 min-w-0">
                             <h3
-                              className="font-semibold truncate"
+                              className="font-semibold truncate block"
                               style={{
                                 color: "hsl(var(--tenant-color-heading))",
                                 fontFamily: "var(--tenant-font-heading, sans-serif)",
+                                maxWidth: "100%",
                               }}
                             >
                               {item.name}
@@ -248,6 +250,7 @@ export default function CartPage() {
                   />
                   <span
                     style={{
+                      color: "hsl(var(--tenant-color-heading))",
                       fontFamily: "var(--tenant-font-heading, sans-serif)",
                     }}
                   >
