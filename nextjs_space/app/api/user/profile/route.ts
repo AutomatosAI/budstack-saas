@@ -42,8 +42,37 @@ export async function PATCH(request: NextRequest) {
         ? `${firstName} ${lastName}`
         : firstName || lastName || undefined;
 
+    // Resolve DB user — try by Clerk ID first, fall back to email for legacy rows
+    let dbUser = await prisma.users.findUnique({ where: { id: user.id } });
+    if (!dbUser && user.email) {
+      dbUser = await prisma.users.findUnique({ where: { email: user.email } });
+    }
+
+    if (!dbUser) {
+      if (!user.email) {
+        return NextResponse.json(
+          { error: "User record not found and no email available" },
+          { status: 404 },
+        );
+      }
+      // Create a minimal record so settings page works for Clerk-only users
+      dbUser = await prisma.users.create({
+        data: {
+          id: user.id,
+          email: user.email,
+          password: "",
+          updatedAt: new Date(),
+          ...(firstName && { firstName }),
+          ...(lastName && { lastName }),
+          ...(fullName && { name: fullName }),
+          ...(phone && { phone }),
+          ...(address && { address }),
+        },
+      });
+    }
+
     const updatedUser = await prisma.users.update({
-      where: { id: user.id },
+      where: { id: dbUser.id },
       data: {
         ...(firstName !== undefined && { firstName }),
         ...(lastName !== undefined && { lastName }),

@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { toast } from "@/components/ui/sonner";
 import { getTenantBasePath } from "@/lib/tenant-utils";
+import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
 
 export default function SettingsPage() {
   const { user, isLoaded, isSignedIn } = useUser();
@@ -21,6 +22,12 @@ export default function SettingsPage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [kycStatus, setKycStatus] = useState<KycStatus | null>(null);
+
+  useEffect(() => {
+    checkUserKycStatus().then(setKycStatus);
+  }, []);
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -71,7 +78,8 @@ export default function SettingsPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update profile");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to update profile");
       }
 
       toast.success("Profile updated successfully!");
@@ -79,7 +87,7 @@ export default function SettingsPage() {
       // Refresh session
       window.location.reload();
     } catch (error) {
-      toast.error("Failed to update profile");
+      toast.error(error instanceof Error ? error.message : "Failed to update profile");
     } finally {
       setIsSaving(false);
     }
@@ -101,20 +109,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pt-24 pb-20">
+    <div className="min-h-screen saas-shell pt-24 pb-20">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-green-900 mb-2">
+            <span className="saas-pill text-slate-600">Customer Dashboard</span>
+            <h1 className="mt-4 text-3xl font-semibold text-slate-900 mb-2">
               Account Settings
             </h1>
-            <p className="text-gray-600">Manage your account information</p>
+            <p className="text-slate-500">Manage your account information</p>
           </div>
           {!isEditing && (
             <Button
               onClick={() => setIsEditing(true)}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-slate-900 text-white hover:bg-slate-800"
             >
               Edit Profile
             </Button>
@@ -122,9 +131,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Profile Information */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-6">
-          <h2 className="text-xl font-bold text-green-900 mb-6 flex items-center gap-2">
-            <User className="w-5 h-5" />
+        <div className="saas-card border-0 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-slate-900 mb-6 flex items-center gap-2">
+            <User className="w-5 h-5 text-slate-500" />
             Personal Information
           </h2>
 
@@ -215,9 +224,21 @@ export default function SettingsPage() {
 
               <div>
                 <Label>Verification Status</Label>
-                <div className="px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg mt-1">
-                  <span className="text-yellow-800 font-medium">
-                    Pending Verification
+                <div
+                  className={`px-4 py-2 border rounded-lg mt-1 ${
+                    kycStatus?.kycVerified
+                      ? "bg-green-50 border-green-200"
+                      : "bg-yellow-50 border-yellow-200"
+                  }`}
+                >
+                  <span
+                    className={`font-medium ${
+                      kycStatus?.kycVerified
+                        ? "text-green-800"
+                        : "text-yellow-800"
+                    }`}
+                  >
+                    {kycStatus?.kycVerified ? "Verified" : "Pending Verification"}
                   </span>
                 </div>
               </div>
@@ -226,9 +247,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Address Information */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-6">
-          <h2 className="text-xl font-bold text-green-900 mb-6 flex items-center gap-2">
-            <MapPin className="w-5 h-5" />
+        <div className="saas-card border-0 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-slate-900 mb-6 flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-slate-500" />
             Address
           </h2>
 
@@ -350,7 +371,7 @@ export default function SettingsPage() {
                 <Button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-slate-900 text-white hover:bg-slate-800"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {isSaving ? "Saving..." : "Save Changes"}
