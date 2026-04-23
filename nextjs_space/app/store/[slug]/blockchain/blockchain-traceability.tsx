@@ -153,27 +153,27 @@ const BlockchainTraceability = () => {
     switch (status) {
       case "completed":
         return {
-          backgroundColor: "var(--tenant-color-primary, #047857)",
+          backgroundColor: "hsl(var(--tenant-color-primary))",
           color: "#ffffff",
           opacity: 0.9,
         };
       case "active":
         return {
-          backgroundColor: "var(--tenant-color-secondary, #0d9488)",
+          backgroundColor: "hsl(var(--tenant-color-secondary))",
           color: "#ffffff",
           opacity: 0.9,
         };
       case "pending":
         return {
-          backgroundColor: "var(--tenant-color-muted, #f3f4f6)",
-          color: "var(--tenant-color-text, #4a5568)",
-          border: "1px solid var(--tenant-color-border, #e5e7eb)",
+          backgroundColor: "hsl(var(--tenant-color-muted))",
+          color: "hsl(var(--tenant-color-text))",
+          border: "1px solid hsl(var(--tenant-color-border))",
         };
       default:
         return {
-          backgroundColor: "var(--tenant-color-muted, #f3f4f6)",
-          color: "var(--tenant-color-text, #4a5568)",
-          border: "1px solid var(--tenant-color-border, #e5e7eb)",
+          backgroundColor: "hsl(var(--tenant-color-muted))",
+          color: "hsl(var(--tenant-color-text))",
+          border: "1px solid hsl(var(--tenant-color-border))",
         };
     }
   };
@@ -186,7 +186,7 @@ const BlockchainTraceability = () => {
     <div
       className="w-full py-20 md:py-32"
       style={{
-        backgroundColor: "var(--tenant-color-background, #ffffff)",
+        backgroundColor: "hsl(var(--tenant-color-background))",
         fontFamily: "var(--tenant-font-base, inherit)",
       }}
     >
@@ -196,7 +196,7 @@ const BlockchainTraceability = () => {
           <Badge
             className="mb-4 text-xs font-bold tracking-wider"
             style={{
-              backgroundColor: "var(--tenant-color-primary, #047857)",
+              backgroundColor: "hsl(var(--tenant-color-primary))",
               color: "#ffffff",
             }}
           >
@@ -205,19 +205,19 @@ const BlockchainTraceability = () => {
           <h2
             className="text-4xl md:text-5xl font-semibold mb-6"
             style={{
-              color: "var(--tenant-color-heading, #1a1a1a)",
+              color: "hsl(var(--tenant-color-heading))",
               fontFamily: "var(--tenant-font-heading, inherit)",
             }}
           >
             Seed-to-Sale{" "}
-            <span style={{ color: "var(--tenant-color-primary, #047857)" }}>
+            <span style={{ color: "hsl(var(--tenant-color-primary))" }}>
               Traceability
             </span>
           </h2>
           <p
             className="text-lg leading-relaxed"
             style={{
-              color: "var(--tenant-color-text, #4a5568)",
+              color: "hsl(var(--tenant-color-text))",
               fontFamily: "var(--tenant-font-base, inherit)",
             }}
           >
@@ -233,7 +233,7 @@ const BlockchainTraceability = () => {
           <div
             className="absolute left-1/2 top-0 bottom-0 w-1 transform -translate-x-1/2 hidden md:block"
             style={{
-              backgroundColor: "var(--tenant-color-border, #e5e7eb)",
+              backgroundColor: "hsl(var(--tenant-color-border))",
               opacity: 0.4,
             }}
           />
@@ -263,18 +263,18 @@ const BlockchainTraceability = () => {
                       )
                     }
                     style={{
-                      backgroundColor: "var(--tenant-color-surface, #ffffff)",
+                      backgroundColor: "hsl(var(--tenant-color-surface))",
                       border:
                         selectedStage === stage.id
-                          ? `2px solid var(--tenant-color-primary, #047857)`
-                          : `1px solid var(--tenant-color-border, #e5e7eb)`,
+                          ? `2px solid hsl(var(--tenant-color-primary))`
+                          : `1px solid hsl(var(--tenant-color-border))`,
                     }}
                   >
                     <div className="flex items-start gap-4">
                       <div
                         className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg"
                         style={{
-                          background: `linear-gradient(135deg, var(--tenant-color-primary, #047857), var(--tenant-color-secondary, #0d9488))`,
+                          background: `linear-gradient(135deg, hsl(var(--tenant-color-primary)), hsl(var(--tenant-color-secondary)))`,
                         }}
                       >
                         <IconComponent
@@ -287,7 +287,7 @@ const BlockchainTraceability = () => {
                           <h3
                             className="font-semibold text-lg"
                             style={{
-                              color: "var(--tenant-color-heading, #1a1a1a)",
+                              color: "hsl(var(--tenant-color-heading))",
                               fontFamily: "var(--tenant-font-heading, inherit)",
                             }}
                           >
@@ -303,7 +303,7 @@ const BlockchainTraceability = () => {
                         <p
                           className="text-sm mb-2"
                           style={{
-                            color: "var(--tenant-color-text, #4a5568)",
+                            color: "hsl(var(--tenant-color-text))",
                             fontFamily: "var(--tenant-font-base, inherit)",
                           }}
                         >
@@ -313,7 +313,7 @@ const BlockchainTraceability = () => {
                           <p
                             className="text-xs font-mono"
                             style={{
-                              color: "var(--tenant-color-text, #4a5568)",
+                              color: "hsl(var(--tenant-color-text))",
                             }}
                           >
                             {stage.timestamp}
@@ -332,20 +332,20 @@ const BlockchainTraceability = () => {
                       style={{
                         backgroundColor:
                           stage.status === "completed"
-                            ? "var(--tenant-color-primary, #047857)"
+                            ? "hsl(var(--tenant-color-primary))"
                             : stage.status === "active"
-                              ? "var(--tenant-color-secondary, #0d9488)"
-                              : "var(--tenant-color-background, #ffffff)",
+                              ? "hsl(var(--tenant-color-secondary))"
+                              : "hsl(var(--tenant-color-background))",
                         borderColor:
                           stage.status === "completed" ||
                           stage.status === "active"
-                            ? "var(--tenant-color-primary, #047857)"
-                            : "var(--tenant-color-border, #e5e7eb)",
+                            ? "hsl(var(--tenant-color-primary))"
+                            : "hsl(var(--tenant-color-border))",
                         color:
                           stage.status === "completed" ||
                           stage.status === "active"
                             ? "#ffffff"
-                            : "var(--tenant-color-text, #4a5568)",
+                            : "hsl(var(--tenant-color-text))",
                       }}
                     >
                       {stage.status === "completed" && (
@@ -358,7 +358,7 @@ const BlockchainTraceability = () => {
                         <div
                           className="w-3 h-3 rounded-full border-2"
                           style={{
-                            borderColor: "var(--tenant-color-text, #4a5568)",
+                            borderColor: "hsl(var(--tenant-color-text))",
                           }}
                         />
                       )}
@@ -386,8 +386,8 @@ const BlockchainTraceability = () => {
               <div
                 className="p-8 rounded-lg"
                 style={{
-                  backgroundColor: "var(--tenant-color-surface, #ffffff)",
-                  border: "1px solid var(--tenant-color-border, #e5e7eb)",
+                  backgroundColor: "hsl(var(--tenant-color-surface))",
+                  border: "1px solid hsl(var(--tenant-color-border))",
                 }}
               >
                 <div className="flex items-start justify-between mb-6">
@@ -395,7 +395,7 @@ const BlockchainTraceability = () => {
                     <div
                       className="w-14 h-14 rounded-xl flex items-center justify-center shadow-lg"
                       style={{
-                        background: `linear-gradient(135deg, var(--tenant-color-primary, #047857), var(--tenant-color-secondary, #0d9488))`,
+                        background: `linear-gradient(135deg, hsl(var(--tenant-color-primary)), hsl(var(--tenant-color-secondary)))`,
                       }}
                     >
                       <stage.Icon
@@ -407,7 +407,7 @@ const BlockchainTraceability = () => {
                       <h3
                         className="text-2xl font-semibold mb-1"
                         style={{
-                          color: "var(--tenant-color-heading, #1a1a1a)",
+                          color: "hsl(var(--tenant-color-heading))",
                           fontFamily: "var(--tenant-font-heading, inherit)",
                         }}
                       >
@@ -415,7 +415,7 @@ const BlockchainTraceability = () => {
                       </h3>
                       <p
                         style={{
-                          color: "var(--tenant-color-text, #4a5568)",
+                          color: "hsl(var(--tenant-color-text))",
                           fontFamily: "var(--tenant-font-base, inherit)",
                         }}
                       >
@@ -439,14 +439,14 @@ const BlockchainTraceability = () => {
                       className="p-4 rounded-lg"
                       style={{
                         backgroundColor:
-                          "var(--tenant-color-background, #ffffff)",
-                        border: "1px solid var(--tenant-color-border, #e5e7eb)",
+                          "hsl(var(--tenant-color-background))",
+                        border: "1px solid hsl(var(--tenant-color-border))",
                       }}
                     >
                       <div
                         className="text-xs font-semibold uppercase tracking-wider mb-1"
                         style={{
-                          color: "var(--tenant-color-text, #4a5568)",
+                          color: "hsl(var(--tenant-color-text))",
                           opacity: 0.8,
                         }}
                       >
@@ -455,7 +455,7 @@ const BlockchainTraceability = () => {
                       <div
                         className="text-sm font-mono font-semibold"
                         style={{
-                          color: "var(--tenant-color-heading, #1a1a1a)",
+                          color: "hsl(var(--tenant-color-heading))",
                         }}
                       >
                         {detail.value}
@@ -469,7 +469,7 @@ const BlockchainTraceability = () => {
                     className="mt-6 pt-6"
                     style={{
                       borderTop:
-                        "1px solid var(--tenant-color-border, #e5e7eb)",
+                        "1px solid hsl(var(--tenant-color-border))",
                     }}
                   >
                     <Button
@@ -488,9 +488,9 @@ const BlockchainTraceability = () => {
                           className="mt-4 p-6 text-center rounded-lg"
                           style={{
                             backgroundColor:
-                              "var(--tenant-color-surface, #ffffff)",
+                              "hsl(var(--tenant-color-surface))",
                             border:
-                              "1px solid var(--tenant-color-border, #e5e7eb)",
+                              "1px solid hsl(var(--tenant-color-border))",
                           }}
                         >
                           <div className="w-48 h-48 mx-auto bg-white rounded-lg flex items-center justify-center mb-4">
@@ -511,7 +511,7 @@ const BlockchainTraceability = () => {
                           <p
                             className="text-sm"
                             style={{
-                              color: "var(--tenant-color-text, #4a5568)",
+                              color: "hsl(var(--tenant-color-text))",
                               opacity: 0.8,
                             }}
                           >
@@ -533,14 +533,14 @@ const BlockchainTraceability = () => {
           <div
             className="p-7 rounded-lg group transition-all duration-200"
             style={{
-              backgroundColor: "var(--tenant-color-surface, #ffffff)",
-              border: "1px solid var(--tenant-color-border, #e5e7eb)",
+              backgroundColor: "hsl(var(--tenant-color-surface))",
+              border: "1px solid hsl(var(--tenant-color-border))",
             }}
           >
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-110"
               style={{
-                background: `linear-gradient(135deg, var(--tenant-color-primary, #047857), var(--tenant-color-secondary, #0d9488))`,
+                background: `linear-gradient(135deg, hsl(var(--tenant-color-primary)), hsl(var(--tenant-color-secondary)))`,
               }}
             >
               <Lock className="w-8 h-8 text-white" strokeWidth={2} />
@@ -548,7 +548,7 @@ const BlockchainTraceability = () => {
             <h3
               className="font-semibold text-lg mb-2"
               style={{
-                color: "var(--tenant-color-heading, #1a1a1a)",
+                color: "hsl(var(--tenant-color-heading))",
                 fontFamily: "var(--tenant-font-heading, inherit)",
               }}
             >
@@ -557,7 +557,7 @@ const BlockchainTraceability = () => {
             <p
               className="text-sm leading-relaxed"
               style={{
-                color: "var(--tenant-color-text, #4a5568)",
+                color: "hsl(var(--tenant-color-text))",
                 fontFamily: "var(--tenant-font-base, inherit)",
                 opacity: 0.8,
               }}
@@ -571,14 +571,14 @@ const BlockchainTraceability = () => {
           <div
             className="p-7 rounded-lg group transition-all duration-200"
             style={{
-              backgroundColor: "var(--tenant-color-surface, #ffffff)",
-              border: "1px solid var(--tenant-color-border, #e5e7eb)",
+              backgroundColor: "hsl(var(--tenant-color-surface))",
+              border: "1px solid hsl(var(--tenant-color-border))",
             }}
           >
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-110"
               style={{
-                background: `linear-gradient(135deg, var(--tenant-color-primary, #047857), var(--tenant-color-secondary, #0d9488))`,
+                background: `linear-gradient(135deg, hsl(var(--tenant-color-primary)), hsl(var(--tenant-color-secondary)))`,
               }}
             >
               <Shield className="w-8 h-8 text-white" strokeWidth={2} />
@@ -586,7 +586,7 @@ const BlockchainTraceability = () => {
             <h3
               className="font-semibold text-lg mb-2"
               style={{
-                color: "var(--tenant-color-heading, #1a1a1a)",
+                color: "hsl(var(--tenant-color-heading))",
                 fontFamily: "var(--tenant-font-heading, inherit)",
               }}
             >
@@ -595,7 +595,7 @@ const BlockchainTraceability = () => {
             <p
               className="text-sm leading-relaxed"
               style={{
-                color: "var(--tenant-color-text, #4a5568)",
+                color: "hsl(var(--tenant-color-text))",
                 fontFamily: "var(--tenant-font-base, inherit)",
                 opacity: 0.8,
               }}
@@ -609,14 +609,14 @@ const BlockchainTraceability = () => {
           <div
             className="p-7 rounded-lg group transition-all duration-200"
             style={{
-              backgroundColor: "var(--tenant-color-surface, #ffffff)",
-              border: "1px solid var(--tenant-color-border, #e5e7eb)",
+              backgroundColor: "hsl(var(--tenant-color-surface))",
+              border: "1px solid hsl(var(--tenant-color-border))",
             }}
           >
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-110"
               style={{
-                background: `linear-gradient(135deg, var(--tenant-color-primary, #047857), var(--tenant-color-secondary, #0d9488))`,
+                background: `linear-gradient(135deg, hsl(var(--tenant-color-primary)), hsl(var(--tenant-color-secondary)))`,
               }}
             >
               <Eye className="w-8 h-8 text-white" strokeWidth={2} />
@@ -624,7 +624,7 @@ const BlockchainTraceability = () => {
             <h3
               className="font-semibold text-lg mb-2"
               style={{
-                color: "var(--tenant-color-heading, #1a1a1a)",
+                color: "hsl(var(--tenant-color-heading))",
                 fontFamily: "var(--tenant-font-heading, inherit)",
               }}
             >
@@ -633,7 +633,7 @@ const BlockchainTraceability = () => {
             <p
               className="text-sm leading-relaxed"
               style={{
-                color: "var(--tenant-color-text, #4a5568)",
+                color: "hsl(var(--tenant-color-text))",
                 fontFamily: "var(--tenant-font-base, inherit)",
                 opacity: 0.8,
               }}
@@ -650,14 +650,14 @@ const BlockchainTraceability = () => {
           <div
             className="p-8 rounded-lg transition-all duration-200"
             style={{
-              backgroundColor: "var(--tenant-color-surface, #ffffff)",
-              border: "1px solid var(--tenant-color-border, #e5e7eb)",
+              backgroundColor: "hsl(var(--tenant-color-surface))",
+              border: "1px solid hsl(var(--tenant-color-border))",
             }}
           >
             <h3
               className="text-2xl font-semibold mb-3"
               style={{
-                color: "var(--tenant-color-heading, #1a1a1a)",
+                color: "hsl(var(--tenant-color-heading))",
                 fontFamily: "var(--tenant-font-heading, inherit)",
               }}
             >
@@ -666,7 +666,7 @@ const BlockchainTraceability = () => {
             <p
               className="mb-6 max-w-2xl mx-auto leading-relaxed"
               style={{
-                color: "var(--tenant-color-text, #4a5568)",
+                color: "hsl(var(--tenant-color-text))",
                 fontFamily: "var(--tenant-font-base, inherit)",
                 opacity: 0.8,
               }}

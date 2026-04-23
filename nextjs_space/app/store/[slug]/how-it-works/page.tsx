@@ -71,7 +71,7 @@ export default function HowItWorksPage() {
     <div
       className="pt-20 pb-16"
       style={{
-        backgroundColor: "var(--tenant-color-background, #ffffff)",
+        backgroundColor: "hsl(var(--tenant-color-background))",
         fontFamily: "var(--tenant-font-base, inherit)",
       }}
     >
@@ -80,7 +80,7 @@ export default function HowItWorksPage() {
           <h1
             className="text-4xl md:text-5xl font-bold mb-8"
             style={{
-              color: "var(--tenant-color-heading, #111827)",
+              color: "hsl(var(--tenant-color-heading))",
               fontFamily: "var(--tenant-font-heading, inherit)",
             }}
           >
@@ -88,7 +88,7 @@ export default function HowItWorksPage() {
           </h1>
           <p
             className="text-xl max-w-2xl mx-auto"
-            style={{ color: "var(--tenant-color-text-muted, #6b7280)" }}
+            style={{ color: "hsl(var(--tenant-color-text-muted))" }}
           >
             {t("howItWorks.subtitle")} {t("howItWorks.through")}{" "}
             {tenant.businessName}
@@ -102,7 +102,7 @@ export default function HowItWorksPage() {
                 <div
                   className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"
                   style={{
-                    backgroundColor: "var(--tenant-color-primary, #059669)",
+                    backgroundColor: "hsl(var(--tenant-color-primary))",
                     color: "#ffffff",
                   }}
                 >
@@ -112,13 +112,13 @@ export default function HowItWorksPage() {
               <div>
                 <h3
                   className="text-2xl font-semibold mb-2"
-                  style={{ color: "var(--tenant-color-heading, #111827)" }}
+                  style={{ color: "hsl(var(--tenant-color-heading))" }}
                 >
                   {step.title}
                 </h3>
                 <p
                   className="text-lg"
-                  style={{ color: "var(--tenant-color-text, #1f2937)" }}
+                  style={{ color: "hsl(var(--tenant-color-text))" }}
                 >
                   {step.description}
                 </p>
@@ -130,14 +130,14 @@ export default function HowItWorksPage() {
         <div
           className="mt-16 p-8 rounded-lg max-w-4xl mx-auto"
           style={{
-            backgroundColor: "var(--tenant-color-surface, #f9fafb)",
-            borderColor: "var(--tenant-color-border, #e5e7eb)",
+            backgroundColor: "hsl(var(--tenant-color-surface))",
+            borderColor: "hsl(var(--tenant-color-border))",
             borderWidth: "1px",
           }}
         >
           <h2
             className="text-2xl font-semibold mb-4"
-            style={{ color: "var(--tenant-color-heading, #111827)" }}
+            style={{ color: "hsl(var(--tenant-color-heading))" }}
           >
             {t("howItWorks.legal.title")}
           </h2>
@@ -146,9 +146,9 @@ export default function HowItWorksPage() {
               <li key={index} className="flex items-start gap-2">
                 <CheckCircle2
                   className="w-5 h-5 mt-0.5 flex-shrink-0"
-                  style={{ color: "var(--tenant-color-success, #10b981)" }}
+                  style={{ color: "hsl(var(--tenant-color-success))" }}
                 />
-                <span style={{ color: "var(--tenant-color-text, #1f2937)" }}>
+                <span style={{ color: "hsl(var(--tenant-color-text))" }}>
                   {item}
                 </span>
               </li>

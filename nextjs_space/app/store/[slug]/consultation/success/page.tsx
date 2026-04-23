@@ -49,11 +49,11 @@ export default function ConsultationSuccessPage() {
     return (
       <div
         className="min-h-screen flex items-center justify-center pb-24 lg:pb-0"
-        style={{ backgroundColor: "var(--tenant-color-background)" }}
+        style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
       >
         <Loader2
           className="h-8 w-8 animate-spin"
-          style={{ color: "var(--tenant-color-primary)" }}
+          style={{ color: "hsl(var(--tenant-color-primary))" }}
         />
       </div>
     );
@@ -62,7 +62,7 @@ export default function ConsultationSuccessPage() {
   return (
     <div
       className="min-h-screen pb-24 lg:pb-0 pt-28 md:pt-32"
-      style={{ backgroundColor: "var(--tenant-color-background)" }}
+      style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
       <div className="max-w-2xl mx-auto px-4 py-8">
         <motion.div
@@ -75,8 +75,8 @@ export default function ConsultationSuccessPage() {
             className="border text-center mb-6"
             style={{
               backgroundColor:
-                "var(--tenant-color-surface, var(--tenant-color-background))",
-              borderColor: "var(--tenant-color-border, rgba(0,0,0,0.2))",
+                "hsl(var(--tenant-color-surface, var(--tenant-color-background)))",
+              borderColor: "hsl(var(--tenant-color-primary) / 0.2)",
             }}
           >
             <CardContent className="pt-8 pb-8">
@@ -87,19 +87,19 @@ export default function ConsultationSuccessPage() {
                 className="h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6"
                 style={{
                   backgroundColor:
-                    "rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.2)",
+                    "hsl(var(--tenant-color-primary) / 0.2)",
                 }}
               >
                 <CheckCircle2
                   className="h-10 w-10"
-                  style={{ color: "var(--tenant-color-primary)" }}
+                  style={{ color: "hsl(var(--tenant-color-primary))" }}
                 />
               </motion.div>
 
               <h1
                 className="text-3xl font-bold mb-3"
                 style={{
-                  color: "var(--tenant-color-heading)",
+                  color: "hsl(var(--tenant-color-heading))",
                   fontFamily: "var(--tenant-font-heading)",
                 }}
               >
@@ -109,7 +109,7 @@ export default function ConsultationSuccessPage() {
               <p
                 className="text-lg mb-2"
                 style={{
-                  color: "var(--tenant-color-text)",
+                  color: "hsl(var(--tenant-color-text))",
                   fontFamily: "var(--tenant-font-base)",
                 }}
               >
@@ -120,7 +120,7 @@ export default function ConsultationSuccessPage() {
                 <p
                   className="text-sm"
                   style={{
-                    color: "var(--tenant-color-text)",
+                    color: "hsl(var(--tenant-color-text))",
                     fontFamily: "var(--tenant-font-base)",
                     opacity: 0.7,
                   }}
@@ -139,14 +139,14 @@ export default function ConsultationSuccessPage() {
             className="border mb-6"
             style={{
               backgroundColor:
-                "var(--tenant-color-surface, var(--tenant-color-background))",
-              borderColor: "var(--tenant-color-border, rgba(0,0,0,0.2))",
+                "hsl(var(--tenant-color-surface, var(--tenant-color-background)))",
+              borderColor: "hsl(var(--tenant-color-primary) / 0.2)",
             }}
           >
             <CardHeader>
               <CardTitle
                 style={{
-                  color: "var(--tenant-color-heading)",
+                  color: "hsl(var(--tenant-color-heading))",
                   fontFamily: "var(--tenant-font-heading)",
                 }}
               >
@@ -160,20 +160,20 @@ export default function ConsultationSuccessPage() {
                   className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center"
                   style={{
                     backgroundColor: consultationData.kycLink
-                      ? "rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.2)"
+                      ? "hsl(var(--tenant-color-primary) / 0.2)"
                       : "rgba(100,100,100,0.2)",
                   }}
                 >
                   {consultationData.kycLink ? (
                     <UserCheck
                       className="h-5 w-5"
-                      style={{ color: "var(--tenant-color-primary)" }}
+                      style={{ color: "hsl(var(--tenant-color-primary))" }}
                     />
                   ) : (
                     <Clock
                       className="h-5 w-5"
                       style={{
-                        color: "var(--tenant-color-text)",
+                        color: "hsl(var(--tenant-color-text))",
                         opacity: 0.5,
                       }}
                     />
@@ -183,7 +183,7 @@ export default function ConsultationSuccessPage() {
                   <h3
                     className="font-semibold mb-1"
                     style={{
-                      color: "var(--tenant-color-heading)",
+                      color: "hsl(var(--tenant-color-heading))",
                       fontFamily: "var(--tenant-font-heading)",
                     }}
                   >
@@ -192,7 +192,7 @@ export default function ConsultationSuccessPage() {
                   <p
                     className="text-sm mb-2"
                     style={{
-                      color: "var(--tenant-color-text)",
+                      color: "hsl(var(--tenant-color-text))",
                       fontFamily: "var(--tenant-font-base)",
                     }}
                   >
@@ -205,7 +205,7 @@ export default function ConsultationSuccessPage() {
                         window.open(consultationData.kycLink, "_blank")
                       }
                       style={{
-                        backgroundColor: "var(--tenant-color-primary)",
+                        backgroundColor: "hsl(var(--tenant-color-primary))",
                         color: "white",
                         fontFamily: "var(--tenant-font-base)",
                       }}
@@ -232,14 +232,14 @@ export default function ConsultationSuccessPage() {
                 >
                   <Clock
                     className="h-5 w-5"
-                    style={{ color: "var(--tenant-color-text)", opacity: 0.5 }}
+                    style={{ color: "hsl(var(--tenant-color-text))", opacity: 0.5 }}
                   />
                 </div>
                 <div className="flex-1">
                   <h3
                     className="font-semibold mb-1"
                     style={{
-                      color: "var(--tenant-color-heading)",
+                      color: "hsl(var(--tenant-color-heading))",
                       fontFamily: "var(--tenant-font-heading)",
                     }}
                   >
@@ -248,7 +248,7 @@ export default function ConsultationSuccessPage() {
                   <p
                     className="text-sm"
                     style={{
-                      color: "var(--tenant-color-text)",
+                      color: "hsl(var(--tenant-color-text))",
                       fontFamily: "var(--tenant-font-base)",
                     }}
                   >
@@ -280,14 +280,14 @@ export default function ConsultationSuccessPage() {
                 >
                   <Clock
                     className="h-5 w-5"
-                    style={{ color: "var(--tenant-color-text)", opacity: 0.5 }}
+                    style={{ color: "hsl(var(--tenant-color-text))", opacity: 0.5 }}
                   />
                 </div>
                 <div className="flex-1">
                   <h3
                     className="font-semibold mb-1"
                     style={{
-                      color: "var(--tenant-color-heading)",
+                      color: "hsl(var(--tenant-color-heading))",
                       fontFamily: "var(--tenant-font-heading)",
                     }}
                   >
@@ -296,7 +296,7 @@ export default function ConsultationSuccessPage() {
                   <p
                     className="text-sm"
                     style={{
-                      color: "var(--tenant-color-text)",
+                      color: "hsl(var(--tenant-color-text))",
                       fontFamily: "var(--tenant-font-base)",
                     }}
                   >
@@ -330,7 +330,7 @@ export default function ConsultationSuccessPage() {
               onClick={() => router.push(`${getTenantBasePath(slug)}/dashboard`)}
               className="flex-1"
               style={{
-                backgroundColor: "var(--tenant-color-primary)",
+                backgroundColor: "hsl(var(--tenant-color-primary))",
                 color: "white",
                 fontFamily: "var(--tenant-font-base)",
               }}
