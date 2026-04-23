@@ -77,9 +77,9 @@ export default function ConditionPage() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: "var(--tenant-color-background)" }}
+        style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
       >
-        <p className="text-lg" style={{ color: "var(--tenant-color-text)" }}>
+        <p className="text-lg" style={{ color: "hsl(var(--tenant-color-text))" }}>
           Loading condition details...
         </p>
       </div>
@@ -111,7 +111,7 @@ export default function ConditionPage() {
   return (
     <div
       className="min-h-screen"
-      style={{ backgroundColor: "var(--tenant-color-background)" }}
+      style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
       {/* Hero Section */}
       <section className="relative pt-32 pb-16 overflow-hidden">
@@ -120,7 +120,7 @@ export default function ConditionPage() {
           style={
             {
               "--tw-gradient-from":
-                "rgba(var(--tenant-color-primary-rgb), 0.05)",
+                "rgba(hsl(var(--tenant-color-primary-rgb)), 0.05)",
             } as any
           }
         />
@@ -133,7 +133,7 @@ export default function ConditionPage() {
             <h1
               className="text-5xl md:text-6xl font-bold mb-6 tracking-tight"
               style={{
-                color: "var(--tenant-color-heading)",
+                color: "hsl(var(--tenant-color-heading))",
                 fontFamily: "var(--tenant-font-heading)",
               }}
             >
@@ -142,7 +142,7 @@ export default function ConditionPage() {
             <p
               className="text-xl max-w-3xl opacity-80"
               style={{
-                color: "var(--tenant-color-text)",
+                color: "hsl(var(--tenant-color-text))",
                 fontFamily: "var(--tenant-font-base)",
               }}
             >
@@ -156,7 +156,7 @@ export default function ConditionPage() {
       <div className="container mx-auto px-4 py-4">
         <div
           className="flex items-center gap-2 text-sm opacity-60 font-medium"
-          style={{ color: "var(--tenant-color-text)" }}
+          style={{ color: "hsl(var(--tenant-color-text))" }}
         >
           <Link
             href={`/store/${params.slug}`}
@@ -174,7 +174,7 @@ export default function ConditionPage() {
           <ChevronRight className="w-4 h-4" />
           <span
             className="opacity-100"
-            style={{ color: "var(--tenant-color-heading)" }}
+            style={{ color: "hsl(var(--tenant-color-heading))" }}
           >
             {condition.name}
           </span>
@@ -190,7 +190,7 @@ export default function ConditionPage() {
               <div className="sticky top-32 space-y-2">
                 <h3
                   className="text-sm font-semibold mb-4"
-                  style={{ color: "var(--tenant-color-heading)" }}
+                  style={{ color: "hsl(var(--tenant-color-heading))" }}
                 >
                   ON THIS PAGE
                 </h3>
@@ -207,9 +207,9 @@ export default function ConditionPage() {
                     className="block w-full text-left px-4 py-2 text-sm rounded-lg transition-all hover:bg-opacity-5 hover:pl-6"
                     style={
                       {
-                        color: "var(--tenant-color-text)",
+                        color: "hsl(var(--tenant-color-text))",
                         backgroundColor: "transparent",
-                        "--hover-bg": "var(--tenant-color-primary)",
+                        "--hover-bg": "hsl(var(--tenant-color-primary))",
                       } as any
                     }
                   >
@@ -226,7 +226,7 @@ export default function ConditionPage() {
                 <div id="causes" className="scroll-mt-32">
                   <h2
                     className="text-3xl font-bold mb-6"
-                    style={{ color: "var(--tenant-color-heading)" }}
+                    style={{ color: "hsl(var(--tenant-color-heading))" }}
                   >
                     Causes & Risk Factors
                   </h2>
@@ -236,19 +236,19 @@ export default function ConditionPage() {
                         key={idx}
                         className="p-6 rounded-xl border bg-opacity-50"
                         style={{
-                          backgroundColor: "var(--tenant-color-surface)",
-                          borderColor: "var(--tenant-color-border)",
+                          backgroundColor: "hsl(var(--tenant-color-surface))",
+                          borderColor: "hsl(var(--tenant-color-border))",
                         }}
                       >
                         <h3
                           className="text-xl font-semibold mb-2"
-                          style={{ color: "var(--tenant-color-heading)" }}
+                          style={{ color: "hsl(var(--tenant-color-heading))" }}
                         >
                           {cause.title}
                         </h3>
                         <p
                           className="opacity-80"
-                          style={{ color: "var(--tenant-color-text)" }}
+                          style={{ color: "hsl(var(--tenant-color-text))" }}
                         >
                           {cause.desc}
                         </p>
@@ -262,7 +262,7 @@ export default function ConditionPage() {
               <div id="symptoms" className="scroll-mt-32">
                 <h2
                   className="text-3xl font-bold mb-6"
-                  style={{ color: "var(--tenant-color-heading)" }}
+                  style={{ color: "hsl(var(--tenant-color-heading))" }}
                 >
                   Common Symptoms
                 </h2>
@@ -271,13 +271,13 @@ export default function ConditionPage() {
                     <div
                       className="p-6 rounded-xl border bg-opacity-50"
                       style={{
-                        backgroundColor: "var(--tenant-color-surface)",
-                        borderColor: "var(--tenant-color-border)",
+                        backgroundColor: "hsl(var(--tenant-color-surface))",
+                        borderColor: "hsl(var(--tenant-color-border))",
                       }}
                     >
                       <h3
                         className="text-xl font-semibold mb-4"
-                        style={{ color: "var(--tenant-color-heading)" }}
+                        style={{ color: "hsl(var(--tenant-color-heading))" }}
                       >
                         Physical Symptoms
                       </h3>
@@ -289,12 +289,12 @@ export default function ConditionPage() {
                                 className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
                                 style={{
                                   backgroundColor:
-                                    "var(--tenant-color-primary)",
+                                    "hsl(var(--tenant-color-primary))",
                                 }}
                               />
                               <span
                                 className="opacity-80"
-                                style={{ color: "var(--tenant-color-text)" }}
+                                style={{ color: "hsl(var(--tenant-color-text))" }}
                               >
                                 {symptom}
                               </span>
@@ -309,13 +309,13 @@ export default function ConditionPage() {
                       <div
                         className="p-6 rounded-xl border bg-opacity-50"
                         style={{
-                          backgroundColor: "var(--tenant-color-surface)",
-                          borderColor: "var(--tenant-color-border)",
+                          backgroundColor: "hsl(var(--tenant-color-surface))",
+                          borderColor: "hsl(var(--tenant-color-border))",
                         }}
                       >
                         <h3
                           className="text-xl font-semibold mb-4"
-                          style={{ color: "var(--tenant-color-heading)" }}
+                          style={{ color: "hsl(var(--tenant-color-heading))" }}
                         >
                           Psychological Symptoms
                         </h3>
@@ -327,12 +327,12 @@ export default function ConditionPage() {
                                   className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
                                   style={{
                                     backgroundColor:
-                                      "var(--tenant-color-secondary, var(--tenant-color-primary))",
+                                      "var(--tenant-color-secondary, hsl(var(--tenant-color-primary)))",
                                   }}
                                 />
                                 <span
                                   className="opacity-80"
-                                  style={{ color: "var(--tenant-color-text)" }}
+                                  style={{ color: "hsl(var(--tenant-color-text))" }}
                                 >
                                   {symptom}
                                 </span>
@@ -350,7 +350,7 @@ export default function ConditionPage() {
                 <div id="treatments" className="scroll-mt-32">
                   <h2
                     className="text-3xl font-bold mb-6"
-                    style={{ color: "var(--tenant-color-heading)" }}
+                    style={{ color: "hsl(var(--tenant-color-heading))" }}
                   >
                     Standard Treatments
                   </h2>
@@ -360,19 +360,19 @@ export default function ConditionPage() {
                         key={idx}
                         className="p-6 rounded-xl border bg-opacity-50"
                         style={{
-                          backgroundColor: "var(--tenant-color-surface)",
-                          borderColor: "var(--tenant-color-border)",
+                          backgroundColor: "hsl(var(--tenant-color-surface))",
+                          borderColor: "hsl(var(--tenant-color-border))",
                         }}
                       >
                         <h3
                           className="text-xl font-semibold mb-2"
-                          style={{ color: "var(--tenant-color-heading)" }}
+                          style={{ color: "hsl(var(--tenant-color-heading))" }}
                         >
                           {treatment.title}
                         </h3>
                         <p
                           className="opacity-80"
-                          style={{ color: "var(--tenant-color-text)" }}
+                          style={{ color: "hsl(var(--tenant-color-text))" }}
                         >
                           {treatment.desc}
                         </p>
@@ -388,32 +388,32 @@ export default function ConditionPage() {
                   className="p-8 rounded-2xl bg-opacity-5 border border-opacity-20"
                   style={{
                     backgroundColor:
-                      "rgba(var(--tenant-color-primary-rgb), 0.05)",
-                    borderColor: "var(--tenant-color-primary)",
+                      "rgba(hsl(var(--tenant-color-primary-rgb)), 0.05)",
+                    borderColor: "hsl(var(--tenant-color-primary))",
                   }}
                 >
                   <h2
                     className="text-3xl font-bold mb-6"
-                    style={{ color: "var(--tenant-color-heading)" }}
+                    style={{ color: "hsl(var(--tenant-color-heading))" }}
                   >
                     Medical Cannabis Approach
                   </h2>
                   <p
                     className="opacity-80 leading-relaxed mb-4"
-                    style={{ color: "var(--tenant-color-text)" }}
+                    style={{ color: "hsl(var(--tenant-color-text))" }}
                   >
                     {medicalCannabis.content1}
                   </p>
                   <p
                     className="opacity-80 leading-relaxed mb-6"
-                    style={{ color: "var(--tenant-color-text)" }}
+                    style={{ color: "hsl(var(--tenant-color-text))" }}
                   >
                     {medicalCannabis.content2}
                   </p>
                   <Link href="/contact">
                     <button
                       className="px-8 py-3 rounded-lg font-semibold text-white transition-opacity hover:opacity-90"
-                      style={{ backgroundColor: "var(--tenant-color-primary)" }}
+                      style={{ backgroundColor: "hsl(var(--tenant-color-primary))" }}
                     >
                       Book Consultation
                     </button>
@@ -426,7 +426,7 @@ export default function ConditionPage() {
                 <div id="faq" className="scroll-mt-32">
                   <h2
                     className="text-3xl font-bold mb-8"
-                    style={{ color: "var(--tenant-color-heading)" }}
+                    style={{ color: "hsl(var(--tenant-color-heading))" }}
                   >
                     Frequently Asked Questions
                   </h2>
@@ -435,7 +435,7 @@ export default function ConditionPage() {
                       <div
                         key={idx}
                         className="rounded-xl border overflow-hidden"
-                        style={{ borderColor: "var(--tenant-color-border)" }}
+                        style={{ borderColor: "hsl(var(--tenant-color-border))" }}
                       >
                         <button
                           onClick={() =>
@@ -443,18 +443,18 @@ export default function ConditionPage() {
                           }
                           className="w-full flex items-center justify-between p-6 text-left hover:bg-opacity-50 transition-colors"
                           style={{
-                            backgroundColor: "var(--tenant-color-surface)",
+                            backgroundColor: "hsl(var(--tenant-color-surface))",
                           }}
                         >
                           <h3
                             className="text-lg font-semibold pr-4"
-                            style={{ color: "var(--tenant-color-heading)" }}
+                            style={{ color: "hsl(var(--tenant-color-heading))" }}
                           >
                             {faq.question}
                           </h3>
                           <ChevronDown
                             className={`w-5 h-5 flex-shrink-0 transition-transform duration-300 ${openFaq === idx ? "rotate-180" : ""}`}
-                            style={{ color: "var(--tenant-color-text)" }}
+                            style={{ color: "hsl(var(--tenant-color-text))" }}
                           />
                         </button>
                         <AnimatePresence>
@@ -469,7 +469,7 @@ export default function ConditionPage() {
                               <div className="px-6 pb-6">
                                 <p
                                   className="opacity-80 leading-relaxed"
-                                  style={{ color: "var(--tenant-color-text)" }}
+                                  style={{ color: "hsl(var(--tenant-color-text))" }}
                                 >
                                   {faq.answer}
                                 </p>
@@ -490,7 +490,7 @@ export default function ConditionPage() {
       {/* CTA Footer */}
       <section
         className="py-20"
-        style={{ backgroundColor: "var(--tenant-color-secondary)" }}
+        style={{ backgroundColor: "hsl(var(--tenant-color-secondary))" }}
       >
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-semibold text-white mb-6">

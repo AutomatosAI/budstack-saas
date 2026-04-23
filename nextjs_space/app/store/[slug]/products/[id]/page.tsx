@@ -189,18 +189,18 @@ export default function ProductDetailPage() {
       <div
         className="min-h-screen pt-20"
         style={{
-          backgroundColor: "var(--tenant-color-background, #ffffff)",
+          backgroundColor: "hsl(var(--tenant-color-background))",
           fontFamily: "var(--tenant-font-base, inherit)",
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex items-center justify-center">
           <Loader2
             className="w-8 h-8 animate-spin"
-            style={{ color: "var(--tenant-color-primary, #059669)" }}
+            style={{ color: "hsl(var(--tenant-color-primary))" }}
           />
           <p
             className="ml-4 text-lg"
-            style={{ color: "var(--tenant-color-text, #1f2937)" }}
+            style={{ color: "hsl(var(--tenant-color-text))" }}
           >
             Loading product details...
           </p>
@@ -214,7 +214,7 @@ export default function ProductDetailPage() {
       <div
         className="min-h-screen pt-20"
         style={{
-          backgroundColor: "var(--tenant-color-background, #ffffff)",
+          backgroundColor: "hsl(var(--tenant-color-background))",
           fontFamily: "var(--tenant-font-base, inherit)",
         }}
       >
@@ -248,7 +248,7 @@ export default function ProductDetailPage() {
     <div
       className="min-h-screen pt-20"
       style={{
-        backgroundColor: "var(--tenant-color-background, #ffffff)",
+        backgroundColor: "hsl(var(--tenant-color-background))",
         fontFamily: "var(--tenant-font-base, inherit)",
       }}
     >
@@ -258,7 +258,7 @@ export default function ProductDetailPage() {
           <Button
             variant="ghost"
             className="mb-6 hover:bg-transparent"
-            style={{ color: "var(--tenant-color-text, #1f2937)" }}
+            style={{ color: "hsl(var(--tenant-color-text))" }}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Products
@@ -282,7 +282,7 @@ export default function ProductDetailPage() {
                 <div
                   className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full text-sm font-bold shadow-md"
                   style={{
-                    backgroundColor: "var(--tenant-color-destructive, #ef4444)",
+                    backgroundColor: "hsl(var(--tenant-color-destructive))",
                     color: "white"
                   }}
                 >
@@ -313,7 +313,7 @@ export default function ProductDetailPage() {
                   <div
                     className="p-8 rounded-full"
                     style={{
-                      backgroundColor: "var(--tenant-color-surface, #f9fafb)",
+                      backgroundColor: "hsl(var(--tenant-color-surface))",
                     }}
                   >
                     {getStrainIcon(product.type)}
@@ -359,7 +359,7 @@ export default function ProductDetailPage() {
                     className={`relative w-24 h-24 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${selectedImage === idx ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"
                       }`}
                     style={{
-                      borderColor: selectedImage === idx ? "var(--tenant-color-primary, #059669)" : "transparent"
+                      borderColor: selectedImage === idx ? "hsl(var(--tenant-color-primary))" : "transparent"
                     }}
                   >
                     <Image
@@ -375,7 +375,7 @@ export default function ProductDetailPage() {
 
             {/* Expiry Date */}
             {product.expiryDate && (
-              <div className="flex items-center gap-2 text-sm" style={{ color: "var(--tenant-color-text-muted, #6b7280)" }}>
+              <div className="flex items-center gap-2 text-sm" style={{ color: "hsl(var(--tenant-color-text-muted))" }}>
                 <AlertCircle className="w-4 h-4" />
                 <span>Expires: {new Date(product.expiryDate).toLocaleDateString()}</span>
               </div>
@@ -396,7 +396,7 @@ export default function ProductDetailPage() {
             <h1
               className="text-4xl md:text-5xl font-bold mb-4"
               style={{
-                color: "var(--tenant-color-heading, #111827)",
+                color: "hsl(var(--tenant-color-heading))",
                 fontFamily: "var(--tenant-font-heading, inherit)",
               }}
             >
@@ -406,7 +406,7 @@ export default function ProductDetailPage() {
             {/* Description */}
             <p
               className="text-lg mb-8 leading-relaxed"
-              style={{ color: "var(--tenant-color-text, #1f2937)" }}
+              style={{ color: "hsl(var(--tenant-color-text))" }}
             >
               {product.description}
             </p>
@@ -415,14 +415,14 @@ export default function ProductDetailPage() {
             <div
               className="rounded-xl p-6 mb-6"
               style={{
-                backgroundColor: "var(--tenant-color-surface, #f9fafb)",
-                borderColor: "var(--tenant-color-border, #e5e7eb)",
+                backgroundColor: "hsl(var(--tenant-color-surface))",
+                borderColor: "hsl(var(--tenant-color-border))",
                 borderWidth: "1px",
               }}
             >
               <h3
                 className="text-lg font-semibold mb-4"
-                style={{ color: "var(--tenant-color-heading, #111827)" }}
+                style={{ color: "hsl(var(--tenant-color-heading))" }}
               >
                 Cannabinoid Profile
               </h3>
@@ -430,13 +430,13 @@ export default function ProductDetailPage() {
                 <div className="text-center">
                   <p
                     className="text-sm mb-1"
-                    style={{ color: "var(--tenant-color-text-muted, #6b7280)" }}
+                    style={{ color: "hsl(var(--tenant-color-text-muted))" }}
                   >
                     THC
                   </p>
                   <p
                     className="text-3xl font-bold"
-                    style={{ color: "var(--tenant-color-primary, #059669)" }}
+                    style={{ color: "hsl(var(--tenant-color-primary))" }}
                   >
                     {(product.thc_content || product.thc || 0).toFixed(1)}%
                   </p>
@@ -444,13 +444,13 @@ export default function ProductDetailPage() {
                 <div className="text-center">
                   <p
                     className="text-sm mb-1"
-                    style={{ color: "var(--tenant-color-text-muted, #6b7280)" }}
+                    style={{ color: "hsl(var(--tenant-color-text-muted))" }}
                   >
                     CBD
                   </p>
                   <p
                     className="text-3xl font-bold"
-                    style={{ color: "var(--tenant-color-secondary, #10b981)" }}
+                    style={{ color: "hsl(var(--tenant-color-secondary))" }}
                   >
                     {(product.cbd_content || product.cbd || 0).toFixed(1)}%
                   </p>
@@ -460,14 +460,14 @@ export default function ProductDetailPage() {
                     <p
                       className="text-sm mb-1"
                       style={{
-                        color: "var(--tenant-color-text-muted, #6b7280)",
+                        color: "hsl(var(--tenant-color-text-muted))",
                       }}
                     >
                       CBG
                     </p>
                     <p
                       className="text-3xl font-bold"
-                      style={{ color: "var(--tenant-color-accent, #8b5cf6)" }}
+                      style={{ color: "hsl(var(--tenant-color-accent))" }}
                     >
                       {product.cbg.toFixed(1)}%
                     </p>
@@ -481,7 +481,7 @@ export default function ProductDetailPage() {
               <div className="mb-6">
                 <h3
                   className="text-lg font-semibold mb-3"
-                  style={{ color: "var(--tenant-color-heading, #111827)" }}
+                  style={{ color: "hsl(var(--tenant-color-heading))" }}
                 >
                   Flavour Profile
                 </h3>
@@ -504,7 +504,7 @@ export default function ProductDetailPage() {
               <div className="mb-6">
                 <h3
                   className="text-lg font-semibold mb-3"
-                  style={{ color: "var(--tenant-color-heading, #111827)" }}
+                  style={{ color: "hsl(var(--tenant-color-heading))" }}
                 >
                   Effects & Feelings
                 </h3>
@@ -514,7 +514,7 @@ export default function ProductDetailPage() {
                       key={index}
                       className="text-sm py-1 px-3"
                       style={{
-                        backgroundColor: "var(--tenant-color-primary, #059669)",
+                        backgroundColor: "hsl(var(--tenant-color-primary))",
                         color: "#ffffff",
                       }}
                     >
@@ -530,7 +530,7 @@ export default function ProductDetailPage() {
               <div className="mb-8">
                 <h3
                   className="text-lg font-semibold mb-3"
-                  style={{ color: "var(--tenant-color-heading, #111827)" }}
+                  style={{ color: "hsl(var(--tenant-color-heading))" }}
                 >
                   Helps With
                 </h3>
@@ -552,21 +552,21 @@ export default function ProductDetailPage() {
             <div
               className="rounded-xl p-6 sticky top-24"
               style={{
-                backgroundColor: "var(--tenant-color-surface, #f9fafb)",
-                borderColor: "var(--tenant-color-border, #e5e7eb)",
+                backgroundColor: "hsl(var(--tenant-color-surface))",
+                borderColor: "hsl(var(--tenant-color-border))",
                 borderWidth: "2px",
               }}
             >
               <div className="flex items-baseline gap-2 mb-6">
                 <p
                   className="text-4xl font-bold"
-                  style={{ color: "var(--tenant-color-heading, #111827)" }}
+                  style={{ color: "hsl(var(--tenant-color-heading))" }}
                 >
                   {displayCurrency} {displayPrice.toFixed(2)}
                 </p>
                 <p
                   className="text-sm"
-                  style={{ color: "var(--tenant-color-text-muted, #6b7280)" }}
+                  style={{ color: "hsl(var(--tenant-color-text-muted))" }}
                 >
                   per unit
                 </p>
@@ -604,7 +604,7 @@ export default function ProductDetailPage() {
                   <div className="mb-6">
                     <p
                       className="text-sm font-medium mb-3"
-                      style={{ color: "var(--tenant-color-text, #1f2937)" }}
+                      style={{ color: "hsl(var(--tenant-color-text))" }}
                     >
                       Select Weight:
                     </p>
@@ -617,16 +617,16 @@ export default function ProductDetailPage() {
                           style={{
                             backgroundColor:
                               selectedWeight === w
-                                ? "var(--tenant-color-primary, #059669)"
+                                ? "hsl(var(--tenant-color-primary))"
                                 : "transparent",
                             color:
                               selectedWeight === w
                                 ? "#ffffff"
-                                : "var(--tenant-color-text, #1f2937)",
+                                : "hsl(var(--tenant-color-text))",
                             borderColor:
                               selectedWeight === w
-                                ? "var(--tenant-color-primary, #059669)"
-                                : "var(--tenant-color-border, #e5e7eb)",
+                                ? "hsl(var(--tenant-color-primary))"
+                                : "hsl(var(--tenant-color-border))",
                           }}
                           onClick={() => setSelectedWeight(w)}
                         >
@@ -640,13 +640,13 @@ export default function ProductDetailPage() {
                   <div className="flex items-baseline gap-2 mb-4">
                     <p
                       className="text-sm"
-                      style={{ color: "var(--tenant-color-text-muted, #6b7280)" }}
+                      style={{ color: "hsl(var(--tenant-color-text-muted))" }}
                     >
                       Total:
                     </p>
                     <p
                       className="text-2xl font-bold"
-                      style={{ color: "var(--tenant-color-heading, #111827)" }}
+                      style={{ color: "hsl(var(--tenant-color-heading))" }}
                     >
                       {displayCurrency} {(displayPrice * selectedWeight).toFixed(2)}
                     </p>
@@ -656,7 +656,7 @@ export default function ProductDetailPage() {
                   {product.stockQuantity > 0 && product.isAvailable && (
                     <p
                       className="text-sm mb-4"
-                      style={{ color: "var(--tenant-color-success, #10b981)" }}
+                      style={{ color: "hsl(var(--tenant-color-success))" }}
                     >
                       ✓ In stock
                     </p>
@@ -669,7 +669,7 @@ export default function ProductDetailPage() {
                     className="w-full text-lg py-6"
                     style={{
                       backgroundColor: product.isAvailable
-                        ? "var(--tenant-color-primary, #059669)"
+                        ? "hsl(var(--tenant-color-primary))"
                         : "#9ca3af",
                       color: "#ffffff",
                     }}
@@ -689,12 +689,12 @@ export default function ProductDetailPage() {
         {similarProducts.length > 0 && (
           <div
             className="border-t pt-16"
-            style={{ borderColor: "var(--tenant-color-border, #e5e7eb)" }}
+            style={{ borderColor: "hsl(var(--tenant-color-border))" }}
           >
             <h2
               className="text-3xl font-bold mb-8"
               style={{
-                color: "var(--tenant-color-heading, #111827)",
+                color: "hsl(var(--tenant-color-heading))",
                 fontFamily: "var(--tenant-font-heading, inherit)",
               }}
             >
@@ -718,7 +718,7 @@ export default function ProductDetailPage() {
                       style={{
                         boxShadow:
                           "var(--tenant-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1))",
-                        backgroundColor: "var(--tenant-color-surface, #ffffff)",
+                        backgroundColor: "hsl(var(--tenant-color-surface))",
                       }}
                     >
                       <div
@@ -749,7 +749,7 @@ export default function ProductDetailPage() {
                         <h3
                           className="font-semibold mb-2 line-clamp-2 group-hover:underline"
                           style={{
-                            color: "var(--tenant-color-heading, #111827)",
+                            color: "hsl(var(--tenant-color-heading))",
                           }}
                         >
                           {similarProduct.name}
@@ -757,21 +757,21 @@ export default function ProductDetailPage() {
                         <div className="flex items-center gap-2 text-sm mb-2">
                           <span
                             style={{
-                              color: "var(--tenant-color-primary, #059669)",
+                              color: "hsl(var(--tenant-color-primary))",
                             }}
                           >
                             THC: {(similarProduct.thc || 0).toFixed(1)}%
                           </span>
                           <span
                             style={{
-                              color: "var(--tenant-color-text-muted, #6b7280)",
+                              color: "hsl(var(--tenant-color-text-muted))",
                             }}
                           >
                             •
                           </span>
                           <span
                             style={{
-                              color: "var(--tenant-color-secondary, #10b981)",
+                              color: "hsl(var(--tenant-color-secondary))",
                             }}
                           >
                             CBD: {(similarProduct.cbd || 0).toFixed(1)}%
@@ -780,7 +780,7 @@ export default function ProductDetailPage() {
                         <p
                           className="text-lg font-bold"
                           style={{
-                            color: "var(--tenant-color-heading, #111827)",
+                            color: "hsl(var(--tenant-color-heading))",
                           }}
                         >
                           {similarProduct.currency || displayCurrency}{" "}

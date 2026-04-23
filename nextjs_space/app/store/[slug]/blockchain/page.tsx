@@ -27,9 +27,9 @@ export default function BlockchainTechnologyPage() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: "var(--tenant-color-background)" }}
+        style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
       >
-        <p className="text-lg" style={{ color: "var(--tenant-color-text)" }}>
+        <p className="text-lg" style={{ color: "hsl(var(--tenant-color-text))" }}>
           Loading...
         </p>
       </div>
@@ -43,12 +43,12 @@ export default function BlockchainTechnologyPage() {
   return (
     <div
       className="min-h-screen pb-24 lg:pb-0"
-      style={{ backgroundColor: "var(--tenant-color-background)" }}
+      style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
       <main>
         {/* Hero Section */}
         <section
-          style={{ backgroundColor: "var(--tenant-color-background)" }}
+          style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
           className="pt-28 md:pt-32 pb-16 md:pb-20"
         >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -60,7 +60,7 @@ export default function BlockchainTechnologyPage() {
                 <h1
                   className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight leading-[1.1]"
                   style={{
-                    color: "var(--tenant-color-heading)",
+                    color: "hsl(var(--tenant-color-heading))",
                     fontFamily: "var(--tenant-font-heading)",
                   }}
                 >
@@ -69,7 +69,7 @@ export default function BlockchainTechnologyPage() {
                 <p
                   className="text-xl md:text-2xl max-w-3xl font-light"
                   style={{
-                    color: "var(--tenant-color-text)",
+                    color: "hsl(var(--tenant-color-text))",
                     fontFamily: "var(--tenant-font-base)",
                   }}
                 >
@@ -86,7 +86,7 @@ export default function BlockchainTechnologyPage() {
           className="py-16 md:py-20"
           style={{
             backgroundColor:
-              "rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.05)",
+              "hsl(var(--tenant-color-primary) / 0.05)",
           }}
         >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -99,7 +99,7 @@ export default function BlockchainTechnologyPage() {
                 <h2
                   className="text-3xl md:text-4xl font-semibold mb-8 tracking-tight"
                   style={{
-                    color: "var(--tenant-color-heading)",
+                    color: "hsl(var(--tenant-color-heading))",
                     fontFamily: "var(--tenant-font-heading)",
                   }}
                 >
@@ -108,7 +108,7 @@ export default function BlockchainTechnologyPage() {
                 <p
                   className="text-base md:text-lg leading-relaxed mb-6"
                   style={{
-                    color: "var(--tenant-color-text)",
+                    color: "hsl(var(--tenant-color-text))",
                     fontFamily: "var(--tenant-font-base)",
                   }}
                 >
@@ -121,7 +121,7 @@ export default function BlockchainTechnologyPage() {
                 <p
                   className="text-base md:text-lg leading-relaxed"
                   style={{
-                    color: "var(--tenant-color-text)",
+                    color: "hsl(var(--tenant-color-text))",
                     fontFamily: "var(--tenant-font-base)",
                   }}
                 >
@@ -143,7 +143,7 @@ export default function BlockchainTechnologyPage() {
           className="py-20 md:py-32"
           style={{
             backgroundColor:
-              "rgba(var(--tenant-color-primary-rgb, 28, 79, 77), 0.05)",
+              "hsl(var(--tenant-color-primary) / 0.05)",
           }}
         >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -155,7 +155,7 @@ export default function BlockchainTechnologyPage() {
               <h2
                 className="text-3xl md:text-4xl font-semibold text-center mb-16 tracking-tight"
                 style={{
-                  color: "var(--tenant-color-heading)",
+                  color: "hsl(var(--tenant-color-heading))",
                   fontFamily: "var(--tenant-font-heading)",
                 }}
               >
@@ -190,15 +190,15 @@ export default function BlockchainTechnologyPage() {
                   <div
                     className="rounded-xl p-8 border hover:shadow-lg transition-all duration-300"
                     style={{
-                      backgroundColor: "var(--tenant-color-background)",
+                      backgroundColor: "hsl(var(--tenant-color-background))",
                       borderColor:
-                        "var(--tenant-color-border, rgba(0,0,0,0.2))",
+                        "hsl(var(--tenant-color-primary) / 0.2)",
                     }}
                   >
                     <h3
                       className="text-xl font-semibold mb-4"
                       style={{
-                        color: "var(--tenant-color-heading)",
+                        color: "hsl(var(--tenant-color-heading))",
                         fontFamily: "var(--tenant-font-heading)",
                       }}
                     >
@@ -207,7 +207,7 @@ export default function BlockchainTechnologyPage() {
                     <p
                       className="text-sm leading-relaxed"
                       style={{
-                        color: "var(--tenant-color-text)",
+                        color: "hsl(var(--tenant-color-text))",
                         fontFamily: "var(--tenant-font-base)",
                       }}
                     >

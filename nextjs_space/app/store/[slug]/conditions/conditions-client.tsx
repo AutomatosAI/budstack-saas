@@ -105,7 +105,7 @@ export default function ConditionsClient({
   return (
     <div
       className="min-h-screen pb-24 lg:pb-0"
-      style={{ backgroundColor: "var(--tenant-color-background)" }}
+      style={{ backgroundColor: "hsl(var(--tenant-color-background))" }}
     >
       <main className="pt-28 md:pt-32">
         {/* Hero Section */}
@@ -113,7 +113,7 @@ export default function ConditionsClient({
           className="py-16 md:py-24"
           style={{
             background:
-              "linear-gradient(to bottom, hsl(var(--tenant-color-primary) / 0.08), transparent)",
+              "linear-gradient(to bottom, hsl(hsl(var(--tenant-color-primary)) / 0.08), transparent)",
           }}
         >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -126,7 +126,7 @@ export default function ConditionsClient({
               <motion.h1
                 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight leading-[1.1]"
                 style={{
-                  color: "hsl(var(--tenant-color-heading))",
+                  color: "hsl(hsl(var(--tenant-color-heading)))",
                   fontFamily: "var(--tenant-font-heading, sans-serif)",
                 }}
                 variants={fadeInUp}
@@ -136,7 +136,7 @@ export default function ConditionsClient({
               <motion.p
                 className="text-lg md:text-xl max-w-3xl mx-auto font-light"
                 style={{
-                  color: "hsl(var(--tenant-color-text))",
+                  color: "hsl(hsl(var(--tenant-color-text)))",
                   fontFamily: "var(--tenant-font-base, sans-serif)",
                 }}
                 variants={fadeInUp}
@@ -162,7 +162,7 @@ export default function ConditionsClient({
                   key={i}
                   className="text-base md:text-lg leading-relaxed"
                   style={{
-                    color: "hsl(var(--tenant-color-text))",
+                    color: "hsl(hsl(var(--tenant-color-text)))",
                     fontFamily: "var(--tenant-font-base, sans-serif)",
                   }}
                   variants={fadeInUp}
@@ -200,9 +200,9 @@ export default function ConditionsClient({
                       className="rounded-xl p-6 text-center shadow-lg hover:shadow-xl transition-shadow"
                       style={{
                         backgroundColor:
-                          "hsl(var(--tenant-color-primary) / 0.05)",
+                          "hsl(hsl(var(--tenant-color-primary)) / 0.05)",
                         border:
-                          "1px solid hsl(var(--tenant-color-primary) / 0.1)",
+                          "1px solid hsl(hsl(var(--tenant-color-primary)) / 0.1)",
                       }}
                       variants={fadeInUp}
                     >
@@ -210,18 +210,18 @@ export default function ConditionsClient({
                         className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
                         style={{
                           backgroundColor:
-                            "hsl(var(--tenant-color-primary) / 0.1)",
+                            "hsl(hsl(var(--tenant-color-primary)) / 0.1)",
                         }}
                       >
                         <IconComponent
                           className="w-7 h-7"
-                          style={{ color: "hsl(var(--tenant-color-primary))" }}
+                          style={{ color: "hsl(hsl(var(--tenant-color-primary)))" }}
                         />
                       </div>
                       <h3
                         className="text-lg font-semibold mb-2"
                         style={{
-                          color: "hsl(var(--tenant-color-heading))",
+                          color: "hsl(hsl(var(--tenant-color-heading)))",
                           fontFamily: "var(--tenant-font-heading, sans-serif)",
                         }}
                       >
@@ -230,7 +230,7 @@ export default function ConditionsClient({
                       <p
                         className="text-sm leading-relaxed"
                         style={{
-                          color: "hsl(var(--tenant-color-text))",
+                          color: "hsl(hsl(var(--tenant-color-text)))",
                           fontFamily: "var(--tenant-font-base, sans-serif)",
                         }}
                       >
@@ -248,7 +248,7 @@ export default function ConditionsClient({
         <section
           className="py-12"
           style={{
-            backgroundColor: "hsl(var(--tenant-color-primary) / 0.04)",
+            backgroundColor: "hsl(hsl(var(--tenant-color-primary)) / 0.04)",
           }}
         >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -263,7 +263,7 @@ export default function ConditionsClient({
                   <Search
                     className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5"
                     style={{
-                      color: "hsl(var(--tenant-color-text))",
+                      color: "hsl(hsl(var(--tenant-color-text)))",
                       opacity: 0.5,
                     }}
                   />
@@ -274,10 +274,10 @@ export default function ConditionsClient({
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-200"
                     style={{
-                      backgroundColor: "hsl(var(--tenant-color-background))",
+                      backgroundColor: "hsl(hsl(var(--tenant-color-background)))",
                       borderColor:
-                        "hsl(var(--tenant-color-primary) / 0.2)",
-                      color: "hsl(var(--tenant-color-text))",
+                        "hsl(hsl(var(--tenant-color-primary)) / 0.2)",
+                      color: "hsl(hsl(var(--tenant-color-text)))",
                       fontFamily: "var(--tenant-font-base, sans-serif)",
                     }}
                   />
@@ -297,16 +297,16 @@ export default function ConditionsClient({
                       style={{
                         backgroundColor:
                           selectedCategory === category.key
-                            ? "hsl(var(--tenant-color-primary))"
-                            : "hsl(var(--tenant-color-background))",
+                            ? "hsl(hsl(var(--tenant-color-primary)))"
+                            : "hsl(hsl(var(--tenant-color-background)))",
                         color:
                           selectedCategory === category.key
                             ? "white"
-                            : "hsl(var(--tenant-color-text))",
+                            : "hsl(hsl(var(--tenant-color-text)))",
                         fontFamily: "var(--tenant-font-base, sans-serif)",
                         border:
                           selectedCategory !== category.key
-                            ? "1px solid hsl(var(--tenant-color-primary) / 0.2)"
+                            ? "1px solid hsl(hsl(var(--tenant-color-primary)) / 0.2)"
                             : "1px solid transparent",
                       }}
                     >
@@ -382,16 +382,16 @@ export default function ConditionsClient({
                         <div
                           className="group block rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border"
                           style={{
-                            backgroundColor: "hsl(var(--tenant-color-background))",
+                            backgroundColor: "hsl(hsl(var(--tenant-color-background)))",
                             borderColor:
-                              "hsl(var(--tenant-color-primary) / 0.12)",
+                              "hsl(hsl(var(--tenant-color-primary)) / 0.12)",
                           }}
                         >
                           <div
                             className="h-48 overflow-hidden relative"
                             style={{
                               background:
-                                "linear-gradient(135deg, hsl(var(--tenant-color-primary) / 0.1), hsl(var(--tenant-color-primary) / 0.03))",
+                                "linear-gradient(135deg, hsl(hsl(var(--tenant-color-primary)) / 0.1), hsl(hsl(var(--tenant-color-primary)) / 0.03))",
                             }}
                           >
                             <Image
@@ -404,7 +404,7 @@ export default function ConditionsClient({
                               className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                               style={{
                                 background:
-                                  "linear-gradient(to top, hsl(var(--tenant-color-primary) / 0.15), transparent)",
+                                  "linear-gradient(to top, hsl(hsl(var(--tenant-color-primary)) / 0.15), transparent)",
                               }}
                             />
                           </div>
@@ -412,7 +412,7 @@ export default function ConditionsClient({
                             <h3
                               className="text-lg font-semibold mb-1 group-hover:opacity-80 transition-colors"
                               style={{
-                                color: "hsl(var(--tenant-color-heading))",
+                                color: "hsl(hsl(var(--tenant-color-heading)))",
                                 fontFamily:
                                   "var(--tenant-font-heading, sans-serif)",
                               }}
@@ -422,7 +422,7 @@ export default function ConditionsClient({
                             <p
                               className="text-sm"
                               style={{
-                                color: "hsl(var(--tenant-color-primary))",
+                                color: "hsl(hsl(var(--tenant-color-primary)))",
                                 fontFamily: "var(--tenant-font-base, sans-serif)",
                               }}
                             >
@@ -442,12 +442,12 @@ export default function ConditionsClient({
                 <div className="text-center py-16">
                   <Search
                     className="w-12 h-12 mx-auto mb-4 opacity-30"
-                    style={{ color: "hsl(var(--tenant-color-text))" }}
+                    style={{ color: "hsl(hsl(var(--tenant-color-text)))" }}
                   />
                   <p
                     className="text-xl mb-2"
                     style={{
-                      color: "hsl(var(--tenant-color-heading))",
+                      color: "hsl(hsl(var(--tenant-color-heading)))",
                       fontFamily: "var(--tenant-font-heading, sans-serif)",
                     }}
                   >
@@ -456,7 +456,7 @@ export default function ConditionsClient({
                   <p
                     className="text-sm"
                     style={{
-                      color: "hsl(var(--tenant-color-text))",
+                      color: "hsl(hsl(var(--tenant-color-text)))",
                       fontFamily: "var(--tenant-font-base, sans-serif)",
                     }}
                   >
@@ -471,7 +471,7 @@ export default function ConditionsClient({
         {/* CTA Section */}
         <section
           className="py-16 md:py-24"
-          style={{ backgroundColor: "hsl(var(--tenant-color-primary))" }}
+          style={{ backgroundColor: "hsl(hsl(var(--tenant-color-primary)))" }}
         >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
@@ -501,7 +501,7 @@ export default function ConditionsClient({
                   className="inline-block px-8 py-3 text-lg rounded-lg font-semibold transition-all duration-200 hover:shadow-lg hover:scale-105"
                   style={{
                     backgroundColor: "white",
-                    color: "hsl(var(--tenant-color-primary))",
+                    color: "hsl(hsl(var(--tenant-color-primary)))",
                     fontFamily: "var(--tenant-font-base, sans-serif)",
                   }}
                 >
