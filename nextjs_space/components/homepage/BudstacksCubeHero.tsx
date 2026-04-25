@@ -20,7 +20,7 @@ export default function BudstacksCubeHero() {
                     alt="Budstacks — the rollout platform for Dr. Green storefronts"
                     fill
                     sizes="(max-width: 640px) 90vw, (max-width: 1024px) 50vw, 540px"
-                    className="object-contain"
+                    className="bs-cube-img object-contain"
                     priority
                 />
             </div>

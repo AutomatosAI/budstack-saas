@@ -1064,9 +1064,11 @@ html {
 /* Cube hero — radial floor + core glow + vignette */
 .budstacks-theme .bs-cube-floor {
   position: absolute;
-  inset: -15%;
-  background: radial-gradient(ellipse 55% 55% at 50% 55%, rgba(36,92,58,0.55), rgba(20,50,32,0.25) 45%, transparent 70%);
-  filter: blur(20px);
+  inset: -25%;
+  background:
+    radial-gradient(ellipse 60% 60% at 50% 55%, rgba(50,140,80,0.45), rgba(20,50,32,0.18) 50%, transparent 75%),
+    radial-gradient(ellipse 80% 70% at 50% 50%, rgba(36,92,58,0.30), transparent 65%);
+  filter: blur(28px);
   pointer-events: none;
 }
 .budstacks-theme .bs-cube-core {
@@ -1077,10 +1079,16 @@ html {
   mix-blend-mode: screen;
   pointer-events: none;
 }
+/* Feathers the cube PNG edges into the background (kills the visible square) */
+.budstacks-theme .bs-cube-img {
+  -webkit-mask-image: radial-gradient(ellipse 62% 62% at 50% 50%, #000 55%, rgba(0,0,0,0.55) 75%, transparent 92%);
+  mask-image: radial-gradient(ellipse 62% 62% at 50% 50%, #000 55%, rgba(0,0,0,0.55) 75%, transparent 92%);
+}
 .budstacks-theme .bs-cube-vignette {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 70% 80% at 50% 50%, transparent 40%, rgba(5,22,12,0.25) 75%, rgba(5,10,7,0.5) 100%);
+  inset: -10%;
+  background:
+    radial-gradient(ellipse 55% 55% at 50% 50%, transparent 40%, rgba(5,22,12,0.15) 70%, rgba(5,10,7,0.35) 90%);
   pointer-events: none;
 }
 

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import BudstacksCubeHero from "./BudstacksCubeHero";
 
 export default function Hero() {
@@ -17,15 +16,17 @@ export default function Hero() {
                     </span>
 
                     {/* Headline */}
-                    <h1 className="font-bs-serif text-[44px] font-medium leading-[1.05] tracking-[-0.025em] text-bs-gold-300 sm:text-[64px] lg:text-[80px] xl:text-[88px] xl:tracking-[-0.035em]">
-                        The premium rollout platform for{" "}
-                        <Image
-                            src="/images/homepage/drgreen-logo.png"
-                            alt="Dr. Green"
-                            width={220}
-                            height={80}
-                            className="bs-drgreen-inline"
-                        />{" "}
+                    <h1 className="font-bs-serif text-[40px] font-normal leading-[1.05] tracking-[-0.02em] text-bs-gold-300 sm:text-[56px] lg:text-[68px] xl:text-[76px] xl:tracking-[-0.03em]">
+                        The premium rollout platform{" "}
+                        <span className="whitespace-nowrap">
+                            for{" "}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src="/images/homepage/drgreen-logo.png"
+                                alt="Dr. Green"
+                                className="bs-drgreen-inline"
+                            />
+                        </span>{" "}
                         storefronts.
                     </h1>
 
