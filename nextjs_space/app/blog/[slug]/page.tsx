@@ -16,7 +16,7 @@ const blogPosts = [
         excerpt:
             "A comprehensive guide to launching your dispensary franchise with BudStacks infrastructure.",
         image:
-            "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=1200&h=700&fit=crop",
+            "https://images.unsplash.com/photo-1536819114556-1e10f967fb61?auto=format&fit=crop&w=1600&q=80",
         content: `
       <p>Launching a medical cannabis franchise has never been easier. With BudStacks's proprietary infrastructure, you can go from application to live store in under 10 minutes.</p>
       
@@ -56,7 +56,7 @@ const blogPosts = [
         excerpt:
             "How to leverage the Dr. Green API for seamless product catalog and order management.",
         image:
-            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=700&fit=crop",
+            "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80",
         content: `
       <p>The Dr. Green API is at the heart of every BudStacks franchise. This integration provides real-time product synchronization, automated inventory management, and seamless order fulfillment.</p>
       
@@ -84,7 +84,7 @@ const blogPosts = [
         excerpt:
             "Ensuring regulatory compliance with integrated blockchain tracking for your dispensary.",
         image:
-            "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1200&h=700&fit=crop",
+            "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=1600&q=80",
         content: `
       <p>Regulatory compliance is critical in the medical cannabis industry. Our blockchain traceability system ensures complete transparency and audit readiness.</p>
       
@@ -109,7 +109,7 @@ const blogPosts = [
         excerpt:
             "Best practices for managing multiple storefronts with isolated data and custom branding.",
         image:
-            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=700&fit=crop",
+            "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80",
         content: `
       <p>As your franchise grows, you may want to operate multiple storefronts. Our multi-tenant architecture makes this seamless.</p>
       
@@ -134,7 +134,7 @@ const blogPosts = [
         excerpt:
             "Building lasting patient relationships through effective CRM and consultation tracking.",
         image:
-            "https://images.unsplash.com/photo-1556745757-8d76bdb6984b?w=1200&h=700&fit=crop",
+            "https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?auto=format&fit=crop&w=1600&q=80",
         content: `
       <p>Strong customer relationships are the foundation of a successful dispensary. Our CRM tools help you manage every interaction.</p>
       
@@ -159,7 +159,7 @@ const blogPosts = [
         excerpt:
             "Using data-driven insights to optimize your dispensary's performance and growth.",
         image:
-            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=700&fit=crop",
+            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&q=80",
         content: `
       <p>Data-driven decision making is key to maximizing your dispensary's revenue. Our analytics dashboard provides the insights you need.</p>
       
