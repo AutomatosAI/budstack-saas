@@ -1371,3 +1371,265 @@ html {
 .budstacks-theme .bg-slate-900 { background-color: #0F1517 !important; }
 .budstacks-theme .border-slate-800 { border-color: #1c2326 !important; }
 .budstacks-theme .border-slate-700 { border-color: #222A2C !important; }
+
+/* ============================================================
+   UNIFIED PALETTE (greens + cream/gold only)
+   ============================================================
+   Super-admin pages were built with multi-color Tailwind utilities
+   (emerald, purple, amber, blue, orange, pink, etc.) and lucide
+   icon-pill bg classes per status (bg-emerald-500, bg-amber-500,
+   bg-purple-600, …). This block flattens all of them to the single
+   green/cream/gold palette inside .budstacks-theme so every page
+   picks up the unified look without per-component refactor.
+
+   Mapping rule:
+     bg-{color}-500/600/700  →  green-tinted icon pill
+     bg-{color}-50/100       →  faint green wash
+     bg-{color}-200/300/400  →  muted green pill
+     bg-{color}-800/900/950  →  dark panel surface
+     text-{color}-(*)        →  green for accents / gold for inert
+     border-{color}-(*)      →  subtle green or dark border
+   --- */
+
+/* Solid icon-pill backgrounds → uniform green tint with green icon */
+.budstacks-theme [class*="bg-emerald-5"],
+.budstacks-theme [class*="bg-emerald-6"],
+.budstacks-theme [class*="bg-emerald-7"],
+.budstacks-theme [class*="bg-green-5"],
+.budstacks-theme [class*="bg-green-6"],
+.budstacks-theme [class*="bg-green-7"],
+.budstacks-theme [class*="bg-lime-5"],
+.budstacks-theme [class*="bg-lime-6"],
+.budstacks-theme [class*="bg-teal-5"],
+.budstacks-theme [class*="bg-teal-6"] {
+  background-color: rgba(82,217,122,0.18) !important;
+  color: #8CF0A4 !important;
+}
+.budstacks-theme [class*="bg-amber-5"],
+.budstacks-theme [class*="bg-amber-6"],
+.budstacks-theme [class*="bg-yellow-5"],
+.budstacks-theme [class*="bg-yellow-6"],
+.budstacks-theme [class*="bg-orange-5"],
+.budstacks-theme [class*="bg-orange-6"] {
+  background-color: rgba(201,169,110,0.18) !important;
+  color: #E8D19E !important;
+}
+.budstacks-theme [class*="bg-blue-5"],
+.budstacks-theme [class*="bg-blue-6"],
+.budstacks-theme [class*="bg-blue-7"],
+.budstacks-theme [class*="bg-cyan-5"],
+.budstacks-theme [class*="bg-cyan-6"],
+.budstacks-theme [class*="bg-sky-5"],
+.budstacks-theme [class*="bg-sky-6"],
+.budstacks-theme [class*="bg-indigo-5"],
+.budstacks-theme [class*="bg-indigo-6"],
+.budstacks-theme [class*="bg-purple-5"],
+.budstacks-theme [class*="bg-purple-6"],
+.budstacks-theme [class*="bg-purple-7"],
+.budstacks-theme [class*="bg-violet-5"],
+.budstacks-theme [class*="bg-violet-6"],
+.budstacks-theme [class*="bg-fuchsia-5"],
+.budstacks-theme [class*="bg-fuchsia-6"],
+.budstacks-theme [class*="bg-pink-5"],
+.budstacks-theme [class*="bg-pink-6"],
+.budstacks-theme [class*="bg-rose-5"],
+.budstacks-theme [class*="bg-rose-6"],
+.budstacks-theme [class*="bg-red-5"],
+.budstacks-theme [class*="bg-red-6"],
+.budstacks-theme [class*="bg-red-7"] {
+  background-color: rgba(82,217,122,0.12) !important;
+  color: #C6CCC8 !important;
+}
+
+/* Faint pastel washes (-50, -100) → very subtle green glaze */
+.budstacks-theme [class*="bg-emerald-50"],
+.budstacks-theme [class*="bg-emerald-100"],
+.budstacks-theme [class*="bg-green-50"],
+.budstacks-theme [class*="bg-green-100"],
+.budstacks-theme [class*="bg-amber-50"],
+.budstacks-theme [class*="bg-amber-100"],
+.budstacks-theme [class*="bg-yellow-50"],
+.budstacks-theme [class*="bg-yellow-100"],
+.budstacks-theme [class*="bg-orange-50"],
+.budstacks-theme [class*="bg-orange-100"],
+.budstacks-theme [class*="bg-blue-50"],
+.budstacks-theme [class*="bg-blue-100"],
+.budstacks-theme [class*="bg-purple-50"],
+.budstacks-theme [class*="bg-purple-100"],
+.budstacks-theme [class*="bg-violet-50"],
+.budstacks-theme [class*="bg-violet-100"],
+.budstacks-theme [class*="bg-pink-50"],
+.budstacks-theme [class*="bg-pink-100"],
+.budstacks-theme [class*="bg-rose-50"],
+.budstacks-theme [class*="bg-rose-100"],
+.budstacks-theme [class*="bg-red-50"],
+.budstacks-theme [class*="bg-red-100"],
+.budstacks-theme [class*="bg-cyan-50"],
+.budstacks-theme [class*="bg-cyan-100"],
+.budstacks-theme [class*="bg-sky-50"],
+.budstacks-theme [class*="bg-sky-100"],
+.budstacks-theme [class*="bg-indigo-50"],
+.budstacks-theme [class*="bg-indigo-100"],
+.budstacks-theme [class*="bg-teal-50"],
+.budstacks-theme [class*="bg-teal-100"],
+.budstacks-theme [class*="bg-lime-50"],
+.budstacks-theme [class*="bg-lime-100"],
+.budstacks-theme [class*="bg-fuchsia-50"],
+.budstacks-theme [class*="bg-fuchsia-100"] {
+  background-color: rgba(82,217,122,0.05) !important;
+}
+
+/* Muted mid-pill backgrounds (-200, -300, -400) → muted green */
+.budstacks-theme [class*="bg-emerald-2"],
+.budstacks-theme [class*="bg-emerald-3"],
+.budstacks-theme [class*="bg-emerald-4"],
+.budstacks-theme [class*="bg-green-2"],
+.budstacks-theme [class*="bg-green-3"],
+.budstacks-theme [class*="bg-green-4"],
+.budstacks-theme [class*="bg-amber-2"],
+.budstacks-theme [class*="bg-amber-3"],
+.budstacks-theme [class*="bg-amber-4"],
+.budstacks-theme [class*="bg-yellow-2"],
+.budstacks-theme [class*="bg-yellow-3"],
+.budstacks-theme [class*="bg-yellow-4"],
+.budstacks-theme [class*="bg-orange-2"],
+.budstacks-theme [class*="bg-orange-3"],
+.budstacks-theme [class*="bg-orange-4"],
+.budstacks-theme [class*="bg-blue-2"],
+.budstacks-theme [class*="bg-blue-3"],
+.budstacks-theme [class*="bg-blue-4"],
+.budstacks-theme [class*="bg-purple-2"],
+.budstacks-theme [class*="bg-purple-3"],
+.budstacks-theme [class*="bg-purple-4"],
+.budstacks-theme [class*="bg-violet-2"],
+.budstacks-theme [class*="bg-violet-3"],
+.budstacks-theme [class*="bg-violet-4"],
+.budstacks-theme [class*="bg-pink-2"],
+.budstacks-theme [class*="bg-pink-3"],
+.budstacks-theme [class*="bg-pink-4"],
+.budstacks-theme [class*="bg-rose-2"],
+.budstacks-theme [class*="bg-rose-3"],
+.budstacks-theme [class*="bg-rose-4"],
+.budstacks-theme [class*="bg-red-2"],
+.budstacks-theme [class*="bg-red-3"],
+.budstacks-theme [class*="bg-red-4"],
+.budstacks-theme [class*="bg-cyan-2"],
+.budstacks-theme [class*="bg-cyan-3"],
+.budstacks-theme [class*="bg-cyan-4"],
+.budstacks-theme [class*="bg-sky-2"],
+.budstacks-theme [class*="bg-sky-3"],
+.budstacks-theme [class*="bg-sky-4"],
+.budstacks-theme [class*="bg-indigo-2"],
+.budstacks-theme [class*="bg-indigo-3"],
+.budstacks-theme [class*="bg-indigo-4"],
+.budstacks-theme [class*="bg-teal-2"],
+.budstacks-theme [class*="bg-teal-3"],
+.budstacks-theme [class*="bg-teal-4"],
+.budstacks-theme [class*="bg-lime-2"],
+.budstacks-theme [class*="bg-lime-3"],
+.budstacks-theme [class*="bg-lime-4"],
+.budstacks-theme [class*="bg-fuchsia-2"],
+.budstacks-theme [class*="bg-fuchsia-3"],
+.budstacks-theme [class*="bg-fuchsia-4"] {
+  background-color: rgba(82,217,122,0.10) !important;
+}
+
+/* Deep panel surfaces (-800, -900, -950) → unified dark panel */
+.budstacks-theme [class*="bg-emerald-8"],
+.budstacks-theme [class*="bg-emerald-9"],
+.budstacks-theme [class*="bg-green-8"],
+.budstacks-theme [class*="bg-green-9"],
+.budstacks-theme [class*="bg-amber-8"],
+.budstacks-theme [class*="bg-amber-9"],
+.budstacks-theme [class*="bg-orange-8"],
+.budstacks-theme [class*="bg-orange-9"],
+.budstacks-theme [class*="bg-blue-8"],
+.budstacks-theme [class*="bg-blue-9"],
+.budstacks-theme [class*="bg-purple-8"],
+.budstacks-theme [class*="bg-purple-9"],
+.budstacks-theme [class*="bg-pink-8"],
+.budstacks-theme [class*="bg-pink-9"],
+.budstacks-theme [class*="bg-red-8"],
+.budstacks-theme [class*="bg-red-9"] {
+  background-color: #0F1517 !important;
+}
+
+/* Text colors → green for accents, gold for warnings, cream for muted */
+.budstacks-theme [class*="text-emerald-"],
+.budstacks-theme [class*="text-green-"],
+.budstacks-theme [class*="text-lime-"],
+.budstacks-theme [class*="text-teal-"] { color: #8CF0A4 !important; }
+
+.budstacks-theme [class*="text-amber-"],
+.budstacks-theme [class*="text-yellow-"],
+.budstacks-theme [class*="text-orange-"] { color: #E8D19E !important; }
+
+.budstacks-theme [class*="text-blue-"],
+.budstacks-theme [class*="text-cyan-"],
+.budstacks-theme [class*="text-sky-"],
+.budstacks-theme [class*="text-indigo-"],
+.budstacks-theme [class*="text-purple-"],
+.budstacks-theme [class*="text-violet-"],
+.budstacks-theme [class*="text-fuchsia-"],
+.budstacks-theme [class*="text-pink-"],
+.budstacks-theme [class*="text-rose-"],
+.budstacks-theme [class*="text-red-"] { color: #C6CCC8 !important; }
+
+/* Colored borders → unified subtle dark border */
+.budstacks-theme [class*="border-emerald-"],
+.budstacks-theme [class*="border-green-"],
+.budstacks-theme [class*="border-lime-"],
+.budstacks-theme [class*="border-teal-"] { border-color: rgba(82,217,122,0.3) !important; }
+
+.budstacks-theme [class*="border-amber-"],
+.budstacks-theme [class*="border-yellow-"],
+.budstacks-theme [class*="border-orange-"],
+.budstacks-theme [class*="border-blue-"],
+.budstacks-theme [class*="border-cyan-"],
+.budstacks-theme [class*="border-sky-"],
+.budstacks-theme [class*="border-indigo-"],
+.budstacks-theme [class*="border-purple-"],
+.budstacks-theme [class*="border-violet-"],
+.budstacks-theme [class*="border-fuchsia-"],
+.budstacks-theme [class*="border-pink-"],
+.budstacks-theme [class*="border-rose-"],
+.budstacks-theme [class*="border-red-"] { border-color: #222A2C !important; }
+
+/* Big metric numbers in stat cards → cream/gold to match homepage hero feel.
+   Targets common large-number patterns inside card-floating panels. */
+.budstacks-theme .card-floating .text-3xl,
+.budstacks-theme .card-floating .text-4xl,
+.budstacks-theme .card-floating .text-5xl,
+.budstacks-theme .card-floating .font-display,
+.budstacks-theme .card-floating-static .text-3xl,
+.budstacks-theme .card-floating-static .text-4xl,
+.budstacks-theme .card-floating-static .text-5xl {
+  color: #fcfcbc !important;
+}
+
+/* Tiny uppercase metric/section labels (the "MRR · ORDERS · PATIENTS" style
+   from the reference screenshots) → mono cream-gold so they read as
+   editorial captions, not utility-text grey. */
+.budstacks-theme .card-floating .uppercase,
+.budstacks-theme .card-floating-static .uppercase {
+  color: #C7B98E !important;
+  font-family: var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace !important;
+  letter-spacing: 0.12em !important;
+}
+
+/* Status dots (small `w-1.5 h-1.5 rounded-full bg-X-500`) — covered above by
+   the bg-{color}-5* selector but those left a tinted bg; for tiny dots we
+   want a brighter green or gold puck. Targets pucks that are dot-sized. */
+.budstacks-theme [class*="rounded-full"][class*="bg-emerald-"],
+.budstacks-theme [class*="rounded-full"][class*="bg-green-"] {
+  background-color: #52D97A !important;
+}
+.budstacks-theme [class*="rounded-full"][class*="bg-amber-"],
+.budstacks-theme [class*="rounded-full"][class*="bg-yellow-"],
+.budstacks-theme [class*="rounded-full"][class*="bg-orange-"] {
+  background-color: #E8D19E !important;
+}
+.budstacks-theme [class*="rounded-full"][class*="bg-red-"],
+.budstacks-theme [class*="rounded-full"][class*="bg-rose-"] {
+  background-color: #C6CCC8 !important;
+}
