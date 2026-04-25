@@ -1279,3 +1279,57 @@ html {
   margin: 0 0.05em;
   filter: drop-shadow(0 0 28px rgba(82,217,122,0.45));
 }
+
+/* ============================================
+   SUPER-ADMIN DARK THEME OVERRIDES (TEST PHASE)
+   ============================================
+   Scoped to .budstacks-theme so they only apply where
+   that wrapper is present (currently /super-admin layout).
+   Tenant-admin has no .budstacks-theme ancestor and is
+   completely unaffected.
+
+   Maps hardcoded Tailwind light-mode classes used
+   throughout the admin chrome + pages onto the dark
+   Budstacks palette. Remove this block to revert.
+   ============================================ */
+
+/* --- Surfaces (light → dark) --- */
+.budstacks-theme .bg-white { background-color: #151A1C !important; }
+.budstacks-theme .bg-slate-50,
+.budstacks-theme .bg-gray-50 { background-color: #0F1517 !important; }
+.budstacks-theme .bg-slate-100,
+.budstacks-theme .bg-gray-100 { background-color: #1A2123 !important; }
+.budstacks-theme .bg-slate-200 { background-color: #222A2C !important; }
+.budstacks-theme .hover\:bg-slate-50:hover,
+.budstacks-theme .hover\:bg-gray-100:hover { background-color: #1A2123 !important; }
+.budstacks-theme .hover\:bg-slate-100:hover { background-color: #222A2C !important; }
+.budstacks-theme .hover\:bg-slate-200:hover { background-color: #2F3A3D !important; }
+.budstacks-theme .hover\:bg-slate-300:hover { background-color: #2F3A3D !important; }
+
+/* --- Borders --- */
+.budstacks-theme .border-slate-100 { border-color: #1c2326 !important; }
+.budstacks-theme .border-slate-200 { border-color: #222A2C !important; }
+.budstacks-theme .border-slate-300 { border-color: #2F3A3D !important; }
+.budstacks-theme .border-slate-400 { border-color: #3A4548 !important; }
+.budstacks-theme .border-gray-200 { border-color: #222A2C !important; }
+.budstacks-theme .border-gray-300 { border-color: #2F3A3D !important; }
+
+/* --- Text (dark on light → light on dark) --- */
+.budstacks-theme .text-slate-900,
+.budstacks-theme .text-gray-900 { color: #F5F6F4 !important; }
+.budstacks-theme .text-slate-800 { color: #EAEEEA !important; }
+.budstacks-theme .text-slate-700 { color: #DDE3DF !important; }
+.budstacks-theme .text-slate-600,
+.budstacks-theme .text-gray-600 { color: #C6CCC8 !important; }
+.budstacks-theme .text-slate-500,
+.budstacks-theme .text-gray-500 { color: #8A928E !important; }
+.budstacks-theme .text-slate-400,
+.budstacks-theme .text-gray-400 { color: #7C8682 !important; }
+.budstacks-theme .hover\:text-slate-900:hover,
+.budstacks-theme .hover\:text-gray-900:hover { color: #F5F6F4 !important; }
+.budstacks-theme .hover\:text-slate-600:hover,
+.budstacks-theme .hover\:text-gray-600:hover { color: #C6CCC8 !important; }
+
+/* --- Dividers / focus rings using slate as bg accent --- */
+.budstacks-theme .ring-slate-200 { --tw-ring-color: #222A2C !important; }
+.budstacks-theme .ring-slate-300 { --tw-ring-color: #2F3A3D !important; }
