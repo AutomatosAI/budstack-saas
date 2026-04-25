@@ -57,7 +57,7 @@ export default async function SuperAdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen canvas-bg">
+    <div className="budstacks-theme flex min-h-screen canvas-bg">
       <SuperAdminSidebar
         userName={`${user.firstName || ""} ${user.lastName || ""}`.trim() || "Super Admin"}
         userEmail={user.emailAddresses[0]?.emailAddress || "admin@budstack.io"}
