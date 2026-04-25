@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Linkedin, Twitter } from "lucide-react";
 import { CookiePreferencesLink } from "@/components/legal/CookiePreferencesLink";
 
 const COLUMNS = [
@@ -19,26 +20,35 @@ const COLUMNS = [
             { label: "Blog", href: "/blog" },
         ],
     },
+] as const;
+
+const LEGAL_LINKS = [
+    { label: "Privacy", href: "/privacy" },
+    { label: "Terms", href: "/terms" },
+    { label: "AUP", href: "/aup" },
+    { label: "DPA", href: "/dpa" },
+    { label: "Sub-processors", href: "/legal/subprocessors" },
+    { label: "Cookies", href: "/cookies" },
+    { label: "Cookie preferences", href: "#cookie-preferences" },
+    { label: "Changelog", href: "/legal/changelog" },
+] as const;
+
+const SOCIALS = [
+    { label: "X/Twitter", href: "#", Icon: Twitter },
+    { label: "LinkedIn", href: "#", Icon: Linkedin },
     {
-        title: "Socials",
-        links: [
-            { label: "X/Twitter", href: "#" },
-            { label: "LinkedIn", href: "#" },
-            { label: "Discord", href: "#" },
-        ],
-    },
-    {
-        title: "Legal",
-        links: [
-            { label: "Privacy", href: "/privacy" },
-            { label: "Terms", href: "/terms" },
-            { label: "AUP", href: "/aup" },
-            { label: "DPA", href: "/dpa" },
-            { label: "Sub-processors", href: "/legal/subprocessors" },
-            { label: "Cookies", href: "/cookies" },
-            { label: "Cookie preferences", href: "#cookie-preferences" },
-            { label: "Changelog", href: "/legal/changelog" },
-        ],
+        label: "Discord",
+        href: "#",
+        Icon: (props: React.SVGProps<SVGSVGElement>) => (
+            <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+                {...props}
+            >
+                <path d="M20.317 4.369A19.79 19.79 0 0 0 16.558 3.2a.075.075 0 0 0-.079.037c-.34.6-.71 1.39-.96 2.005a18.27 18.27 0 0 0-5.487 0 12.6 12.6 0 0 0-.97-2.005.077.077 0 0 0-.079-.037 19.736 19.736 0 0 0-3.76 1.169.07.07 0 0 0-.032.027C2.05 7.95 1.39 11.42 1.71 14.85a.083.083 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.027c.462-.63.872-1.295 1.225-1.994a.076.076 0 0 0-.041-.105 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.128 12.3 12.3 0 0 1-1.873.892.076.076 0 0 0-.04.106c.36.698.77 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-3.97-.838-7.41-3.548-10.454a.06.06 0 0 0-.031-.028zM8.02 12.99c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.955 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+            </svg>
+        ),
     },
 ] as const;
 
@@ -46,7 +56,7 @@ export default function Footer() {
     return (
         <footer className="px-3 pb-6 pt-20 sm:px-6 sm:pt-24">
             <div className="bs-pill-footer mx-auto max-w-[1320px] rounded-[28px] px-6 pb-7 pt-10 sm:px-12 sm:pt-11">
-                <div className="grid grid-cols-2 gap-8 md:grid-cols-[2fr_1fr_1fr_1fr_1fr] md:gap-10">
+                <div className="grid grid-cols-2 gap-8 md:grid-cols-[2fr_1fr_1fr_2fr] md:gap-10">
                     {/* Brand col */}
                     <div className="col-span-2 md:col-span-1">
                         <Link href="/" className="inline-flex items-center" aria-label="Budstacks home">
@@ -77,30 +87,61 @@ export default function Footer() {
                                 <span className="text-bs-fg-2">of Dr. Green</span>
                             </span>
                         </div>
+
+                        {/* Social icons */}
+                        <div className="mt-6 flex items-center gap-2.5">
+                            {SOCIALS.map(({ label, href, Icon }) => (
+                                <Link
+                                    key={label}
+                                    href={href}
+                                    aria-label={label}
+                                    className="flex h-9 w-9 items-center justify-center rounded-full border border-bs-green-400/20 bg-bs-green-400/[0.04] text-bs-fg-2 transition hover:border-bs-green-400/40 hover:bg-bs-green-400/10 hover:text-bs-green-300"
+                                >
+                                    <Icon className="h-4 w-4" />
+                                </Link>
+                            ))}
+                        </div>
                     </div>
 
-                    {/* Link columns */}
+                    {/* Product / Company columns */}
                     {COLUMNS.map((col) => (
                         <div key={col.title}>
                             <span className="bs-eyebrow">{col.title}</span>
                             <ul className="mt-4 flex flex-col gap-2.5">
                                 {col.links.map((l) => (
                                     <li key={l.label}>
-                                        {l.href === "#cookie-preferences" ? (
-                                            <CookiePreferencesLink />
-                                        ) : (
-                                            <Link
-                                                href={l.href}
-                                                className="text-[13.5px] text-bs-fg-1 transition hover:text-bs-fg-0"
-                                            >
-                                                {l.label}
-                                            </Link>
-                                        )}
+                                        <Link
+                                            href={l.href}
+                                            className="text-[13.5px] text-bs-fg-1 transition hover:text-bs-fg-0"
+                                        >
+                                            {l.label}
+                                        </Link>
                                     </li>
                                 ))}
                             </ul>
                         </div>
                     ))}
+
+                    {/* Legal column — two-column grid for compactness */}
+                    <div>
+                        <span className="bs-eyebrow">Legal</span>
+                        <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5">
+                            {LEGAL_LINKS.map((l) => (
+                                <li key={l.label}>
+                                    {l.href === "#cookie-preferences" ? (
+                                        <CookiePreferencesLink />
+                                    ) : (
+                                        <Link
+                                            href={l.href}
+                                            className="text-[13.5px] text-bs-fg-1 transition hover:text-bs-fg-0"
+                                        >
+                                            {l.label}
+                                        </Link>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 </div>
 
                 {/* Bottom row */}
