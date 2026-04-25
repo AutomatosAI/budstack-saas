@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
     return (
-        <div className="min-h-screen canvas-bg">
+        <div className="budstacks-theme min-h-screen">
             <Navbar />
 
             <main className="px-4 pt-32 pb-24 sm:px-6 lg:px-8">

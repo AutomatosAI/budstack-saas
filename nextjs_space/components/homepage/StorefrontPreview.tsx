@@ -6,7 +6,7 @@ import Image from "next/image";
  */
 export default function StorefrontPreview() {
     return (
-        <div className="relative mx-auto w-[260px] sm:w-[280px]">
+        <div className="relative mx-auto w-[230px] sm:w-[250px]">
             {/* Phone frame */}
             <div className="relative overflow-hidden rounded-[42px] border-[10px] border-bs-bg-3 bg-bs-bg-3 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)]">
                 {/* Notch */}

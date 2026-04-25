@@ -994,12 +994,53 @@ html {
    ============================================ */
 
 .budstacks-theme {
+  /* Shadcn token overrides — make all internal shadcn components dark */
+  --background: 200 9% 4%;
+  --foreground: 90 8% 96%;
+  --card: 197 11% 9%;
+  --card-grad-bottom: 197 11% 8%;
+  --card-foreground: 90 8% 96%;
+  --popover: 197 11% 9%;
+  --popover-foreground: 90 8% 96%;
+  --primary: 137 64% 51%;
+  --primary-foreground: 200 16% 4%;
+  --secondary: 195 9% 12%;
+  --secondary-foreground: 90 8% 96%;
+  --muted: 195 9% 12%;
+  --muted-foreground: 165 4% 56%;
+  --accent: 137 64% 51%;
+  --accent-foreground: 200 16% 4%;
+  --destructive: 0 75% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 197 9% 16%;
+  --input: 197 9% 16%;
+  --ring: 137 64% 51%;
+
   background: #07090A;
   color: #F5F6F4;
   font-family: 'Söhne', var(--font-inter), system-ui, sans-serif;
   font-feature-settings: "ss01", "cv01", "cv11";
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+}
+
+/* Override legacy utility classes inside the dark scope */
+.budstacks-theme .canvas-bg { background-color: #07090A; background-image: none; }
+.budstacks-theme .card-floating,
+.budstacks-theme .card-floating-static {
+  background: #151A1C !important;
+  border-color: #222A2C !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 20px 60px -30px rgba(0,0,0,0.7) !important;
+}
+.budstacks-theme .bg-gradient-to-b.from-slate-50,
+.budstacks-theme .bg-gradient-to-b.from-green-50 { background: #07090A !important; }
+.budstacks-theme .bg-slate-100 { background: #151A1C !important; }
+.budstacks-theme .border-slate-200 { border-color: #222A2C !important; }
+.budstacks-theme .text-slate-600 { color: #C6CCC8 !important; }
+.budstacks-theme .section-badge {
+  background: rgba(82,217,122,0.06);
+  border: 1px solid rgba(82,217,122,0.3);
+  color: #8CF0A4;
 }
 
 .budstacks-theme h1,

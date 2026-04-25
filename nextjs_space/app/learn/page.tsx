@@ -109,7 +109,7 @@ export default async function LearnPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="budstacks-theme min-h-screen">
       <Navbar />
       {/* Header */}
       <div className="pt-32 pb-12 px-4">

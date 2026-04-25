@@ -25,6 +25,7 @@ type NavItem = { label: string; href: string; isRoute?: boolean };
 
 const NAV_ITEMS: readonly NavItem[] = [
     { label: "Features", href: "/#features" },
+    { label: "Models", href: "/#models" },
     { label: "Pricing", href: "/#pricing" },
     { label: "Marketplace", href: "/marketplace", isRoute: true },
     { label: "Docs", href: "/learn", isRoute: true },

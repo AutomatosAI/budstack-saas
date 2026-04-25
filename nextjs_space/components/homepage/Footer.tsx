@@ -6,37 +6,32 @@ const COLUMNS = [
         title: "Product",
         links: [
             { label: "Features", href: "/#features" },
-            { label: "Marketplace", href: "/marketplace" },
             { label: "Pricing", href: "/#pricing" },
-            { label: "Dashboard", href: "/auth/login" },
-            { label: "Changelog", href: "/learn" },
-        ],
-    },
-    {
-        title: "Operators",
-        links: [
-            { label: "Apply for licence", href: "/onboarding" },
-            { label: "Log in", href: "/auth/login" },
-            { label: "Playbook", href: "/learn" },
-            { label: "The Wire", href: "/blog" },
-        ],
-    },
-    {
-        title: "Partnership",
-        links: [
-            { label: "Dr. Green", href: "/contact" },
-            { label: "NFT licence", href: "/learn" },
-            { label: "Compliance", href: "/regulatory" },
-            { label: "Regions", href: "/#global" },
+            { label: "Management Models", href: "/#models" },
         ],
     },
     {
         title: "Company",
         links: [
-            { label: "About", href: "/contact" },
+            { label: "About", href: "#" },
             { label: "Contact", href: "/contact" },
-            { label: "Press", href: "/blog" },
-            { label: "Legal", href: "/privacy" },
+            { label: "Blog", href: "/blog" },
+        ],
+    },
+    {
+        title: "Socials",
+        links: [
+            { label: "X/Twitter", href: "#" },
+            { label: "LinkedIn", href: "#" },
+            { label: "Discord", href: "#" },
+        ],
+    },
+    {
+        title: "Legal",
+        links: [
+            { label: "Privacy", href: "/privacy" },
+            { label: "Terms", href: "/terms" },
+            { label: "Cookies", href: "/cookies" },
         ],
     },
 ] as const;
@@ -60,10 +55,22 @@ export default function Footer() {
                         <p className="mt-4 max-w-[260px] text-[13.5px] leading-[1.55] text-bs-fg-2">
                             The rollout platform for Dr. Green franchise operators.
                         </p>
-                        <span className="bs-chip bs-chip-gold mt-5">
-                            <span className="dot" />
-                            Official SaaS Partner
-                        </span>
+
+                        {/* Dr.Green partnership badge */}
+                        <div className="mt-5 inline-flex items-center gap-3 rounded-full border border-bs-green-400/20 bg-bs-green-400/[0.04] py-1.5 pl-1.5 pr-4">
+                            <Image
+                                src="/images/homepage/drgreen-skull.png"
+                                alt="Dr. Green"
+                                width={36}
+                                height={36}
+                                className="h-7 w-7 shrink-0 [filter:drop-shadow(0_0_8px_rgba(82,217,122,0.4))]"
+                            />
+                            <span className="font-bs-mono text-[10.5px] uppercase leading-tight tracking-[0.14em] text-bs-green-300">
+                                Official SaaS Partner
+                                <br />
+                                <span className="text-bs-fg-2">of Dr. Green</span>
+                            </span>
+                        </div>
                     </div>
 
                     {/* Link columns */}

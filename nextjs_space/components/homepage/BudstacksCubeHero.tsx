@@ -6,7 +6,7 @@ import Image from "next/image";
  */
 export default function BudstacksCubeHero() {
     return (
-        <div className="relative mx-auto aspect-square w-full max-w-[540px]">
+        <div className="relative mx-auto aspect-square w-full max-w-[260px] sm:max-w-[380px] lg:max-w-[540px]">
             {/* Ambient floor glow */}
             <div className="bs-cube-floor" />
 

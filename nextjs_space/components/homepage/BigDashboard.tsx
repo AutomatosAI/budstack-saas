@@ -7,7 +7,7 @@ export default function BigDashboard({ compact = false }: { compact?: boolean })
     return (
         <div
             className={`bs-card overflow-hidden bg-bs-bg-1 ${
-                compact ? "p-4 sm:p-5" : "p-5 sm:p-7"
+                compact ? "p-3 sm:p-5" : "p-5 sm:p-7"
             }`}
         >
             {/* Window chrome */}
@@ -113,8 +113,8 @@ export default function BigDashboard({ compact = false }: { compact?: boolean })
                             </svg>
                         </div>
 
-                        {/* Consultations */}
-                        <div className="bs-card !rounded-xl bg-bs-bg-2 p-4">
+                        {/* Consultations — hidden on mobile when compact (preview-feel) */}
+                        <div className={`bs-card !rounded-xl bg-bs-bg-2 p-4 ${compact ? "hidden sm:block" : ""}`}>
                             <span className="bs-eyebrow">Pending Consultations</span>
                             <div className="mt-3 space-y-2 text-[13px]">
                                 {[
@@ -143,10 +143,10 @@ export default function BigDashboard({ compact = false }: { compact?: boolean })
 
 function KpiCard({ label, value, delta }: { label: string; value: string; delta: string }) {
     return (
-        <div className="rounded-xl border border-bs-border bg-bs-bg-2 p-3">
+        <div className="rounded-xl border border-bs-border bg-bs-bg-2 p-2.5 sm:p-3">
             <span className="bs-eyebrow">{label}</span>
-            <div className="mt-1 font-bs-serif text-[20px] text-bs-gold-300 sm:text-[24px]">{value}</div>
-            <div className="mt-0.5 font-bs-mono text-[10.5px] text-bs-green-300">{delta}</div>
+            <div className="mt-1 font-bs-serif text-[16px] leading-tight text-bs-gold-300 sm:text-[24px]">{value}</div>
+            <div className="mt-0.5 font-bs-mono text-[10px] text-bs-green-300 sm:text-[10.5px]">{delta}</div>
         </div>
     );
 }

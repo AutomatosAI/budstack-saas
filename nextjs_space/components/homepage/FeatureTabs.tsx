@@ -84,8 +84,8 @@ export default function FeatureTabs() {
                 </div>
 
                 {/* Tab content */}
-                <div className="mt-10 grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-                    <div>
+                <div className="mt-10 grid gap-12 lg:grid-cols-2 lg:items-start lg:gap-16">
+                    <div className="lg:pt-6">
                         <h3 className="font-bs-serif text-[28px] font-medium leading-[1.15] tracking-[-0.02em] text-bs-gold-300 sm:text-[36px] lg:text-[44px]">
                             {c.title}
                         </h3>
@@ -100,7 +100,7 @@ export default function FeatureTabs() {
                     <div className="flex justify-center">
                         {active === "storefront" && <StorefrontPreview />}
                         {active === "dashboard" && (
-                            <div className="w-full max-w-[560px]">
+                            <div className="w-full max-w-[500px]">
                                 <BigDashboard compact />
                             </div>
                         )}

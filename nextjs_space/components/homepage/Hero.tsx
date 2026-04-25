@@ -3,10 +3,10 @@ import BudstacksCubeHero from "./BudstacksCubeHero";
 
 export default function Hero() {
     return (
-        <section className="bs-smoky relative overflow-hidden px-5 pb-20 pt-16 sm:px-10 sm:pb-24 sm:pt-20 lg:px-20 lg:pb-32 lg:pt-28">
+        <section className="bs-smoky relative overflow-hidden px-5 pb-12 pt-6 sm:px-10 sm:pb-20 sm:pt-12 lg:px-20 lg:pb-32 lg:pt-28">
             <div className="bs-smoky-bg" aria-hidden />
 
-            <div className="relative z-10 mx-auto grid max-w-[1280px] items-center gap-12 lg:min-h-[620px] lg:grid-cols-2 lg:gap-15">
+            <div className="relative z-10 mx-auto grid max-w-[1280px] items-center gap-6 sm:gap-10 lg:min-h-[620px] lg:grid-cols-2 lg:gap-15">
                 {/* Left column */}
                 <div className="order-2 lg:order-1">
                     {/* Eyebrow chip */}

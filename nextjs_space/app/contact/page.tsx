@@ -89,7 +89,7 @@ export default function ContactPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="budstacks-theme min-h-screen">
             <Navbar />
 
             <main className="px-4 py-24 sm:px-6 lg:px-8">
