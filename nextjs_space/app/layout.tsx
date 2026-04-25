@@ -1,6 +1,6 @@
 
 import type { Metadata } from 'next';
-import { Inter, Playfair_Display, JetBrains_Mono } from 'next/font/google';
+import { Inter, Playfair_Display, JetBrains_Mono, Fraunces } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -15,6 +15,9 @@ import { headers } from 'next/headers';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono' });
+// Fraunces is the free fallback for GT Sectra (paid). Once GT Sectra is licensed,
+// add @font-face declarations and it will take precedence in .budstacks-theme.
+const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces' });
 
 // Force dynamic rendering to avoid Clerk key requirement during build
 export const dynamic = 'force-dynamic';
@@ -110,7 +113,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable} ${fraunces.variable} font-sans antialiased`}>
         <ClerkProvider
           appearance={{
             elements: {
