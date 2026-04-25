@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 /**
- * Layered cube hero — ambient floor glow → core glow → cube → sparkles → vignette.
+ * Layered cube hero — ambient floor glow → core glow → cube → sparkles.
  * Cube image already includes the BUDSTACKS wordmark baked in.
  */
 export default function BudstacksCubeHero() {
@@ -30,9 +30,6 @@ export default function BudstacksCubeHero() {
             <span className="pointer-events-none absolute right-[14%] top-[30%] h-1 w-1 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)] motion-safe:animate-bs-sparkle-2" />
             <span className="pointer-events-none absolute left-[26%] bottom-[24%] h-1 w-1 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)] motion-safe:animate-bs-sparkle-3" />
             <span className="pointer-events-none absolute right-[22%] bottom-[18%] h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)] motion-safe:animate-bs-sparkle-4" />
-
-            {/* Vignette overlay */}
-            <div className="bs-cube-vignette" />
         </div>
     );
 }
