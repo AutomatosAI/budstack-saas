@@ -7,17 +7,16 @@ const COLUMNS = [
     {
         title: "Product",
         links: [
-            { label: "Features", href: "/#features" },
-            { label: "Pricing", href: "/#pricing" },
-            { label: "Management Models", href: "/#models" },
+            { label: "The Stack", href: "/#features" },
+            { label: "The Numbers", href: "/#pricing" },
+            { label: "Marketplace", href: "/marketplace" },
         ],
     },
     {
         title: "Company",
         links: [
-            { label: "About", href: "#" },
-            { label: "Contact", href: "/contact" },
             { label: "Blog", href: "/blog" },
+            { label: "Contact", href: "/contact" },
         ],
     },
 ] as const;
