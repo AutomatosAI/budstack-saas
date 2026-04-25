@@ -32,8 +32,12 @@ const COLUMNS = [
         links: [
             { label: "Privacy", href: "/privacy" },
             { label: "Terms", href: "/terms" },
+            { label: "AUP", href: "/aup" },
+            { label: "DPA", href: "/dpa" },
+            { label: "Sub-processors", href: "/legal/subprocessors" },
             { label: "Cookies", href: "/cookies" },
             { label: "Cookie preferences", href: "#cookie-preferences" },
+            { label: "Changelog", href: "/legal/changelog" },
         ],
     },
 ] as const;
