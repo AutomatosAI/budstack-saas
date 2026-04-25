@@ -1164,14 +1164,9 @@ html {
   mix-blend-mode: screen;
   pointer-events: none;
 }
-/* Cube PNG: upscayl AI threshold-ed the alpha to a hard cliff (no anti-alias
-   at the boundary), and the cube body has dark green pixels at its edges that
-   read as a square halo on the dark hero. Aggressive radial mask feathers
-   those edges so the cube floats cleanly. */
-.budstacks-theme .bs-cube-img {
-  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 50%, rgba(0,0,0,0.65) 72%, rgba(0,0,0,0.25) 86%, transparent 95%);
-  mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 50%, rgba(0,0,0,0.65) 72%, rgba(0,0,0,0.25) 86%, transparent 95%);
-}
+/* Cube PNG has a soft circular alpha fade baked in (PIL ellipse mask + Gaussian
+   blur + alpha multiply), so no CSS mask is needed — the PNG itself fades to
+   transparent with no square edge. */
 .budstacks-theme .bs-cube-vignette {
   position: absolute;
   inset: -10%;
