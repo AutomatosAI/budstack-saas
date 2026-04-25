@@ -1333,3 +1333,47 @@ html {
 /* --- Dividers / focus rings using slate as bg accent --- */
 .budstacks-theme .ring-slate-200 { --tw-ring-color: #222A2C !important; }
 .budstacks-theme .ring-slate-300 { --tw-ring-color: #2F3A3D !important; }
+
+/* --- Translucent surfaces (white/slate with /opacity) --- */
+.budstacks-theme .bg-white\/90,
+.budstacks-theme .bg-white\/80,
+.budstacks-theme .bg-white\/70 { background-color: rgba(21,26,28,0.92) !important; backdrop-filter: blur(8px); }
+.budstacks-theme .bg-slate-50\/50 { background-color: rgba(15,21,23,0.6) !important; }
+.budstacks-theme .bg-slate-100\/50 { background-color: rgba(26,33,35,0.6) !important; }
+.budstacks-theme .bg-black\/30,
+.budstacks-theme .bg-black\/40 { background-color: rgba(0,0,0,0.5) !important; }
+
+/* --- Amber/yellow ribbon (e.g. "Editing marketplace template" breadcrumb)
+       Re-tint to dark green so it reads as "info banner" in dark scope. --- */
+.budstacks-theme .bg-amber-50,
+.budstacks-theme .bg-amber-100 { background-color: rgba(82,217,122,0.06) !important; }
+.budstacks-theme .text-amber-800,
+.budstacks-theme .text-amber-700,
+.budstacks-theme .text-amber-900 { color: #8CF0A4 !important; }
+.budstacks-theme .text-amber-400 { color: rgba(82,217,122,0.4) !important; }
+.budstacks-theme .hover\:text-amber-900:hover { color: #52D97A !important; }
+
+/* --- Blue tag chips (template tags) → dark green pill --- */
+.budstacks-theme .bg-blue-50 { background-color: rgba(82,217,122,0.05) !important; }
+.budstacks-theme .border-blue-200 { border-color: rgba(82,217,122,0.3) !important; }
+.budstacks-theme .text-blue-700 { color: #8CF0A4 !important; }
+
+/* --- Headings inside admin: warm cream tone (matches homepage feel) --- */
+.budstacks-theme h1,
+.budstacks-theme h2,
+.budstacks-theme h3,
+.budstacks-theme h4 { color: #F2EDDF; }
+
+/* --- Section badge: gold tint instead of plain white pill --- */
+.budstacks-theme .section-badge {
+  background: rgba(201,169,110,0.06) !important;
+  border: 1px solid rgba(201,169,110,0.35) !important;
+  color: #E8D19E !important;
+  box-shadow: none !important;
+}
+
+/* --- Slate dark utility used by some preview wrappers (light:dark variant) --- */
+.budstacks-theme .dark\:bg-slate-900 { background-color: #0F1517 !important; }
+.budstacks-theme .bg-slate-900 { background-color: #0F1517 !important; }
+.budstacks-theme .border-slate-800 { border-color: #1c2326 !important; }
+.budstacks-theme .border-slate-700 { border-color: #222A2C !important; }

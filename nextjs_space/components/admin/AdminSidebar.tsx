@@ -10,6 +10,7 @@ import {
   Popcorn,
   type LucideIcon,
 } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /**
@@ -91,25 +92,58 @@ export function AdminSidebar({
         <div className="p-5 flex items-center justify-between border-b border-slate-100">
           {!collapsed && (
             <Link href="/" className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent">
-                <Popcorn className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="font-sans-heading text-base font-bold text-foreground">
-                  BudStacks
-                </h1>
-                {headerBadge && (
-                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                    {headerBadge}
-                  </span>
-                )}
-              </div>
+              {theme === "super-admin" ? (
+                <div>
+                  <Image
+                    src="/images/homepage/budstacks-horizontal.png"
+                    alt="Budstacks"
+                    width={140}
+                    height={32}
+                    priority
+                    className="h-7 w-auto [filter:drop-shadow(0_0_10px_rgba(82,217,122,0.35))]"
+                  />
+                  {headerBadge && (
+                    <span className="mt-1 block text-[10px] font-medium uppercase tracking-wide text-bs-fg-2">
+                      {headerBadge}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent">
+                    <Popcorn className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="font-sans-heading text-base font-bold text-foreground">
+                      BudStacks
+                    </h1>
+                    {headerBadge && (
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                        {headerBadge}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
             </Link>
           )}
           {collapsed && (
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent mx-auto">
-              <Popcorn className="h-5 w-5 text-white" />
-            </div>
+            theme === "super-admin" ? (
+              <div className="mx-auto">
+                <Image
+                  src="/images/homepage/budstacks-cube.png"
+                  alt="Budstacks"
+                  width={32}
+                  height={32}
+                  priority
+                  className="h-8 w-8 object-contain [filter:drop-shadow(0_0_10px_rgba(82,217,122,0.35))]"
+                />
+              </div>
+            ) : (
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent mx-auto">
+                <Popcorn className="h-5 w-5 text-white" />
+              </div>
+            )
           )}
           {/* Collapse button - desktop only */}
           <button
