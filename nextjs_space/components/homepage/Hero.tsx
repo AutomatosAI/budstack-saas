@@ -16,7 +16,7 @@ export default function Hero() {
                     </span>
 
                     {/* Headline */}
-                    <h1 className="font-bs-serif text-[40px] font-normal leading-[1.05] tracking-[-0.02em] text-bs-gold-300 sm:text-[56px] lg:text-[68px] xl:text-[76px] xl:tracking-[-0.03em]">
+                    <h1 className="font-bs-serif text-[40px] font-normal leading-[1.05] tracking-[-0.02em] text-[#d6d0c7] sm:text-[56px] lg:text-[68px] xl:text-[76px] xl:tracking-[-0.03em]">
                         The premium rollout platform{" "}
                         <span className="whitespace-nowrap">
                             for{" "}
@@ -31,7 +31,7 @@ export default function Hero() {
                     </h1>
 
                     {/* Subhead */}
-                    <p className="mt-6 max-w-[540px] text-base leading-[1.5] text-bs-gold-400 sm:text-lg lg:text-[20px]">
+                    <p className="mt-6 max-w-[540px] text-base leading-[1.5] text-[#fcfcbc] sm:text-lg lg:text-[20px]">
                         For licensed operators: launch a compliant, beautifully branded medical-cannabis
                         storefront — with no custom development overhead and no operational chaos.
                     </p>
@@ -48,7 +48,7 @@ export default function Hero() {
                     </div>
 
                     {/* Compliance row */}
-                    <div className="mt-8 flex flex-wrap gap-4 font-bs-mono text-[11px] uppercase tracking-[0.1em] text-bs-gold-400 sm:gap-6">
+                    <div className="mt-8 flex flex-wrap gap-4 font-bs-mono text-[11px] uppercase tracking-[0.1em] text-[#fcfcbc] sm:gap-6">
                         <span>◆ GDPR · HIPAA</span>
                         <span>◆ INFARMED</span>
                         <span>◆ EU-GMP</span>
