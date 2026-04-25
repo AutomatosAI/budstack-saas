@@ -9,6 +9,7 @@ import { LanguageProvider } from '@/lib/i18n';
 import { QueryProvider } from '@/components/query-provider';
 import { SessionKeepAlive } from '@/components/session-keep-alive';
 import { GlobalPlatformChatbot } from '@/components/landing/GlobalPlatformChatbot';
+import { CookieBanner } from '@/components/legal/CookieBanner';
 import { prisma } from '@/lib/db';
 import { headers } from 'next/headers';
 
@@ -140,6 +141,7 @@ export default async function RootLayout({
                   />
                 )}
                 <Toaster />
+                <CookieBanner />
               </ThemeProvider>
             </LanguageProvider>
           </QueryProvider>

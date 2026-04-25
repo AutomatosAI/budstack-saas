@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { CookiePreferencesLink } from "@/components/legal/CookiePreferencesLink";
 
 const COLUMNS = [
     {
@@ -32,6 +33,7 @@ const COLUMNS = [
             { label: "Privacy", href: "/privacy" },
             { label: "Terms", href: "/terms" },
             { label: "Cookies", href: "/cookies" },
+            { label: "Cookie preferences", href: "#cookie-preferences" },
         ],
     },
 ] as const;
@@ -80,12 +82,16 @@ export default function Footer() {
                             <ul className="mt-4 flex flex-col gap-2.5">
                                 {col.links.map((l) => (
                                     <li key={l.label}>
-                                        <Link
-                                            href={l.href}
-                                            className="text-[13.5px] text-bs-fg-1 transition hover:text-bs-fg-0"
-                                        >
-                                            {l.label}
-                                        </Link>
+                                        {l.href === "#cookie-preferences" ? (
+                                            <CookiePreferencesLink />
+                                        ) : (
+                                            <Link
+                                                href={l.href}
+                                                className="text-[13.5px] text-bs-fg-1 transition hover:text-bs-fg-0"
+                                            >
+                                                {l.label}
+                                            </Link>
+                                        )}
                                     </li>
                                 ))}
                             </ul>
