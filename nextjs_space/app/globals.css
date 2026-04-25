@@ -1164,10 +1164,11 @@ html {
   mix-blend-mode: screen;
   pointer-events: none;
 }
-/* Feathers the cube PNG edges into the background (kills the visible square) */
+/* Cube PNG now has clean transparent corners (Apr 2026 hi-res asset) — no
+   radial mask needed. Light feather kept for edge softness on the dark glow. */
 .budstacks-theme .bs-cube-img {
-  -webkit-mask-image: radial-gradient(ellipse 62% 62% at 50% 50%, #000 55%, rgba(0,0,0,0.55) 75%, transparent 92%);
-  mask-image: radial-gradient(ellipse 62% 62% at 50% 50%, #000 55%, rgba(0,0,0,0.55) 75%, transparent 92%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, #000 80%, rgba(0,0,0,0.85) 92%, transparent 100%);
+  mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, #000 80%, rgba(0,0,0,0.85) 92%, transparent 100%);
 }
 .budstacks-theme .bs-cube-vignette {
   position: absolute;
