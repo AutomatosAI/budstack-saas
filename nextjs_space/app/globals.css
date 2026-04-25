@@ -1164,11 +1164,13 @@ html {
   mix-blend-mode: screen;
   pointer-events: none;
 }
-/* Cube PNG now has clean transparent corners (Apr 2026 hi-res asset) — no
-   radial mask needed. Light feather kept for edge softness on the dark glow. */
+/* Cube PNG: upscayl AI threshold-ed the alpha to a hard cliff (no anti-alias
+   at the boundary), and the cube body has dark green pixels at its edges that
+   read as a square halo on the dark hero. Aggressive radial mask feathers
+   those edges so the cube floats cleanly. */
 .budstacks-theme .bs-cube-img {
-  -webkit-mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, #000 80%, rgba(0,0,0,0.85) 92%, transparent 100%);
-  mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, #000 80%, rgba(0,0,0,0.85) 92%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 50%, rgba(0,0,0,0.65) 72%, rgba(0,0,0,0.25) 86%, transparent 95%);
+  mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 50%, rgba(0,0,0,0.65) 72%, rgba(0,0,0,0.25) 86%, transparent 95%);
 }
 .budstacks-theme .bs-cube-vignette {
   position: absolute;
