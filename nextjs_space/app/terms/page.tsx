@@ -28,7 +28,7 @@ export default function TermsPage() {
                             Terms of Service
                         </h1>
                         <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-                            Last updated: January 14, 2025
+                            Last updated: April 25, 2026
                         </p>
                     </div>
 
@@ -40,6 +40,10 @@ export default function TermsPage() {
                                     1. Acceptance of Terms
                                 </h2>
                                 <p className="text-muted-foreground leading-relaxed">
+                                    BudStacks is a B2B SaaS infrastructure platform for licensed cannabis
+                                    operators. We do not sell, advertise, dispense, or recommend cannabis or
+                                    cannabis products to consumers. Our customers are licensed operators who
+                                    are solely responsible for regulatory compliance in their jurisdictions.
                                     By accessing and using BudStacks services, you accept and agree to be bound
                                     by these Terms of Service and all applicable laws and regulations.
                                 </p>
@@ -50,9 +54,11 @@ export default function TermsPage() {
                                     2. Eligibility
                                 </h2>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    You must be of legal age and hold a valid Dr. Green NFT license to access franchise
-                                    services. Medical dispensary customers must have a valid medical prescription as required
-                                    by applicable regulations.
+                                    You must be of legal age and hold a valid operating licence in your
+                                    jurisdiction (clinic, pharmacy, dispensary, or equivalent) to access
+                                    operator services. End-customers of our partner storefronts must meet
+                                    their operator's own eligibility requirements, including a valid
+                                    prescription where required by applicable regulations.
                                 </p>
                             </section>
 

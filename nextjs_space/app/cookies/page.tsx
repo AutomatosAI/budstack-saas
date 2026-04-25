@@ -49,7 +49,7 @@ export default function CookiesPage() {
                             Cookie Policy
                         </h1>
                         <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-                            Last updated: January 14, 2025
+                            Last updated: April 25, 2026
                         </p>
                     </div>
 
@@ -100,8 +100,8 @@ export default function CookiesPage() {
                             allow you to block or delete cookies. However, please note that disabling certain
                             cookies may affect the functionality of our website.
                         </p>
-                        <div className="rounded-2xl bg-slate-100 border border-slate-200 p-5">
-                            <p className="text-sm text-slate-600">
+                        <div className="rounded-2xl bg-bs-bg-2 border border-bs-border p-5">
+                            <p className="text-sm text-bs-fg-2">
                                 <strong>Note:</strong> Essential cookies cannot be disabled as they are necessary
                                 for the website to function properly. For more information about your privacy rights,
                                 see our{" "}

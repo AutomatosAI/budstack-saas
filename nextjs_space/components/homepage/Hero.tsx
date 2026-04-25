@@ -32,8 +32,8 @@ export default function Hero() {
 
                     {/* Subhead */}
                     <p className="mt-6 max-w-[540px] text-base leading-[1.5] text-bs-gold-400 sm:text-lg lg:text-[20px]">
-                        Launch a compliant, beautifully branded medical-cannabis storefront — with no
-                        custom development overhead and no operational chaos.
+                        For licensed operators: launch a compliant, beautifully branded medical-cannabis
+                        storefront — with no custom development overhead and no operational chaos.
                     </p>
 
                     {/* CTAs */}

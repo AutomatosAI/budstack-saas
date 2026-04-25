@@ -102,6 +102,13 @@ export default function Footer() {
                         Built in Portugal · Operating Globally
                     </span>
                 </div>
+
+                {/* Compliance line — B2B platform disclaimer */}
+                <p className="mt-4 max-w-[920px] text-[11px] leading-[1.55] text-bs-fg-3">
+                    BudStacks is a B2B SaaS platform for licensed cannabis operators. We do not sell,
+                    advertise, or recommend cannabis products to consumers. Operators are solely responsible
+                    for regulatory compliance in their jurisdictions.
+                </p>
             </div>
         </footer>
     );
