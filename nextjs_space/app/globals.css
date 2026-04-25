@@ -1007,7 +1007,7 @@ html {
   --secondary: 195 9% 12%;
   --secondary-foreground: 90 8% 96%;
   --muted: 195 9% 12%;
-  --muted-foreground: 165 4% 56%;
+  --muted-foreground: 165 4% 72%;
   --accent: 137 64% 51%;
   --accent-foreground: 200 16% 4%;
   --destructive: 0 75% 60%;
@@ -1041,6 +1041,50 @@ html {
   background: rgba(82,217,122,0.06);
   border: 1px solid rgba(82,217,122,0.3);
   color: #8CF0A4;
+}
+
+/* Form inputs — aggressive overrides so any input/textarea/select inside .budstacks-theme
+   becomes legible regardless of hardcoded utility classes left over from the light theme. */
+.budstacks-theme input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
+.budstacks-theme textarea,
+.budstacks-theme select {
+  background-color: #0F1517 !important;
+  border-color: #222A2C !important;
+  color: #F2F4F2 !important;
+  caret-color: #52D97A;
+}
+.budstacks-theme input::placeholder,
+.budstacks-theme textarea::placeholder {
+  color: #7C8682 !important;
+  opacity: 1;
+}
+.budstacks-theme input:focus,
+.budstacks-theme textarea:focus,
+.budstacks-theme select:focus,
+.budstacks-theme input:focus-visible,
+.budstacks-theme textarea:focus-visible,
+.budstacks-theme select:focus-visible {
+  border-color: #52D97A !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(82,217,122,0.18) !important;
+}
+.budstacks-theme select option {
+  background-color: #0F1517;
+  color: #F2F4F2;
+}
+.budstacks-theme label {
+  color: #DDE3DF;
+}
+/* Translucent muted bg utility (e.g. bg-muted/30) — common in forms.
+   Force a solid dark surface so inputs are visible. */
+.budstacks-theme .bg-muted\/30,
+.budstacks-theme .bg-muted\/50,
+.budstacks-theme .bg-muted\/60 {
+  background-color: #0F1517 !important;
+}
+/* Hardcoded near-black borders left over from light theme */
+.budstacks-theme [class*="border-\[rgba\(15\,23\,42"] {
+  border-color: #222A2C !important;
 }
 
 .budstacks-theme h1,

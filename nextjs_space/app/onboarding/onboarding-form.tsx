@@ -208,7 +208,7 @@ export default function OnboardingForm({
         return (
           <div className="space-y-6">
             <div>
-              <Label htmlFor="businessName" className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Label htmlFor="businessName" className="flex items-center gap-2 text-sm font-medium text-bs-fg-0">
                 <Store className="h-4 w-4 text-accent" />
                 Business Name *
               </Label>
@@ -499,10 +499,10 @@ export default function OnboardingForm({
                 <span>Join the BudStacks Ecosystem</span>
               </div>
             </div>
-            <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            <h1 className="font-bs-serif text-3xl font-medium tracking-[-0.02em] text-bs-gold-300 sm:text-4xl">
               Apply for Franchise
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
+            <p className="mx-auto mt-4 max-w-xl text-lg text-bs-fg-1">
               Launch your medical cannabis dispensary in minutes
             </p>
           </div>
@@ -510,10 +510,10 @@ export default function OnboardingForm({
           {/* Form Card */}
           <div className="card-floating p-8 lg:p-10">
             <div className="mb-8">
-              <h2 className="font-display text-xl font-semibold text-foreground">
+              <h2 className="font-bs-serif text-xl font-medium text-bs-fg-0">
                 New Tenant Application
               </h2>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-bs-fg-2 mt-1">
                 Complete the steps below to create your dispensary store
               </p>
             </div>
