@@ -1633,3 +1633,134 @@ html {
 .budstacks-theme [class*="rounded-full"][class*="bg-rose-"] {
   background-color: #C6CCC8 !important;
 }
+
+/* ============================================================
+   MOBILE TIGHTENING (super-admin)
+   ============================================================
+   Super-admin panels were designed desktop-first with generous p-6/p-8
+   padding and gap-6/gap-8 grid spacing. On a phone that wastes
+   horizontal real estate and pushes content off-screen. Tighten the
+   common patterns at <640px so cards don't squeeze content and big
+   numbers don't wrap mid-value. Scoped to .budstacks-theme so
+   tenant-admin and other surfaces are unaffected.
+   --- */
+@media (max-width: 639px) {
+  /* Card / panel padding */
+  .budstacks-theme .card-floating,
+  .budstacks-theme .card-floating-static {
+    padding: 1rem !important;            /* p-4 */
+    border-radius: 14px !important;
+  }
+  .budstacks-theme .card-floating .p-6,
+  .budstacks-theme .card-floating .p-8,
+  .budstacks-theme .card-floating-static .p-6,
+  .budstacks-theme .card-floating-static .p-8 {
+    padding: 1rem !important;
+  }
+
+  /* Tighter spacing between sections */
+  .budstacks-theme .space-y-8 > * + * { margin-top: 1.25rem !important; }
+  .budstacks-theme .space-y-6 > * + * { margin-top: 1rem !important; }
+  .budstacks-theme .gap-8 { gap: 0.875rem !important; }
+  .budstacks-theme .gap-6 { gap: 0.75rem !important; }
+
+  /* Page heading: pull big serif headers in slightly so they don't
+     dominate the viewport on phone screens. */
+  .budstacks-theme h1.text-3xl,
+  .budstacks-theme h1.text-4xl,
+  .budstacks-theme h1.sm\:text-4xl {
+    font-size: 1.625rem !important;       /* ~26px */
+    line-height: 1.15 !important;
+    letter-spacing: -0.01em !important;
+  }
+  .budstacks-theme h2.text-2xl,
+  .budstacks-theme h3.text-xl {
+    font-size: 1.125rem !important;       /* ~18px */
+    line-height: 1.25 !important;
+  }
+
+  /* Stat-card big numbers — keep them prominent but unwrappable.
+     Numbers like "€11,240" must not break. */
+  .budstacks-theme .card-floating .text-3xl,
+  .budstacks-theme .card-floating .text-4xl,
+  .budstacks-theme .card-floating-static .text-3xl,
+  .budstacks-theme .card-floating-static .text-4xl {
+    font-size: 1.625rem !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+  }
+
+  /* Stat-card icon pill — drop from p-3 (12px) to p-2 so it doesn't
+     fight the number for horizontal space. */
+  .budstacks-theme .card-floating .rounded-2xl,
+  .budstacks-theme .card-floating-static .rounded-2xl {
+    padding: 0.5rem !important;
+  }
+
+  /* Sticky top notification bar — collapse padding on phone so it
+     doesn't push the page heading down. */
+  .budstacks-theme .sticky.top-0 {
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  /* Sub-headers / descriptions — tighter line-height on mobile */
+  .budstacks-theme .text-muted-foreground { line-height: 1.4 !important; }
+
+  /* Section badge: shrink on mobile, no wrap */
+  .budstacks-theme .section-badge {
+    padding: 0.25rem 0.625rem !important;
+    font-size: 0.6875rem !important;
+    white-space: nowrap !important;
+  }
+
+  /* Tables: shadcn already wraps in overflow-auto; tighten cell
+     padding so more columns fit before scrolling kicks in. */
+  .budstacks-theme table th,
+  .budstacks-theme table td {
+    padding: 0.5rem 0.625rem !important;
+    font-size: 0.8125rem !important;
+  }
+
+  /* Forms: full-width by default, smaller field padding */
+  .budstacks-theme input:not([type="checkbox"]):not([type="radio"]),
+  .budstacks-theme textarea,
+  .budstacks-theme select {
+    padding: 0.625rem 0.75rem !important;
+    font-size: 16px !important;          /* prevent iOS zoom on focus */
+  }
+
+  /* Dialog content — full-bleed minus 16px safe area on phone */
+  .budstacks-theme [role="dialog"] {
+    width: calc(100vw - 1rem) !important;
+    max-width: calc(100vw - 1rem) !important;
+    padding: 1rem !important;
+  }
+
+  /* Big horizontal padding on the layout main area */
+  .budstacks-theme .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .budstacks-theme .py-6 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+
+  /* Buttons: prevent text from cramping; allow wrap-free shrink */
+  .budstacks-theme .rounded-xl[class*="px-"],
+  .budstacks-theme button.rounded-xl {
+    padding-left: 0.875rem !important;
+    padding-right: 0.875rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Mobile hamburger button: nudge clear of safe area + give bigger tap target */
+  .budstacks-theme + button.fixed.top-4.left-4,
+  .budstacks-theme button.fixed.top-4.left-4 {
+    top: max(0.5rem, env(safe-area-inset-top)) !important;
+    left: 0.625rem !important;
+  }
+}
+
+/* Small-tablet narrow viewport (640-767px): drop sidebar to off-canvas
+   drawer style and slightly tighten card padding. */
+@media (min-width: 640px) and (max-width: 767px) {
+  .budstacks-theme .card-floating,
+  .budstacks-theme .card-floating-static {
+    padding: 1.25rem !important;
+  }
+}
