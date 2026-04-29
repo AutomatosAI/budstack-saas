@@ -92,7 +92,7 @@ export default function Nav() {
                         </SheetTrigger>
                         <SheetContent
                             side="left"
-                            className="w-[300px] border-r border-bs-border bg-bs-bg-1 sm:w-[360px]"
+                            className="budstacks-theme w-[300px] border-r border-bs-border bg-bs-bg-1 sm:w-[360px]"
                         >
                             <SheetHeader>
                                 <SheetTitle className="flex items-center text-bs-fg-0">
