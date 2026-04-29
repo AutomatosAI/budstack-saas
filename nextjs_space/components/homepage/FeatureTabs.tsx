@@ -16,7 +16,7 @@ const TABS: { key: TabKey; label: string }[] = [
 
 const CONTENT: Record<
     TabKey,
-    { title: string; body: string; cta: string; href: string }
+    { title: string; body: string; cta: string; href: string; external?: boolean }
 > = {
     storefront: {
         title: "A white-label storefront that looks amazing — ready in a day.",
@@ -28,19 +28,21 @@ const CONTENT: Record<
         title: "One console. Every patient. Every gram. Every region.",
         body: "Real-time orders, KYC queues, inventory, margin and patient cohorts — wired to Dr. Green's prescription rails. No spreadsheets.",
         cta: "See the console →",
-        href: "/learn",
+        href: "/marketplace",
     },
     compliance: {
-        title: "Compliance baked in, not bolted on.",
-        body: "GDPR, HIPAA, INFARMED and EU-GMP audit trails generated automatically from the same data your storefront and dashboard run on.",
-        cta: "Review compliance →",
-        href: "/regulatory",
+        title: "Dr. Green's compliance, surfaced in your dashboard.",
+        body: "Dr. Green holds the INFARMED licence and EU-GMP certificate, with seed-to-sale tracking on an immutable blockchain ledger. We pipe every audit trail straight into your storefront and dashboard — you sell, they keep the regulators happy.",
+        cta: "How Dr. Green stays compliant →",
+        href: "https://dr.green",
+        external: true,
     },
     logistics: {
-        title: "Cold-chain logistics, fully integrated.",
-        body: "Licensed couriers, EU-GMP custody, temperature-logged delivery and proof-of-receipt — handled at the platform layer.",
-        cta: "How shipping works →",
-        href: "/learn",
+        title: "Dr. Green ships. You sell.",
+        body: "Vetted couriers, signed chain-of-custody and proof of receipt — Dr. Green's logistics partners run the cold chain end-to-end. Your dashboard tracks every consignment in real time, no extra plumbing.",
+        cta: "See Dr. Green's network →",
+        href: "https://dr.green",
+        external: true,
     },
 };
 
@@ -92,9 +94,20 @@ export default function FeatureTabs() {
                         <p className="mt-5 max-w-[520px] text-[16px] leading-[1.55] text-bs-fg-1 sm:text-[17px]">
                             {c.body}
                         </p>
-                        <Link href={c.href} className="bs-btn-ghost mt-7">
-                            {c.cta}
-                        </Link>
+                        {c.external ? (
+                            <a
+                                href={c.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bs-btn-ghost mt-7"
+                            >
+                                {c.cta}
+                            </a>
+                        ) : (
+                            <Link href={c.href} className="bs-btn-ghost mt-7">
+                                {c.cta}
+                            </Link>
+                        )}
                     </div>
 
                     <div className="flex justify-center">
@@ -117,16 +130,16 @@ function ComplianceCard({ kind }: { kind: "compliance" | "logistics" }) {
     const items =
         kind === "compliance"
             ? [
-                  { tag: "GDPR · HIPAA", note: "Patient-data residency, right-to-erasure, audit logs" },
-                  { tag: "INFARMED", note: "Portuguese authority reporting, monthly + ad-hoc" },
-                  { tag: "EU-GMP", note: "Manufacturing chain-of-custody, lab certificates" },
-                  { tag: "Seed-to-Sale", note: "Lot tracking from cultivator to patient receipt" },
+                  { tag: "INFARMED", note: "Dr. Green holds the Portuguese cultivation + import licence" },
+                  { tag: "EU-GMP", note: "Certified manufacturing chain-of-custody and lab releases" },
+                  { tag: "Blockchain", note: "Immutable seed-to-sale ledger — every strain verifiable" },
+                  { tag: "GDPR", note: "End-to-end encrypted patient data, consent + residency" },
               ]
             : [
-                  { tag: "Cold Chain", note: "2–8°C temperature logging end-to-end" },
-                  { tag: "Licensed Couriers", note: "Pre-vetted in PT, ZA, TH; expanding UK & DE" },
-                  { tag: "Custody", note: "Tamper-evident packaging, signed chain-of-custody" },
-                  { tag: "Proof of Receipt", note: "Patient ID + signature, attached to order" },
+                  { tag: "Licensed Couriers", note: "Dr. Green's vetted partners across PT, ZA, TH; UK & DE next" },
+                  { tag: "Chain of Custody", note: "Tamper-evident packaging, signed pickup-to-drop" },
+                  { tag: "Proof of Receipt", note: "Patient ID + signature, attached to the order record" },
+                  { tag: "Live Tracking", note: "Status streamed into your dashboard end-to-end" },
               ];
 
     return (
