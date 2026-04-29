@@ -180,9 +180,18 @@ export async function DELETE(
       (tt: any) => tt.activeForTenant !== null,
     );
 
-    // Support force deletion via query param
+    // Two flags for two distinct decisions:
+    //   force=true                        → proceed even if tenants reference this base
+    //   cascadeTenantTemplates=true       → ALSO delete the tenants' cloned tenant_templates rows
+    //                                        (this is destructive — it removes the operator's
+    //                                         work, which once cloned is theirs).
+    // Without cascadeTenantTemplates the route refuses to delete a base template that has
+    // tenant clones, because the FK constraint would block the delete and we MUST NOT
+    // silently wipe operator data. Caller must clean up clones first or pass the flag.
+    // Incident 2026-04-29: prior version cascaded by default and wiped LekkerWeed clone.
     const { searchParams } = new URL(req.url);
     const force = searchParams.get("force") === "true";
+    const cascadeTenantTemplates = searchParams.get("cascadeTenantTemplates") === "true";
 
     if ((template._count.tenants > 0 || activeTenantTemplates.length > 0) && !force) {
       const usageDetails = [];
@@ -209,7 +218,7 @@ export async function DELETE(
     }
 
     console.log(
-      `[Template Delete] Deleting template: ${template.name} (${template.slug})${force ? ' (FORCE)' : ''}`,
+      `[Template Delete] Deleting template: ${template.name} (${template.slug})${force ? ' (FORCE)' : ''}${cascadeTenantTemplates ? ' (CASCADE-TENANT-TEMPLATES)' : ''}`,
     );
 
     // Clear activeTenantTemplateId on any tenants using this template's tenant_templates
@@ -231,10 +240,36 @@ export async function DELETE(
       console.log(`[Template Delete] Cleared templateId on ${template._count.tenants} tenant(s)`);
     }
 
-    // Delete tenant_templates that reference this base template
-    if (template._count.tenant_templates > 0) {
+    // Tenant clones are owned by the tenant once cloned. Deleting the base template
+    // does NOT remove the tenant's data unless the caller EXPLICITLY opts in via
+    // cascadeTenantTemplates=true. Without that flag, refuse the delete with 409 so
+    // the caller has to acknowledge the destruction.
+    //
+    // TODO: schema migration to make tenant_templates.baseTemplateId nullable with
+    // onDelete: SetNull, then this branch can null the FK and let the base be
+    // deleted while preserving the clone.
+    if (template._count.tenant_templates > 0 && !cascadeTenantTemplates) {
+      const cloneSummary = template.tenant_templates.map((tt: any) => ({
+        tenantTemplateId: tt.id,
+        templateName: tt.templateName,
+        tenantId: tt.activeForTenant?.id,
+        businessName: tt.activeForTenant?.businessName,
+      }));
+      return NextResponse.json(
+        {
+          error:
+            `REFUSED: deleting this base template would leave ${template._count.tenant_templates} tenant clone(s) with a dangling baseTemplateId FK, ` +
+            `or — if you pass cascadeTenantTemplates=true — wipe those clones (which are owned by the tenant). ` +
+            `Either delete the clones manually first, or pass ?force=true&cascadeTenantTemplates=true to opt into the destructive cascade.`,
+          tenantClones: cloneSummary,
+        },
+        { status: 409 },
+      );
+    }
+
+    if (template._count.tenant_templates > 0 && cascadeTenantTemplates) {
       console.log(
-        `[Template Delete] Deleting ${template._count.tenant_templates} tenant_templates that reference this base template`,
+        `[Template Delete] CASCADE: deleting ${template._count.tenant_templates} tenant_templates that reference this base template (caller passed cascadeTenantTemplates=true)`,
       );
       await prisma.tenant_templates.deleteMany({
         where: { baseTemplateId: templateId },
