@@ -49,17 +49,17 @@ const contactInfo = [
     {
         icon: Mail,
         title: "Email us",
-        detail: "hello@popcornmedia.io",
+        detail: "info@budstacks.io",
     },
     {
         icon: Phone,
         title: "Call us",
-        detail: "+49 (30) 123 4567",
+        detail: "+351 939 455 949",
     },
     {
         icon: MapPin,
         title: "Our location",
-        detail: "Berlin, Germany",
+        detail: "Portugal",
     },
 ];
 
@@ -186,7 +186,7 @@ export default function ContactPage() {
                                                 <FormControl>
                                                     <Input
                                                         type="tel"
-                                                        placeholder="+49 (30) 123 4567"
+                                                        placeholder="+351 939 455 949"
                                                         className="h-12 rounded-xl border border-bs-border bg-bs-bg-2 px-4 text-bs-fg-0 placeholder:text-bs-fg-3 focus:border-bs-green-400 focus:ring-2 focus:ring-bs-green-400/30 focus-visible:ring-bs-green-400/30"
                                                         {...field}
                                                     />

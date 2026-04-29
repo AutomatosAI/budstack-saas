@@ -36,7 +36,7 @@ export default function InvestmentBento() {
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
                         <span className="bs-eyebrow bs-eyebrow-green">The Numbers</span>
-                        <h2 className="mt-3 max-w-[820px] font-bs-serif text-[34px] font-medium leading-[1.1] tracking-[-0.02em] text-bs-gold-300 sm:text-[44px] lg:text-[56px] xl:text-[64px]">
+                        <h2 className="mt-3 max-w-[760px] font-bs-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-bs-gold-300 sm:text-[36px] lg:text-[44px] xl:text-[52px]">
                             $10K in. $9K → $12K out / month.
                         </h2>
                     </div>
