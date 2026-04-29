@@ -14,8 +14,8 @@ const MILESTONES = [
 
 // Chart geometry
 const W = 600;
-const H = 320;
-const M = { l: 52, r: 28, t: 28, b: 40 };
+const H = 260;
+const M = { l: 52, r: 28, t: 22, b: 36 };
 const innerW = W - M.l - M.r;
 const innerH = H - M.t - M.b;
 const X_MAX = 100;
@@ -46,7 +46,7 @@ export default function InvestmentBento() {
                     </span>
                 </div>
 
-                <div className="mt-10 grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="mt-10 grid grid-cols-1 items-stretch gap-3 md:grid-cols-3">
                     {/* Left column — stacked anchor cards */}
                     <div className="flex flex-col gap-3 md:col-span-1">
                         <StatCard
@@ -59,6 +59,11 @@ export default function InvestmentBento() {
                             value="$3–4/g"
                             note="Depends on strain and region"
                         />
+                        <StatCard
+                            label="Per Patient"
+                            value="30 g / mo"
+                            note="Average monthly script per active patient"
+                        />
                     </div>
 
                     {/* Right — big chart card */}
@@ -70,19 +75,19 @@ export default function InvestmentBento() {
                             </span>
                         </div>
 
-                        <div className="mt-3 font-bs-serif text-[40px] font-medium leading-none tracking-[-0.04em] text-bs-green-400 sm:text-[52px] lg:text-[60px]">
+                        <div className="mt-2 font-bs-serif text-[36px] font-medium leading-none tracking-[-0.04em] text-bs-green-400 sm:text-[44px] lg:text-[52px]">
                             $9K → $12K
                         </div>
                         <p className="mt-2 font-bs-mono text-[11px] uppercase tracking-[0.1em] text-bs-fg-2">
                             30g/mo per patient × $3–4/g margin
                         </p>
 
-                        <div className="mt-6">
+                        <div className="mt-4 flex-1">
                             <RevenueChart />
                         </div>
 
                         {/* Legend */}
-                        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 font-bs-mono text-[10.5px] uppercase tracking-[0.12em] text-bs-fg-2">
+                        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 font-bs-mono text-[10.5px] uppercase tracking-[0.12em] text-bs-fg-2">
                             <span className="flex items-center gap-2">
                                 <span className="h-[2px] w-5 bg-bs-gold-400" />
                                 High estimate · $4/g
@@ -100,7 +105,7 @@ export default function InvestmentBento() {
                         </div>
 
                         {/* Milestone strip */}
-                        <div className="mt-5 grid grid-cols-2 gap-2 border-t border-bs-border pt-4 sm:grid-cols-4">
+                        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-bs-border pt-3 sm:grid-cols-4">
                             {MILESTONES.map((m) => (
                                 <div key={m.clients} className="flex flex-col">
                                     <span className="font-bs-mono text-[10.5px] uppercase tracking-[0.12em] text-bs-fg-3">
@@ -277,7 +282,7 @@ function RevenueChart() {
 
 function StatCard({ label, value, note }: { label: string; value: string; note: string }) {
     return (
-        <div className="bs-card flex flex-col p-6 sm:p-7">
+        <div className="bs-card flex flex-1 flex-col justify-center p-6 sm:p-7">
             <span className="bs-eyebrow">{label}</span>
             <div className="mt-3 font-bs-serif text-[28px] font-medium tracking-[-0.02em] text-bs-gold-300 sm:text-[34px]">
                 {value}
