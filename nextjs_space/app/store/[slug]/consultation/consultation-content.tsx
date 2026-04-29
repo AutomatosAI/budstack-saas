@@ -29,6 +29,10 @@ const fadeInUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
 };
 
+// TODO: Drive from per-country compliance rules (PT, UK, DE etc.).
+// Hidden for now — South Africa doesn't require this prescription notice.
+const SHOW_COMPLIANCE_NOTICE = false;
+
 const staggerContainer = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
@@ -433,47 +437,49 @@ export default function ConsultationContent({
         </div>
       </section>
 
-      {/* Compliance Notice */}
-      <section className="py-8 md:py-12">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div
-            className="max-w-4xl mx-auto rounded-xl p-6 flex items-start gap-4"
-            style={{
-              backgroundColor: "hsl(38 92% 95%)",
-              border: "1px solid hsl(38 92% 80%)",
-            }}
-          >
-            <AlertTriangle
-              className="w-5 h-5 flex-shrink-0 mt-0.5"
-              style={{ color: "hsl(38 92% 40%)" }}
-            />
-            <div>
-              <p
-                className="text-sm font-medium mb-1"
-                style={{
-                  color: "hsl(38 60% 30%)",
-                  fontFamily: "var(--tenant-font-heading, sans-serif)",
-                }}
-              >
-                Important Notice
-              </p>
-              <p
-                className="text-sm leading-relaxed"
-                style={{
-                  color: "hsl(38 40% 35%)",
-                  fontFamily: "var(--tenant-font-base, sans-serif)",
-                }}
-              >
-                Medical cannabis is a prescription medication. This
-                consultation does not guarantee a prescription. All
-                applications are reviewed by licensed medical professionals
-                who will determine eligibility based on your medical history
-                and applicable regulations.
-              </p>
+      {/* Compliance Notice — gated by SHOW_COMPLIANCE_NOTICE; will become country-driven */}
+      {SHOW_COMPLIANCE_NOTICE && (
+        <section className="py-8 md:py-12">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div
+              className="max-w-4xl mx-auto rounded-xl p-6 flex items-start gap-4"
+              style={{
+                backgroundColor: "hsl(38 92% 95%)",
+                border: "1px solid hsl(38 92% 80%)",
+              }}
+            >
+              <AlertTriangle
+                className="w-5 h-5 flex-shrink-0 mt-0.5"
+                style={{ color: "hsl(38 92% 40%)" }}
+              />
+              <div>
+                <p
+                  className="text-sm font-medium mb-1"
+                  style={{
+                    color: "hsl(38 60% 30%)",
+                    fontFamily: "var(--tenant-font-heading, sans-serif)",
+                  }}
+                >
+                  Important Notice
+                </p>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{
+                    color: "hsl(38 40% 35%)",
+                    fontFamily: "var(--tenant-font-base, sans-serif)",
+                  }}
+                >
+                  Medical cannabis is a prescription medication. This
+                  consultation does not guarantee a prescription. All
+                  applications are reviewed by licensed medical professionals
+                  who will determine eligibility based on your medical history
+                  and applicable regulations.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </>
   );
 }

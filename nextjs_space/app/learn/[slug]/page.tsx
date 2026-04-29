@@ -76,7 +76,7 @@ export default async function LearnArticlePage({
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="budstacks-theme min-h-screen">
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-24">
         {/* Back link */}

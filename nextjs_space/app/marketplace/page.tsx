@@ -40,7 +40,7 @@ export default async function MarketplacePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="budstacks-theme min-h-screen">
       <Navbar />
       {/* Header */}
       <div className="pt-32 pb-16 px-4">
@@ -68,7 +68,7 @@ export default async function MarketplacePage() {
               className="card-floating overflow-hidden hover:scale-[1.01] transition-all duration-300"
             >
               {/* Preview Image */}
-              <div className="aspect-video bg-slate-100 relative group">
+              <div className="aspect-video bg-bs-bg-2 relative group">
                 {template.signedPreviewUrl ? (
                   <img
                     src={template.signedPreviewUrl}
@@ -76,17 +76,16 @@ export default async function MarketplacePage() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                  <div className="absolute inset-0 flex items-center justify-center text-bs-fg-3">
                     <Palette className="h-16 w-16 opacity-30" />
                   </div>
                 )}
                 {/* Hover overlay with Preview button */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                   <Link href={`/store/preview/${template.slug}`} target="_blank">
                     <Button
-                      variant="secondary"
                       size="sm"
-                      className="shadow-lg rounded-xl"
+                      className="shadow-lg rounded-xl bg-bs-green-500 text-bs-bg-0 hover:bg-bs-green-400"
                     >
                       <Eye className="mr-2 h-4 w-4" />
                       Preview
@@ -96,23 +95,17 @@ export default async function MarketplacePage() {
                 {/* Badges */}
                 <div className="absolute top-3 right-3 flex gap-1">
                   {template.sourceType === "COMMUNITY" && (
-                    <Badge className="bg-teal-500 hover:bg-teal-600 border-none">
+                    <Badge className="bg-bs-green-400/15 text-bs-green-300 border border-bs-green-400/25 hover:bg-bs-green-400/20">
                       Community
                     </Badge>
                   )}
                   {template.isPremium && (
-                    <Badge
-                      variant="secondary"
-                      className="bg-amber-100 text-amber-800 hover:bg-amber-200"
-                    >
+                    <Badge className="bg-bs-gold-400/15 text-bs-gold-300 border border-bs-gold-400/25 hover:bg-bs-gold-400/20">
                       Premium
                     </Badge>
                   )}
                   {template.category && (
-                    <Badge
-                      variant="secondary"
-                      className="bg-white/90 text-slate-700"
-                    >
+                    <Badge className="bg-bs-bg-1/90 text-bs-fg-1 border border-bs-border backdrop-blur-sm">
                       {template.category}
                     </Badge>
                   )}
@@ -150,7 +143,7 @@ export default async function MarketplacePage() {
                       .map((tag: string) => (
                         <span
                           key={tag}
-                          className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"
+                          className="text-xs font-bs-mono uppercase tracking-[0.08em] px-2.5 py-1 rounded-full bg-bs-green-400/10 text-bs-green-300 border border-bs-green-400/20"
                         >
                           {tag}
                         </span>
@@ -160,12 +153,11 @@ export default async function MarketplacePage() {
               </div>
 
               {/* Card Footer — Preview Only */}
-              <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+              <div className="p-4 border-t border-bs-border bg-bs-bg-2/40">
                 <Link href={`/store/preview/${template.slug}`} target="_blank" className="block">
                   <Button
-                    variant="outline"
                     size="sm"
-                    className="w-full rounded-xl"
+                    className="w-full rounded-xl bg-bs-green-400/10 text-bs-green-300 border border-bs-green-400/25 hover:bg-bs-green-400/20"
                   >
                     <Eye className="mr-2 h-4 w-4" />
                     Preview Theme
@@ -177,8 +169,8 @@ export default async function MarketplacePage() {
 
           {templates.length === 0 && (
             <div className="col-span-full card-floating p-12 text-center">
-              <div className="mx-auto w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                <Layout className="h-6 w-6 text-slate-400" />
+              <div className="mx-auto w-12 h-12 rounded-full bg-bs-bg-2 border border-bs-border flex items-center justify-center mb-4">
+                <Layout className="h-6 w-6 text-bs-fg-3" />
               </div>
               <h3 className="font-display text-lg font-bold text-foreground mb-2">
                 Coming Soon

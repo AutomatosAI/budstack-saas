@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Cookie, FileText, Settings, BarChart3, Shield } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
+import { CookiePreferencesLink } from "@/components/legal/CookiePreferencesLink";
 
 export const metadata: Metadata = {
     title: "Cookie Policy | BudStacks",
@@ -32,7 +33,7 @@ const cookieTypes = [
 
 export default function CookiesPage() {
     return (
-        <div className="min-h-screen canvas-bg">
+        <div className="budstacks-theme min-h-screen">
             <Navbar />
 
             <main className="px-4 pt-32 pb-24 sm:px-6 lg:px-8">
@@ -49,7 +50,7 @@ export default function CookiesPage() {
                             Cookie Policy
                         </h1>
                         <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-                            Last updated: January 14, 2025
+                            Last updated: April 25, 2026
                         </p>
                     </div>
 
@@ -96,12 +97,18 @@ export default function CookiesPage() {
                             Managing Cookies
                         </h2>
                         <p className="text-muted-foreground leading-relaxed mb-6">
-                            You can control and delete cookies through your browser settings. Most browsers
-                            allow you to block or delete cookies. However, please note that disabling certain
-                            cookies may affect the functionality of our website.
+                            You can change your cookie choices at any time using the button below, or
+                            via the "Cookie preferences" link in the site footer. You can also control
+                            and delete cookies through your browser settings — note that disabling
+                            essential cookies may affect site functionality.
                         </p>
-                        <div className="rounded-2xl bg-slate-100 border border-slate-200 p-5">
-                            <p className="text-sm text-slate-600">
+                        <div className="mb-6">
+                            <CookiePreferencesLink className="inline-flex items-center gap-2 rounded-xl bg-bs-green-500 px-4 py-2.5 text-sm font-medium text-bs-bg-0 transition hover:bg-bs-green-400 shadow-[0_8px_24px_-8px_rgba(82,217,122,0.5)]">
+                                Manage cookie preferences
+                            </CookiePreferencesLink>
+                        </div>
+                        <div className="rounded-2xl bg-bs-bg-2 border border-bs-border p-5">
+                            <p className="text-sm text-bs-fg-2">
                                 <strong>Note:</strong> Essential cookies cannot be disabled as they are necessary
                                 for the website to function properly. For more information about your privacy rights,
                                 see our{" "}

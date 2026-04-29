@@ -28,29 +28,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen canvas-bg flex flex-col">
+    <div className="budstacks-theme min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-1 flex items-center justify-center px-4 pt-24 pb-16">
         {isSignedIn ? (
           <div className="w-full max-w-md space-y-4 text-center">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-              <h2 className="text-2xl font-bold mb-4">Already Signed In</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                You are currently signed in as <strong>{user?.emailAddresses[0]?.emailAddress}</strong>
+            <div className="rounded-2xl border border-bs-border bg-bs-bg-1 shadow-xl p-8">
+              <h2 className="font-bs-serif text-2xl font-medium text-bs-fg-0 mb-4">Already Signed In</h2>
+              <p className="text-bs-fg-2 mb-6">
+                You are currently signed in as <strong className="text-bs-fg-0">{user?.emailAddresses[0]?.emailAddress}</strong>
               </p>
               <div className="space-y-3">
                 <Button
                   onClick={handleSignOut}
                   disabled={isSigningOut}
-                  className="w-full"
-                  variant="default"
+                  className="w-full bg-bs-green-500 text-bs-bg-0 hover:bg-bs-green-400 rounded-xl"
                 >
                   {isSigningOut ? "Signing out..." : "Sign Out and Sign In as Different User"}
                 </Button>
                 <Button
                   onClick={() => router.push("/auth/callback")}
-                  variant="outline"
-                  className="w-full"
+                  className="w-full bg-bs-bg-2 text-bs-fg-1 border border-bs-border hover:bg-bs-bg-2/80 rounded-xl"
                 >
                   Go to Dashboard
                 </Button>
@@ -58,18 +56,11 @@ export default function LoginPage() {
             </div>
           </div>
         ) : (
-          <SignIn 
-            routing="path" 
+          <SignIn
+            routing="path"
             path="/auth/login"
             signUpUrl="/onboarding"
             afterSignInUrl="/auth/callback"
-            // Allow users to switch accounts
-            appearance={{
-              elements: {
-                rootBox: "mx-auto",
-                card: "shadow-xl",
-              },
-            }}
           />
         )}
       </main>

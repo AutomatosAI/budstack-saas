@@ -2,7 +2,9 @@ import Link from "next/link";
 import { FileText } from "lucide-react";
 import { Navbar, Footer } from "@/components/landing";
 
-// Sample blog posts - in a real app these would come from a CMS or database
+// Sample blog posts - in a real app these would come from a CMS or database.
+// Images are local SVG placeholders (themed to BudStacks palette) —
+// placeholder while the blog widget is being finished.
 const blogPosts = [
     {
         id: 1,
@@ -11,8 +13,7 @@ const blogPosts = [
         date: "Jan 10, 2026",
         excerpt:
             "A comprehensive guide to launching your dispensary franchise with BudStacks infrastructure.",
-        image:
-            "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800&h=500&fit=crop",
+        image: "/images/blog/post-01-franchise.svg",
     },
     {
         id: 2,
@@ -21,8 +22,7 @@ const blogPosts = [
         date: "Jan 5, 2026",
         excerpt:
             "How to leverage the Dr. Green API for seamless product catalog and order management.",
-        image:
-            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=500&fit=crop",
+        image: "/images/blog/post-02-api.svg",
     },
     {
         id: 3,
@@ -31,8 +31,7 @@ const blogPosts = [
         date: "Dec 28, 2025",
         excerpt:
             "Ensuring regulatory compliance with integrated blockchain tracking for your dispensary.",
-        image:
-            "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&h=500&fit=crop",
+        image: "/images/blog/post-03-blockchain.svg",
     },
     {
         id: 4,
@@ -41,8 +40,7 @@ const blogPosts = [
         date: "Dec 20, 2025",
         excerpt:
             "Best practices for managing multiple storefronts with isolated data and custom branding.",
-        image:
-            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=500&fit=crop",
+        image: "/images/blog/post-04-scale.svg",
     },
     {
         id: 5,
@@ -51,8 +49,7 @@ const blogPosts = [
         date: "Dec 15, 2025",
         excerpt:
             "Building lasting patient relationships through effective CRM and consultation tracking.",
-        image:
-            "https://images.unsplash.com/photo-1556745757-8d76bdb6984b?w=800&h=500&fit=crop",
+        image: "/images/blog/post-05-customers.svg",
     },
     {
         id: 6,
@@ -61,14 +58,13 @@ const blogPosts = [
         date: "Dec 10, 2025",
         excerpt:
             "Using data-driven insights to optimize your dispensary's performance and growth.",
-        image:
-            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=500&fit=crop",
+        image: "/images/blog/post-06-analytics.svg",
     },
 ];
 
 export default function BlogPage() {
     return (
-        <div className="min-h-screen bg-background">
+        <div className="budstacks-theme min-h-screen">
             <Navbar />
 
             <main className="px-4 py-24 sm:px-6 lg:px-8">
@@ -81,10 +77,10 @@ export default function BlogPage() {
                                 Blog
                             </div>
                         </div>
-                        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
+                        <h1 className="font-bs-serif text-3xl font-medium tracking-[-0.02em] text-bs-gold-300 sm:text-4xl md:text-5xl">
                             Resources for franchise owners
                         </h1>
-                        <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+                        <p className="mx-auto mt-4 max-w-2xl text-lg text-bs-fg-1">
                             Hands-on posts that help you launch, manage and scale your
                             dispensary.
                         </p>
@@ -98,25 +94,29 @@ export default function BlogPage() {
                                 href={`/blog/${post.slug}`}
                                 className="card-floating group overflow-hidden"
                             >
-                                {/* Image */}
-                                <div className="aspect-[16/10] overflow-hidden">
+                                {/* Image — gradient backdrop shows through if photo fails to load */}
+                                <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-bs-green-500/25 via-bs-bg-1 to-bs-gold-400/15">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
                                         src={post.image}
                                         alt={post.title}
-                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer"
+                                        className="h-full w-full object-cover opacity-90 transition-all duration-300 group-hover:scale-105 group-hover:opacity-100"
                                     />
+                                    {/* Top-down dark wash for legibility against varied photos */}
+                                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bs-bg-0/60 via-transparent to-transparent" />
                                 </div>
 
                                 {/* Content */}
                                 <div className="p-6">
-                                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                    <p className="mb-2 font-bs-mono text-[11px] uppercase tracking-[0.14em] text-bs-fg-3">
                                         {post.date}
                                     </p>
-                                    <h2 className="font-display text-xl font-bold text-foreground transition-colors group-hover:text-accent">
+                                    <h2 className="font-bs-serif text-xl font-medium text-bs-fg-0 transition-colors group-hover:text-bs-green-300">
                                         {post.title}
                                     </h2>
-                                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                                    <p className="mt-2 line-clamp-2 text-sm text-bs-fg-2">
                                         {post.excerpt}
                                     </p>
                                 </div>

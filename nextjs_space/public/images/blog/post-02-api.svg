@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B1410"/>
+      <stop offset="100%" stop-color="#13251D"/>
+    </linearGradient>
+    <radialGradient id="glow2" cx="20%" cy="80%" r="60%">
+      <stop offset="0%" stop-color="#52D97A" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#52D97A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="750" fill="url(#g2)"/>
+  <rect width="1200" height="750" fill="url(#glow2)"/>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22" fill="#52D97A" opacity="0.8">
+    <text x="120" y="200">{</text>
+    <text x="160" y="240">"order": "ord_8f2",</text>
+    <text x="160" y="280" fill="#C9A96E">"status": "fulfilled",</text>
+    <text x="160" y="320">"items": [</text>
+    <text x="200" y="360">{ "sku": "OG-3.5", "qty": 2 }</text>
+    <text x="160" y="400">],</text>
+    <text x="160" y="440" fill="#C9A96E">"total_g": 7</text>
+    <text x="120" y="480">}</text>
+  </g>
+  <line x1="900" y1="180" x2="900" y2="500" stroke="#52D97A" stroke-width="2" stroke-dasharray="4 6" opacity="0.4"/>
+  <circle cx="900" cy="180" r="6" fill="#52D97A"/>
+  <circle cx="900" cy="500" r="6" fill="#C9A96E"/>
+  <text x="60" y="690" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" fill="#C9A96E" letter-spacing="3" opacity="0.7">§ DR.GREEN · API</text>
+</svg>

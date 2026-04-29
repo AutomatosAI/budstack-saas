@@ -49,17 +49,17 @@ const contactInfo = [
     {
         icon: Mail,
         title: "Email us",
-        detail: "hello@popcornmedia.io",
+        detail: "info@budstacks.io",
     },
     {
         icon: Phone,
         title: "Call us",
-        detail: "+49 (30) 123 4567",
+        detail: "+351 939 455 949",
     },
     {
         icon: MapPin,
         title: "Our location",
-        detail: "Berlin, Germany",
+        detail: "Portugal",
     },
 ];
 
@@ -89,7 +89,7 @@ export default function ContactPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="budstacks-theme min-h-screen">
             <Navbar />
 
             <main className="px-4 py-24 sm:px-6 lg:px-8">
@@ -102,10 +102,10 @@ export default function ContactPage() {
                                 Contact
                             </div>
                         </div>
-                        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
+                        <h1 className="font-bs-serif text-3xl font-medium tracking-[-0.02em] text-bs-gold-300 sm:text-4xl md:text-5xl">
                             Get in touch with BudStacks
                         </h1>
-                        <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+                        <p className="mx-auto mt-4 max-w-2xl text-lg text-bs-fg-1">
                             Questions about setup, integrations or enterprise plans? We are
                             here to help.
                         </p>
@@ -120,10 +120,10 @@ export default function ContactPage() {
                                     <MessageSquare className="h-5 w-5 text-white" />
                                 </div>
                                 <div>
-                                    <h2 className="font-display text-xl font-semibold text-foreground">
+                                    <h2 className="font-bs-serif text-xl font-medium text-bs-fg-0">
                                         Send us a message
                                     </h2>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-bs-fg-2">
                                         Let&apos;s hear from you.
                                     </p>
                                 </div>
@@ -139,13 +139,13 @@ export default function ContactPage() {
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-1">
                                                     Name
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Input
                                                         placeholder="Jordan Miller"
-                                                        className="h-12 rounded-xl border-[rgba(15,23,42,0.08)] bg-muted/30 px-4 text-foreground placeholder:text-muted-foreground/60 focus:border-accent focus:ring-accent"
+                                                        className="h-12 rounded-xl border border-bs-border bg-bs-bg-2 px-4 text-bs-fg-0 placeholder:text-bs-fg-3 focus:border-bs-green-400 focus:ring-2 focus:ring-bs-green-400/30 focus-visible:ring-bs-green-400/30"
                                                         {...field}
                                                     />
                                                 </FormControl>
@@ -159,14 +159,14 @@ export default function ContactPage() {
                                         name="email"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-1">
                                                     Email
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Input
                                                         type="email"
                                                         placeholder="jordan@example.com"
-                                                        className="h-12 rounded-xl border-[rgba(15,23,42,0.08)] bg-muted/30 px-4 text-foreground placeholder:text-muted-foreground/60 focus:border-accent focus:ring-accent"
+                                                        className="h-12 rounded-xl border border-bs-border bg-bs-bg-2 px-4 text-bs-fg-0 placeholder:text-bs-fg-3 focus:border-bs-green-400 focus:ring-2 focus:ring-bs-green-400/30 focus-visible:ring-bs-green-400/30"
                                                         {...field}
                                                     />
                                                 </FormControl>
@@ -180,14 +180,14 @@ export default function ContactPage() {
                                         name="phone"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-1">
                                                     Phone
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Input
                                                         type="tel"
-                                                        placeholder="+49 (30) 123 4567"
-                                                        className="h-12 rounded-xl border-[rgba(15,23,42,0.08)] bg-muted/30 px-4 text-foreground placeholder:text-muted-foreground/60 focus:border-accent focus:ring-accent"
+                                                        placeholder="+351 939 455 949"
+                                                        className="h-12 rounded-xl border border-bs-border bg-bs-bg-2 px-4 text-bs-fg-0 placeholder:text-bs-fg-3 focus:border-bs-green-400 focus:ring-2 focus:ring-bs-green-400/30 focus-visible:ring-bs-green-400/30"
                                                         {...field}
                                                     />
                                                 </FormControl>
@@ -201,14 +201,14 @@ export default function ContactPage() {
                                         name="message"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-1">
                                                     Message
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Textarea
                                                         placeholder="Your Message"
                                                         rows={4}
-                                                        className="rounded-xl border-[rgba(15,23,42,0.08)] bg-muted/30 px-4 py-3 text-foreground placeholder:text-muted-foreground/60 focus:border-accent focus:ring-accent"
+                                                        className="rounded-xl border border-bs-border bg-bs-bg-2 px-4 py-3 text-bs-fg-0 placeholder:text-bs-fg-3 focus:border-bs-green-400 focus:ring-2 focus:ring-bs-green-400/30 focus-visible:ring-bs-green-400/30"
                                                         {...field}
                                                     />
                                                 </FormControl>
@@ -219,12 +219,11 @@ export default function ContactPage() {
 
                                     <Button
                                         type="submit"
-                                        variant="default"
                                         size="lg"
-                                        className="w-full"
+                                        className="w-full bg-bs-green-500 text-bs-bg-0 hover:bg-bs-green-400 font-medium rounded-xl shadow-[0_8px_24px_-8px_rgba(82,217,122,0.5)]"
                                         disabled={isSubmitting}
                                     >
-                                        {isSubmitting ? "Sending..." : "Submit Form"}
+                                        {isSubmitting ? "Sending..." : "Send message →"}
                                     </Button>
                                 </form>
                             </Form>
@@ -239,10 +238,10 @@ export default function ContactPage() {
                                             <info.icon className="h-5 w-5 text-white" />
                                         </div>
                                         <div>
-                                            <h3 className="font-display font-semibold text-foreground">
+                                            <h3 className="font-bs-serif text-base font-medium text-bs-fg-0">
                                                 {info.title}
                                             </h3>
-                                            <p className="text-muted-foreground">{info.detail}</p>
+                                            <p className="text-bs-fg-2">{info.detail}</p>
                                         </div>
                                     </div>
                                 </div>

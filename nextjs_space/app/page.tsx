@@ -1,37 +1,27 @@
-import {
-  Navbar,
-  Footer,
-  Hero,
-  DashboardPreview,
-  InfrastructureSection,
-  EcosystemSection,
-  ManagementModels,
-  ApplicationStepsSection,
-  FeaturesSection,
-  FranchiseOpportunitySection,
-  PricingSection,
-  TestimonialsSection,
-  CTASection,
-} from "@/components/landing";
+import Nav from "@/components/homepage/Nav";
+import Hero from "@/components/homepage/Hero";
+import Partners from "@/components/homepage/Partners";
+import DashboardShowcase from "@/components/homepage/DashboardShowcase";
+import FeatureTabs from "@/components/homepage/FeatureTabs";
+import InvestmentBento from "@/components/homepage/InvestmentBento";
+import GlobalMap from "@/components/homepage/GlobalMap";
+import CTA from "@/components/homepage/CTA";
+import Footer from "@/components/homepage/Footer";
 
 export default function HomePage() {
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <main>
-        <Hero />
-        <DashboardPreview />
-        <InfrastructureSection />
-        <EcosystemSection />
-        <ManagementModels />
-        <ApplicationStepsSection />
-        <FeaturesSection />
-        <FranchiseOpportunitySection />
-        <PricingSection />
-        <TestimonialsSection />
-        <CTASection />
-      </main>
-      <Footer />
-    </div>
-  );
+    return (
+        <div className="budstacks-theme min-h-screen">
+            <Nav />
+            <main>
+                <Hero />
+                <Partners />
+                <DashboardShowcase />
+                <FeatureTabs />
+                <InvestmentBento />
+                <GlobalMap />
+                <CTA />
+            </main>
+            <Footer />
+        </div>
+    );
 }

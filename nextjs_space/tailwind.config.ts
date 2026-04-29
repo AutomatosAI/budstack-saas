@@ -14,6 +14,10 @@ const config: Config = {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
         serif: ['var(--font-playfair)', 'Georgia', 'serif'],
         mono: ['var(--font-jetbrains-mono)', 'Courier New', 'monospace'],
+        // Budstacks marketing — paid fonts first, free fallbacks second
+        'bs-sans': ['"Söhne"', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+        'bs-serif': ['"GT Sectra"', 'var(--font-fraunces)', 'var(--font-playfair)', 'Georgia', 'serif'],
+        'bs-mono': ['var(--font-jetbrains-mono)', '"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
@@ -66,6 +70,41 @@ const config: Config = {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
+        // Budstacks marketing palette — premium dark + neon green + warm gold
+        bs: {
+          'bg-0': '#07090A',
+          'bg-1': '#0C1011',
+          'bg-2': '#121618',
+          'bg-3': '#1A1F21',
+          surface: '#151A1C',
+          'surface-hi': '#1E2427',
+          border: '#222A2C',
+          'border-hi': '#2F3A3D',
+          'fg-0': '#F5F6F4',
+          'fg-1': '#C6CCC8',
+          'fg-2': '#8A928E',
+          'fg-3': '#5A615E',
+          green: {
+            900: '#0B2617',
+            700: '#124F2A',
+            500: '#2FB560',
+            400: '#52D97A',
+            300: '#8CF0A4',
+            glow: '#9BFF9E',
+          },
+          gold: {
+            500: '#C9A96E',
+            400: '#D9BC82',
+            300: '#E8D19E',
+          },
+        },
+      },
+      boxShadow: {
+        'bs-card': '0 1px 0 rgba(255,255,255,0.04) inset, 0 20px 60px -30px rgba(0,0,0,0.7)',
+        'bs-pill-nav': '0 1px 0 rgba(255,255,255,0.04) inset, 0 18px 50px -10px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.4), 0 0 60px -20px rgba(82,217,122,0.25)',
+        'bs-pill-footer': '0 1px 0 rgba(255,255,255,0.04) inset, 0 30px 80px -20px rgba(0,0,0,0.7), 0 0 80px -30px rgba(82,217,122,0.22)',
+        'bs-green': '0 0 0 1px rgba(82,217,122,0.3), 0 10px 30px -10px rgba(82,217,122,0.4)',
+        'bs-green-hover': '0 0 0 1px rgba(82,217,122,0.5), 0 14px 40px -8px rgba(82,217,122,0.55)',
       },
       keyframes: {
         'accordion-down': {
@@ -131,6 +170,19 @@ const config: Config = {
             transform: 'rotate(10deg)',
           },
         },
+        'bs-cube-float': {
+          '0%, 100%': { transform: 'translateY(0) rotate(-0.5deg)' },
+          '50%': { transform: 'translateY(-14px) rotate(0.5deg)' },
+        },
+        'bs-sparkle': {
+          '0%, 100%': { opacity: '0.15', transform: 'translate(0, 0) scale(0.8)' },
+          '50%': { opacity: '0.9', transform: 'translate(0, -8px) scale(1.1)' },
+        },
+        'bs-smoke-drift': {
+          '0%': { transform: 'translate(0, 0) scale(1.02)' },
+          '50%': { transform: 'translate(-3%, 2%) scale(1.06)' },
+          '100%': { transform: 'translate(3%, -2%) scale(1.04)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -138,6 +190,12 @@ const config: Config = {
         'focus-ring': 'focus-ring 0.15s ease-out',
         'focus-pulse': 'focus-pulse 2s ease-in-out infinite',
         'skip-link-slide': 'skip-link-slide 0.2s ease-out',
+        'bs-cube-float': 'bs-cube-float 6s ease-in-out infinite',
+        'bs-sparkle-1': 'bs-sparkle 4s ease-in-out infinite',
+        'bs-sparkle-2': 'bs-sparkle 5s ease-in-out infinite 1s',
+        'bs-sparkle-3': 'bs-sparkle 6s ease-in-out infinite 2s',
+        'bs-sparkle-4': 'bs-sparkle 7s ease-in-out infinite 3s',
+        'bs-smoke-drift': 'bs-smoke-drift 38s ease-in-out infinite alternate',
       },
     },
   },
