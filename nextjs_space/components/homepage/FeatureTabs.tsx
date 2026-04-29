@@ -19,7 +19,7 @@ const CONTENT: Record<
     { title: string; body: string; cta: string; href: string }
 > = {
     storefront: {
-        title: "A white-label storefront that looks like it cost €40K.",
+        title: "A white-label storefront that looks amazing — ready in a day.",
         body: "Your subdomain, your domain, or both. Six branding tabs, custom CSS, SEO controls, AB-ready layouts. Launch in hours — iterate every day.",
         cta: "Explore storefront →",
         href: "/marketplace",
@@ -57,7 +57,7 @@ export default function FeatureTabs() {
                 {/* Section eyebrow + headline */}
                 <span className="bs-eyebrow bs-eyebrow-green">The Stack</span>
                 <h2 className="mt-3 max-w-[820px] font-bs-serif text-[34px] font-medium leading-[1.1] tracking-[-0.02em] text-bs-gold-300 sm:text-[44px] lg:text-[56px] xl:text-[64px]">
-                    Four layers that would take you two years to build.
+                    Four layers that would take months to build.
                 </h2>
 
                 {/* Tab strip — horizontal scroll on mobile */}

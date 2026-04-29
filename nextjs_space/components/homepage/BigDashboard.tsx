@@ -66,7 +66,7 @@ export default function BigDashboard({ compact = false }: { compact?: boolean })
 
                     {/* KPI cards */}
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        <KpiCard label="MRR" value="€11,240" delta="+18% vs prev" />
+                        <KpiCard label="MRR" value="$11,240" delta="+18% vs prev" />
                         <KpiCard label="Orders" value="312" delta="+7%" />
                         <KpiCard label="Patients" value="1,284" delta="+42 new" />
                         <KpiCard label="Margin" value="$3.80/g" delta="stable" />
@@ -80,7 +80,7 @@ export default function BigDashboard({ compact = false }: { compact?: boolean })
                                 <div>
                                     <span className="bs-eyebrow">Revenue · 30D</span>
                                 </div>
-                                <span className="font-bs-serif text-[15px] text-bs-gold-300">€11,240</span>
+                                <span className="font-bs-serif text-[15px] text-bs-gold-300">$11,240</span>
                             </div>
                             <svg viewBox="0 0 320 100" className="h-24 w-full">
                                 <defs>

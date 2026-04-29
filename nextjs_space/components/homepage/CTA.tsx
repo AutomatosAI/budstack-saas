@@ -31,12 +31,12 @@ export default function CTA() {
                 </h2>
 
                 <p className="mt-5 max-w-[560px] text-[16px] leading-[1.55] text-bs-fg-1 sm:text-[18px]">
-                    Apply for a Dr. Green licence. Launch on Budstacks. Be live in 14 days.
+                    Got your Dr. Green licence? Launch your branded store on Budstacks. Be live in 14 days.
                 </p>
 
                 <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                     <Link href="/onboarding" className="bs-btn-green">
-                        Apply for licence →
+                        Apply for Store →
                     </Link>
                     <Link href="/contact" className="bs-btn-ghost">
                         Email the partnerships team

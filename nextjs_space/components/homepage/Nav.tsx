@@ -138,7 +138,7 @@ export default function Nav() {
                                         </Link>
                                         <Link href="/onboarding" onClick={() => setOpen(false)}>
                                             <button className="bs-btn-green w-full justify-center">
-                                                Apply for license →
+                                                Apply for Store →
                                             </button>
                                         </Link>
                                     </div>
@@ -249,7 +249,7 @@ export default function Nav() {
                     {/* Apply CTA — always visible (signed-in users can still apply for additional licences) */}
                     <Link href="/onboarding" className="hidden sm:block">
                         <button className="bs-btn-green !py-2.5 !px-4 text-[13px]">
-                            Apply for license →
+                            Apply for Store →
                         </button>
                     </Link>
 

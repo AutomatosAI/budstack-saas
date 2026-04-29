@@ -23,7 +23,7 @@ export default function GlobalMap() {
             <div className="mx-auto max-w-[1280px]">
                 <span className="bs-eyebrow bs-eyebrow-green">§ 02 — Global</span>
                 <h2 className="mt-3 max-w-[720px] font-bs-serif text-[34px] font-medium leading-[1.1] tracking-[-0.02em] text-bs-gold-300 sm:text-[44px] lg:text-[56px] xl:text-[64px]">
-                    One licence, five territories and climbing.
+                    One licence, one brand.
                 </h2>
 
                 {/* Legend */}

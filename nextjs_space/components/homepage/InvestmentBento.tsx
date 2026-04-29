@@ -1,18 +1,18 @@
 /**
- * Investment Bento — €12K profit calc + grid of stat cards.
+ * Investment Bento — revenue calc (50→250 patients × 30g × $10/g) + grid of stat cards.
  * Anchored as #pricing for nav linking.
  */
 const BARS = [
-    { month: "M1", value: 3000 },
-    { month: "M2", value: 4200 },
-    { month: "M3", value: 5500 },
-    { month: "M4", value: 7000 },
-    { month: "M5", value: 8200 },
-    { month: "M6", value: 9500 },
-    { month: "M7", value: 10800 },
-    { month: "M8", value: 12000 },
+    { month: "M1", value: 15000, patients: 50 },
+    { month: "M2", value: 22000, patients: 75 },
+    { month: "M3", value: 30000, patients: 100 },
+    { month: "M4", value: 39000, patients: 130 },
+    { month: "M5", value: 48000, patients: 160 },
+    { month: "M6", value: 57000, patients: 190 },
+    { month: "M7", value: 66000, patients: 220 },
+    { month: "M8", value: 75000, patients: 250 },
 ];
-const MAX = 12000;
+const MAX = 75000;
 
 export default function InvestmentBento() {
     return (
@@ -24,8 +24,8 @@ export default function InvestmentBento() {
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
                         <span className="bs-eyebrow bs-eyebrow-green">The Numbers</span>
-                        <h2 className="mt-3 max-w-[720px] font-bs-serif text-[34px] font-medium leading-[1.1] tracking-[-0.02em] text-bs-gold-300 sm:text-[44px] lg:text-[56px] xl:text-[64px]">
-                            $10K in, $9–12K out / month.
+                        <h2 className="mt-3 max-w-[820px] font-bs-serif text-[34px] font-medium leading-[1.1] tracking-[-0.02em] text-bs-gold-300 sm:text-[44px] lg:text-[56px] xl:text-[64px]">
+                            $10K in. $15K → $75K out / month.
                         </h2>
                     </div>
                     <span className="bs-chip bs-chip-gold self-start md:self-end">
@@ -37,12 +37,12 @@ export default function InvestmentBento() {
                 <div className="mt-10 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2">
                     {/* Big card — chart */}
                     <div className="bs-card flex flex-col p-6 sm:p-8 lg:row-span-2">
-                        <span className="bs-eyebrow">Estimated Monthly Profit</span>
-                        <div className="mt-2 font-bs-serif text-[64px] font-medium leading-none tracking-[-0.04em] text-bs-green-400 sm:text-[80px] lg:text-[96px]">
-                            €12K
+                        <span className="bs-eyebrow">Estimated Monthly Revenue</span>
+                        <div className="mt-2 font-bs-serif text-[48px] font-medium leading-none tracking-[-0.04em] text-bs-green-400 sm:text-[64px] lg:text-[76px]">
+                            $15K → $75K
                         </div>
                         <p className="mt-2 font-bs-mono text-[11px] uppercase tracking-[0.1em] text-bs-fg-2">
-                            @ 100 active patients × 30g/mo × $4/g margin
+                            @ 50–250 active patients × 30g/mo × $10/g
                         </p>
 
                         {/* Bar chart */}
@@ -52,14 +52,14 @@ export default function InvestmentBento() {
                                 return (
                                     <div key={b.month} className="flex flex-1 flex-col items-center gap-1.5">
                                         <span className="font-bs-mono text-[9px] text-bs-gold-300">
-                                            €{(b.value / 1000).toFixed(b.value < 10000 ? 1 : 0)}
-                                            {b.value < 10000 ? "k" : "k"}
+                                            ${Math.round(b.value / 1000)}k
                                         </span>
                                         <div
                                             className="w-full rounded-t bg-gradient-to-t from-bs-green-700 to-bs-green-400"
                                             style={{ height: `${h}%` }}
                                         />
                                         <span className="font-bs-mono text-[9.5px] text-bs-fg-2">{b.month}</span>
+                                        <span className="font-bs-mono text-[8.5px] text-bs-fg-2/70">{b.patients}p</span>
                                     </div>
                                 );
                             })}

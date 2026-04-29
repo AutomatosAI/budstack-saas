@@ -26,10 +26,10 @@ const LEGAL_LINKS = [
     { label: "Terms", href: "/terms" },
     { label: "AUP", href: "/aup" },
     { label: "DPA", href: "/dpa" },
-    { label: "Sub-processors", href: "/legal/subprocessors" },
     { label: "Cookies", href: "/cookies" },
-    { label: "Cookie preferences", href: "#cookie-preferences" },
     { label: "Changelog", href: "/legal/changelog" },
+    { label: "Sub-processors", href: "/legal/subprocessors" },
+    { label: "Cookie preferences", href: "#cookie-preferences" },
 ] as const;
 
 const SOCIALS = [
@@ -121,10 +121,10 @@ export default function Footer() {
                         </div>
                     ))}
 
-                    {/* Legal column — two-column grid for compactness */}
+                    {/* Legal column — single column on mobile to avoid jagged wraps, two columns on desktop */}
                     <div>
                         <span className="bs-eyebrow">Legal</span>
-                        <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5">
+                        <ul className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2">
                             {LEGAL_LINKS.map((l) => (
                                 <li key={l.label}>
                                     {l.href === "#cookie-preferences" ? (
