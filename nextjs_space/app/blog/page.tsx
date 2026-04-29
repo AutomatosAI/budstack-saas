@@ -3,11 +3,8 @@ import { FileText } from "lucide-react";
 import { Navbar, Footer } from "@/components/landing";
 
 // Sample blog posts - in a real app these would come from a CMS or database.
-// Images are themed Unsplash photos (cannabis / medical / dispensary / data) —
+// Images are local SVG placeholders (themed to BudStacks palette) —
 // placeholder while the blog widget is being finished.
-const UNSPLASH = (id: string) =>
-    `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=80`;
-
 const blogPosts = [
     {
         id: 1,
@@ -16,8 +13,7 @@ const blogPosts = [
         date: "Jan 10, 2026",
         excerpt:
             "A comprehensive guide to launching your dispensary franchise with BudStacks infrastructure.",
-        // Cannabis plant macro
-        image: UNSPLASH("photo-1536819114556-1e10f967fb61"),
+        image: "/images/blog/post-01-franchise.svg",
     },
     {
         id: 2,
@@ -26,8 +22,7 @@ const blogPosts = [
         date: "Jan 5, 2026",
         excerpt:
             "How to leverage the Dr. Green API for seamless product catalog and order management.",
-        // Code on screen
-        image: UNSPLASH("photo-1555066931-4365d14bab8c"),
+        image: "/images/blog/post-02-api.svg",
     },
     {
         id: 3,
@@ -36,8 +31,7 @@ const blogPosts = [
         date: "Dec 28, 2025",
         excerpt:
             "Ensuring regulatory compliance with integrated blockchain tracking for your dispensary.",
-        // Network / chain abstract
-        image: UNSPLASH("photo-1639762681485-074b7f938ba0"),
+        image: "/images/blog/post-03-blockchain.svg",
     },
     {
         id: 4,
@@ -46,8 +40,7 @@ const blogPosts = [
         date: "Dec 20, 2025",
         excerpt:
             "Best practices for managing multiple storefronts with isolated data and custom branding.",
-        // City lights / scale
-        image: UNSPLASH("photo-1497366216548-37526070297c"),
+        image: "/images/blog/post-04-scale.svg",
     },
     {
         id: 5,
@@ -56,8 +49,7 @@ const blogPosts = [
         date: "Dec 15, 2025",
         excerpt:
             "Building lasting patient relationships through effective CRM and consultation tracking.",
-        // Consultation / handshake
-        image: UNSPLASH("photo-1573164713714-d95e436ab8d6"),
+        image: "/images/blog/post-05-customers.svg",
     },
     {
         id: 6,
@@ -66,8 +58,7 @@ const blogPosts = [
         date: "Dec 10, 2025",
         excerpt:
             "Using data-driven insights to optimize your dispensary's performance and growth.",
-        // Analytics dashboard
-        image: UNSPLASH("photo-1551288049-bebda4e38f71"),
+        image: "/images/blog/post-06-analytics.svg",
     },
 ];
 

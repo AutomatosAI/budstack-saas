@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B1410"/>
+      <stop offset="100%" stop-color="#172E22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="750" fill="url(#g3)"/>
+  <g transform="translate(600 375)" fill="none" stroke="#52D97A" stroke-width="2.5">
+    <g opacity="0.9">
+      <rect x="-310" y="-50" width="120" height="100" rx="10"/>
+      <rect x="-150" y="-50" width="120" height="100" rx="10"/>
+      <rect x="10" y="-50" width="120" height="100" rx="10"/>
+      <rect x="170" y="-50" width="120" height="100" rx="10"/>
+    </g>
+    <g stroke="#C9A96E" opacity="0.7">
+      <line x1="-190" y1="0" x2="-150" y2="0"/>
+      <line x1="-30" y1="0" x2="10" y2="0"/>
+      <line x1="130" y1="0" x2="170" y2="0"/>
+    </g>
+  </g>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#52D97A" opacity="0.7" text-anchor="middle">
+    <text x="350" y="395">0xa3f9</text>
+    <text x="510" y="395">0xb1c0</text>
+    <text x="670" y="395">0xd482</text>
+    <text x="830" y="395">0xe7e1</text>
+  </g>
+  <text x="60" y="690" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" fill="#C9A96E" letter-spacing="3" opacity="0.7">§ COMPLIANCE · CHAIN</text>
+</svg>
