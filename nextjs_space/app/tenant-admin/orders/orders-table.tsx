@@ -17,7 +17,6 @@ import {
   Download,
   ShoppingCart,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -689,56 +688,32 @@ export function OrdersTable({
               </span>
 
               {/* Needs Attention Chip */}
-              <button
+              <Button
                 onClick={() => handleQuickFilter("PENDING")}
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                  "border hover:shadow-sm",
-                  statusFilter === "PENDING"
-                    ? "bg-amber-100 border-amber-300 text-amber-800"
-                    : "bg-white border-slate-200 text-slate-600 hover:border-amber-300 hover:bg-amber-50",
-                )}
+                variant={statusFilter === "PENDING" ? "default" : "outline"}
+                size="sm"
+                className="gap-1.5 rounded-full"
               >
                 <AlertCircle className="w-3.5 h-3.5" />
                 Needs Attention
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "ml-1 h-5 px-1.5 text-[10px] font-semibold",
-                    statusFilter === "PENDING"
-                      ? "bg-amber-200 text-amber-800"
-                      : "bg-slate-100 text-slate-600",
-                  )}
-                >
+                <RowPill tone="amber" className="ml-1">
                   {statusCounts.PENDING}
-                </Badge>
-              </button>
+                </RowPill>
+              </Button>
 
               {/* In Progress Chip */}
-              <button
+              <Button
                 onClick={() => handleQuickFilter("PROCESSING")}
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                  "border hover:shadow-sm",
-                  statusFilter === "PROCESSING"
-                    ? "bg-emerald-100 border-emerald-300 text-emerald-800"
-                    : "bg-white border-slate-200 text-slate-600 hover:border-emerald-300 hover:bg-emerald-50",
-                )}
+                variant={statusFilter === "PROCESSING" ? "default" : "outline"}
+                size="sm"
+                className="gap-1.5 rounded-full"
               >
                 <Loader2 className="w-3.5 h-3.5" />
                 In Progress
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "ml-1 h-5 px-1.5 text-[10px] font-semibold",
-                    statusFilter === "PROCESSING"
-                      ? "bg-emerald-200 text-emerald-800"
-                      : "bg-slate-100 text-slate-600",
-                  )}
-                >
+                <RowPill tone="emerald" className="ml-1">
                   {statusCounts.PROCESSING}
-                </Badge>
-              </button>
+                </RowPill>
+              </Button>
 
               {/* Clear Filters (shown when filters active) */}
               {hasFilters && (
@@ -976,18 +951,14 @@ export function OrdersTable({
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {selectedOrderNumbers.map((orderNum) => (
-                  <Badge
-                    key={orderNum}
-                    variant="secondary"
-                    className="text-xs font-normal"
-                  >
+                  <RowPill key={orderNum} tone="slate">
                     {orderNum}
-                  </Badge>
+                  </RowPill>
                 ))}
                 {selectedIds.size > 5 && (
-                  <Badge variant="outline" className="text-xs font-normal">
+                  <RowPill tone="slate">
                     +{selectedIds.size - 5} more
-                  </Badge>
+                  </RowPill>
                 )}
               </div>
             </div>

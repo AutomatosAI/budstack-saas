@@ -1991,3 +1991,77 @@ html {
     padding: 1.25rem !important;
   }
 }
+
+/* ============================================================
+   Row Pill — single-source-of-truth status pill component
+   ============================================================
+   Uses data-tone (not Tailwind utility classes) so it is NOT
+   caught by the .budstacks-theme [class*="bg-…"] catch-all
+   above. Two distinct palettes: light surfaces and dark
+   .budstacks-theme. Each tone is visually distinct in both. */
+
+.row-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.row-pill > .row-pill-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Light theme — pastel surfaces with high text contrast */
+.row-pill[data-tone="emerald"] { background:#d1fae5; color:#065f46; border-color:#a7f3d0; }
+.row-pill[data-tone="amber"]   { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+.row-pill[data-tone="red"]     { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+.row-pill[data-tone="slate"]   { background:#f1f5f9; color:#334155; border-color:#e2e8f0; }
+.row-pill[data-tone="gold"]    { background:#fef9c3; color:#78350f; border-color:#fcd34d; }
+.row-pill[data-tone="blue"]    { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
+.row-pill[data-tone="purple"]  { background:#ede9fe; color:#5b21b6; border-color:#ddd6fe; }
+
+/* Dark theme override — distinct tones inside .budstacks-theme.
+   Higher specificity (0,3,1) beats the [class*=…] catch-alls (0,2,1).
+   !important is required because the catch-alls also use !important. */
+.budstacks-theme .row-pill[data-tone="emerald"] {
+  background: rgba(82,217,122,0.16) !important;
+  color: #8CF0A4 !important;
+  border-color: rgba(82,217,122,0.42) !important;
+}
+.budstacks-theme .row-pill[data-tone="amber"] {
+  background: rgba(232,209,158,0.14) !important;
+  color: #F2DCAB !important;
+  border-color: rgba(232,209,158,0.40) !important;
+}
+.budstacks-theme .row-pill[data-tone="red"] {
+  background: rgba(255,168,168,0.12) !important;
+  color: #FFB4B4 !important;
+  border-color: rgba(255,168,168,0.40) !important;
+}
+.budstacks-theme .row-pill[data-tone="slate"] {
+  background: rgba(198,204,200,0.08) !important;
+  color: #C6CCC8 !important;
+  border-color: rgba(198,204,200,0.28) !important;
+}
+.budstacks-theme .row-pill[data-tone="gold"] {
+  background: rgba(201,169,110,0.14) !important;
+  color: #E8D19E !important;
+  border-color: rgba(201,169,110,0.50) !important;
+}
+.budstacks-theme .row-pill[data-tone="blue"] {
+  background: rgba(140,200,240,0.12) !important;
+  color: #B7DCEF !important;
+  border-color: rgba(140,200,240,0.36) !important;
+}
+.budstacks-theme .row-pill[data-tone="purple"] {
+  background: rgba(196,181,253,0.12) !important;
+  color: #C4B5FD !important;
+  border-color: rgba(196,181,253,0.36) !important;
+}
