@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +15,10 @@ import {
 import { XCircle, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useRouter } from "next/navigation";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface WithdrawButtonProps {
   templateId: string;
@@ -55,33 +58,42 @@ export default function WithdrawButton({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+        <button
+          type="button"
+          className="bs-btn bs-btn-ghost bs-btn-sm text-bs-danger"
           disabled={isWithdrawing}
         >
           {isWithdrawing ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2
+              className="mr-2 h-4 w-4 animate-spin"
+              aria-hidden="true"
+            />
           ) : (
-            <XCircle className="mr-2 h-4 w-4" />
+            <XCircle className="mr-2 h-4 w-4" aria-hidden="true" />
           )}
           Withdraw
-        </Button>
+        </button>
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent className="bs-dialog-content">
         <AlertDialogHeader>
-          <AlertDialogTitle>Withdraw Submission?</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogTitle
+            className="text-[22px] leading-tight"
+            style={sectionTitleStyle}
+          >
+            Withdraw Submission?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-bs-fg-muted">
             Withdraw the marketplace submission for &ldquo;{templateName}&rdquo;?
             You can re-submit later.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+          <AlertDialogCancel className="bs-btn bs-btn-ghost">
+            Cancel
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleWithdraw}
-            className="rounded-full bg-red-600 hover:bg-red-700"
+            className="bs-btn bs-btn-danger"
           >
             Withdraw
           </AlertDialogAction>

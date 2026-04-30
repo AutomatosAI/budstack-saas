@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 
 export function SyncButton() {
@@ -34,15 +33,17 @@ export function SyncButton() {
   }
 
   return (
-    <Button
-      variant="hero"
-      size="lg"
-      className="rounded-xl shadow-lg hover:shadow-xl transition-all"
+    <button
+      type="button"
       onClick={handleSync}
       disabled={syncing}
+      className="bs-btn bs-btn-green disabled:opacity-50"
     >
-      <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+      <RefreshCw
+        className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`}
+        aria-hidden="true"
+      />
       {syncing ? "Syncing..." : "Sync from Dr Green"}
-    </Button>
+    </button>
   );
 }

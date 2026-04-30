@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Check, GripVertical, Search, X, Package, Loader2 } from "lucide-react";
@@ -115,8 +114,8 @@ export function ProductPicker({ value, onChange }: ProductPickerProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-        <Loader2 className="w-4 h-4 animate-spin" />
+      <div className="flex items-center gap-2 py-4 text-sm text-bs-fg-muted">
+        <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
         Loading products...
       </div>
     );
@@ -124,7 +123,7 @@ export function ProductPicker({ value, onChange }: ProductPickerProps) {
 
   if (error) {
     return (
-      <div className="py-3 text-sm text-destructive">
+      <div className="py-3 text-sm text-bs-danger">
         {error}
       </div>
     );
@@ -132,8 +131,8 @@ export function ProductPicker({ value, onChange }: ProductPickerProps) {
 
   if (missingCredentials) {
     return (
-      <div className="flex items-center gap-2 py-4 text-sm text-amber-600 dark:text-amber-400">
-        <Package className="w-4 h-4" />
+      <div className="flex items-center gap-2 py-4 text-sm text-bs-warn">
+        <Package className="w-4 h-4" aria-hidden="true" />
         Dr Green API not configured. Set up your API keys in Settings first, then sync your products.
       </div>
     );
@@ -141,8 +140,8 @@ export function ProductPicker({ value, onChange }: ProductPickerProps) {
 
   if (products.length === 0) {
     return (
-      <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-        <Package className="w-4 h-4" />
+      <div className="flex items-center gap-2 py-4 text-sm text-bs-fg-muted">
+        <Package className="w-4 h-4" aria-hidden="true" />
         No products found. Sync your products from the Products tab first.
       </div>
     );
@@ -153,30 +152,32 @@ export function ProductPicker({ value, onChange }: ProductPickerProps) {
       {/* Selected products — reorderable */}
       {selectedProducts.length > 0 && (
         <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">
+          <Label className="text-xs text-bs-fg-muted">
             {selectedProducts.length} selected — drag to reorder
           </Label>
           {selectedProducts.map((product, index) => (
             <div
               key={product.id}
-              className="flex items-center gap-2 p-2 rounded-lg border bg-primary/5 border-primary/20"
+              className="flex items-center gap-2 p-2 rounded-bs-sm border bg-bs-green/5 border-bs-green/20"
             >
               <div className="flex flex-col gap-0.5">
                 <button
                   type="button"
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  className="text-bs-fg-muted hover:text-bs-fg disabled:opacity-30"
                   disabled={index === 0}
                   onClick={() => moveProduct(index, -1)}
+                  aria-label="Move up"
                 >
-                  <GripVertical className="w-3 h-3 rotate-180" />
+                  <GripVertical className="w-3 h-3 rotate-180" aria-hidden="true" />
                 </button>
                 <button
                   type="button"
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  className="text-bs-fg-muted hover:text-bs-fg disabled:opacity-30"
                   disabled={index === selectedProducts.length - 1}
                   onClick={() => moveProduct(index, 1)}
+                  aria-label="Move down"
                 >
-                  <GripVertical className="w-3 h-3" />
+                  <GripVertical className="w-3 h-3" aria-hidden="true" />
                 </button>
               </div>
               {getProductImage(product) && (
@@ -190,13 +191,14 @@ export function ProductPicker({ value, onChange }: ProductPickerProps) {
                   />
                 </div>
               )}
-              <span className="text-sm font-medium flex-1 truncate">{product.name}</span>
+              <span className="text-sm font-medium flex-1 truncate text-bs-fg">{product.name}</span>
               <button
                 type="button"
                 onClick={() => removeProduct(product.id)}
-                className="text-muted-foreground hover:text-destructive"
+                className="text-bs-fg-muted hover:text-bs-danger"
+                aria-label="Remove product"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           ))}
@@ -205,7 +207,7 @@ export function ProductPicker({ value, onChange }: ProductPickerProps) {
 
       {/* Search + product grid */}
       <div className="relative">
-        <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+        <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-bs-fg-muted" aria-hidden="true" />
         <Input
           placeholder="Search products..."
           value={search}
@@ -214,7 +216,7 @@ export function ProductPicker({ value, onChange }: ProductPickerProps) {
         />
       </div>
 
-      <div className="max-h-64 overflow-y-auto border rounded-lg divide-y">
+      <div className="max-h-64 overflow-y-auto border border-bs-border-100 rounded-bs-sm divide-y divide-bs-border-100">
         {filtered.map((product) => {
           const isSelected = selectedIds.includes(product.id);
           const img = getProductImage(product);
@@ -225,19 +227,19 @@ export function ProductPicker({ value, onChange }: ProductPickerProps) {
               type="button"
               onClick={() => toggleProduct(product.id)}
               className={cn(
-                "flex items-center gap-3 w-full p-2.5 text-left hover:bg-muted/50 transition-colors",
-                isSelected && "bg-primary/5",
+                "flex items-center gap-3 w-full p-2.5 text-left hover:bg-bs-card-2/50 transition-colors",
+                isSelected && "bg-bs-green/5",
               )}
             >
               <div
                 className={cn(
                   "w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors",
                   isSelected
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-muted-foreground/30",
+                    ? "border-bs-green bg-bs-green text-bs-canvas"
+                    : "border-bs-border-200",
                 )}
               >
-                {isSelected && <Check className="w-3 h-3" />}
+                {isSelected && <Check className="w-3 h-3" aria-hidden="true" />}
               </div>
               {img && (
                 <div className="relative w-10 h-10 rounded overflow-hidden flex-shrink-0">
@@ -245,8 +247,8 @@ export function ProductPicker({ value, onChange }: ProductPickerProps) {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{product.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm font-medium truncate text-bs-fg">{product.name}</p>
+                <p className="text-xs text-bs-fg-muted">
                   {product.type || "Product"}
                   {getProductPrice(product) > 0 && (
                     <> &middot; {new Intl.NumberFormat(undefined, { style: "currency", currency: "ZAR" }).format(getProductPrice(product))}</>
@@ -257,7 +259,7 @@ export function ProductPicker({ value, onChange }: ProductPickerProps) {
           );
         })}
         {filtered.length === 0 && (
-          <p className="p-3 text-sm text-muted-foreground text-center">No products match your search.</p>
+          <p className="p-3 text-sm text-bs-fg-muted text-center">No products match your search.</p>
         )}
       </div>
     </div>

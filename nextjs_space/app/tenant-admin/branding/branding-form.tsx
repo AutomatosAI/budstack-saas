@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/sonner";
 import Script from "next/script";
@@ -15,6 +14,7 @@ import {
   Tablet,
   Smartphone,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TenantSettings } from "@/lib/types";
@@ -645,21 +645,23 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         )}
       >
         <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
-          <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-20 py-3 lg:py-4 border-b flex items-center justify-between mb-4 lg:mb-6">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <Layout className="w-5 h-5 text-primary" />
+          <div className="sticky top-0 bg-bs-canvas/95 backdrop-blur-sm z-20 py-3 lg:py-4 border-b border-bs-border-100 flex items-center justify-between mb-4 lg:mb-6">
+            <h2
+              className="flex items-center gap-2 text-[22px] leading-tight"
+              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+            >
+              <Layout className="w-5 h-5 text-bs-green" aria-hidden="true" />
               Store Editor
             </h2>
             <div className="flex items-center gap-2">
-              <Button
+              <button
                 type="button"
-                variant="outline"
-                size="icon"
-                className="lg:hidden"
+                className="bs-btn bs-btn-ghost bs-btn-sm lg:hidden h-8 w-8 p-0 flex items-center justify-center"
                 onClick={() => setShowPreview(true)}
+                aria-label="Show preview"
               >
-                <Eye className="h-4 w-4" />
-              </Button>
+                <Eye className="h-4 w-4" aria-hidden="true" />
+              </button>
               {(() => {
                 // Both tenant admins and super admins use the same preview tool.
                 // In "marketplace" mode the activeTemplate.id is a row in `templates`,
@@ -671,17 +673,31 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                   ? `/store/preview/${baseSlug}`
                   : `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}`;
                 return (
-                  <a href={previewHref} target="_blank" rel="noopener noreferrer">
-                    <Button type="button" variant="outline" size="sm" className="gap-1.5">
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      Preview
-                    </Button>
+                  <a
+                    href={previewHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bs-btn bs-btn-ghost bs-btn-sm gap-1.5"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                    Preview
                   </a>
                 );
               })()}
-              <Button type="submit" disabled={isLoading} size="sm">
-                {isLoading ? "Publishing..." : (publishLabel || "Publish Site")}
-              </Button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="bs-btn bs-btn-green bs-btn-sm disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    Publishing...
+                  </>
+                ) : (
+                  publishLabel || "Publish Site"
+                )}
+              </button>
             </div>
           </div>
 
@@ -748,21 +764,21 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
       {/* RIGHT: Live Preview Pane */}
       <div
         className={cn(
-          "flex-1 min-w-0 bg-muted/20 border-2 rounded-xl border-dashed overflow-hidden relative shadow-inner isolate z-0",
+          "flex-1 min-w-0 bg-bs-card-2/40 border border-dashed border-bs-border-100 rounded-bs-md overflow-hidden relative shadow-inner isolate z-0",
           "hidden lg:block",
           showPreview &&
-          "!block fixed inset-0 z-50 rounded-none border-0 lg:relative lg:z-0 lg:rounded-xl lg:border-2",
+          "!block fixed inset-0 z-50 rounded-none border-0 lg:relative lg:z-0 lg:rounded-bs-md lg:border",
         )}
       >
         {showPreview && (
           <button
             onClick={() => setShowPreview(false)}
-            className="lg:hidden absolute top-3 left-3 z-[60] bg-background/90 backdrop-blur-sm border rounded-lg px-3 py-1.5 text-sm font-medium shadow-md"
+            className="lg:hidden absolute top-3 left-3 z-[60] bs-btn bs-btn-ghost bs-btn-sm"
           >
             &larr; Back to Editor
           </button>
         )}
-        <div className="absolute top-0 inset-x-0 h-10 bg-muted/80 backdrop-blur-md border-b flex items-center justify-between px-4 font-mono text-xs text-muted-foreground z-50">
+        <div className="absolute top-0 inset-x-0 h-10 bg-bs-card-2/80 backdrop-blur-md border-b border-bs-border-100 flex items-center justify-between px-4 font-mono text-xs text-bs-fg-muted z-50">
           <div className="flex items-center gap-4">
             <div className="flex gap-1.5 mr-4">
               <div className="w-3 h-3 rounded-full bg-red-400/80" />
@@ -771,7 +787,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
             </div>
             <span>Live Preview &mdash; {formData.businessName || tenant.businessName}</span>
           </div>
-          <div className="flex items-center gap-1 bg-background/60 rounded-lg p-0.5">
+          <div className="flex items-center gap-1 bg-bs-canvas/60 rounded-bs-sm p-0.5">
             {([
               { id: "desktop" as const, icon: Monitor, label: "Desktop" },
               { id: "tablet" as const, icon: Tablet, label: "Tablet" },
@@ -782,14 +798,14 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 type="button"
                 onClick={() => setPreviewDevice(d.id)}
                 className={cn(
-                  "p-1.5 rounded-md transition-all",
+                  "p-1.5 rounded-bs-sm transition-all",
                   previewDevice === d.id
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                    ? "bg-bs-green text-bs-canvas"
+                    : "text-bs-fg-muted hover:text-bs-fg hover:bg-bs-card-2",
                 )}
                 title={d.label}
               >
-                <d.icon size={14} />
+                <d.icon size={14} aria-hidden="true" />
               </button>
             ))}
           </div>
@@ -799,7 +815,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         {previewDevice === "desktop" && (
           <div
             ref={previewScrollRef}
-            className="w-full h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-background relative"
+            className="w-full h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-bs-canvas relative"
             style={{ transform: "scale(1)" }}
           >
             {automatosApiKey && (
@@ -826,8 +842,8 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 />
               </TenantThemeProvider>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground flex-col gap-4">
-                <Layout className="w-12 h-12 opacity-20" />
+              <div className="flex items-center justify-center h-full text-bs-fg-muted flex-col gap-4">
+                <Layout className="w-12 h-12 opacity-20" aria-hidden="true" />
                 <p>No valid template layout selected.</p>
               </div>
             )}
@@ -839,7 +855,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
           const baseSlug = (activeTemplate as any)?.templates?.slug || tenant.subdomain;
           if (!activeTemplate?.id) {
             return (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
+              <div className="flex items-center justify-center h-full text-bs-fg-muted">
                 <p>No active template selected.</p>
               </div>
             );

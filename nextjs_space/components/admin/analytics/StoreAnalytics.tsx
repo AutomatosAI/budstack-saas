@@ -2,9 +2,6 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   TrendingUp,
   Package,
@@ -12,14 +9,11 @@ import {
   Calendar,
   ShoppingBag,
   DollarSign,
-  Sparkles,
   ArrowUpRight,
-  Leaf,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-// Dynamic import for Plotly to avoid SSR issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Plot = dynamic(() => import("react-plotly.js") as any, {
   ssr: false,
@@ -58,7 +52,6 @@ interface TopProduct {
   revenue: number;
 }
 
-// Mock data generators
 const generateSalesTrendData = () => {
   const days = 30;
   const data = [];
@@ -193,15 +186,14 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-const getStatusColor = (status: string) => {
-  // Updated with darker text colors for WCAG AA compliance (4.5:1 contrast on light backgrounds)
-  const colors = {
-    COMPLETED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    PROCESSING: "bg-cyan-100 text-cyan-800 border-cyan-200",
-    PENDING: "bg-amber-100 text-amber-800 border-amber-200",
-    CANCELLED: "bg-slate-100 text-slate-800 border-slate-200",
+const getStatusChipClass = (status: string) => {
+  const map: Record<string, string> = {
+    COMPLETED: "bs-chip bs-chip-green",
+    PROCESSING: "bs-chip bs-chip-info",
+    PENDING: "bs-chip bs-chip-warn",
+    CANCELLED: "bs-chip bs-chip-muted",
   };
-  return colors[status as keyof typeof colors] || colors.PENDING;
+  return map[status] || "bs-chip bs-chip-muted";
 };
 
 const formatTimeAgo = (date: Date) => {
@@ -222,24 +214,21 @@ const getInitials = (name: string) => {
     .slice(0, 2);
 };
 
-// Loading skeleton component
 const MetricCardSkeleton = () => (
-  <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-cyan-50">
-    <div className="p-6 space-y-3">
-      <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
-      <div className="h-8 w-32 bg-slate-200 rounded animate-pulse" />
-      <div className="h-3 w-20 bg-slate-200 rounded animate-pulse" />
+  <div className="bs-card bs-card-pad">
+    <div className="space-y-3">
+      <div className="h-4 w-24 bg-bs-card-2 rounded animate-pulse" />
+      <div className="h-8 w-32 bg-bs-card-2 rounded animate-pulse" />
+      <div className="h-3 w-20 bg-bs-card-2 rounded animate-pulse" />
     </div>
-  </Card>
+  </div>
 );
 
 const ChartCardSkeleton = () => (
-  <Card className="overflow-hidden bg-white/80 backdrop-blur">
-    <div className="p-6">
-      <div className="h-6 w-32 bg-slate-200 rounded animate-pulse mb-6" />
-      <div className="h-64 bg-slate-100 rounded-lg animate-pulse" />
-    </div>
-  </Card>
+  <div className="bs-card bs-card-pad">
+    <div className="h-6 w-32 bg-bs-card-2 rounded animate-pulse mb-6" />
+    <div className="h-64 bg-bs-card-2 rounded-lg animate-pulse" />
+  </div>
 );
 
 export default function StoreAnalytics({ className }: StoreAnalyticsProps) {
@@ -250,10 +239,9 @@ export default function StoreAnalytics({ className }: StoreAnalyticsProps) {
   const [orderStatusData, setOrderStatusData] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [recentCustomers, setRecentCustomers] = useState<RecentCustomer[]>([]);
-  const [pendingConsultations] = useState(7); // Mock value
+  const [pendingConsultations] = useState(7);
 
   useEffect(() => {
-    // Simulate API fetch with delay
     const timer = setTimeout(() => {
       setRevenueMetrics(getRevenueMetrics());
       setSalesTrendData(generateSalesTrendData());
@@ -270,14 +258,11 @@ export default function StoreAnalytics({ className }: StoreAnalyticsProps) {
   if (loading) {
     return (
       <div className={cn("space-y-6", className)}>
-        {/* Revenue Metrics Skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <MetricCardSkeleton />
           <MetricCardSkeleton />
           <MetricCardSkeleton />
         </div>
-
-        {/* Charts Skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ChartCardSkeleton />
           <ChartCardSkeleton />
@@ -286,7 +271,7 @@ export default function StoreAnalytics({ className }: StoreAnalyticsProps) {
     );
   }
 
-  // Sales Trend Chart Configuration
+  // Sales Trend Chart Configuration — chart series colours PRESERVED
   const salesTrendTrace = {
     x: salesTrendData.map((d) => d.date),
     y: salesTrendData.map((d) => d.sales),
@@ -323,7 +308,7 @@ export default function StoreAnalytics({ className }: StoreAnalyticsProps) {
     hovermode: "x unified" as const,
   };
 
-  // Top Products Chart Configuration
+  // Top Products Chart Configuration — chart series colours PRESERVED
   const topProductsTrace = {
     x: topProducts.map((p) => p.revenue),
     y: topProducts.map((p) => p.name),
@@ -358,7 +343,7 @@ export default function StoreAnalytics({ className }: StoreAnalyticsProps) {
     },
   };
 
-  // Order Status Distribution Chart Configuration
+  // Order Status Distribution Chart Configuration — chart series colours PRESERVED
   const orderStatusTrace = {
     labels: Object.keys(orderStatusData),
     values: Object.values(orderStatusData) as number[],
@@ -411,293 +396,209 @@ export default function StoreAnalytics({ className }: StoreAnalyticsProps) {
 
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Decorative header element */}
       <div className="flex items-center gap-3 mb-2">
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-full blur-md opacity-60 animate-pulse" />
-          <Sparkles className="relative h-6 w-6 text-emerald-600" />
-        </div>
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-700 via-emerald-600 to-cyan-600 bg-clip-text text-transparent">
-          Store Analytics
-        </h2>
+        <div className="bs-eyebrow">Store Analytics</div>
       </div>
 
-      {/* Revenue Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {revenueMetrics.map((metric, index) => (
-          <Card
-            key={metric.label}
-            className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-cyan-50 border-emerald-200/50 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] group"
-            style={{
-              animationDelay: `${index * 100}ms`,
-              animationFillMode: "backwards",
-            }}
-          >
-            {/* Decorative leaf accent */}
-            <div className="absolute -right-8 -top-8 w-32 h-32 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Leaf className="w-full h-full text-emerald-600 rotate-45" />
+        {revenueMetrics.map((metric) => (
+          <div key={metric.label} className="bs-stat">
+            <div className="bs-stat-row">
+              <span className="bs-stat-label">{metric.label}</span>
+              <span className="bs-stat-icon">
+                <DollarSign className="h-4 w-4" aria-hidden="true" />
+              </span>
             </div>
-
-            <div className="relative p-6 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-emerald-900">
-                  {metric.label}
-                </span>
-                <DollarSign className="h-4 w-4 text-emerald-700 opacity-70" />
-              </div>
-
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold bg-gradient-to-br from-emerald-800 to-emerald-700 bg-clip-text text-transparent">
-                  {formatCurrency(metric.value)}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs">
-                <div
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-0.5 rounded-full",
-                    metric.change > 0
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-amber-100 text-amber-800",
-                  )}
-                >
-                  <TrendingUp className="h-3 w-3" />
-                  <span className="font-semibold">
-                    {metric.change > 0 ? "+" : ""}
-                    {metric.change}%
-                  </span>
-                </div>
-                <span className="text-slate-600">{metric.period}</span>
-              </div>
+            <div className="bs-stat-value">{formatCurrency(metric.value)}</div>
+            <div
+              className={cn(
+                "bs-stat-delta",
+                metric.change > 0 ? "text-bs-green-soft" : "text-bs-danger",
+              )}
+            >
+              <TrendingUp className="h-3 w-3" aria-hidden="true" />
+              <span className="font-mono tabular-nums">
+                {metric.change > 0 ? "+" : ""}
+                {metric.change}%
+              </span>
+              <span className="text-bs-fg-muted ml-1">{metric.period}</span>
             </div>
-          </Card>
+          </div>
         ))}
       </div>
 
-      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sales Trend Chart */}
-        <Card className="overflow-hidden bg-white/80 backdrop-blur border-emerald-100 hover:shadow-lg transition-shadow">
-          <div className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="h-5 w-5 text-emerald-600" />
-              <h3 className="text-lg font-semibold text-slate-800">
-                Sales Trend
-              </h3>
-              <Badge
-                variant="outline"
-                className="ml-auto text-xs bg-emerald-50 text-emerald-800 border-emerald-200"
-              >
-                Last 30 days
-              </Badge>
-            </div>
-            <div className="h-[280px]">
-              <Plot
-                data={[salesTrendTrace]}
-                layout={salesTrendLayout}
-                config={{ displayModeBar: false, responsive: true }}
-                className="w-full h-full"
-                useResizeHandler
-              />
-            </div>
+        <div className="bs-card bs-card-pad">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
+            <h3 className="font-display text-[22px] text-bs-fg" style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}>
+              Sales Trend
+            </h3>
+            <span className="bs-chip bs-chip-muted ml-auto">Last 30 days</span>
           </div>
-        </Card>
-
-        {/* Top Products Chart */}
-        <Card className="overflow-hidden bg-white/80 backdrop-blur border-cyan-100 hover:shadow-lg transition-shadow">
-          <div className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Package className="h-5 w-5 text-cyan-600" />
-              <h3 className="text-lg font-semibold text-slate-800">
-                Top Products
-              </h3>
-              <Badge
-                variant="outline"
-                className="ml-auto text-xs bg-cyan-50 text-cyan-800 border-cyan-200"
-              >
-                By Revenue
-              </Badge>
-            </div>
-            <div className="h-[280px]">
-              <Plot
-                data={[topProductsTrace]}
-                layout={topProductsLayout}
-                config={{ displayModeBar: false, responsive: true }}
-                className="w-full h-full"
-                useResizeHandler
-              />
-            </div>
+          <div className="h-[280px]">
+            <Plot
+              data={[salesTrendTrace]}
+              layout={salesTrendLayout}
+              config={{ displayModeBar: false, responsive: true }}
+              className="w-full h-full"
+              useResizeHandler
+            />
           </div>
-        </Card>
+        </div>
 
-        {/* Order Status Distribution */}
-        <Card className="overflow-hidden bg-white/80 backdrop-blur border-emerald-100 hover:shadow-lg transition-shadow">
-          <div className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <ShoppingBag className="h-5 w-5 text-emerald-600" />
-              <h3 className="text-lg font-semibold text-slate-800">
-                Order Distribution
-              </h3>
-            </div>
-            <div className="h-[280px]">
-              <Plot
-                data={[orderStatusTrace]}
-                layout={orderStatusLayout}
-                config={{ displayModeBar: false, responsive: true }}
-                className="w-full h-full"
-                useResizeHandler
-              />
-            </div>
+        <div className="bs-card bs-card-pad">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="h-5 w-5 text-bs-fg-muted" aria-hidden="true" />
+            <h3 className="font-display text-[22px] text-bs-fg" style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}>
+              Top Products
+            </h3>
+            <span className="bs-chip bs-chip-muted ml-auto">By Revenue</span>
           </div>
-        </Card>
+          <div className="h-[280px]">
+            <Plot
+              data={[topProductsTrace]}
+              layout={topProductsLayout}
+              config={{ displayModeBar: false, responsive: true }}
+              className="w-full h-full"
+              useResizeHandler
+            />
+          </div>
+        </div>
 
-        {/* Pending Consultations Card */}
-        <Card className="overflow-hidden bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 border-amber-200/50 hover:shadow-lg transition-shadow">
-          <div className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Calendar className="h-5 w-5 text-amber-600" />
-              <h3 className="text-lg font-semibold text-slate-800">
-                Consultations
-              </h3>
-            </div>
+        <div className="bs-card bs-card-pad">
+          <div className="flex items-center gap-2 mb-4">
+            <ShoppingBag className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
+            <h3 className="font-display text-[22px] text-bs-fg" style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}>
+              Order Distribution
+            </h3>
+          </div>
+          <div className="h-[280px]">
+            <Plot
+              data={[orderStatusTrace]}
+              layout={orderStatusLayout}
+              config={{ displayModeBar: false, responsive: true }}
+              className="w-full h-full"
+              useResizeHandler
+            />
+          </div>
+        </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-white/70 rounded-lg border border-amber-200/50">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">
-                    Pending Requests
-                  </p>
-                  <p className="text-3xl font-bold text-amber-600">
-                    {pendingConsultations}
-                  </p>
-                </div>
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                  <Calendar className="h-8 w-8 text-white" />
-                </div>
+        <div className="bs-card bs-card-pad">
+          <div className="flex items-center gap-2 mb-6">
+            <Calendar className="h-5 w-5 text-bs-gold" aria-hidden="true" />
+            <h3 className="font-display text-[22px] text-bs-fg" style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}>
+              Consultations
+            </h3>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-bs-card-2 rounded-lg border border-bs-border-100">
+              <div>
+                <p className="text-sm text-bs-fg-muted mb-1">Pending Requests</p>
+                <p className="font-display text-[36px] text-bs-gold" style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}>
+                  {pendingConsultations}
+                </p>
               </div>
-
-              <Button
-                asChild
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all"
-              >
-                <Link href="/tenant-admin/consultations">
-                  View All Consultations
-                  <ArrowUpRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+              <div className="w-14 h-14 rounded-full bg-bs-card border border-bs-border-100 flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-bs-gold" aria-hidden="true" />
+              </div>
             </div>
+
+            <Link href="/tenant-admin/consultations" className="bs-btn bs-btn-green w-full justify-center">
+              <span>View All Consultations</span>
+              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* Activity Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Orders */}
-        <Card className="overflow-hidden bg-white/80 backdrop-blur border-purple-100">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="h-5 w-5 text-purple-600" />
-                <h3 className="text-lg font-semibold text-slate-800">
-                  Recent Orders
-                </h3>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link
-                  href="/tenant-admin/orders"
-                  className="text-purple-600 hover:text-purple-700"
-                >
-                  View All
-                </Link>
-              </Button>
+        <div className="bs-card bs-card-pad">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5 text-bs-fg-muted" aria-hidden="true" />
+              <h3 className="font-display text-[22px] text-bs-fg" style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}>
+                Recent Orders
+              </h3>
             </div>
-
-            <div className="space-y-3">
-              {recentOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:border-purple-200 hover:bg-purple-50/50 transition-all group"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-800 truncate group-hover:text-purple-700 transition-colors">
-                      {order.orderNumber}
-                    </p>
-                    <p className="text-sm text-slate-500 truncate">
-                      {order.customer}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3 ml-4">
-                    <div className="text-right">
-                      <p className="font-semibold text-slate-800">
-                        {formatCurrency(order.total)}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {formatTimeAgo(order.createdAt)}
-                      </p>
-                    </div>
-                    <Badge
-                      className={cn(
-                        "text-xs border",
-                        getStatusColor(order.status),
-                      )}
-                    >
-                      {order.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Link href="/tenant-admin/orders" className="bs-btn bs-btn-ghost bs-btn-sm">
+              View All
+            </Link>
           </div>
-        </Card>
 
-        {/* Recent Customers */}
-        <Card className="overflow-hidden bg-white/80 backdrop-blur border-cyan-100">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-cyan-600" />
-                <h3 className="text-lg font-semibold text-slate-800">
-                  Recent Customers
-                </h3>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link
-                  href="/tenant-admin/customers"
-                  className="text-cyan-600 hover:text-cyan-700"
-                >
-                  View All
-                </Link>
-              </Button>
-            </div>
+          <div className="space-y-2">
+            {recentOrders.map((order) => (
+              <div
+                key={order.id}
+                className="flex items-center justify-between p-3 rounded-lg border border-bs-border-100 bg-bs-card-2 hover:border-bs-border transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="font-mono tabular-nums text-bs-fg truncate">
+                    {order.orderNumber}
+                  </p>
+                  <p className="text-sm text-bs-fg-muted truncate">
+                    {order.customer}
+                  </p>
+                </div>
 
-            <div className="space-y-3">
-              {recentCustomers.map((customer) => (
-                <div
-                  key={customer.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-slate-100 hover:border-cyan-200 hover:bg-cyan-50/50 transition-all group"
-                >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 group-hover:scale-110 transition-transform">
-                    {getInitials(customer.name)}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-800 truncate group-hover:text-cyan-700 transition-colors">
-                      {customer.name}
+                <div className="flex items-center gap-3 ml-4">
+                  <div className="text-right">
+                    <p className="font-mono tabular-nums font-semibold text-bs-fg">
+                      {formatCurrency(order.total)}
                     </p>
-                    <p className="text-sm text-slate-500 truncate">
-                      {customer.email}
+                    <p className="font-mono tabular-nums text-xs text-bs-fg-muted">
+                      {formatTimeAgo(order.createdAt)}
                     </p>
                   </div>
-
-                  <span className="text-xs text-slate-500 flex-shrink-0">
-                    {formatTimeAgo(customer.createdAt)}
+                  <span className={getStatusChipClass(order.status)}>
+                    {order.status}
                   </span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        </Card>
+        </div>
+
+        <div className="bs-card bs-card-pad">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-bs-fg-muted" aria-hidden="true" />
+              <h3 className="font-display text-[22px] text-bs-fg" style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}>
+                Recent Customers
+              </h3>
+            </div>
+            <Link href="/tenant-admin/customers" className="bs-btn bs-btn-ghost bs-btn-sm">
+              View All
+            </Link>
+          </div>
+
+          <div className="space-y-2">
+            {recentCustomers.map((customer) => (
+              <div
+                key={customer.id}
+                className="flex items-center gap-3 p-3 rounded-lg border border-bs-border-100 bg-bs-card-2 hover:border-bs-border transition-colors"
+              >
+                <div className="bs-avatar w-10 h-10 flex-shrink-0">
+                  {getInitials(customer.name)}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-bs-fg truncate">
+                    {customer.name}
+                  </p>
+                  <p className="text-sm text-bs-fg-muted truncate">
+                    {customer.email}
+                  </p>
+                </div>
+
+                <span className="font-mono tabular-nums text-xs text-bs-fg-muted flex-shrink-0">
+                  {formatTimeAgo(customer.createdAt)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

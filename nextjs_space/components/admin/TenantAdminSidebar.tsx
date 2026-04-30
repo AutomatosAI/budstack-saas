@@ -132,6 +132,7 @@ export function TenantAdminSidebar({
   return (
     <AdminSidebar
       theme="tenant-admin"
+      accent="green"
       menuItems={tenantAdminMenuItems}
       userName={userName}
       userEmail={userEmail}

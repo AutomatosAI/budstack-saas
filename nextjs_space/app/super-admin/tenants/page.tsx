@@ -1,10 +1,14 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { Building2 } from "lucide-react";
 import { TenantsTable } from "./tenants-table";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 /** Default pagination settings */
 const DEFAULT_PAGE_SIZE = 20;
@@ -151,27 +155,25 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
 
   return (
     <div className="space-y-8">
-      {/* Centered Header */}
-      <div className="text-center max-w-2xl mx-auto">
-        <div className="section-badge mb-4 inline-flex">
-          Tenants
+      <div className="bs-page-header-compact flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="bs-page-title" style={sectionTitleStyle}>
+            All Tenants
+          </h1>
+          <p className="bs-page-subtitle">
+            Manage all tenant accounts and NFT holders from a single view.
+          </p>
         </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          All Tenants
-        </h1>
-        <p className="mt-3 text-muted-foreground">
-          Manage all tenant accounts and NFT holders from a single view.
-        </p>
-        <div className="mt-6">
-          <Link href="/super-admin/onboarding">
-            <Button variant="hero" size="lg" className="rounded-xl">
-              Review Applications
-            </Button>
+        <div className="flex justify-start sm:justify-end">
+          <Link
+            href="/super-admin/onboarding"
+            className="bs-btn bs-btn-green"
+          >
+            Review Applications
           </Link>
         </div>
       </div>
 
-      {/* Tenants Table with Search and Pagination */}
       <TenantsTable
         tenants={tenants}
         totalCount={filteredCount}

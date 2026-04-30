@@ -2,19 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon, Mail, Loader2, CheckCircle2, XCircle } from "lucide-react";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface SettingsFormProps {
   config: {
@@ -45,11 +40,11 @@ export default function SettingsForm({ config }: SettingsFormProps) {
     awsBucketName: config.awsBucketName || "",
     awsFolderPrefix: config.awsFolderPrefix || "",
     awsRegion: config.awsRegion || "",
-    awsAccessKeyId: "", // Always start empty for security
-    awsSecretAccessKey: "", // Always start empty for security
-    emailServer: "", // Always start empty for security
+    awsAccessKeyId: "",
+    awsSecretAccessKey: "",
+    emailServer: "",
     emailFrom: config.emailFrom || "",
-    redisUrl: "", // Always start empty for security
+    redisUrl: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,7 +90,7 @@ export default function SettingsForm({ config }: SettingsFormProps) {
 
       if (data.success) {
         setSmtpTestResult({ success: true, message: data.message });
-        toast.success("Test email sent successfully!");
+        toast.success("Test email sent successfully");
       } else {
         setSmtpTestResult({ success: false, message: data.error });
         toast.error(data.error);
@@ -110,268 +105,312 @@ export default function SettingsForm({ config }: SettingsFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Alert>
-        <InfoIcon className="h-4 w-4" />
-        <AlertDescription>
+      <div className="bs-card bs-card-pad flex items-start gap-3 bg-bs-info/10 border-bs-info/30">
+        <InfoIcon
+          className="h-5 w-5 text-bs-info flex-shrink-0 mt-0.5"
+          aria-hidden="true"
+        />
+        <p className="text-sm text-bs-fg">
           These settings override environment variables. Sensitive fields are
           encrypted before storage. Leave encrypted fields empty to keep
           existing values.
-        </AlertDescription>
-      </Alert>
+        </p>
+      </div>
 
       {/* Dr. Green API */}
-      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-        <CardHeader className="border-b border-slate-100">
-          <CardTitle>Dr. Green API Configuration</CardTitle>
-          <CardDescription>
+      <section className="bs-card bs-card-pad space-y-4">
+        <div>
+          <h3
+            className="text-[22px] leading-tight"
+            style={sectionTitleStyle}
+          >
+            Dr. Green API Configuration
+          </h3>
+          <p className="text-sm text-bs-fg-muted">
             Configure the default Dr. Green API endpoint
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <div>
-            <Label htmlFor="drGreenApiUrl">API URL</Label>
-            <Input
-              id="drGreenApiUrl"
-              value={formData.drGreenApiUrl}
-              onChange={(e) =>
-                setFormData({ ...formData, drGreenApiUrl: e.target.value })
-              }
-              placeholder="https://stage-api.drgreennft.com/api/v1"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Default API endpoint for all tenants (can be overridden per
-              tenant)
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="drGreenApiUrl" className="text-bs-fg">
+            API URL
+          </Label>
+          <Input
+            id="drGreenApiUrl"
+            value={formData.drGreenApiUrl}
+            onChange={(e) =>
+              setFormData({ ...formData, drGreenApiUrl: e.target.value })
+            }
+            placeholder="https://stage-api.drgreennft.com/api/v1"
+          />
+          <p className="text-xs text-bs-fg-muted">
+            Default API endpoint for all tenants (can be overridden per tenant)
+          </p>
+        </div>
+      </section>
 
       {/* AWS S3 Configuration */}
-      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-        <CardHeader className="border-b border-slate-100">
-          <CardTitle>AWS S3 Configuration</CardTitle>
-          <CardDescription>Configure file storage settings</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <div>
-            <Label htmlFor="awsBucketName">Bucket Name</Label>
-            <Input
-              id="awsBucketName"
-              value={formData.awsBucketName}
-              onChange={(e) =>
-                setFormData({ ...formData, awsBucketName: e.target.value })
-              }
-              placeholder="budstack-uploads"
-            />
-          </div>
-          <div>
-            <Label htmlFor="awsRegion">Region</Label>
-            <Input
-              id="awsRegion"
-              value={formData.awsRegion}
-              onChange={(e) =>
-                setFormData({ ...formData, awsRegion: e.target.value })
-              }
-              placeholder="eu-west-1"
-            />
-          </div>
-          <div>
-            <Label htmlFor="awsFolderPrefix">Folder Prefix</Label>
-            <Input
-              id="awsFolderPrefix"
-              value={formData.awsFolderPrefix}
-              onChange={(e) =>
-                setFormData({ ...formData, awsFolderPrefix: e.target.value })
-              }
-              placeholder="development/"
-            />
-          </div>
-          <div>
-            <Label htmlFor="awsAccessKeyId">Access Key ID (Encrypted)</Label>
-            <Input
-              id="awsAccessKeyId"
-              type="password"
-              value={formData.awsAccessKeyId}
-              onChange={(e) =>
-                setFormData({ ...formData, awsAccessKeyId: e.target.value })
-              }
-              placeholder={
-                config.awsAccessKeyId
-                  ? "******** (Existing)"
-                  : "Enter new access key"
-              }
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {config.awsAccessKeyId
-                ? "Leave empty to keep existing key."
-                : "Required for file uploads."}
-            </p>
-          </div>
-          <div>
-            <Label htmlFor="awsSecretAccessKey">
-              Secret Access Key (Encrypted)
-            </Label>
-            <Input
-              id="awsSecretAccessKey"
-              type="password"
-              value={formData.awsSecretAccessKey}
-              onChange={(e) =>
-                setFormData({ ...formData, awsSecretAccessKey: e.target.value })
-              }
-              placeholder={
-                config.awsSecretAccessKey
-                  ? "******** (Existing)"
-                  : "Enter new secret key"
-              }
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {config.awsSecretAccessKey
-                ? "Leave empty to keep existing secret."
-                : "Required for file uploads."}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <section className="bs-card bs-card-pad space-y-4">
+        <div>
+          <h3
+            className="text-[22px] leading-tight"
+            style={sectionTitleStyle}
+          >
+            AWS S3 Configuration
+          </h3>
+          <p className="text-sm text-bs-fg-muted">
+            Configure file storage settings
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="awsBucketName" className="text-bs-fg">
+            Bucket Name
+          </Label>
+          <Input
+            id="awsBucketName"
+            value={formData.awsBucketName}
+            onChange={(e) =>
+              setFormData({ ...formData, awsBucketName: e.target.value })
+            }
+            placeholder="budstack-uploads"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="awsRegion" className="text-bs-fg">
+            Region
+          </Label>
+          <Input
+            id="awsRegion"
+            value={formData.awsRegion}
+            onChange={(e) =>
+              setFormData({ ...formData, awsRegion: e.target.value })
+            }
+            placeholder="eu-west-1"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="awsFolderPrefix" className="text-bs-fg">
+            Folder Prefix
+          </Label>
+          <Input
+            id="awsFolderPrefix"
+            value={formData.awsFolderPrefix}
+            onChange={(e) =>
+              setFormData({ ...formData, awsFolderPrefix: e.target.value })
+            }
+            placeholder="development/"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="awsAccessKeyId" className="text-bs-fg">
+            Access Key ID (Encrypted)
+          </Label>
+          <Input
+            id="awsAccessKeyId"
+            type="password"
+            value={formData.awsAccessKeyId}
+            onChange={(e) =>
+              setFormData({ ...formData, awsAccessKeyId: e.target.value })
+            }
+            placeholder={
+              config.awsAccessKeyId
+                ? "******** (Existing)"
+                : "Enter new access key"
+            }
+          />
+          <p className="text-xs text-bs-fg-muted">
+            {config.awsAccessKeyId
+              ? "Leave empty to keep existing key."
+              : "Required for file uploads."}
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="awsSecretAccessKey" className="text-bs-fg">
+            Secret Access Key (Encrypted)
+          </Label>
+          <Input
+            id="awsSecretAccessKey"
+            type="password"
+            value={formData.awsSecretAccessKey}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                awsSecretAccessKey: e.target.value,
+              })
+            }
+            placeholder={
+              config.awsSecretAccessKey
+                ? "******** (Existing)"
+                : "Enter new secret key"
+            }
+          />
+          <p className="text-xs text-bs-fg-muted">
+            {config.awsSecretAccessKey
+              ? "Leave empty to keep existing secret."
+              : "Required for file uploads."}
+          </p>
+        </div>
+      </section>
 
       {/* Email Configuration */}
-      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-        <CardHeader className="border-b border-slate-100">
-          <CardTitle>Email Configuration</CardTitle>
-          <CardDescription>
+      <section className="bs-card bs-card-pad space-y-4">
+        <div>
+          <h3
+            className="text-[22px] leading-tight"
+            style={sectionTitleStyle}
+          >
+            Email Configuration
+          </h3>
+          <p className="text-sm text-bs-fg-muted">
             Configure SMTP settings for sending emails
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <div>
-            <Label htmlFor="emailServer">SMTP Server URL (Encrypted)</Label>
-            <Input
-              id="emailServer"
-              type="password"
-              value={formData.emailServer}
-              onChange={(e) =>
-                setFormData({ ...formData, emailServer: e.target.value })
-              }
-              placeholder={
-                config.emailServer
-                  ? "******** (Existing)"
-                  : "smtp://user:password@smtp.sendgrid.net:587"
-              }
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {config.emailServer
-                ? "Leave empty to keep existing server."
-                : "Full SMTP connection string with credentials."}
-            </p>
-          </div>
-          <div>
-            <Label htmlFor="emailFrom">From Email Address</Label>
-            <Input
-              id="emailFrom"
-              value={formData.emailFrom}
-              onChange={(e) =>
-                setFormData({ ...formData, emailFrom: e.target.value })
-              }
-              placeholder="noreply@budstack.io"
-            />
-          </div>
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="emailServer" className="text-bs-fg">
+            SMTP Server URL (Encrypted)
+          </Label>
+          <Input
+            id="emailServer"
+            type="password"
+            value={formData.emailServer}
+            onChange={(e) =>
+              setFormData({ ...formData, emailServer: e.target.value })
+            }
+            placeholder={
+              config.emailServer
+                ? "******** (Existing)"
+                : "smtp://user:password@smtp.sendgrid.net:587"
+            }
+          />
+          <p className="text-xs text-bs-fg-muted">
+            {config.emailServer
+              ? "Leave empty to keep existing server."
+              : "Full SMTP connection string with credentials."}
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="emailFrom" className="text-bs-fg">
+            From Email Address
+          </Label>
+          <Input
+            id="emailFrom"
+            value={formData.emailFrom}
+            onChange={(e) =>
+              setFormData({ ...formData, emailFrom: e.target.value })
+            }
+            placeholder="noreply@budstack.io"
+          />
+        </div>
 
-          {/* Test SMTP Section */}
-          {config.emailServer && (
-            <div className="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <div className="flex items-center gap-2 mb-3">
-                <Mail className="w-5 h-5 text-purple-600" />
-                <span className="font-medium text-purple-900">
-                  Test SMTP Configuration
+        {config.emailServer && (
+          <div className="mt-2 p-4 rounded-bs-md bg-bs-card-2/50 border border-bs-border-100">
+            <div className="flex items-center gap-2 mb-3">
+              <Mail className="w-5 h-5 text-bs-info" aria-hidden="true" />
+              <span className="font-medium text-bs-fg">
+                Test SMTP Configuration
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="Enter your email to receive test"
+                className="flex-1"
+              />
+              <button
+                type="button"
+                onClick={handleTestSmtp}
+                disabled={isTestingSmtp || !testEmail}
+                className="bs-btn bs-btn-ghost"
+              >
+                {isTestingSmtp ? (
+                  <>
+                    <Loader2
+                      className="w-4 h-4 mr-2 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Testing...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4 mr-2" aria-hidden="true" />
+                    Send Test
+                  </>
+                )}
+              </button>
+            </div>
+            {smtpTestResult && (
+              <div
+                className={`mt-3 p-3 rounded-bs-sm flex items-start gap-2 ${
+                  smtpTestResult.success
+                    ? "bg-bs-green/10 border border-bs-green/30"
+                    : "bg-bs-danger/10 border border-bs-danger/30"
+                }`}
+              >
+                {smtpTestResult.success ? (
+                  <CheckCircle2
+                    className="w-5 h-5 flex-shrink-0 mt-0.5 text-bs-green"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <XCircle
+                    className="w-5 h-5 flex-shrink-0 mt-0.5 text-bs-danger"
+                    aria-hidden="true"
+                  />
+                )}
+                <span className="text-sm text-bs-fg">
+                  {smtpTestResult.message}
                 </span>
               </div>
-              <div className="flex gap-2">
-                <Input
-                  type="email"
-                  value={testEmail}
-                  onChange={(e) => setTestEmail(e.target.value)}
-                  placeholder="Enter your email to receive test"
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  onClick={handleTestSmtp}
-                  disabled={isTestingSmtp || !testEmail}
-                  variant="outline"
-                  className="border-purple-300 text-purple-700 hover:bg-purple-100"
-                >
-                  {isTestingSmtp ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Testing...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="w-4 h-4 mr-2" />
-                      Send Test
-                    </>
-                  )}
-                </Button>
-              </div>
-              {smtpTestResult && (
-                <div
-                  className={`mt-3 p-3 rounded-md flex items-start gap-2 ${smtpTestResult.success
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800"
-                    }`}
-                >
-                  {smtpTestResult.success ? (
-                    <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <XCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  )}
-                  <span className="text-sm">{smtpTestResult.message}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* Redis Configuration */}
-      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-        <CardHeader className="border-b border-slate-100">
-          <CardTitle>Redis Configuration</CardTitle>
-          <CardDescription>
+      <section className="bs-card bs-card-pad space-y-4">
+        <div>
+          <h3
+            className="text-[22px] leading-tight"
+            style={sectionTitleStyle}
+          >
+            Redis Configuration
+          </h3>
+          <p className="text-sm text-bs-fg-muted">
             Configure Redis for caching and sessions
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <div>
-            <Label htmlFor="redisUrl">Redis Connection URL (Encrypted)</Label>
-            <Input
-              id="redisUrl"
-              type="password"
-              value={formData.redisUrl}
-              onChange={(e) =>
-                setFormData({ ...formData, redisUrl: e.target.value })
-              }
-              placeholder={
-                config.redisUrl ? "******** (Existing)" : "redis://redis:6379"
-              }
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {config.redisUrl
-                ? "Leave empty to keep existing URL."
-                : "Redis connection string."}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="redisUrl" className="text-bs-fg">
+            Redis Connection URL (Encrypted)
+          </Label>
+          <Input
+            id="redisUrl"
+            type="password"
+            value={formData.redisUrl}
+            onChange={(e) =>
+              setFormData({ ...formData, redisUrl: e.target.value })
+            }
+            placeholder={
+              config.redisUrl ? "******** (Existing)" : "redis://redis:6379"
+            }
+          />
+          <p className="text-xs text-bs-fg-muted">
+            {config.redisUrl
+              ? "Leave empty to keep existing URL."
+              : "Redis connection string."}
+          </p>
+        </div>
+      </section>
 
-      {/* Submit */}
       <div className="flex justify-end">
-        <Button
+        <button
           type="submit"
           disabled={isLoading}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium shadow-md hover:shadow-lg transition-all"
+          className="bs-btn bs-btn-green"
         >
           {isLoading ? "Saving..." : "Save Settings"}
-        </Button>
+        </button>
       </div>
     </form>
   );

@@ -33,7 +33,6 @@ export default async function SeoPage() {
 
   const tenantId = localUser.tenantId;
 
-  // Fetch tenant with subdomain and products/posts for SEO management
   const [tenant, products, posts] = await Promise.all([
     prisma.tenants.findUnique({
       where: { id: tenantId },
@@ -76,16 +75,10 @@ export default async function SeoPage() {
   const baseUrl = getTenantBaseUrl(tenant);
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="text-center max-w-2xl mx-auto mb-8">
-        <div className="section-badge mb-4 inline-flex">
-          <Search className="h-4 w-4" />
-          SEO
-        </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          SEO Manager
-        </h1>
-        <p className="mt-3 text-muted-foreground mx-auto">
+    <div>
+      <div className="bs-page-header-centered">
+        <h1 className="bs-page-title">SEO Manager</h1>
+        <p className="bs-page-subtitle">
           Optimize how your store appears in search engines and social media.
         </p>
       </div>

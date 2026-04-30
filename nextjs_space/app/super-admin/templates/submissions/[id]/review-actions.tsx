@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -19,24 +18,35 @@ import { Check, X, MessageSquare, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useRouter } from "next/navigation";
 
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
+
 interface ReviewActionsProps {
   submissionId: string;
   status: string;
 }
 
-export default function ReviewActions({ submissionId, status }: ReviewActionsProps) {
+export default function ReviewActions({
+  submissionId,
+  status,
+}: ReviewActionsProps) {
   const [feedback, setFeedback] = useState("");
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const router = useRouter();
 
-  const isDisabled = status === "approved" || status === "rejected" || status === "withdrawn";
+  const isDisabled =
+    status === "approved" || status === "rejected" || status === "withdrawn";
 
   const handleApprove = async () => {
     setIsLoading("approve");
     try {
-      const res = await fetch(`/api/super-admin/submissions/${submissionId}/approve`, {
-        method: "POST",
-      });
+      const res = await fetch(
+        `/api/super-admin/submissions/${submissionId}/approve`,
+        {
+          method: "POST",
+        },
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success("Submission approved and published to marketplace");
@@ -56,11 +66,14 @@ export default function ReviewActions({ submissionId, status }: ReviewActionsPro
     }
     setIsLoading("reject");
     try {
-      const res = await fetch(`/api/super-admin/submissions/${submissionId}/reject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedback: feedback.trim() }),
-      });
+      const res = await fetch(
+        `/api/super-admin/submissions/${submissionId}/reject`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ feedback: feedback.trim() }),
+        },
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success("Submission rejected");
@@ -80,11 +93,14 @@ export default function ReviewActions({ submissionId, status }: ReviewActionsPro
     }
     setIsLoading("changes");
     try {
-      const res = await fetch(`/api/super-admin/submissions/${submissionId}/request-changes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedback: feedback.trim() }),
-      });
+      const res = await fetch(
+        `/api/super-admin/submissions/${submissionId}/request-changes`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ feedback: feedback.trim() }),
+        },
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success("Changes requested");
@@ -100,7 +116,9 @@ export default function ReviewActions({ submissionId, status }: ReviewActionsPro
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="feedback">Reviewer Feedback</Label>
+        <Label htmlFor="feedback" className="text-bs-fg">
+          Reviewer Feedback
+        </Label>
         <Textarea
           id="feedback"
           placeholder="Provide feedback for the template author..."
@@ -109,69 +127,80 @@ export default function ReviewActions({ submissionId, status }: ReviewActionsPro
           rows={3}
           disabled={isDisabled || isLoading !== null}
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-bs-fg-muted">
           Required for Reject and Request Changes actions.
         </p>
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Button
-          variant="outline"
+        <button
+          type="button"
           onClick={handleRequestChanges}
           disabled={isDisabled || isLoading !== null}
-          className="rounded-xl text-orange-600 border-orange-200 hover:bg-orange-50"
+          className="bs-btn bs-btn-ghost"
         >
           {isLoading === "changes" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
-            <MessageSquare className="mr-2 h-4 w-4" />
+            <MessageSquare className="mr-2 h-4 w-4" aria-hidden="true" />
           )}
           Request Changes
-        </Button>
+        </button>
 
-        <Button
-          variant="outline"
+        <button
+          type="button"
           onClick={handleReject}
           disabled={isDisabled || isLoading !== null}
-          className="rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+          className="bs-btn bs-btn-danger"
         >
           {isLoading === "reject" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
-            <X className="mr-2 h-4 w-4" />
+            <X className="mr-2 h-4 w-4" aria-hidden="true" />
           )}
           Reject
-        </Button>
+        </button>
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button
+            <button
+              type="button"
               disabled={isDisabled || isLoading !== null}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-700"
+              className="bs-btn bs-btn-green"
             >
               {isLoading === "approve" ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2
+                  className="mr-2 h-4 w-4 animate-spin"
+                  aria-hidden="true"
+                />
               ) : (
-                <Check className="mr-2 h-4 w-4" />
+                <Check className="mr-2 h-4 w-4" aria-hidden="true" />
               )}
               Approve
-            </Button>
+            </button>
           </AlertDialogTrigger>
-          <AlertDialogContent>
+          <AlertDialogContent className="bs-dialog-content">
             <AlertDialogHeader>
-              <AlertDialogTitle>Approve this submission?</AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogTitle
+                className="text-[22px] leading-tight"
+                style={sectionTitleStyle}
+              >
+                Approve this submission?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-bs-fg-muted">
                 This will publish the template to the marketplace. All tenants
                 will be able to clone it.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+              <AlertDialogCancel className="bs-btn bs-btn-ghost">
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleApprove}
-                className="rounded-full bg-emerald-600 hover:bg-emerald-700"
+                className="bs-btn bs-btn-green"
               >
-                Approve & Publish
+                Approve &amp; Publish
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

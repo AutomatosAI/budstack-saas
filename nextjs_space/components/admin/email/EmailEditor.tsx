@@ -7,11 +7,6 @@ import {
     ResizablePanel,
     ResizableHandle,
 } from "@/components/ui/resizable";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Save, Eye, Code, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -96,67 +91,70 @@ export const EmailEditor = ({
 
     return (
         <div className="flex h-[calc(100vh-100px)] flex-col gap-4">
-            <Card className="shrink-0">
-                <CardContent className="grid grid-cols-1 items-end gap-4 p-4 md:grid-cols-4">
+            <div className="bs-card bs-card-pad shrink-0">
+                <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-4">
                     <div className="space-y-2">
-                        <Label htmlFor="name">Template Name</Label>
-                        <Input
+                        <label htmlFor="name" className="bs-eyebrow">Template Name</label>
+                        <input
                             id="name"
                             value={formData.name}
                             onChange={(e) => handleChange("name", e.target.value)}
                             placeholder="e.g. Welcome Email v1"
+                            className="bs-input w-full"
                         />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="subject">Subject Line</Label>
-                        <Input
+                        <label htmlFor="subject" className="bs-eyebrow">Subject Line</label>
+                        <input
                             id="subject"
                             value={formData.subject}
                             onChange={(e) => handleChange("subject", e.target.value)}
                             placeholder="Welcome to BudStacks, {{name}}!"
+                            className="bs-input w-full"
                         />
                     </div>
                     <div className="flex justify-end pb-0.5">
-                        <Button
+                        <button
+                            type="button"
                             onClick={handleSave}
                             disabled={isSaving}
-                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full"
+                            className="bs-btn bs-btn-green"
                         >
                             {isSaving ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                                    <Loader2 className="h-4 w-4 animate-spin" /> <span>Saving...</span>
                                 </>
                             ) : (
                                 <>
-                                    <Save className="mr-2 h-4 w-4" /> Save Template
+                                    <Save className="h-4 w-4" /> <span>Save Template</span>
                                 </>
                             )}
-                        </Button>
+                        </button>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
-            <div className="flex-1 overflow-hidden rounded-md border bg-background">
+            <div className="flex-1 overflow-hidden rounded-bs-md border border-bs-border-100 bg-bs-canvas">
                 <ResizablePanelGroup direction="horizontal">
                     <ResizablePanel defaultSize={50} minSize={30}>
-                        <div className="flex h-full flex-col border-r">
-                            <div className="flex items-center justify-between border-b bg-muted p-2">
-                                <span className="flex items-center text-xs font-semibold text-muted-foreground">
+                        <div className="flex h-full flex-col border-r border-bs-border-100">
+                            <div className="flex items-center justify-between border-b border-bs-border-100 bg-bs-card-2 p-2">
+                                <span className="flex items-center text-xs font-mono uppercase tracking-wide text-bs-fg-muted">
                                     <Code className="mr-1 h-3 w-3" /> HTML Source
                                 </span>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button variant="ghost" size="sm" className="h-6 gap-1 text-xs">
-                                            <HelpCircle className="h-3 w-3" /> Variables Reference
-                                        </Button>
+                                        <button type="button" className="bs-btn bs-btn-ghost bs-btn-sm">
+                                            <HelpCircle className="h-3 w-3" /> <span>Variables Reference</span>
+                                        </button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-80" align="end">
                                         <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <h4 className="font-medium leading-none">
+                                                <h4 className="font-medium leading-none text-bs-fg">
                                                     Available Variables
                                                 </h4>
-                                                <p className="text-xs text-muted-foreground">
+                                                <p className="text-xs text-bs-fg-muted">
                                                     Click to copy common placeholders. Availability depends
                                                     on the event.
                                                 </p>
@@ -164,14 +162,14 @@ export const EmailEditor = ({
                                             <div className="grid gap-3">
                                                 {COMMON_VARIABLES.map((group) => (
                                                     <div key={group.category} className="space-y-1">
-                                                        <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                                        <h5 className="bs-eyebrow">
                                                             {group.category}
                                                         </h5>
                                                         <div className="flex flex-wrap gap-1.5">
                                                             {group.vars.map((variable) => (
                                                                 <code
                                                                     key={variable}
-                                                                    className="cursor-pointer rounded border bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-700 transition-colors hover:bg-slate-200 sm:text-xs"
+                                                                    className="cursor-pointer rounded border border-bs-border-100 bg-bs-card-2 px-1.5 py-0.5 font-mono text-[10px] text-bs-fg transition-colors hover:bg-bs-card-3 sm:text-xs"
                                                                     onClick={() => {
                                                                         const text = `{{${variable}}}`;
                                                                         navigator.clipboard.writeText(text);
@@ -189,8 +187,8 @@ export const EmailEditor = ({
                                     </PopoverContent>
                                 </Popover>
                             </div>
-                            <Textarea
-                                className="flex-1 resize-none rounded-none border-0 p-4 font-mono text-sm leading-relaxed focus-visible:ring-0"
+                            <textarea
+                                className="bs-input flex-1 resize-none rounded-none border-0 p-4 font-mono text-sm leading-relaxed focus-visible:ring-0"
                                 value={formData.contentHtml}
                                 onChange={(e) => handleChange("contentHtml", e.target.value)}
                                 placeholder="<html>...</html>"
@@ -201,9 +199,9 @@ export const EmailEditor = ({
                     <ResizableHandle withHandle />
 
                     <ResizablePanel defaultSize={50} minSize={30}>
-                        <div className="flex h-full flex-col bg-slate-100">
-                            <div className="flex items-center justify-between border-b bg-white p-2">
-                                <span className="flex items-center text-xs font-semibold text-muted-foreground">
+                        <div className="flex h-full flex-col bg-bs-canvas">
+                            <div className="flex items-center justify-between border-b border-bs-border-100 bg-bs-card-2 p-2">
+                                <span className="flex items-center text-xs font-mono uppercase tracking-wide text-bs-fg-muted">
                                     <Eye className="mr-1 h-3 w-3" /> Live Preview
                                 </span>
                             </div>

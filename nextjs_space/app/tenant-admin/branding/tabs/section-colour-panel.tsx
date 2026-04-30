@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { ColorPicker } from "./shared";
 import type { EditorFormData, SetFormData } from "./types";
@@ -87,26 +86,24 @@ export function SectionColourPanel({
 
   return (
     <div className="space-y-4 pt-2">
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-bs-fg-muted">
         Override global colours for this section. Leave empty to inherit from Brand.
       </p>
       {hasOverrides && (
         <div className="flex justify-end">
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground"
+            className="bs-btn bs-btn-ghost bs-btn-sm text-xs text-bs-fg-muted"
             onClick={clearAll}
           >
             Clear all overrides
-          </Button>
+          </button>
         </div>
       )}
       <div className="space-y-4">
         {SECTION_OVERRIDE_GROUPS.map((group) => (
           <div key={group.heading}>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            <p className="bs-eyebrow mb-2">
               {group.heading}
             </p>
             <div className="grid grid-cols-2 gap-4">
@@ -121,15 +118,14 @@ export function SectionColourPanel({
                       onChange={(v) => setOverride(key, v)}
                     />
                     {currentValue && (
-                      <Button
+                      <button
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-0 right-0 h-6 w-6"
+                        className="bs-btn bs-btn-ghost bs-btn-sm absolute top-0 right-0 h-6 w-6 p-0 flex items-center justify-center"
                         onClick={() => clearOverride(key)}
+                        aria-label="Clear override"
                       >
-                        <X className="h-3 w-3" />
-                      </Button>
+                        <X className="h-3 w-3" aria-hidden="true" />
+                      </button>
                     )}
                   </div>
                 );

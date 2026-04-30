@@ -2,9 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
 import { Globe, Key, Zap, Mail } from "lucide-react";
 
@@ -99,121 +96,136 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Domain Settings */}
-      <div className="card-floating p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="icon-badge">
-            <Globe className="h-5 w-5 text-white" />
+      <section className="bs-card bs-card-pad">
+        <header className="mb-6 flex items-center gap-4">
+          <div className="rounded-xl border border-bs-border-100 bg-bs-card-2 p-2.5">
+            <Globe className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
           </div>
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground">
+          <div className="space-y-1">
+            <h2
+              className="font-display text-[22px] text-bs-fg"
+              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+            >
               Domain Configuration
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-bs-fg-muted">
               Manage your store&apos;s domain settings
             </p>
           </div>
-        </div>
+        </header>
         <div className="space-y-6">
-          <div>
-            <Label className="text-foreground font-medium">Default Subdomain</Label>
-            <div className="flex items-center mt-2">
-              <Input
+          <div className="space-y-2">
+            <label className="bs-eyebrow">Default Subdomain</label>
+            <div className="flex items-center gap-3">
+              <input
                 value={tenant.subdomain}
                 disabled
-                className="flex-1 rounded-xl bg-slate-50"
+                className="bs-input flex-1 opacity-70"
               />
-              <span className="ml-3 font-medium text-muted-foreground">.{process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io'}</span>
+              <span className="font-mono text-sm text-bs-fg-muted">
+                .{process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io"}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-bs-fg-muted">
               This is your permanent subdomain
             </p>
           </div>
-          <div>
-            <Label htmlFor="customDomain" className="text-foreground font-medium">
+          <div className="space-y-2">
+            <label htmlFor="customDomain" className="bs-eyebrow">
               Custom Domain (Optional)
-            </Label>
-            <Input
+            </label>
+            <input
               id="customDomain"
               value={formData.customDomain}
               onChange={(e) =>
                 setFormData({ ...formData, customDomain: e.target.value })
               }
               placeholder="yourdispensary.com"
-              className="mt-2 rounded-xl"
+              className="bs-input w-full"
             />
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-bs-fg-muted">
               Contact support after adding a custom domain for DNS configuration
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* NFT Information */}
-      <div className="card-floating p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="icon-badge">
-            <Key className="h-5 w-5 text-white" />
+      <section className="bs-card bs-card-pad">
+        <header className="mb-6 flex items-center gap-4">
+          <div className="rounded-xl border border-bs-border-100 bg-bs-card-2 p-2.5">
+            <Key className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
           </div>
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground">
+          <div className="space-y-1">
+            <h2
+              className="font-display text-[22px] text-bs-fg"
+              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+            >
               NFT License
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-bs-fg-muted">
               Your store license information
             </p>
           </div>
-        </div>
-        <div>
-          <Label className="text-foreground font-medium">NFT Token ID</Label>
-          <Input
+        </header>
+        <div className="space-y-2">
+          <label className="bs-eyebrow">NFT Token ID</label>
+          <input
             value={tenant.nftTokenId || "Not set"}
             disabled
-            className="mt-2 rounded-xl bg-slate-50"
+            className="bs-input w-full font-mono opacity-70"
           />
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-xs text-bs-fg-muted">
             This NFT verifies your license to operate on BudStacks.io
           </p>
         </div>
-      </div>
+      </section>
 
       {/* Dr. Green Integration */}
-      <div className="card-floating p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="rounded-2xl bg-emerald-500 p-3">
-            <Zap className="h-5 w-5 text-white" />
+      <section className="bs-card bs-card-pad">
+        <header className="mb-6 flex items-center gap-4">
+          <div className="rounded-xl border border-bs-border-100 bg-bs-card-2 p-2.5">
+            <Zap className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
           </div>
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground">
+          <div className="space-y-1">
+            <h2
+              className="font-display text-[22px] text-bs-fg"
+              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+            >
               Dr. Green Integration
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-bs-fg-muted">
               Configure your connection to the Dr. Green API
             </p>
           </div>
-        </div>
+        </header>
         <div className="space-y-6">
-          <div>
-            <Label htmlFor="drGreenApiKey" className="text-foreground font-medium">
+          <div className="space-y-2">
+            <label htmlFor="drGreenApiKey" className="bs-eyebrow">
               API Key
-            </Label>
+            </label>
             <textarea
               id="drGreenApiKey"
               value={formData.drGreenApiKey}
               onChange={(e) =>
                 setFormData({ ...formData, drGreenApiKey: e.target.value })
               }
-              placeholder={hasApiKey ? "******** (Verified)" : "Paste your Public Key here"}
+              placeholder={
+                hasApiKey ? "******** (Verified)" : "Paste your Public Key here"
+              }
               rows={3}
-              className="mt-2 rounded-xl w-full border border-input bg-background px-3 py-2 text-sm font-mono resize-y"
+              className="bs-input w-full resize-y font-mono"
             />
-            <p className="text-xs text-muted-foreground mt-2">
-              {hasApiKey ? "Leave empty to keep existing key." : "Required for Dr. Green integration."}
+            <p className="text-xs text-bs-fg-muted">
+              {hasApiKey
+                ? "Leave empty to keep existing key."
+                : "Required for Dr. Green integration."}
             </p>
           </div>
-          <div>
-            <Label htmlFor="drGreenSecretKey" className="text-foreground font-medium">
+          <div className="space-y-2">
+            <label htmlFor="drGreenSecretKey" className="bs-eyebrow">
               Secret Key
-            </Label>
+            </label>
             <textarea
               id="drGreenSecretKey"
               value={formData.drGreenSecretKey}
@@ -226,52 +238,55 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                   : "Paste your Private Key here"
               }
               rows={3}
-              className="mt-2 rounded-xl w-full border border-input bg-background px-3 py-2 text-sm font-mono resize-y"
+              className="bs-input w-full resize-y font-mono"
             />
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-bs-fg-muted">
               {tenant.drGreenSecretKey
                 ? "Leave empty to keep existing secret."
                 : "Required for submitting consultations."}
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Automatos Integration */}
-      <div className="card-floating p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="rounded-2xl bg-blue-500 p-3">
-            <Zap className="h-5 w-5 text-white" />
+      <section className="bs-card bs-card-pad">
+        <header className="mb-6 flex items-center gap-4">
+          <div className="rounded-xl border border-bs-border-100 bg-bs-card-2 p-2.5">
+            <Zap className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
           </div>
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground">
+          <div className="space-y-1">
+            <h2
+              className="font-display text-[22px] text-bs-fg"
+              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+            >
               Automatos AI Integration
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-bs-fg-muted">
               Configure your storefront Chatbot
             </p>
           </div>
-        </div>
+        </header>
         <div className="space-y-6">
-          <div>
-            <Label htmlFor="automatosApiKey" className="text-foreground font-medium">
+          <div className="space-y-2">
+            <label htmlFor="automatosApiKey" className="bs-eyebrow">
               Automatos API Key (Public)
-            </Label>
-            <Input
+            </label>
+            <input
               id="automatosApiKey"
               value={formData.automatosApiKey}
               onChange={(e) =>
                 setFormData({ ...formData, automatosApiKey: e.target.value })
               }
               placeholder="ak_pub_..."
-              className="mt-2 rounded-xl"
+              className="bs-input w-full font-mono"
             />
           </div>
-          <div>
-            <Label htmlFor="automatosAgentId" className="text-foreground font-medium">
+          <div className="space-y-2">
+            <label htmlFor="automatosAgentId" className="bs-eyebrow">
               Agent ID (Optional)
-            </Label>
-            <Input
+            </label>
+            <input
               id="automatosAgentId"
               type="number"
               value={formData.automatosAgentId}
@@ -279,154 +294,156 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
                 setFormData({ ...formData, automatosAgentId: e.target.value })
               }
               placeholder="e.g. 42"
-              className="mt-2 rounded-xl"
+              className="bs-input w-full font-mono"
             />
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Email Configuration */}
-      <div className="card-floating p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="rounded-2xl bg-purple-600 p-3">
-            <Mail className="h-5 w-5 text-white" />
+      <section className="bs-card bs-card-pad">
+        <header className="mb-6 flex items-center gap-4">
+          <div className="rounded-xl border border-bs-border-100 bg-bs-card-2 p-2.5">
+            <Mail className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
           </div>
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground">
+          <div className="space-y-1">
+            <h2
+              className="font-display text-[22px] text-bs-fg"
+              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+            >
               Email Configuration (SMTP)
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-bs-fg-muted">
               Configure your custom email server for branding
             </p>
           </div>
-        </div>
+        </header>
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="smtpHost" className="text-foreground font-medium">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <label htmlFor="smtpHost" className="bs-eyebrow">
                 SMTP Host
-              </Label>
-              <Input
+              </label>
+              <input
                 id="smtpHost"
                 value={formData.smtpHost}
                 onChange={(e) =>
                   setFormData({ ...formData, smtpHost: e.target.value })
                 }
                 placeholder="smtp.mailgun.org"
-                className="mt-2 rounded-xl"
+                className="bs-input w-full"
               />
             </div>
-            <div>
-              <Label htmlFor="smtpPort" className="text-foreground font-medium">
+            <div className="space-y-2">
+              <label htmlFor="smtpPort" className="bs-eyebrow">
                 Port
-              </Label>
-              <Input
+              </label>
+              <input
                 id="smtpPort"
                 value={formData.smtpPort}
                 onChange={(e) =>
                   setFormData({ ...formData, smtpPort: e.target.value })
                 }
                 placeholder="587"
-                className="mt-2 rounded-xl"
+                className="bs-input w-full font-mono"
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="smtpUser" className="text-foreground font-medium">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <label htmlFor="smtpUser" className="bs-eyebrow">
                 Username
-              </Label>
-              <Input
+              </label>
+              <input
                 id="smtpUser"
                 value={formData.smtpUser}
                 onChange={(e) =>
                   setFormData({ ...formData, smtpUser: e.target.value })
                 }
                 placeholder="postmaster@domain.com"
-                className="mt-2 rounded-xl"
+                className="bs-input w-full"
               />
             </div>
-            <div>
-              <Label htmlFor="smtpPassword" className="text-foreground font-medium">
+            <div className="space-y-2">
+              <label htmlFor="smtpPassword" className="bs-eyebrow">
                 Password
-              </Label>
-              <Input
+              </label>
+              <input
                 type="password"
                 id="smtpPassword"
                 value={formData.smtpPassword}
                 onChange={(e) =>
                   setFormData({ ...formData, smtpPassword: e.target.value })
                 }
-                placeholder={smtpConfigured ? "******** (Verified)" : "Enter password"}
-                className="mt-2 rounded-xl"
+                placeholder={
+                  smtpConfigured ? "******** (Verified)" : "Enter password"
+                }
+                className="bs-input w-full"
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="smtpFromName" className="text-foreground font-medium">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <label htmlFor="smtpFromName" className="bs-eyebrow">
                 Sender Name
-              </Label>
-              <Input
+              </label>
+              <input
                 id="smtpFromName"
                 value={formData.smtpFromName}
                 onChange={(e) =>
                   setFormData({ ...formData, smtpFromName: e.target.value })
                 }
                 placeholder={tenant.businessName}
-                className="mt-2 rounded-xl"
+                className="bs-input w-full"
               />
             </div>
-            <div>
-              <Label htmlFor="smtpFromEmail" className="text-foreground font-medium">
+            <div className="space-y-2">
+              <label htmlFor="smtpFromEmail" className="bs-eyebrow">
                 Sender Email
-              </Label>
-              <Input
+              </label>
+              <input
                 id="smtpFromEmail"
                 value={formData.smtpFromEmail}
                 onChange={(e) =>
                   setFormData({ ...formData, smtpFromEmail: e.target.value })
                 }
                 placeholder="orders@yourdomain.com"
-                className="mt-2 rounded-xl"
+                className="bs-input w-full"
               />
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 pt-6 border-t border-slate-200">
-            <Input
+          <div className="flex flex-wrap items-center gap-4 border-t border-bs-border-100 pt-6">
+            <input
               placeholder="Test Email Address"
               value={testEmail}
               onChange={(e) => setTestEmail(e.target.value)}
-              className="max-w-[280px] rounded-xl"
+              className="bs-input max-w-[280px]"
             />
-            <Button
+            <button
               type="button"
-              variant="outline"
-              className="rounded-xl"
               onClick={handleTestSmtp}
               disabled={testLoading || !smtpConfigured}
+              className="bs-btn bs-btn-ghost"
             >
               {testLoading ? "Verifying..." : "Test Connection"}
-            </Button>
-            <p className="text-xs text-muted-foreground">
+            </button>
+            <p className="text-xs text-bs-fg-muted">
               Save settings before testing.
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Submit */}
       <div className="flex justify-end">
-        <Button
+        <button
           type="submit"
-          variant="hero"
-          size="lg"
-          className="rounded-xl"
           disabled={isLoading}
+          className="bs-btn bs-btn-green"
         >
           {isLoading ? "Saving..." : "Save Changes"}
-        </Button>
+        </button>
       </div>
     </form>
   );

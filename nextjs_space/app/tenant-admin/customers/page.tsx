@@ -2,7 +2,8 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { Users } from "lucide-react";
+import { Users, UserCheck, UserPlus } from "lucide-react";
+import { StatCard } from "@/components/admin/shared";
 import { CustomersTable } from "./customers-table";
 
 /** Default pagination settings */
@@ -145,75 +146,39 @@ export default async function CustomersListPage({
 
   return (
     <div className="space-y-8">
-      {/* Centered Header */}
-      <div className="text-center max-w-2xl mx-auto">
-        <div className="section-badge mb-4 inline-flex">
-          <Users className="h-4 w-4" />
-          Customers
-        </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+      <header className="bs-page-header-centered">
+        <h1
+          className="bs-page-title"
+          style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+        >
           Customer Management
         </h1>
-        <p className="mt-3 text-muted-foreground">
+        <p className="bs-page-subtitle">
           Manage your customer base and view engagement metrics.
         </p>
-      </div>
+      </header>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="card-floating p-6">
-          <div className="flex items-start justify-between">
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                Total Customers
-              </p>
-              <p className="font-display text-3xl font-bold tracking-tight text-foreground">
-                {totalCustomersCount}
-              </p>
-              <p className="text-xs text-muted-foreground">Registered users</p>
-            </div>
-            <div className="rounded-2xl bg-primary p-3">
-              <Users className="h-5 w-5 text-white" />
-            </div>
-          </div>
-        </div>
-
-        <div className="card-floating p-6">
-          <div className="flex items-start justify-between">
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                Active Customers
-              </p>
-              <p className="font-display text-3xl font-bold tracking-tight text-foreground">
-                {totalCustomersCount}
-              </p>
-              <p className="text-xs text-muted-foreground">Currently active</p>
-            </div>
-            <div className="rounded-2xl bg-emerald-500 p-3">
-              <Users className="h-5 w-5 text-white" />
-            </div>
-          </div>
-        </div>
-
-        <div className="card-floating p-6">
-          <div className="flex items-start justify-between">
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                Recent Sign-ups
-              </p>
-              <p className="font-display text-3xl font-bold tracking-tight text-foreground">
-                {recentSignupsCount}
-              </p>
-              <p className="text-xs text-muted-foreground">Last 30 days</p>
-            </div>
-            <div className="rounded-2xl bg-purple-600 p-3">
-              <Users className="h-5 w-5 text-white" />
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Total Customers"
+          value={totalCustomersCount}
+          icon={Users}
+          hint="Registered users"
+        />
+        <StatCard
+          label="Active Customers"
+          value={totalCustomersCount}
+          icon={UserCheck}
+          hint="Currently active"
+        />
+        <StatCard
+          label="Recent Sign-ups"
+          value={recentSignupsCount}
+          icon={UserPlus}
+          hint="Last 30 days"
+        />
       </div>
 
-      {/* Customers Table with Search and Pagination */}
       <CustomersTable customers={customers} totalCount={filteredCount} />
     </div>
   );

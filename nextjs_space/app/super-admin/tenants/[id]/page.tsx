@@ -1,17 +1,21 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+  ArrowLeft,
+  Building2,
+  Package,
+  ShoppingBag,
+  Users as UsersIcon,
+} from "lucide-react";
 import { prisma } from "@/lib/db";
-import { format } from "date-fns";
+import { RowPill } from "@/components/admin/shared";
 import TenantEditForm from "./tenant-edit-form";
+import TenantActions from "./tenant-actions";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 export default async function TenantDetailPage({
   params,
@@ -50,160 +54,159 @@ export default async function TenantDetailPage({
   }
 
   return (
-    <div className="p-8">
+    <div className="space-y-8">
+      <Link
+        href="/super-admin/tenants"
+        className="inline-flex items-center text-sm text-bs-fg-muted hover:text-bs-fg"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+        Back to Tenants
+      </Link>
 
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-              {tenant.businessName}
-            </h1>
-            <p className="text-slate-600 mt-2">
-              Manage tenant details and configuration
-            </p>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                Tenant ID
-              </span>
-              <code className="select-all rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-800 border border-slate-200">
-                {tenant.id}
-              </code>
-            </div>
-          </div>
-          {tenant.isActive ? (
-            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-lg px-4 py-1.5">
-              Active
-            </Badge>
-          ) : (
-            <Badge
-              variant="secondary"
-              className="bg-slate-200 text-lg px-4 py-1.5"
-            >
-              Inactive
-            </Badge>
-          )}
+      <div className="bs-page-header-centered">
+        <h1 className="bs-page-title" style={sectionTitleStyle}>
+          {tenant.businessName}
+        </h1>
+        <p className="bs-page-subtitle">
+          Manage tenant details, configuration, and platform access.
+        </p>
+        <div className="mt-4 flex items-center justify-center gap-3 flex-wrap">
+          <RowPill tone={tenant.isActive ? "emerald" : "slate"}>
+            {tenant.isActive ? "Active" : "Inactive"}
+          </RowPill>
+          <span className="font-mono text-xs text-bs-fg-muted">
+            ID: {tenant.id}
+          </span>
         </div>
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Edit Form & Users */}
         <div className="lg:col-span-2 space-y-6">
           <TenantEditForm tenant={tenant} />
 
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle className="flex items-center justify-between">
-                <span>Users ({tenant.users.length})</span>
-                <Badge variant="outline">
-                  {tenant.users.length}{" "}
-                  {tenant.users.length === 1 ? "User" : "Users"}
-                </Badge>
-              </CardTitle>
-              <CardDescription>
-                All users associated with this tenant
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                {tenant.users.map((user: any) => (
-                  <div
-                    key={user.id}
-                    className="flex justify-between items-center p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center font-semibold text-white shadow-md">
-                        {user.name?.charAt(0).toUpperCase() || "?"}
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          {user.name}
-                        </p>
-                        <p className="text-sm text-slate-600">{user.email}</p>
-                      </div>
+          <section className="bs-card bs-card-pad">
+            <div className="flex items-center justify-between mb-4">
+              <h2
+                className="text-[22px] leading-tight text-bs-fg"
+                style={sectionTitleStyle}
+              >
+                Users ({tenant.users.length})
+              </h2>
+              <RowPill tone="blue">
+                {tenant.users.length}{" "}
+                {tenant.users.length === 1 ? "User" : "Users"}
+              </RowPill>
+            </div>
+            <p className="text-sm text-bs-fg-muted mb-6">
+              All users associated with this tenant.
+            </p>
+
+            <div className="space-y-3">
+              {tenant.users.map((u: any) => (
+                <div
+                  key={u.id}
+                  className="flex justify-between items-center p-4 rounded-bs-md bg-bs-card-2/50 hover:bg-bs-card-2 transition-colors border border-bs-border-100"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-bs-green text-bs-canvas flex items-center justify-center font-semibold">
+                      {u.name?.charAt(0).toUpperCase() || "?"}
                     </div>
-                    <Badge variant="outline" className="bg-white">
-                      {user.role}
-                    </Badge>
+                    <div>
+                      <p className="font-medium text-bs-fg">{u.name}</p>
+                      <p className="text-sm text-bs-fg-muted font-mono">
+                        {u.email}
+                      </p>
+                    </div>
                   </div>
-                ))}
-                {tenant.users.length === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-slate-500">
-                      No users associated with this tenant yet
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  <RowPill tone="slate">{u.role}</RowPill>
+                </div>
+              ))}
+              {tenant.users.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-bs-fg-muted">
+                    No users associated with this tenant yet.
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
 
         {/* Right Column - Stats & Actions */}
         <div className="space-y-6">
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Statistics</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              <div>
-                <p className="text-sm font-medium text-slate-600 mb-1">
-                  Total Products
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-purple-700">
-                      {tenant._count.products}
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-500">Products listed</p>
+          <section className="bs-card bs-card-pad">
+            <h2
+              className="text-[22px] leading-tight text-bs-fg mb-6"
+              style={sectionTitleStyle}
+            >
+              Statistics
+            </h2>
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-bs-md bg-bs-card-2 border border-bs-border-100 flex items-center justify-center">
+                  <Package
+                    className="h-5 w-5 text-bs-green"
+                    aria-hidden="true"
+                  />
+                </div>
+                <div>
+                  <p className="text-2xl font-medium text-bs-fg leading-none">
+                    {tenant._count.products}
+                  </p>
+                  <p className="text-sm text-bs-fg-muted mt-1">
+                    Products listed
+                  </p>
                 </div>
               </div>
-              <Separator />
-              <div>
-                <p className="text-sm font-medium text-slate-600 mb-1">
-                  Total Orders
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-amber-700">
-                      {tenant._count.orders}
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-500">Orders placed</p>
+              <div className="border-t border-bs-border-100" />
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-bs-md bg-bs-card-2 border border-bs-border-100 flex items-center justify-center">
+                  <ShoppingBag
+                    className="h-5 w-5 text-bs-gold"
+                    aria-hidden="true"
+                  />
+                </div>
+                <div>
+                  <p className="text-2xl font-medium text-bs-fg leading-none">
+                    {tenant._count.orders}
+                  </p>
+                  <p className="text-sm text-bs-fg-muted mt-1">
+                    Orders placed
+                  </p>
                 </div>
               </div>
-              <Separator />
-              <div>
-                <p className="text-sm font-medium text-slate-600 mb-1">
-                  Total Users
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-blue-700">
-                      {tenant.users.length}
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-500">Registered users</p>
+              <div className="border-t border-bs-border-100" />
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-bs-md bg-bs-card-2 border border-bs-border-100 flex items-center justify-center">
+                  <UsersIcon
+                    className="h-5 w-5 text-bs-info"
+                    aria-hidden="true"
+                  />
+                </div>
+                <div>
+                  <p className="text-2xl font-medium text-bs-fg leading-none">
+                    {tenant.users.length}
+                  </p>
+                  <p className="text-sm text-bs-fg-muted mt-1">
+                    Registered users
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <TenantActions tenant={tenant} />
-            </CardContent>
-          </Card>
+          <section className="bs-card bs-card-pad">
+            <h2
+              className="text-[22px] leading-tight text-bs-fg mb-4"
+              style={sectionTitleStyle}
+            >
+              Actions
+            </h2>
+            <TenantActions tenant={tenant} />
+          </section>
         </div>
       </div>
     </div>
   );
 }
-
-// Import the actions component (activate/deactivate/delete only)
-import TenantActions from "./tenant-actions";

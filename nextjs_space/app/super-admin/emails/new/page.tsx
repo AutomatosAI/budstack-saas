@@ -1,11 +1,18 @@
 "use client";
 
-'use client';
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Mail } from "lucide-react";
+import {
+  EmailEditor,
+  EmailTemplateData,
+} from "@/components/admin/email/EmailEditor";
+import { toast } from "@/components/ui/sonner";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { EmailEditor, EmailTemplateData } from '@/components/admin/email/EmailEditor';
-import { toast } from '@/components/ui/sonner';
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 export default function NewEmailTemplatePage() {
   const router = useRouter();
@@ -24,8 +31,7 @@ export default function NewEmailTemplatePage() {
 
       toast.success("Template created successfully");
       router.push("/super-admin/emails");
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast.error("Failed to create template");
     } finally {
       setIsSaving(false);
@@ -33,16 +39,25 @@ export default function NewEmailTemplatePage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)]">
-      <div className="px-6 py-6 lg:px-8 lg:pt-8 lg:pb-6 border-b">
-        <h1 className="text-4xl font-semibold tracking-tight text-slate-900">Create Template</h1>
-        <p className="mt-2 text-slate-500">
+    <div className="space-y-8">
+      <Link
+        href="/super-admin/emails"
+        className="inline-flex items-center text-sm text-bs-fg-muted hover:text-bs-fg"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+        Back to Email Templates
+      </Link>
+
+      <div className="bs-page-header-centered">
+        <h1 className="bs-page-title" style={sectionTitleStyle}>
+          Create Template
+        </h1>
+        <p className="bs-page-subtitle">
           Design a new system email template.
         </p>
       </div>
-      <div className="flex-1 p-6 overflow-hidden">
-        <EmailEditor onSave={handleSave} isSaving={isSaving} />
-      </div>
+
+      <EmailEditor onSave={handleSave} isSaving={isSaving} />
     </div>
   );
 }

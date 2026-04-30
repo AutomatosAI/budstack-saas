@@ -3,18 +3,6 @@
 import { useUser } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import {
   Package,
@@ -22,10 +10,8 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Printer,
   FileText,
   Check,
-  ShoppingBag,
 } from "lucide-react";
 import {
   Dialog,
@@ -34,16 +20,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
+import { StatCard } from "@/components/admin/shared";
 import { OrdersTable } from "./orders-table";
-
 
 interface OrderItem {
   id: string;
@@ -119,23 +98,19 @@ export default function TenantOrdersPage() {
     }
   }, [isLoaded, isSignedIn, user, router]);
 
-  // Build API URL with query params
   const buildApiUrl = useCallback(() => {
     const params = new URLSearchParams();
 
-    // Pagination params
     const page = searchParams.get("page") || "1";
     const pageSize = searchParams.get("pageSize") || "20";
     params.set("page", page);
     params.set("pageSize", pageSize);
 
-    // Search and filter params
     const search = searchParams.get("search");
     const statusFilter = searchParams.get("status");
     const dateFrom = searchParams.get("dateFrom");
     const dateTo = searchParams.get("dateTo");
 
-    // Sort params
     const sortBy = searchParams.get("sortBy");
     const sortOrder = searchParams.get("sortOrder");
 
@@ -193,7 +168,6 @@ export default function TenantOrdersPage() {
       if (response.ok) {
         toast.success("Order status updated successfully");
         await fetchOrders();
-        // Update selected order if it's the one being updated
         if (selectedOrder?.id === orderId) {
           setSelectedOrder({ ...selectedOrder, status: newStatus });
         }
@@ -208,18 +182,19 @@ export default function TenantOrdersPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusChipClass = (status: string) => {
     switch (status) {
       case "COMPLETED":
-        return "bg-green-600 hover:bg-green-700";
+        return "bs-chip bs-chip-green";
       case "PROCESSING":
-        return "bg-blue-600 hover:bg-blue-700";
+        return "bs-chip bs-chip-info";
       case "PENDING":
-        return "bg-yellow-600 hover:bg-yellow-700";
+      case "PENDING_SYNC":
+        return "bs-chip bs-chip-warn";
       case "CANCELLED":
-        return "bg-red-600 hover:bg-red-700";
+        return "bs-chip bs-chip-danger";
       default:
-        return "bg-gray-600 hover:bg-gray-700";
+        return "bs-chip bs-chip-muted";
     }
   };
 
@@ -238,7 +213,6 @@ export default function TenantOrdersPage() {
     }
   };
 
-  // Save admin notes with debouncing (1 second delay)
   const saveAdminNotes = useCallback(async (orderId: string, notes: string) => {
     setIsSavingNotes(true);
     try {
@@ -253,7 +227,6 @@ export default function TenantOrdersPage() {
 
       if (response.ok) {
         setShowSavedIndicator(true);
-        // Hide saved indicator after 2 seconds
         setTimeout(() => setShowSavedIndicator(false), 2000);
       } else {
         toast.error("Failed to save admin notes");
@@ -266,17 +239,14 @@ export default function TenantOrdersPage() {
     }
   }, []);
 
-  // Handle admin notes change with debouncing
   const handleAdminNotesChange = useCallback(
     (value: string, orderId: string) => {
       setAdminNotes(value);
 
-      // Clear existing timeout
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
 
-      // Set new timeout to save after 1 second of no typing
       saveTimeoutRef.current = setTimeout(() => {
         saveAdminNotes(orderId, value);
       }, 1000);
@@ -284,7 +254,6 @@ export default function TenantOrdersPage() {
     [saveAdminNotes],
   );
 
-  // Initialize admin notes when order is selected
   useEffect(() => {
     if (selectedOrder) {
       setAdminNotes(selectedOrder.adminNotes || "");
@@ -292,7 +261,6 @@ export default function TenantOrdersPage() {
     }
   }, [selectedOrder]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
@@ -303,10 +271,10 @@ export default function TenantOrdersPage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading orders...</p>
+          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-bs-green border-t-transparent"></div>
+          <p className="text-bs-fg-muted">Loading orders...</p>
         </div>
       </div>
     );
@@ -316,7 +284,6 @@ export default function TenantOrdersPage() {
     return null;
   }
 
-  // Calculate total orders for stats (sum of all status counts)
   const totalOrders =
     statusCounts.PENDING +
     statusCounts.PROCESSING +
@@ -324,90 +291,34 @@ export default function TenantOrdersPage() {
     statusCounts.CANCELLED;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      {/* Flowa-style Header */}
-      {/* Centered Header */}
-      <div className="text-center max-w-2xl mx-auto mb-8">
-        <div className="section-badge mb-4 inline-flex">
-          <ShoppingBag className="h-4 w-4" />
-          Orders
-        </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+    <div className="space-y-8 p-4 sm:p-6 lg:p-8">
+      <header className="bs-page-header-centered">
+        <h1
+          className="bs-page-title"
+          style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+        >
           Order Management
         </h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground mx-auto">
+        <p className="bs-page-subtitle">
           Manage and fulfill customer orders with clarity and speed.
         </p>
+      </header>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+        <StatCard label="Total Orders" value={totalOrders} icon={Package} />
+        <StatCard label="Pending" value={statusCounts.PENDING} icon={Clock} />
+        <StatCard
+          label="Processing"
+          value={statusCounts.PROCESSING}
+          icon={Truck}
+        />
+        <StatCard
+          label="Completed"
+          value={statusCounts.COMPLETED}
+          icon={CheckCircle2}
+        />
       </div>
 
-      {/* Order Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
-          <CardHeader className="p-0 pb-4 space-y-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-slate-600">
-                Total Orders
-              </CardTitle>
-              <div className="rounded-xl bg-slate-100 p-2.5">
-                <Package className="h-5 w-5 text-slate-600" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="text-3xl font-semibold text-slate-900">{totalOrders}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
-          <CardHeader className="p-0 pb-4 space-y-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-slate-600">
-                Pending
-              </CardTitle>
-              <div className="rounded-xl bg-amber-50 p-2.5">
-                <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="text-3xl font-semibold text-slate-900">{statusCounts.PENDING}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
-          <CardHeader className="p-0 pb-4 space-y-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-slate-600">
-                Processing
-              </CardTitle>
-              <div className="rounded-xl bg-blue-50 p-2.5">
-                <Truck className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="text-3xl font-semibold text-slate-900">{statusCounts.PROCESSING}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
-          <CardHeader className="p-0 pb-4 space-y-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-slate-600">
-                Completed
-              </CardTitle>
-              <div className="rounded-xl bg-emerald-50 p-2.5">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="text-3xl font-semibold text-slate-900">{statusCounts.COMPLETED}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Orders Table with Search, Filters, and Pagination */}
       <OrdersTable
         orders={orders}
         totalCount={totalCount}
@@ -420,30 +331,34 @@ export default function TenantOrdersPage() {
         open={!!selectedOrder}
         onOpenChange={() => setSelectedOrder(null)}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bs-dialog-content max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Order Details</DialogTitle>
-            <DialogDescription>
+            <DialogTitle
+              className="font-display text-[28px] text-bs-fg"
+              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+            >
+              Order Details
+            </DialogTitle>
+            <DialogDescription className="font-mono text-bs-fg-muted">
               Order #{selectedOrder?.orderNumber.slice(-8).toUpperCase()}
             </DialogDescription>
           </DialogHeader>
 
           {selectedOrder && (
             <div className="space-y-6">
-              {/* Order Header */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Customer</p>
-                  <p className="font-semibold">
+              <div className="grid grid-cols-2 gap-4 rounded-bs-md border border-bs-border-100 bg-bs-card-2 p-4">
+                <div className="space-y-1">
+                  <p className="bs-eyebrow">Customer</p>
+                  <p className="font-semibold text-bs-fg">
                     {selectedOrder.user?.name || "Guest"}
                   </p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-bs-fg-muted">
                     {selectedOrder.user?.email}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600 mb-1">Order Date</p>
-                  <p className="font-semibold">
+                <div className="space-y-1 text-right">
+                  <p className="bs-eyebrow">Order Date</p>
+                  <p className="font-mono text-sm font-semibold text-bs-fg tabular-nums">
                     {format(
                       new Date(selectedOrder.createdAt),
                       "MMM d, yyyy • h:mm a",
@@ -452,185 +367,181 @@ export default function TenantOrdersPage() {
                 </div>
               </div>
 
-              {/* Order Status Management */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-3">Order Status</h3>
+              <div className="rounded-bs-md border border-bs-border-100 bg-bs-card-2 p-4">
+                <h3
+                  className="mb-3 font-display text-[22px] text-bs-fg"
+                  style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+                >
+                  Order Status
+                </h3>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <Select
+                    <select
                       value={selectedOrder.status}
-                      onValueChange={(value) =>
-                        updateOrderStatus(selectedOrder.id, value)
+                      onChange={(e) =>
+                        updateOrderStatus(selectedOrder.id, e.target.value)
                       }
                       disabled={updatingStatus}
+                      className="bs-select w-full"
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PENDING">Pending</SelectItem>
-                        <SelectItem value="PROCESSING">Processing</SelectItem>
-                        <SelectItem value="COMPLETED">Completed</SelectItem>
-                        <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <option value="PENDING">Pending</option>
+                      <option value="PROCESSING">Processing</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="CANCELLED">Cancelled</option>
+                    </select>
                   </div>
-                  <Badge
-                    className={`${getStatusColor(selectedOrder.status)} text-white gap-1`}
-                  >
+                  <span className={`${getStatusChipClass(selectedOrder.status)} gap-1`}>
                     {getStatusIcon(selectedOrder.status)}
                     {selectedOrder.status}
-                  </Badge>
+                  </span>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="mt-2 text-sm text-bs-fg-muted">
                   Update the order status to reflect fulfillment progress
                 </p>
               </div>
 
-              {/* Order Items */}
               <div>
-                <h3 className="font-semibold text-lg mb-3">Order Items</h3>
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead className="text-center">Quantity</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                <h3
+                  className="mb-3 font-display text-[22px] text-bs-fg"
+                  style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+                >
+                  Order Items
+                </h3>
+                <div className="overflow-hidden rounded-bs-md border border-bs-border-100">
+                  <table className="bs-table w-full">
+                    <thead>
+                      <tr>
+                        <th className="text-left">Product</th>
+                        <th className="text-center">Quantity</th>
+                        <th className="text-right">Price</th>
+                        <th className="text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
                       {selectedOrder.items.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">
+                        <tr key={item.id}>
+                          <td className="font-medium text-bs-fg">
                             {item.productName}
-                          </TableCell>
-                          <TableCell className="text-center">
+                          </td>
+                          <td className="text-center font-mono text-bs-fg-muted tabular-nums">
                             {item.quantity}
-                          </TableCell>
-                          <TableCell className="text-right">
+                          </td>
+                          <td className="text-right font-mono tabular-nums">
                             €{item.price.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right">
+                          </td>
+                          <td className="text-right font-mono tabular-nums">
                             €{(item.quantity * item.price).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
-              {/* Order Summary */}
-              <div className="border-t pt-4">
-                <div className="space-y-2 max-w-md ml-auto">
-                  <div className="flex justify-between text-gray-600">
+              <div className="border-t border-bs-border-100 pt-4">
+                <div className="ml-auto max-w-md space-y-2">
+                  <div className="flex justify-between text-bs-fg-muted">
                     <span>Subtotal</span>
-                    <span>€{selectedOrder.subtotal.toFixed(2)}</span>
+                    <span className="font-mono tabular-nums">
+                      €{selectedOrder.subtotal.toFixed(2)}
+                    </span>
                   </div>
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-bs-fg-muted">
                     <span>Shipping</span>
-                    <span>€{selectedOrder.shippingCost.toFixed(2)}</span>
+                    <span className="font-mono tabular-nums">
+                      €{selectedOrder.shippingCost.toFixed(2)}
+                    </span>
                   </div>
-                  <div className="flex justify-between text-xl font-bold pt-2 border-t">
+                  <div className="flex justify-between border-t border-bs-border-100 pt-2 text-xl font-bold text-bs-fg">
                     <span>Total</span>
-                    <span>€{selectedOrder.total.toFixed(2)}</span>
+                    <span className="font-mono tabular-nums">
+                      €{selectedOrder.total.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* Admin Notes Section */}
-              <div className="border rounded-lg p-4 bg-amber-50/30 border-amber-200">
-                <div className="flex items-start justify-between mb-2">
+              <div className="rounded-bs-md border border-bs-border-100 bg-bs-card-2 p-4">
+                <div className="mb-2 flex items-start justify-between">
                   <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-amber-600" />
-                    <h3 className="font-semibold text-lg text-slate-900">
+                    <FileText className="h-5 w-5 text-bs-gold" />
+                    <h3
+                      className="font-display text-[22px] text-bs-fg"
+                      style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+                    >
                       Admin Notes
                     </h3>
                   </div>
                   {showSavedIndicator && (
-                    <div className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium animate-in fade-in duration-200">
-                      <Check className="w-4 h-4" />
+                    <div className="flex items-center gap-1.5 text-sm font-medium text-bs-green-soft">
+                      <Check className="h-4 w-4" />
                       <span>Saved</span>
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-slate-600 mb-3">
+                <p className="mb-3 text-sm text-bs-fg-muted">
                   Internal notes (not visible to customers)
                 </p>
-                <Textarea
+                <textarea
                   value={adminNotes}
                   onChange={(e) =>
                     handleAdminNotesChange(e.target.value, selectedOrder.id)
                   }
                   placeholder="Add notes about special handling, gift messages, or other internal information..."
-                  className="min-h-[120px] resize-y bg-white border-amber-200 focus-visible:ring-amber-400 focus-visible:border-amber-400"
+                  className="bs-input min-h-[120px] w-full resize-y"
                   disabled={isSavingNotes}
                 />
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="mt-2 text-xs text-bs-fg-muted">
                   {isSavingNotes
                     ? "Saving..."
                     : "Changes are saved automatically after 1 second of no typing"}
                 </p>
               </div>
 
-              {/* Quick Actions */}
-              <div className="space-y-3 pt-4 border-t">
-                {/* Print Packing Slip Button */}
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 font-medium"
-                  onClick={() => {
-                    const packingSlipUrl = `/tenant-admin/orders/${selectedOrder.id}/packing-slip`;
-                    window.open(packingSlipUrl, "_blank");
-                  }}
-                >
-                  <Printer className="w-4 h-4" />
-                  Print Packing Slip
-                </Button>
-
-                {/* Status Action Buttons */}
-                <div className="flex gap-3">
-                  {selectedOrder.status === "PENDING" && (
-                    <Button
-                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+              {/* Status Action Buttons (Print Packing Slip removed per PRD §4.5) */}
+              <div className="flex gap-3 border-t border-bs-border-100 pt-4">
+                {selectedOrder.status === "PENDING" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateOrderStatus(selectedOrder.id, "PROCESSING")
+                    }
+                    disabled={updatingStatus}
+                    className="bs-btn bs-btn-green flex-1"
+                  >
+                    <Truck className="h-4 w-4" />
+                    <span>Start Processing</span>
+                  </button>
+                )}
+                {selectedOrder.status === "PROCESSING" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateOrderStatus(selectedOrder.id, "COMPLETED")
+                    }
+                    disabled={updatingStatus}
+                    className="bs-btn bs-btn-green flex-1"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Mark as Completed</span>
+                  </button>
+                )}
+                {selectedOrder.status !== "CANCELLED" &&
+                  selectedOrder.status !== "COMPLETED" && (
+                    <button
+                      type="button"
                       onClick={() =>
-                        updateOrderStatus(selectedOrder.id, "PROCESSING")
+                        updateOrderStatus(selectedOrder.id, "CANCELLED")
                       }
                       disabled={updatingStatus}
+                      className="bs-btn bs-btn-danger"
                     >
-                      <Truck className="w-4 h-4 mr-2" />
-                      Start Processing
-                    </Button>
+                      <XCircle className="h-4 w-4" />
+                      <span>Cancel Order</span>
+                    </button>
                   )}
-                  {selectedOrder.status === "PROCESSING" && (
-                    <Button
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                      onClick={() =>
-                        updateOrderStatus(selectedOrder.id, "COMPLETED")
-                      }
-                      disabled={updatingStatus}
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Mark as Completed
-                    </Button>
-                  )}
-                  {selectedOrder.status !== "CANCELLED" &&
-                    selectedOrder.status !== "COMPLETED" && (
-                      <Button
-                        variant="outline"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() =>
-                          updateOrderStatus(selectedOrder.id, "CANCELLED")
-                        }
-                        disabled={updatingStatus}
-                      >
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Cancel Order
-                      </Button>
-                    )}
-                </div>
               </div>
             </div>
           )}

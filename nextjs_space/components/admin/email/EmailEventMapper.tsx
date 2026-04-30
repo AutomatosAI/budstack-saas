@@ -2,29 +2,6 @@
 
 import React, { useState } from "react";
 import useSWR, { mutate } from "swr";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -66,12 +43,10 @@ const SYSTEM_EVENTS = [
 ];
 
 export const EmailEventMapper = () => {
-    // Fetch Templates
     const { data: templates, isLoading: loadingTemplates } = useSWR<
         EmailTemplate[]
     >("/api/super-admin/email-templates", fetcher);
 
-    // Fetch Mappings
     const { data: mappings, isLoading: loadingMappings } = useSWR<EmailMapping[]>(
         "/api/super-admin/email-mappings",
         fetcher,
@@ -109,102 +84,116 @@ export const EmailEventMapper = () => {
         }
     };
 
-    if (loadingTemplates || loadingMappings)
-        return <div>Loading configuration...</div>;
+    if (loadingTemplates || loadingMappings) {
+        return (
+            <div className="bs-card bs-card-pad flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-bs-fg-muted" />
+            </div>
+        );
+    }
 
     const templateList = Array.isArray(templates) ? templates : [];
 
     return (
-        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden">
-            <CardHeader className="border-b border-slate-100">
-                <CardTitle>System Event Mappings</CardTitle>
-                <CardDescription>
+        <div className="bs-card bs-card-pad">
+            <div className="space-y-1 border-b border-bs-border-100 pb-4">
+                <h2
+                    className="font-display text-[22px] text-bs-fg"
+                    style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+                >
+                    System Event Mappings
+                </h2>
+                <p className="text-sm text-bs-fg-muted">
                     Map system events to specific email templates. These defaults will be
                     used unless overridden by a tenant.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Event</TableHead>
-                                <TableHead>Template</TableHead>
-                                <TableHead className="hidden md:table-cell">Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {SYSTEM_EVENTS.map((event) => {
-                                const currentTemplateId = getActiveTemplateId(event.id);
-                                const isSaving = saving === event.id;
-                                return (
-                                    <TableRow key={event.id}>
-                                        <TableCell>
-                                            <div className="font-medium">{event.label}</div>
-                                            <div className="text-xs text-muted-foreground hidden md:block">
-                                                {event.description}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <Select
-                                                    value={currentTemplateId || "default"}
-                                                    onValueChange={(val) => {
-                                                        if (val !== "default")
-                                                            handleSaveMapping(event.id, val);
-                                                    }}
-                                                    disabled={isSaving}
-                                                >
-                                                    <SelectTrigger className="w-[180px] md:w-[250px]">
-                                                        <SelectValue placeholder="Select a template" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="default" disabled>
-                                                            <em>Select a template...</em>
-                                                        </SelectItem>
-                                                        {templateList.map((t) => (
-                                                            <SelectItem key={t.id} value={t.id}>
-                                                                {t.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                {isSaving && (
-                                                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="hidden md:table-cell">
-                                            {currentTemplateId ? "Active" : "Not Set"}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                    handleSaveMapping(
-                                                        event.id,
-                                                        currentTemplateId || "default",
-                                                    )
-                                                }
-                                                disabled={isSaving || !currentTemplateId}
+                </p>
+            </div>
+
+            <div className="mt-4 overflow-x-auto">
+                <table className="bs-table w-full">
+                    <thead>
+                        <tr>
+                            <th className="text-left">Event</th>
+                            <th className="text-left">Template</th>
+                            <th className="hidden text-left md:table-cell">Status</th>
+                            <th className="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {SYSTEM_EVENTS.map((event) => {
+                            const currentTemplateId = getActiveTemplateId(event.id);
+                            const isSaving = saving === event.id;
+                            return (
+                                <tr key={event.id}>
+                                    <td>
+                                        <div className="font-medium text-bs-fg">{event.label}</div>
+                                        <div className="hidden text-xs text-bs-fg-muted md:block">
+                                            {event.description}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                value={currentTemplateId || "default"}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val !== "default")
+                                                        handleSaveMapping(event.id, val);
+                                                }}
+                                                disabled={isSaving}
+                                                className="bs-select w-[180px] md:w-[250px]"
                                             >
-                                                {isSaving ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <Save className="h-4 w-4" />
-                                                )}
-                                                <span className="sr-only">Save</span>
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-        </Card>
+                                                <option value="default" disabled>
+                                                    Select a template...
+                                                </option>
+                                                {templateList.map((t) => (
+                                                    <option key={t.id} value={t.id}>
+                                                        {t.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {isSaving && (
+                                                <Loader2 className="h-4 w-4 animate-spin text-bs-fg-muted" />
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="hidden md:table-cell">
+                                        <span
+                                            className={
+                                                currentTemplateId
+                                                    ? "bs-chip bs-chip-green"
+                                                    : "bs-chip bs-chip-muted"
+                                            }
+                                        >
+                                            {currentTemplateId ? "Active" : "Not Set"}
+                                        </span>
+                                    </td>
+                                    <td className="text-right">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleSaveMapping(
+                                                    event.id,
+                                                    currentTemplateId || "default",
+                                                )
+                                            }
+                                            disabled={isSaving || !currentTemplateId}
+                                            className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0"
+                                        >
+                                            {isSaving ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Save className="h-4 w-4" />
+                                            )}
+                                            <span className="sr-only">Save</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     );
 };

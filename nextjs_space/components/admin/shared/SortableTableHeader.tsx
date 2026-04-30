@@ -6,34 +6,18 @@ import { TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { SortOrder, SortState } from "@/lib/admin/url-state";
 
-/**
- * Alignment options for table header content
- */
 export type TableHeaderAlignment = "left" | "center" | "right";
 
-/**
- * Props for the SortableTableHeader component
- */
 export interface SortableTableHeaderProps {
-  /** Unique column key used for sorting */
   columnKey: string;
-  /** Display label for the column header */
   label: string;
-  /** Current sort state from useTableState hook */
   sortState: SortState;
-  /** Callback when sort is triggered - typically setSort from useTableState */
   onSort: (column: string) => void;
-  /** Text alignment for the header content */
   align?: TableHeaderAlignment;
-  /** Additional CSS classes */
   className?: string;
-  /** Whether this column is sortable (defaults to true) */
   sortable?: boolean;
 }
 
-/**
- * Get the next sort order in the cycle: null -> asc -> desc -> null
- */
 function getNextSortLabel(
   currentColumn: string | null,
   currentOrder: SortOrder,
@@ -51,28 +35,6 @@ function getNextSortLabel(
   return "Sort ascending";
 }
 
-/**
- * SortableTableHeader - A clickable table header with sort indicators.
- *
- * Features:
- * - Three-state sorting cycle (asc -> desc -> null)
- * - Visual sort indicators (ArrowUp, ArrowDown, ArrowUpDown)
- * - Smooth hover and active states
- * - ARIA labels for accessibility
- * - Integrates with useTableState hook
- *
- * @example
- * ```tsx
- * const [{ sort }, { setSort }] = useTableState();
- *
- * <SortableTableHeader
- *   columnKey="businessName"
- *   label="Business Name"
- *   sortState={sort}
- *   onSort={setSort}
- * />
- * ```
- */
 export const SortableTableHeader = React.forwardRef<
   HTMLTableCellElement,
   SortableTableHeaderProps
@@ -115,63 +77,27 @@ export const SortableTableHeader = React.forwardRef<
       right: "justify-end text-right",
     };
 
-    // Render sort icon based on state
     const SortIcon = () => {
       const iconClasses = cn(
-        "h-4 w-4 flex-shrink-0 transition-all duration-200",
-        isActive
-          ? "text-slate-900 scale-110"
-          : "text-slate-400 group-hover:text-slate-600",
+        "h-3.5 w-3.5 flex-shrink-0 transition-opacity",
+        isActive ? "text-bs-fg opacity-100" : "text-bs-fg-muted opacity-0 group-hover:opacity-100",
       );
-
-      if (!isActive) {
-        return (
-          <ArrowUpDown
-            className={cn(iconClasses, "opacity-0 group-hover:opacity-100")}
-            aria-hidden="true"
-          />
-        );
-      }
 
       if (currentOrder === "asc") {
-        return (
-          <ArrowUp
-            className={cn(
-              iconClasses,
-              "animate-in fade-in zoom-in-50 duration-150",
-            )}
-            aria-hidden="true"
-          />
-        );
+        return <ArrowUp className={iconClasses} aria-hidden="true" />;
       }
-
       if (currentOrder === "desc") {
-        return (
-          <ArrowDown
-            className={cn(
-              iconClasses,
-              "animate-in fade-in zoom-in-50 duration-150",
-            )}
-            aria-hidden="true"
-          />
-        );
+        return <ArrowDown className={iconClasses} aria-hidden="true" />;
       }
-
-      return (
-        <ArrowUpDown
-          className={cn(iconClasses, "opacity-0 group-hover:opacity-100")}
-          aria-hidden="true"
-        />
-      );
+      return <ArrowUpDown className={iconClasses} aria-hidden="true" />;
     };
 
-    // Non-sortable header
     if (!sortable) {
       return (
         <TableHead
           ref={ref}
           className={cn(
-            "font-semibold text-slate-700",
+            "font-mono text-mono-eyebrow uppercase text-bs-fg-muted",
             alignmentClasses[align],
             className,
           )}
@@ -182,7 +108,7 @@ export const SortableTableHeader = React.forwardRef<
     }
 
     return (
-      <TableHead ref={ref} className={cn("font-semibold p-0", className)}>
+      <TableHead ref={ref} className={cn("p-0", className)}>
         <button
           type="button"
           onClick={handleClick}
@@ -197,29 +123,16 @@ export const SortableTableHeader = React.forwardRef<
                   : "none"
               : undefined
           }
+          data-active={isActive ? "true" : undefined}
           className={cn(
-            "group flex items-center gap-1.5 w-full h-full px-4 py-3",
-            "select-none cursor-pointer",
-            "transition-all duration-150 ease-out",
-            // Hover and focus states
-            "hover:bg-slate-100/80 focus-visible:bg-slate-100/80",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400",
-            // Active state
-            isActive && "bg-slate-50",
-            // Alignment
+            "group flex items-center gap-1.5 w-full h-full px-4 py-3 select-none cursor-pointer",
+            "font-mono text-mono-eyebrow uppercase tracking-wide transition-colors",
+            isActive ? "text-bs-fg" : "text-bs-fg-muted hover:text-bs-fg",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bs-green/40",
             alignmentClasses[align],
           )}
         >
-          <span
-            className={cn(
-              "text-sm font-semibold transition-colors duration-150",
-              isActive
-                ? "text-slate-900"
-                : "text-slate-700 group-hover:text-slate-900",
-            )}
-          >
-            {label}
-          </span>
+          <span>{label}</span>
           <SortIcon />
         </button>
       </TableHead>

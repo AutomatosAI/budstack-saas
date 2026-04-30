@@ -57,7 +57,7 @@ export function StoreEditorHelperBot({
             agentId={agentId || undefined}
             greeting="Hi! I am the BudStacks Creative Assistant. I can help you pick colors, write descriptions, or configure your layout. What do you need help with?"
             context={editorContext}
-            theme="light"
+            theme="dark"
         />
     );
 }

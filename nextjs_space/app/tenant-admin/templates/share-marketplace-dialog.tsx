@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +23,10 @@ import {
 import { Share2, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useRouter } from "next/navigation";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface ShareMarketplaceDialogProps {
   templateId: string;
@@ -94,41 +97,48 @@ export function ShareMarketplaceDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {triggerElement || (
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-xl text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-          >
-            <Share2 className="mr-2 h-4 w-4" />
+          <button type="button" className="bs-btn bs-btn-ghost bs-btn-sm">
+            <Share2 className="mr-2 h-4 w-4" aria-hidden="true" />
             Share to Marketplace
-          </Button>
+          </button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="bs-dialog-content sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Share to Marketplace</DialogTitle>
-          <DialogDescription>
+          <DialogTitle
+            className="text-[22px] leading-tight"
+            style={sectionTitleStyle}
+          >
+            Share to Marketplace
+          </DialogTitle>
+          <DialogDescription className="text-bs-fg-muted">
             A copy of your template files will be submitted for review. Your
             local template is not affected.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>Template Name</Label>
-            <Input value={templateName} disabled className="bg-slate-50" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Author</Label>
+            <Label className="text-bs-fg">Template Name</Label>
             <Input
-              value={tenantBusinessName}
+              value={templateName}
               disabled
-              className="bg-slate-50"
+              className="bg-bs-card-2/50"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label className="text-bs-fg">Author</Label>
+            <Input
+              value={tenantBusinessName}
+              disabled
+              className="bg-bs-card-2/50"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-bs-fg">
+              Description
+            </Label>
             <Textarea
               id="description"
               placeholder="Describe what makes your template special..."
@@ -140,7 +150,9 @@ export function ShareMarketplaceDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category" className="text-bs-fg">
+              Category
+            </Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger id="category">
                 <SelectValue placeholder="Select a category" />
@@ -156,7 +168,9 @@ export function ShareMarketplaceDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags (comma-separated)</Label>
+            <Label htmlFor="tags" className="text-bs-fg">
+              Tags (comma-separated)
+            </Label>
             <Input
               id="tags"
               placeholder="e.g., cannabis, wellness, minimal"
@@ -167,28 +181,32 @@ export function ShareMarketplaceDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button
-            variant="outline"
+          <button
+            type="button"
+            className="bs-btn bs-btn-ghost"
             onClick={() => setOpen(false)}
             disabled={isSubmitting}
-            className="rounded-full"
           >
             Cancel
-          </Button>
-          <Button
+          </button>
+          <button
+            type="button"
+            className="bs-btn bs-btn-green"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="rounded-full bg-emerald-600 hover:bg-emerald-700"
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2
+                  className="mr-2 h-4 w-4 animate-spin"
+                  aria-hidden="true"
+                />
                 Submitting...
               </>
             ) : (
               "Submit for Review"
             )}
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

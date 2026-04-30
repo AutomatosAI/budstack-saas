@@ -20,6 +20,18 @@
 
 @layer base {
   :root {
+    /* Budstacks Admin Design System — display serif token */
+    --bs-font-display: var(--font-cormorant), 'Cormorant Garamond', Georgia, serif;
+
+    /* Budstacks Admin Design System — ring/tint helpers (used by .bs-* component classes) */
+    --bs-green-ring:   rgba(82,217,122,0.30);
+    --bs-green-tint-5: rgba(82,217,122,0.05);
+    --bs-gold-ring:    rgba(231,219,184,0.30);
+    --bs-gold-tint:    rgba(231,219,184,0.14);
+    --bs-danger-ring:  rgba(248,113,113,0.32);
+    --bs-warn-ring:    rgba(245,194,107,0.32);
+    --bs-info-ring:    rgba(125,183,255,0.30);
+
     /* ========== CANVAS & SURFACE (Flowa Pro) ========== */
     /* Page canvas - cool blue-tinted gray for contrast with white cards */
     --canvas: 216 20% 95%;
@@ -244,14 +256,9 @@
      FLOWA FLOATING CARD DESIGN SYSTEM
      ============================================ */
 
-  /* Admin Background - Clean minimal design */
-  .admin-bg {
-    background-color: #fafaf9;
-    background-image: radial-gradient(circle, #e7e5e4 1px, transparent 1px);
-    background-size: 24px 24px;
-  }
+  /* .admin-bg deprecated/removed in US-009 — was unused. */
 
-  /* Legacy alias for backward compatibility */
+  /* Legacy alias used by storefront /store/[slug]/dashboard + /settings */
   .saas-shell {
     background-color: #fafaf9;
     background-image: radial-gradient(circle, #e7e5e4 1px, transparent 1px);
@@ -273,13 +280,13 @@
   h4,
   h5,
   h6 {
-    font-family: 'DM Serif Display', 'Plus Jakarta Sans', Georgia, serif;
-    font-weight: 400;
+    font-family: var(--font-cormorant), 'Cormorant Garamond', 'Plus Jakarta Sans', Georgia, serif;
+    font-weight: 500;
   }
 
   /* Utility for display headings */
   .font-display {
-    font-family: 'DM Serif Display', Georgia, serif;
+    font-family: var(--font-cormorant), 'Cormorant Garamond', Georgia, serif;
   }
 
   .font-sans-heading {
@@ -860,25 +867,25 @@
      ACCESSIBILITY - FOCUS STATES SYSTEM
      ============================================ */
 
-  /* Super Admin Focus Ring - Slate theme */
+  /* Super Admin Focus Ring - Budstacks Admin DS gold accent */
   .focus-super-admin {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bs-gold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-bs-bg;
     animation: focus-ring 0.15s ease-out;
   }
 
   .focus-super-admin-inset {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bs-gold/40;
     animation: focus-ring 0.15s ease-out;
   }
 
-  /* Tenant Admin Focus Ring - Cyan theme */
+  /* Tenant Admin Focus Ring - Budstacks Admin DS green accent */
   .focus-tenant-admin {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bs-green/40 focus-visible:ring-offset-2 focus-visible:ring-offset-bs-bg;
     animation: focus-ring 0.15s ease-out;
   }
 
   .focus-tenant-admin-inset {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-400;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bs-green/40;
     animation: focus-ring 0.15s ease-out;
   }
 
@@ -1024,90 +1031,18 @@ html {
   min-height: 100vh;
 }
 
-/* Override legacy utility classes inside the dark scope */
-.budstacks-theme .canvas-bg { background-color: #07090A; background-image: none; }
-.budstacks-theme .card-floating,
-.budstacks-theme .card-floating-static {
-  background: #151A1C !important;
-  border-color: #222A2C !important;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 20px 60px -30px rgba(0,0,0,0.7) !important;
-}
-.budstacks-theme .bg-gradient-to-b.from-slate-50,
-.budstacks-theme .bg-gradient-to-b.from-green-50 { background: #07090A !important; }
-.budstacks-theme .bg-slate-100 { background: #151A1C !important; }
-.budstacks-theme .border-slate-200 { border-color: #222A2C !important; }
-.budstacks-theme .text-slate-600 { color: #C6CCC8 !important; }
+/* Override legacy utility classes inside the dark scope — REMOVED in US-009.
+   Admin pages must now use bs-* tokens directly (see @layer components below).
+   The .section-badge class is kept (used on the homepage) — see below. */
 .budstacks-theme .section-badge {
   background: rgba(82,217,122,0.06);
   border: 1px solid rgba(82,217,122,0.3);
   color: #8CF0A4;
 }
 
-/* Form inputs — aggressive overrides so any input/textarea/select inside .budstacks-theme
-   becomes legible regardless of hardcoded utility classes left over from the light theme. */
-.budstacks-theme input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
-.budstacks-theme textarea,
-.budstacks-theme select {
-  background-color: #0F1517 !important;
-  border-color: #222A2C !important;
-  color: #F2F4F2 !important;
-  caret-color: #52D97A;
-}
-.budstacks-theme input::placeholder,
-.budstacks-theme textarea::placeholder {
-  color: #7C8682 !important;
-  opacity: 1;
-}
-.budstacks-theme input:focus,
-.budstacks-theme textarea:focus,
-.budstacks-theme select:focus,
-.budstacks-theme input:focus-visible,
-.budstacks-theme textarea:focus-visible,
-.budstacks-theme select:focus-visible {
-  border-color: #52D97A !important;
-  outline: none !important;
-  box-shadow: 0 0 0 3px rgba(82,217,122,0.18) !important;
-}
-.budstacks-theme select option {
-  background-color: #0F1517;
-  color: #F2F4F2;
-}
-.budstacks-theme label {
-  color: #DDE3DF;
-}
-/* Translucent muted bg utility (e.g. bg-muted/30) — common in forms.
-   Force a solid dark surface so inputs are visible. */
-.budstacks-theme .bg-muted\/30,
-.budstacks-theme .bg-muted\/50,
-.budstacks-theme .bg-muted\/60 {
-  background-color: #0F1517 !important;
-}
-/* Hardcoded near-black borders left over from light theme */
-.budstacks-theme [class*="border-\[rgba\(15\,23\,42"] {
-  border-color: #222A2C !important;
-}
-
-.budstacks-theme h1,
-.budstacks-theme h2,
-.budstacks-theme h3,
-.budstacks-theme h4 {
-  font-family: 'GT Sectra', var(--font-fraunces), Georgia, serif;
-  letter-spacing: -0.01em;
-  font-feature-settings: "ss01", "dlig";
-  font-weight: 400;
-}
-
-.budstacks-theme .bs-eyebrow {
-  font-family: var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #8A928E;
-}
-
-.budstacks-theme .bs-eyebrow-green { color: #52D97A; }
-.budstacks-theme .bs-eyebrow-gold { color: #D9BC82; }
+/* Form input + .bs-eyebrow + .budstacks-theme h1-h4 overrides removed in US-009.
+   Admin pages now use .bs-input + Cormorant headings via [data-surface="admin"] gate.
+   Marketing pages share the global Cormorant rule (from US-002). */
 
 /* Smoky atmospheric background — used on hero + CTA */
 .budstacks-theme .bs-smoky {
@@ -1195,74 +1130,8 @@ html {
     0 0 80px -30px rgba(82,217,122,0.22);
 }
 
-/* Card surface (raised bento cards) */
-.budstacks-theme .bs-card {
-  background: #151A1C;
-  border: 1px solid #222A2C;
-  border-radius: 16px;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 20px 60px -30px rgba(0,0,0,0.7);
-}
-
-/* Buttons */
-.budstacks-theme .bs-btn-green {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 12px 22px;
-  border-radius: 999px;
-  background: #2FB560;
-  color: #07090A;
-  font-weight: 500;
-  font-size: 14px;
-  white-space: nowrap;
-  transition: all 160ms ease;
-  box-shadow: 0 0 0 1px rgba(82,217,122,0.3), 0 10px 30px -10px rgba(82,217,122,0.4);
-}
-.budstacks-theme .bs-btn-green:hover {
-  background: #52D97A;
-  box-shadow: 0 0 0 1px rgba(82,217,122,0.5), 0 14px 40px -8px rgba(82,217,122,0.55);
-}
-.budstacks-theme .bs-btn-ghost {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 12px 22px;
-  border-radius: 999px;
-  background: transparent;
-  color: #F5F6F4;
-  font-weight: 500;
-  font-size: 14px;
-  white-space: nowrap;
-  border: 1px solid #2F3A3D;
-  transition: all 160ms ease;
-}
-.budstacks-theme .bs-btn-ghost:hover {
-  background: #151A1C;
-  border-color: #8A928E;
-}
-
-/* Chip */
-.budstacks-theme .bs-chip {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-family: var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.budstacks-theme .bs-chip-green {
-  border: 1px solid rgba(82,217,122,0.3);
-  color: #8CF0A4;
-  background: rgba(82,217,122,0.05);
-}
-.budstacks-theme .bs-chip-gold {
-  border: 1px solid rgba(201,169,110,0.35);
-  color: #E8D19E;
-  background: rgba(201,169,110,0.05);
-}
-.budstacks-theme .bs-chip .dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: 0 0 8px currentColor;
-}
+/* .budstacks-theme .bs-card, .bs-btn-x, .bs-chip duplicates removed in US-009.
+   Un-scoped versions in @layer components (below) are now authoritative. */
 
 /* Inline Dr.Green logo treatment in headlines */
 .budstacks-theme .bs-drgreen-inline {
@@ -1274,493 +1143,250 @@ html {
   filter: drop-shadow(0 0 28px rgba(82,217,122,0.45));
 }
 
-/* ============================================
-   SUPER-ADMIN DARK THEME OVERRIDES (TEST PHASE)
-   ============================================
-   Scoped to .budstacks-theme so they only apply where
-   that wrapper is present (currently /super-admin layout).
-   Tenant-admin has no .budstacks-theme ancestor and is
-   completely unaffected.
-
-   Maps hardcoded Tailwind light-mode classes used
-   throughout the admin chrome + pages onto the dark
-   Budstacks palette. Remove this block to revert.
-   ============================================ */
-
-/* --- Surfaces (light → dark) --- */
-.budstacks-theme .bg-white { background-color: #151A1C !important; }
-.budstacks-theme .bg-slate-50,
-.budstacks-theme .bg-gray-50 { background-color: #0F1517 !important; }
-.budstacks-theme .bg-slate-100,
-.budstacks-theme .bg-gray-100 { background-color: #1A2123 !important; }
-.budstacks-theme .bg-slate-200 { background-color: #222A2C !important; }
-.budstacks-theme .hover\:bg-slate-50:hover,
-.budstacks-theme .hover\:bg-gray-100:hover { background-color: #1A2123 !important; }
-.budstacks-theme .hover\:bg-slate-100:hover { background-color: #222A2C !important; }
-.budstacks-theme .hover\:bg-slate-200:hover { background-color: #2F3A3D !important; }
-.budstacks-theme .hover\:bg-slate-300:hover { background-color: #2F3A3D !important; }
-
-/* --- Borders --- */
-.budstacks-theme .border-slate-100 { border-color: #1c2326 !important; }
-.budstacks-theme .border-slate-200 { border-color: #222A2C !important; }
-.budstacks-theme .border-slate-300 { border-color: #2F3A3D !important; }
-.budstacks-theme .border-slate-400 { border-color: #3A4548 !important; }
-.budstacks-theme .border-gray-200 { border-color: #222A2C !important; }
-.budstacks-theme .border-gray-300 { border-color: #2F3A3D !important; }
-
-/* --- Text (dark on light → light on dark) --- */
-.budstacks-theme .text-slate-900,
-.budstacks-theme .text-gray-900 { color: #F5F6F4 !important; }
-.budstacks-theme .text-slate-800 { color: #EAEEEA !important; }
-.budstacks-theme .text-slate-700 { color: #DDE3DF !important; }
-.budstacks-theme .text-slate-600,
-.budstacks-theme .text-gray-600 { color: #C6CCC8 !important; }
-.budstacks-theme .text-slate-500,
-.budstacks-theme .text-gray-500 { color: #8A928E !important; }
-.budstacks-theme .text-slate-400,
-.budstacks-theme .text-gray-400 { color: #7C8682 !important; }
-.budstacks-theme .hover\:text-slate-900:hover,
-.budstacks-theme .hover\:text-gray-900:hover { color: #F5F6F4 !important; }
-.budstacks-theme .hover\:text-slate-600:hover,
-.budstacks-theme .hover\:text-gray-600:hover { color: #C6CCC8 !important; }
-
-/* --- Dividers / focus rings using slate as bg accent --- */
-.budstacks-theme .ring-slate-200 { --tw-ring-color: #222A2C !important; }
-.budstacks-theme .ring-slate-300 { --tw-ring-color: #2F3A3D !important; }
-
-/* --- Translucent surfaces (white/slate with /opacity) --- */
-.budstacks-theme .bg-white\/90,
-.budstacks-theme .bg-white\/80,
-.budstacks-theme .bg-white\/70 { background-color: rgba(21,26,28,0.92) !important; backdrop-filter: blur(8px); }
-.budstacks-theme .bg-slate-50\/50 { background-color: rgba(15,21,23,0.6) !important; }
-.budstacks-theme .bg-slate-100\/50 { background-color: rgba(26,33,35,0.6) !important; }
-.budstacks-theme .bg-black\/30,
-.budstacks-theme .bg-black\/40 { background-color: rgba(0,0,0,0.5) !important; }
-
-/* --- Amber/yellow ribbon (e.g. "Editing marketplace template" breadcrumb)
-       Re-tint to dark green so it reads as "info banner" in dark scope. --- */
-.budstacks-theme .bg-amber-50,
-.budstacks-theme .bg-amber-100 { background-color: rgba(82,217,122,0.06) !important; }
-.budstacks-theme .text-amber-800,
-.budstacks-theme .text-amber-700,
-.budstacks-theme .text-amber-900 { color: #8CF0A4 !important; }
-.budstacks-theme .text-amber-400 { color: rgba(82,217,122,0.4) !important; }
-.budstacks-theme .hover\:text-amber-900:hover { color: #52D97A !important; }
-
-/* --- Blue tag chips (template tags) → dark green pill --- */
-.budstacks-theme .bg-blue-50 { background-color: rgba(82,217,122,0.05) !important; }
-.budstacks-theme .border-blue-200 { border-color: rgba(82,217,122,0.3) !important; }
-.budstacks-theme .text-blue-700 { color: #8CF0A4 !important; }
-
-/* --- Headings inside admin: warm cream tone (matches homepage feel) --- */
-.budstacks-theme h1,
-.budstacks-theme h2,
-.budstacks-theme h3,
-.budstacks-theme h4 { color: #F2EDDF; }
-
-/* --- Section badge: gold tint instead of plain white pill --- */
-.budstacks-theme .section-badge {
-  background: rgba(201,169,110,0.06) !important;
-  border: 1px solid rgba(201,169,110,0.35) !important;
-  color: #E8D19E !important;
-  box-shadow: none !important;
-}
-
-/* --- Slate dark utility used by some preview wrappers (light:dark variant) --- */
-.budstacks-theme .dark\:bg-slate-900 { background-color: #0F1517 !important; }
-.budstacks-theme .bg-slate-900 { background-color: #0F1517 !important; }
-.budstacks-theme .border-slate-800 { border-color: #1c2326 !important; }
-.budstacks-theme .border-slate-700 { border-color: #222A2C !important; }
+/* ============================================================
+   .budstacks-theme catch-all !important override block (admin band-aids)
+   removed in US-009 (Phase 0.4 / Phase 1 exit). Admin pages now use
+   bs-* tokens directly via the @layer components block (below) and the
+   [data-surface="admin"] gate. Storefront homepage classes (.bs-smoky,
+   .bs-cube-*, .bs-pill-nav, .bs-pill-footer, .bs-drgreen-inline) and
+   storefront utilities (.saas-shell) intentionally preserved (PRD §4).
+   ============================================================ */
 
 /* ============================================================
-   UNIFIED PALETTE (greens + cream/gold only)
+   Row Pill — single-source-of-truth status pill component
    ============================================================
-   Super-admin pages were built with multi-color Tailwind utilities
-   (emerald, purple, amber, blue, orange, pink, etc.) and lucide
-   icon-pill bg classes per status (bg-emerald-500, bg-amber-500,
-   bg-purple-600, …). This block flattens all of them to the single
-   green/cream/gold palette inside .budstacks-theme so every page
-   picks up the unified look without per-component refactor.
+   Uses data-tone (not Tailwind utility classes) so it is NOT
+   caught by the .budstacks-theme [class*="bg-…"] catch-all
+   above. Two distinct palettes: light surfaces and dark
+   .budstacks-theme. Each tone is visually distinct in both. */
 
-   Mapping rule:
-     bg-{color}-500/600/700  →  green-tinted icon pill
-     bg-{color}-50/100       →  faint green wash
-     bg-{color}-200/300/400  →  muted green pill
-     bg-{color}-800/900/950  →  dark panel surface
-     text-{color}-(*)        →  green for accents / gold for inert
-     border-{color}-(*)      →  subtle green or dark border
-   --- */
+.row-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.row-pill > .row-pill-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}
 
-/* Solid icon-pill backgrounds → uniform green tint with green icon */
-.budstacks-theme [class*="bg-emerald-5"],
-.budstacks-theme [class*="bg-emerald-6"],
-.budstacks-theme [class*="bg-emerald-7"],
-.budstacks-theme [class*="bg-green-5"],
-.budstacks-theme [class*="bg-green-6"],
-.budstacks-theme [class*="bg-green-7"],
-.budstacks-theme [class*="bg-lime-5"],
-.budstacks-theme [class*="bg-lime-6"],
-.budstacks-theme [class*="bg-teal-5"],
-.budstacks-theme [class*="bg-teal-6"] {
-  background-color: rgba(82,217,122,0.18) !important;
+/* Light theme — pastel surfaces with high text contrast */
+.row-pill[data-tone="emerald"] { background:#d1fae5; color:#065f46; border-color:#a7f3d0; }
+.row-pill[data-tone="amber"]   { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+.row-pill[data-tone="red"]     { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+.row-pill[data-tone="slate"]   { background:#f1f5f9; color:#334155; border-color:#e2e8f0; }
+.row-pill[data-tone="gold"]    { background:#fef9c3; color:#78350f; border-color:#fcd34d; }
+.row-pill[data-tone="blue"]    { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
+.row-pill[data-tone="purple"]  { background:#ede9fe; color:#5b21b6; border-color:#ddd6fe; }
+
+/* Dark theme override — distinct tones inside .budstacks-theme.
+   Higher specificity (0,3,1) beats the [class*=…] catch-alls (0,2,1).
+   !important is required because the catch-alls also use !important. */
+.budstacks-theme .row-pill[data-tone="emerald"] {
+  background: rgba(82,217,122,0.16) !important;
   color: #8CF0A4 !important;
+  border-color: rgba(82,217,122,0.42) !important;
 }
-.budstacks-theme [class*="bg-amber-5"],
-.budstacks-theme [class*="bg-amber-6"],
-.budstacks-theme [class*="bg-yellow-5"],
-.budstacks-theme [class*="bg-yellow-6"],
-.budstacks-theme [class*="bg-orange-5"],
-.budstacks-theme [class*="bg-orange-6"] {
-  background-color: rgba(201,169,110,0.18) !important;
-  color: #E8D19E !important;
+.budstacks-theme .row-pill[data-tone="amber"] {
+  background: rgba(232,209,158,0.14) !important;
+  color: #F2DCAB !important;
+  border-color: rgba(232,209,158,0.40) !important;
 }
-.budstacks-theme [class*="bg-blue-5"],
-.budstacks-theme [class*="bg-blue-6"],
-.budstacks-theme [class*="bg-blue-7"],
-.budstacks-theme [class*="bg-cyan-5"],
-.budstacks-theme [class*="bg-cyan-6"],
-.budstacks-theme [class*="bg-sky-5"],
-.budstacks-theme [class*="bg-sky-6"],
-.budstacks-theme [class*="bg-indigo-5"],
-.budstacks-theme [class*="bg-indigo-6"],
-.budstacks-theme [class*="bg-purple-5"],
-.budstacks-theme [class*="bg-purple-6"],
-.budstacks-theme [class*="bg-purple-7"],
-.budstacks-theme [class*="bg-violet-5"],
-.budstacks-theme [class*="bg-violet-6"],
-.budstacks-theme [class*="bg-fuchsia-5"],
-.budstacks-theme [class*="bg-fuchsia-6"],
-.budstacks-theme [class*="bg-pink-5"],
-.budstacks-theme [class*="bg-pink-6"],
-.budstacks-theme [class*="bg-rose-5"],
-.budstacks-theme [class*="bg-rose-6"],
-.budstacks-theme [class*="bg-red-5"],
-.budstacks-theme [class*="bg-red-6"],
-.budstacks-theme [class*="bg-red-7"] {
-  background-color: rgba(82,217,122,0.12) !important;
+.budstacks-theme .row-pill[data-tone="red"] {
+  background: rgba(255,168,168,0.12) !important;
+  color: #FFB4B4 !important;
+  border-color: rgba(255,168,168,0.40) !important;
+}
+.budstacks-theme .row-pill[data-tone="slate"] {
+  background: rgba(198,204,200,0.08) !important;
   color: #C6CCC8 !important;
+  border-color: rgba(198,204,200,0.28) !important;
+}
+.budstacks-theme .row-pill[data-tone="gold"] {
+  background: rgba(201,169,110,0.14) !important;
+  color: #E8D19E !important;
+  border-color: rgba(201,169,110,0.50) !important;
+}
+.budstacks-theme .row-pill[data-tone="blue"] {
+  background: rgba(140,200,240,0.12) !important;
+  color: #B7DCEF !important;
+  border-color: rgba(140,200,240,0.36) !important;
+}
+.budstacks-theme .row-pill[data-tone="purple"] {
+  background: rgba(196,181,253,0.12) !important;
+  color: #C4B5FD !important;
+  border-color: rgba(196,181,253,0.36) !important;
 }
 
-/* Faint pastel washes (-50, -100) → very subtle green glaze */
-.budstacks-theme [class*="bg-emerald-50"],
-.budstacks-theme [class*="bg-emerald-100"],
-.budstacks-theme [class*="bg-green-50"],
-.budstacks-theme [class*="bg-green-100"],
-.budstacks-theme [class*="bg-amber-50"],
-.budstacks-theme [class*="bg-amber-100"],
-.budstacks-theme [class*="bg-yellow-50"],
-.budstacks-theme [class*="bg-yellow-100"],
-.budstacks-theme [class*="bg-orange-50"],
-.budstacks-theme [class*="bg-orange-100"],
-.budstacks-theme [class*="bg-blue-50"],
-.budstacks-theme [class*="bg-blue-100"],
-.budstacks-theme [class*="bg-purple-50"],
-.budstacks-theme [class*="bg-purple-100"],
-.budstacks-theme [class*="bg-violet-50"],
-.budstacks-theme [class*="bg-violet-100"],
-.budstacks-theme [class*="bg-pink-50"],
-.budstacks-theme [class*="bg-pink-100"],
-.budstacks-theme [class*="bg-rose-50"],
-.budstacks-theme [class*="bg-rose-100"],
-.budstacks-theme [class*="bg-red-50"],
-.budstacks-theme [class*="bg-red-100"],
-.budstacks-theme [class*="bg-cyan-50"],
-.budstacks-theme [class*="bg-cyan-100"],
-.budstacks-theme [class*="bg-sky-50"],
-.budstacks-theme [class*="bg-sky-100"],
-.budstacks-theme [class*="bg-indigo-50"],
-.budstacks-theme [class*="bg-indigo-100"],
-.budstacks-theme [class*="bg-teal-50"],
-.budstacks-theme [class*="bg-teal-100"],
-.budstacks-theme [class*="bg-lime-50"],
-.budstacks-theme [class*="bg-lime-100"],
-.budstacks-theme [class*="bg-fuchsia-50"],
-.budstacks-theme [class*="bg-fuchsia-100"] {
-  background-color: rgba(82,217,122,0.05) !important;
+/* ===========================================================================
+   BUDSTACKS ADMIN DESIGN SYSTEM — component classes (un-scoped)
+   Source: /Users/gkavanagh/Development/HealingBuds/Budstacks-Design-Guide/globals.layer.css
+   These bs-* component classes are namespaced and safe at the global scope.
+   The dark-theme body/h1-h3 base rules from the source file are intentionally
+   NOT pasted here — those are applied via the [data-surface="admin"] gate so
+   the storefront and marketing pages keep their own theming.
+   =========================================================================== */
+@layer components {
+  /* ===== Page header ===== */
+  .bs-eyebrow              { @apply inline-flex items-center gap-2 font-mono text-mono-eyebrow uppercase text-bs-gold border border-bs-gold/30 bg-bs-gold/[0.14] px-3.5 py-1.5 rounded-bs-pill; }
+  .bs-page-title           { @apply font-display text-display-xl text-bs-fg; font-weight: 500; }
+  .bs-page-subtitle        { @apply text-bs-fg-body text-[15px] max-w-[640px]; }
+  .bs-page-header-centered { @apply text-left pt-2 pb-5 mb-6 border-b border-bs-border-100; }
+  .bs-page-header-compact  { @apply flex items-end justify-between pt-2 pb-5 mb-6 border-b border-bs-border-100; }
+
+  /* ===== Buttons ===== */
+  .bs-btn        { @apply inline-flex items-center gap-2 h-10 px-[22px] rounded-bs-pill font-sans font-medium text-sm transition border whitespace-nowrap; }
+  .bs-btn-sm     { @apply h-8 px-[14px] text-[13px]; }
+  .bs-btn-green  { @apply bg-bs-green-deep text-[#07090A] border-transparent shadow-bs-glow hover:bg-bs-green hover:shadow-bs-glow-hover; }
+  .bs-btn-ghost  { @apply bg-transparent text-bs-fg border-bs-step-300 hover:bg-bs-card hover:border-bs-fg-muted; }
+  .bs-btn-text   { @apply bg-transparent text-bs-fg-body border-transparent hover:text-bs-fg px-2 h-8; }
+  .bs-btn-danger { @apply bg-transparent text-bs-danger border-bs-danger/30 hover:bg-bs-danger/10 hover:border-bs-danger; }
+
+  /* ===== Cards ===== */
+  .bs-card       { @apply bg-bs-card border border-bs-border rounded-bs-lg shadow-bs-card transition hover:shadow-bs-card-hover; }
+  .bs-card-pad   { @apply p-6; }
+  .bs-card-head  { @apply flex items-start gap-3.5 mb-[18px]; }
+  .bs-card-icon  { @apply w-9 h-9 flex items-center justify-center rounded-[10px] bg-bs-green/10 text-bs-green border border-bs-green/[0.18] flex-shrink-0; }
+  .bs-card-title { @apply font-display text-display-md text-bs-fg; font-weight: 500; }
+  .bs-card-desc  { @apply text-bs-fg-muted text-[13.5px]; }
+
+  /* ===== Stat ===== */
+  .bs-stat       { @apply bg-bs-card border border-bs-border rounded-bs-lg shadow-bs-card p-[22px] min-h-[132px] flex flex-col transition hover:shadow-bs-card-hover; }
+  .bs-stat-row   { @apply flex justify-between items-center mb-3.5; }
+  .bs-stat-label { @apply font-mono text-[10.5px] tracking-[0.18em] uppercase text-bs-gold-soft; }
+  .bs-stat-icon  { @apply w-7 h-7 flex items-center justify-center rounded-lg bg-bs-green/10 text-bs-green; }
+  .bs-stat-value { @apply font-display text-display-num text-bs-gold-cream; font-weight: 500; }
+  .bs-stat-delta { @apply mt-2.5 text-xs text-bs-fg-muted flex items-center gap-1.5; }
+
+  /* ===== Chips ===== */
+  .bs-chip        { @apply inline-flex items-center gap-1.5 font-mono text-mono-chip uppercase px-2.5 py-1 rounded-bs-pill border whitespace-nowrap; }
+  .bs-chip-green  { @apply text-bs-green-soft border-bs-green/30 bg-bs-green/5; }
+  .bs-chip-gold   { @apply text-bs-gold-soft border-bs-gold/[0.35] bg-bs-gold/5; }
+  .bs-chip-danger { @apply text-bs-danger border-bs-danger/[0.32] bg-bs-danger/[0.08]; }
+  .bs-chip-warn   { @apply text-bs-warn border-bs-warn/[0.32] bg-bs-warn/[0.08]; }
+  .bs-chip-info   { @apply text-bs-info border-bs-info/30 bg-bs-info/[0.08]; }
+  .bs-chip-muted  { @apply text-bs-fg-muted border-bs-fg-muted/25 bg-bs-fg-muted/[0.06]; }
+
+  /* ===== Inputs ===== */
+  .bs-input { @apply w-full h-10 bg-bs-input border border-bs-border rounded-bs-md px-3.5 text-bs-fg text-sm placeholder:text-bs-fg-muted transition focus:outline-none focus:border-bs-green/30 focus:ring-2 focus:ring-bs-green/10; }
+  .bs-label { @apply block text-[13px] text-bs-fg-body-2 font-medium mb-1.5; }
+  .bs-help  { @apply text-xs text-bs-fg-muted mt-1.5; }
+
+  /* Toggle (44×24, green when on) */
+  .bs-toggle { @apply relative inline-flex h-6 w-11 items-center rounded-bs-pill bg-bs-step-200 border border-bs-border transition data-[state=on]:bg-bs-green-deep data-[state=on]:border-bs-green; }
+  .bs-toggle-thumb { @apply inline-block h-4 w-4 transform rounded-full bg-bs-fg shadow transition translate-x-1 data-[state=on]:translate-x-6; }
+
+  /* Select — matches input geometry, prepared for affordances like count pills */
+  .bs-select { @apply w-full h-10 bg-bs-input border border-bs-border rounded-bs-md px-3.5 text-bs-fg text-sm transition focus:outline-none focus:border-bs-green/30 focus:ring-2 focus:ring-bs-green/10 appearance-none; }
+
+  /* ===== Tables ===== */
+  .bs-table-wrap     { @apply bg-bs-card border border-bs-border rounded-bs-lg shadow-bs-card overflow-hidden; }
+  .bs-table-toolbar  { @apply flex items-center justify-between gap-3 px-[22px] py-3.5 border-b border-bs-border-100 bg-white/[0.015]; }
+  .bs-table          { @apply w-full text-[13.5px] border-collapse; }
+  .bs-table thead th { @apply text-left font-medium text-xs tracking-wide text-bs-fg-muted px-[22px] py-3 bg-white/[0.015] border-b border-bs-border-100; }
+  .bs-table tbody td { @apply px-[22px] py-3.5 border-b border-bs-border-100 text-bs-fg-body align-middle; }
+  .bs-table tbody tr { @apply transition hover:bg-bs-green/[0.025]; }
+  .bs-table .num,
+  .bs-table .mono    { @apply font-mono text-mono-cell text-bs-fg-body-2; }
+  .bs-table .strong  { @apply text-bs-fg font-medium; }
+
+  /* ===== Misc ===== */
+  .bs-banner { @apply border border-bs-green/30 bg-bs-green/[0.06] rounded-bs-md px-4 py-3 text-bs-fg-body-2 text-[13.5px]; }
+  .bs-avatar { @apply w-8 h-8 rounded-full bg-bs-green/[0.18] text-bs-green-soft inline-flex items-center justify-center font-sans font-semibold text-xs tracking-wider; }
+
+  /* ===== Modal / Drawer / Toast (US-056) ===== */
+  /* Applied via className override on shadcn DialogContent / SheetContent.
+     components/ui/* primitives are NOT modified. Storefront/onboarding consumers
+     do not opt in, so storefront Dialogs keep their original chrome. */
+  .bs-dialog-content { @apply bg-bs-card border border-bs-border text-bs-fg shadow-bs-card-hover rounded-bs-lg; }
+  .bs-dialog-overlay { @apply bg-bs-bg-smoke/80 backdrop-blur-sm; }
+  .bs-dialog-title   { @apply text-bs-fg; font-family: var(--bs-font-display, 'Cormorant Garamond', serif); font-size: 22px; line-height: 1.15; font-weight: 500; }
+  .bs-dialog-desc    { @apply text-bs-fg-muted; }
+  .bs-sheet-content  { @apply bg-bs-card border-bs-border text-bs-fg shadow-bs-card-hover; }
+  .bs-toast-card     { @apply bg-bs-card border border-bs-border text-bs-fg rounded-bs-md shadow-bs-card; }
+  .bs-toast-rail-info    { @apply border-l-4 border-l-bs-info; }
+  .bs-toast-rail-success { @apply border-l-4 border-l-bs-green; }
+  .bs-toast-rail-warn    { @apply border-l-4 border-l-bs-warn; }
+  .bs-toast-rail-danger  { @apply border-l-4 border-l-bs-danger; }
 }
 
-/* Muted mid-pill backgrounds (-200, -300, -400) → muted green */
-.budstacks-theme [class*="bg-emerald-2"],
-.budstacks-theme [class*="bg-emerald-3"],
-.budstacks-theme [class*="bg-emerald-4"],
-.budstacks-theme [class*="bg-green-2"],
-.budstacks-theme [class*="bg-green-3"],
-.budstacks-theme [class*="bg-green-4"],
-.budstacks-theme [class*="bg-amber-2"],
-.budstacks-theme [class*="bg-amber-3"],
-.budstacks-theme [class*="bg-amber-4"],
-.budstacks-theme [class*="bg-yellow-2"],
-.budstacks-theme [class*="bg-yellow-3"],
-.budstacks-theme [class*="bg-yellow-4"],
-.budstacks-theme [class*="bg-orange-2"],
-.budstacks-theme [class*="bg-orange-3"],
-.budstacks-theme [class*="bg-orange-4"],
-.budstacks-theme [class*="bg-blue-2"],
-.budstacks-theme [class*="bg-blue-3"],
-.budstacks-theme [class*="bg-blue-4"],
-.budstacks-theme [class*="bg-purple-2"],
-.budstacks-theme [class*="bg-purple-3"],
-.budstacks-theme [class*="bg-purple-4"],
-.budstacks-theme [class*="bg-violet-2"],
-.budstacks-theme [class*="bg-violet-3"],
-.budstacks-theme [class*="bg-violet-4"],
-.budstacks-theme [class*="bg-pink-2"],
-.budstacks-theme [class*="bg-pink-3"],
-.budstacks-theme [class*="bg-pink-4"],
-.budstacks-theme [class*="bg-rose-2"],
-.budstacks-theme [class*="bg-rose-3"],
-.budstacks-theme [class*="bg-rose-4"],
-.budstacks-theme [class*="bg-red-2"],
-.budstacks-theme [class*="bg-red-3"],
-.budstacks-theme [class*="bg-red-4"],
-.budstacks-theme [class*="bg-cyan-2"],
-.budstacks-theme [class*="bg-cyan-3"],
-.budstacks-theme [class*="bg-cyan-4"],
-.budstacks-theme [class*="bg-sky-2"],
-.budstacks-theme [class*="bg-sky-3"],
-.budstacks-theme [class*="bg-sky-4"],
-.budstacks-theme [class*="bg-indigo-2"],
-.budstacks-theme [class*="bg-indigo-3"],
-.budstacks-theme [class*="bg-indigo-4"],
-.budstacks-theme [class*="bg-teal-2"],
-.budstacks-theme [class*="bg-teal-3"],
-.budstacks-theme [class*="bg-teal-4"],
-.budstacks-theme [class*="bg-lime-2"],
-.budstacks-theme [class*="bg-lime-3"],
-.budstacks-theme [class*="bg-lime-4"],
-.budstacks-theme [class*="bg-fuchsia-2"],
-.budstacks-theme [class*="bg-fuchsia-3"],
-.budstacks-theme [class*="bg-fuchsia-4"] {
-  background-color: rgba(82,217,122,0.10) !important;
+/* ===========================================================================
+   BUDSTACKS ADMIN DESIGN SYSTEM — dark-theme base rules (GATED)
+   Only paint admin surfaces. The [data-surface="admin"] attribute is set on
+   the outer wrapper of /super-admin and /tenant-admin layouts. Storefront
+   (/store/[slug]/*), marketing, and onboarding pages do NOT carry the
+   attribute, so they keep their existing theming.
+   =========================================================================== */
+[data-surface="admin"] {
+  @apply bg-bs-bg text-bs-fg-body font-sans antialiased;
 }
 
-/* Deep panel surfaces (-800, -900, -950) → unified dark panel */
-.budstacks-theme [class*="bg-emerald-8"],
-.budstacks-theme [class*="bg-emerald-9"],
-.budstacks-theme [class*="bg-green-8"],
-.budstacks-theme [class*="bg-green-9"],
-.budstacks-theme [class*="bg-amber-8"],
-.budstacks-theme [class*="bg-amber-9"],
-.budstacks-theme [class*="bg-orange-8"],
-.budstacks-theme [class*="bg-orange-9"],
-.budstacks-theme [class*="bg-blue-8"],
-.budstacks-theme [class*="bg-blue-9"],
-.budstacks-theme [class*="bg-purple-8"],
-.budstacks-theme [class*="bg-purple-9"],
-.budstacks-theme [class*="bg-pink-8"],
-.budstacks-theme [class*="bg-pink-9"],
-.budstacks-theme [class*="bg-red-8"],
-.budstacks-theme [class*="bg-red-9"] {
-  background-color: #0F1517 !important;
+[data-surface="admin"] h1,
+[data-surface="admin"] h2,
+[data-surface="admin"] h3 {
+  @apply font-display text-bs-fg;
+  font-weight: 500;
 }
 
-/* Text colors → green for accents, gold for warnings, cream for muted */
-.budstacks-theme [class*="text-emerald-"],
-.budstacks-theme [class*="text-green-"],
-.budstacks-theme [class*="text-lime-"],
-.budstacks-theme [class*="text-teal-"] { color: #8CF0A4 !important; }
-
-.budstacks-theme [class*="text-amber-"],
-.budstacks-theme [class*="text-yellow-"],
-.budstacks-theme [class*="text-orange-"] { color: #E8D19E !important; }
-
-.budstacks-theme [class*="text-blue-"],
-.budstacks-theme [class*="text-cyan-"],
-.budstacks-theme [class*="text-sky-"],
-.budstacks-theme [class*="text-indigo-"],
-.budstacks-theme [class*="text-purple-"],
-.budstacks-theme [class*="text-violet-"],
-.budstacks-theme [class*="text-fuchsia-"],
-.budstacks-theme [class*="text-pink-"],
-.budstacks-theme [class*="text-rose-"],
-.budstacks-theme [class*="text-red-"] { color: #C6CCC8 !important; }
-
-/* Colored borders → unified subtle dark border */
-.budstacks-theme [class*="border-emerald-"],
-.budstacks-theme [class*="border-green-"],
-.budstacks-theme [class*="border-lime-"],
-.budstacks-theme [class*="border-teal-"] { border-color: rgba(82,217,122,0.3) !important; }
-
-.budstacks-theme [class*="border-amber-"],
-.budstacks-theme [class*="border-yellow-"],
-.budstacks-theme [class*="border-orange-"],
-.budstacks-theme [class*="border-blue-"],
-.budstacks-theme [class*="border-cyan-"],
-.budstacks-theme [class*="border-sky-"],
-.budstacks-theme [class*="border-indigo-"],
-.budstacks-theme [class*="border-purple-"],
-.budstacks-theme [class*="border-violet-"],
-.budstacks-theme [class*="border-fuchsia-"],
-.budstacks-theme [class*="border-pink-"],
-.budstacks-theme [class*="border-rose-"],
-.budstacks-theme [class*="border-red-"] { border-color: #222A2C !important; }
-
-/* Big metric numbers in stat cards → cream/gold to match homepage hero feel.
-   Targets common large-number patterns inside card-floating panels. */
-.budstacks-theme .card-floating .text-3xl,
-.budstacks-theme .card-floating .text-4xl,
-.budstacks-theme .card-floating .text-5xl,
-.budstacks-theme .card-floating .font-display,
-.budstacks-theme .card-floating-static .text-3xl,
-.budstacks-theme .card-floating-static .text-4xl,
-.budstacks-theme .card-floating-static .text-5xl {
-  color: #fcfcbc !important;
+/* US-057 — auto-style native inputs/textareas inside admin so shadcn
+   <Input>/<Textarea> components inherit dark theme without per-consumer
+   className changes. components/ui/input.tsx and textarea.tsx are NOT
+   modified. Excludes color picker (intentional user-data), file inputs,
+   range sliders, and toggleable controls (handled by shadcn primitives). */
+[data-surface="admin"] input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),
+[data-surface="admin"] textarea {
+  @apply bg-bs-input border-bs-border text-bs-fg;
+}
+[data-surface="admin"] input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"])::placeholder,
+[data-surface="admin"] textarea::placeholder {
+  @apply text-bs-fg-muted;
+}
+[data-surface="admin"] input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):focus-visible,
+[data-surface="admin"] textarea:focus-visible {
+  @apply outline-none ring-2 ring-bs-green/10 border-bs-green/30;
 }
 
-/* Tiny uppercase metric/section labels (the "MRR · ORDERS · PATIENTS" style
-   from the reference screenshots) → mono cream-gold so they read as
-   editorial captions, not utility-text grey. */
-.budstacks-theme .card-floating .uppercase,
-.budstacks-theme .card-floating-static .uppercase {
-  color: #C7B98E !important;
-  font-family: var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace !important;
-  letter-spacing: 0.12em !important;
+/* shadcn SelectTrigger renders a <button> with role="combobox" — style its
+   chrome to match bs-input geometry inside admin. Native <select> is rare
+   in admin usage but handled defensively. */
+[data-surface="admin"] [role="combobox"] {
+  @apply bg-bs-input border-bs-border text-bs-fg;
+}
+[data-surface="admin"] [role="combobox"][data-placeholder] {
+  @apply text-bs-fg-muted;
+}
+[data-surface="admin"] select {
+  @apply bg-bs-input border-bs-border text-bs-fg;
 }
 
-/* Status dots (small `w-1.5 h-1.5 rounded-full bg-X-500`) — covered above by
-   the bg-{color}-5* selector but those left a tinted bg; for tiny dots we
-   want a brighter green or gold puck. Targets pucks that are dot-sized. */
-.budstacks-theme [class*="rounded-full"][class*="bg-emerald-"],
-.budstacks-theme [class*="rounded-full"][class*="bg-green-"] {
-  background-color: #52D97A !important;
+/* shadcn Switch renders [data-state=on|off] — keep green when on, neutral
+   when off, on dark canvas. */
+[data-surface="admin"] [role="switch"][data-state="checked"] {
+  @apply bg-bs-green-deep;
 }
-.budstacks-theme [class*="rounded-full"][class*="bg-amber-"],
-.budstacks-theme [class*="rounded-full"][class*="bg-yellow-"],
-.budstacks-theme [class*="rounded-full"][class*="bg-orange-"] {
-  background-color: #E8D19E !important;
-}
-.budstacks-theme [class*="rounded-full"][class*="bg-red-"],
-.budstacks-theme [class*="rounded-full"][class*="bg-rose-"] {
-  background-color: #C6CCC8 !important;
+[data-surface="admin"] [role="switch"][data-state="unchecked"] {
+  @apply bg-bs-step-200 border-bs-border;
 }
 
-/* ============================================================
-   MOBILE TIGHTENING (super-admin)
-   ============================================================
-   Super-admin panels were designed desktop-first with generous p-6/p-8
-   padding and gap-6/gap-8 grid spacing. On a phone that wastes
-   horizontal real estate and pushes content off-screen. Tighten the
-   common patterns at <640px so cards don't squeeze content and big
-   numbers don't wrap mid-value. Scoped to .budstacks-theme so
-   tenant-admin and other surfaces are unaffected.
-   --- */
-@media (max-width: 639px) {
-  /* Card / panel padding */
-  .budstacks-theme .card-floating,
-  .budstacks-theme .card-floating-static {
-    padding: 1rem !important;            /* p-4 */
-    border-radius: 14px !important;
-  }
-  .budstacks-theme .card-floating .p-6,
-  .budstacks-theme .card-floating .p-8,
-  .budstacks-theme .card-floating-static .p-6,
-  .budstacks-theme .card-floating-static .p-8 {
-    padding: 1rem !important;
-  }
-
-  /* Tighter spacing between sections */
-  .budstacks-theme .space-y-8 > * + * { margin-top: 1.25rem !important; }
-  .budstacks-theme .space-y-6 > * + * { margin-top: 1rem !important; }
-  .budstacks-theme .gap-8 { gap: 0.875rem !important; }
-  .budstacks-theme .gap-6 { gap: 0.75rem !important; }
-
-  /* Page heading: pull big serif headers in slightly so they don't
-     dominate the viewport on phone screens. */
-  .budstacks-theme h1.text-3xl,
-  .budstacks-theme h1.text-4xl,
-  .budstacks-theme h1.sm\:text-4xl {
-    font-size: 1.625rem !important;       /* ~26px */
-    line-height: 1.15 !important;
-    letter-spacing: -0.01em !important;
-  }
-  .budstacks-theme h2.text-2xl,
-  .budstacks-theme h3.text-xl {
-    font-size: 1.125rem !important;       /* ~18px */
-    line-height: 1.25 !important;
-  }
-
-  /* Stat-card big numbers — keep them prominent but unwrappable.
-     Numbers like "€11,240" must not break. */
-  .budstacks-theme .card-floating .text-3xl,
-  .budstacks-theme .card-floating .text-4xl,
-  .budstacks-theme .card-floating-static .text-3xl,
-  .budstacks-theme .card-floating-static .text-4xl {
-    font-size: 1.625rem !important;
-    line-height: 1.1 !important;
-    white-space: nowrap !important;
-  }
-
-  /* Stat-card icon pill — drop from p-3 (12px) to p-2 so it doesn't
-     fight the number for horizontal space. */
-  .budstacks-theme .card-floating .rounded-2xl,
-  .budstacks-theme .card-floating-static .rounded-2xl {
-    padding: 0.5rem !important;
-  }
-
-  /* Sticky top notification bar — collapse padding on phone so it
-     doesn't push the page heading down. */
-  .budstacks-theme .sticky.top-0 {
-    padding: 0.5rem 0.75rem !important;
-  }
-
-  /* Sub-headers / descriptions — tighter line-height on mobile */
-  .budstacks-theme .text-muted-foreground { line-height: 1.4 !important; }
-
-  /* Section badge: shrink on mobile, no wrap */
-  .budstacks-theme .section-badge {
-    padding: 0.25rem 0.625rem !important;
-    font-size: 0.6875rem !important;
-    white-space: nowrap !important;
-  }
-
-  /* Tables: shadcn already wraps in overflow-auto; tighten cell
-     padding so more columns fit before scrolling kicks in. */
-  .budstacks-theme table th,
-  .budstacks-theme table td {
-    padding: 0.5rem 0.625rem !important;
-    font-size: 0.8125rem !important;
-  }
-
-  /* Forms: full-width by default, smaller field padding */
-  .budstacks-theme input:not([type="checkbox"]):not([type="radio"]),
-  .budstacks-theme textarea,
-  .budstacks-theme select {
-    padding: 0.625rem 0.75rem !important;
-    font-size: 16px !important;          /* prevent iOS zoom on focus */
-  }
-
-  /* Dialog content — full-bleed minus 16px safe area on phone */
-  .budstacks-theme [role="dialog"] {
-    width: calc(100vw - 1rem) !important;
-    max-width: calc(100vw - 1rem) !important;
-    padding: 1rem !important;
-  }
-
-  /* Big horizontal padding on the layout main area */
-  .budstacks-theme .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
-  .budstacks-theme .py-6 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
-
-  /* Buttons: prevent text from cramping; allow wrap-free shrink */
-  .budstacks-theme .rounded-xl[class*="px-"],
-  .budstacks-theme button.rounded-xl {
-    padding-left: 0.875rem !important;
-    padding-right: 0.875rem !important;
-    font-size: 0.875rem !important;
-  }
-
-  /* Mobile hamburger button: nudge clear of safe area + give bigger tap target */
-  .budstacks-theme + button.fixed.top-4.left-4,
-  .budstacks-theme button.fixed.top-4.left-4 {
-    top: max(0.5rem, env(safe-area-inset-top)) !important;
-    left: 0.625rem !important;
-  }
+/* shadcn Checkbox renders <button role="checkbox"> on dark canvas — neutral
+   border, green when checked. */
+[data-surface="admin"] [role="checkbox"][data-state="unchecked"] {
+  @apply border-bs-border bg-transparent;
+}
+[data-surface="admin"] [role="checkbox"][data-state="checked"] {
+  @apply bg-bs-green border-bs-green text-bs-bg;
 }
 
-/* Small-tablet narrow viewport (640-767px): drop sidebar to off-canvas
-   drawer style and slightly tighten card padding. */
-@media (min-width: 640px) and (max-width: 767px) {
-  .budstacks-theme .card-floating,
-  .budstacks-theme .card-floating-static {
-    padding: 1.25rem !important;
-  }
+/* Labels in admin forms — make sure shadcn Label renders in admin foreground. */
+[data-surface="admin"] label {
+  @apply text-bs-fg;
 }
+

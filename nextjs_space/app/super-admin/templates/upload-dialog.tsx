@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +22,10 @@ import {
 import { Plus, Github, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useRouter } from "next/navigation";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 export function UploadTemplateDialog() {
   const [open, setOpen] = useState(false);
@@ -47,13 +50,7 @@ export function UploadTemplateDialog() {
 
     setIsUploading(true);
 
-    console.log("[Template Upload] Starting upload...");
-    console.log("[Template Upload] GitHub URL:", githubUrl.trim());
-    console.log("[Template Upload] Structure Type:", structureType);
-
     try {
-      console.log("[Template Upload] Sending POST request...");
-
       const response = await fetch("/api/super-admin/templates/upload", {
         method: "POST",
         headers: {
@@ -66,28 +63,13 @@ export function UploadTemplateDialog() {
         }),
       });
 
-      console.log(
-        "[Template Upload] Response status:",
-        response.status,
-        response.statusText,
-      );
-      console.log(
-        "[Template Upload] Response headers:",
-        Object.fromEntries(response.headers.entries()),
-      );
-
       let data;
       const contentType = response.headers.get("content-type");
 
       if (contentType && contentType.includes("application/json")) {
         data = await response.json();
-        console.log("[Template Upload] Response data:", data);
       } else {
         const text = await response.text();
-        console.error(
-          "[Template Upload] Non-JSON response:",
-          text.substring(0, 500),
-        );
         throw new Error(
           `Server returned non-JSON response (${response.status}): ${text.substring(0, 100)}`,
         );
@@ -96,14 +78,9 @@ export function UploadTemplateDialog() {
       if (!response.ok) {
         const errorMsg =
           data.error || data.message || "Failed to upload template";
-        console.error("[Template Upload] Upload failed:", errorMsg);
-        if (data.details) {
-          console.error("[Template Upload] Error details:", data.details);
-        }
         throw new Error(errorMsg);
       }
 
-      console.log("[Template Upload] Upload successful!");
       toast.success(data.message || "Template uploaded successfully!");
       setOpen(false);
       setTemplateName("");
@@ -111,33 +88,30 @@ export function UploadTemplateDialog() {
       setStructureType("default");
       router.refresh();
     } catch (error: any) {
-      console.error("[Template Upload] ERROR:", error);
-      console.error("[Template Upload] Error stack:", error.stack);
-
-      // Show detailed error to user
       const errorMessage = error.message || "Failed to upload template";
       toast.error(errorMessage);
-
-      // Also log for debugging
-      console.error("[Template Upload] Full error object:", error);
     } finally {
       setIsUploading(false);
-      console.log("[Template Upload] Upload process completed");
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all rounded-full">
-          <Plus className="mr-2 h-4 w-4" />
+        <button type="button" className="bs-btn bs-btn-green">
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
           Upload New Template
-        </Button>
+        </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="bs-dialog-content sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Upload Template from GitHub</DialogTitle>
-          <DialogDescription>
+          <DialogTitle
+            className="text-[22px] leading-tight"
+            style={sectionTitleStyle}
+          >
+            Upload Template from GitHub
+          </DialogTitle>
+          <DialogDescription className="text-bs-fg-muted">
             Select the template structure type and enter the GitHub repository
             URL.
             {structureType === "default" && (
@@ -161,7 +135,9 @@ export function UploadTemplateDialog() {
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="structure-type">Template Structure</Label>
+            <Label htmlFor="structure-type" className="text-bs-fg">
+              Template Structure
+            </Label>
             <Select
               value={structureType}
               onValueChange={(value: "default" | "lovable") =>
@@ -175,7 +151,7 @@ export function UploadTemplateDialog() {
                 <SelectItem value="default">
                   <div className="flex flex-col items-start">
                     <span className="font-medium">Default (BudStacks)</span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-bs-fg-muted">
                       Already follows BudStacks structure
                     </span>
                   </div>
@@ -183,7 +159,7 @@ export function UploadTemplateDialog() {
                 <SelectItem value="lovable">
                   <div className="flex flex-col items-start">
                     <span className="font-medium">Lovable.dev Template</span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-bs-fg-muted">
                       Will be automatically converted
                     </span>
                   </div>
@@ -193,7 +169,9 @@ export function UploadTemplateDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="template-name">Template Name</Label>
+            <Label htmlFor="template-name" className="text-bs-fg">
+              Template Name
+            </Label>
             <Input
               id="template-name"
               placeholder="e.g., Portugal Wellness, Miami Vice Theme, etc."
@@ -201,15 +179,18 @@ export function UploadTemplateDialog() {
               onChange={(e) => setTemplateName(e.target.value)}
               disabled={isUploading}
             />
-            <p className="text-xs text-gray-500">
-              Give your template a unique, descriptive name (e.g., "Portugal
-              Wellness", "GTA Vice City").
+            <p className="text-xs text-bs-fg-muted">
+              Give your template a unique, descriptive name (e.g., &quot;Portugal
+              Wellness&quot;, &quot;GTA Vice City&quot;).
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="github-url">
-              <Github className="inline-block w-4 h-4 mr-1" />
+            <Label htmlFor="github-url" className="text-bs-fg">
+              <Github
+                className="inline-block w-4 h-4 mr-1"
+                aria-hidden="true"
+              />
               GitHub Repository URL
             </Label>
             <Input
@@ -219,31 +200,39 @@ export function UploadTemplateDialog() {
               onChange={(e) => setGithubUrl(e.target.value)}
               disabled={isUploading}
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-bs-fg-muted">
               Example:
               https://github.com/Gerard161-Site/healingbuds-template.git
             </p>
           </div>
         </div>
         <DialogFooter>
-          <Button
-            variant="outline"
+          <button
+            type="button"
             onClick={() => setOpen(false)}
             disabled={isUploading}
-            className="rounded-full"
+            className="bs-btn bs-btn-ghost"
           >
             Cancel
-          </Button>
-          <Button onClick={handleUpload} disabled={isUploading} className="rounded-full bg-blue-600 hover:bg-blue-700">
+          </button>
+          <button
+            type="button"
+            onClick={handleUpload}
+            disabled={isUploading}
+            className="bs-btn bs-btn-green"
+          >
             {isUploading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2
+                  className="mr-2 h-4 w-4 animate-spin"
+                  aria-hidden="true"
+                />
                 Uploading...
               </>
             ) : (
               "Upload Template"
             )}
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

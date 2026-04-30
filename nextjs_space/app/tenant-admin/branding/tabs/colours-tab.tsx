@@ -1,15 +1,6 @@
 "use client";
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -18,6 +9,10 @@ import {
 import { X } from "lucide-react";
 import { ColorPicker } from "./shared";
 import type { EditorFormData, SetFormData } from "./types";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 const OVERRIDE_GROUPS = [
   {
@@ -44,8 +39,6 @@ const OVERRIDE_GROUPS = [
     ],
   },
 ];
-
-const OVERRIDE_KEYS = OVERRIDE_GROUPS.flatMap((g) => g.keys);
 
 interface ColoursTabProps {
   formData: EditorFormData;
@@ -99,75 +92,77 @@ export function ColoursTab({
   return (
     <div className="space-y-6">
       {/* Global Brand Colors */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Brand Colors</CardTitle>
-          <CardDescription>
+      <section className="bs-card bs-card-pad space-y-3">
+        <div>
+          <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
+            Brand Colors
+          </h3>
+          <p className="text-sm text-bs-fg-muted">
             Define your color palette (applies to ALL pages)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-6">
-            <ColorPicker
-              label="Button Color"
-              description="Main buttons and interactive elements"
-              value={formData.primaryColor}
-              onChange={(v) => setGlobalColor("primaryColor", v)}
-            />
-            <ColorPicker
-              label="Call-to-Action Color"
-              description="CTA buttons like 'Book Now' or 'Check Eligibility'"
-              value={formData.accentColor}
-              onChange={(v) => setGlobalColor("accentColor", v)}
-            />
-            <ColorPicker
-              label="Links & Highlights"
-              description="Links, secondary buttons, gradients"
-              value={formData.secondaryColor}
-              onChange={(v) => setGlobalColor("secondaryColor", v)}
-            />
-            <ColorPicker
-              label="Page Background"
-              description="Main page background"
-              value={formData.backgroundColor}
-              onChange={(v) => setGlobalColor("backgroundColor", v)}
-            />
-            <ColorPicker
-              label="Heading Text"
-              description="Page titles and section headings"
-              value={formData.headingColor}
-              onChange={(v) => setGlobalColor("headingColor", v)}
-            />
-            <ColorPicker
-              label="Body Text"
-              description="Paragraphs and general content"
-              value={formData.textColor}
-              onChange={(v) => setGlobalColor("textColor", v)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-6">
+          <ColorPicker
+            label="Button Color"
+            description="Main buttons and interactive elements"
+            value={formData.primaryColor}
+            onChange={(v) => setGlobalColor("primaryColor", v)}
+          />
+          <ColorPicker
+            label="Call-to-Action Color"
+            description="CTA buttons like 'Book Now' or 'Check Eligibility'"
+            value={formData.accentColor}
+            onChange={(v) => setGlobalColor("accentColor", v)}
+          />
+          <ColorPicker
+            label="Links & Highlights"
+            description="Links, secondary buttons, gradients"
+            value={formData.secondaryColor}
+            onChange={(v) => setGlobalColor("secondaryColor", v)}
+          />
+          <ColorPicker
+            label="Page Background"
+            description="Main page background"
+            value={formData.backgroundColor}
+            onChange={(v) => setGlobalColor("backgroundColor", v)}
+          />
+          <ColorPicker
+            label="Heading Text"
+            description="Page titles and section headings"
+            value={formData.headingColor}
+            onChange={(v) => setGlobalColor("headingColor", v)}
+          />
+          <ColorPicker
+            label="Body Text"
+            description="Paragraphs and general content"
+            value={formData.textColor}
+            onChange={(v) => setGlobalColor("textColor", v)}
+          />
+        </div>
+      </section>
 
       {/* Navigation & Footer Color Overrides */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Header & Footer Colors</CardTitle>
-          <CardDescription>
+      <section className="bs-card bs-card-pad space-y-3">
+        <div>
+          <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
+            Header &amp; Footer Colors
+          </h3>
+          <p className="text-sm text-bs-fg-muted">
             Override global colors for navigation and footer. Leave empty to
             use global defaults.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
+        </div>
+        <div>
           <Accordion type="multiple" className="w-full">
             <AccordionItem value="nav-colors">
               <AccordionTrigger className="text-sm">
                 <span className="flex items-center gap-2">
                   {Object.keys(formData.navColorOverrides).length > 0 && (
-                    <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                    <span className="w-2 h-2 rounded-full bg-bs-green shrink-0" />
                   )}
                   Navigation
                   {Object.keys(formData.navColorOverrides).length > 0 && (
-                    <span className="text-xs text-muted-foreground font-normal">
+                    <span className="text-xs text-bs-fg-muted font-normal">
                       ({Object.keys(formData.navColorOverrides).length} override
                       {Object.keys(formData.navColorOverrides).length !== 1 ? "s" : ""})
                     </span>
@@ -178,21 +173,19 @@ export function ColoursTab({
                 <div className="space-y-4 pt-2">
                   {Object.keys(formData.navColorOverrides).length > 0 && (
                     <div className="flex justify-end">
-                      <Button
+                      <button
                         type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs text-muted-foreground"
+                        className="bs-btn bs-btn-ghost bs-btn-sm text-xs text-bs-fg-muted"
                         onClick={() => setFormData((prev) => ({ ...prev, navColorOverrides: {} }))}
                       >
                         Clear all overrides
-                      </Button>
+                      </button>
                     </div>
                   )}
                   <div className="space-y-4">
                     {OVERRIDE_GROUPS.map((group) => (
                       <div key={group.heading}>
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{group.heading}</p>
+                        <p className="bs-eyebrow mb-2">{group.heading}</p>
                         <div className="grid grid-cols-2 gap-4">
                           {group.keys.map(({ key, label, description }) => {
                             const currentValue = formData.navColorOverrides[key] || "";
@@ -205,15 +198,14 @@ export function ColoursTab({
                                   onChange={(v) => setNavOverride(key, v)}
                                 />
                                 {currentValue && (
-                                  <Button
+                                  <button
                                     type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-0 right-0 h-6 w-6"
+                                    className="bs-btn bs-btn-ghost bs-btn-sm absolute top-0 right-0 h-6 w-6 p-0 flex items-center justify-center"
                                     onClick={() => clearNavOverride(key)}
+                                    aria-label="Clear override"
                                   >
-                                    <X className="h-3 w-3" />
-                                  </Button>
+                                    <X className="h-3 w-3" aria-hidden="true" />
+                                  </button>
                                 )}
                               </div>
                             );
@@ -230,11 +222,11 @@ export function ColoursTab({
               <AccordionTrigger className="text-sm">
                 <span className="flex items-center gap-2">
                   {Object.keys(formData.footerColorOverrides).length > 0 && (
-                    <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                    <span className="w-2 h-2 rounded-full bg-bs-green shrink-0" />
                   )}
                   Footer
                   {Object.keys(formData.footerColorOverrides).length > 0 && (
-                    <span className="text-xs text-muted-foreground font-normal">
+                    <span className="text-xs text-bs-fg-muted font-normal">
                       ({Object.keys(formData.footerColorOverrides).length} override
                       {Object.keys(formData.footerColorOverrides).length !== 1 ? "s" : ""})
                     </span>
@@ -245,21 +237,19 @@ export function ColoursTab({
                 <div className="space-y-4 pt-2">
                   {Object.keys(formData.footerColorOverrides).length > 0 && (
                     <div className="flex justify-end">
-                      <Button
+                      <button
                         type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs text-muted-foreground"
+                        className="bs-btn bs-btn-ghost bs-btn-sm text-xs text-bs-fg-muted"
                         onClick={() => setFormData((prev) => ({ ...prev, footerColorOverrides: {} }))}
                       >
                         Clear all overrides
-                      </Button>
+                      </button>
                     </div>
                   )}
                   <div className="space-y-4">
                     {OVERRIDE_GROUPS.map((group) => (
                       <div key={group.heading}>
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{group.heading}</p>
+                        <p className="bs-eyebrow mb-2">{group.heading}</p>
                         <div className="grid grid-cols-2 gap-4">
                           {group.keys.map(({ key, label, description }) => {
                             const currentValue = formData.footerColorOverrides[key] || "";
@@ -272,15 +262,14 @@ export function ColoursTab({
                                   onChange={(v) => setFooterOverride(key, v)}
                                 />
                                 {currentValue && (
-                                  <Button
+                                  <button
                                     type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-0 right-0 h-6 w-6"
+                                    className="bs-btn bs-btn-ghost bs-btn-sm absolute top-0 right-0 h-6 w-6 p-0 flex items-center justify-center"
                                     onClick={() => clearFooterOverride(key)}
+                                    aria-label="Clear override"
                                   >
-                                    <X className="h-3 w-3" />
-                                  </Button>
+                                    <X className="h-3 w-3" aria-hidden="true" />
+                                  </button>
                                 )}
                               </div>
                             );
@@ -293,8 +282,8 @@ export function ColoursTab({
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
     </div>
   );

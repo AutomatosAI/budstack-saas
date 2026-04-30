@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +15,10 @@ import {
 import { RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useRouter } from "next/navigation";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface UpdateGitHubButtonProps {
   templateId: string;
@@ -55,33 +58,39 @@ export default function UpdateGitHubButton({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-full"
+        <button
+          type="button"
+          className="bs-btn bs-btn-ghost bs-btn-sm"
           disabled={isUpdating}
           title="Update from GitHub"
         >
           {isUpdating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
           )}
-        </Button>
+        </button>
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent className="bs-dialog-content">
         <AlertDialogHeader>
-          <AlertDialogTitle>Update from GitHub?</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogTitle
+            className="text-[22px] leading-tight"
+            style={sectionTitleStyle}
+          >
+            Update from GitHub?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-bs-fg-muted">
             Update &ldquo;{templateName}&rdquo; from GitHub? This will overwrite
             the template files with the latest version from the repo.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+          <AlertDialogCancel className="bs-btn bs-btn-ghost">
+            Cancel
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleUpdate}
-            className="rounded-full bg-blue-600 hover:bg-blue-700"
+            className="bs-btn bs-btn-green"
           >
             Update
           </AlertDialogAction>

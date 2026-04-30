@@ -4,35 +4,33 @@ import { EmailEventMapper } from "@/components/admin/email/EmailEventMapper";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail } from "lucide-react";
 
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
+
 export default function EmailTemplatesPage() {
   return (
     <div className="space-y-8">
-      {/* Centered Header */}
-      <div className="text-center max-w-2xl mx-auto">
-        <div className="section-badge mb-4 inline-flex">
-          <Mail className="h-4 w-4" />
-          Email
-        </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+      <div className="bs-page-header-compact">
+        <h1 className="bs-page-title" style={sectionTitleStyle}>
           Email Templates
         </h1>
-        <p className="mt-3 text-muted-foreground">
+        <p className="bs-page-subtitle">
           Create templates and map them to system events.
         </p>
       </div>
 
-      {/* Tabs */}
       <Tabs defaultValue="templates">
-        <TabsList className="mb-6 bg-white border border-slate-200 rounded-xl p-1">
+        <TabsList className="mb-6 bg-bs-card border border-bs-border-100 rounded-bs-md p-1">
           <TabsTrigger
             value="templates"
-            className="rounded-lg data-[state=active]:bg-accent data-[state=active]:text-white"
+            className="rounded-bs-sm data-[state=active]:bg-bs-green data-[state=active]:text-bs-canvas"
           >
             Templates
           </TabsTrigger>
           <TabsTrigger
             value="events"
-            className="rounded-lg data-[state=active]:bg-accent data-[state=active]:text-white"
+            className="rounded-bs-sm data-[state=active]:bg-bs-green data-[state=active]:text-bs-canvas"
           >
             Event Triggers
           </TabsTrigger>

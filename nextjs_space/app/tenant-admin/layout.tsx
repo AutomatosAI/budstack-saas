@@ -95,7 +95,7 @@ export default async function TenantAdminLayout({
   if (!localUser?.tenants) {
     console.error("[tenant-admin] No tenant found for user:", email, "Clerk ID:", user.id);
     return (
-      <div className="min-h-screen canvas-bg flex items-center justify-center">
+      <div data-surface="admin" data-tier="tenant" className="budstacks-theme min-h-screen canvas-bg flex items-center justify-center">
         <div className="card-floating p-10 text-center max-w-md">
           <h1 className="font-display text-2xl font-bold text-foreground mb-4">
             No Tenant Associated
@@ -112,15 +112,15 @@ export default async function TenantAdminLayout({
   const mockNotifications: Array<{ id: string; type: "SYSTEM_ALERT"; title: string; message: string; timestamp: Date; isRead: boolean }> = [];
 
   return (
-    <div className="flex min-h-screen canvas-bg">
+    <div data-surface="admin" data-tier="tenant" className="budstacks-theme flex min-h-screen canvas-bg">
       <TenantAdminSidebar
         userName={`${user.firstName || ""} ${user.lastName || ""}`.trim() || "Tenant Admin"}
         userEmail={user.emailAddresses[0]?.emailAddress || ""}
         tenantName={localUser.tenants.businessName || "My Store"}
       />
       <AccessibleAdminLayout theme="tenant-admin">
-        {/* Notification bar - compact */}
-        <div className="sticky top-0 z-30 flex items-center justify-end px-4 py-2 md:px-8">
+        {/* Top bar — Budstacks Admin DS: bg-bs-bg, hairline border, 56px */}
+        <div className="sticky top-0 z-30 flex items-center justify-end h-14 px-4 md:px-8 bg-bs-bg border-b border-bs-border-100">
           <NotificationCenter
             theme="tenant-admin"
             notifications={mockNotifications}
@@ -128,8 +128,10 @@ export default async function TenantAdminLayout({
           />
           <HeaderProfile theme="tenant-admin" />
         </div>
-        {/* Main content */}
-        <div className="flex-1 overflow-auto px-4 py-4 md:px-8 md:py-6">{children}</div>
+        {/* Main content — 1800px max with responsive 16→32px side padding, snug top */}
+        <div className="flex-1 overflow-auto px-4 md:px-8 pt-6 pb-10">
+          <div className="mx-auto max-w-[1800px]">{children}</div>
+        </div>
       </AccessibleAdminLayout>
     </div>
   );

@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   RefreshCw,
   GripVertical,
+  Loader2,
 } from "lucide-react";
 import {
   DndContext,
@@ -32,18 +33,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +50,7 @@ import {
   SortableTableHeader,
   BulkActionBar,
   ExportButton,
+  RowPill,
 } from "@/components/admin/shared";
 import type { StatusFilterOption, BulkAction } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
@@ -67,7 +58,6 @@ import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { exportToCSV } from "@/lib/admin/csv-export";
 
-/** Filter types for product table */
 type CategoryFilter =
   | "all"
   | "flower"
@@ -78,18 +68,13 @@ type CategoryFilter =
   | "accessories";
 type StockFilter = "all" | "in-stock" | "out-of-stock";
 
-/** Type for bulk action confirmation dialog */
 type BulkActionType = "set-in-stock" | "set-out-of-stock" | "delete" | null;
 
-/** Typed filters for product table - uses Record index signature for URL state compatibility */
 type ProductFilters = {
   category: CategoryFilter;
   stock: StockFilter;
 } & Record<string, string>;
 
-/**
- * Product data shape from Prisma query
- */
 interface Product {
   id: string;
   name: string;
@@ -104,28 +89,18 @@ interface Product {
 }
 
 interface ProductsTableProps {
-  /** Array of product data from server (paginated and filtered) */
   products: Product[];
-  /** Total count of filtered products (for pagination) */
   totalCount: number;
-  /** Count of in-stock products (with search applied) */
   inStockCount: number;
-  /** Count of out-of-stock products (with search applied) */
   outOfStockCount: number;
-  /** Category counts map (with search applied) */
   categoryCounts: Record<string, number>;
-  /** Currency symbol derived from tenant country code */
   currencySymbol?: string;
 }
 
-/**
- * SortableProductRow - Draggable table row component
- */
 interface SortableProductRowProps {
   product: Product;
   isSelected: boolean;
   onSelectOne: (id: string, checked: boolean) => void;
-  getStrainBadgeClasses: (name: string) => string;
   getStrainLabel: (name: string) => string;
   currencySymbol: string;
 }
@@ -134,7 +109,6 @@ function SortableProductRow({
   product,
   isSelected,
   onSelectOne,
-  getStrainBadgeClasses,
   getStrainLabel,
   currencySymbol,
 }: SortableProductRowProps) {
@@ -154,47 +128,47 @@ function SortableProductRow({
   };
 
   return (
-    <TableRow
+    <tr
       ref={setNodeRef}
       style={style}
       className={cn(
-        "hover:bg-slate-50 transition-colors",
-        isSelected && "bg-emerald-50/70",
-        isDragging && "relative z-50 shadow-lg",
+        "transition-colors hover:bg-bs-card-2",
+        isSelected && "bg-bs-card-2/60",
+        isDragging && "relative z-50 shadow-bs-card-hover",
       )}
     >
-      {/* Drag Handle - hidden on mobile */}
-      <TableCell
+      <td
         className="w-12 cursor-grab active:cursor-grabbing hidden md:table-cell"
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="h-5 w-5 text-slate-400 hover:text-slate-600 transition-colors" />
-      </TableCell>
+        <GripVertical
+          className="h-5 w-5 text-bs-fg-muted hover:text-bs-fg transition-colors"
+          aria-hidden="true"
+        />
+      </td>
 
-      {/* Row Checkbox - hidden on mobile */}
-      <TableCell className="w-12 hidden sm:table-cell">
+      <td className="w-12 hidden sm:table-cell">
         <Checkbox
           checked={isSelected}
           onCheckedChange={(checked) =>
             onSelectOne(product.id, checked === true)
           }
           aria-label={`Select ${product.name}`}
-          className="border-emerald-400 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+          className="border-bs-border data-[state=checked]:bg-bs-green-soft data-[state=checked]:border-bs-green-soft"
         />
-      </TableCell>
+      </td>
 
-      <TableCell className="font-medium text-slate-900">
+      <td className="font-medium text-bs-fg">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-            <Leaf className="h-4 w-4 text-emerald-600" />
+          <div className="h-8 w-8 rounded-bs-md border border-bs-border-100 bg-bs-card-2 flex items-center justify-center flex-shrink-0">
+            <Leaf className="h-4 w-4 text-bs-green-soft" aria-hidden="true" />
           </div>
           <div className="min-w-0">
             <span className="block truncate max-w-[150px] sm:max-w-[200px]">
               {product.name}
             </span>
-            {/* Show category and price on mobile */}
-            <span className="block text-xs text-slate-500 md:hidden">
+            <span className="block text-xs font-mono text-bs-fg-muted md:hidden">
               {product.category || "Uncategorized"} • {currencySymbol}
               {typeof product.price === "number"
                 ? product.price.toFixed(2)
@@ -202,74 +176,49 @@ function SortableProductRow({
             </span>
           </div>
         </div>
-      </TableCell>
+      </td>
 
-      <TableCell className="text-slate-600 capitalize hidden md:table-cell">
-        {product.category || <span className="text-slate-400">—</span>}
-      </TableCell>
+      <td className="text-bs-fg-muted capitalize hidden md:table-cell">
+        {product.category || <span className="text-bs-fg-muted">—</span>}
+      </td>
 
-      <TableCell className="hidden lg:table-cell">
-        <Badge className={getStrainBadgeClasses(product.name)}>
-          {getStrainLabel(product.name)}
-        </Badge>
-      </TableCell>
+      <td className="hidden lg:table-cell">
+        <RowPill tone="gold">{getStrainLabel(product.name)}</RowPill>
+      </td>
 
-      <TableCell className="text-center text-slate-700 font-mono text-sm hidden lg:table-cell">
+      <td className="text-center font-mono text-sm text-bs-fg-muted hidden lg:table-cell">
         {product.thcContent != null ? `${product.thcContent}%` : "—"}
-      </TableCell>
+      </td>
 
-      <TableCell className="text-center text-slate-700 font-mono text-sm hidden lg:table-cell">
+      <td className="text-center font-mono text-sm text-bs-fg-muted hidden lg:table-cell">
         {product.cbdContent != null ? `${product.cbdContent}%` : "—"}
-      </TableCell>
+      </td>
 
-      <TableCell className="text-right text-slate-700 font-medium hidden sm:table-cell">
+      <td className="text-right font-mono tabular-nums font-medium text-bs-fg hidden sm:table-cell">
         {currencySymbol}
         {typeof product.price === "number"
           ? product.price.toFixed(2)
           : product.price}
-      </TableCell>
+      </td>
 
-      <TableCell className="text-center hidden sm:table-cell">
-        <span
-          className={`inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-full text-sm font-medium ${
-            product.stock > 0
-              ? "bg-emerald-100 text-emerald-800"
-              : "bg-slate-100 text-slate-700"
-          }`}
-        >
+      <td className="text-center hidden sm:table-cell">
+        <RowPill tone={product.stock > 0 ? "emerald" : "red"}>
           {product.stock}
-        </span>
-      </TableCell>
+        </RowPill>
+      </td>
 
-      <TableCell>
-        <Badge
-          className={cn(
-            "font-medium",
-            product.stock > 0
-              ? "bg-emerald-600 text-white hover:bg-emerald-700"
-              : "bg-slate-200 text-slate-800 hover:bg-slate-300",
-          )}
+      <td>
+        <RowPill
+          tone={product.stock > 0 ? "emerald" : "red"}
           aria-label={`Status: ${product.stock > 0 ? "In Stock" : "Out of Stock"}`}
         >
           {product.stock > 0 ? "In Stock" : "Out of Stock"}
-        </Badge>
-      </TableCell>
-    </TableRow>
+        </RowPill>
+      </td>
+    </tr>
   );
 }
 
-/**
- * ProductsTable - Client component for displaying products with search, filter, and pagination.
- *
- * Features:
- * - Server-side pagination with URL state (?page=, ?pageSize=)
- * - Debounced search across name, category, slug fields
- * - Category filter (Flower, Edibles, Concentrates, Pre-Rolls, Topicals, Accessories)
- * - Stock status filter (In Stock, Out of Stock)
- * - Case-insensitive filtering
- * - URL state persistence (?search=, ?category=, ?stock=, ?page=, ?pageSize=)
- * - Empty state for no results
- */
 export function ProductsTable({
   products,
   totalCount,
@@ -287,23 +236,18 @@ export function ProductsTable({
     defaultPageSize: 20,
   });
 
-  // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Confirmation dialog state
   const [confirmAction, setConfirmAction] = useState<BulkActionType>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Drag-and-drop state - local ordering of products
   const [orderedProducts, setOrderedProducts] = useState<Product[]>(products);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
 
-  // Update ordered products when products prop changes
   useMemo(() => {
     setOrderedProducts(products);
   }, [products]);
 
-  // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -314,10 +258,8 @@ export function ProductsTable({
   const categoryFilter = filters.category || "all";
   const stockFilter = filters.stock || "all";
 
-  // Total products matching search (regardless of category/stock filter)
   const totalSearchCount = inStockCount + outOfStockCount;
 
-  // Category filter options with server-provided counts
   const categoryOptions: StatusFilterOption<CategoryFilter>[] = useMemo(
     () => [
       { value: "all", label: "All Categories", count: totalSearchCount },
@@ -351,7 +293,6 @@ export function ProductsTable({
     [totalSearchCount, categoryCounts],
   );
 
-  // Stock filter options with server-provided counts
   const stockOptions: StatusFilterOption<StockFilter>[] = useMemo(
     () => [
       { value: "all", label: "All Stock", count: totalSearchCount },
@@ -367,7 +308,6 @@ export function ProductsTable({
   const hasFilters = hasSearchQuery || hasCategoryFilter || hasStockFilter;
   const noResults = totalCount === 0 && hasFilters;
 
-  // Build description for empty state
   const emptyDescription = useMemo(() => {
     const activeFilters: string[] = [];
     if (hasCategoryFilter) activeFilters.push(categoryFilter);
@@ -395,14 +335,12 @@ export function ProductsTable({
     stockFilter,
   ]);
 
-  // Clear filters handler
   const handleClearFilters = () => {
     setSearch("");
     setFilter("category", "all");
     setFilter("stock", "all");
   };
 
-  // Selection handlers
   const isAllSelected =
     products.length > 0 && products.every((p) => selectedIds.has(p.id));
   const isSomeSelected =
@@ -410,14 +348,12 @@ export function ProductsTable({
 
   const handleSelectAll = useCallback(() => {
     if (isAllSelected) {
-      // Deselect all on current page
       setSelectedIds((prev) => {
         const next = new Set(prev);
         products.forEach((p) => next.delete(p.id));
         return next;
       });
     } else {
-      // Select all on current page
       setSelectedIds((prev) => {
         const next = new Set(prev);
         products.forEach((p) => next.add(p.id));
@@ -442,7 +378,6 @@ export function ProductsTable({
     setSelectedIds(new Set());
   }, []);
 
-  // Bulk action handlers
   const handleSetInStock = useCallback(() => {
     setConfirmAction("set-in-stock");
   }, []);
@@ -455,7 +390,6 @@ export function ProductsTable({
     setConfirmAction("delete");
   }, []);
 
-  // Drag end handler
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
@@ -471,11 +405,9 @@ export function ProductsTable({
         return;
       }
 
-      // Update local state immediately for smooth UX
       const newOrder = arrayMove(orderedProducts, oldIndex, newIndex);
       setOrderedProducts(newOrder);
 
-      // Persist to server
       setIsSavingOrder(true);
       try {
         const orderUpdates = newOrder.map((product, index) => ({
@@ -498,7 +430,6 @@ export function ProductsTable({
       } catch (error) {
         console.error("Error updating product order:", error);
         toast.error("Failed to update product order");
-        // Revert to original order on error
         setOrderedProducts(products);
       } finally {
         setIsSavingOrder(false);
@@ -507,7 +438,6 @@ export function ProductsTable({
     [orderedProducts, products, router],
   );
 
-  // Export ALL filtered products (the main export button)
   const handleExportAll = useCallback(async () => {
     if (products.length === 0) return;
 
@@ -545,9 +475,8 @@ export function ProductsTable({
         toast.error(`Export failed: ${error.message}`);
       },
     );
-  }, [products]);
+  }, [products, currencySymbol]);
 
-  // Export SELECTED products (for bulk action bar)
   const handleExportCSV = useCallback(async () => {
     const selectedProducts = products.filter((p) => selectedIds.has(p.id));
     if (selectedProducts.length === 0) return;
@@ -589,7 +518,7 @@ export function ProductsTable({
         toast.error(`Export failed: ${error.message}`);
       },
     );
-  }, [products, selectedIds, clearSelection]);
+  }, [products, selectedIds, clearSelection, currencySymbol]);
 
   const handleConfirmAction = useCallback(async () => {
     if (!confirmAction || selectedIds.size === 0) return;
@@ -612,7 +541,6 @@ export function ProductsTable({
         throw new Error(data.error || "Failed to perform action");
       }
 
-      // Display appropriate success message
       const actionMessages: Record<string, string> = {
         "set-in-stock": "set to In Stock",
         "set-out-of-stock": "set to Out of Stock",
@@ -623,7 +551,6 @@ export function ProductsTable({
         `${data.count} product${data.count === 1 ? "" : "s"} ${actionMessages[confirmAction]} successfully`,
       );
 
-      // Clear selection and refresh
       clearSelection();
       router.refresh();
     } catch (error) {
@@ -634,7 +561,6 @@ export function ProductsTable({
     }
   }, [confirmAction, selectedIds, clearSelection, router]);
 
-  // Bulk actions configuration
   const bulkActions: BulkAction[] = useMemo(
     () => [
       {
@@ -669,32 +595,12 @@ export function ProductsTable({
     [handleSetInStock, handleSetOutOfStock, handleExportCSV, handleDelete],
   );
 
-  // Get selected product names for confirmation dialog
   const selectedProductNames = useMemo(() => {
     return products
       .filter((p) => selectedIds.has(p.id))
       .map((p) => p.name)
       .slice(0, 5);
   }, [products, selectedIds]);
-
-  // Get strain badge color (using hash for demo since strain isn't in schema)
-  // Updated with darker text colors for WCAG AA compliance (4.5:1 contrast on light backgrounds)
-  const getStrainBadgeClasses = (productName: string) => {
-    const nameHash = productName
-      .split("")
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const strainIndex = nameHash % 3;
-    switch (strainIndex) {
-      case 0: // Sativa
-        return "bg-amber-100 text-amber-800 border-amber-200";
-      case 1: // Indica
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case 2: // Hybrid
-        return "bg-emerald-100 text-emerald-800 border-emerald-200";
-      default:
-        return "bg-slate-100 text-slate-800 border-slate-200";
-    }
-  };
 
   const getStrainLabel = (productName: string) => {
     const nameHash = productName
@@ -706,23 +612,27 @@ export function ProductsTable({
 
   return (
     <>
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-emerald-50 to-teal-50">
+      <div className="bs-card overflow-hidden">
+        <div className="border-b border-bs-border-100 px-6 py-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <CardTitle className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-slate-900">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl border border-bs-border-100 bg-bs-card-2 p-2.5">
+                <Package className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
+              </div>
+              <h2
+                className="text-[22px] text-bs-fg"
+                style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+              >
                 {hasFilters
                   ? `Results (${totalCount})`
                   : `All Products (${totalSearchCount})`}
-              </span>
-              <Badge variant="outline" className="text-sm font-normal">
+              </h2>
+              <RowPill tone="gold" className="text-sm font-normal">
                 {inStockCount} In Stock
-              </Badge>
-            </CardTitle>
+              </RowPill>
+            </div>
 
-            {/* Search and Filter Controls */}
             <div className="flex flex-col gap-3 w-full xl:w-auto">
-              {/* Search Input - Full width on mobile */}
               <div className="w-full xl:w-72">
                 <SearchInput
                   value={search}
@@ -733,9 +643,7 @@ export function ProductsTable({
                 />
               </div>
 
-              {/* Filters Row - Wraps on smaller screens */}
               <div className="flex flex-wrap gap-2">
-                {/* Category Filter */}
                 <StatusFilter<CategoryFilter>
                   value={categoryFilter}
                   onChange={(value) => setFilter("category", value)}
@@ -746,7 +654,6 @@ export function ProductsTable({
                   className="w-[150px]"
                 />
 
-                {/* Stock Filter */}
                 <StatusFilter<StockFilter>
                   value={stockFilter}
                   onChange={(value) => setFilter("stock", value)}
@@ -757,7 +664,6 @@ export function ProductsTable({
                   className="w-[140px]"
                 />
 
-                {/* Export Button */}
                 <ExportButton
                   onExport={handleExportAll}
                   recordCount={products.length}
@@ -767,9 +673,9 @@ export function ProductsTable({
               </div>
             </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="p-0">
+        <div>
           {noResults ? (
             <EmptyState
               icon={Search}
@@ -806,13 +712,11 @@ export function ProductsTable({
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50/50">
-                      {/* Drag Handle Column - hidden on mobile */}
-                      <TableHead className="w-12 hidden md:table-cell" />
-                      {/* Select All Checkbox - hidden on mobile */}
-                      <TableHead className="w-12 hidden sm:table-cell">
+                <table className="bs-table w-full">
+                  <thead>
+                    <tr>
+                      <th className="w-12 hidden md:table-cell" />
+                      <th className="w-12 hidden sm:table-cell">
                         <Checkbox
                           checked={isAllSelected}
                           onCheckedChange={handleSelectAll}
@@ -822,13 +726,13 @@ export function ProductsTable({
                               : "Select all products"
                           }
                           className={cn(
-                            "border-emerald-400 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600",
+                            "border-bs-border data-[state=checked]:bg-bs-green-soft data-[state=checked]:border-bs-green-soft",
                             isSomeSelected &&
-                              "data-[state=checked]:bg-emerald-400",
+                              "data-[state=checked]:bg-bs-green-soft/60",
                           )}
                           {...(isSomeSelected && { "data-state": "checked" })}
                         />
-                      </TableHead>
+                      </th>
                       <SortableTableHeader
                         columnKey="name"
                         label="Name"
@@ -842,9 +746,7 @@ export function ProductsTable({
                         onSort={setSort}
                         className="hidden md:table-cell"
                       />
-                      <TableHead className="font-semibold text-slate-700 hidden lg:table-cell">
-                        Strain
-                      </TableHead>
+                      <th className="hidden lg:table-cell text-left">Strain</th>
                       <SortableTableHeader
                         columnKey="thcContent"
                         label="THC %"
@@ -876,37 +778,33 @@ export function ProductsTable({
                         align="center"
                         className="hidden sm:table-cell"
                       />
-                      <TableHead className="font-semibold text-slate-700">
-                        Status
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
+                      <th className="text-left">Status</th>
+                    </tr>
+                  </thead>
                   <SortableContext
                     items={orderedProducts.map((p) => p.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <TableBody>
+                    <tbody>
                       {orderedProducts.map((product) => (
                         <SortableProductRow
                           key={product.id}
                           product={product}
                           isSelected={selectedIds.has(product.id)}
                           onSelectOne={handleSelectOne}
-                          getStrainBadgeClasses={getStrainBadgeClasses}
                           getStrainLabel={getStrainLabel}
                           currencySymbol={currencySymbol}
                         />
                       ))}
-                    </TableBody>
+                    </tbody>
                   </SortableContext>
-                </Table>
+                </table>
               </DndContext>
             </div>
           )}
 
-          {/* Pagination Controls */}
           {products.length > 0 && (
-            <div className="border-t border-slate-200 bg-slate-50/50">
+            <div className="border-t border-bs-border-100 bg-bs-card-2">
               <Pagination
                 page={page}
                 pageSize={pageSize}
@@ -919,10 +817,9 @@ export function ProductsTable({
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Bulk Action Bar */}
       <BulkActionBar
         selectedCount={selectedIds.size}
         itemLabel="products"
@@ -930,120 +827,91 @@ export function ProductsTable({
         onClearSelection={clearSelection}
       />
 
-      {/* Confirmation Dialog */}
       <Dialog
         open={confirmAction !== null}
         onOpenChange={(open) => !open && setConfirmAction(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="bs-dialog-content sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle
+              className="flex items-center gap-2 text-[22px] text-bs-fg"
+              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+            >
               {confirmAction === "delete" ? (
                 <>
-                  <Trash2 className="h-5 w-5 text-red-500" />
+                  <Trash2 className="h-5 w-5 text-bs-danger" aria-hidden="true" />
                   <span>Delete Products</span>
                 </>
               ) : confirmAction === "set-in-stock" ? (
                 <>
-                  <PackageCheck className="h-5 w-5 text-emerald-500" />
+                  <PackageCheck className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
                   <span>Set In Stock</span>
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="h-5 w-5 text-amber-500" />
+                  <AlertTriangle className="h-5 w-5 text-bs-warn" aria-hidden="true" />
                   <span>Set Out of Stock</span>
                 </>
               )}
             </DialogTitle>
-            <DialogDescription className="pt-2">
+            <DialogDescription className="pt-2 text-bs-fg-muted">
               {confirmAction === "delete" ? (
-                <span className="text-red-600">
+                <span className="text-bs-danger">
                   Are you sure you want to delete{" "}
                   <strong>{selectedIds.size}</strong> product
                   {selectedIds.size === 1 ? "" : "s"}? This cannot be undone.
                 </span>
               ) : confirmAction === "set-in-stock" ? (
                 <span>
-                  Set <strong>{selectedIds.size}</strong> product
+                  Set <strong className="text-bs-fg">{selectedIds.size}</strong> product
                   {selectedIds.size === 1 ? "" : "s"} to In Stock?
                 </span>
               ) : (
                 <span>
-                  Set <strong>{selectedIds.size}</strong> product
+                  Set <strong className="text-bs-fg">{selectedIds.size}</strong> product
                   {selectedIds.size === 1 ? "" : "s"} to Out of Stock?
                 </span>
               )}
             </DialogDescription>
           </DialogHeader>
 
-          {/* Show product names */}
           {selectedProductNames.length > 0 && (
             <div className="py-2">
-              <p className="text-xs text-muted-foreground mb-2">
-                Affected products:
-              </p>
+              <p className="bs-eyebrow mb-2">Affected products</p>
               <div className="flex flex-wrap gap-1.5">
                 {selectedProductNames.map((name) => (
-                  <Badge
-                    key={name}
-                    variant="secondary"
-                    className="text-xs font-normal"
-                  >
+                  <RowPill key={name} tone="slate">
                     {name}
-                  </Badge>
+                  </RowPill>
                 ))}
                 {selectedIds.size > 5 && (
-                  <Badge variant="outline" className="text-xs font-normal">
-                    +{selectedIds.size - 5} more
-                  </Badge>
+                  <RowPill tone="slate">+{selectedIds.size - 5} more</RowPill>
                 )}
               </div>
             </div>
           )}
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
+            <button
+              type="button"
               onClick={() => setConfirmAction(null)}
               disabled={isProcessing}
+              className="bs-btn bs-btn-ghost disabled:opacity-50"
             >
               Cancel
-            </Button>
-            <Button
-              variant={confirmAction === "delete" ? "destructive" : "default"}
+            </button>
+            <button
+              type="button"
               onClick={handleConfirmAction}
               disabled={isProcessing}
               className={cn(
-                confirmAction === "set-in-stock" &&
-                  "bg-emerald-600 hover:bg-emerald-700",
-                confirmAction === "set-out-of-stock" &&
-                  "bg-amber-600 hover:bg-amber-700",
+                "bs-btn disabled:opacity-50",
+                confirmAction === "delete" ? "bs-btn-danger" : "bs-btn-green",
               )}
             >
               {isProcessing ? (
                 <>
-                  <span className="animate-spin mr-2">
-                    <svg
-                      className="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                  </span>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
                   Processing...
                 </>
               ) : confirmAction === "delete" ? (
@@ -1053,7 +921,7 @@ export function ProductsTable({
               ) : (
                 "Set Out of Stock"
               )}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

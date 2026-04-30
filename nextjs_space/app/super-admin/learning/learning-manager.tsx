@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -33,7 +31,13 @@ import {
   FileText,
   GripVertical,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
+import { RowPill } from "@/components/admin/shared";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 type Resource = {
   id: string;
@@ -114,14 +118,16 @@ function ResourceForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+        <div className="p-3 bg-bs-danger/10 border border-bs-danger/30 text-bs-danger rounded-bs-sm text-sm">
           {error}
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
-          <Label htmlFor="title">Title</Label>
+          <Label htmlFor="title" className="text-bs-fg">
+            Title
+          </Label>
           <Input
             id="title"
             name="title"
@@ -132,8 +138,13 @@ function ResourceForm({
         </div>
 
         <div>
-          <Label htmlFor="category">Category</Label>
-          <Select name="category" defaultValue={resource?.category || "general"}>
+          <Label htmlFor="category" className="text-bs-fg">
+            Category
+          </Label>
+          <Select
+            name="category"
+            defaultValue={resource?.category || "general"}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -148,7 +159,9 @@ function ResourceForm({
         </div>
 
         <div>
-          <Label htmlFor="type">Type</Label>
+          <Label htmlFor="type" className="text-bs-fg">
+            Type
+          </Label>
           <Select name="type" defaultValue={resource?.type || "article"}>
             <SelectTrigger>
               <SelectValue />
@@ -165,7 +178,9 @@ function ResourceForm({
       </div>
 
       <div>
-        <Label htmlFor="description">Short Description</Label>
+        <Label htmlFor="description" className="text-bs-fg">
+          Short Description
+        </Label>
         <Input
           id="description"
           name="description"
@@ -175,7 +190,9 @@ function ResourceForm({
       </div>
 
       <div>
-        <Label htmlFor="content">Content (Markdown)</Label>
+        <Label htmlFor="content" className="text-bs-fg">
+          Content (Markdown)
+        </Label>
         <Textarea
           id="content"
           name="content"
@@ -188,7 +205,9 @@ function ResourceForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="videoUrl">Video URL (YouTube/Vimeo)</Label>
+          <Label htmlFor="videoUrl" className="text-bs-fg">
+            Video URL (YouTube/Vimeo)
+          </Label>
           <Input
             id="videoUrl"
             name="videoUrl"
@@ -198,7 +217,9 @@ function ResourceForm({
         </div>
 
         <div>
-          <Label htmlFor="docUrl">External Doc URL</Label>
+          <Label htmlFor="docUrl" className="text-bs-fg">
+            External Doc URL
+          </Label>
           <Input
             id="docUrl"
             name="docUrl"
@@ -210,7 +231,9 @@ function ResourceForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="coverImage">Cover Image</Label>
+          <Label htmlFor="coverImage" className="text-bs-fg">
+            Cover Image
+          </Label>
           <Input
             id="coverImage"
             name="coverImage"
@@ -220,7 +243,9 @@ function ResourceForm({
         </div>
 
         <div>
-          <Label htmlFor="docFile">Upload Document (PDF)</Label>
+          <Label htmlFor="docFile" className="text-bs-fg">
+            Upload Document (PDF)
+          </Label>
           <Input
             id="docFile"
             name="docFile"
@@ -232,7 +257,9 @@ function ResourceForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="tags">Tags (comma-separated)</Label>
+          <Label htmlFor="tags" className="text-bs-fg">
+            Tags (comma-separated)
+          </Label>
           <Input
             id="tags"
             name="tags"
@@ -242,7 +269,9 @@ function ResourceForm({
         </div>
 
         <div>
-          <Label htmlFor="sortOrder">Sort Order</Label>
+          <Label htmlFor="sortOrder" className="text-bs-fg">
+            Sort Order
+          </Label>
           <Input
             id="sortOrder"
             name="sortOrder"
@@ -261,22 +290,38 @@ function ResourceForm({
           defaultChecked={resource?.isPublished ?? false}
           className="rounded"
         />
-        <Label htmlFor="isPublished" className="cursor-pointer">
+        <Label htmlFor="isPublished" className="cursor-pointer text-bs-fg">
           Published (visible on public site)
         </Label>
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
-        <Button type="button" variant="outline" onClick={onClose}>
+        <button
+          type="button"
+          onClick={onClose}
+          className="bs-btn bs-btn-ghost"
+        >
           Cancel
-        </Button>
-        <Button type="submit" disabled={loading}>
-          {loading
-            ? "Saving..."
-            : resource
-              ? "Update Resource"
-              : "Create Resource"}
-        </Button>
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="bs-btn bs-btn-green"
+        >
+          {loading ? (
+            <>
+              <Loader2
+                className="mr-2 h-4 w-4 animate-spin"
+                aria-hidden="true"
+              />
+              Saving...
+            </>
+          ) : resource ? (
+            "Update Resource"
+          ) : (
+            "Create Resource"
+          )}
+        </button>
       </div>
     </form>
   );
@@ -295,11 +340,10 @@ export function LearningManager({
 
   const handleRefresh = () => {
     router.refresh();
-    // Also re-fetch client-side for immediate update
     fetch("/api/super-admin/learning")
       .then((r) => r.json())
       .then((data) => setResources(data.resources))
-      .catch(console.error);
+      .catch(() => {});
   };
 
   const handleDelete = async (id: string) => {
@@ -312,8 +356,8 @@ export function LearningManager({
         body: JSON.stringify({ id }),
       });
       setResources((prev) => prev.filter((r) => r.id !== id));
-    } catch (err) {
-      console.error("Delete failed:", err);
+    } catch {
+      // swallow — UI shows no row removed if call failed
     } finally {
       setDeleting(null);
     }
@@ -333,27 +377,32 @@ export function LearningManager({
           r.id === resource.id ? { ...r, isPublished: !r.isPublished } : r,
         ),
       );
-    } catch (err) {
-      console.error("Toggle failed:", err);
+    } catch {
+      // swallow — UI state unchanged on error
     }
   };
 
   const TypeIcon = ({ type }: { type: string }) => {
     switch (type) {
       case "video":
-        return <Play className="h-4 w-4" />;
+        return (
+          <Play className="h-4 w-4 text-bs-fg-muted" aria-hidden="true" />
+        );
       case "guide":
-        return <FileText className="h-4 w-4" />;
+        return (
+          <FileText className="h-4 w-4 text-bs-fg-muted" aria-hidden="true" />
+        );
       default:
-        return <BookOpen className="h-4 w-4" />;
+        return (
+          <BookOpen className="h-4 w-4 text-bs-fg-muted" aria-hidden="true" />
+        );
     }
   };
 
   return (
     <div>
-      {/* Actions bar */}
       <div className="flex justify-between items-center mb-6">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-bs-fg-muted">
           {resources.length} resource{resources.length !== 1 ? "s" : ""}
         </p>
         <Dialog
@@ -364,17 +413,24 @@ export function LearningManager({
           }}
         >
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingResource(undefined)}>
-              <Plus className="mr-2 h-4 w-4" />
+            <button
+              type="button"
+              onClick={() => setEditingResource(undefined)}
+              className="bs-btn bs-btn-green gap-2"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
               Add Resource
-            </Button>
+            </button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bs-dialog-content max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle
+                className="text-[22px] leading-tight"
+                style={sectionTitleStyle}
+              >
                 {editingResource ? "Edit Resource" : "New Resource"}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-bs-fg-muted">
                 {editingResource
                   ? "Update the learning resource details."
                   : "Create a new doc, guide, or video for the learning center."}
@@ -392,13 +448,16 @@ export function LearningManager({
         </Dialog>
       </div>
 
-      {/* Resource list */}
       <div className="space-y-3">
         {resources.length === 0 && (
-          <div className="card-floating p-12 text-center">
-            <BookOpen className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">
-              No learning resources yet. Click &quot;Add Resource&quot; to create one.
+          <div className="bs-card bs-card-pad text-center py-12">
+            <BookOpen
+              className="h-8 w-8 text-bs-fg-muted mx-auto mb-3"
+              aria-hidden="true"
+            />
+            <p className="text-bs-fg-muted">
+              No learning resources yet. Click &quot;Add Resource&quot; to
+              create one.
             </p>
           </div>
         )}
@@ -406,88 +465,92 @@ export function LearningManager({
         {resources.map((resource) => (
           <div
             key={resource.id}
-            className="card-floating p-4 flex items-center gap-4"
+            className="bs-card bs-card-pad p-4 flex items-center gap-4"
           >
-            <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <GripVertical
+              className="h-4 w-4 text-bs-fg-muted flex-shrink-0"
+              aria-hidden="true"
+            />
 
             <div className="flex items-center gap-2 flex-shrink-0">
               <TypeIcon type={resource.type} />
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-medium text-foreground truncate">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-medium text-bs-fg truncate">
                   {resource.title}
                 </h3>
-                <Badge
-                  variant="secondary"
-                  className={
-                    resource.isPublished
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-slate-100 text-slate-600"
-                  }
-                >
+                <RowPill tone={resource.isPublished ? "emerald" : "slate"}>
                   {resource.isPublished ? "Published" : "Draft"}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {resource.category}
-                </Badge>
+                </RowPill>
+                <RowPill tone="blue">{resource.category}</RowPill>
               </div>
               {resource.description && (
-                <p className="text-sm text-muted-foreground truncate mt-0.5">
+                <p className="text-sm text-bs-fg-muted truncate mt-0.5">
                   {resource.description}
                 </p>
               )}
             </div>
 
             <div className="flex items-center gap-1 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
+              <button
+                type="button"
                 onClick={() => handleTogglePublish(resource)}
                 title={resource.isPublished ? "Unpublish" : "Publish"}
+                aria-label={resource.isPublished ? "Unpublish" : "Publish"}
+                className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0"
               >
                 {resource.isPublished ? (
-                  <EyeOff className="h-4 w-4" />
+                  <EyeOff className="h-4 w-4" aria-hidden="true" />
                 ) : (
-                  <Eye className="h-4 w-4" />
+                  <Eye className="h-4 w-4" aria-hidden="true" />
                 )}
-              </Button>
+              </button>
 
               {resource.isPublished && (
                 <a
                   href={`/learn/${resource.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  title="View"
+                  aria-label="View resource"
+                  className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0"
                 >
-                  <Button variant="ghost" size="icon" title="View">
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
                 </a>
               )}
 
-              <Button
-                variant="ghost"
-                size="icon"
+              <button
+                type="button"
                 onClick={() => {
                   setEditingResource(resource);
                   setShowForm(true);
                 }}
                 title="Edit"
+                aria-label="Edit resource"
+                className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0"
               >
-                <Pencil className="h-4 w-4" />
-              </Button>
+                <Pencil className="h-4 w-4" aria-hidden="true" />
+              </button>
 
-              <Button
-                variant="ghost"
-                size="icon"
+              <button
+                type="button"
                 onClick={() => handleDelete(resource.id)}
                 disabled={deleting === resource.id}
                 title="Delete"
-                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                aria-label="Delete resource"
+                className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0 text-bs-danger hover:text-bs-danger"
               >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+                {deleting === resource.id ? (
+                  <Loader2
+                    className="h-4 w-4 animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                )}
+              </button>
             </div>
           </div>
         ))}

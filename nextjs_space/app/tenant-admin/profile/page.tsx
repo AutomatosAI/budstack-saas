@@ -1,19 +1,14 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { UserProfile } from "@clerk/nextjs";
 import { User, Building2, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface TenantData {
   id: string;
@@ -33,9 +28,11 @@ export default function TenantProfilePage() {
   const [tenant, setTenant] = useState<TenantData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
-  // Form state
   const [businessName, setBusinessName] = useState("");
   const [countryCode, setCountryCode] = useState("");
   const [address1, setAddress1] = useState("");
@@ -59,7 +56,9 @@ export default function TenantProfilePage() {
         setPostalCode(data.businessPostalCode ?? "");
         setCountry(data.businessCountry ?? "");
       })
-      .catch(() => setMessage({ type: "error", text: "Failed to load tenant details" }))
+      .catch(() =>
+        setMessage({ type: "error", text: "Failed to load tenant details" }),
+      )
       .finally(() => setLoading(false));
   }, []);
 
@@ -92,7 +91,10 @@ export default function TenantProfilePage() {
       setTenant(updated);
       setMessage({ type: "success", text: "Company details saved" });
     } catch (err) {
-      setMessage({ type: "error", text: err instanceof Error ? err.message : "Save failed" });
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Save failed",
+      });
     } finally {
       setSaving(false);
     }
@@ -100,156 +102,183 @@ export default function TenantProfilePage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="text-center max-w-2xl mx-auto">
-        <div className="section-badge mb-4 inline-flex">
-          <User className="h-4 w-4" />
-          Profile
-        </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Your Profile
-        </h1>
-        <p className="mt-3 text-muted-foreground">
+      <div className="bs-page-header-centered">
+        <h1 className="bs-page-title">Your Profile</h1>
+        <p className="bs-page-subtitle">
           Manage your account settings, security, and company information.
         </p>
       </div>
 
-      {/* Company Details Card */}
+      {/* Company Details Section */}
       <div className="flex justify-center">
-        <Card className="w-full max-w-4xl">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <CardTitle>Company Details</CardTitle>
-                <CardDescription>
-                  Business address and country settings used for shipping and compliance.
-                </CardDescription>
-              </div>
+        <section className="bs-card bs-card-pad w-full max-w-4xl space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="rounded-bs-md bg-bs-card-2 p-2.5">
+              <Building2
+                className="h-5 w-5 text-bs-fg"
+                aria-hidden="true"
+              />
             </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div>
+              <h2
+                className="text-[22px] leading-tight"
+                style={sectionTitleStyle}
+              >
+                Company Details
+              </h2>
+              <p className="text-sm text-bs-fg-muted">
+                Business address and country settings used for shipping and
+                compliance.
+              </p>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2
+                className="h-6 w-6 animate-spin text-bs-fg-muted"
+                aria-hidden="true"
+              />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="businessName" className="text-bs-fg">
+                  Business Name
+                </Label>
+                <Input
+                  id="businessName"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="Your business name"
+                />
               </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Business Name */}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="businessName">Business Name</Label>
+                  <Label htmlFor="countryCode" className="text-bs-fg">
+                    Country Code (ISO 2-letter)
+                  </Label>
                   <Input
-                    id="businessName"
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    placeholder="Your business name"
+                    id="countryCode"
+                    value={countryCode}
+                    onChange={(e) =>
+                      setCountryCode(e.target.value.toUpperCase().slice(0, 2))
+                    }
+                    placeholder="ZA"
+                    maxLength={2}
+                    className="uppercase"
+                  />
+                  <p className="text-xs text-bs-fg-muted">
+                    Used for Dr Green API region. Examples: ZA, PT, GB, DE
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country" className="text-bs-fg">
+                    Country
+                  </Label>
+                  <Input
+                    id="country"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    placeholder="South Africa"
                   />
                 </div>
+              </div>
 
-                {/* Country Code */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="countryCode">Country Code (ISO 2-letter)</Label>
-                    <Input
-                      id="countryCode"
-                      value={countryCode}
-                      onChange={(e) => setCountryCode(e.target.value.toUpperCase().slice(0, 2))}
-                      placeholder="ZA"
-                      maxLength={2}
-                      className="uppercase"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Used for Dr Green API region. Examples: ZA, PT, GB, DE
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="country">Country</Label>
-                    <Input
-                      id="country"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      placeholder="South Africa"
-                    />
-                  </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="address1" className="text-bs-fg">
+                    Address Line 1
+                  </Label>
+                  <Input
+                    id="address1"
+                    value={address1}
+                    onChange={(e) => setAddress1(e.target.value)}
+                    placeholder="123 Main Street"
+                  />
                 </div>
-
-                {/* Address */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="address1">Address Line 1</Label>
-                    <Input
-                      id="address1"
-                      value={address1}
-                      onChange={(e) => setAddress1(e.target.value)}
-                      placeholder="123 Main Street"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address2">Address Line 2</Label>
-                    <Input
-                      id="address2"
-                      value={address2}
-                      onChange={(e) => setAddress2(e.target.value)}
-                      placeholder="Suite 100"
-                    />
-                  </div>
-                </div>
-
-                {/* City / State / Postal */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="Cape Town"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="state">State / Province</Label>
-                    <Input
-                      id="state"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      placeholder="Western Cape"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="postalCode">Postal Code</Label>
-                    <Input
-                      id="postalCode"
-                      value={postalCode}
-                      onChange={(e) => setPostalCode(e.target.value)}
-                      placeholder="8001"
-                    />
-                  </div>
-                </div>
-
-                {/* Message + Save */}
-                <div className="flex items-center justify-between pt-2">
-                  <div>
-                    {message && (
-                      <p
-                        className={
-                          message.type === "success"
-                            ? "text-sm text-green-600"
-                            : "text-sm text-destructive"
-                        }
-                      >
-                        {message.text}
-                      </p>
-                    )}
-                  </div>
-                  <Button onClick={handleSave} disabled={saving || !businessName.trim()}>
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Changes
-                  </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="address2" className="text-bs-fg">
+                    Address Line 2
+                  </Label>
+                  <Input
+                    id="address2"
+                    value={address2}
+                    onChange={(e) => setAddress2(e.target.value)}
+                    placeholder="Suite 100"
+                  />
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-bs-fg">
+                    City
+                  </Label>
+                  <Input
+                    id="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Cape Town"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state" className="text-bs-fg">
+                    State / Province
+                  </Label>
+                  <Input
+                    id="state"
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    placeholder="Western Cape"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="postalCode" className="text-bs-fg">
+                    Postal Code
+                  </Label>
+                  <Input
+                    id="postalCode"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    placeholder="8001"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <div>
+                  {message && (
+                    <p
+                      className={
+                        message.type === "success"
+                          ? "text-sm text-bs-green"
+                          : "text-sm text-bs-danger"
+                      }
+                    >
+                      {message.text}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="bs-btn bs-btn-green"
+                  onClick={handleSave}
+                  disabled={saving || !businessName.trim()}
+                >
+                  {saving && (
+                    <Loader2
+                      className="mr-2 h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                  )}
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
       </div>
 
       {/* Clerk User Profile */}
@@ -259,13 +288,18 @@ export default function TenantProfilePage() {
           appearance={{
             elements: {
               rootBox: "w-full max-w-4xl",
-              card: "shadow-none border border-border bg-card",
+              card: "shadow-none border border-bs-border-100 bg-bs-card text-bs-fg",
               navbar: "hidden",
-              navbarButton: "text-muted-foreground hover:text-foreground hover:bg-muted",
-              headerTitle: "text-foreground font-display font-bold",
-              headerSubtitle: "text-muted-foreground",
-              formButtonPrimary: "bg-primary text-primary-foreground hover:bg-primary/90",
-              formFieldInput: "bg-background border-input",
+              navbarButton:
+                "text-bs-fg-muted hover:text-bs-fg hover:bg-bs-card-2",
+              headerTitle: "text-bs-fg",
+              headerSubtitle: "text-bs-fg-muted",
+              formButtonPrimary:
+                "bg-bs-green text-bs-canvas hover:bg-bs-green/90",
+              formFieldInput: "bg-bs-canvas border-bs-border-100 text-bs-fg",
+              formFieldLabel: "text-bs-fg",
+              dividerLine: "bg-bs-border-100",
+              dividerText: "text-bs-fg-muted",
             },
           }}
         />

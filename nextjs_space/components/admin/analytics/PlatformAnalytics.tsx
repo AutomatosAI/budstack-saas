@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   TrendingUp,
   DollarSign,
@@ -14,7 +13,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Dynamic import of Plotly for code splitting
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Plot = dynamic(() => import("react-plotly.js") as any, {
   ssr: false,
@@ -40,25 +38,16 @@ interface ChartData {
   };
 }
 
-/**
- * Platform Analytics Component
- *
- * Mission Control aesthetic with dark slate theme, monospaced numerics,
- * and sharp cyan accents. Features Plotly.js charts with loading states.
- */
 export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
   const [data, setData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API fetch with realistic delay
     const fetchData = async () => {
       setLoading(true);
 
-      // In production, replace with actual API call
       await new Promise((resolve) => setTimeout(resolve, 1200));
 
-      // Mock data generation
       const mockData: ChartData = {
         tenantSignups: generateMockSignupData(),
         platformRevenue: generateMockRevenueData(),
@@ -90,52 +79,44 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
 
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Section Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Platform Analytics
+          <div className="bs-eyebrow mb-2">Platform Analytics</div>
+          <h2
+            className="font-display text-[36px] text-bs-fg leading-tight"
+            style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+          >
+            Real-time insights and trends
           </h2>
-          <p className="text-slate-600 mt-1">Real-time insights and trends</p>
         </div>
       </div>
 
-      {/* Quick Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard
           icon={DollarSign}
           label="Monthly Recurring Revenue"
           value={`$${(data.quickMetrics.mrr / 1000).toFixed(1)}k`}
           subValue="MRR"
-          delay="0ms"
-          accentColor="cyan"
         />
         <MetricCard
           icon={Percent}
           label="Churn Rate"
           value={`${data.quickMetrics.churnRate}%`}
           subValue="Last 30 days"
-          delay="100ms"
-          accentColor="amber"
         />
         <MetricCard
           icon={Users}
           label="Avg Users per Tenant"
           value={data.quickMetrics.avgUsersPerTenant.toFixed(1)}
           subValue="Platform-wide"
-          delay="200ms"
-          accentColor="emerald"
         />
       </div>
 
-      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tenant Signups Chart */}
         <ChartCard
           title="Tenant Signups"
           subtitle="Last 90 days"
           icon={TrendingUp}
-          delay="300ms"
         >
           <Plot
             data={[
@@ -197,12 +178,10 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
           />
         </ChartCard>
 
-        {/* Platform Revenue Chart */}
         <ChartCard
           title="Platform Revenue"
           subtitle="Last 12 months"
           icon={DollarSign}
-          delay="400ms"
         >
           <Plot
             data={[
@@ -266,14 +245,11 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
         </ChartCard>
       </div>
 
-      {/* Bottom Row: Pie Chart + Needs Attention */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Active vs Inactive Tenants */}
         <ChartCard
           title="Tenant Distribution"
           subtitle="Active vs Inactive"
           icon={PieChartIcon}
-          delay="500ms"
         >
           <Plot
             data={[
@@ -324,142 +300,65 @@ export function PlatformAnalytics({ className }: PlatformAnalyticsProps) {
           />
         </ChartCard>
 
-        {/* Needs Attention Card */}
-        <Card
-          className="border-2 border-slate-200 shadow-lg bg-white overflow-hidden animate-in fade-in slide-in-from-bottom-4"
-          style={{ animationDelay: "600ms", animationFillMode: "backwards" }}
-        >
-          <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <AlertCircle className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <CardTitle className="text-lg font-bold text-slate-900">
-                  Needs Attention
-                </CardTitle>
-                <p className="text-xs text-slate-600 mt-0.5">
-                  Action items requiring review
-                </p>
-              </div>
+        <div className="bs-card bs-card-pad">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="rounded-xl p-2 bg-bs-card-2 border border-bs-border-100">
+              <AlertCircle className="h-5 w-5 text-bs-gold" aria-hidden="true" />
             </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <AttentionItem
-                icon={UserPlus}
-                label="Pending Onboarding"
-                count={data.needsAttention.pendingOnboarding}
-                color="cyan"
-              />
-              <AttentionItem
-                icon={AlertCircle}
-                label="Failed Payments"
-                count={data.needsAttention.failedPayments}
-                color="red"
-              />
-              <AttentionItem
-                icon={AlertCircle}
-                label="Support Tickets"
-                count={data.needsAttention.supportTickets}
-                color="amber"
-              />
+            <div>
+              <h3 className="font-display text-[22px] text-bs-fg" style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}>
+                Needs Attention
+              </h3>
+              <p className="text-xs text-bs-fg-muted mt-0.5">
+                Action items requiring review
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="space-y-3">
+            <AttentionItem
+              icon={UserPlus}
+              label="Pending Onboarding"
+              count={data.needsAttention.pendingOnboarding}
+              tone="info"
+            />
+            <AttentionItem
+              icon={AlertCircle}
+              label="Failed Payments"
+              count={data.needsAttention.failedPayments}
+              tone="danger"
+            />
+            <AttentionItem
+              icon={AlertCircle}
+              label="Support Tickets"
+              count={data.needsAttention.supportTickets}
+              tone="warn"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
-/* ============================================================================
- * Supporting Components
- * ========================================================================= */
 
 interface MetricCardProps {
   icon: React.ElementType;
   label: string;
   value: string;
   subValue: string;
-  delay: string;
-  accentColor: "cyan" | "amber" | "emerald";
 }
 
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  subValue,
-  delay,
-  accentColor,
-}: MetricCardProps) {
-  const colorMap = {
-    cyan: {
-      border: "border-cyan-200",
-      iconBg: "bg-cyan-500/10",
-      iconBorder: "border-cyan-500/20",
-      iconColor: "text-cyan-600",
-      valueColor: "text-cyan-600",
-    },
-    amber: {
-      border: "border-amber-200",
-      iconBg: "bg-amber-500/10",
-      iconBorder: "border-amber-500/20",
-      iconColor: "text-amber-600",
-      valueColor: "text-amber-600",
-    },
-    emerald: {
-      border: "border-emerald-200",
-      iconBg: "bg-emerald-500/10",
-      iconBorder: "border-emerald-500/20",
-      iconColor: "text-emerald-600",
-      valueColor: "text-emerald-600",
-    },
-  };
-
-  const colors = colorMap[accentColor];
-
+function MetricCard({ icon: Icon, label, value, subValue }: MetricCardProps) {
   return (
-    <Card
-      className={cn(
-        "border-2 shadow-lg bg-white overflow-hidden hover:shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
-        colors.border,
-      )}
-      style={{ animationDelay: delay, animationFillMode: "backwards" }}
-    >
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-3">
-            <div
-              className={cn(
-                "p-2.5 rounded-lg border inline-block",
-                colors.iconBg,
-                colors.iconBorder,
-              )}
-            >
-              <Icon className={cn("h-5 w-5", colors.iconColor)} />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-slate-600 uppercase tracking-wider">
-                {label}
-              </p>
-              <p
-                className={cn("text-4xl font-bold mt-2", colors.valueColor)}
-                style={{ fontFamily: "JetBrains Mono, monospace" }}
-              >
-                {value}
-              </p>
-              <p
-                className="text-xs text-slate-500 mt-1"
-                style={{ fontFamily: "JetBrains Mono, monospace" }}
-              >
-                {subValue}
-              </p>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="bs-stat">
+      <div className="bs-stat-row">
+        <span className="bs-stat-label">{label}</span>
+        <span className="bs-stat-icon">
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+      </div>
+      <div className="bs-stat-value">{value}</div>
+      <div className="bs-stat-delta font-mono">{subValue}</div>
+    </div>
   );
 }
 
@@ -467,39 +366,25 @@ interface ChartCardProps {
   title: string;
   subtitle: string;
   icon: React.ElementType;
-  delay: string;
   children: React.ReactNode;
 }
 
-function ChartCard({
-  title,
-  subtitle,
-  icon: Icon,
-  delay,
-  children,
-}: ChartCardProps) {
+function ChartCard({ title, subtitle, icon: Icon, children }: ChartCardProps) {
   return (
-    <Card
-      className="border-2 border-slate-200 shadow-lg bg-white overflow-hidden animate-in fade-in slide-in-from-bottom-4"
-      style={{ animationDelay: delay, animationFillMode: "backwards" }}
-    >
-      <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-            <Icon className="h-5 w-5 text-cyan-600" />
-          </div>
-          <div>
-            <CardTitle className="text-lg font-bold text-slate-900">
-              {title}
-            </CardTitle>
-            <p className="text-xs text-slate-600 mt-0.5">{subtitle}</p>
-          </div>
+    <div className="bs-card bs-card-pad">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="rounded-xl p-2 bg-bs-card-2 border border-bs-border-100">
+          <Icon className="h-5 w-5 text-bs-fg-muted" aria-hidden="true" />
         </div>
-      </CardHeader>
-      <CardContent className="pt-6">
-        <div className="h-[280px] relative">{children}</div>
-      </CardContent>
-    </Card>
+        <div>
+          <h3 className="font-display text-[22px] text-bs-fg" style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}>
+            {title}
+          </h3>
+          <p className="text-xs text-bs-fg-muted mt-0.5">{subtitle}</p>
+        </div>
+      </div>
+      <div className="h-[280px] relative">{children}</div>
+    </div>
   );
 }
 
@@ -507,52 +392,26 @@ interface AttentionItemProps {
   icon: React.ElementType;
   label: string;
   count: number;
-  color: "cyan" | "red" | "amber";
+  tone: "info" | "danger" | "warn";
 }
 
-function AttentionItem({
-  icon: Icon,
-  label,
-  count,
-  color,
-}: AttentionItemProps) {
-  const colorMap = {
-    cyan: {
-      bg: "bg-cyan-500/10",
-      border: "border-cyan-500/20",
-      icon: "text-cyan-600",
-      badge: "bg-cyan-500 text-white",
-    },
-    red: {
-      bg: "bg-red-500/10",
-      border: "border-red-500/20",
-      icon: "text-red-600",
-      badge: "bg-red-500 text-white",
-    },
-    amber: {
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
-      icon: "text-amber-600",
-      badge: "bg-amber-500 text-white",
-    },
-  };
-
-  const colors = colorMap[color];
+function AttentionItem({ icon: Icon, label, count, tone }: AttentionItemProps) {
+  const chipClass =
+    tone === "danger"
+      ? "bs-chip bs-chip-danger"
+      : tone === "warn"
+        ? "bs-chip bs-chip-warn"
+        : "bs-chip bs-chip-info";
 
   return (
-    <div className="flex items-center justify-between p-4 rounded-lg border-2 border-slate-200 hover:border-slate-300 transition-colors">
+    <div className="flex items-center justify-between p-4 rounded-xl border border-bs-border-100 bg-bs-card-2 hover:border-bs-border transition-colors">
       <div className="flex items-center gap-3">
-        <div className={cn("p-2 rounded-lg border", colors.bg, colors.border)}>
-          <Icon className={cn("h-4 w-4", colors.icon)} />
+        <div className="p-2 rounded-lg bg-bs-card border border-bs-border-100">
+          <Icon className="h-4 w-4 text-bs-fg-muted" aria-hidden="true" />
         </div>
-        <span className="text-sm font-medium text-slate-700">{label}</span>
+        <span className="text-sm font-medium text-bs-fg">{label}</span>
       </div>
-      <div
-        className={cn("px-3 py-1 rounded-full text-sm font-bold", colors.badge)}
-        style={{ fontFamily: "JetBrains Mono, monospace" }}
-      >
-        {count}
-      </div>
+      <span className={cn(chipClass, "font-mono tabular-nums")}>{count}</span>
     </div>
   );
 }
@@ -560,76 +419,43 @@ function AttentionItem({
 function AnalyticsLoadingSkeleton({ className }: { className?: string }) {
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Header Skeleton */}
       <div className="space-y-2">
-        <div className="h-8 w-64 bg-slate-200 rounded animate-pulse" />
-        <div className="h-4 w-48 bg-slate-100 rounded animate-pulse" />
+        <div className="h-8 w-64 bg-bs-card-2 rounded animate-pulse" />
+        <div className="h-4 w-48 bg-bs-card-2 rounded animate-pulse" />
       </div>
 
-      {/* Quick Metrics Skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[0, 1, 2].map((i) => (
-          <Card key={i} className="border-2 border-slate-200 shadow-lg">
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="h-12 w-12 bg-slate-200 rounded-lg animate-pulse" />
-                <div className="space-y-2">
-                  <div className="h-3 w-32 bg-slate-100 rounded animate-pulse" />
-                  <div className="h-10 w-28 bg-slate-200 rounded animate-pulse" />
-                  <div className="h-3 w-24 bg-slate-100 rounded animate-pulse" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div key={i} className="bs-card bs-card-pad">
+            <div className="space-y-3">
+              <div className="h-4 w-24 bg-bs-card-2 rounded animate-pulse" />
+              <div className="h-8 w-32 bg-bs-card-2 rounded animate-pulse" />
+              <div className="h-3 w-20 bg-bs-card-2 rounded animate-pulse" />
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* Charts Skeleton */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {[0, 1].map((i) => (
-          <Card key={i} className="border-2 border-slate-200 shadow-lg">
-            <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="h-10 w-10 bg-slate-200 rounded-lg animate-pulse" />
-                <div className="space-y-2">
-                  <div className="h-5 w-40 bg-slate-200 rounded animate-pulse" />
-                  <div className="h-3 w-32 bg-slate-100 rounded animate-pulse" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="h-[280px] bg-slate-100 rounded-lg animate-pulse" />
-            </CardContent>
-          </Card>
+          <div key={i} className="bs-card bs-card-pad">
+            <div className="h-6 w-40 bg-bs-card-2 rounded animate-pulse mb-6" />
+            <div className="h-[280px] bg-bs-card-2 rounded-lg animate-pulse" />
+          </div>
         ))}
       </div>
 
-      {/* Bottom Row Skeleton */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {[0, 1].map((i) => (
-          <Card key={i} className="border-2 border-slate-200 shadow-lg">
-            <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="h-10 w-10 bg-slate-200 rounded-lg animate-pulse" />
-                <div className="space-y-2">
-                  <div className="h-5 w-40 bg-slate-200 rounded animate-pulse" />
-                  <div className="h-3 w-32 bg-slate-100 rounded animate-pulse" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="h-[280px] bg-slate-100 rounded-lg animate-pulse" />
-            </CardContent>
-          </Card>
+          <div key={i} className="bs-card bs-card-pad">
+            <div className="h-6 w-40 bg-bs-card-2 rounded animate-pulse mb-6" />
+            <div className="h-[280px] bg-bs-card-2 rounded-lg animate-pulse" />
+          </div>
         ))}
       </div>
     </div>
   );
 }
-
-/* ============================================================================
- * Mock Data Generators
- * ========================================================================= */
 
 function generateMockSignupData() {
   const data = [];

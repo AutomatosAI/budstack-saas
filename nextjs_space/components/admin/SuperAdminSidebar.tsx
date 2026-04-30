@@ -114,6 +114,7 @@ export function SuperAdminSidebar({
   return (
     <AdminSidebar
       theme="super-admin"
+      accent="gold"
       menuItems={superAdminMenuItems}
       userName={userName}
       userEmail={userEmail}

@@ -17,18 +17,7 @@ import {
   Download,
   ShoppingCart,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +40,8 @@ import {
   SortableTableHeader,
   BulkActionBar,
   ExportButton,
+  RowPill,
+  type RowPillTone,
 } from "@/components/admin/shared";
 import type { StatusFilterOption, BulkAction } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
@@ -58,13 +49,10 @@ import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { exportToCSV } from "@/lib/admin/csv-export";
 
-/** Order status types */
 type OrderStatus = "all" | "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED";
 
-/** Date range preset options */
 type DateRangePreset = "all" | "7days" | "30days" | "90days" | "custom";
 
-/** Filter types for orders table */
 type OrderFilters = {
   status: OrderStatus;
   dateRange: DateRangePreset;
@@ -72,12 +60,8 @@ type OrderFilters = {
   dateTo: string;
 } & Record<string, string>;
 
-/** Type for bulk action confirmation dialog */
 type BulkActionType = "mark-processing" | "mark-completed" | null;
 
-/**
- * Order item data shape
- */
 interface OrderItem {
   id: string;
   productName: string;
@@ -85,9 +69,6 @@ interface OrderItem {
   price: number;
 }
 
-/**
- * Order data shape from API
- */
 interface Order {
   id: string;
   orderNumber: string;
@@ -105,33 +86,17 @@ interface Order {
 }
 
 interface OrdersTableProps {
-  /** Array of order data from server (paginated and filtered) */
   orders: Order[];
-  /** Total count of filtered orders (for pagination) */
   totalCount: number;
-  /** Status counts from server (with search/date filters applied) */
   statusCounts: {
     PENDING: number;
     PROCESSING: number;
     COMPLETED: number;
     CANCELLED: number;
   };
-  /** Callback when order is selected for viewing */
   onViewOrder: (order: Order) => void;
 }
 
-/**
- * OrdersTable - Client component for displaying orders with search, filter, and pagination.
- *
- * Features:
- * - Server-side pagination with URL state (?page=, ?pageSize=)
- * - Debounced search across orderNumber, customer name, customer email
- * - Status filter (Pending, Processing, Completed, Cancelled)
- * - Date range picker with presets (Last 7/30/90 days, Custom)
- * - Quick filter chips for "Needs Attention" and "In Progress"
- * - URL state persistence (?search=, ?status=, ?dateRange=, ?dateFrom=, ?dateTo=, ?page=, ?pageSize=)
- * - Empty state for no results
- */
 export function OrdersTable({
   orders,
   totalCount,
@@ -152,15 +117,12 @@ export function OrdersTable({
     defaultPageSize: 20,
   });
 
-  // Calendar popover state
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
 
-  // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Confirmation dialog state
   const [confirmAction, setConfirmAction] = useState<BulkActionType>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -169,14 +131,12 @@ export function OrdersTable({
   const dateFromFilter = filters.dateFrom || "";
   const dateToFilter = filters.dateTo || "";
 
-  // Total orders matching search/date filter (regardless of status filter)
   const totalSearchCount =
     statusCounts.PENDING +
     statusCounts.PROCESSING +
     statusCounts.COMPLETED +
     statusCounts.CANCELLED;
 
-  // Status filter options with server-provided counts
   const statusOptions: StatusFilterOption<OrderStatus>[] = useMemo(
     () => [
       { value: "all", label: "All Orders", count: totalSearchCount },
@@ -192,7 +152,6 @@ export function OrdersTable({
     [totalSearchCount, statusCounts],
   );
 
-  // Quick filter handlers
   const handleQuickFilter = (status: OrderStatus) => {
     if (statusFilter === status) {
       setFilter("status", "all");
@@ -201,7 +160,6 @@ export function OrdersTable({
     }
   };
 
-  // Date range preset handler
   const handleDateRangePreset = (preset: DateRangePreset) => {
     setFilter("dateRange", preset);
     if (preset !== "custom") {
@@ -212,7 +170,6 @@ export function OrdersTable({
     }
   };
 
-  // Custom date range handler
   const handleCustomDateSelect = () => {
     if (customDateFrom && customDateTo) {
       setFilter("dateRange", "custom");
@@ -222,7 +179,6 @@ export function OrdersTable({
     }
   };
 
-  // Clear all filters
   const handleClearFilters = () => {
     setSearch("");
     setFilter("status", "all");
@@ -233,7 +189,6 @@ export function OrdersTable({
     setCustomDateTo(undefined);
   };
 
-  // Status icon helper
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "COMPLETED":
@@ -249,23 +204,22 @@ export function OrdersTable({
     }
   };
 
-  // Status color helper
-  const getStatusColor = (status: string) => {
+  const getStatusTone = (status: string): RowPillTone => {
     switch (status) {
       case "COMPLETED":
-        return "bg-emerald-500 hover:bg-emerald-600 text-white";
+        return "emerald";
       case "PROCESSING":
-        return "bg-blue-500 hover:bg-blue-600 text-white";
+        return "blue";
       case "PENDING":
-        return "bg-amber-500 hover:bg-amber-600 text-white";
+      case "PENDING_SYNC":
+        return "amber";
       case "CANCELLED":
-        return "bg-red-500 hover:bg-red-600 text-white";
+        return "red";
       default:
-        return "bg-slate-500 hover:bg-slate-600 text-white";
+        return "slate";
     }
   };
 
-  // Format date range display
   const getDateRangeLabel = () => {
     switch (dateRangeFilter) {
       case "7days":
@@ -290,7 +244,6 @@ export function OrdersTable({
   const hasFilters = hasSearchQuery || hasStatusFilter || hasDateFilter;
   const noResults = totalCount === 0 && hasFilters;
 
-  // Build description for empty state
   const emptyDescription = useMemo(() => {
     const activeFilters: string[] = [];
     if (hasStatusFilter) activeFilters.push(statusFilter.toLowerCase());
@@ -308,7 +261,6 @@ export function OrdersTable({
     return "No orders found.";
   }, [hasSearchQuery, hasStatusFilter, hasDateFilter, search, statusFilter]);
 
-  // Selection handlers
   const isAllSelected =
     orders.length > 0 && orders.every((o) => selectedIds.has(o.id));
   const isSomeSelected =
@@ -316,14 +268,12 @@ export function OrdersTable({
 
   const handleSelectAll = useCallback(() => {
     if (isAllSelected) {
-      // Deselect all on current page
       setSelectedIds((prev) => {
         const next = new Set(prev);
         orders.forEach((o) => next.delete(o.id));
         return next;
       });
     } else {
-      // Select all on current page
       setSelectedIds((prev) => {
         const next = new Set(prev);
         orders.forEach((o) => next.add(o.id));
@@ -348,7 +298,6 @@ export function OrdersTable({
     setSelectedIds(new Set());
   }, []);
 
-  // Bulk action handlers
   const handleMarkProcessing = useCallback(() => {
     setConfirmAction("mark-processing");
   }, []);
@@ -357,7 +306,6 @@ export function OrdersTable({
     setConfirmAction("mark-completed");
   }, []);
 
-  // Export ALL filtered orders (the main export button)
   const handleExportAll = useCallback(async () => {
     if (orders.length === 0) return;
 
@@ -395,7 +343,6 @@ export function OrdersTable({
     );
   }, [orders]);
 
-  // Export SELECTED orders (for bulk action bar)
   const handleExportCSV = useCallback(async () => {
     const selectedOrders = orders.filter((o) => selectedIds.has(o.id));
     if (selectedOrders.length === 0) return;
@@ -458,7 +405,6 @@ export function OrdersTable({
         throw new Error(data.error || "Failed to perform action");
       }
 
-      // Display appropriate success message
       const actionMessages: Record<string, string> = {
         "mark-processing": "marked as Processing",
         "mark-completed": "marked as Completed",
@@ -468,7 +414,6 @@ export function OrdersTable({
         `${data.count} order${data.count === 1 ? "" : "s"} ${actionMessages[confirmAction]} successfully`,
       );
 
-      // Clear selection and refresh
       clearSelection();
       router.refresh();
     } catch (error) {
@@ -479,7 +424,6 @@ export function OrdersTable({
     }
   }, [confirmAction, selectedIds, clearSelection, router]);
 
-  // Bulk actions configuration (no Cancel action for bulk operations)
   const bulkActions: BulkAction[] = useMemo(
     () => [
       {
@@ -507,7 +451,6 @@ export function OrdersTable({
     [handleMarkProcessing, handleMarkCompleted, handleExportCSV],
   );
 
-  // Get selected order numbers for confirmation dialog
   const selectedOrderNumbers = useMemo(() => {
     return orders
       .filter((o) => selectedIds.has(o.id))
@@ -517,22 +460,25 @@ export function OrdersTable({
 
   return (
     <>
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
+      <div className="bs-card overflow-hidden">
+        <div className="border-b border-bs-border-100 px-6 py-5">
           <div className="flex flex-col gap-4">
-            {/* Title Row */}
             <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-              <CardTitle className="flex items-center gap-3">
-                <span className="text-2xl font-bold text-slate-900">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl border border-bs-border-100 bg-bs-card-2 p-2.5">
+                  <ShoppingCart className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
+                </div>
+                <h2
+                  className="text-[22px] text-bs-fg"
+                  style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+                >
                   {hasFilters
                     ? `Results (${totalCount})`
                     : `All Orders (${totalSearchCount})`}
-                </span>
-              </CardTitle>
+                </h2>
+              </div>
 
-              {/* Search and Status Filter */}
               <div className="flex flex-col gap-3 w-full xl:w-auto xl:flex-row xl:items-center">
-                {/* Search Input */}
                 <div className="w-full xl:w-72">
                   <SearchInput
                     value={search}
@@ -543,7 +489,6 @@ export function OrdersTable({
                   />
                 </div>
 
-                {/* Status Filter */}
                 <StatusFilter<OrderStatus>
                   value={statusFilter}
                   onChange={(value) => setFilter("status", value)}
@@ -554,81 +499,86 @@ export function OrdersTable({
                   className="w-full xl:w-[160px]"
                 />
 
-                {/* Date Range Picker */}
                 <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
+                    <button
+                      type="button"
                       className={cn(
+                        "bs-btn bs-btn-ghost",
                         "w-full xl:w-[180px] justify-start text-left font-normal",
-                        "bg-background/50 backdrop-blur-sm",
-                        "border-border/60 hover:border-border",
-                        dateRangeFilter !== "all" &&
-                          "border-primary/50 bg-primary/5",
+                        dateRangeFilter !== "all" && "border-bs-green-soft/50",
                       )}
                     >
-                      <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <Calendar className="mr-2 h-4 w-4 text-bs-fg-muted" aria-hidden="true" />
                       <span
                         className={cn(
                           dateRangeFilter === "all"
-                            ? "text-muted-foreground"
-                            : "text-foreground",
+                            ? "text-bs-fg-muted"
+                            : "text-bs-fg",
                         )}
                       >
                         {getDateRangeLabel()}
                       </span>
-                    </Button>
+                    </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent
+                    className="w-auto p-0 bs-card border border-bs-border rounded-bs-md shadow-bs-card-hover"
+                    align="start"
+                  >
                     <div className="p-3 space-y-3">
-                      {/* Preset Options */}
                       <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant={
-                            dateRangeFilter === "all" ? "default" : "outline"
-                          }
-                          size="sm"
+                        <button
+                          type="button"
                           onClick={() => handleDateRangePreset("all")}
-                          className="justify-start"
+                          className={cn(
+                            "bs-btn bs-btn-sm justify-start",
+                            dateRangeFilter === "all"
+                              ? "bs-btn-green"
+                              : "bs-btn-ghost",
+                          )}
                         >
                           All time
-                        </Button>
-                        <Button
-                          variant={
-                            dateRangeFilter === "7days" ? "default" : "outline"
-                          }
-                          size="sm"
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDateRangePreset("7days")}
-                          className="justify-start"
+                          className={cn(
+                            "bs-btn bs-btn-sm justify-start",
+                            dateRangeFilter === "7days"
+                              ? "bs-btn-green"
+                              : "bs-btn-ghost",
+                          )}
                         >
                           Last 7 days
-                        </Button>
-                        <Button
-                          variant={
-                            dateRangeFilter === "30days" ? "default" : "outline"
-                          }
-                          size="sm"
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDateRangePreset("30days")}
-                          className="justify-start"
+                          className={cn(
+                            "bs-btn bs-btn-sm justify-start",
+                            dateRangeFilter === "30days"
+                              ? "bs-btn-green"
+                              : "bs-btn-ghost",
+                          )}
                         >
                           Last 30 days
-                        </Button>
-                        <Button
-                          variant={
-                            dateRangeFilter === "90days" ? "default" : "outline"
-                          }
-                          size="sm"
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDateRangePreset("90days")}
-                          className="justify-start"
+                          className={cn(
+                            "bs-btn bs-btn-sm justify-start",
+                            dateRangeFilter === "90days"
+                              ? "bs-btn-green"
+                              : "bs-btn-ghost",
+                          )}
                         >
                           Last 90 days
-                        </Button>
+                        </button>
                       </div>
 
-                      <div className="border-t pt-3">
-                        <p className="text-sm font-medium text-muted-foreground mb-2">
-                          Custom Range
-                        </p>
+                      <div className="border-t border-bs-border-100 pt-3">
+                        <p className="bs-eyebrow mb-2">Custom Range</p>
                         <div className="flex gap-2">
                           <div className="flex-1">
                             <CalendarComponent
@@ -654,20 +604,19 @@ export function OrdersTable({
                             />
                           </div>
                         </div>
-                        <Button
-                          className="w-full mt-2"
-                          size="sm"
+                        <button
+                          type="button"
+                          className="bs-btn bs-btn-green bs-btn-sm w-full mt-2 disabled:opacity-50"
                           onClick={handleCustomDateSelect}
                           disabled={!customDateFrom || !customDateTo}
                         >
                           Apply Custom Range
-                        </Button>
+                        </button>
                       </div>
                     </div>
                   </PopoverContent>
                 </Popover>
 
-                {/* Export Button */}
                 <ExportButton
                   onExport={handleExportAll}
                   recordCount={orders.length}
@@ -677,79 +626,58 @@ export function OrdersTable({
               </div>
             </div>
 
-            {/* Quick Filter Chips */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground mr-1">
+              <span className="text-sm text-bs-fg-muted mr-1">
                 Quick filters:
               </span>
 
-              {/* Needs Attention Chip */}
               <button
+                type="button"
                 onClick={() => handleQuickFilter("PENDING")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                  "border hover:shadow-sm",
-                  statusFilter === "PENDING"
-                    ? "bg-amber-100 border-amber-300 text-amber-800"
-                    : "bg-white border-slate-200 text-slate-600 hover:border-amber-300 hover:bg-amber-50",
+                  "bs-btn bs-btn-sm gap-1.5 rounded-full",
+                  statusFilter === "PENDING" ? "bs-btn-green" : "bs-btn-ghost",
                 )}
               >
-                <AlertCircle className="w-3.5 h-3.5" />
+                <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
                 Needs Attention
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "ml-1 h-5 px-1.5 text-[10px] font-semibold",
-                    statusFilter === "PENDING"
-                      ? "bg-amber-200 text-amber-800"
-                      : "bg-slate-100 text-slate-600",
-                  )}
-                >
+                <RowPill tone="amber" className="ml-1">
                   {statusCounts.PENDING}
-                </Badge>
+                </RowPill>
               </button>
 
-              {/* In Progress Chip */}
               <button
+                type="button"
                 onClick={() => handleQuickFilter("PROCESSING")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                  "border hover:shadow-sm",
+                  "bs-btn bs-btn-sm gap-1.5 rounded-full",
                   statusFilter === "PROCESSING"
-                    ? "bg-blue-100 border-blue-300 text-blue-800"
-                    : "bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-blue-50",
+                    ? "bs-btn-green"
+                    : "bs-btn-ghost",
                 )}
               >
-                <Loader2 className="w-3.5 h-3.5" />
+                <Loader2 className="w-3.5 h-3.5" aria-hidden="true" />
                 In Progress
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "ml-1 h-5 px-1.5 text-[10px] font-semibold",
-                    statusFilter === "PROCESSING"
-                      ? "bg-blue-200 text-blue-800"
-                      : "bg-slate-100 text-slate-600",
-                  )}
-                >
+                <RowPill tone="emerald" className="ml-1">
                   {statusCounts.PROCESSING}
-                </Badge>
+                </RowPill>
               </button>
 
-              {/* Clear Filters (shown when filters active) */}
               {hasFilters && (
                 <button
+                  type="button"
                   onClick={handleClearFilters}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-sm text-bs-fg-muted hover:text-bs-fg transition-colors"
                 >
-                  <XCircle className="w-3.5 h-3.5" />
+                  <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
                   Clear all
                 </button>
               )}
             </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="p-0">
+        <div>
           {noResults ? (
             <EmptyState
               icon={Search}
@@ -776,11 +704,10 @@ export function OrdersTable({
             />
           ) : (
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50/50">
-                    {/* Select All Checkbox */}
-                    <TableHead className="w-12">
+              <table className="bs-table w-full">
+                <thead>
+                  <tr>
+                    <th className="w-12">
                       <Checkbox
                         checked={isAllSelected}
                         onCheckedChange={handleSelectAll}
@@ -790,31 +717,27 @@ export function OrdersTable({
                             : "Select all orders"
                         }
                         className={cn(
-                          "border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600",
+                          "border-bs-border data-[state=checked]:bg-bs-green-soft data-[state=checked]:border-bs-green-soft",
                           isSomeSelected &&
-                            "data-[state=checked]:bg-purple-400",
+                            "data-[state=checked]:bg-bs-green-soft/60",
                         )}
                         {...(isSomeSelected && { "data-state": "checked" })}
                       />
-                    </TableHead>
+                    </th>
                     <SortableTableHeader
                       columnKey="orderNumber"
                       label="Order ID"
                       sortState={sort}
                       onSort={setSort}
                     />
-                    <TableHead className="font-semibold text-slate-700">
-                      Customer
-                    </TableHead>
+                    <th className="text-left">Customer</th>
                     <SortableTableHeader
                       columnKey="status"
                       label="Status"
                       sortState={sort}
                       onSort={setSort}
                     />
-                    <TableHead className="font-semibold text-slate-700 text-center">
-                      Items
-                    </TableHead>
+                    <th className="text-center">Items</th>
                     <SortableTableHeader
                       columnKey="total"
                       label="Total"
@@ -828,88 +751,78 @@ export function OrdersTable({
                       sortState={sort}
                       onSort={setSort}
                     />
-                    <TableHead className="font-semibold text-slate-700 text-right">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                    <th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {orders.map((order) => {
                     const isSelected = selectedIds.has(order.id);
                     return (
-                      <TableRow
+                      <tr
                         key={order.id}
                         className={cn(
-                          "hover:bg-slate-50 transition-colors",
-                          isSelected && "bg-purple-50/70",
+                          "transition-colors hover:bg-bs-card-2",
+                          isSelected && "bg-bs-card-2/60",
                         )}
                       >
-                        {/* Row Checkbox */}
-                        <TableCell className="w-12">
+                        <td className="w-12">
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={(checked) =>
                               handleSelectOne(order.id, checked === true)
                             }
                             aria-label={`Select order ${order.orderNumber.slice(-8).toUpperCase()}`}
-                            className="border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                            className="border-bs-border data-[state=checked]:bg-bs-green-soft data-[state=checked]:border-bs-green-soft"
                           />
-                        </TableCell>
-                        <TableCell className="font-medium text-slate-900">
+                        </td>
+                        <td className="font-mono font-medium text-bs-fg">
                           #{order.orderNumber.slice(-8).toUpperCase()}
-                        </TableCell>
-                        <TableCell>
+                        </td>
+                        <td>
                           <div>
-                            <p className="font-medium text-slate-900">
+                            <p className="font-medium text-bs-fg">
                               {order.user?.name || "Guest"}
                             </p>
-                            <p className="text-sm text-slate-500">
+                            <p className="text-sm text-bs-fg-muted">
                               {order.user?.email || "N/A"}
                             </p>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={cn(
-                              getStatusColor(order.status),
-                              "gap-1",
-                            )}
-                          >
+                        </td>
+                        <td>
+                          <RowPill tone={getStatusTone(order.status)}>
                             {getStatusIcon(order.status)}
                             {order.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center text-slate-600">
+                          </RowPill>
+                        </td>
+                        <td className="text-center text-bs-fg-muted">
                           {order.items.length}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-slate-900">
+                        </td>
+                        <td className="text-right font-mono tabular-nums font-medium text-bs-fg">
                           €{order.total.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-slate-600">
+                        </td>
+                        <td className="font-mono text-bs-fg-muted">
                           {format(new Date(order.createdAt), "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
+                        </td>
+                        <td className="text-right">
+                          <button
+                            type="button"
                             onClick={() => onViewOrder(order)}
-                            className="gap-2"
+                            className="bs-btn bs-btn-ghost bs-btn-sm gap-2"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-4 h-4" aria-hidden="true" />
                             View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                          </button>
+                        </td>
+                      </tr>
                     );
                   })}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
           )}
 
-          {/* Pagination Controls */}
           {orders.length > 0 && (
-            <div className="border-t border-slate-200 bg-slate-50/50">
+            <div className="border-t border-bs-border-100 bg-bs-card-2">
               <Pagination
                 page={page}
                 pageSize={pageSize}
@@ -922,10 +835,9 @@ export function OrdersTable({
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Bulk Action Bar */}
       <BulkActionBar
         selectedCount={selectedIds.size}
         itemLabel="orders"
@@ -933,109 +845,79 @@ export function OrdersTable({
         onClearSelection={clearSelection}
       />
 
-      {/* Confirmation Dialog */}
       <Dialog
         open={confirmAction !== null}
         onOpenChange={(open) => !open && setConfirmAction(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="bs-dialog-content sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle
+              className="flex items-center gap-2 text-[22px] text-bs-fg"
+              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+            >
               {confirmAction === "mark-processing" ? (
                 <>
-                  <Truck className="h-5 w-5 text-blue-500" />
+                  <Truck className="h-5 w-5 text-bs-fg-muted" aria-hidden="true" />
                   <span>Mark as Processing</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  <CheckCircle2 className="h-5 w-5 text-bs-fg-muted" aria-hidden="true" />
                   <span>Mark as Completed</span>
                 </>
               )}
             </DialogTitle>
-            <DialogDescription className="pt-2">
+            <DialogDescription className="pt-2 text-bs-fg-muted">
               {confirmAction === "mark-processing" ? (
                 <span>
-                  Update <strong>{selectedIds.size}</strong> order
+                  Update <strong className="text-bs-fg">{selectedIds.size}</strong> order
                   {selectedIds.size === 1 ? "" : "s"} to Processing?
                 </span>
               ) : (
                 <span>
-                  Update <strong>{selectedIds.size}</strong> order
+                  Update <strong className="text-bs-fg">{selectedIds.size}</strong> order
                   {selectedIds.size === 1 ? "" : "s"} to Completed?
                 </span>
               )}
             </DialogDescription>
           </DialogHeader>
 
-          {/* Show order numbers */}
           {selectedOrderNumbers.length > 0 && (
             <div className="py-2">
-              <p className="text-xs text-muted-foreground mb-2">
-                Affected orders:
-              </p>
+              <p className="bs-eyebrow mb-2">Affected orders</p>
               <div className="flex flex-wrap gap-1.5">
                 {selectedOrderNumbers.map((orderNum) => (
-                  <Badge
-                    key={orderNum}
-                    variant="secondary"
-                    className="text-xs font-normal"
-                  >
+                  <RowPill key={orderNum} tone="slate">
                     {orderNum}
-                  </Badge>
+                  </RowPill>
                 ))}
                 {selectedIds.size > 5 && (
-                  <Badge variant="outline" className="text-xs font-normal">
+                  <RowPill tone="slate">
                     +{selectedIds.size - 5} more
-                  </Badge>
+                  </RowPill>
                 )}
               </div>
             </div>
           )}
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
+            <button
+              type="button"
               onClick={() => setConfirmAction(null)}
               disabled={isProcessing}
+              className="bs-btn bs-btn-ghost disabled:opacity-50"
             >
               Cancel
-            </Button>
-            <Button
-              variant="default"
+            </button>
+            <button
+              type="button"
               onClick={handleConfirmAction}
               disabled={isProcessing}
-              className={cn(
-                confirmAction === "mark-processing" &&
-                  "bg-blue-600 hover:bg-blue-700",
-                confirmAction === "mark-completed" &&
-                  "bg-emerald-600 hover:bg-emerald-700",
-              )}
+              className="bs-btn bs-btn-green disabled:opacity-50"
             >
               {isProcessing ? (
                 <>
-                  <span className="animate-spin mr-2">
-                    <svg
-                      className="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                  </span>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
                   Processing...
                 </>
               ) : confirmAction === "mark-processing" ? (
@@ -1043,7 +925,7 @@ export function OrdersTable({
               ) : (
                 "Mark Completed"
               )}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

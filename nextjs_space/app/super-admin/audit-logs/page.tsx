@@ -1,14 +1,13 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { Activity, Clock, ShieldCheck } from "lucide-react";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import { generateMockEvents } from "@/lib/mock-data";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { StatCard } from "@/components/admin/shared";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 export default async function AuditLogsPage() {
   const user = await currentUser();
@@ -17,74 +16,51 @@ export default async function AuditLogsPage() {
     redirect("/auth/login");
   }
 
-  // Generate mock events for demo (replace with real data in production)
   const allEvents = generateMockEvents(50);
 
+  const last24h = allEvents.filter((e) => {
+    const hoursDiff =
+      (Date.now() - e.timestamp.getTime()) / (1000 * 60 * 60);
+    return hoursDiff < 24;
+  }).length;
+
   return (
-    <div className="p-8">
-      <div className="space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-            Audit Logs
-          </h1>
-          <p className="text-slate-600 mt-2">
-            Complete activity history and system events
-          </p>
-        </div>
+    <div className="space-y-8">
+      <div className="bs-page-header-compact">
+        <h1 className="bs-page-title" style={sectionTitleStyle}>
+          Activity Overview
+        </h1>
+        <p className="bs-page-subtitle">
+          Platform-wide event tracking and monitoring.
+        </p>
+      </div>
 
-        {/* Stats Card */}
-        <Card className="border-slate-200 shadow-lg">
-          <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-slate-100">
-            <CardTitle className="text-xl">Activity Overview</CardTitle>
-            <CardDescription>
-              Platform-wide event tracking and monitoring
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex flex-col">
-                <span className="text-sm text-slate-600 mb-1">
-                  Total Events
-                </span>
-                <span className="text-2xl font-bold text-slate-900">
-                  {allEvents.length}
-                </span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm text-slate-600 mb-1">
-                  Last 24 Hours
-                </span>
-                <span className="text-2xl font-bold text-emerald-600">
-                  {
-                    allEvents.filter((e) => {
-                      const hoursDiff =
-                        (Date.now() - e.timestamp.getTime()) / (1000 * 60 * 60);
-                      return hoursDiff < 24;
-                    }).length
-                  }
-                </span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm text-slate-600 mb-1">
-                  Active Monitoring
-                </span>
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-emerald-400" />
-                  <span className="text-sm font-semibold text-emerald-600">Monitoring Enabled</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Activity Timeline */}
-        <ActivityTimeline
-          events={allEvents}
-          maxVisible={50}
-          showViewAll={false}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard
+          label="Total Events"
+          value={allEvents.length}
+          icon={Activity}
+          hint="All recorded events"
+        />
+        <StatCard
+          label="Last 24 Hours"
+          value={last24h}
+          icon={Clock}
+          hint="Recent activity"
+        />
+        <StatCard
+          label="Monitoring"
+          value="Enabled"
+          icon={ShieldCheck}
+          hint="Real-time tracking active"
         />
       </div>
+
+      <ActivityTimeline
+        events={allEvents}
+        maxVisible={50}
+        showViewAll={false}
+      />
     </div>
   );
 }

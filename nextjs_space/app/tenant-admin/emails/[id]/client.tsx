@@ -52,13 +52,18 @@ export function TenantEditTemplateClient({
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)]">
-      <div className="px-6 py-4 border-b">
-        <h1 className="text-2xl font-bold tracking-tight">
+      <div className="bs-page-header-centered pb-6 border-b border-bs-border-100">
+        <h1
+          className="bs-page-title"
+          style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+        >
           Edit Custom Template
         </h1>
-        <p className="text-muted-foreground">Editing: {template.name}</p>
+        <p className="bs-page-subtitle">
+          Editing: <span className="font-mono text-bs-fg">{template.name}</span>
+        </p>
       </div>
-      <div className="flex-1 p-6 overflow-hidden">
+      <div className="flex-1 pt-6 overflow-hidden">
         <EmailEditor
           initialData={template}
           onSave={handleSave}

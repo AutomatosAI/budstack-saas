@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Copy, Loader2, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "@/components/ui/sonner";
 
 interface TemplateCloneButtonProps {
   templateId: string;
@@ -36,43 +36,40 @@ export default function TemplateCloneButton({
       setIsSuccess(true);
       router.refresh();
 
-      // Reset success state after 2s
       setTimeout(() => {
         setIsSuccess(false);
-        // Switch tab to "my-templates"? Ideally yes, but router.refresh() keeps current tab.
-        // We could use query param or context to switch tab.
       }, 2000);
     } catch (error) {
       console.error("Clone error:", error);
-      alert("Failed to clone template. Please try again.");
+      toast.error("Failed to clone template. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Button
-      className="w-full"
+    <button
+      type="button"
+      className={`bs-btn ${isSuccess ? "bs-btn-ghost" : "bs-btn-green"} w-full`}
       onClick={handleClone}
       disabled={isLoading || isSuccess}
-      variant={isSuccess ? "outline" : "default"}
     >
       {isLoading ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
           Cloning...
         </>
       ) : isSuccess ? (
         <>
-          <Check className="mr-2 h-4 w-4 text-green-500" />
+          <Check className="mr-2 h-4 w-4 text-bs-green" aria-hidden="true" />
           Cloned!
         </>
       ) : (
         <>
-          <Copy className="mr-2 h-4 w-4" />
+          <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
           Clone Template
         </>
       )}
-    </Button>
+    </button>
   );
 }

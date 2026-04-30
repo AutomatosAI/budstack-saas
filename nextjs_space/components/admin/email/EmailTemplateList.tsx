@@ -4,31 +4,6 @@ import React, { useState } from "react";
 import useSWR, { mutate } from "swr";
 import { useRouter } from "next/navigation";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -38,7 +13,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, MoreHorizontal, Edit, Trash2, Copy, Eye, EyeOff } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from '@/components/ui/sonner';
 
 const fetcher = async (url: string) => {
@@ -78,7 +53,7 @@ export const EmailTemplateList = () => {
             if (!res.ok) throw new Error("Failed to delete");
 
             toast.success("Template deleted successfully");
-            mutate("/api/super-admin/email-templates"); // Refresh list
+            mutate("/api/super-admin/email-templates");
         } catch (error) {
             toast.error("Failed to delete template");
         } finally {
@@ -102,131 +77,141 @@ export const EmailTemplateList = () => {
         }
     };
 
-    if (isLoading) return <div>Loading templates...</div>;
-    if (error) return <div>Failed to load templates: {error.message}</div>;
+    if (isLoading) {
+        return (
+            <div className="bs-card bs-card-pad flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-bs-fg-muted" />
+            </div>
+        );
+    }
+    if (error) {
+        return (
+            <div className="bs-card bs-card-pad text-sm text-bs-danger">
+                Failed to load templates: {error.message}
+            </div>
+        );
+    }
 
-    // Safety check ensuring templates is an array
     const templateList = Array.isArray(templates) ? templates : [];
 
     return (
-        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100">
-                <div>
-                    <CardTitle>Email Templates</CardTitle>
-                    <CardDescription>Manage your system email templates.</CardDescription>
+        <div className="bs-card bs-card-pad">
+            <div className="flex flex-col gap-3 border-b border-bs-border-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                    <h2
+                        className="font-display text-[22px] text-bs-fg"
+                        style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+                    >
+                        Email Templates
+                    </h2>
+                    <p className="text-sm text-bs-fg-muted">
+                        Manage your system email templates.
+                    </p>
                 </div>
-                <Button
+                <button
+                    type="button"
                     onClick={() => router.push("/super-admin/emails/new")}
-                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-full"
+                    className="bs-btn bs-btn-green"
                 >
-                    <Plus className="mr-2 h-4 w-4" /> Create Template
-                </Button>
-            </CardHeader>
-            <CardContent>
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead className="hidden md:table-cell">Subject</TableHead>
-                                <TableHead className="hidden md:table-cell">Category</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="hidden md:table-cell">
-                                    Last Updated
-                                </TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {templateList.length === 0 && (
-                                <TableRow>
-                                    <TableCell
-                                        colSpan={6}
-                                        className="text-center py-8 text-muted-foreground"
+                    <Plus className="h-4 w-4" /> <span>Create Template</span>
+                </button>
+            </div>
+
+            <div className="mt-4 overflow-x-auto">
+                <table className="bs-table w-full">
+                    <thead>
+                        <tr>
+                            <th className="text-left">Name</th>
+                            <th className="hidden text-left md:table-cell">Subject</th>
+                            <th className="hidden text-left md:table-cell">Category</th>
+                            <th className="text-left">Status</th>
+                            <th className="hidden text-left md:table-cell">Last Updated</th>
+                            <th className="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {templateList.length === 0 && (
+                            <tr>
+                                <td
+                                    colSpan={6}
+                                    className="py-10 text-center text-sm text-bs-fg-muted"
+                                >
+                                    No templates found. Create one to get started.
+                                </td>
+                            </tr>
+                        )}
+                        {templateList.map((template) => (
+                            <tr key={template.id}>
+                                <td className="font-medium text-bs-fg">{template.name}</td>
+                                <td className="hidden text-bs-fg-muted md:table-cell">
+                                    {template.subject}
+                                </td>
+                                <td className="hidden md:table-cell">
+                                    <span className="bs-chip bs-chip-muted capitalize">
+                                        {template.category}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span
+                                        className={
+                                            template.isActive
+                                                ? "bs-chip bs-chip-green"
+                                                : "bs-chip bs-chip-muted"
+                                        }
                                     >
-                                        No templates found. Create one to get started.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                            {templateList.map((template) => (
-                                <TableRow key={template.id}>
-                                    <TableCell className="font-medium">{template.name}</TableCell>
-                                    <TableCell className="hidden md:table-cell">
-                                        {template.subject}
-                                    </TableCell>
-                                    <TableCell className="hidden md:table-cell">
-                                        <Badge variant="outline" className="capitalize">
-                                            {template.category}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            className={
-                                                template.isActive
-                                                    ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                                    : "bg-slate-200 text-slate-800 hover:bg-slate-300"
+                                        {template.isActive ? "Active" : "Inactive"}
+                                    </span>
+                                </td>
+                                <td className="hidden font-mono text-bs-fg-muted tabular-nums md:table-cell">
+                                    {new Date(template.updatedAt).toLocaleDateString()}
+                                </td>
+                                <td className="text-right">
+                                    <div className="flex items-center justify-end gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                router.push(`/super-admin/emails/${template.id}`)
                                             }
+                                            title="Edit"
+                                            className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0"
                                         >
-                                            {template.isActive ? "Active" : "Inactive"}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="hidden md:table-cell">
-                                        {new Date(template.updatedAt).toLocaleDateString()}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() =>
-                                                    router.push(`/super-admin/emails/${template.id}`)
-                                                }
-                                                title="Edit"
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() =>
-                                                    handleTogglePublish(template.id, template.isActive)
-                                                }
-                                                title={template.isActive ? "Disable" : "Enable"}
-                                                className={
-                                                    template.isActive
-                                                        ? "text-amber-600 hover:text-amber-700"
-                                                        : "text-green-600 hover:text-green-700"
-                                                }
-                                            >
-                                                {template.isActive ? (
-                                                    <EyeOff className="h-4 w-4" />
-                                                ) : (
-                                                    <Eye className="h-4 w-4" />
-                                                )}
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => setIsDeleting(template.id)}
-                                                className="text-red-600 hover:text-red-700"
-                                                title="Delete"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
+                                            <Edit className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleTogglePublish(template.id, template.isActive)
+                                            }
+                                            title={template.isActive ? "Disable" : "Enable"}
+                                            className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0"
+                                        >
+                                            {template.isActive ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsDeleting(template.id)}
+                                            title="Delete"
+                                            className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0 text-bs-danger hover:text-bs-danger"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
 
             <AlertDialog
                 open={!!isDeleting}
                 onOpenChange={(open) => !open && setIsDeleting(null)}
             >
-                <AlertDialogContent>
+                <AlertDialogContent className="bs-dialog-content">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
@@ -237,7 +222,7 @@ export const EmailTemplateList = () => {
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bs-btn bs-btn-danger"
                             onClick={() => isDeleting && handleDelete(isDeleting)}
                         >
                             Delete
@@ -245,6 +230,6 @@ export const EmailTemplateList = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </Card>
+        </div>
     );
 };

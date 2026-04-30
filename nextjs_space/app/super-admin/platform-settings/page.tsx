@@ -1,7 +1,12 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { Settings } from "lucide-react";
 import { prisma } from "@/lib/db";
 import PlatformBrandingForm from "./platform-branding-form";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 export default async function PlatformSettingsPage() {
   const user = await currentUser();
@@ -10,7 +15,6 @@ export default async function PlatformSettingsPage() {
     redirect("/auth/login");
   }
 
-  // Get or create platform settings
   let settings = await prisma.platform_settings.findUnique({
     where: { id: "platform" },
   });
@@ -22,18 +26,16 @@ export default async function PlatformSettingsPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8">
-      {/* Page Header */}
-      <div className="mb-10">
-        <h1 className="text-4xl font-semibold tracking-tight text-slate-900">
+    <div className="space-y-8">
+      <div className="bs-page-header-centered">
+        <h1 className="bs-page-title" style={sectionTitleStyle}>
           Platform Branding
         </h1>
-        <p className="mt-2 max-w-2xl text-slate-500">
-          Customize the look and feel of the main BudStacks platform
+        <p className="bs-page-subtitle">
+          Customize the look and feel of the main BudStacks platform.
         </p>
       </div>
 
-      {/* Branding Form */}
       <PlatformBrandingForm settings={settings} />
     </div>
   );

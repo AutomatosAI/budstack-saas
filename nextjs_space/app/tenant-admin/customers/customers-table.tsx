@@ -3,33 +3,20 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Users, Search, Phone, ShoppingBag, Share2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Users, Search, Phone, ShoppingBag, Share2, Eye } from "lucide-react";
 import {
   SearchInput,
   EmptyState,
   Pagination,
   SortableTableHeader,
   ExportButton,
+  RowPill,
 } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
 import { exportToCSV } from "@/lib/admin/csv-export";
 import { toast } from "@/components/ui/sonner";
 import { useCallback } from "react";
 
-/**
- * Customer data shape from Prisma query
- */
 export interface Customer {
   id: string;
   email: string;
@@ -42,22 +29,10 @@ export interface Customer {
 }
 
 interface CustomersTableProps {
-  /** Array of customer data from server (paginated and filtered) */
   customers: Customer[];
-  /** Total count of filtered customers (for pagination) */
   totalCount: number;
 }
 
-/**
- * CustomersTable - Client component for displaying customers with search and pagination.
- *
- * Features:
- * - Server-side pagination with URL state (?page=, ?pageSize=)
- * - Debounced search across name, email, phone
- * - Case-insensitive filtering
- * - URL state persistence (?search=, ?page=, ?pageSize=)
- * - Empty state for no results with clear action
- */
 export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
   const [
     { search, page, pageSize, sort },
@@ -69,7 +44,6 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
   const hasSearchQuery = search.trim().length > 0;
   const noResults = totalCount === 0 && hasSearchQuery;
 
-  // Build description for empty state
   const emptyDescription = useMemo(() => {
     if (hasSearchQuery) {
       return `No customers found matching "${search}". Try a different search term.`;
@@ -77,12 +51,10 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
     return "No customers yet. Share your store URL to get started.";
   }, [hasSearchQuery, search]);
 
-  // Clear search handler
   const handleClearSearch = () => {
     setSearch("");
   };
 
-  // Export handler
   const handleExportAll = useCallback(async () => {
     if (customers.length === 0) return;
 
@@ -116,7 +88,6 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
     );
   }, [customers]);
 
-  // Get initials for avatar
   const getInitials = (name: string | null): string => {
     if (!name) return "?";
     const parts = name.trim().split(" ");
@@ -127,24 +98,23 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
   };
 
   return (
-    <Card className="shadow-lg border-slate-200">
-      <CardHeader className="border-b bg-gradient-to-r from-cyan-50 to-blue-50">
+    <div className="bs-card overflow-hidden">
+      <div className="border-b border-bs-border-100 px-6 py-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="flex items-center gap-3 text-2xl font-bold text-slate-900">
-            <span>
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl border border-bs-border-100 bg-bs-card-2 p-2.5">
+              <Users className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
+            </div>
+            <h2
+              className="text-[22px] text-bs-fg"
+              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+            >
               {hasSearchQuery
                 ? `Results (${totalCount})`
                 : `All Customers (${totalCount})`}
-            </span>
-            <Badge
-              variant="outline"
-              className="text-sm font-normal bg-white/60"
-            >
-              {totalCount} Total
-            </Badge>
-          </CardTitle>
+            </h2>
+          </div>
 
-          {/* Search and Export Controls */}
           <div className="flex flex-col gap-3 w-full sm:w-auto sm:flex-row">
             <div className="w-full sm:w-72">
               <SearchInput
@@ -156,7 +126,6 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
               />
             </div>
 
-            {/* Export Button */}
             <ExportButton
               onExport={handleExportAll}
               recordCount={customers.length}
@@ -165,9 +134,9 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
             />
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="p-0">
+      <div>
         {noResults ? (
           <EmptyState
             icon={Search}
@@ -201,9 +170,9 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
           />
         ) : (
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/50">
+            <table className="bs-table w-full">
+              <thead>
+                <tr>
                   <SortableTableHeader
                     columnKey="name"
                     label="Customer"
@@ -217,12 +186,12 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                     onSort={setSort}
                     className="hidden md:table-cell"
                   />
-                  <TableHead className="font-semibold text-center hidden sm:table-cell">
+                  <th className="text-center hidden sm:table-cell">
                     <span className="flex items-center justify-center gap-1.5">
-                      <ShoppingBag className="h-3.5 w-3.5 text-slate-400" />
+                      <ShoppingBag className="h-3.5 w-3.5 text-bs-fg-muted" aria-hidden="true" />
                       Orders
                     </span>
-                  </TableHead>
+                  </th>
                   <SortableTableHeader
                     columnKey="createdAt"
                     label="Joined"
@@ -230,78 +199,71 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                     onSort={setSort}
                     className="hidden sm:table-cell"
                   />
-                  <TableHead className="font-semibold">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                  <th className="text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
                 {customers.map((customer) => (
-                  <TableRow
+                  <tr
                     key={customer.id}
-                    className="hover:bg-slate-50 transition-colors group"
+                    className="hover:bg-bs-card-2 transition-colors group"
                   >
-                    <TableCell>
+                    <td>
                       <div className="flex items-center gap-3">
-                        {/* Avatar with initials */}
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white font-medium text-sm shadow-sm group-hover:shadow-md transition-shadow">
+                        <div className="bs-avatar flex-shrink-0 w-10 h-10 text-sm">
                           {getInitials(customer.name)}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-900 truncate">
+                          <p className="font-medium text-bs-fg truncate">
                             {customer.name || "N/A"}
                           </p>
-                          {/* Show email on mobile */}
                           <a
                             href={`mailto:${customer.email}`}
-                            className="text-xs text-slate-500 hover:text-cyan-600 md:hidden truncate block"
+                            className="text-xs font-mono text-bs-fg-muted hover:text-bs-green-soft md:hidden truncate block"
                           >
                             {customer.email}
                           </a>
                           {customer.phone && (
-                            <p className="text-xs text-slate-500 flex items-center gap-1 hidden md:flex">
-                              <Phone className="h-3 w-3" />
+                            <p className="text-xs text-bs-fg-muted items-center gap-1 hidden md:flex">
+                              <Phone className="h-3 w-3" aria-hidden="true" />
                               {customer.phone}
                             </p>
                           )}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-slate-600 hidden md:table-cell">
+                    </td>
+                    <td className="text-bs-fg-muted hidden md:table-cell">
                       <a
                         href={`mailto:${customer.email}`}
-                        className="hover:text-cyan-600 hover:underline transition-colors"
+                        className="font-mono hover:text-bs-green-soft hover:underline transition-colors"
                       >
                         {customer.email}
                       </a>
-                    </TableCell>
-                    <TableCell className="text-center hidden sm:table-cell">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-700 text-sm font-medium">
-                        {customer._count.orders}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-slate-600 text-sm hidden sm:table-cell">
+                    </td>
+                    <td className="text-center hidden sm:table-cell">
+                      <RowPill tone="gold">{customer._count.orders}</RowPill>
+                    </td>
+                    <td className="text-bs-fg-muted text-sm font-mono hidden sm:table-cell">
                       {format(new Date(customer.createdAt), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      <Link href={`/tenant-admin/customers/${customer.id}`}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="hover:bg-cyan-50 hover:text-cyan-700 hover:border-cyan-300 transition-colors"
-                        >
-                          View Details
-                        </Button>
+                    </td>
+                    <td>
+                      <Link
+                        href={`/tenant-admin/customers/${customer.id}`}
+                        className="bs-btn bs-btn-ghost bs-btn-sm gap-2"
+                      >
+                        <Eye className="w-4 h-4" aria-hidden="true" />
+                        View
                       </Link>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ))}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
           </div>
         )}
 
-        {/* Pagination Controls */}
         {customers.length > 0 && (
-          <div className="border-t border-slate-200 bg-slate-50/50">
+          <div className="border-t border-bs-border-100 bg-bs-card-2">
             <Pagination
               page={page}
               pageSize={pageSize}
@@ -314,7 +276,7 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
             />
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -36,13 +36,16 @@ export function TenantNewTemplateClient() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)]">
-      <div className="px-6 py-4 border-b">
-        <h1 className="text-2xl font-bold tracking-tight">
+      <div className="bs-page-header-centered pb-6 border-b border-bs-border-100">
+        <h1
+          className="bs-page-title"
+          style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+        >
           Create New Template
         </h1>
-        <p className="text-muted-foreground">Design a custom email template.</p>
+        <p className="bs-page-subtitle">Design a custom email template.</p>
       </div>
-      <div className="flex-1 p-6 overflow-hidden">
+      <div className="flex-1 pt-6 overflow-hidden">
         <EmailEditor onSave={handleSave} isSaving={isSaving} />
       </div>
     </div>

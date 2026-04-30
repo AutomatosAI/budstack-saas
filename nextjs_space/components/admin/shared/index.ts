@@ -30,3 +30,5 @@ export {
   type BreadcrumbItem,
 } from './Breadcrumbs';
 export { ExportButton, type ExportButtonProps } from './ExportButton';
+export { RowPill, type RowPillProps, type RowPillTone } from './RowPill';
+export { StatCard, type StatCardProps } from './StatCard';

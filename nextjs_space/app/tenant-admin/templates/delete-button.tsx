@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Trash2, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useRouter } from "next/navigation";
@@ -15,6 +14,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface DeleteButtonProps {
   templateId: string;
@@ -35,9 +38,12 @@ export default function DeleteButton({
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/tenant-admin/my-templates/${templateId}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/tenant-admin/my-templates/${templateId}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       const data = await response.json();
 
@@ -58,43 +64,48 @@ export default function DeleteButton({
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
+      <button
+        type="button"
+        className="bs-btn bs-btn-ghost bs-btn-sm text-bs-danger hover:bg-bs-danger/10"
         onClick={() => setShowDeleteDialog(true)}
         disabled={isDeleting || isActive}
-        className="rounded-xl text-red-600 hover:text-red-700 hover:bg-red-50"
         title={isActive ? "Cannot delete active template" : "Delete template"}
       >
         {isDeleting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
         ) : (
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
         )}
-      </Button>
+      </button>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bs-dialog-content">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Template</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>"{templateName}"</strong>?
+            <AlertDialogTitle
+              className="text-[22px] leading-tight"
+              style={sectionTitleStyle}
+            >
+              Delete Template
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-bs-fg-muted">
+              Are you sure you want to delete{" "}
+              <strong className="text-bs-fg">&ldquo;{templateName}&rdquo;</strong>?
               {isActive && (
-                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-900">
-                  ⚠️ This template is currently active. Please activate a
+                <span className="mt-2 block p-3 bg-bs-warn/10 border border-bs-warn/30 rounded-bs-md text-bs-fg">
+                  This template is currently active. Please activate a
                   different template before deleting this one.
-                </div>
+                </span>
               )}
               {!isActive && (
-                <div className="mt-2">
+                <span className="mt-2 block">
                   This action cannot be undone. Your customizations will be
                   permanently removed.
-                </div>
+                </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting} className="rounded-xl">
+            <AlertDialogCancel disabled={isDeleting} className="bs-btn bs-btn-ghost">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
@@ -103,11 +114,14 @@ export default function DeleteButton({
                 handleDelete();
               }}
               disabled={isDeleting || isActive}
-              className="bg-red-600 hover:bg-red-700 rounded-xl"
+              className="bs-btn bs-btn-danger"
             >
               {isDeleting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2
+                    className="mr-2 h-4 w-4 animate-spin"
+                    aria-hidden="true"
+                  />
                   Deleting...
                 </>
               ) : (
