@@ -59,6 +59,7 @@ import {
   SortableTableHeader,
   BulkActionBar,
   ExportButton,
+  RowPill,
 } from "@/components/admin/shared";
 import type { StatusFilterOption, BulkAction } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
@@ -229,29 +230,18 @@ function SortableProductRow({
       </TableCell>
 
       <TableCell className="text-center hidden sm:table-cell">
-        <span
-          className={`inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-full text-sm font-medium ${
-            product.stock > 0
-              ? "bg-emerald-100 text-emerald-800"
-              : "bg-slate-100 text-slate-700"
-          }`}
-        >
+        <RowPill tone={product.stock > 0 ? "emerald" : "slate"}>
           {product.stock}
-        </span>
+        </RowPill>
       </TableCell>
 
       <TableCell>
-        <Badge
-          className={cn(
-            "font-medium",
-            product.stock > 0
-              ? "bg-emerald-600 text-white hover:bg-emerald-700"
-              : "bg-slate-200 text-slate-800 hover:bg-slate-300",
-          )}
+        <RowPill
+          tone={product.stock > 0 ? "emerald" : "slate"}
           aria-label={`Status: ${product.stock > 0 ? "In Stock" : "Out of Stock"}`}
         >
           {product.stock > 0 ? "In Stock" : "Out of Stock"}
-        </Badge>
+        </RowPill>
       </TableCell>
     </TableRow>
   );

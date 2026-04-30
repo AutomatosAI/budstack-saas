@@ -50,6 +50,8 @@ import {
   SortableTableHeader,
   BulkActionBar,
   ExportButton,
+  RowPill,
+  type RowPillTone,
 } from "@/components/admin/shared";
 import type { StatusFilterOption, BulkAction } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
@@ -248,19 +250,20 @@ export function OrdersTable({
     }
   };
 
-  // Status color helper
-  const getStatusColor = (status: string) => {
+  // Status tone helper — maps order status to RowPill semantic tint
+  const getStatusTone = (status: string): RowPillTone => {
     switch (status) {
       case "COMPLETED":
-        return "bg-emerald-500 hover:bg-emerald-600 text-white";
+        return "emerald";
       case "PROCESSING":
-        return "bg-blue-500 hover:bg-blue-600 text-white";
+        return "blue";
       case "PENDING":
-        return "bg-amber-500 hover:bg-amber-600 text-white";
+      case "PENDING_SYNC":
+        return "amber";
       case "CANCELLED":
-        return "bg-red-500 hover:bg-red-600 text-white";
+        return "red";
       default:
-        return "bg-slate-500 hover:bg-slate-600 text-white";
+        return "slate";
     }
   };
 
@@ -871,15 +874,10 @@ export function OrdersTable({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            className={cn(
-                              getStatusColor(order.status),
-                              "gap-1",
-                            )}
-                          >
+                          <RowPill tone={getStatusTone(order.status)}>
                             {getStatusIcon(order.status)}
                             {order.status}
-                          </Badge>
+                          </RowPill>
                         </TableCell>
                         <TableCell className="text-center text-slate-600">
                           {order.items.length}

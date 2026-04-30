@@ -4,7 +4,6 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -42,6 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
+import { StatCard } from "@/components/admin/shared";
 import { OrdersTable } from "./orders-table";
 
 
@@ -342,69 +342,18 @@ export default function TenantOrdersPage() {
 
       {/* Order Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
-          <CardHeader className="p-0 pb-4 space-y-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-slate-600">
-                Total Orders
-              </CardTitle>
-              <div className="rounded-xl bg-slate-100 p-2.5">
-                <Package className="h-5 w-5 text-slate-600" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="text-3xl font-semibold text-slate-900">{totalOrders}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
-          <CardHeader className="p-0 pb-4 space-y-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-slate-600">
-                Pending
-              </CardTitle>
-              <div className="rounded-xl bg-amber-50 p-2.5">
-                <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="text-3xl font-semibold text-slate-900">{statusCounts.PENDING}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
-          <CardHeader className="p-0 pb-4 space-y-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-slate-600">
-                Processing
-              </CardTitle>
-              <div className="rounded-xl bg-blue-50 p-2.5">
-                <Truck className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="text-3xl font-semibold text-slate-900">{statusCounts.PROCESSING}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
-          <CardHeader className="p-0 pb-4 space-y-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-slate-600">
-                Completed
-              </CardTitle>
-              <div className="rounded-xl bg-emerald-50 p-2.5">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="text-3xl font-semibold text-slate-900">{statusCounts.COMPLETED}</div>
-          </CardContent>
-        </Card>
+        <StatCard label="Total Orders" value={totalOrders} icon={Package} />
+        <StatCard label="Pending" value={statusCounts.PENDING} icon={Clock} />
+        <StatCard
+          label="Processing"
+          value={statusCounts.PROCESSING}
+          icon={Truck}
+        />
+        <StatCard
+          label="Completed"
+          value={statusCounts.COMPLETED}
+          icon={CheckCircle2}
+        />
       </div>
 
       {/* Orders Table with Search, Filters, and Pagination */}

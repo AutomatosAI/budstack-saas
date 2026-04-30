@@ -13,9 +13,9 @@ import {
   Download,
   AlertTriangle,
   FileCheck,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -42,6 +42,7 @@ import {
   SortableTableHeader,
   BulkActionBar,
   ExportButton,
+  RowPill,
 } from "@/components/admin/shared";
 import type { StatusFilterOption, BulkAction } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
@@ -397,19 +398,19 @@ export function TenantsTable({
 
   return (
     <>
-      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-        <CardHeader className="border-b border-slate-100">
+      <div className="card-floating overflow-hidden">
+        <div className="border-b border-slate-200/70 px-6 py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <CardTitle className="flex items-center gap-3">
-              <span>
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-emerald-500 p-2.5 shadow-sm">
+                <Building2 className="h-5 w-5 text-white" />
+              </div>
+              <h2 className="font-display text-2xl font-bold text-foreground">
                 {hasFilters
                   ? `Results (${totalCount})`
                   : `All Tenants (${totalSearchCount})`}
-              </span>
-              <Badge variant="outline" className="text-sm font-normal">
-                {activeCount} Active
-              </Badge>
-            </CardTitle>
+              </h2>
+            </div>
 
             {/* Search and Filter Controls */}
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
@@ -442,9 +443,9 @@ export function TenantsTable({
               />
             </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="p-0">
+        <div>
           {noResults ? (
             <EmptyState
               icon={Search}
@@ -603,49 +604,36 @@ export function TenantsTable({
                             </a>
                           </TableCell>
                           <TableCell>
-                            {tenant.isActive ? (
-                              <Badge
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                                aria-label="Status: Active"
-                              >
-                                Active
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="secondary"
-                                className="bg-slate-200 text-slate-800"
-                                aria-label="Status: Inactive"
-                              >
-                                Inactive
-                              </Badge>
-                            )}
+                            <RowPill
+                              tone={tenant.isActive ? "emerald" : "slate"}
+                              aria-label={`Status: ${tenant.isActive ? "Active" : "Inactive"}`}
+                            >
+                              {tenant.isActive ? "Active" : "Inactive"}
+                            </RowPill>
                           </TableCell>
                           <TableCell className="text-center hidden lg:table-cell">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 text-sm font-medium">
+                            <RowPill tone="blue">
                               {tenant._count.users}
-                            </span>
+                            </RowPill>
                           </TableCell>
                           <TableCell className="text-center hidden lg:table-cell">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-800 text-sm font-medium">
+                            <RowPill tone="emerald">
                               {tenant._count.products}
-                            </span>
+                            </RowPill>
                           </TableCell>
                           <TableCell className="text-center hidden lg:table-cell">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-800 text-sm font-medium">
+                            <RowPill tone="gold">
                               {tenant._count.orders}
-                            </span>
+                            </RowPill>
                           </TableCell>
                           <TableCell className="text-slate-600 text-sm hidden sm:table-cell">
                             {format(new Date(tenant.createdAt), "MMM d, yyyy")}
                           </TableCell>
                           <TableCell>
                             <Link href={`/super-admin/tenants/${tenant.id}`}>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="hover:bg-cyan-50 hover:text-cyan-700 hover:border-cyan-300 transition-colors"
-                              >
-                                Manage
+                              <Button variant="outline" size="sm" className="gap-2">
+                                <Eye className="w-4 h-4" />
+                                View
                               </Button>
                             </Link>
                           </TableCell>
@@ -673,8 +661,8 @@ export function TenantsTable({
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Bulk Action Bar */}
       <BulkActionBar

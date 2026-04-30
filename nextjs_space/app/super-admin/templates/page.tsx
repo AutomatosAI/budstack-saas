@@ -5,7 +5,7 @@ import { getFileUrl } from '@/lib/s3';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, Layout, ClipboardList, ImageIcon, Paintbrush, Plus } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { RowPill } from '@/components/admin/shared';
 import { UploadTemplateDialog } from './upload-dialog';
 import { TemplateActions } from './template-actions';
 import Image from 'next/image';
@@ -85,9 +85,9 @@ export default async function TemplatesManagementPage() {
             className="rounded-lg data-[state=active]:bg-accent data-[state=active]:text-white"
           >
             Community Submissions {pendingSubmissions.length > 0 && (
-              <Badge className="ml-2 bg-yellow-500 hover:bg-yellow-600 border-none text-xs">
+              <RowPill tone="amber" className="ml-2">
                 {pendingSubmissions.length}
-              </Badge>
+              </RowPill>
             )}
           </TabsTrigger>
         </TabsList>
@@ -130,21 +130,12 @@ export default async function TemplatesManagementPage() {
               </div>
               {/* Top-right badges */}
               <div className="absolute top-3 right-3 flex gap-1">
-                <Badge
-                  className={
-                    template.isActive
-                      ? "bg-emerald-500 hover:bg-emerald-600 border-none"
-                      : "bg-slate-400 border-none"
-                  }
-                >
+                <RowPill tone={template.isActive ? "emerald" : "slate"}>
                   {template.isActive ? "Active" : "Inactive"}
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className="bg-white/90 border-slate-300 text-slate-700"
-                >
+                </RowPill>
+                <RowPill tone="slate" className="bg-white/90">
                   {template.category}
-                </Badge>
+                </RowPill>
               </div>
             </div>
             <div className="p-5">
@@ -182,13 +173,9 @@ export default async function TemplatesManagementPage() {
               {/* Tags */}
               <div className="flex flex-wrap gap-2 mt-3">
                 {template.tags.slice(0, 4).map((tag: string) => (
-                  <Badge
-                    key={tag}
-                    variant="outline"
-                    className="text-xs bg-blue-50 border-blue-200 text-blue-700"
-                  >
+                  <RowPill key={tag} tone="blue">
                     {tag}
-                  </Badge>
+                  </RowPill>
                 ))}
               </div>
             </div>
@@ -235,22 +222,18 @@ export default async function TemplatesManagementPage() {
         <TabsContent value="submissions">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {pendingSubmissions.map((sub: any) => {
-              const statusConfig: Record<string, { label: string; className: string }> = {
-                pending: { label: "Pending Review", className: "bg-yellow-500 hover:bg-yellow-600" },
-                changes_requested: { label: "Changes Requested", className: "bg-orange-500 hover:bg-orange-600" },
+              const statusConfig: Record<string, { label: string; tone: "amber" | "gold" | "slate" }> = {
+                pending: { label: "Pending Review", tone: "amber" },
+                changes_requested: { label: "Changes Requested", tone: "gold" },
               };
-              const config = statusConfig[sub.status] || { label: sub.status, className: "bg-slate-400" };
+              const config = statusConfig[sub.status] || { label: sub.status, tone: "slate" as const };
               return (
                 <div key={sub.id} className="card-floating overflow-hidden">
                   <div className="p-5 border-b border-slate-100">
                     <div className="flex justify-between items-start mb-3">
-                      <Badge className={config.className}>
-                        {config.label}
-                      </Badge>
+                      <RowPill tone={config.tone}>{config.label}</RowPill>
                       {sub.category && (
-                        <Badge variant="outline" className="bg-white border-slate-300 text-slate-700">
-                          {sub.category}
-                        </Badge>
+                        <RowPill tone="slate">{sub.category}</RowPill>
                       )}
                     </div>
                     <h3 className="font-display text-lg font-bold text-foreground">
@@ -270,17 +253,17 @@ export default async function TemplatesManagementPage() {
                     {sub.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {sub.tags.slice(0, 4).map((tag: string) => (
-                          <Badge key={tag} variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+                          <RowPill key={tag} tone="blue">
                             {tag}
-                          </Badge>
+                          </RowPill>
                         ))}
                       </div>
                     )}
                   </div>
                   <div className="p-4">
                     <Link href={`/super-admin/templates/submissions/${sub.id}`}>
-                      <Button size="sm" className="w-full rounded-xl bg-blue-600 hover:bg-blue-700">
-                        <ClipboardList className="mr-2 h-4 w-4" />
+                      <Button size="sm" className="w-full gap-2">
+                        <ClipboardList className="h-4 w-4" />
                         Review
                       </Button>
                     </Link>

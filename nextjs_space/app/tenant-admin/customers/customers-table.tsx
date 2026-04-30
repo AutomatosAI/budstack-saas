@@ -3,9 +3,8 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Users, Search, Phone, ShoppingBag, Share2 } from "lucide-react";
+import { Users, Search, Phone, ShoppingBag, Share2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -20,6 +19,7 @@ import {
   Pagination,
   SortableTableHeader,
   ExportButton,
+  RowPill,
 } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
 import { exportToCSV } from "@/lib/admin/csv-export";
@@ -138,12 +138,6 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                 ? `Results (${totalCount})`
                 : `All Customers (${totalCount})`}
             </h2>
-            <Badge
-              variant="outline"
-              className="text-sm font-normal border-amber-300/60 bg-amber-50/60 text-amber-800"
-            >
-              {totalCount} Total
-            </Badge>
           </div>
 
           {/* Search and Export Controls */}
@@ -276,21 +270,16 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                       </a>
                     </TableCell>
                     <TableCell className="text-center hidden sm:table-cell">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
-                        {customer._count.orders}
-                      </span>
+                      <RowPill tone="gold">{customer._count.orders}</RowPill>
                     </TableCell>
                     <TableCell className="text-slate-600 text-sm hidden sm:table-cell">
                       {format(new Date(customer.createdAt), "MMM d, yyyy")}
                     </TableCell>
                     <TableCell>
                       <Link href={`/tenant-admin/customers/${customer.id}`}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 transition-colors"
-                        >
-                          View Details
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <Eye className="w-4 h-4" />
+                          View
                         </Button>
                       </Link>
                     </TableCell>
