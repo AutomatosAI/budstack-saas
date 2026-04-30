@@ -5,7 +5,7 @@ import { getFileUrl } from '@/lib/s3';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, Layout, ClipboardList, ImageIcon, Paintbrush, Plus } from 'lucide-react';
-import { RowPill } from '@/components/admin/shared';
+import { RowPill, AdminPageHeader } from '@/components/admin/shared';
 import { UploadTemplateDialog } from './upload-dialog';
 import { TemplateActions } from './template-actions';
 import Image from 'next/image';
@@ -49,28 +49,23 @@ export default async function TemplatesManagementPage() {
 
   return (
     <div className="space-y-8">
-      {/* Centered Header */}
-      <div className="text-center max-w-2xl mx-auto">
-        <div className="section-badge mb-4 inline-flex">
-          <Layout className="h-4 w-4" />
-          Themes
-        </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Store Themes
-        </h1>
-        <p className="mt-3 text-muted-foreground">
-          Manage storefront themes for tenants. Themes define the visual layout of each store.
-        </p>
-        <div className="mt-6 flex gap-3 justify-center">
-          <UploadTemplateDialog />
-          <Link href="/api/super-admin/templates/create-blank" prefetch={false}>
-            <Button variant="outline" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create New Theme
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <AdminPageHeader
+        eyebrow="Themes"
+        eyebrowIcon={Layout}
+        title="Store Themes"
+        subtitle="Manage storefront themes for tenants. Themes define the visual layout of each store."
+        actions={
+          <div className="flex gap-3">
+            <UploadTemplateDialog />
+            <Link href="/api/super-admin/templates/create-blank" prefetch={false}>
+              <Button variant="outline" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create New Theme
+              </Button>
+            </Link>
+          </div>
+        }
+      />
 
       <Tabs defaultValue="templates" className="w-full">
         <TabsList className="mb-8 bg-white border border-slate-200 rounded-xl p-1">

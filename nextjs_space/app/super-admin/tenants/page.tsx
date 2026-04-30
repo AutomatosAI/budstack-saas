@@ -1,7 +1,9 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdminPageHeader } from "@/components/admin/shared";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { TenantsTable } from "./tenants-table";
@@ -151,27 +153,20 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
 
   return (
     <div className="space-y-8">
-      {/* Centered Header */}
-      <div className="text-center max-w-2xl mx-auto">
-        <div className="section-badge mb-4 inline-flex">
-          Tenants
-        </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          All Tenants
-        </h1>
-        <p className="mt-3 text-muted-foreground">
-          Manage all tenant accounts and NFT holders from a single view.
-        </p>
-        <div className="mt-6">
+      <AdminPageHeader
+        eyebrow="Tenants"
+        eyebrowIcon={Building2}
+        title="All Tenants"
+        subtitle="Manage all tenant accounts and NFT holders from a single view."
+        actions={
           <Link href="/super-admin/onboarding">
             <Button variant="hero" size="lg" className="rounded-xl">
               Review Applications
             </Button>
           </Link>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Tenants Table with Search and Pagination */}
       <TenantsTable
         tenants={tenants}
         totalCount={filteredCount}

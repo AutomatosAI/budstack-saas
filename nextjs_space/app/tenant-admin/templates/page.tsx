@@ -17,6 +17,7 @@ import { ShareMarketplaceDialog } from "./share-marketplace-dialog";
 import WithdrawButton from "./withdraw-button";
 import ResubmitButton from "./resubmit-button";
 import { PreviewUploadDialog } from "./preview-upload-dialog";
+import { AdminPageHeader } from "@/components/admin/shared";
 type ClonedTemplate = any;
 
 /** Sign an S3 key to a URL, or pass through if already a URL */
@@ -100,19 +101,12 @@ export default async function TemplatesPage() {
 
     return (
         <div className="space-y-8">
-            {/* Centered Header */}
-            <div className="text-center max-w-2xl mx-auto">
-                <div className="section-badge mb-4 inline-flex">
-                    <Layout className="h-4 w-4" />
-                    Themes
-                </div>
-                <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                    Theme Management
-                </h1>
-                <p className="mt-3 text-muted-foreground">
-                    Manage your store&apos;s design and layout.
-                </p>
-            </div>
+            <AdminPageHeader
+                eyebrow="Themes"
+                eyebrowIcon={Layout}
+                title="Theme Management"
+                subtitle="Manage your store's design and layout."
+            />
 
             <Tabs defaultValue="my-templates" className="w-full">
                 <TabsList className="mb-8 bg-white border border-slate-200 rounded-xl p-1">

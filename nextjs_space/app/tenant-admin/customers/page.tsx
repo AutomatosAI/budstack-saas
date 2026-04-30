@@ -3,7 +3,11 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { Users, UserCheck, UserPlus } from "lucide-react";
-import { StatCard } from "@/components/admin/shared";
+import {
+  StatCard,
+  AdminPageHeader,
+  AdminStatGrid,
+} from "@/components/admin/shared";
 import { CustomersTable } from "./customers-table";
 
 /** Default pagination settings */
@@ -146,22 +150,14 @@ export default async function CustomersListPage({
 
   return (
     <div className="space-y-8">
-      {/* Centered Header */}
-      <div className="text-center max-w-2xl mx-auto">
-        <div className="section-badge mb-4 inline-flex">
-          <Users className="h-4 w-4" />
-          Customers
-        </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Customer Management
-        </h1>
-        <p className="mt-3 text-muted-foreground">
-          Manage your customer base and view engagement metrics.
-        </p>
-      </div>
+      <AdminPageHeader
+        eyebrow="Customers"
+        eyebrowIcon={Users}
+        title="Customer Management"
+        subtitle="Manage your customer base and view engagement metrics."
+      />
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <AdminStatGrid columns={3}>
         <StatCard
           label="Total Customers"
           value={totalCustomersCount}
@@ -180,9 +176,8 @@ export default async function CustomersListPage({
           icon={UserPlus}
           hint="Last 30 days"
         />
-      </div>
+      </AdminStatGrid>
 
-      {/* Customers Table with Search and Pagination */}
       <CustomersTable customers={customers} totalCount={filteredCount} />
     </div>
   );
