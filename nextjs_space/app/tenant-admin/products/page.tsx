@@ -2,7 +2,6 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { Package } from "lucide-react";
 import { ProductsTable } from "./products-table";
 import { SyncButton } from "./sync-button";
 
@@ -209,21 +208,20 @@ export default async function ProductsPage({
 
   return (
     <div className="space-y-8">
-      {/* Centered Header with Absolute Right Button */}
-      <div className="relative mb-8">
-        <div className="text-center max-w-2xl mx-auto">
-          <div className="section-badge mb-4 inline-flex">
-            <Package className="h-4 w-4" />
-            Products
-          </div>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+      <div className="bs-page-header-compact flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="bs-eyebrow">Products</div>
+          <h1
+            className="bs-page-title"
+            style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+          >
             Product Catalog
           </h1>
-          <p className="mt-3 text-muted-foreground">
+          <p className="bs-page-subtitle">
             Manage your product catalog and inventory.
           </p>
         </div>
-        <div className="mt-4 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mt-0">
+        <div className="flex justify-start sm:justify-end">
           <SyncButton />
         </div>
       </div>

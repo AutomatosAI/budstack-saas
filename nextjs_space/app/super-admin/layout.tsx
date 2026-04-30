@@ -57,14 +57,14 @@ export default async function SuperAdminLayout({
   }
 
   return (
-    <div className="budstacks-theme flex min-h-screen canvas-bg">
+    <div data-surface="admin" data-tier="super" className="budstacks-theme flex min-h-screen canvas-bg">
       <SuperAdminSidebar
         userName={`${user.firstName || ""} ${user.lastName || ""}`.trim() || "Super Admin"}
         userEmail={user.emailAddresses[0]?.emailAddress || "admin@budstack.io"}
       />
       <AccessibleAdminLayout theme="super-admin">
-        {/* Notification bar - compact */}
-        <div className="sticky top-0 z-30 flex items-center justify-end px-4 py-2 md:px-8">
+        {/* Top bar — Budstacks Admin DS: bg-bs-bg, hairline border, 56px */}
+        <div className="sticky top-0 z-30 flex items-center justify-end h-14 px-4 md:px-8 bg-bs-bg border-b border-bs-border-100">
           <NotificationCenter
             theme="super-admin"
             notifications={notifications}
@@ -72,8 +72,10 @@ export default async function SuperAdminLayout({
           />
           <HeaderProfile theme="super-admin" />
         </div>
-        {/* Main content */}
-        <div className="flex-1 overflow-auto px-4 py-4 md:px-8 md:py-6">{children}</div>
+        {/* Main content — 1180px max with responsive 32→64px side padding, 56px top */}
+        <div className="flex-1 overflow-auto px-8 lg:px-16 pt-14 pb-10">
+          <div className="mx-auto max-w-[1180px]">{children}</div>
+        </div>
       </AccessibleAdminLayout>
     </div>
   );

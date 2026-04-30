@@ -1,7 +1,6 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { Settings } from "lucide-react";
 import SettingsForm from "./settings-form";
 
 export default async function SettingsPage() {
@@ -21,7 +20,6 @@ export default async function SettingsPage() {
     include: { tenants: true },
   });
 
-  // Mask the secret key before passing to client
   if (localUser?.tenants?.drGreenSecretKey) {
     localUser.tenants.drGreenSecretKey = "********";
   }
@@ -35,19 +33,18 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Centered Header */}
-      <div className="text-center max-w-2xl mx-auto">
-        <div className="section-badge mb-4 inline-flex">
-          <Settings className="h-4 w-4" />
-          Settings
-        </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+      <header className="bs-page-header-centered">
+        <div className="bs-eyebrow">Settings</div>
+        <h1
+          className="bs-page-title"
+          style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+        >
           Store Settings
         </h1>
-        <p className="mt-3 text-muted-foreground">
+        <p className="bs-page-subtitle">
           Configure your store preferences and operations.
         </p>
-      </div>
+      </header>
 
       <SettingsForm tenant={localUser.tenants} />
     </div>

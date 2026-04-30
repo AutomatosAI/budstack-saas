@@ -4,14 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { StatCard } from "@/components/admin/shared";
 import {
   TrendingUp,
   DollarSign,
@@ -22,6 +15,8 @@ import {
   AlertCircle,
   Percent,
   UserPlus,
+  BarChart3,
+  Loader2,
 } from "lucide-react";
 import {
   LineChart,
@@ -39,11 +34,14 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 
-// Dynamic import of Plotly for code splitting
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Plot = dynamic(() => import("react-plotly.js") as any, {
   ssr: false,
 }) as any;
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface AnalyticsData {
   totalTenants: number;
@@ -93,8 +91,12 @@ export default function ComprehensiveAnalyticsPage() {
     if (isLoaded && !isSignedIn) {
       router.push("/auth/login");
     }
-    if (isLoaded && isSignedIn && user?.publicMetadata?.role !== "SUPER_ADMIN") {
-      router.push("/auth/login"); // Or access denied page
+    if (
+      isLoaded &&
+      isSignedIn &&
+      user?.publicMetadata?.role !== "SUPER_ADMIN"
+    ) {
+      router.push("/auth/login");
     }
   }, [isLoaded, isSignedIn, user, router]);
 
@@ -102,11 +104,11 @@ export default function ComprehensiveAnalyticsPage() {
     if (user?.id) {
       fetchAllData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, timeRange]);
 
   const fetchAllData = async () => {
     try {
-      // Fetch business analytics from API
       const analyticsResponse = await fetch(
         `/api/super-admin/analytics?timeRange=${timeRange}`,
       );
@@ -115,7 +117,6 @@ export default function ComprehensiveAnalyticsPage() {
         setAnalytics(data);
       }
 
-      // Generate platform metrics (mock data - replace with real API in production)
       await new Promise((resolve) => setTimeout(resolve, 800));
       const platformData: PlatformMetrics = {
         tenantSignups: generateMockSignupData(),
@@ -140,6 +141,7 @@ export default function ComprehensiveAnalyticsPage() {
     }
   };
 
+  // Chart series hex literals — intentional product output (PRD §4.6), do NOT replace with tokens
   const COLORS = [
     "#10b981",
     "#3b82f6",
@@ -151,10 +153,13 @@ export default function ComprehensiveAnalyticsPage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center theme-force-light">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-cyan-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">
+          <Loader2
+            className="mx-auto mb-4 h-10 w-10 animate-spin text-bs-fg-muted"
+            aria-hidden="true"
+          />
+          <p className="text-bs-fg-muted">
             Loading comprehensive analytics...
           </p>
         </div>
@@ -166,307 +171,261 @@ export default function ComprehensiveAnalyticsPage() {
     return null;
   }
 
+  const timeRangeOptions: { value: "7d" | "30d" | "90d"; label: string }[] = [
+    { value: "7d", label: "7 Days" },
+    { value: "30d", label: "30 Days" },
+    { value: "90d", label: "90 Days" },
+  ];
+
   return (
     <div className="space-y-8">
-      {/* Centered Header with Time Range Selector */}
-      <div className="text-center max-w-2xl mx-auto">
-        <div className="section-badge mb-4 inline-flex">
+      <div className="bs-page-header-centered">
+        <div className="bs-eyebrow inline-flex items-center gap-1.5">
+          <BarChart3 className="h-4 w-4" aria-hidden="true" />
           Analytics
         </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Platform Analytics
-        </h1>
-        <p className="mt-3 text-muted-foreground">
+        <h1 className="bs-page-title">Platform Analytics</h1>
+        <p className="bs-page-subtitle">
           Comprehensive insights across all dimensions.
         </p>
         <div className="flex gap-2 justify-center mt-6">
-          <Button
-            variant={timeRange === "7d" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTimeRange("7d")}
-            className={
-              timeRange === "7d"
-                ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
-                : "rounded-xl"
-            }
-          >
-            7 Days
-          </Button>
-          <Button
-            variant={timeRange === "30d" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTimeRange("30d")}
-            className={
-              timeRange === "30d"
-                ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
-                : "rounded-xl"
-            }
-          >
-            30 Days
-          </Button>
-          <Button
-            variant={timeRange === "90d" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTimeRange("90d")}
-            className={
-              timeRange === "90d"
-                ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
-                : "rounded-xl"
-            }
-          >
-            90 Days
-          </Button>
+          {timeRangeOptions.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setTimeRange(opt.value)}
+              className={cn(
+                "bs-btn bs-btn-sm",
+                timeRange === opt.value ? "bs-btn-green" : "bs-btn-ghost",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ========== SECTION 1: Key Business Metrics ========== */}
-      <section>
-        <h2 className="text-2xl font-bold mb-6 text-slate-900">
+      {/* Key Business Metrics */}
+      <section className="space-y-4">
+        <h2
+          className="text-[22px] leading-tight text-bs-fg"
+          style={sectionTitleStyle}
+        >
           Key Business Metrics
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Total Revenue */}
-          <Card className="border-none shadow-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-emerald-50">
-                Total Revenue
-              </CardTitle>
-              <DollarSign className="h-5 w-5 text-emerald-100" />
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold">
-                €{analytics.totalRevenue.toFixed(2)}
-              </div>
-              <div className="flex items-center gap-1 text-xs mt-2">
-                <TrendingUp className="w-3 h-3" />
-                <span>+€{analytics.recentRevenue.toFixed(2)} this period</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Total Orders */}
-          <Card className="border-none shadow-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-amber-50">
-                Total Orders
-              </CardTitle>
-              <ShoppingCart className="h-5 w-5 text-amber-100" />
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold">{analytics.totalOrders}</div>
-              <p className="text-xs mt-2">
-                +{analytics.recentOrders} this period
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Total Customers */}
-          <Card className="border-none shadow-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-purple-50">
-                Total Customers
-              </CardTitle>
-              <Users className="h-5 w-5 text-purple-100" />
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold">{analytics.totalUsers}</div>
-              <p className="text-xs mt-2">
-                +{analytics.recentUsers} this period
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Active Stores */}
-          <Card className="border-none shadow-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white overflow-hidden relative group hover:shadow-xl transition-shadow duration-300">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-cyan-50">
-                Active Stores
-              </CardTitle>
-              <Store className="h-5 w-5 text-cyan-100" />
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold">
-                {analytics.activeTenants}
-              </div>
-              <p className="text-xs mt-2">of {analytics.totalTenants} total</p>
-            </CardContent>
-          </Card>
+          <StatCard
+            label="Total Revenue"
+            value={`€${analytics.totalRevenue.toFixed(2)}`}
+            icon={DollarSign}
+            hint={
+              <span className="inline-flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" aria-hidden="true" />€
+                {analytics.recentRevenue.toFixed(2)} this period
+              </span>
+            }
+          />
+          <StatCard
+            label="Total Orders"
+            value={analytics.totalOrders}
+            icon={ShoppingCart}
+            hint={`+${analytics.recentOrders} this period`}
+          />
+          <StatCard
+            label="Total Customers"
+            value={analytics.totalUsers}
+            icon={Users}
+            hint={`+${analytics.recentUsers} this period`}
+          />
+          <StatCard
+            label="Active Stores"
+            value={analytics.activeTenants}
+            icon={Store}
+            hint={`of ${analytics.totalTenants} total`}
+          />
         </div>
       </section>
 
-      {/* ========== SECTION 2: Platform Health Metrics (Mission Control) ========== */}
-      <section>
-        <h2 className="text-2xl font-bold mb-6 text-slate-900">
+      {/* Platform Health Metrics */}
+      <section className="space-y-4">
+        <h2
+          className="text-[22px] leading-tight text-bs-fg"
+          style={sectionTitleStyle}
+        >
           Platform Health Metrics
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <MetricCard
-            icon={DollarSign}
+          <StatCard
             label="Monthly Recurring Revenue"
             value={`$${(platformMetrics.quickMetrics.mrr / 1000).toFixed(1)}k`}
-            subValue="MRR"
-            delay="0ms"
-            accentColor="cyan"
+            icon={DollarSign}
+            hint="MRR"
           />
-          <MetricCard
-            icon={Percent}
+          <StatCard
             label="Churn Rate"
             value={`${platformMetrics.quickMetrics.churnRate}%`}
-            subValue="Last 30 days"
-            delay="100ms"
-            accentColor="amber"
+            icon={Percent}
+            hint="Last 30 days"
           />
-          <MetricCard
-            icon={Users}
+          <StatCard
             label="Avg Users per Tenant"
             value={platformMetrics.quickMetrics.avgUsersPerTenant.toFixed(1)}
-            subValue="Platform-wide"
-            delay="200ms"
-            accentColor="emerald"
+            icon={Users}
+            hint="Platform-wide"
           />
         </div>
       </section>
 
-      {/* ========== SECTION 3: Business Intelligence (Recharts) ========== */}
-      <section>
-        <h2 className="text-2xl font-bold mb-6 text-slate-900">
+      {/* Business Intelligence (Recharts) */}
+      <section className="space-y-4">
+        <h2
+          className="text-[22px] leading-tight text-bs-fg"
+          style={sectionTitleStyle}
+        >
           Business Intelligence
         </h2>
 
-        {/* Revenue & Orders Trends */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Revenue Trend</CardTitle>
-              <CardDescription>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bs-card bs-card-pad">
+            <div className="mb-4">
+              <h3
+                className="text-[20px] leading-tight text-bs-fg"
+                style={sectionTitleStyle}
+              >
+                Revenue Trend
+              </h3>
+              <p className="text-sm text-bs-fg-muted">
                 Daily revenue over the selected period
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={analytics.revenueByDay}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value: any) => `€${value.toFixed(2)}`}
-                    labelFormatter={(label) => `Date: ${label}`}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{ fill: "#10b981" }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={analytics.revenueByDay}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip
+                  formatter={(value: any) => `€${value.toFixed(2)}`}
+                  labelFormatter={(label) => `Date: ${label}`}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  dot={{ fill: "#10b981" }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
 
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Order Volume</CardTitle>
-              <CardDescription>
+          <div className="bs-card bs-card-pad">
+            <div className="mb-4">
+              <h3
+                className="text-[20px] leading-tight text-bs-fg"
+                style={sectionTitleStyle}
+              >
+                Order Volume
+              </h3>
+              <p className="text-sm text-bs-fg-muted">
                 Daily orders over the selected period
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={analytics.ordersByDay}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip labelFormatter={(label) => `Date: ${label}`} />
-                  <Bar dataKey="orders" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={analytics.ordersByDay}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip labelFormatter={(label) => `Date: ${label}`} />
+                <Bar dataKey="orders" fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* Revenue by Tenant & Customer Growth */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Revenue by Store</CardTitle>
-              <CardDescription>
+          <div className="bs-card bs-card-pad">
+            <div className="mb-4">
+              <h3
+                className="text-[20px] leading-tight text-bs-fg"
+                style={sectionTitleStyle}
+              >
+                Revenue by Store
+              </h3>
+              <p className="text-sm text-bs-fg-muted">
                 Distribution of revenue across stores
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={analytics.revenueByTenant}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry) =>
-                      `${entry.name}: €${entry.value.toFixed(0)}`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {analytics.revenueByTenant.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: any) => `€${value.toFixed(2)}`} />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={analytics.revenueByTenant}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry) =>
+                    `${entry.name}: €${entry.value.toFixed(0)}`
+                  }
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {analytics.revenueByTenant.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: any) => `€${value.toFixed(2)}`} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
 
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Customer Growth</CardTitle>
-              <CardDescription>
+          <div className="bs-card bs-card-pad">
+            <div className="mb-4">
+              <h3
+                className="text-[20px] leading-tight text-bs-fg"
+                style={sectionTitleStyle}
+              >
+                Customer Growth
+              </h3>
+              <p className="text-sm text-bs-fg-muted">
                 New customer registrations over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={analytics.customerGrowth}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip labelFormatter={(label) => `Date: ${label}`} />
-                  <Line
-                    type="monotone"
-                    dataKey="customers"
-                    stroke="#8b5cf6"
-                    strokeWidth={2}
-                    dot={{ fill: "#8b5cf6" }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={analytics.customerGrowth}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip labelFormatter={(label) => `Date: ${label}`} />
+                <Line
+                  type="monotone"
+                  dataKey="customers"
+                  stroke="#8b5cf6"
+                  strokeWidth={2}
+                  dot={{ fill: "#8b5cf6" }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </section>
 
-      {/* ========== SECTION 4: Platform Trends (Plotly - Mission Control) ========== */}
-      <section>
-        <h2 className="text-2xl font-bold mb-6 text-slate-900">
+      {/* Platform Trends (Plotly) */}
+      <section className="space-y-4">
+        <h2
+          className="text-[22px] leading-tight text-bs-fg"
+          style={sectionTitleStyle}
+        >
           Platform Trends
         </h2>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Tenant Signups Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ChartCard
             title="Tenant Signups"
             subtitle="Last 90 days"
             icon={TrendingUp}
-            delay="300ms"
           >
             <Plot
               data={[
@@ -475,18 +434,11 @@ export default function ComprehensiveAnalyticsPage() {
                   y: platformMetrics.tenantSignups.map((d) => d.count),
                   type: "scatter",
                   mode: "lines+markers",
-                  line: {
-                    color: "#06b6d4",
-                    width: 3,
-                    shape: "spline",
-                  },
+                  line: { color: "#06b6d4", width: 3, shape: "spline" },
                   marker: {
                     color: "#06b6d4",
                     size: 6,
-                    line: {
-                      color: "#0e7490",
-                      width: 2,
-                    },
+                    line: { color: "#0e7490", width: 2 },
                   },
                   fill: "tozeroy",
                   fillcolor: "rgba(6, 182, 212, 0.1)",
@@ -498,42 +450,37 @@ export default function ComprehensiveAnalyticsPage() {
                 plot_bgcolor: "rgba(0,0,0,0)",
                 margin: { l: 40, r: 20, t: 20, b: 40 },
                 xaxis: {
-                  gridcolor: "#e2e8f0",
+                  gridcolor: "#1f2629",
                   showgrid: true,
                   zeroline: false,
                   tickfont: {
                     family: "JetBrains Mono, monospace",
                     size: 10,
-                    color: "#64748b",
+                    color: "#8a9296",
                   },
                 },
                 yaxis: {
-                  gridcolor: "#e2e8f0",
+                  gridcolor: "#1f2629",
                   showgrid: true,
                   zeroline: false,
                   tickfont: {
                     family: "JetBrains Mono, monospace",
                     size: 10,
-                    color: "#64748b",
+                    color: "#8a9296",
                   },
                 },
                 hovermode: "closest",
               }}
-              config={{
-                displayModeBar: false,
-                responsive: true,
-              }}
+              config={{ displayModeBar: false, responsive: true }}
               style={{ width: "100%", height: "100%" }}
               useResizeHandler
             />
           </ChartCard>
 
-          {/* Platform Revenue Chart */}
           <ChartCard
             title="Platform Revenue"
             subtitle="Last 12 months"
             icon={DollarSign}
-            delay="400ms"
           >
             <Plot
               data={[
@@ -564,47 +511,41 @@ export default function ComprehensiveAnalyticsPage() {
                 plot_bgcolor: "rgba(0,0,0,0)",
                 margin: { l: 50, r: 20, t: 20, b: 60 },
                 xaxis: {
-                  gridcolor: "#e2e8f0",
+                  gridcolor: "#1f2629",
                   showgrid: false,
                   zeroline: false,
                   tickfont: {
                     family: "JetBrains Mono, monospace",
                     size: 10,
-                    color: "#64748b",
+                    color: "#8a9296",
                   },
                   tickangle: -45,
                 },
                 yaxis: {
-                  gridcolor: "#e2e8f0",
+                  gridcolor: "#1f2629",
                   showgrid: true,
                   zeroline: false,
                   tickfont: {
                     family: "JetBrains Mono, monospace",
                     size: 10,
-                    color: "#64748b",
+                    color: "#8a9296",
                   },
                   tickprefix: "$",
                 },
                 hovermode: "closest",
               }}
-              config={{
-                displayModeBar: false,
-                responsive: true,
-              }}
+              config={{ displayModeBar: false, responsive: true }}
               style={{ width: "100%", height: "100%" }}
               useResizeHandler
             />
           </ChartCard>
         </div>
 
-        {/* Bottom Row: Pie Chart + Needs Attention */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Active vs Inactive Tenants */}
           <ChartCard
             title="Tenant Distribution"
             subtitle="Active vs Inactive"
             icon={PieChartIcon}
-            delay="500ms"
           >
             <Plot
               data={[
@@ -617,10 +558,7 @@ export default function ComprehensiveAnalyticsPage() {
                   type: "pie",
                   marker: {
                     colors: ["#06b6d4", "#cbd5e1"],
-                    line: {
-                      color: "#fff",
-                      width: 3,
-                    },
+                    line: { color: "#0a0c0d", width: 3 },
                   },
                   textfont: {
                     family: "JetBrains Mono, monospace",
@@ -640,206 +578,113 @@ export default function ComprehensiveAnalyticsPage() {
                   font: {
                     family: "JetBrains Mono, monospace",
                     size: 12,
-                    color: "#64748b",
+                    color: "#8a9296",
                   },
                   orientation: "h",
                   y: -0.2,
                 },
               }}
-              config={{
-                displayModeBar: false,
-                responsive: true,
-              }}
+              config={{ displayModeBar: false, responsive: true }}
               style={{ width: "100%", height: "100%" }}
               useResizeHandler
             />
           </ChartCard>
 
-          {/* Needs Attention Card */}
-          <Card
-            className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4"
-            style={{ animationDelay: "600ms", animationFillMode: "backwards" }}
-          >
-            <CardHeader className="border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <AlertCircle className="h-5 w-5 text-amber-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-bold text-slate-900">
-                    Needs Attention
-                  </CardTitle>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    Action items requiring review
-                  </p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <AttentionItem
-                  icon={UserPlus}
-                  label="Pending Onboarding"
-                  count={platformMetrics.needsAttention.pendingOnboarding}
-                  color="cyan"
-                />
-                <AttentionItem
-                  icon={AlertCircle}
-                  label="Failed Payments"
-                  count={platformMetrics.needsAttention.failedPayments}
-                  color="red"
-                />
-                <AttentionItem
-                  icon={AlertCircle}
-                  label="Support Tickets"
-                  count={platformMetrics.needsAttention.supportTickets}
-                  color="amber"
+          <div className="bs-card bs-card-pad">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="rounded-bs-md bg-bs-warn/10 p-2 border border-bs-warn/30">
+                <AlertCircle
+                  className="h-5 w-5 text-bs-warn"
+                  aria-hidden="true"
                 />
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* ========== SECTION 5: Top Performing Stores ========== */}
-      <section>
-        <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-          <CardHeader>
-            <CardTitle className="text-2xl">Top Performing Stores</CardTitle>
-            <CardDescription>
-              Stores ranked by order volume and revenue
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {analytics.topTenants.map((tenant: any, index: number) => (
-                <div
-                  key={tenant.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              <div>
+                <h3
+                  className="text-[20px] leading-tight text-bs-fg"
+                  style={sectionTitleStyle}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center font-bold text-white text-lg">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-lg">
-                        {tenant.businessName}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {tenant.subdomain}.{process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-green-600">
-                      €{tenant._sum?.total?.toFixed(2) || "0.00"}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {tenant._count?.orders || 0} orders
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {analytics.topTenants.length === 0 && (
-                <p className="text-center text-gray-500 py-8">
-                  No data available yet
+                  Needs Attention
+                </h3>
+                <p className="text-xs text-bs-fg-muted mt-0.5">
+                  Action items requiring review
                 </p>
-              )}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </section>
-    </div>
-  );
-}
-
-/* ============================================================================
- * Supporting Components
- * ========================================================================= */
-
-interface MetricCardProps {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  subValue: string;
-  delay: string;
-  accentColor: "cyan" | "amber" | "emerald";
-}
-
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  subValue,
-  delay,
-  accentColor,
-}: MetricCardProps) {
-  const colorMap = {
-    cyan: {
-      border: "border-cyan-200",
-      iconBg: "bg-cyan-500/10",
-      iconBorder: "border-cyan-500/20",
-      iconColor: "text-cyan-600",
-      valueColor: "text-cyan-600",
-    },
-    amber: {
-      border: "border-amber-200",
-      iconBg: "bg-amber-500/10",
-      iconBorder: "border-amber-500/20",
-      iconColor: "text-amber-600",
-      valueColor: "text-amber-600",
-    },
-    emerald: {
-      border: "border-emerald-200",
-      iconBg: "bg-emerald-500/10",
-      iconBorder: "border-emerald-500/20",
-      iconColor: "text-emerald-600",
-      valueColor: "text-emerald-600",
-    },
-  };
-
-  const colors = colorMap[accentColor];
-
-  return (
-    <Card
-      className={cn(
-        "bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden hover:shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
-      )}
-      style={{ animationDelay: delay, animationFillMode: "backwards" }}
-    >
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-3">
-            <div
-              className={cn(
-                "p-2.5 rounded-lg border inline-block",
-                colors.iconBg,
-                colors.iconBorder,
-              )}
-            >
-              <Icon className={cn("h-5 w-5", colors.iconColor)} />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-slate-600 uppercase tracking-wider">
-                {label}
-              </p>
-              <p
-                className={cn("text-4xl font-bold mt-2", colors.valueColor)}
-                style={{ fontFamily: "JetBrains Mono, monospace" }}
-              >
-                {value}
-              </p>
-              <p
-                className="text-xs text-slate-500 mt-1"
-                style={{ fontFamily: "JetBrains Mono, monospace" }}
-              >
-                {subValue}
-              </p>
+            <div className="space-y-4">
+              <AttentionItem
+                icon={UserPlus}
+                label="Pending Onboarding"
+                count={platformMetrics.needsAttention.pendingOnboarding}
+                tone="info"
+              />
+              <AttentionItem
+                icon={AlertCircle}
+                label="Failed Payments"
+                count={platformMetrics.needsAttention.failedPayments}
+                tone="danger"
+              />
+              <AttentionItem
+                icon={AlertCircle}
+                label="Support Tickets"
+                count={platformMetrics.needsAttention.supportTickets}
+                tone="warn"
+              />
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </section>
+
+      {/* Top Performing Stores */}
+      <section className="bs-card bs-card-pad">
+        <div className="mb-6">
+          <h2
+            className="text-[22px] leading-tight text-bs-fg"
+            style={sectionTitleStyle}
+          >
+            Top Performing Stores
+          </h2>
+          <p className="text-sm text-bs-fg-muted">
+            Stores ranked by order volume and revenue
+          </p>
+        </div>
+        <div className="space-y-4">
+          {analytics.topTenants.map((tenant: any, index: number) => (
+            <div
+              key={tenant.id}
+              className="flex items-center justify-between p-4 bg-bs-card-2/50 rounded-bs-md hover:bg-bs-card-2 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-bs-green flex items-center justify-center font-bold text-bs-canvas text-lg">
+                  {index + 1}
+                </div>
+                <div>
+                  <p className="font-semibold text-lg text-bs-fg">
+                    {tenant.businessName}
+                  </p>
+                  <p className="text-sm text-bs-fg-muted">
+                    {tenant.subdomain}.
+                    {process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io"}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-bs-green">
+                  €{tenant._sum?.total?.toFixed(2) || "0.00"}
+                </p>
+                <p className="text-sm text-bs-fg-muted">
+                  {tenant._count?.orders || 0} orders
+                </p>
+              </div>
+            </div>
+          ))}
+          {analytics.topTenants.length === 0 && (
+            <p className="text-center text-bs-fg-muted py-8">
+              No data available yet
+            </p>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -847,7 +692,6 @@ interface ChartCardProps {
   title: string;
   subtitle: string;
   icon: React.ElementType;
-  delay: string;
   children: React.ReactNode;
 }
 
@@ -855,31 +699,29 @@ function ChartCard({
   title,
   subtitle,
   icon: Icon,
-  delay,
   children,
 }: ChartCardProps) {
   return (
-    <Card
-      className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4"
-      style={{ animationDelay: delay, animationFillMode: "backwards" }}
-    >
-      <CardHeader className="border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-            <Icon className="h-5 w-5 text-cyan-600" />
-          </div>
-          <div>
-            <CardTitle className="text-lg font-bold text-slate-900">
-              {title}
-            </CardTitle>
-            <p className="text-xs text-slate-600 mt-0.5">{subtitle}</p>
-          </div>
+    <div className="bs-card bs-card-pad">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="rounded-bs-md bg-bs-card-2 p-2">
+          <Icon
+            className="h-5 w-5 text-bs-fg"
+            aria-hidden="true"
+          />
         </div>
-      </CardHeader>
-      <CardContent className="pt-6">
-        <div className="h-[280px] relative">{children}</div>
-      </CardContent>
-    </Card>
+        <div>
+          <h3
+            className="text-[20px] leading-tight text-bs-fg"
+            style={sectionTitleStyle}
+          >
+            {title}
+          </h3>
+          <p className="text-xs text-bs-fg-muted mt-0.5">{subtitle}</p>
+        </div>
+      </div>
+      <div className="h-[280px] relative">{children}</div>
+    </div>
   );
 }
 
@@ -887,48 +729,54 @@ interface AttentionItemProps {
   icon: React.ElementType;
   label: string;
   count: number;
-  color: "cyan" | "red" | "amber";
+  tone: "info" | "danger" | "warn";
 }
 
 function AttentionItem({
   icon: Icon,
   label,
   count,
-  color,
+  tone,
 }: AttentionItemProps) {
-  const colorMap = {
-    cyan: {
-      bg: "bg-cyan-500/10",
-      border: "border-cyan-500/20",
-      icon: "text-cyan-600",
-      badge: "bg-cyan-500 text-white",
+  const toneMap = {
+    info: {
+      bg: "bg-bs-info/10",
+      border: "border-bs-info/30",
+      icon: "text-bs-info",
+      badge: "bg-bs-info text-bs-canvas",
     },
-    red: {
-      bg: "bg-red-500/10",
-      border: "border-red-500/20",
-      icon: "text-red-600",
-      badge: "bg-red-500 text-white",
+    danger: {
+      bg: "bg-bs-danger/10",
+      border: "border-bs-danger/30",
+      icon: "text-bs-danger",
+      badge: "bg-bs-danger text-bs-canvas",
     },
-    amber: {
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
-      icon: "text-amber-600",
-      badge: "bg-amber-500 text-white",
+    warn: {
+      bg: "bg-bs-warn/10",
+      border: "border-bs-warn/30",
+      icon: "text-bs-warn",
+      badge: "bg-bs-warn text-bs-canvas",
     },
   };
 
-  const colors = colorMap[color];
+  const colors = toneMap[tone];
 
   return (
-    <div className="flex items-center justify-between p-4 rounded-lg border-2 border-slate-200 hover:border-slate-300 transition-colors">
+    <div className="flex items-center justify-between p-4 rounded-bs-md border border-bs-border-100 hover:border-bs-fg-muted transition-colors">
       <div className="flex items-center gap-3">
-        <div className={cn("p-2 rounded-lg border", colors.bg, colors.border)}>
-          <Icon className={cn("h-4 w-4", colors.icon)} />
+        <div className={cn("p-2 rounded-bs-sm border", colors.bg, colors.border)}>
+          <Icon
+            className={cn("h-4 w-4", colors.icon)}
+            aria-hidden="true"
+          />
         </div>
-        <span className="text-sm font-medium text-slate-700">{label}</span>
+        <span className="text-sm font-medium text-bs-fg">{label}</span>
       </div>
       <div
-        className={cn("px-3 py-1 rounded-full text-sm font-bold", colors.badge)}
+        className={cn(
+          "px-3 py-1 rounded-full text-sm font-bold",
+          colors.badge,
+        )}
         style={{ fontFamily: "JetBrains Mono, monospace" }}
       >
         {count}
@@ -936,10 +784,6 @@ function AttentionItem({
     </div>
   );
 }
-
-/* ============================================================================
- * Mock Data Generators
- * ========================================================================= */
 
 function generateMockSignupData() {
   const data = [];

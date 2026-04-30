@@ -1,22 +1,10 @@
 "use client";
 
-// Force rebuild: 1
-
 import { useState } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Loader2, Plus, Copy, Eye, EyeOff } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
@@ -125,124 +113,126 @@ export function TenantTemplateList() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="bs-card bs-card-pad flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-bs-fg-muted" />
       </div>
     );
   }
 
   if (error) {
-    return <div className="p-8 text-red-500">Failed to load templates.</div>;
+    return (
+      <div className="bs-card bs-card-pad text-sm text-bs-danger">
+        Failed to load templates.
+      </div>
+    );
   }
 
   if (!templates || templates.length === 0) {
     return (
-      <div className="rounded-md border bg-background p-8 text-center">
-        <p className="text-sm text-muted-foreground">
+      <div className="bs-card bs-card-pad flex flex-col items-center gap-3 py-12 text-center">
+        <p className="text-sm text-bs-fg-muted">
           No templates yet. Create your first email template.
         </p>
-        <Link href="/tenant-admin/emails/new" className="mt-4 inline-block">
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" /> New Template
-          </Button>
+        <Link href="/tenant-admin/emails/new">
+          <span className="bs-btn bs-btn-green bs-btn-sm">
+            <Plus className="h-4 w-4" /> <span>New Template</span>
+          </span>
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden">
+    <div className="bs-card bs-card-pad">
       <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Template Name</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden md:table-cell">Last Updated</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <table className="bs-table w-full">
+          <thead>
+            <tr>
+              <th className="text-left">Template Name</th>
+              <th className="text-left">Status</th>
+              <th className="hidden text-left md:table-cell">Last Updated</th>
+              <th className="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
             {templates.map((template) => (
-              <TableRow key={template.id}>
-                <TableCell className="font-medium">
+              <tr key={template.id}>
+                <td className="font-medium text-bs-fg">
                   {template.name}
                   {template.description && (
-                    <div className="max-w-[150px] sm:max-w-[300px] truncate text-xs text-muted-foreground">
+                    <div className="max-w-[150px] truncate text-xs text-bs-fg-muted sm:max-w-[300px]">
                       {template.description}
                     </div>
                   )}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={template.isSystem ? "secondary" : "default"}
+                </td>
+                <td>
+                  <span
                     className={
-                      !template.isSystem ? "bg-slate-900 dark:bg-slate-700" : ""
+                      template.isSystem
+                        ? "bs-chip bs-chip-muted"
+                        : "bs-chip bs-chip-info"
                     }
                   >
                     {template.isSystem ? "System" : "Custom"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
+                  </span>
+                </td>
+                <td className="hidden font-mono text-bs-fg-muted tabular-nums md:table-cell">
                   {format(new Date(template.updatedAt), "MMM d, yyyy")}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1 flex-nowrap whitespace-nowrap min-w-[120px]">
+                </td>
+                <td className="text-right">
+                  <div className="flex min-w-[120px] flex-nowrap items-center justify-end gap-1 whitespace-nowrap">
                     {template.isSystem ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
+                      <button
+                        type="button"
                         onClick={() => handleClone(template.id)}
                         title="Clone/Customize this template"
+                        className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0"
                       >
                         <Copy className="h-4 w-4" />
-                      </Button>
+                      </button>
                     ) : (
                       <>
-                        <Link href={`/tenant-admin/emails/${template.id}`} passHref>
-                          <Button variant="ghost" size="icon" title="Edit Template">
+                        <Link href={`/tenant-admin/emails/${template.id}`}>
+                          <span
+                            className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0"
+                            title="Edit Template"
+                          >
                             <Edit className="h-4 w-4" />
-                          </Button>
+                          </span>
                         </Link>
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <button
+                          type="button"
                           onClick={() =>
                             handleTogglePublish(template.id, template.isActive)
                           }
                           title={
                             template.isActive ? "Disable Template" : "Enable Template"
                           }
-                          className={
-                            template.isActive
-                              ? "text-amber-600 hover:text-amber-700"
-                              : "text-green-600 hover:text-green-700"
-                          }
+                          className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0"
                         >
                           {template.isActive ? (
                             <EyeOff className="h-4 w-4" />
                           ) : (
                             <Eye className="h-4 w-4" />
                           )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDelete(template.id)}
                           disabled={isDeleting === template.id}
-                          className="text-destructive hover:text-destructive/90"
+                          className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 px-0 text-bs-danger hover:text-bs-danger"
                           title="Delete Template"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </Button>
+                        </button>
                       </>
                     )}
                   </div>
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
     </div>
   );

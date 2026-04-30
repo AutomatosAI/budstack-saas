@@ -18,16 +18,35 @@ const config: Config = {
         'bs-sans': ['"Söhne"', 'var(--font-inter)', 'system-ui', 'sans-serif'],
         'bs-serif': ['"GT Sectra"', 'var(--font-fraunces)', 'var(--font-playfair)', 'Georgia', 'serif'],
         'bs-mono': ['var(--font-jetbrains-mono)', '"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        // Budstacks admin design system — Cormorant Garamond for titles & big metric numbers
+        display: ['var(--font-cormorant)', '"Cormorant Garamond"', 'Georgia', 'serif'],
+      },
+      fontSize: {
+        'display-xl': ['48px', { lineHeight: '1.05', letterSpacing: '-0.01em' }],
+        'display-lg': ['32px', { lineHeight: '1.10' }],
+        'display-md': ['22px', { lineHeight: '1.20' }],
+        'display-num': ['36px', { lineHeight: '1', letterSpacing: '-0.01em' }],
+        'mono-eyebrow': ['11px', { lineHeight: '1.4', letterSpacing: '0.20em' }],
+        'mono-chip': ['11px', { lineHeight: '1.4', letterSpacing: '0.10em' }],
+        'mono-cell': ['12.5px', { lineHeight: '1.4' }],
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic':
           'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+        // Budstacks admin design system tints
+        'bs-green-tint': 'linear-gradient(rgba(82,217,122,0.06), rgba(82,217,122,0.06))',
+        'bs-gold-tint': 'linear-gradient(rgba(231,219,184,0.14), rgba(231,219,184,0.14))',
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+        // Budstacks admin design system radii
+        'bs-sm': '6px',
+        'bs-md': '10px',
+        'bs-lg': '16px',
+        'bs-pill': '9999px',
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -98,6 +117,37 @@ const config: Config = {
             300: '#E8D19E',
           },
         },
+        // Budstacks admin design system — flat bs-* keys (coexist with nested bs.* during migration)
+        // Surface
+        'bs-bg': '#07090A',
+        'bs-bg-smoke': '#050a07',
+        'bs-canvas': '#07090A',
+        'bs-card': '#151A1C',
+        'bs-card-2': '#1A2123',
+        'bs-input': '#0F1517',
+        'bs-hover': '#1A2123',
+        'bs-step-200': '#222A2C',
+        'bs-step-300': '#2F3A3D',
+        'bs-border': '#222A2C',
+        'bs-border-100': '#1c2326',
+        // Text
+        'bs-fg': '#F5F6F4',
+        'bs-fg-2': '#F2F4F2',
+        'bs-fg-body': '#C6CCC8',
+        'bs-fg-body-2': '#EAEEEA',
+        'bs-fg-muted': '#8A938F',
+        // Brand green (flat — coexists with nested bs.green.500/.400)
+        'bs-green': '#52D97A',
+        'bs-green-deep': '#2FB560',
+        'bs-green-soft': '#8CF0A4',
+        // Gold (flat — coexists with nested bs.gold.500/.400)
+        'bs-gold': '#D9BC82',
+        'bs-gold-soft': '#E8D19E',
+        'bs-gold-cream': '#fcfcbc',
+        // Semantic
+        'bs-danger': '#F87171',
+        'bs-warn': '#F5C26B',
+        'bs-info': '#7DB7FF',
       },
       boxShadow: {
         'bs-card': '0 1px 0 rgba(255,255,255,0.04) inset, 0 20px 60px -30px rgba(0,0,0,0.7)',
@@ -105,6 +155,9 @@ const config: Config = {
         'bs-pill-footer': '0 1px 0 rgba(255,255,255,0.04) inset, 0 30px 80px -20px rgba(0,0,0,0.7), 0 0 80px -30px rgba(82,217,122,0.22)',
         'bs-green': '0 0 0 1px rgba(82,217,122,0.3), 0 10px 30px -10px rgba(82,217,122,0.4)',
         'bs-green-hover': '0 0 0 1px rgba(82,217,122,0.5), 0 14px 40px -8px rgba(82,217,122,0.55)',
+        'bs-card-hover': '0 1px 0 rgba(255,255,255,0.06) inset, 0 0 0 1px rgba(82,217,122,0.18), 0 24px 70px -28px rgba(0,0,0,0.8)',
+        'bs-glow': '0 0 0 1px rgba(82,217,122,0.30), 0 10px 30px -10px rgba(82,217,122,0.40)',
+        'bs-glow-hover': '0 0 0 1px rgba(82,217,122,0.50), 0 14px 40px -8px rgba(82,217,122,0.55)',
       },
       keyframes: {
         'accordion-down': {

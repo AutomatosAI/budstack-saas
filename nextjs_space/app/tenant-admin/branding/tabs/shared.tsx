@@ -56,8 +56,8 @@ export function ColorPicker({
 }) {
   return (
     <div>
-      <Label>{label}</Label>
-      <p className="text-xs text-gray-500 mb-2">{description}</p>
+      <Label className="bs-eyebrow">{label}</Label>
+      <p className="text-xs text-bs-fg-muted mb-2">{description}</p>
       <div className="flex gap-2">
         <Input
           type="color"
@@ -92,9 +92,9 @@ export function FileUpload({
 }) {
   return (
     <div>
-      <Label>{label}</Label>
-      <p className="text-xs text-gray-500 mb-2">{description}</p>
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+      <Label className="bs-eyebrow">{label}</Label>
+      <p className="text-xs text-bs-fg-muted mb-2">{description}</p>
+      <div className="border border-dashed border-bs-border-100 rounded-bs-md p-4 text-center hover:border-bs-border-200 transition-colors">
         <input
           type="file"
           accept={accept}
@@ -103,11 +103,11 @@ export function FileUpload({
           id={`file-${label}`}
         />
         <label htmlFor={`file-${label}`} className="cursor-pointer">
-          <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+          <Upload className="mx-auto h-8 w-8 text-bs-fg-muted mb-2" aria-hidden="true" />
           {file ? (
-            <p className="text-sm text-green-600 font-medium">{file.name}</p>
+            <p className="text-sm text-bs-green-soft font-medium">{file.name}</p>
           ) : (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-bs-fg-muted">
               Click to upload or drag and drop
             </p>
           )}
@@ -164,7 +164,7 @@ export function SectionVideoUploader({
           placeholder="Upload or paste video URL..."
           className="flex-1"
         />
-        <div className="relative border rounded-md p-1.5 flex h-10 w-10 items-center justify-center bg-muted/50 hover:bg-muted cursor-pointer shrink-0 transition-colors">
+        <div className="relative border border-bs-border-100 rounded-bs-sm p-1.5 flex h-10 w-10 items-center justify-center bg-bs-card-2/50 hover:bg-bs-card-2 cursor-pointer shrink-0 transition-colors">
           <input
             type="file"
             accept="video/mp4,video/webm,video/quicktime"
@@ -173,9 +173,9 @@ export function SectionVideoUploader({
             disabled={isUploading}
           />
           {isUploading ? (
-            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            <Loader2 className="w-4 h-4 animate-spin text-bs-fg-muted" aria-hidden="true" />
           ) : (
-            <Video className="w-4 h-4 text-muted-foreground" />
+            <Video className="w-4 h-4 text-bs-fg-muted" aria-hidden="true" />
           )}
         </div>
       </div>
@@ -184,10 +184,10 @@ export function SectionVideoUploader({
           src={value}
           controls
           muted
-          className="w-full max-h-32 rounded-md border object-cover"
+          className="w-full max-h-32 rounded-bs-sm border border-bs-border-100 object-cover"
         />
       )}
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-bs-fg-muted">
         MP4, WebM, or MOV — max 100MB
       </p>
     </div>
@@ -236,7 +236,7 @@ export function SectionImageUploader({
         placeholder="https://..."
         className="flex-1"
       />
-      <div className="relative border rounded-md p-1.5 flex h-10 w-10 items-center justify-center bg-muted/50 hover:bg-muted cursor-pointer shrink-0 transition-colors">
+      <div className="relative border border-bs-border-100 rounded-bs-sm p-1.5 flex h-10 w-10 items-center justify-center bg-bs-card-2/50 hover:bg-bs-card-2 cursor-pointer shrink-0 transition-colors">
         <input
           type="file"
           accept="image/*"
@@ -245,9 +245,9 @@ export function SectionImageUploader({
           disabled={isUploading}
         />
         {isUploading ? (
-          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          <Loader2 className="w-4 h-4 animate-spin text-bs-fg-muted" aria-hidden="true" />
         ) : (
-          <Upload className="w-4 h-4 text-muted-foreground" />
+          <Upload className="w-4 h-4 text-bs-fg-muted" aria-hidden="true" />
         )}
       </div>
     </div>

@@ -1,14 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,21 +62,21 @@ function StyleCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "relative flex flex-col items-start gap-0.5 p-3 rounded-lg border-2 text-left transition-all w-full",
+        "relative flex flex-col items-start gap-0.5 p-3 rounded-bs-sm border-2 text-left transition-all w-full",
         selected
-          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-          : "border-muted hover:border-muted-foreground/30 hover:bg-muted/50",
+          ? "border-bs-green bg-bs-green/5 ring-1 ring-bs-green/20"
+          : "border-bs-border-100 hover:border-bs-border-200 hover:bg-bs-card-2/50",
       )}
     >
       {selected && (
         <div className="absolute top-2 right-2">
-          <Check className="w-4 h-4 text-primary" />
+          <Check className="w-4 h-4 text-bs-green" aria-hidden="true" />
         </div>
       )}
-      <span className={cn("text-sm font-semibold", selected ? "text-primary" : "text-foreground")}>
+      <span className={cn("text-sm font-semibold", selected ? "text-bs-green" : "text-bs-fg")}>
         {label}
       </span>
-      <span className="text-xs text-muted-foreground leading-tight">{description}</span>
+      <span className="text-xs text-bs-fg-muted leading-tight">{description}</span>
     </button>
   );
 }
@@ -129,26 +121,23 @@ function LinkArrayEditor({
             placeholder="/page"
             className="flex-1"
           />
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 text-red-500 hover:text-red-700"
+            className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 p-0 shrink-0 flex items-center justify-center text-bs-danger"
             onClick={() => removeLink(i)}
+            aria-label="Remove link"
           >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
         </div>
       ))}
-      <Button
+      <button
         type="button"
-        variant="outline"
-        size="sm"
-        className="w-full border-dashed"
+        className="bs-btn bs-btn-ghost bs-btn-sm w-full border border-dashed border-bs-border-100"
         onClick={addLink}
       >
-        <Plus className="h-3.5 w-3.5 mr-1.5" /> {addLabel}
-      </Button>
+        <Plus className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" /> {addLabel}
+      </button>
     </div>
   );
 }
@@ -182,7 +171,7 @@ function SocialLinksEditor({
     <div className="space-y-2">
       {links.map((link, i) => (
         <div key={i} className="flex gap-2 items-center">
-          <span className="text-xs font-medium capitalize w-20 shrink-0 text-muted-foreground">
+          <span className="text-xs font-medium capitalize w-20 shrink-0 text-bs-fg-muted">
             {link.platform === "x" ? "X (Twitter)" : link.platform}
           </span>
           <Input
@@ -191,20 +180,19 @@ function SocialLinksEditor({
             placeholder={`https://${link.platform}.com/...`}
             className="flex-1"
           />
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 text-red-500 hover:text-red-700"
+            className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 p-0 shrink-0 flex items-center justify-center text-bs-danger"
             onClick={() => removeLink(i)}
+            aria-label="Remove social link"
           >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
         </div>
       ))}
       {availablePlatforms.length > 0 && (
         <Select onValueChange={(v) => addLink(v as SocialPlatform)}>
-          <SelectTrigger className="border-dashed text-muted-foreground">
+          <SelectTrigger className="border-dashed text-bs-fg-muted">
             <SelectValue placeholder="+ Add social link..." />
           </SelectTrigger>
           <SelectContent>
@@ -245,7 +233,7 @@ function FooterSectionsEditor({
   return (
     <div className="space-y-4">
       {sections.map((section, i) => (
-        <div key={i} className="border rounded-lg p-3 space-y-2">
+        <div key={i} className="border border-bs-border-100 rounded-bs-sm p-3 space-y-2">
           <div className="flex items-center gap-2">
             <Input
               value={section.title}
@@ -253,15 +241,14 @@ function FooterSectionsEditor({
               placeholder="Column title"
               className="flex-1 font-medium"
             />
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0 text-red-500 hover:text-red-700"
+              className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 p-0 shrink-0 flex items-center justify-center text-bs-danger"
               onClick={() => removeSection(i)}
+              aria-label="Remove column"
             >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
           </div>
           <LinkArrayEditor
             links={section.links}
@@ -271,15 +258,13 @@ function FooterSectionsEditor({
         </div>
       ))}
       {sections.length < 4 && (
-        <Button
+        <button
           type="button"
-          variant="outline"
-          size="sm"
-          className="w-full border-dashed"
+          className="bs-btn bs-btn-ghost bs-btn-sm w-full border border-dashed border-bs-border-100"
           onClick={addSection}
         >
-          <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Column
-        </Button>
+          <Plus className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" /> Add Column
+        </button>
       )}
     </div>
   );
@@ -405,20 +390,18 @@ function ArrayFieldEditor({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">{field.label}</Label>
-        <Button
+        <button
           type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs"
+          className="bs-btn bs-btn-ghost bs-btn-sm h-7 text-xs"
           onClick={addItem}
         >
-          <Plus className="w-3 h-3 mr-1" />
+          <Plus className="w-3 h-3 mr-1" aria-hidden="true" />
           Add {itemLabel}
-        </Button>
+        </button>
       </div>
 
       {items.length === 0 && (
-        <p className="text-xs text-muted-foreground italic py-2">
+        <p className="text-xs text-bs-fg-muted italic py-2">
           No {field.label.toLowerCase()} yet. Click &quot;Add {itemLabel}&quot; to start.
         </p>
       )}
@@ -435,43 +418,40 @@ function ArrayFieldEditor({
         return (
           <div
             key={`${sectionId}-${field.key}-${index}`}
-            className="border rounded-lg bg-muted/30"
+            className="border border-bs-border-100 rounded-bs-sm bg-bs-card-2/30"
           >
             {/* Item header — always visible */}
-            <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/50 rounded-t-lg">
-              <span className="text-xs font-medium text-muted-foreground truncate max-w-[200px]">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-bs-border-100 bg-bs-card-2/50 rounded-t-bs-sm">
+              <span className="text-xs font-medium text-bs-fg-muted truncate max-w-[200px]">
                 {previewText}
               </span>
               <div className="flex items-center gap-0.5">
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
+                  className="bs-btn bs-btn-ghost bs-btn-sm h-6 w-6 p-0 flex items-center justify-center disabled:opacity-50"
                   onClick={() => moveItem(index, -1)}
                   disabled={index === 0}
+                  aria-label="Move up"
                 >
-                  <ChevronUp className="w-3 h-3" />
-                </Button>
-                <Button
+                  <ChevronUp className="w-3 h-3" aria-hidden="true" />
+                </button>
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
+                  className="bs-btn bs-btn-ghost bs-btn-sm h-6 w-6 p-0 flex items-center justify-center disabled:opacity-50"
                   onClick={() => moveItem(index, 1)}
                   disabled={index === items.length - 1}
+                  aria-label="Move down"
                 >
-                  <ChevronDown className="w-3 h-3" />
-                </Button>
-                <Button
+                  <ChevronDown className="w-3 h-3" aria-hidden="true" />
+                </button>
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                  className="bs-btn bs-btn-ghost bs-btn-sm h-6 w-6 p-0 flex items-center justify-center text-bs-danger hover:bg-bs-danger/10"
                   onClick={() => removeItem(index)}
+                  aria-label="Remove item"
                 >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
+                  <Trash2 className="w-3 h-3" aria-hidden="true" />
+                </button>
               </div>
             </div>
 
@@ -562,392 +542,388 @@ export function ContentTab({ formData, setFormData, onSectionSelect }: ContentTa
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardContent className="pt-4">
-      <Accordion
-        type="multiple"
-        defaultValue={["navigation"]}
-        onValueChange={handleAccordionChange}
-        className="w-full"
-      >
+      <section className="bs-card bs-card-pad">
+        <Accordion
+          type="multiple"
+          defaultValue={["navigation"]}
+          onValueChange={handleAccordionChange}
+          className="w-full"
+        >
 
-      {/* ─── Navigation ─────────────────────────── */}
-      <AccordionItem value="navigation">
-        <AccordionTrigger className="text-base font-semibold">
-          Navigation
-        </AccordionTrigger>
-        <AccordionContent>
-        <div className="space-y-4 pt-2">
-          <div>
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">Style</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {NAV_STYLES.map((nav) => (
-                <StyleCard
-                  key={nav.type}
-                  label={nav.label}
-                  description={nav.description}
-                  selected={formData.navigationStyle === nav.type}
-                  onSelect={() => setFormData((prev) => ({ ...prev, navigationStyle: nav.type }))}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="border-t pt-4">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">Menu Links</Label>
-            <LinkArrayEditor
-              links={formData.navigationConfig.links}
-              onChange={(links) => updateNavConfig({ links })}
-              addLabel="Add Menu Link"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="mt-2 text-xs text-muted-foreground"
-              onClick={() => updateNavConfig({ links: DEFAULT_NAV_LINKS })}
-            >
-              Reset to defaults
-            </Button>
-          </div>
-
-          <div className="border-t pt-4 space-y-3">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider block">CTA Button</Label>
-            <div className="flex gap-2">
-              <Input
-                value={formData.navigationConfig.cta.label}
-                onChange={(e) => updateNavConfig({ cta: { ...formData.navigationConfig.cta, label: e.target.value } })}
-                placeholder="Button text"
-                className="flex-1"
-              />
-              <Input
-                value={formData.navigationConfig.cta.href}
-                onChange={(e) => updateNavConfig({ cta: { ...formData.navigationConfig.cta, href: e.target.value } })}
-                placeholder="/page"
-                className="flex-1"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">Show Cart Icon</Label>
-              <Switch
-                checked={formData.navigationConfig.showCart}
-                onCheckedChange={(checked) => updateNavConfig({ showCart: checked })}
-              />
-            </div>
-          </div>
-        </div>
-        </AccordionContent>
-      </AccordionItem>
-
-      {/* ─── Section Content ─────────────────────── */}
-      {formData.layoutSections.map((section: any) => {
-        if (!section.id) return null;
-
-        const configValues =
-          formData.sectionConfigs[section.id] || section.config || {};
-        const editableFields = getEditableFields(section.type);
-        const schema = SECTION_SCHEMAS[section.type];
-        const sameCategory = schema
-          ? Object.entries(SECTION_SCHEMAS)
-              .filter(
-                ([t, s]) =>
-                  s.category === schema.category && t !== section.type,
-              )
-              .map(([t, s]) => ({ type: t, label: s.label }))
-          : [];
-
-        const updateField = (key: string, value: any) => {
-          setFormData((prev) => ({
-            ...prev,
-            sectionConfigs: {
-              ...prev.sectionConfigs,
-              [section.id]: {
-                ...prev.sectionConfigs[section.id],
-                [key]: value,
-              },
-            },
-          }));
-        };
-
-        const sectionLabel = schema?.label || section.type.replace(/([A-Z])/g, " $1").trim();
-        const hasEdits = Object.keys(formData.sectionConfigs[section.id] || {}).length > 0;
-
-        return (
-          <AccordionItem key={section.id} value={section.id}>
-            <AccordionTrigger className="text-sm">
-              <span className="flex items-center gap-2">
-                {hasEdits && (
-                  <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-                )}
-                {sectionLabel}
-                {hasEdits && (
-                  <span className="text-xs text-muted-foreground font-normal">
-                    (edited)
-                  </span>
-                )}
-              </span>
+          {/* ─── Navigation ─────────────────────────── */}
+          <AccordionItem value="navigation">
+            <AccordionTrigger className="text-base font-semibold">
+              Navigation
             </AccordionTrigger>
             <AccordionContent>
-            <Tabs defaultValue="content" className="pt-2">
-              <TabsList className="grid w-full grid-cols-2 h-8">
-                <TabsTrigger value="content" className="text-xs">Content</TabsTrigger>
-                <TabsTrigger value="colour" className="text-xs">Colour</TabsTrigger>
-              </TabsList>
-              <TabsContent value="content" className="mt-3">
-            <div className="space-y-4 pt-2">
-              {sameCategory.length > 0 && (
+              <div className="space-y-4 pt-2">
                 <div>
-                  <Label className="text-xs text-muted-foreground">Swap variant</Label>
-                  <Select
-                    value={section.type}
-                    onValueChange={(newType) =>
-                      handleChangeSectionType(section.id, newType)
-                    }
-                  >
-                    <SelectTrigger className="mt-1 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={section.type}>
-                        {schema?.label || section.type}
-                      </SelectItem>
-                      {sameCategory.map((opt) => (
-                        <SelectItem key={opt.type} value={opt.type}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {editableFields.length > 0 ? (
-                editableFields.map((field: FieldSchema) => {
-                  const fieldValue = configValues[field.key] ?? field.default;
-
-                  // Conditional visibility for ProductShowcase data source toggle:
-                  // Hide "categories" array when using real products, hide "productIds" when manual
-                  const dataSource = configValues.dataSource || "manual";
-                  if (field.key === "categories" && dataSource === "products") return null;
-                  if (field.key === "productIds" && dataSource !== "products") return null;
-
-                  // Product picker field
-                  if (field.type === "product-picker") {
-                    return (
-                      <div key={`${section.id}-${field.key}`}>
-                        <Label>{field.label}</Label>
-                        <ProductPicker
-                          value={String(fieldValue || "")}
-                          onChange={(val) => updateField(field.key, val)}
-                        />
-                      </div>
-                    );
-                  }
-
-                  // Array field with item schema — render inline item editor
-                  if (field.type === "array" && field.itemFields) {
-                    const arrayItems = Array.isArray(configValues[field.key])
-                      ? configValues[field.key]
-                      : [];
-                    return (
-                      <ArrayFieldEditor
-                        key={`${section.id}-${field.key}`}
-                        sectionId={section.id}
-                        field={field}
-                        items={arrayItems}
-                        onUpdate={updateField}
+                  <p className="bs-eyebrow mb-2">Style</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {NAV_STYLES.map((nav) => (
+                      <StyleCard
+                        key={nav.type}
+                        label={nav.label}
+                        description={nav.description}
+                        selected={formData.navigationStyle === nav.type}
+                        onSelect={() => setFormData((prev) => ({ ...prev, navigationStyle: nav.type }))}
                       />
-                    );
-                  }
+                    ))}
+                  </div>
+                </div>
 
-                  return (
-                    <div key={`${section.id}-${field.key}`}>
-                      {field.type === "boolean" ? (
-                        <div className="flex items-center justify-between mt-1">
-                          <Label>{field.label}</Label>
-                          <Switch
-                            checked={!!fieldValue}
-                            onCheckedChange={(checked) => updateField(field.key, checked)}
-                          />
-                        </div>
-                      ) : (
-                      <>
-                      <Label>{field.label}</Label>
+                <div className="border-t border-bs-border-100 pt-4">
+                  <p className="bs-eyebrow mb-2">Menu Links</p>
+                  <LinkArrayEditor
+                    links={formData.navigationConfig.links}
+                    onChange={(links) => updateNavConfig({ links })}
+                    addLabel="Add Menu Link"
+                  />
+                  <button
+                    type="button"
+                    className="bs-btn bs-btn-ghost bs-btn-sm mt-2 text-xs text-bs-fg-muted"
+                    onClick={() => updateNavConfig({ links: DEFAULT_NAV_LINKS })}
+                  >
+                    Reset to defaults
+                  </button>
+                </div>
 
-                      {field.type === "video" ? (
-                        <SectionVideoUploader
-                          value={String(fieldValue || "")}
-                          onChange={(url) => updateField(field.key, url)}
-                        />
-                      ) : field.type === "image" ? (
-                        <SectionImageUploader
-                          value={String(fieldValue || "")}
-                          onChange={(url) => updateField(field.key, url)}
-                        />
-                      ) : field.type === "textarea" ? (
-                        <Textarea
-                          value={String(fieldValue || "")}
-                          onChange={(e) =>
-                            updateField(field.key, e.target.value)
-                          }
-                          rows={3}
-                          className="mt-1"
-                          placeholder={field.placeholder}
-                        />
-                      ) : field.type === "select" && field.options ? (
-                        <Select
-                          value={String(fieldValue || field.options[0])}
-                          onValueChange={(val) => updateField(field.key, val)}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {field.options.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : field.type === "number" ? (
-                        <Input
-                          type="number"
-                          value={fieldValue}
-                          onChange={(e) =>
-                            updateField(field.key, Number(e.target.value))
-                          }
-                          className="mt-1"
-                          placeholder={field.placeholder}
-                        />
-                      ) : (
-                        <Input
-                          type="text"
-                          value={String(fieldValue || "")}
-                          onChange={(e) =>
-                            updateField(field.key, e.target.value)
-                          }
-                          className="mt-1"
-                          placeholder={
-                            field.placeholder ||
-                            (field.type === "url"
-                              ? "/page or https://..."
-                              : undefined)
-                          }
-                        />
-                      )}
-                      </>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No editable fields defined for this section type.
-                </p>
-              )}
-            </div>
-              </TabsContent>
-              <TabsContent value="colour" className="mt-3">
-                <SectionColourPanel
-                  sectionId={section.id}
-                  formData={formData}
-                  setFormData={setFormData}
-                />
-              </TabsContent>
-            </Tabs>
+                <div className="border-t border-bs-border-100 pt-4 space-y-3">
+                  <p className="bs-eyebrow">CTA Button</p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={formData.navigationConfig.cta.label}
+                      onChange={(e) => updateNavConfig({ cta: { ...formData.navigationConfig.cta, label: e.target.value } })}
+                      placeholder="Button text"
+                      className="flex-1"
+                    />
+                    <Input
+                      value={formData.navigationConfig.cta.href}
+                      onChange={(e) => updateNavConfig({ cta: { ...formData.navigationConfig.cta, href: e.target.value } })}
+                      placeholder="/page"
+                      className="flex-1"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Show Cart Icon</Label>
+                    <Switch
+                      checked={formData.navigationConfig.showCart}
+                      onCheckedChange={(checked) => updateNavConfig({ showCart: checked })}
+                    />
+                  </div>
+                </div>
+              </div>
             </AccordionContent>
           </AccordionItem>
-        );
-      })}
 
-      {/* ─── Footer ─────────────────────────────── */}
-      <AccordionItem value="footer">
-        <AccordionTrigger className="text-base font-semibold">
-          Footer
-        </AccordionTrigger>
-        <AccordionContent>
-        <div className="space-y-4 pt-2">
-          <div>
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">Style</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {FOOTER_STYLES.map((f) => (
-                <StyleCard
-                  key={f.type}
-                  label={f.label}
-                  description={f.description}
-                  selected={formData.footerStyle === f.type}
-                  onSelect={() => setFormData((prev) => ({ ...prev, footerStyle: f.type }))}
-                />
-              ))}
-            </div>
-          </div>
+          {/* ─── Section Content ─────────────────────── */}
+          {formData.layoutSections.map((section: any) => {
+            if (!section.id) return null;
 
-          <div className="border-t pt-4 space-y-3">
-            <div>
-              <Label>Tagline</Label>
-              <Input
-                value={formData.footerConfig.tagline}
-                onChange={(e) => updateFooterConfig({ tagline: e.target.value })}
-                placeholder="Your tagline here..."
-                className="mt-1"
-              />
-            </div>
+            const configValues =
+              formData.sectionConfigs[section.id] || section.config || {};
+            const editableFields = getEditableFields(section.type);
+            const schema = SECTION_SCHEMAS[section.type];
+            const sameCategory = schema
+              ? Object.entries(SECTION_SCHEMAS)
+                  .filter(
+                    ([t, s]) =>
+                      s.category === schema.category && t !== section.type,
+                  )
+                  .map(([t, s]) => ({ type: t, label: s.label }))
+              : [];
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label>Address</Label>
-                <Input
-                  value={formData.footerConfig.address}
-                  onChange={(e) => updateFooterConfig({ address: e.target.value })}
-                  placeholder="Business address"
-                  className="mt-1"
-                />
+            const updateField = (key: string, value: any) => {
+              setFormData((prev) => ({
+                ...prev,
+                sectionConfigs: {
+                  ...prev.sectionConfigs,
+                  [section.id]: {
+                    ...prev.sectionConfigs[section.id],
+                    [key]: value,
+                  },
+                },
+              }));
+            };
+
+            const sectionLabel = schema?.label || section.type.replace(/([A-Z])/g, " $1").trim();
+            const hasEdits = Object.keys(formData.sectionConfigs[section.id] || {}).length > 0;
+
+            return (
+              <AccordionItem key={section.id} value={section.id}>
+                <AccordionTrigger className="text-sm">
+                  <span className="flex items-center gap-2">
+                    {hasEdits && (
+                      <span className="w-2 h-2 rounded-full bg-bs-info shrink-0" />
+                    )}
+                    {sectionLabel}
+                    {hasEdits && (
+                      <span className="text-xs text-bs-fg-muted font-normal">
+                        (edited)
+                      </span>
+                    )}
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Tabs defaultValue="content" className="pt-2">
+                    <TabsList className="grid w-full grid-cols-2 h-8">
+                      <TabsTrigger value="content" className="text-xs">Content</TabsTrigger>
+                      <TabsTrigger value="colour" className="text-xs">Colour</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="content" className="mt-3">
+                      <div className="space-y-4 pt-2">
+                        {sameCategory.length > 0 && (
+                          <div>
+                            <Label className="text-xs text-bs-fg-muted">Swap variant</Label>
+                            <Select
+                              value={section.type}
+                              onValueChange={(newType) =>
+                                handleChangeSectionType(section.id, newType)
+                              }
+                            >
+                              <SelectTrigger className="mt-1 h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={section.type}>
+                                  {schema?.label || section.type}
+                                </SelectItem>
+                                {sameCategory.map((opt) => (
+                                  <SelectItem key={opt.type} value={opt.type}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        {editableFields.length > 0 ? (
+                          editableFields.map((field: FieldSchema) => {
+                            const fieldValue = configValues[field.key] ?? field.default;
+
+                            // Conditional visibility for ProductShowcase data source toggle:
+                            // Hide "categories" array when using real products, hide "productIds" when manual
+                            const dataSource = configValues.dataSource || "manual";
+                            if (field.key === "categories" && dataSource === "products") return null;
+                            if (field.key === "productIds" && dataSource !== "products") return null;
+
+                            // Product picker field
+                            if (field.type === "product-picker") {
+                              return (
+                                <div key={`${section.id}-${field.key}`}>
+                                  <Label>{field.label}</Label>
+                                  <ProductPicker
+                                    value={String(fieldValue || "")}
+                                    onChange={(val) => updateField(field.key, val)}
+                                  />
+                                </div>
+                              );
+                            }
+
+                            // Array field with item schema — render inline item editor
+                            if (field.type === "array" && field.itemFields) {
+                              const arrayItems = Array.isArray(configValues[field.key])
+                                ? configValues[field.key]
+                                : [];
+                              return (
+                                <ArrayFieldEditor
+                                  key={`${section.id}-${field.key}`}
+                                  sectionId={section.id}
+                                  field={field}
+                                  items={arrayItems}
+                                  onUpdate={updateField}
+                                />
+                              );
+                            }
+
+                            return (
+                              <div key={`${section.id}-${field.key}`}>
+                                {field.type === "boolean" ? (
+                                  <div className="flex items-center justify-between mt-1">
+                                    <Label>{field.label}</Label>
+                                    <Switch
+                                      checked={!!fieldValue}
+                                      onCheckedChange={(checked) => updateField(field.key, checked)}
+                                    />
+                                  </div>
+                                ) : (
+                                  <>
+                                    <Label>{field.label}</Label>
+
+                                    {field.type === "video" ? (
+                                      <SectionVideoUploader
+                                        value={String(fieldValue || "")}
+                                        onChange={(url) => updateField(field.key, url)}
+                                      />
+                                    ) : field.type === "image" ? (
+                                      <SectionImageUploader
+                                        value={String(fieldValue || "")}
+                                        onChange={(url) => updateField(field.key, url)}
+                                      />
+                                    ) : field.type === "textarea" ? (
+                                      <Textarea
+                                        value={String(fieldValue || "")}
+                                        onChange={(e) =>
+                                          updateField(field.key, e.target.value)
+                                        }
+                                        rows={3}
+                                        className="mt-1"
+                                        placeholder={field.placeholder}
+                                      />
+                                    ) : field.type === "select" && field.options ? (
+                                      <Select
+                                        value={String(fieldValue || field.options[0])}
+                                        onValueChange={(val) => updateField(field.key, val)}
+                                      >
+                                        <SelectTrigger className="mt-1">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {field.options.map((opt) => (
+                                            <SelectItem key={opt} value={opt}>
+                                              {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    ) : field.type === "number" ? (
+                                      <Input
+                                        type="number"
+                                        value={fieldValue}
+                                        onChange={(e) =>
+                                          updateField(field.key, Number(e.target.value))
+                                        }
+                                        className="mt-1"
+                                        placeholder={field.placeholder}
+                                      />
+                                    ) : (
+                                      <Input
+                                        type="text"
+                                        value={String(fieldValue || "")}
+                                        onChange={(e) =>
+                                          updateField(field.key, e.target.value)
+                                        }
+                                        className="mt-1"
+                                        placeholder={
+                                          field.placeholder ||
+                                          (field.type === "url"
+                                            ? "/page or https://..."
+                                            : undefined)
+                                        }
+                                      />
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-sm text-bs-fg-muted">
+                            No editable fields defined for this section type.
+                          </p>
+                        )}
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="colour" className="mt-3">
+                      <SectionColourPanel
+                        sectionId={section.id}
+                        formData={formData}
+                        setFormData={setFormData}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+
+          {/* ─── Footer ─────────────────────────────── */}
+          <AccordionItem value="footer">
+            <AccordionTrigger className="text-base font-semibold">
+              Footer
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-4 pt-2">
+                <div>
+                  <p className="bs-eyebrow mb-2">Style</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {FOOTER_STYLES.map((f) => (
+                      <StyleCard
+                        key={f.type}
+                        label={f.label}
+                        description={f.description}
+                        selected={formData.footerStyle === f.type}
+                        onSelect={() => setFormData((prev) => ({ ...prev, footerStyle: f.type }))}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-bs-border-100 pt-4 space-y-3">
+                  <div>
+                    <Label>Tagline</Label>
+                    <Input
+                      value={formData.footerConfig.tagline}
+                      onChange={(e) => updateFooterConfig({ tagline: e.target.value })}
+                      placeholder="Your tagline here..."
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label>Address</Label>
+                      <Input
+                        value={formData.footerConfig.address}
+                        onChange={(e) => updateFooterConfig({ address: e.target.value })}
+                        placeholder="Business address"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label>Email</Label>
+                      <Input
+                        value={formData.footerConfig.email}
+                        onChange={(e) => updateFooterConfig({ email: e.target.value })}
+                        placeholder="contact@..."
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Disclaimer</Label>
+                    <Input
+                      value={formData.footerConfig.disclaimer}
+                      onChange={(e) => updateFooterConfig({ disclaimer: e.target.value })}
+                      placeholder="Legal disclaimer text..."
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-bs-border-100 pt-4">
+                  <p className="bs-eyebrow mb-2">Footer Columns</p>
+                  <FooterSectionsEditor
+                    sections={formData.footerConfig.sections}
+                    onChange={(sections) => updateFooterConfig({ sections })}
+                  />
+                </div>
+
+                <div className="border-t border-bs-border-100 pt-4">
+                  <p className="bs-eyebrow mb-2">Social Links</p>
+                  <SocialLinksEditor
+                    links={formData.footerConfig.socialLinks}
+                    onChange={(socialLinks) => updateFooterConfig({ socialLinks: socialLinks as EditorFormData["footerConfig"]["socialLinks"] })}
+                  />
+                </div>
               </div>
-              <div>
-                <Label>Email</Label>
-                <Input
-                  value={formData.footerConfig.email}
-                  onChange={(e) => updateFooterConfig({ email: e.target.value })}
-                  placeholder="contact@..."
-                  className="mt-1"
-                />
-              </div>
-            </div>
+            </AccordionContent>
+          </AccordionItem>
 
-            <div>
-              <Label>Disclaimer</Label>
-              <Input
-                value={formData.footerConfig.disclaimer}
-                onChange={(e) => updateFooterConfig({ disclaimer: e.target.value })}
-                placeholder="Legal disclaimer text..."
-                className="mt-1"
-              />
-            </div>
-          </div>
-
-          <div className="border-t pt-4">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">Footer Columns</Label>
-            <FooterSectionsEditor
-              sections={formData.footerConfig.sections}
-              onChange={(sections) => updateFooterConfig({ sections })}
-            />
-          </div>
-
-          <div className="border-t pt-4">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">Social Links</Label>
-            <SocialLinksEditor
-              links={formData.footerConfig.socialLinks}
-              onChange={(socialLinks) => updateFooterConfig({ socialLinks: socialLinks as EditorFormData["footerConfig"]["socialLinks"] })}
-            />
-          </div>
-        </div>
-        </AccordionContent>
-      </AccordionItem>
-
-      </Accordion>
-        </CardContent>
-      </Card>
+        </Accordion>
+      </section>
     </div>
   );
 }

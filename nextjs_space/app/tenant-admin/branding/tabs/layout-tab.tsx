@@ -1,14 +1,6 @@
 "use client";
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -43,6 +35,10 @@ import {
 import { useState } from "react";
 import type { EditorFormData, SetFormData } from "./types";
 
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
+
 // ─── Sortable Section Item ────────────────────────────────────
 
 function SortableSectionItem({
@@ -66,34 +62,33 @@ function SortableSectionItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center justify-between p-3 mb-2 bg-white border rounded-md shadow-sm"
+      className="flex items-center justify-between p-3 mb-2 bg-bs-card-2 border border-bs-border-100 rounded-bs-sm shadow-sm"
     >
       <div className="flex items-center gap-3">
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-100 rounded"
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-bs-card rounded-bs-sm"
         >
-          <GripVertical className="h-4 w-4 text-gray-400" />
+          <GripVertical className="h-4 w-4 text-bs-fg-muted" aria-hidden="true" />
         </div>
-        <span className="font-medium text-sm capitalize flex items-center">
+        <span className="font-medium text-sm capitalize flex items-center text-bs-fg">
           {section.type.replace(/([A-Z])/g, " $1").trim()}
-          <span className="text-muted-foreground font-normal ml-2 text-xs">
+          <span className="text-bs-fg-muted font-normal ml-2 text-xs font-mono">
             {section.id.length > 8
               ? `...${section.id.slice(-6)}`
               : section.id}
           </span>
         </span>
       </div>
-      <Button
+      <button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+        className="bs-btn bs-btn-ghost bs-btn-sm h-8 w-8 p-0 flex items-center justify-center text-bs-danger"
         onClick={() => onRemove(id)}
+        aria-label="Remove section"
       >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+        <Trash2 className="h-4 w-4" aria-hidden="true" />
+      </button>
     </div>
   );
 }
@@ -171,15 +166,17 @@ export function LayoutTab({ formData, setFormData }: LayoutTabProps) {
   return (
     <div className="space-y-6">
       {/* ─── Section Ordering ─────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Section Ordering</CardTitle>
-          <CardDescription>
+      <section className="bs-card bs-card-pad space-y-3">
+        <div>
+          <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
+            Section Ordering
+          </h3>
+          <p className="text-sm text-bs-fg-muted">
             Drag and drop to reorder sections. Use the trash icon to remove a
             section.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
+        </div>
+        <div>
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -213,17 +210,17 @@ export function LayoutTab({ formData, setFormData }: LayoutTabProps) {
             </DragOverlay>
           </DndContext>
 
-          <div className="mt-4 pt-4 border-t">
+          <div className="mt-4 pt-4 border-t border-bs-border-100">
             <Dialog
               open={isAddSectionOpen}
               onOpenChange={setIsAddSectionOpen}
             >
               <DialogTrigger asChild>
-                <Button variant="outline" className="w-full border-dashed">
-                  <Plus className="h-4 w-4 mr-2" /> Add Section
-                </Button>
+                <button type="button" className="bs-btn bs-btn-ghost w-full border border-dashed border-bs-border-100">
+                  <Plus className="h-4 w-4 mr-2" aria-hidden="true" /> Add Section
+                </button>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="bs-dialog-content max-w-3xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Component Library</DialogTitle>
                   <DialogDescription>
@@ -233,24 +230,24 @@ export function LayoutTab({ formData, setFormData }: LayoutTabProps) {
                 <div className="space-y-6 mt-4">
                   {getSectionsByCategory().map((group) => (
                     <div key={group.category}>
-                      <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-3">
+                      <h4 className="bs-eyebrow mb-3">
                         {group.label}
-                      </h3>
+                      </h4>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {group.types.map(({ type, schema }) => (
-                          <Button
+                          <button
                             key={type}
-                            variant="outline"
-                            className="h-auto py-4 flex flex-col justify-center items-center gap-1.5 hover:bg-slate-50 transition-colors overflow-hidden"
+                            type="button"
+                            className="bs-btn bs-btn-ghost h-auto py-4 flex flex-col justify-center items-center gap-1.5 overflow-hidden text-left"
                             onClick={() => handleAddSection(type)}
                           >
                             <div className="font-semibold text-sm truncate w-full text-center">
                               {schema.label}
                             </div>
-                            <div className="text-xs text-muted-foreground text-center leading-tight line-clamp-2 w-full">
+                            <div className="text-xs text-bs-fg-muted text-center leading-tight line-clamp-2 w-full">
                               {schema.description}
                             </div>
-                          </Button>
+                          </button>
                         ))}
                       </div>
                     </div>
@@ -259,8 +256,8 @@ export function LayoutTab({ formData, setFormData }: LayoutTabProps) {
               </DialogContent>
             </Dialog>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

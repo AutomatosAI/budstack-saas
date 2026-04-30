@@ -2,11 +2,17 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Mail } from "lucide-react";
 import {
   EmailEditor,
   EmailTemplateData,
 } from "@/components/admin/email/EmailEditor";
 import { toast } from "sonner";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface EditTemplateClientProps {
   template: {
@@ -38,10 +44,9 @@ export function EditTemplateClient({ template }: EditTemplateClientProps) {
       if (!res.ok) throw new Error("Failed to update template");
 
       toast.success("Template updated successfully");
-      router.refresh(); // Refresh server data
+      router.refresh();
       router.push("/super-admin/emails");
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast.error("Failed to update template");
     } finally {
       setIsSaving(false);
@@ -49,18 +54,33 @@ export function EditTemplateClient({ template }: EditTemplateClientProps) {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)]">
-      <div className="px-6 py-6 lg:px-8 lg:pt-8 lg:pb-6 border-b">
-        <h1 className="text-4xl font-semibold tracking-tight text-slate-900">Edit Template</h1>
-        <p className="mt-2 text-slate-500">Editing: {template.name}</p>
+    <div className="space-y-8">
+      <Link
+        href="/super-admin/emails"
+        className="inline-flex items-center text-sm text-bs-fg-muted hover:text-bs-fg"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+        Back to Email Templates
+      </Link>
+
+      <div className="bs-page-header-centered">
+        <div className="bs-eyebrow inline-flex items-center gap-1.5">
+          <Mail className="h-4 w-4" aria-hidden="true" />
+          Edit Template
+        </div>
+        <h1 className="bs-page-title" style={sectionTitleStyle}>
+          {template.name}
+        </h1>
+        <p className="bs-page-subtitle">
+          Update the system email template content and metadata.
+        </p>
       </div>
-      <div className="flex-1 p-6 overflow-hidden">
-        <EmailEditor
-          initialData={template}
-          onSave={handleSave}
-          isSaving={isSaving}
-        />
-      </div>
+
+      <EmailEditor
+        initialData={template}
+        onSave={handleSave}
+        isSaving={isSaving}
+      />
     </div>
   );
 }

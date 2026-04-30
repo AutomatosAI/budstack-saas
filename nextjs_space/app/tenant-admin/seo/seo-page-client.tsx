@@ -2,15 +2,6 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { SeoEditorModal } from "@/components/admin/seo";
 import {
   Package,
@@ -20,6 +11,10 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface SeoData {
   title?: string;
@@ -98,7 +93,6 @@ export function SeoPageClient({
 
     if (!res.ok) throw new Error("Failed to save");
 
-    // Update local state
     setLocalProducts((prev) =>
       prev.map((p) => (p.id === selectedProduct.id ? { ...p, seo } : p)),
     );
@@ -115,7 +109,6 @@ export function SeoPageClient({
 
     if (!res.ok) throw new Error("Failed to save");
 
-    // Update local state
     setLocalPosts((prev) =>
       prev.map((p) => (p.id === selectedPost.id ? { ...p, seo } : p)),
     );
@@ -132,7 +125,6 @@ export function SeoPageClient({
 
     if (!res.ok) throw new Error("Failed to save");
 
-    // Update local state
     setLocalPageSeo((prev) => ({
       ...prev,
       [selectedPage.key]: seo,
@@ -140,19 +132,19 @@ export function SeoPageClient({
   };
 
   const SeoStatusBadge = ({ hasCustomSeo }: { hasCustomSeo: boolean }) => (
-    <Badge variant={hasCustomSeo ? "default" : "secondary"} className="gap-1">
+    <span className={hasCustomSeo ? "bs-chip bs-chip-green inline-flex items-center gap-1" : "bs-chip bs-chip-muted inline-flex items-center gap-1"}>
       {hasCustomSeo ? (
         <>
-          <CheckCircle className="h-3 w-3" />
+          <CheckCircle className="h-3 w-3" aria-hidden="true" />
           Custom
         </>
       ) : (
         <>
-          <AlertCircle className="h-3 w-3" />
+          <AlertCircle className="h-3 w-3" aria-hidden="true" />
           Default
         </>
       )}
-    </Badge>
+    </span>
   );
 
   return (
@@ -160,175 +152,176 @@ export function SeoPageClient({
       <Tabs defaultValue="products" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
           <TabsTrigger value="products" className="gap-2">
-            <Package className="h-4 w-4 hidden sm:block" />
+            <Package className="h-4 w-4 hidden sm:block" aria-hidden="true" />
             Products ({localProducts.length})
           </TabsTrigger>
           <TabsTrigger value="posts" className="gap-2">
-            <FileText className="h-4 w-4 hidden sm:block" />
+            <FileText className="h-4 w-4 hidden sm:block" aria-hidden="true" />
             Posts ({localPosts.length})
           </TabsTrigger>
           <TabsTrigger value="pages" className="gap-2">
-            <Home className="h-4 w-4 hidden sm:block" />
+            <Home className="h-4 w-4 hidden sm:block" aria-hidden="true" />
             Static Pages
           </TabsTrigger>
         </TabsList>
 
         {/* Products Tab */}
         <TabsContent value="products">
-          <Card>
-            <CardHeader>
-              <CardTitle>Product SEO</CardTitle>
-              <CardDescription>
-                Customize titles and descriptions for your products in search
-                results.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {localProducts.length === 0 ? (
-                <p className="text-sm text-slate-500 text-center py-8">
-                  No products found. Sync products from Dr Green first.
-                </p>
-              ) : (
-                <div className="divide-y">
-                  {localProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-4"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
-                        {product.images[0] && (
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-10 h-10 rounded object-cover flex-shrink-0"
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-medium text-slate-900 truncate">
-                            {product.name}
-                          </p>
-                          <p className="text-xs text-slate-500 truncate">
-                            {baseUrl}/products/{product.slug}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 w-full sm:w-auto pl-14 sm:pl-0">
-                        <SeoStatusBadge hasCustomSeo={hasSeo(product.seo)} />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedProduct(product)}
-                        >
-                          <Search className="h-4 w-4 mr-1" />
-                          Edit SEO
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Posts Tab */}
-        <TabsContent value="posts">
-          <Card>
-            <CardHeader>
-              <CardTitle>Blog Post SEO</CardTitle>
-              <CardDescription>
-                Optimize your blog posts for search engines.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {localPosts.length === 0 ? (
-                <p className="text-sm text-slate-500 text-center py-8">
-                  No blog posts yet. Create posts in The Wire section.
-                </p>
-              ) : (
-                <div className="divide-y">
-                  {localPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-4"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
-                        {post.coverImage && (
-                          <img
-                            src={post.coverImage}
-                            alt={post.title}
-                            className="w-10 h-10 rounded object-cover flex-shrink-0"
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-medium text-slate-900 truncate">
-                            {post.title}
-                          </p>
-                          <p className="text-xs text-slate-500 truncate">
-                            {baseUrl}/the-wire/{post.slug}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 w-full sm:w-auto pl-14 sm:pl-0">
-                        <SeoStatusBadge hasCustomSeo={hasSeo(post.seo)} />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedPost(post)}
-                        >
-                          <Search className="h-4 w-4 mr-1" />
-                          Edit SEO
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Static Pages Tab */}
-        <TabsContent value="pages">
-          <Card>
-            <CardHeader>
-              <CardTitle>Static Page SEO</CardTitle>
-              <CardDescription>
-                Set metadata for your store's main pages.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="divide-y">
-                {STATIC_PAGES.map((page) => (
+          <section className="bs-card bs-card-pad space-y-4">
+            <div>
+              <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
+                Product SEO
+              </h3>
+              <p className="text-sm text-bs-fg-muted">
+                Customize titles and descriptions for your products in search results.
+              </p>
+            </div>
+            {localProducts.length === 0 ? (
+              <p className="text-sm text-bs-fg-muted text-center py-8">
+                No products found. Sync products from Dr Green first.
+              </p>
+            ) : (
+              <div className="divide-y divide-bs-border-100">
+                {localProducts.map((product) => (
                   <div
-                    key={page.key}
+                    key={product.id}
                     className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-4"
                   >
-                    <div className="min-w-0 w-full sm:w-auto">
-                      <p className="font-medium text-slate-900">{page.name}</p>
-                      <p className="text-xs text-slate-500 truncate">
-                        {baseUrl}
-                        {page.path || "/"}
-                      </p>
+                    <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
+                      {product.images[0] && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-10 h-10 rounded object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-bs-fg truncate">
+                          {product.name}
+                        </p>
+                        <p className="text-xs text-bs-fg-muted truncate font-mono">
+                          {baseUrl}/products/{product.slug}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 w-full sm:w-auto">
-                      <SeoStatusBadge
-                        hasCustomSeo={hasSeo(localPageSeo[page.key])}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedPage(page)}
+                    <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 w-full sm:w-auto pl-14 sm:pl-0">
+                      <SeoStatusBadge hasCustomSeo={hasSeo(product.seo)} />
+                      <button
+                        type="button"
+                        className="bs-btn bs-btn-ghost bs-btn-sm"
+                        onClick={() => setSelectedProduct(product)}
                       >
-                        <Search className="h-4 w-4 mr-1" />
+                        <Search className="h-4 w-4 mr-1" aria-hidden="true" />
                         Edit SEO
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </section>
+        </TabsContent>
+
+        {/* Posts Tab */}
+        <TabsContent value="posts">
+          <section className="bs-card bs-card-pad space-y-4">
+            <div>
+              <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
+                Blog Post SEO
+              </h3>
+              <p className="text-sm text-bs-fg-muted">
+                Optimize your blog posts for search engines.
+              </p>
+            </div>
+            {localPosts.length === 0 ? (
+              <p className="text-sm text-bs-fg-muted text-center py-8">
+                No blog posts yet. Create posts in The Wire section.
+              </p>
+            ) : (
+              <div className="divide-y divide-bs-border-100">
+                {localPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-4"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
+                      {post.coverImage && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={post.coverImage}
+                          alt={post.title}
+                          className="w-10 h-10 rounded object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-bs-fg truncate">
+                          {post.title}
+                        </p>
+                        <p className="text-xs text-bs-fg-muted truncate font-mono">
+                          {baseUrl}/the-wire/{post.slug}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 w-full sm:w-auto pl-14 sm:pl-0">
+                      <SeoStatusBadge hasCustomSeo={hasSeo(post.seo)} />
+                      <button
+                        type="button"
+                        className="bs-btn bs-btn-ghost bs-btn-sm"
+                        onClick={() => setSelectedPost(post)}
+                      >
+                        <Search className="h-4 w-4 mr-1" aria-hidden="true" />
+                        Edit SEO
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </TabsContent>
+
+        {/* Static Pages Tab */}
+        <TabsContent value="pages">
+          <section className="bs-card bs-card-pad space-y-4">
+            <div>
+              <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
+                Static Page SEO
+              </h3>
+              <p className="text-sm text-bs-fg-muted">
+                Set metadata for your store&apos;s main pages.
+              </p>
+            </div>
+            <div className="divide-y divide-bs-border-100">
+              {STATIC_PAGES.map((page) => (
+                <div
+                  key={page.key}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-4"
+                >
+                  <div className="min-w-0 w-full sm:w-auto">
+                    <p className="font-medium text-bs-fg">{page.name}</p>
+                    <p className="text-xs text-bs-fg-muted truncate font-mono">
+                      {baseUrl}
+                      {page.path || "/"}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 w-full sm:w-auto">
+                    <SeoStatusBadge
+                      hasCustomSeo={hasSeo(localPageSeo[page.key])}
+                    />
+                    <button
+                      type="button"
+                      className="bs-btn bs-btn-ghost bs-btn-sm"
+                      onClick={() => setSelectedPage(page)}
+                    >
+                      <Search className="h-4 w-4 mr-1" aria-hidden="true" />
+                      Edit SEO
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         </TabsContent>
       </Tabs>
 

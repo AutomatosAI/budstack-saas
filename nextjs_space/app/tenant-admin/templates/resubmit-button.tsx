@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +15,10 @@ import {
 import { RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useRouter } from "next/navigation";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface ResubmitButtonProps {
   templateId: string;
@@ -55,33 +58,42 @@ export default function ResubmitButton({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-xl text-orange-600 border-orange-200 hover:bg-orange-50"
+        <button
+          type="button"
+          className="bs-btn bs-btn-ghost bs-btn-sm text-bs-warn"
           disabled={isProcessing}
         >
           {isProcessing ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2
+              className="mr-2 h-4 w-4 animate-spin"
+              aria-hidden="true"
+            />
           ) : (
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
           )}
           Update & Re-submit
-        </Button>
+        </button>
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent className="bs-dialog-content">
         <AlertDialogHeader>
-          <AlertDialogTitle>Update & Re-submit?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will update &ldquo;{templateName}&rdquo; from GitHub with the latest
-            version and re-submit it for marketplace review.
+          <AlertDialogTitle
+            className="text-[22px] leading-tight"
+            style={sectionTitleStyle}
+          >
+            Update & Re-submit?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-bs-fg-muted">
+            This will update &ldquo;{templateName}&rdquo; from GitHub with the
+            latest version and re-submit it for marketplace review.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+          <AlertDialogCancel className="bs-btn bs-btn-ghost">
+            Cancel
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleResubmit}
-            className="rounded-full bg-orange-600 hover:bg-orange-700"
+            className="bs-btn bs-btn-green"
           >
             Update & Re-submit
           </AlertDialogAction>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +15,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useRouter } from "next/navigation";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface EditApproveDialogProps {
   submissionId: string;
@@ -42,32 +45,37 @@ export default function EditApproveDialog({
   const [isProcessing, setIsProcessing] = useState(false);
   const router = useRouter();
 
-  const isDisabled = status === "approved" || status === "rejected" || status === "withdrawn";
+  const isDisabled =
+    status === "approved" || status === "rejected" || status === "withdrawn";
 
   const handleEditAndApprove = async () => {
     setIsProcessing(true);
     try {
-      // Save edits
-      const editRes = await fetch(`/api/super-admin/submissions/${submissionId}/edit`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          layoutJson: layout,
-          defaultsJson: defaults,
-          configJson: config,
-          stylesCss: styles,
-        }),
-      });
+      const editRes = await fetch(
+        `/api/super-admin/submissions/${submissionId}/edit`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            layoutJson: layout,
+            defaultsJson: defaults,
+            configJson: config,
+            stylesCss: styles,
+          }),
+        },
+      );
 
       if (!editRes.ok) {
         const data = await editRes.json();
         throw new Error(data.error || "Failed to save edits");
       }
 
-      // Approve
-      const approveRes = await fetch(`/api/super-admin/submissions/${submissionId}/approve`, {
-        method: "POST",
-      });
+      const approveRes = await fetch(
+        `/api/super-admin/submissions/${submissionId}/approve`,
+        {
+          method: "POST",
+        },
+      );
 
       if (!approveRes.ok) {
         const data = await approveRes.json();
@@ -88,20 +96,26 @@ export default function EditApproveDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="outline"
+        <button
+          type="button"
           disabled={isDisabled}
-          className="rounded-xl text-blue-600 border-blue-200 hover:bg-blue-50"
+          className="bs-btn bs-btn-ghost"
         >
-          <Pencil className="mr-2 h-4 w-4" />
+          <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
           Edit & Approve
-        </Button>
+        </button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="bs-dialog-content max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Template Files & Approve</DialogTitle>
-          <DialogDescription>
-            Make changes to the template files before approving. All changes will be saved to the marketplace version.
+          <DialogTitle
+            className="text-[22px] leading-tight"
+            style={sectionTitleStyle}
+          >
+            Edit Template Files & Approve
+          </DialogTitle>
+          <DialogDescription className="text-bs-fg-muted">
+            Make changes to the template files before approving. All changes
+            will be saved to the marketplace version.
           </DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="layout" className="w-full">
@@ -145,28 +159,32 @@ export default function EditApproveDialog({
           </TabsContent>
         </Tabs>
         <DialogFooter>
-          <Button
-            variant="outline"
+          <button
+            type="button"
             onClick={() => setOpen(false)}
             disabled={isProcessing}
-            className="rounded-full"
+            className="bs-btn bs-btn-ghost"
           >
             Cancel
-          </Button>
-          <Button
+          </button>
+          <button
+            type="button"
             onClick={handleEditAndApprove}
             disabled={isProcessing}
-            className="rounded-full bg-emerald-600 hover:bg-emerald-700"
+            className="bs-btn bs-btn-green"
           >
             {isProcessing ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2
+                  className="mr-2 h-4 w-4 animate-spin"
+                  aria-hidden="true"
+                />
                 Processing...
               </>
             ) : (
               "Save & Approve"
             )}
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

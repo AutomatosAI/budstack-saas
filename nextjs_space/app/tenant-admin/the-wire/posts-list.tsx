@@ -4,18 +4,9 @@ import { useState } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Eye, EyeOff } from "lucide-react";
+import { Edit, Trash2, Eye, EyeOff, Newspaper } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { RowPill } from "@/components/admin/shared/RowPill";
 
 interface Post {
   id: string;
@@ -78,160 +69,111 @@ export default function PostsList({ initialPosts }: { initialPosts: any[] }) {
 
   if (posts.length === 0) {
     return (
-      <div className="border rounded-md overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden sm:table-cell">Author</TableHead>
-              <TableHead className="hidden sm:table-cell">Date</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {posts.map((post) => (
-              <TableRow key={post.id}>
-                <TableCell className="font-medium">
-                  <div className="min-w-0">
-                    <span className="block truncate max-w-[150px] sm:max-w-[250px]">{post.title}</span>
-                    <div className="text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-[200px]">
-                      /{post.slug}
-                    </div>
-                    {/* Show author/date on mobile */}
-                    <div className="sm:hidden text-xs text-muted-foreground mt-1">
-                      {post.users?.name || 'Unknown'} • {format(new Date(post.createdAt), 'MMM d')}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={post.published ? 'default' : 'secondary'}>
-                    {post.published ? 'Published' : 'Draft'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">{post.users?.name || 'Unknown'}</TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  {format(new Date(post.createdAt), 'MMM d, yyyy')}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Link href={`/tenant-admin/the-wire/${post.id}`} passHref>
-                      <Button variant="ghost" size="icon" title="Edit article">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleTogglePublish(post.id, post.published)}
-                      title={post.published ? 'Unpublish article' : 'Publish article'}
-                      className={post.published ? 'text-amber-600 hover:text-amber-700' : 'text-green-600 hover:text-green-700'}
-                    >
-                      {post.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(post.id)}
-                      disabled={isDeleting === post.id}
-                      className="text-destructive hover:text-destructive/90"
-                      title="Delete article"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <section className="bs-card bs-card-pad">
+        <div className="text-center py-16">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-bs-md bs-card-2 border border-bs-border-100 mb-4">
+            <Newspaper className="h-8 w-8 text-bs-fg-muted" aria-hidden="true" />
+          </div>
+          <h3
+            className="text-[22px] font-semibold text-bs-fg mb-2"
+            style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+          >
+            No articles yet
+          </h3>
+          <p className="text-bs-fg-muted">
+            Create your first article to get started.
+          </p>
+        </div>
+      </section>
     );
   }
 
   return (
-    <div className="border rounded-md overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Title</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="hidden sm:table-cell">Author</TableHead>
-            <TableHead className="hidden sm:table-cell">Date</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {posts.map((post) => (
-            <TableRow key={post.id}>
-              <TableCell className="font-medium">
-                <div className="min-w-0">
-                  <span className="block truncate max-w-[150px] sm:max-w-[250px]">
-                    {post.title}
-                  </span>
-                  <div className="text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-[200px]">
-                    /{post.slug}
+    <section className="bs-card overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="bs-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Status</th>
+              <th className="hidden sm:table-cell">Author</th>
+              <th className="hidden sm:table-cell">Date</th>
+              <th className="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {posts.map((post) => (
+              <tr key={post.id} className="hover:bg-bs-card-2">
+                <td className="font-medium text-bs-fg">
+                  <div className="min-w-0">
+                    <span className="block truncate max-w-[150px] sm:max-w-[250px]">
+                      {post.title}
+                    </span>
+                    <div className="text-xs text-bs-fg-muted truncate max-w-[150px] sm:max-w-[200px] font-mono">
+                      /{post.slug}
+                    </div>
+                    <div className="sm:hidden text-xs text-bs-fg-muted mt-1">
+                      {post.users?.name || "Unknown"} •{" "}
+                      <span className="font-mono">
+                        {format(new Date(post.createdAt), "MMM d")}
+                      </span>
+                    </div>
                   </div>
-                  {/* Show author/date on mobile */}
-                  <div className="sm:hidden text-xs text-muted-foreground mt-1">
-                    {post.author?.name || "Unknown"} •{" "}
-                    {format(new Date(post.createdAt), "MMM d")}
+                </td>
+                <td>
+                  <RowPill tone={post.published ? "emerald" : "slate"}>
+                    {post.published ? "Published" : "Draft"}
+                  </RowPill>
+                </td>
+                <td className="hidden sm:table-cell text-bs-fg-muted">
+                  {post.users?.name || "Unknown"}
+                </td>
+                <td className="hidden sm:table-cell font-mono text-bs-fg-muted">
+                  {format(new Date(post.createdAt), "MMM d, yyyy")}
+                </td>
+                <td className="text-right whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1 min-w-[120px]">
+                    <Link
+                      href={`/tenant-admin/the-wire/${post.id}`}
+                      title="Edit article"
+                      className="bs-btn bs-btn-ghost bs-btn-sm"
+                    >
+                      <Edit className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePublish(post.id, post.published)}
+                      title={
+                        post.published ? "Unpublish article" : "Publish article"
+                      }
+                      className={
+                        post.published
+                          ? "bs-btn bs-btn-ghost bs-btn-sm text-bs-warn"
+                          : "bs-btn bs-btn-ghost bs-btn-sm text-bs-green-soft"
+                      }
+                    >
+                      {post.published ? (
+                        <EyeOff className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(post.id)}
+                      disabled={isDeleting === post.id}
+                      title="Delete article"
+                      className="bs-btn bs-btn-ghost bs-btn-sm text-bs-danger disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant={post.published ? "default" : "secondary"}>
-                  {post.published ? "Published" : "Draft"}
-                </Badge>
-              </TableCell>
-              <TableCell className="hidden sm:table-cell">
-                {post.author?.name || "Unknown"}
-              </TableCell>
-              <TableCell className="hidden sm:table-cell">
-                {format(new Date(post.createdAt), "MMM d, yyyy")}
-              </TableCell>
-              <TableCell className="text-right whitespace-nowrap">
-                <div className="flex items-center justify-end gap-1 min-w-[120px]">
-                  <Link href={`/tenant-admin/the-wire/${post.id}`} passHref>
-                    <Button variant="ghost" size="icon" title="Edit article">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleTogglePublish(post.id, post.published)}
-                    title={
-                      post.published ? "Unpublish article" : "Publish article"
-                    }
-                    className={
-                      post.published
-                        ? "text-amber-600 hover:text-amber-700"
-                        : "text-green-600 hover:text-green-700"
-                    }
-                  >
-                    {post.published ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(post.id)}
-                    disabled={isDeleting === post.id}
-                    className="text-destructive hover:text-destructive/90"
-                    title="Delete article"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

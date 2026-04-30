@@ -1,41 +1,51 @@
-
 "use client";
 
 import { UserProfile } from "@clerk/nextjs";
 import { User } from "lucide-react";
 
-export default function SuperAdminProfilePage() {
-    return (
-        <div className="space-y-8">
-            {/* Centered Header */}
-            <div className="text-center max-w-2xl mx-auto">
-                <div className="section-badge mb-4 inline-flex">
-                    <User className="h-4 w-4" />
-                    Profile
-                </div>
-                <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                    Your Profile
-                </h1>
-                <p className="mt-3 text-muted-foreground">
-                    Manage your account settings, security, and personal information.
-                </p>
-            </div>
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
-            <div className="flex justify-center">
-                <UserProfile
-                    routing="hash"
-                    appearance={{
-                        elements: {
-                            rootBox: "w-full max-w-4xl",
-                            card: "shadow-none border border-border bg-card",
-                            navbar: "hidden",
-                            headerTitle: "text-foreground font-display font-bold",
-                            headerSubtitle: "text-muted-foreground",
-                            formButtonPrimary: "bg-primary text-primary-foreground hover:bg-primary/90",
-                        }
-                    }}
-                />
-            </div>
+export default function SuperAdminProfilePage() {
+  return (
+    <div className="space-y-8">
+      <div className="bs-page-header-centered">
+        <div className="bs-eyebrow inline-flex items-center gap-1.5">
+          <User className="h-4 w-4" aria-hidden="true" />
+          Profile
         </div>
-    );
+        <h1 className="bs-page-title" style={sectionTitleStyle}>
+          Your Profile
+        </h1>
+        <p className="bs-page-subtitle">
+          Manage your account settings, security, and personal information.
+        </p>
+      </div>
+
+      <div className="flex justify-center">
+        <UserProfile
+          routing="hash"
+          appearance={{
+            elements: {
+              rootBox: "w-full max-w-4xl",
+              card: "shadow-none border border-bs-border-100 bg-bs-card text-bs-fg",
+              navbar: "hidden",
+              headerTitle: "text-bs-fg font-display font-bold",
+              headerSubtitle: "text-bs-fg-muted",
+              formButtonPrimary:
+                "bs-btn bs-btn-green",
+              formFieldInput:
+                "bg-bs-card-2 border-bs-border-100 text-bs-fg",
+              formFieldLabel: "text-bs-fg",
+              profileSectionTitleText: "text-bs-fg",
+              profileSectionContent: "text-bs-fg-muted",
+              accordionTriggerButton: "text-bs-fg hover:text-bs-fg",
+              menuButton: "text-bs-fg-muted hover:text-bs-fg",
+            },
+          }}
+        />
+      </div>
+    </div>
+  );
 }

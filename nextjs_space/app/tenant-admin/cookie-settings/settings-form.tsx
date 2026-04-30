@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -13,6 +12,10 @@ import {
   isGDPRRegion,
   isPOPIARegion,
 } from "@/lib/cookie-utils";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface CookieSettingsFormProps {
   tenantId: string;
@@ -64,86 +67,86 @@ export default function CookieSettingsForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Region Info Card */}
-      <div className="card-floating p-8 border-emerald-200 bg-gradient-to-br from-emerald-50/50 to-white">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="rounded-2xl bg-emerald-500 p-3">
-            <Globe className="h-5 w-5 text-white" />
+      {/* Region Info Section */}
+      <section className="bs-card bs-card-pad space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="rounded-bs-md bg-bs-green/10 p-2.5">
+            <Globe className="h-5 w-5 text-bs-green" aria-hidden="true" />
           </div>
-          <h2 className="font-display text-xl font-bold text-foreground">
+          <h2 className="text-[22px] leading-tight" style={sectionTitleStyle}>
             Your Compliance Region
           </h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Country Code
-            </p>
-            <p className="font-display text-xl font-bold text-foreground">
+            <p className="bs-eyebrow mb-1">Country Code</p>
+            <p className="text-[20px] leading-tight text-bs-fg" style={sectionTitleStyle}>
               {countryCode}
             </p>
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Consent Model
-            </p>
-            <p className="font-display text-xl font-bold text-foreground capitalize">
+            <p className="bs-eyebrow mb-1">Consent Model</p>
+            <p
+              className="text-[20px] leading-tight text-bs-fg capitalize"
+              style={sectionTitleStyle}
+            >
               {consentModel}
             </p>
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-              GDPR Applies
-            </p>
+            <p className="bs-eyebrow mb-1">GDPR Applies</p>
             <p
-              className={`font-display text-xl font-bold ${isGDPR ? "text-amber-600" : "text-slate-400"}`}
+              className={`text-[20px] leading-tight ${isGDPR ? "text-bs-warn" : "text-bs-fg-muted"}`}
+              style={sectionTitleStyle}
             >
               {isGDPR ? "Yes" : "No"}
             </p>
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-              POPIA Applies
-            </p>
+            <p className="bs-eyebrow mb-1">POPIA Applies</p>
             <p
-              className={`font-display text-xl font-bold ${isPOPIA ? "text-amber-600" : "text-slate-400"}`}
+              className={`text-[20px] leading-tight ${isPOPIA ? "text-bs-warn" : "text-bs-fg-muted"}`}
+              style={sectionTitleStyle}
             >
               {isPOPIA ? "Yes" : "No"}
             </p>
           </div>
         </div>
         {consentModel === "opt-in" && (
-          <div className="mt-6 rounded-xl bg-amber-100 border border-amber-200 p-4">
-            <p className="text-sm text-amber-800">
+          <div className="rounded-bs-md bg-bs-warn/10 border border-bs-warn/30 p-4">
+            <p className="text-sm text-bs-fg">
               <strong>Opt-In Required:</strong> Users must give explicit consent
               before non-essential cookies are set.
             </p>
           </div>
         )}
-      </div>
+      </section>
 
       {/* Cookie Banner Settings */}
-      <div className="card-floating p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="icon-badge">
-            <Cookie className="h-5 w-5 text-white" />
+      <section className="bs-card bs-card-pad space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="rounded-bs-md bg-bs-card-2 p-2.5">
+            <Cookie className="h-5 w-5 text-bs-fg" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="font-display text-xl font-bold text-foreground">
+            <h2 className="text-[22px] leading-tight" style={sectionTitleStyle}>
               Cookie Banner
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-bs-fg-muted">
               Configure how the cookie consent banner appears on your storefront
             </p>
           </div>
         </div>
         <div className="space-y-6">
-          <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <div className="flex items-center justify-between p-4 rounded-bs-md bg-bs-card-2/50 border border-bs-border-100">
             <div>
-              <Label htmlFor="cookieConsentEnabled" className="text-foreground font-medium">
+              <Label
+                htmlFor="cookieConsentEnabled"
+                className="text-bs-fg font-medium"
+              >
                 Enable Cookie Banner
               </Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-bs-fg-muted">
                 Show cookie consent banner to visitors
               </p>
             </div>
@@ -156,8 +159,11 @@ export default function CookieSettingsForm({
             />
           </div>
 
-          <div>
-            <Label htmlFor="cookieBannerMessage" className="text-foreground font-medium">
+          <div className="space-y-2">
+            <Label
+              htmlFor="cookieBannerMessage"
+              className="text-bs-fg font-medium"
+            >
               Custom Banner Message (Optional)
             </Label>
             <Input
@@ -170,15 +176,14 @@ export default function CookieSettingsForm({
                 })
               }
               placeholder="We use cookies to enhance your experience..."
-              className="mt-2 rounded-xl"
             />
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-bs-fg-muted">
               Leave empty to use the default message for your region
             </p>
           </div>
 
-          <div>
-            <Label htmlFor="cookiePolicyUrl" className="text-foreground font-medium">
+          <div className="space-y-2">
+            <Label htmlFor="cookiePolicyUrl" className="text-bs-fg font-medium">
               Cookie Policy URL (Optional)
             </Label>
             <Input
@@ -188,58 +193,55 @@ export default function CookieSettingsForm({
                 setFormData({ ...formData, cookiePolicyUrl: e.target.value })
               }
               placeholder="/cookies or https://yoursite.com/cookie-policy"
-              className="mt-2 rounded-xl"
             />
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-bs-fg-muted">
               Link to your detailed cookie policy page
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Cookie Categories */}
-      <div className="card-floating p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="rounded-2xl bg-purple-600 p-3">
-            <Shield className="h-5 w-5 text-white" />
+      <section className="bs-card bs-card-pad space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="rounded-bs-md bg-bs-card-2 p-2.5">
+            <Shield className="h-5 w-5 text-bs-fg" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="font-display text-xl font-bold text-foreground">
+            <h2 className="text-[22px] leading-tight" style={sectionTitleStyle}>
               Cookie Categories
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-bs-fg-muted">
               Enable optional cookie categories for enhanced functionality
             </p>
           </div>
         </div>
         <div className="space-y-4">
           {/* Essential - Always on */}
-          <div className="flex items-center justify-between p-5 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex items-center justify-between p-5 bg-bs-card-2/50 rounded-bs-md border border-bs-border-100">
             <div className="flex items-start gap-4">
-              <div className="rounded-xl bg-emerald-500 p-2.5">
-                <Shield className="h-4 w-4 text-white" />
+              <div className="rounded-bs-md bg-bs-green/10 p-2.5">
+                <Shield className="h-4 w-4 text-bs-green" aria-hidden="true" />
               </div>
               <div>
-                <p className="font-medium text-foreground">Essential Cookies</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-medium text-bs-fg">Essential Cookies</p>
+                <p className="text-sm text-bs-fg-muted">
                   Required for site functionality (auth, cart, sessions)
                 </p>
               </div>
             </div>
-            <span className="text-sm font-semibold text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full">
-              Always Enabled
-            </span>
+            <span className="bs-chip bs-chip-green">Always Enabled</span>
           </div>
 
           {/* Analytics */}
-          <div className="flex items-center justify-between p-5 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex items-center justify-between p-5 bg-bs-card-2/50 rounded-bs-md border border-bs-border-100">
             <div className="flex items-start gap-4">
-              <div className="rounded-xl bg-blue-500 p-2.5">
-                <BarChart3 className="h-4 w-4 text-white" />
+              <div className="rounded-bs-md bg-bs-info/10 p-2.5">
+                <BarChart3 className="h-4 w-4 text-bs-info" aria-hidden="true" />
               </div>
               <div>
-                <p className="font-medium text-foreground">Analytics Cookies</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-medium text-bs-fg">Analytics Cookies</p>
+                <p className="text-sm text-bs-fg-muted">
                   Track user behavior to improve your store
                 </p>
               </div>
@@ -253,14 +255,14 @@ export default function CookieSettingsForm({
           </div>
 
           {/* Marketing */}
-          <div className="flex items-center justify-between p-5 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex items-center justify-between p-5 bg-bs-card-2/50 rounded-bs-md border border-bs-border-100">
             <div className="flex items-start gap-4">
-              <div className="rounded-xl bg-purple-500 p-2.5">
-                <Target className="h-4 w-4 text-white" />
+              <div className="rounded-bs-md bg-bs-card-2 p-2.5">
+                <Target className="h-4 w-4 text-bs-fg" aria-hidden="true" />
               </div>
               <div>
-                <p className="font-medium text-foreground">Marketing Cookies</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-medium text-bs-fg">Marketing Cookies</p>
+                <p className="text-sm text-bs-fg-muted">
                   Enable personalized ads and retargeting
                 </p>
               </div>
@@ -273,19 +275,13 @@ export default function CookieSettingsForm({
             />
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Submit */}
       <div className="flex justify-end">
-        <Button
-          type="submit"
-          variant="hero"
-          size="lg"
-          className="rounded-xl"
-          disabled={isLoading}
-        >
+        <button type="submit" className="bs-btn bs-btn-green" disabled={isLoading}>
           {isLoading ? "Saving..." : "Save Cookie Settings"}
-        </Button>
+        </button>
       </div>
     </form>
   );

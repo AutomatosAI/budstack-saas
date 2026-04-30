@@ -5,6 +5,10 @@ import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import { generateMockEvents } from "@/lib/mock-data";
 import { StatCard } from "@/components/admin/shared";
 
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
+
 export default async function AuditLogsPage() {
   const user = await currentUser();
 
@@ -12,7 +16,6 @@ export default async function AuditLogsPage() {
     redirect("/auth/login");
   }
 
-  // Generate mock events for demo (replace with real data in production)
   const allEvents = generateMockEvents(50);
 
   const last24h = allEvents.filter((e) => {
@@ -23,21 +26,19 @@ export default async function AuditLogsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Centered Header */}
-      <div className="text-center max-w-2xl mx-auto">
-        <div className="section-badge mb-4 inline-flex">
-          <Activity className="h-4 w-4" />
+      <div className="bs-page-header-compact">
+        <div className="bs-eyebrow inline-flex items-center gap-1.5">
+          <Activity className="h-4 w-4" aria-hidden="true" />
           Audit Logs
         </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h1 className="bs-page-title" style={sectionTitleStyle}>
           Activity Overview
         </h1>
-        <p className="mt-3 text-muted-foreground">
+        <p className="bs-page-subtitle">
           Platform-wide event tracking and monitoring.
         </p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
           label="Total Events"
@@ -59,7 +60,6 @@ export default async function AuditLogsPage() {
         />
       </div>
 
-      {/* Activity Timeline */}
       <ActivityTimeline
         events={allEvents}
         maxVisible={50}

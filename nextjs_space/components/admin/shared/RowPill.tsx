@@ -20,6 +20,16 @@ export interface RowPillProps
   children: React.ReactNode;
 }
 
+const TONE_TO_CHIP: Record<RowPillTone, string> = {
+  emerald: "bs-chip-green",
+  amber: "bs-chip-warn",
+  red: "bs-chip-danger",
+  slate: "bs-chip-muted",
+  gold: "bs-chip-gold",
+  blue: "bs-chip-info",
+  purple: "bs-chip-info",
+};
+
 export function RowPill({
   tone = "slate",
   icon: Icon,
@@ -31,9 +41,9 @@ export function RowPill({
     <span
       {...rest}
       data-tone={tone}
-      className={cn("row-pill", className)}
+      className={cn("bs-chip", TONE_TO_CHIP[tone], className)}
     >
-      {Icon ? <Icon className="row-pill-icon" aria-hidden="true" /> : null}
+      {Icon ? <Icon className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
       {children}
     </span>
   );

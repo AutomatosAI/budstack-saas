@@ -5,16 +5,11 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent } from "@/components/ui/card";
 import Tiptap from "@/components/editor/tiptap";
 import { toast } from "@/components/ui/sonner";
 import Link from "next/link";
-import { ArrowLeft, Upload, X, Loader2 } from "lucide-react";
+import { Upload, X, Loader2 } from "lucide-react";
 
 const postSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -62,7 +57,6 @@ export default function PostForm({
       toast.error("Failed to upload image");
     } finally {
       setIsUploading(false);
-      // Reset input
       e.target.value = "";
     }
   };
@@ -110,162 +104,169 @@ export default function PostForm({
   };
 
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+    <div className="space-y-8">
+      <div className="bs-page-header-centered">
+        <div className="bs-eyebrow">Content</div>
+        <h1
+          className="bs-page-title"
+          style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+        >
           {isEditing ? "Edit Article" : "New Article"}
         </h1>
-        <p className="text-slate-600 mt-2">
+        <p className="bs-page-subtitle">
           {isEditing
             ? "Update your article content and settings"
             : "Create a new article for The Wire"}
         </p>
       </div>
 
-      <div className="max-w-5xl">
+      <div className="max-w-5xl mx-auto">
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid gap-6">
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    {...form.register("title")}
-                    placeholder="Article Title"
-                  />
-                  {form.formState.errors.title && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.title.message}
-                    </p>
-                  )}
-                </div>
+            <section className="bs-card bs-card-pad space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="title" className="bs-eyebrow">
+                  Title
+                </label>
+                <input
+                  id="title"
+                  {...form.register("title")}
+                  placeholder="Article Title"
+                  className="bs-input w-full"
+                />
+                {form.formState.errors.title && (
+                  <p className="text-sm text-bs-danger">
+                    {form.formState.errors.title.message}
+                  </p>
+                )}
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="excerpt">Excerpt</Label>
-                  <Textarea
-                    id="excerpt"
-                    {...form.register("excerpt")}
-                    placeholder="Short summary for preview cards..."
-                    className="h-20"
-                  />
-                </div>
+              <div className="space-y-2">
+                <label htmlFor="excerpt" className="bs-eyebrow">
+                  Excerpt
+                </label>
+                <textarea
+                  id="excerpt"
+                  {...form.register("excerpt")}
+                  placeholder="Short summary for preview cards..."
+                  className="bs-input w-full h-20"
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="coverImage">Cover Image</Label>
-                  <div className="flex flex-col gap-4">
-                    {form.watch("coverImage") && (
-                      <div className="relative aspect-video w-full max-w-sm rounded-lg overflow-hidden border">
-                        <img
-                          src={form.watch("coverImage")}
-                          alt="Cover preview"
-                          className="object-cover w-full h-full"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-2 right-2 h-6 w-6"
-                          onClick={() => form.setValue("coverImage", "")}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="coverImage"
-                        {...form.register("coverImage")}
-                        placeholder="https://... or upload image"
-                        className="flex-1"
+              <div className="space-y-2">
+                <label htmlFor="coverImage" className="bs-eyebrow">
+                  Cover Image
+                </label>
+                <div className="flex flex-col gap-4">
+                  {form.watch("coverImage") && (
+                    <div className="relative aspect-video w-full max-w-sm rounded-bs-md overflow-hidden border border-bs-border-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={form.watch("coverImage")}
+                        alt="Cover preview"
+                        className="object-cover w-full h-full"
                       />
-                      <div className="relative">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          disabled={isUploading}
-                        >
-                          {isUploading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Upload className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <input
-                          type="file"
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          disabled={isUploading}
-                        />
-                      </div>
+                      <button
+                        type="button"
+                        className="bs-btn bs-btn-danger bs-btn-sm absolute top-2 right-2 h-6 w-6 p-0 flex items-center justify-center"
+                        onClick={() => form.setValue("coverImage", "")}
+                        aria-label="Remove cover image"
+                      >
+                        <X className="h-3 w-3" aria-hidden="true" />
+                      </button>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Paste a URL or click the upload icon to select a file.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-2">
-                  <Label>Content</Label>
-                  <Tiptap
-                    content={form.getValues("content")}
-                    onChange={(html) =>
-                      form.setValue("content", html, { shouldValidate: true })
-                    }
-                  />
-                  {form.formState.errors.content && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.content.message}
-                    </p>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6 flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Publish Status</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {form.watch("published")
-                      ? "Article is live"
-                      : "Article is saved as draft"}
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="coverImage"
+                      {...form.register("coverImage")}
+                      placeholder="https://... or upload image"
+                      className="bs-input flex-1"
+                    />
+                    <div className="relative">
+                      <button
+                        type="button"
+                        disabled={isUploading}
+                        className="bs-btn bs-btn-ghost bs-btn-sm h-10 w-10 p-0 flex items-center justify-center disabled:opacity-50"
+                        aria-label="Upload image"
+                      >
+                        {isUploading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Upload className="h-4 w-4" aria-hidden="true" />
+                        )}
+                      </button>
+                      <input
+                        type="file"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={isUploading}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-bs-fg-muted">
+                    Paste a URL or click the upload icon to select a file.
                   </p>
                 </div>
-                <Switch
-                  checked={form.watch("published")}
-                  onCheckedChange={(checked) =>
-                    form.setValue("published", checked)
+              </div>
+            </section>
+
+            <section className="bs-card bs-card-pad">
+              <div className="space-y-2">
+                <label className="bs-eyebrow">Content</label>
+                <Tiptap
+                  content={form.getValues("content")}
+                  onChange={(html) =>
+                    form.setValue("content", html, { shouldValidate: true })
                   }
                 />
-              </CardContent>
-            </Card>
+                {form.formState.errors.content && (
+                  <p className="text-sm text-bs-danger">
+                    {form.formState.errors.content.message}
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section className="bs-card bs-card-pad flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="bs-eyebrow block">Publish Status</span>
+                <p className="text-sm text-bs-fg-muted">
+                  {form.watch("published")
+                    ? "Article is live"
+                    : "Article is saved as draft"}
+                </p>
+              </div>
+              <Switch
+                checked={form.watch("published")}
+                onCheckedChange={(checked) =>
+                  form.setValue("published", checked)
+                }
+              />
+            </section>
           </div>
 
           <div className="flex justify-end gap-4 pt-4">
-            <Link href="/tenant-admin/the-wire">
-              <Button variant="outline" type="button">
-                Cancel
-              </Button>
+            <Link href="/tenant-admin/the-wire" className="bs-btn bs-btn-ghost">
+              Cancel
             </Link>
-            <Button
+            <button
               type="submit"
               disabled={isLoading}
-              className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all"
+              className="bs-btn bs-btn-green disabled:opacity-50"
             >
-              {isLoading
-                ? "Saving..."
-                : isEditing
-                  ? "Update Article"
-                  : "Create Article"}
-            </Button>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  Saving...
+                </>
+              ) : isEditing ? (
+                "Update Article"
+              ) : (
+                "Create Article"
+              )}
+            </button>
           </div>
         </form>
       </div>

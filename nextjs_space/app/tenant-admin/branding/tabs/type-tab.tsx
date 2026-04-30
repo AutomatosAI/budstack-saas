@@ -1,12 +1,5 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +13,10 @@ import {
 } from "@/components/ui/select";
 import { FONTS } from "./shared";
 import type { EditorFormData, SetFormData } from "./types";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface TypeTabProps {
   formData: EditorFormData;
@@ -52,7 +49,7 @@ function FontSelect({
         {showSameAsBody && <SelectItem value="same">Same as body</SelectItem>}
         {Object.entries(FONT_GROUPS).map(([category, fonts]) => (
           <SelectGroup key={category}>
-            <SelectLabel className="text-xs text-muted-foreground uppercase tracking-wider">{category}</SelectLabel>
+            <SelectLabel className="bs-eyebrow">{category}</SelectLabel>
             {fonts.map((font) => (
               <SelectItem key={font.id} value={font.id}>
                 {font.name}
@@ -71,14 +68,15 @@ export function TypeTab({ formData, setFormData }: TypeTabProps) {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Typography</CardTitle>
-          <CardDescription>
+      <section className="bs-card bs-card-pad space-y-6">
+        <div>
+          <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
+            Typography
+          </h3>
+          <p className="text-sm text-bs-fg-muted">
             Font styles (applies to ALL pages)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+          </p>
+        </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Body Font</Label>
@@ -109,7 +107,7 @@ export function TypeTab({ formData, setFormData }: TypeTabProps) {
                 placeholder="16"
                 className="mt-1"
               />
-              <span className="text-xs text-muted-foreground mt-1 block">Paragraphs & content (default 16)</span>
+              <span className="text-xs text-bs-fg-muted mt-1 block">Paragraphs & content (default 16)</span>
             </div>
             <div>
               <Label>Hero Title Size (px)</Label>
@@ -122,7 +120,7 @@ export function TypeTab({ formData, setFormData }: TypeTabProps) {
                 placeholder="36"
                 className="mt-1"
               />
-              <span className="text-xs text-muted-foreground mt-1 block">Hero banner headline (default 36)</span>
+              <span className="text-xs text-bs-fg-muted mt-1 block">Hero banner headline (default 36)</span>
             </div>
             <div>
               <Label>Section Heading Size (px)</Label>
@@ -135,21 +133,21 @@ export function TypeTab({ formData, setFormData }: TypeTabProps) {
                 placeholder="30"
                 className="mt-1"
               />
-              <span className="text-xs text-muted-foreground mt-1 block">Section titles like Features, FAQ (default 30)</span>
+              <span className="text-xs text-bs-fg-muted mt-1 block">Section titles like Features, FAQ (default 30)</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </section>
 
       {/* Expanded Typography Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Font Weight & Spacing</CardTitle>
-          <CardDescription>
+      <section className="bs-card bs-card-pad space-y-6">
+        <div>
+          <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
+            Font Weight &amp; Spacing
+          </h3>
+          <p className="text-sm text-bs-fg-muted">
             Fine-tune typography weight and letter spacing
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+          </p>
+        </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Body Font Weight</Label>
@@ -205,8 +203,7 @@ export function TypeTab({ formData, setFormData }: TypeTabProps) {
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
+      </section>
     </div>
   );
 }

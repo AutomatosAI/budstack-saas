@@ -2,8 +2,6 @@ import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import BrandingForm from './branding-form';
-import { Breadcrumbs } from '@/components/admin/shared';
-import { Sparkles } from 'lucide-react';
 
 import { getJsonFromS3, getTextFromS3 } from '@/lib/s3';
 import { SECTION_ASSET_KEYS } from '@/lib/types/template-layout';

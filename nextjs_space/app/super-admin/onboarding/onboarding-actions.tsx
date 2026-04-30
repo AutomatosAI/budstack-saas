@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
+import { Loader2 } from "lucide-react";
 
 export default function OnboardingActions({ tenantId }: { tenantId: string }) {
   const router = useRouter();
@@ -22,9 +22,8 @@ export default function OnboardingActions({ tenantId }: { tenantId: string }) {
 
       toast.success("Tenant approved successfully");
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to approve tenant");
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -49,9 +48,8 @@ export default function OnboardingActions({ tenantId }: { tenantId: string }) {
 
       toast.success("Tenant rejected");
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to reject tenant");
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -59,18 +57,26 @@ export default function OnboardingActions({ tenantId }: { tenantId: string }) {
 
   return (
     <div className="flex gap-2">
-      <Button size="sm" onClick={approveTenant} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white rounded-full">
-        Approve
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
+      <button
+        type="button"
+        onClick={approveTenant}
+        disabled={isLoading}
+        className="bs-btn bs-btn-green bs-btn-sm"
+      >
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        ) : (
+          "Approve"
+        )}
+      </button>
+      <button
+        type="button"
         onClick={rejectTenant}
         disabled={isLoading}
-        className="rounded-full"
+        className="bs-btn bs-btn-danger bs-btn-sm"
       >
         Reject
-      </Button>
+      </button>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/sonner";
@@ -34,7 +33,7 @@ export default function ActivateButton({
         throw new Error("Failed to activate template");
       }
 
-      toast.success(`✅ ${templateName} is now active!`);
+      toast.success(`${templateName} is now active`);
       router.refresh();
     } catch (error) {
       console.error("Activation error:", error);
@@ -46,34 +45,32 @@ export default function ActivateButton({
 
   if (isActive) {
     return (
-      <Button
-        size="sm"
-        variant="default"
-        className="bg-green-600 hover:bg-green-700"
+      <button
+        type="button"
+        className="bs-btn bs-btn-green bs-btn-sm"
         disabled
       >
-        <Check className="mr-2 h-4 w-4" />
+        <Check className="mr-2 h-4 w-4" aria-hidden="true" />
         Active
-      </Button>
+      </button>
     );
   }
 
   return (
-    <Button
-      size="sm"
-      variant="default"
+    <button
+      type="button"
+      className="bs-btn bs-btn-green bs-btn-sm"
       onClick={handleActivate}
       disabled={isLoading}
-      className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
     >
       {isLoading ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
           Activating...
         </>
       ) : (
         "Activate"
       )}
-    </Button>
+    </button>
   );
 }

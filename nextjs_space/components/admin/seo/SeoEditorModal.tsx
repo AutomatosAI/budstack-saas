@@ -8,10 +8,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { GooglePreview } from "./GooglePreview";
 import { ImageIcon, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -72,92 +68,99 @@ export function SeoEditorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bs-dialog-content max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">
+          <DialogTitle
+            className="font-display text-[22px] text-bs-fg"
+            style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+          >
             SEO Settings: {entityName}
           </DialogTitle>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-bs-fg-muted">
             Customize how this {entityType} appears in search engines and social
             media.
           </p>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Google Preview */}
+          {/* Google Preview — light Google-brand colours preserved (product output) */}
           <GooglePreview
             title={title || entityName}
             description={description || `Learn more about ${entityName}`}
             url={previewUrl}
           />
 
-          {/* Meta Title */}
           <div className="space-y-2">
-            <Label htmlFor="seo-title">
-              Meta Title
-              <span className="text-xs text-slate-500 ml-2">
+            <label htmlFor="seo-title" className="bs-eyebrow flex items-center gap-2">
+              <span>Meta Title</span>
+              <span className="text-[10px] normal-case tracking-normal text-bs-fg-muted">
                 ({title.length}/60 recommended)
               </span>
-            </Label>
-            <Input
+            </label>
+            <input
               id="seo-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={entityName}
-              className={title.length > 60 ? "border-orange-400" : ""}
+              className={`bs-input w-full ${title.length > 60 ? "border-bs-warn" : ""}`}
             />
-            <p className="text-xs text-slate-500">
-              Leave empty to use: "{entityName}"
+            <p className="text-xs text-bs-fg-muted">
+              Leave empty to use: &quot;{entityName}&quot;
             </p>
           </div>
 
-          {/* Meta Description */}
           <div className="space-y-2">
-            <Label htmlFor="seo-description">
-              Meta Description
-              <span className="text-xs text-slate-500 ml-2">
+            <label
+              htmlFor="seo-description"
+              className="bs-eyebrow flex items-center gap-2"
+            >
+              <span>Meta Description</span>
+              <span className="text-[10px] normal-case tracking-normal text-bs-fg-muted">
                 ({description.length}/160 recommended)
               </span>
-            </Label>
-            <Textarea
+            </label>
+            <textarea
               id="seo-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={`Learn more about ${entityName}...`}
               rows={3}
-              className={description.length > 160 ? "border-orange-400" : ""}
+              className={`bs-input w-full resize-y ${description.length > 160 ? "border-bs-warn" : ""}`}
             />
           </div>
 
-          {/* OG Image */}
           <div className="space-y-2">
-            <Label htmlFor="seo-og-image">
-              Open Graph Image
-              <span className="text-xs text-slate-500 ml-2">
+            <label htmlFor="seo-og-image" className="bs-eyebrow flex items-center gap-2">
+              <span>Open Graph Image</span>
+              <span className="text-[10px] normal-case tracking-normal text-bs-fg-muted">
                 (1200x630 recommended)
               </span>
-            </Label>
+            </label>
             <div className="flex gap-2">
-              <Input
+              <input
                 id="seo-og-image"
                 value={ogImage}
                 onChange={(e) => setOgImage(e.target.value)}
                 placeholder="https://example.com/image.jpg"
-                className="flex-1"
+                className="bs-input flex-1"
               />
-              <Button variant="outline" size="icon" disabled>
+              <button
+                type="button"
+                disabled
+                className="bs-btn bs-btn-ghost h-10 w-10 px-0"
+              >
                 <ImageIcon className="h-4 w-4" />
-              </Button>
+              </button>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-bs-fg-muted">
               Enter image URL or upload (upload coming soon)
             </p>
             {ogImage && (
-              <div className="mt-2 border rounded-lg overflow-hidden">
+              <div className="mt-2 overflow-hidden rounded-bs-md border border-bs-border-100">
                 <img
                   src={ogImage}
                   alt="OG Preview"
-                  className="w-full h-32 object-cover"
+                  className="h-32 w-full object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src =
                       'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><text x="10" y="30" fill="gray">Invalid Image</text></svg>';
@@ -169,22 +172,32 @@ export function SeoEditorModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="bs-btn bs-btn-ghost"
+          >
             Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="bs-btn bs-btn-green"
+          >
             {isSaving ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Saving...</span>
               </>
             ) : (
               <>
-                <Save className="h-4 w-4 mr-2" />
-                Save SEO Settings
+                <Save className="h-4 w-4" />
+                <span>Save SEO Settings</span>
               </>
             )}
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

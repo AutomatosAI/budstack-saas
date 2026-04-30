@@ -14,10 +14,13 @@ import {
   AlertTriangle,
   FileCheck,
   Eye,
+  Loader2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 import {
   Table,
   TableBody,
@@ -398,14 +401,20 @@ export function TenantsTable({
 
   return (
     <>
-      <div className="card-floating overflow-hidden">
-        <div className="border-b border-slate-200/70 px-6 py-5">
+      <div className="bs-card overflow-hidden">
+        <div className="border-b border-bs-border-100 px-6 py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-emerald-500 p-2.5 shadow-sm">
-                <Building2 className="h-5 w-5 text-white" />
+              <div className="rounded-bs-md bg-bs-card-2 border border-bs-border-100 p-2.5">
+                <Building2
+                  className="h-5 w-5 text-bs-green"
+                  aria-hidden="true"
+                />
               </div>
-              <h2 className="font-display text-2xl font-bold text-foreground">
+              <h2
+                className="text-[22px] leading-tight text-bs-fg"
+                style={sectionTitleStyle}
+              >
                 {hasFilters
                   ? `Results (${totalCount})`
                   : `All Tenants (${totalSearchCount})`}
@@ -464,7 +473,7 @@ export function TenantsTable({
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50/50">
+                  <TableRow className="bg-bs-card-2/50">
                     {/* Select All Checkbox */}
                     <TableHead className="w-12">
                       <Checkbox
@@ -476,8 +485,9 @@ export function TenantsTable({
                             : "Select all tenants"
                         }
                         className={cn(
-                          "border-slate-400 data-[state=checked]:bg-slate-700 data-[state=checked]:border-slate-700",
-                          isSomeSelected && "data-[state=checked]:bg-slate-500",
+                          "border-bs-border-100 data-[state=checked]:bg-bs-green data-[state=checked]:border-bs-green",
+                          isSomeSelected &&
+                            "data-[state=checked]:bg-bs-green/60",
                         )}
                         {...(isSomeSelected && { "data-state": "checked" })}
                       />
@@ -554,8 +564,8 @@ export function TenantsTable({
                         <TableRow
                           key={tenant.id}
                           className={cn(
-                            "hover:bg-slate-50 transition-colors",
-                            isSelected && "bg-slate-100/70",
+                            "hover:bg-bs-card-2/40 transition-colors",
+                            isSelected && "bg-bs-card-2/60",
                           )}
                         >
                           {/* Row Checkbox */}
@@ -566,10 +576,10 @@ export function TenantsTable({
                                 handleSelectOne(tenant.id, checked === true)
                               }
                               aria-label={`Select ${tenant.businessName}`}
-                              className="border-slate-400 data-[state=checked]:bg-slate-700 data-[state=checked]:border-slate-700"
+                              className="border-bs-border-100 data-[state=checked]:bg-bs-green data-[state=checked]:border-bs-green"
                             />
                           </TableCell>
-                          <TableCell className="font-medium text-slate-900">
+                          <TableCell className="font-medium text-bs-fg">
                             <div className="min-w-0">
                               <span className="block truncate">
                                 {tenant.businessName}
@@ -579,15 +589,18 @@ export function TenantsTable({
                                 href={tenantUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block text-xs text-cyan-600 mt-0.5 md:hidden hover:underline truncate"
+                                className="block text-xs text-bs-green mt-0.5 md:hidden hover:underline truncate font-mono"
                               >
                                 {tenant.subdomain}.budstack.io
                               </a>
                             </div>
                           </TableCell>
-                          <TableCell className="text-slate-600 font-mono text-sm hidden lg:table-cell max-w-[200px] truncate" title={tenant.nftTokenId || ""}>
+                          <TableCell
+                            className="text-bs-fg-muted font-mono text-sm hidden lg:table-cell max-w-[200px] truncate"
+                            title={tenant.nftTokenId || ""}
+                          >
                             {tenant.nftTokenId || (
-                              <span className="text-slate-400">N/A</span>
+                              <span className="text-bs-fg-muted">N/A</span>
                             )}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
@@ -595,12 +608,15 @@ export function TenantsTable({
                               href={tenantUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-cyan-600 hover:text-cyan-700 hover:underline flex items-center gap-1 transition-colors"
+                              className="text-bs-green hover:text-bs-green/80 hover:underline flex items-center gap-1 transition-colors font-mono text-sm"
                             >
                               <span className="truncate max-w-[200px]">
                                 {tenantUrl}
                               </span>
-                              <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                              <ExternalLink
+                                className="h-3 w-3 flex-shrink-0"
+                                aria-hidden="true"
+                              />
                             </a>
                           </TableCell>
                           <TableCell>
@@ -626,15 +642,19 @@ export function TenantsTable({
                               {tenant._count.orders}
                             </RowPill>
                           </TableCell>
-                          <TableCell className="text-slate-600 text-sm hidden sm:table-cell">
+                          <TableCell className="text-bs-fg-muted text-sm hidden sm:table-cell font-mono">
                             {format(new Date(tenant.createdAt), "MMM d, yyyy")}
                           </TableCell>
                           <TableCell>
-                            <Link href={`/super-admin/tenants/${tenant.id}`}>
-                              <Button variant="outline" size="sm" className="gap-2">
-                                <Eye className="w-4 h-4" />
-                                View
-                              </Button>
+                            <Link
+                              href={`/super-admin/tenants/${tenant.id}`}
+                              className="bs-btn bs-btn-ghost bs-btn-sm gap-1.5"
+                            >
+                              <Eye
+                                className="h-4 w-4"
+                                aria-hidden="true"
+                              />
+                              View
                             </Link>
                           </TableCell>
                         </TableRow>
@@ -648,7 +668,7 @@ export function TenantsTable({
 
           {/* Pagination Controls */}
           {tenants.length > 0 && (
-            <div className="border-t border-slate-200 bg-slate-50/50">
+            <div className="border-t border-bs-border-100 bg-bs-card-2/40">
               <Pagination
                 page={page}
                 pageSize={pageSize}
@@ -677,35 +697,44 @@ export function TenantsTable({
         open={confirmAction !== null}
         onOpenChange={(open) => !open && setConfirmAction(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="bs-dialog-content sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle
+              className="flex items-center gap-2 text-[22px] leading-tight"
+              style={sectionTitleStyle}
+            >
               {confirmAction === "activate" ? (
                 <>
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  <CheckCircle2
+                    className="h-5 w-5 text-bs-green"
+                    aria-hidden="true"
+                  />
                   <span>Activate Tenants</span>
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="h-5 w-5 text-amber-500" />
+                  <AlertTriangle
+                    className="h-5 w-5 text-bs-warn"
+                    aria-hidden="true"
+                  />
                   <span>Deactivate Tenants</span>
                 </>
               )}
             </DialogTitle>
-            <DialogDescription className="pt-2">
+            <DialogDescription className="pt-2 text-bs-fg-muted">
               {confirmAction === "activate" ? (
                 <span>
                   Are you sure you want to activate{" "}
-                  <strong>{selectedIds.size}</strong> tenant
-                  {selectedIds.size === 1 ? "" : "s"}? They will be able to
-                  access their stores.
+                  <strong className="text-bs-fg">{selectedIds.size}</strong>{" "}
+                  tenant{selectedIds.size === 1 ? "" : "s"}? They will be able
+                  to access their stores.
                 </span>
               ) : (
                 <span>
                   Are you sure you want to deactivate{" "}
-                  <strong>{selectedIds.size}</strong> tenant
-                  {selectedIds.size === 1 ? "" : "s"}? Their stores will become
-                  inaccessible.
+                  <strong className="text-bs-fg">{selectedIds.size}</strong>{" "}
+                  tenant{selectedIds.size === 1 ? "" : "s"}? Their stores will
+                  become inaccessible.
                 </span>
               )}
             </DialogDescription>
@@ -714,69 +743,50 @@ export function TenantsTable({
           {/* Show tenant names */}
           {selectedTenantNames.length > 0 && (
             <div className="py-2">
-              <p className="text-xs text-muted-foreground mb-2">
+              <p className="text-xs text-bs-fg-muted mb-2">
                 Affected tenants:
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {selectedTenantNames.map((name) => (
-                  <Badge
-                    key={name}
-                    variant="secondary"
-                    className="text-xs font-normal"
-                  >
+                  <RowPill key={name} tone="slate">
                     {name}
-                  </Badge>
+                  </RowPill>
                 ))}
                 {selectedIds.size > 5 && (
-                  <Badge variant="outline" className="text-xs font-normal">
+                  <RowPill tone="slate">
                     +{selectedIds.size - 5} more
-                  </Badge>
+                  </RowPill>
                 )}
               </div>
             </div>
           )}
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
+            <button
+              type="button"
               onClick={() => setConfirmAction(null)}
               disabled={isProcessing}
+              className="bs-btn bs-btn-ghost"
             >
               Cancel
-            </Button>
-            <Button
-              variant={confirmAction === "activate" ? "default" : "destructive"}
+            </button>
+            <button
+              type="button"
               onClick={handleConfirmAction}
               disabled={isProcessing}
               className={cn(
-                confirmAction === "activate" &&
-                "bg-emerald-600 hover:bg-emerald-700",
+                "bs-btn",
+                confirmAction === "activate"
+                  ? "bs-btn-green"
+                  : "bs-btn-danger",
               )}
             >
               {isProcessing ? (
                 <>
-                  <span className="animate-spin mr-2">
-                    <svg
-                      className="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                  </span>
+                  <Loader2
+                    className="mr-2 h-4 w-4 animate-spin"
+                    aria-hidden="true"
+                  />
                   Processing...
                 </>
               ) : confirmAction === "activate" ? (
@@ -784,7 +794,7 @@ export function TenantsTable({
               ) : (
                 "Deactivate"
               )}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

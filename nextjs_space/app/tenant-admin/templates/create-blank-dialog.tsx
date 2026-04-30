@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +15,10 @@ import { Label } from "@/components/ui/label";
 import { Plus, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useRouter } from "next/navigation";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 export function CreateBlankDialog() {
   const [open, setOpen] = useState(false);
@@ -32,11 +35,14 @@ export function CreateBlankDialog() {
     setIsCreating(true);
 
     try {
-      const response = await fetch("/api/tenant-admin/templates/create-blank", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ templateName: templateName.trim() }),
-      });
+      const response = await fetch(
+        "/api/tenant-admin/templates/create-blank",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ templateName: templateName.trim() }),
+        },
+      );
 
       const data = await response.json();
 
@@ -44,7 +50,7 @@ export function CreateBlankDialog() {
         throw new Error(data.error || "Failed to create template");
       }
 
-      toast.success("Template created! Opening editor...");
+      toast.success("Template created. Opening editor.");
       setOpen(false);
       setTemplateName("");
       router.push(`/tenant-admin/branding?templateId=${data.templateId}`);
@@ -58,15 +64,20 @@ export function CreateBlankDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-md hover:shadow-lg transition-all rounded-full">
-          <Plus className="mr-2 h-4 w-4" />
+        <button type="button" className="bs-btn bs-btn-green">
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
           Create New Template
-        </Button>
+        </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="bs-dialog-content sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Template</DialogTitle>
-          <DialogDescription>
+          <DialogTitle
+            className="text-[22px] leading-tight"
+            style={sectionTitleStyle}
+          >
+            Create New Template
+          </DialogTitle>
+          <DialogDescription className="text-bs-fg-muted">
             Start from a blank canvas and build your template in the Store
             Editor. You can add sections, customise colours, typography, and
             more.
@@ -74,7 +85,9 @@ export function CreateBlankDialog() {
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="blank-template-name">Template Name</Label>
+            <Label htmlFor="blank-template-name" className="text-bs-fg">
+              Template Name
+            </Label>
             <Input
               id="blank-template-name"
               placeholder="e.g., My Custom Design"
@@ -91,28 +104,32 @@ export function CreateBlankDialog() {
           </div>
         </div>
         <DialogFooter>
-          <Button
-            variant="outline"
+          <button
+            type="button"
+            className="bs-btn bs-btn-ghost"
             onClick={() => setOpen(false)}
             disabled={isCreating}
-            className="rounded-full"
           >
             Cancel
-          </Button>
-          <Button
+          </button>
+          <button
+            type="button"
+            className="bs-btn bs-btn-green"
             onClick={handleCreate}
             disabled={isCreating}
-            className="rounded-full bg-emerald-600 hover:bg-emerald-700"
           >
             {isCreating ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2
+                  className="mr-2 h-4 w-4 animate-spin"
+                  aria-hidden="true"
+                />
                 Creating...
               </>
             ) : (
               "Create Template"
             )}
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

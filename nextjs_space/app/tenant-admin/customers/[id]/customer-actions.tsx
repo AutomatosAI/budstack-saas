@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import {
   AlertDialog,
@@ -50,33 +49,39 @@ export default function CustomerActions({ customer }: CustomerActionsProps) {
   return (
     <>
       <div className="space-y-2">
-        <Button
-          variant="destructive"
-          className="w-full"
+        <button
+          type="button"
           onClick={() => setShowDeleteDialog(true)}
+          className="bs-btn bs-btn-danger w-full"
         >
           Delete Customer (GDPR)
-        </Button>
+        </button>
       </div>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bs-dialog-content">
           <AlertDialogHeader>
-            <AlertDialogTitle>GDPR Compliant Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle
+              className="text-[22px] text-bs-fg"
+              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+            >
+              GDPR Compliant Deletion
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-bs-fg-muted">
               This will anonymize all personal data for{" "}
-              <strong>{customer.name || customer.email}</strong>. The customer
+              <strong className="text-bs-fg">{customer.name || customer.email}</strong>. The customer
               record will be kept for order history integrity but all PII will
               be removed. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="bs-btn bs-btn-ghost">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={deleteCustomer}
               disabled={isLoading}
-              className="bg-red-600 hover:bg-red-700"
+              className="bs-btn bs-btn-danger disabled:opacity-50"
             >
               {isLoading ? "Deleting..." : "Delete Customer Data"}
             </AlertDialogAction>

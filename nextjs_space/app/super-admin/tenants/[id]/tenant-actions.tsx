@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import {
   AlertDialog,
@@ -14,6 +13,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Loader2, Power, Trash2 } from "lucide-react";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface TenantActionsProps {
   tenant: {
@@ -44,9 +48,8 @@ export default function TenantActions({ tenant }: TenantActionsProps) {
         `Tenant ${tenant.isActive ? "deactivated" : "activated"} successfully`,
       );
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to update tenant status");
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -63,9 +66,8 @@ export default function TenantActions({ tenant }: TenantActionsProps) {
 
       toast.success("Tenant deleted successfully");
       router.push("/super-admin/tenants");
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete tenant");
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -74,44 +76,67 @@ export default function TenantActions({ tenant }: TenantActionsProps) {
   return (
     <>
       <div className="space-y-2">
-        <Button
-          variant={tenant.isActive ? "destructive" : "default"}
-          className="w-full"
+        <button
+          type="button"
           onClick={toggleTenantStatus}
           disabled={isLoading}
+          className={`bs-btn w-full gap-2 ${tenant.isActive ? "bs-btn-danger" : "bs-btn-green"}`}
         >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Power className="h-4 w-4" aria-hidden="true" />
+          )}
           {tenant.isActive ? "Deactivate Tenant" : "Activate Tenant"}
-        </Button>
+        </button>
 
-        <Button
-          variant="destructive"
-          className="w-full"
+        <button
+          type="button"
           onClick={() => setShowDeleteDialog(true)}
+          className="bs-btn bs-btn-danger w-full gap-2"
         >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
           Delete Tenant
-        </Button>
+        </button>
       </div>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bs-dialog-content">
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle
+              className="text-[22px] leading-tight"
+              style={sectionTitleStyle}
+            >
+              Are you absolutely sure?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-bs-fg-muted">
               This will permanently delete the tenant{" "}
-              <strong>{tenant.businessName}</strong> and all associated data
-              including users, products, and orders. This action cannot be
-              undone.
+              <strong className="text-bs-fg">{tenant.businessName}</strong>{" "}
+              and all associated data including users, products, and orders.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="bs-btn bs-btn-ghost">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={deleteTenant}
               disabled={isLoading}
-              className="bg-red-600 hover:bg-red-700"
+              className="bs-btn bs-btn-danger"
             >
-              {isLoading ? "Deleting..." : "Delete Tenant"}
+              {isLoading ? (
+                <>
+                  <Loader2
+                    className="mr-2 h-4 w-4 animate-spin"
+                    aria-hidden="true"
+                  />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Tenant"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

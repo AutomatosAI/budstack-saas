@@ -2,10 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
 import { format } from "date-fns";
 
@@ -28,18 +24,21 @@ export default function CustomerEditForm({ customer }: CustomerEditFormProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Form state
   const [firstName, setFirstName] = useState(customer.firstName || "");
   const [lastName, setLastName] = useState(customer.lastName || "");
   const [phone, setPhone] = useState(customer.phone || "");
   const [newEmail, setNewEmail] = useState(customer.email);
 
-  const emailChanged = newEmail.toLowerCase().trim() !== customer.email.toLowerCase().trim();
+  const emailChanged =
+    newEmail.toLowerCase().trim() !== customer.email.toLowerCase().trim();
 
   const handleSave = async () => {
-    if (emailChanged && !window.confirm(
-      `Change email from "${customer.email}" to "${newEmail}"?\n\nThis will update the email across BudStacks, Clerk, and Dr Green.`
-    )) {
+    if (
+      emailChanged &&
+      !window.confirm(
+        `Change email from "${customer.email}" to "${newEmail}"?\n\nThis will update the email across BudStacks, Clerk, and Dr Green.`,
+      )
+    ) {
       return;
     }
 
@@ -63,14 +62,16 @@ export default function CustomerEditForm({ customer }: CustomerEditFormProps) {
         throw new Error(data.error || "Failed to update customer");
       }
 
-      // Show sync status if email was changed
       if (emailChanged) {
         const failures: string[] = [];
         if (data.clerkSync && !data.clerkSync.success) failures.push("Clerk");
-        if (data.drGreenSync && !data.drGreenSync.success) failures.push("Dr Green");
+        if (data.drGreenSync && !data.drGreenSync.success)
+          failures.push("Dr Green");
 
         if (failures.length > 0) {
-          toast.warning(`Email updated locally but sync failed for: ${failures.join(", ")}`);
+          toast.warning(
+            `Email updated locally but sync failed for: ${failures.join(", ")}`,
+          );
         } else {
           toast.success("Email updated across all systems");
         }
@@ -97,116 +98,148 @@ export default function CustomerEditForm({ customer }: CustomerEditFormProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle>Customer Information</CardTitle>
-          {!isEditing ? (
-            <Button onClick={() => setIsEditing(true)} variant="outline">
-              Edit
-            </Button>
+    <section className="bs-card bs-card-pad">
+      <div className="bs-card-head mb-6 flex items-center justify-between">
+        <h2
+          className="text-[22px] text-bs-fg"
+          style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+        >
+          Customer Information
+        </h2>
+        {!isEditing ? (
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="bs-btn bs-btn-ghost bs-btn-sm"
+          >
+            Edit
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={isSaving}
+              className="bs-btn bs-btn-ghost bs-btn-sm disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bs-btn bs-btn-green bs-btn-sm disabled:opacity-50"
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <label htmlFor="firstName" className="bs-eyebrow">
+            First Name
+          </label>
+          {isEditing ? (
+            <input
+              id="firstName"
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="First Name"
+              className="bs-input w-full"
+            />
           ) : (
-            <div className="space-x-2">
-              <Button
-                onClick={handleCancel}
-                variant="outline"
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
+            <p className="text-base text-bs-fg">{customer.firstName || "Not set"}</p>
           )}
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-6">
-          {/* First Name */}
-          <div className="space-y-2">
-            <Label htmlFor="firstName">First Name</Label>
-            {isEditing ? (
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="First Name"
-              />
-            ) : (
-              <p className="text-base">{customer.firstName || "Not set"}</p>
-            )}
-          </div>
 
-          {/* Last Name */}
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name</Label>
-            {isEditing ? (
-              <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Last Name"
-              />
-            ) : (
-              <p className="text-base">{customer.lastName || "Not set"}</p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            {isEditing ? (
-              <div className="space-y-1">
-                <Input
-                  id="email"
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                />
-                {emailChanged && (
-                  <p className="text-xs text-blue-600">
-                    Will sync to Clerk and Dr Green automatically
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-base">{customer.email}</p>
-            )}
-          </div>
-
-          {/* Phone */}
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            {isEditing ? (
-              <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Phone number"
-              />
-            ) : (
-              <p className="text-base">{customer.phone || "Not set"}</p>
-            )}
-          </div>
-
-          {/* Created Date (read-only) */}
-          <div className="space-y-2">
-            <Label>Customer Since</Label>
-            <p className="text-base text-gray-500">
-              {format(new Date(customer.createdAt), "MMM d, yyyy")}
-            </p>
-          </div>
-
-          {/* Last Updated (read-only) */}
-          <div className="space-y-2">
-            <Label>Last Updated</Label>
-            <p className="text-base text-gray-500">
-              {format(new Date(customer.updatedAt), "MMM d, yyyy")}
-            </p>
-          </div>
+        <div className="space-y-2">
+          <label htmlFor="lastName" className="bs-eyebrow">
+            Last Name
+          </label>
+          {isEditing ? (
+            <input
+              id="lastName"
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Last Name"
+              className="bs-input w-full"
+            />
+          ) : (
+            <p className="text-base text-bs-fg">{customer.lastName || "Not set"}</p>
+          )}
         </div>
-      </CardContent>
-    </Card>
+
+        <div className="space-y-2">
+          <label htmlFor="email" className="bs-eyebrow">
+            Email
+          </label>
+          {isEditing ? (
+            <div className="space-y-1">
+              <input
+                id="email"
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="bs-input w-full font-mono"
+              />
+              {emailChanged && (
+                <p className="text-xs text-bs-info">
+                  Will sync to Clerk and Dr Green automatically
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-base font-mono text-bs-fg">{customer.email}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="phone" className="bs-eyebrow">
+            Phone
+          </label>
+          {isEditing ? (
+            <input
+              id="phone"
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Phone number"
+              className="bs-input w-full"
+            />
+          ) : (
+            <p className="text-base text-bs-fg">{customer.phone || "Not set"}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <p className="bs-eyebrow">Customer Since</p>
+          <p className="text-base font-mono text-bs-fg-muted">
+            {format(new Date(customer.createdAt), "MMM d, yyyy")}
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <p className="bs-eyebrow">Last Updated</p>
+          <p className="text-base font-mono text-bs-fg-muted">
+            {format(new Date(customer.updatedAt), "MMM d, yyyy")}
+          </p>
+        </div>
+      </div>
+
+      {isEditing && (
+        <div className="mt-2 pt-2">
+          <p className="bs-eyebrow text-bs-fg-muted">
+            Customer ID:{" "}
+            <span className="font-mono normal-case text-bs-fg-muted">
+              {customer.id}
+            </span>
+          </p>
+        </div>
+      )}
+    </section>
   );
 }

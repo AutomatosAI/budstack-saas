@@ -3,13 +3,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * SkipToContent Component
- *
- * Provides keyboard users with a shortcut to skip navigation and jump
- * directly to the main content area. Visually hidden until focused.
- *
- * @param theme - 'super-admin' (slate) or 'tenant-admin' (cyan)
- * @param targetId - ID of the main content element to focus (default: 'main-content')
+ * Keyboard skip-link to main content. Visually hidden until focused.
  */
 
 export interface SkipToContentProps {
@@ -21,22 +15,12 @@ export function SkipToContent({
   theme = "tenant-admin",
   targetId = "main-content",
 }: SkipToContentProps) {
-  const themeStyles = {
-    "super-admin": {
-      bg: "bg-slate-900",
-      text: "text-white",
-      ring: "focus:ring-slate-400",
-      shadow: "shadow-slate-500/50",
-    },
-    "tenant-admin": {
-      bg: "bg-cyan-600",
-      text: "text-white",
-      ring: "focus:ring-cyan-400",
-      shadow: "shadow-cyan-500/50",
-    },
+  const styles = {
+    bg: "bg-bs-card border border-bs-border",
+    text: "text-bs-fg",
+    ring: "focus:ring-bs-green/40",
+    shadow: "shadow-bs-card-hover",
   };
-
-  const styles = themeStyles[theme];
 
   const handleSkip = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -65,7 +49,7 @@ export function SkipToContent({
         // Focus ring with offset
         "focus:outline-none focus:ring-2",
         styles.ring,
-        "focus:ring-offset-2 focus:ring-offset-white",
+        "focus:ring-offset-2 focus:ring-offset-bs-bg",
         // Shadow and depth
         "shadow-lg",
         styles.shadow,

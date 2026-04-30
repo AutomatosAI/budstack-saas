@@ -2,28 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/components/ui/sonner";
 import {
-  Upload,
-  Check,
-  Palette,
-  Type,
-  Layout,
-  Image as ImageIcon,
-} from "lucide-react";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { toast } from "@/components/ui/sonner";
+import { Check, Palette, Type, Layout, Loader2 } from "lucide-react";
 import Image from "next/image";
+
+import { FONTS } from "@/app/tenant-admin/branding/tabs/shared";
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 interface PlatformBrandingFormProps {
   settings: {
@@ -53,8 +49,30 @@ const TEMPLATES = [
   { id: "bold", name: "Bold", description: "Vibrant and eye-catching" },
 ];
 
-// Import shared font list — single source of truth
-import { FONTS } from "@/app/tenant-admin/branding/tabs/shared";
+function SectionCard({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="bs-card bs-card-pad">
+      <div className="mb-6 border-b border-bs-border-100 pb-4">
+        <h2
+          className="text-[22px] leading-tight text-bs-fg"
+          style={sectionTitleStyle}
+        >
+          {title}
+        </h2>
+        <p className="text-sm text-bs-fg-muted mt-1">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
 
 export default function PlatformBrandingForm({
   settings,
@@ -68,7 +86,6 @@ export default function PlatformBrandingForm({
     businessName: settings.businessName,
     tagline: settings.tagline || "",
 
-    // Colors
     primaryColor: settings.primaryColor,
     secondaryColor: settings.secondaryColor,
     accentColor: settings.accentColor,
@@ -76,14 +93,11 @@ export default function PlatformBrandingForm({
     textColor: settings.textColor,
     headingColor: settings.headingColor,
 
-    // Typography
     fontFamily: settings.fontFamily,
     headingFontFamily: settings.headingFontFamily,
 
-    // Template
     template: settings.template,
 
-    // Automatos config
     automatosApiKey: settings.automatosApiKey || "",
     automatosAgentId: settings.automatosAgentId?.toString() || "",
     automatosHelperAgentId: settings.automatosHelperAgentId?.toString() || "",
@@ -96,12 +110,10 @@ export default function PlatformBrandingForm({
     try {
       const formDataToSend = new FormData();
 
-      // Append all form data
       Object.entries(formData).forEach(([key, value]) => {
         formDataToSend.append(key, value as string);
       });
 
-      // Append files
       if (logo) formDataToSend.append("logo", logo);
       if (favicon) formDataToSend.append("favicon", favicon);
 
@@ -112,61 +124,81 @@ export default function PlatformBrandingForm({
 
       if (!res.ok) throw new Error("Failed to update platform settings");
 
-      toast.success("✅ Platform branding updated successfully!");
+      toast.success("Platform branding updated successfully");
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to update platform branding");
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const tileBase = "p-4 border-2 rounded-bs-md cursor-pointer transition-all";
+  const tileSelected =
+    "border-bs-green bg-bs-green/10 shadow-bs-card-hover";
+  const tileIdle =
+    "border-bs-border-100 hover:border-bs-border bg-bs-card-2/40";
+
   return (
     <form onSubmit={handleSubmit}>
       <Tabs defaultValue="design" className="space-y-6">
-        <TabsList className="grid grid-cols-4 w-full xl:max-w-2xl lg:max-w-xl">
-          <TabsTrigger value="design">
-            <Layout className="w-4 h-4 mr-2" />
+        <TabsList className="grid grid-cols-4 w-full xl:max-w-2xl lg:max-w-xl bg-bs-card border border-bs-border-100 rounded-bs-md p-1">
+          <TabsTrigger
+            value="design"
+            className="rounded-bs-sm data-[state=active]:bg-bs-green data-[state=active]:text-bs-canvas"
+          >
+            <Layout className="w-4 h-4 mr-2" aria-hidden="true" />
             Design
           </TabsTrigger>
-          <TabsTrigger value="ai">
-            <Layout className="w-4 h-4 mr-2" />
-            AI & Widgets
+          <TabsTrigger
+            value="ai"
+            className="rounded-bs-sm data-[state=active]:bg-bs-green data-[state=active]:text-bs-canvas"
+          >
+            <Layout className="w-4 h-4 mr-2" aria-hidden="true" />
+            AI &amp; Widgets
           </TabsTrigger>
-          <TabsTrigger value="colors">
-            <Palette className="w-4 h-4 mr-2" />
+          <TabsTrigger
+            value="colors"
+            className="rounded-bs-sm data-[state=active]:bg-bs-green data-[state=active]:text-bs-canvas"
+          >
+            <Palette className="w-4 h-4 mr-2" aria-hidden="true" />
             Colors
           </TabsTrigger>
-          <TabsTrigger value="typography">
-            <Type className="w-4 h-4 mr-2" />
+          <TabsTrigger
+            value="typography"
+            className="rounded-bs-sm data-[state=active]:bg-bs-green data-[state=active]:text-bs-canvas"
+          >
+            <Type className="w-4 h-4 mr-2" aria-hidden="true" />
             Typography
           </TabsTrigger>
         </TabsList>
 
-        {/* DESIGN TAB */}
         <TabsContent value="design" className="space-y-6">
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Platform Information</CardTitle>
-              <CardDescription>
-                Basic information about BudStacks
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
+          <SectionCard
+            title="Platform Information"
+            description="Basic information about BudStacks"
+          >
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="businessName">Platform Name *</Label>
+                <Label htmlFor="businessName" className="text-bs-fg">
+                  Platform Name *
+                </Label>
                 <Input
                   id="businessName"
                   value={formData.businessName}
                   onChange={(e) =>
-                    setFormData({ ...formData, businessName: e.target.value })
+                    setFormData({
+                      ...formData,
+                      businessName: e.target.value,
+                    })
                   }
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="tagline">Tagline</Label>
+                <Label htmlFor="tagline" className="text-bs-fg">
+                  Tagline
+                </Label>
                 <Textarea
                   id="tagline"
                   value={formData.tagline}
@@ -177,59 +209,56 @@ export default function PlatformBrandingForm({
                   rows={2}
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </SectionCard>
 
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Template Style</CardTitle>
-              <CardDescription>
-                Choose the overall design aesthetic
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-3 gap-4">
-                {TEMPLATES.map((template) => (
-                  <div
-                    key={template.id}
-                    onClick={() =>
-                      setFormData({ ...formData, template: template.id })
-                    }
-                    className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.template === template.id
-                      ? "border-emerald-500 bg-emerald-50 shadow-md"
-                      : "border-slate-200 hover:border-slate-300 hover:shadow"
-                      }`}
-                  >
-                    {formData.template === template.id && (
-                      <Check className="absolute top-2 right-2 w-5 h-5 text-emerald-600" />
-                    )}
-                    <h3 className="font-semibold text-slate-900">
-                      {template.name}
-                    </h3>
-                    <p className="text-sm text-slate-600">
-                      {template.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <SectionCard
+            title="Template Style"
+            description="Choose the overall design aesthetic"
+          >
+            <div className="grid grid-cols-3 gap-4">
+              {TEMPLATES.map((template) => (
+                <div
+                  key={template.id}
+                  onClick={() =>
+                    setFormData({ ...formData, template: template.id })
+                  }
+                  className={`${tileBase} relative ${
+                    formData.template === template.id
+                      ? tileSelected
+                      : tileIdle
+                  }`}
+                >
+                  {formData.template === template.id && (
+                    <Check
+                      className="absolute top-2 right-2 w-5 h-5 text-bs-green"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <h3 className="font-semibold text-bs-fg">
+                    {template.name}
+                  </h3>
+                  <p className="text-sm text-bs-fg-muted">
+                    {template.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
 
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Brand Images</CardTitle>
-              <CardDescription>Upload your logo and favicon</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-              {/* Logo Upload */}
+          <SectionCard
+            title="Brand Images"
+            description="Upload your logo and favicon"
+          >
+            <div className="space-y-6">
               <div className="space-y-2">
-                <Label>Platform Logo</Label>
-                <p className="text-sm text-slate-500">
+                <Label className="text-bs-fg">Platform Logo</Label>
+                <p className="text-sm text-bs-fg-muted">
                   Recommended: PNG/SVG, transparent background
                 </p>
 
                 {settings.logoUrl && !logo && (
-                  <div className="relative w-48 h-24 border rounded-lg overflow-hidden bg-slate-50 shadow-sm">
+                  <div className="relative w-48 h-24 border border-bs-border-100 rounded-bs-md overflow-hidden bg-bs-card-2">
                     <Image
                       src={settings.logoUrl}
                       alt="Current logo"
@@ -247,23 +276,22 @@ export default function PlatformBrandingForm({
                     className="max-w-xs"
                   />
                   {logo && (
-                    <span className="text-sm text-emerald-600 flex items-center gap-1">
-                      <Check className="w-4 h-4" />
+                    <span className="text-sm text-bs-green flex items-center gap-1">
+                      <Check className="w-4 h-4" aria-hidden="true" />
                       New logo selected
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Favicon Upload */}
               <div className="space-y-2">
-                <Label>Favicon</Label>
-                <p className="text-sm text-slate-500">
+                <Label className="text-bs-fg">Favicon</Label>
+                <p className="text-sm text-bs-fg-muted">
                   Recommended: 32x32px or 64x64px, PNG/ICO
                 </p>
 
                 {settings.faviconUrl && !favicon && (
-                  <div className="relative w-16 h-16 border rounded-lg overflow-hidden bg-slate-50 shadow-sm">
+                  <div className="relative w-16 h-16 border border-bs-border-100 rounded-bs-md overflow-hidden bg-bs-card-2">
                     <Image
                       src={settings.faviconUrl}
                       alt="Current favicon"
@@ -281,81 +309,98 @@ export default function PlatformBrandingForm({
                     className="max-w-xs"
                   />
                   {favicon && (
-                    <span className="text-sm text-emerald-600 flex items-center gap-1">
-                      <Check className="w-4 h-4" />
+                    <span className="text-sm text-bs-green flex items-center gap-1">
+                      <Check className="w-4 h-4" aria-hidden="true" />
                       New favicon selected
                     </span>
                   )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </SectionCard>
         </TabsContent>
 
-        {/* AI & WIDGETS TAB */}
         <TabsContent value="ai" className="space-y-6">
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Automatos AI Integration</CardTitle>
-              <CardDescription>
-                Configure the Super Admin Chatbot powered by Automatos.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
+          <SectionCard
+            title="Automatos AI Integration"
+            description="Configure the Super Admin Chatbot powered by Automatos."
+          >
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="automatosApiKey">Automatos API Key</Label>
+                <Label htmlFor="automatosApiKey" className="text-bs-fg">
+                  Automatos API Key
+                </Label>
                 <Input
                   id="automatosApiKey"
                   value={formData.automatosApiKey}
                   onChange={(e) =>
-                    setFormData({ ...formData, automatosApiKey: e.target.value })
+                    setFormData({
+                      ...formData,
+                      automatosApiKey: e.target.value,
+                    })
                   }
                   placeholder="ak_pub_..."
                   autoComplete="off"
+                  className="font-mono"
                 />
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-bs-fg-muted">
                   Ensure you use a Public Key for the website widget.
                 </p>
               </div>
               <div>
-                <Label htmlFor="automatosAgentId">Customer Support Agent ID (Optional)</Label>
+                <Label htmlFor="automatosAgentId" className="text-bs-fg">
+                  Customer Support Agent ID (Optional)
+                </Label>
                 <Input
                   id="automatosAgentId"
                   type="number"
                   value={formData.automatosAgentId}
                   onChange={(e) =>
-                    setFormData({ ...formData, automatosAgentId: e.target.value })
+                    setFormData({
+                      ...formData,
+                      automatosAgentId: e.target.value,
+                    })
                   }
                   placeholder="e.g. 42"
+                  className="font-mono"
                 />
               </div>
               <div>
-                <Label htmlFor="automatosHelperAgentId">Store Editor Helper Agent ID (Optional)</Label>
+                <Label
+                  htmlFor="automatosHelperAgentId"
+                  className="text-bs-fg"
+                >
+                  Store Editor Helper Agent ID (Optional)
+                </Label>
                 <Input
                   id="automatosHelperAgentId"
                   type="number"
                   value={formData.automatosHelperAgentId}
                   onChange={(e) =>
-                    setFormData({ ...formData, automatosHelperAgentId: e.target.value })
+                    setFormData({
+                      ...formData,
+                      automatosHelperAgentId: e.target.value,
+                    })
                   }
                   placeholder="e.g. 43"
+                  className="font-mono"
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </SectionCard>
         </TabsContent>
 
-        {/* COLORS TAB */}
         <TabsContent value="colors" className="space-y-6">
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Color Palette</CardTitle>
-              <CardDescription>Define your brand colors</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
+          <SectionCard
+            title="Color Palette"
+            description="Define your brand colors"
+          >
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="primaryColor">Primary Color</Label>
+                  <Label htmlFor="primaryColor" className="text-bs-fg">
+                    Primary Color
+                  </Label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       type="color"
@@ -379,12 +424,15 @@ export default function PlatformBrandingForm({
                         })
                       }
                       placeholder="#059669"
+                      className="font-mono"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="secondaryColor">Secondary Color</Label>
+                  <Label htmlFor="secondaryColor" className="text-bs-fg">
+                    Secondary Color
+                  </Label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       type="color"
@@ -408,12 +456,15 @@ export default function PlatformBrandingForm({
                         })
                       }
                       placeholder="#34d399"
+                      className="font-mono"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="accentColor">Accent Color</Label>
+                  <Label htmlFor="accentColor" className="text-bs-fg">
+                    Accent Color
+                  </Label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       type="color"
@@ -437,12 +488,15 @@ export default function PlatformBrandingForm({
                         })
                       }
                       placeholder="#10b981"
+                      className="font-mono"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="backgroundColor">Background Color</Label>
+                  <Label htmlFor="backgroundColor" className="text-bs-fg">
+                    Background Color
+                  </Label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       type="color"
@@ -466,19 +520,25 @@ export default function PlatformBrandingForm({
                         })
                       }
                       placeholder="#ffffff"
+                      className="font-mono"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="textColor">Text Color</Label>
+                  <Label htmlFor="textColor" className="text-bs-fg">
+                    Text Color
+                  </Label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       type="color"
                       id="textColor"
                       value={formData.textColor}
                       onChange={(e) =>
-                        setFormData({ ...formData, textColor: e.target.value })
+                        setFormData({
+                          ...formData,
+                          textColor: e.target.value,
+                        })
                       }
                       className="w-20 h-10"
                     />
@@ -486,15 +546,21 @@ export default function PlatformBrandingForm({
                       type="text"
                       value={formData.textColor}
                       onChange={(e) =>
-                        setFormData({ ...formData, textColor: e.target.value })
+                        setFormData({
+                          ...formData,
+                          textColor: e.target.value,
+                        })
                       }
                       placeholder="#1f2937"
+                      className="font-mono"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="headingColor">Heading Color</Label>
+                  <Label htmlFor="headingColor" className="text-bs-fg">
+                    Heading Color
+                  </Label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       type="color"
@@ -518,14 +584,15 @@ export default function PlatformBrandingForm({
                         })
                       }
                       placeholder="#111827"
+                      className="font-mono"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Color Preview */}
+              {/* Color Preview — user-data display, hex literals intentional per PRD §4.6 */}
               <div
-                className="mt-6 p-6 rounded-lg border"
+                className="mt-6 p-6 rounded-bs-md border border-bs-border-100"
                 style={{ backgroundColor: formData.backgroundColor }}
               >
                 <h3
@@ -580,20 +647,18 @@ export default function PlatformBrandingForm({
                   </button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </SectionCard>
         </TabsContent>
 
-        {/* TYPOGRAPHY TAB */}
         <TabsContent value="typography" className="space-y-6">
-          <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl">
-            <CardHeader className="border-b border-slate-100">
-              <CardTitle>Font Selection</CardTitle>
-              <CardDescription>Choose fonts for your platform</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-6">
+          <SectionCard
+            title="Font Selection"
+            description="Choose fonts for your platform"
+          >
+            <div className="space-y-6">
               <div>
-                <Label>Body Font</Label>
+                <Label className="text-bs-fg">Body Font</Label>
                 <div className="grid grid-cols-2 gap-3 mt-2">
                   {FONTS.map((font) => (
                     <div
@@ -601,25 +666,29 @@ export default function PlatformBrandingForm({
                       onClick={() =>
                         setFormData({ ...formData, fontFamily: font.id })
                       }
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.fontFamily === font.id
-                        ? "border-emerald-500 bg-emerald-50 shadow-md"
-                        : "border-slate-200 hover:border-slate-300 hover:shadow"
-                        }`}
+                      className={`${tileBase} ${
+                        formData.fontFamily === font.id
+                          ? tileSelected
+                          : tileIdle
+                      }`}
                     >
                       <div className="flex items-start justify-between">
                         <div>
                           <h4
-                            className="font-semibold"
+                            className="font-semibold text-bs-fg"
                             style={{ fontFamily: font.id }}
                           >
                             {font.name}
                           </h4>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-bs-fg-muted">
                             {font.category}
                           </p>
                         </div>
                         {formData.fontFamily === font.id && (
-                          <Check className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                          <Check
+                            className="w-5 h-5 text-bs-green flex-shrink-0"
+                            aria-hidden="true"
+                          />
                         )}
                       </div>
                     </div>
@@ -628,54 +697,69 @@ export default function PlatformBrandingForm({
               </div>
 
               <div>
-                <Label>Heading Font</Label>
+                <Label className="text-bs-fg">Heading Font</Label>
                 <div className="grid grid-cols-2 gap-3 mt-2">
                   {FONTS.map((font) => (
                     <div
                       key={font.id}
                       onClick={() =>
-                        setFormData({ ...formData, headingFontFamily: font.id })
+                        setFormData({
+                          ...formData,
+                          headingFontFamily: font.id,
+                        })
                       }
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.headingFontFamily === font.id
-                        ? "border-emerald-500 bg-emerald-50 shadow-md"
-                        : "border-slate-200 hover:border-slate-300 hover:shadow"
-                        }`}
+                      className={`${tileBase} ${
+                        formData.headingFontFamily === font.id
+                          ? tileSelected
+                          : tileIdle
+                      }`}
                     >
                       <div className="flex items-start justify-between">
                         <div>
                           <h4
-                            className="font-semibold"
+                            className="font-semibold text-bs-fg"
                             style={{ fontFamily: font.id }}
                           >
                             {font.name}
                           </h4>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-bs-fg-muted">
                             {font.category}
                           </p>
                         </div>
                         {formData.headingFontFamily === font.id && (
-                          <Check className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                          <Check
+                            className="w-5 h-5 text-bs-green flex-shrink-0"
+                            aria-hidden="true"
+                          />
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </SectionCard>
         </TabsContent>
       </Tabs>
 
-      {/* Save Button */}
       <div className="flex justify-end mt-8">
-        <Button
+        <button
           type="submit"
-          size="lg"
           disabled={isLoading}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium shadow-md hover:shadow-lg transition-all"
+          className="bs-btn bs-btn-green gap-2"
         >
-          {isLoading ? "Saving..." : "Save Platform Branding"}
-        </Button>
+          {isLoading ? (
+            <>
+              <Loader2
+                className="h-4 w-4 animate-spin"
+                aria-hidden="true"
+              />
+              Saving...
+            </>
+          ) : (
+            "Save Platform Branding"
+          )}
+        </button>
       </div>
     </form>
   );

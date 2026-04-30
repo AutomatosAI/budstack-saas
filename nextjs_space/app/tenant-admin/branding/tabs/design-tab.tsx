@@ -1,21 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { EditorFormData, SetFormData } from "./types";
 
@@ -23,6 +8,10 @@ interface DesignTabProps {
   formData: EditorFormData;
   setFormData: SetFormData;
 }
+
+const sectionTitleStyle = {
+  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
+};
 
 /** Visual radio button for picking a style option */
 function StyleOption({
@@ -43,14 +32,14 @@ function StyleOption({
       type="button"
       onClick={() => onSelect(value)}
       className={cn(
-        "flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all",
+        "flex flex-col items-center gap-2 p-3 rounded-bs-md border-2 transition-all",
         selected
-          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-          : "border-muted hover:border-muted-foreground/30 hover:bg-muted/50",
+          ? "border-bs-green bg-bs-green/5 ring-1 ring-bs-green/20"
+          : "border-bs-border-100 hover:border-bs-border-200 hover:bg-bs-card-2/50",
       )}
     >
       {children}
-      <span className={cn("text-xs font-medium", selected ? "text-primary" : "text-muted-foreground")}>
+      <span className={cn("text-xs font-medium", selected ? "text-bs-green" : "text-bs-fg-muted")}>
         {label}
       </span>
     </button>
@@ -64,15 +53,16 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
   return (
     <div className="space-y-6">
       {/* === BUTTON STYLES — Visual Picker === */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Button Styles</CardTitle>
-          <CardDescription>Shape, size, and hover effects for all CTA buttons</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
+      <section className="bs-card bs-card-pad space-y-5">
+        <div>
+          <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
+            Button Styles
+          </h3>
+          <p className="text-sm text-bs-fg-muted">Shape, size, and hover effects for all CTA buttons</p>
+        </div>
           {/* Button Shape */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Shape</Label>
+            <Label className="bs-eyebrow">Shape</Label>
             <div className="grid grid-cols-3 gap-2">
               <StyleOption label="Rounded" value="rounded" selected={formData.buttonStyle === "rounded"} onSelect={(v) => update("buttonStyle", v)}>
                 <div className="w-full h-9 bg-primary/80 rounded-lg flex items-center justify-center text-white text-xs font-medium">Button</div>
@@ -88,7 +78,7 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
 
           {/* Button Size */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Size</Label>
+            <Label className="bs-eyebrow">Size</Label>
             <div className="grid grid-cols-3 gap-2">
               <StyleOption label="Small" value="small" selected={formData.buttonSize === "small"} onSelect={(v) => update("buttonSize", v)}>
                 <div className="h-10 flex items-center justify-center">
@@ -110,7 +100,7 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
 
           {/* Button Hover Effect */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Hover Effect</Label>
+            <Label className="bs-eyebrow">Hover Effect</Label>
             <div className="grid grid-cols-2 gap-2">
               <StyleOption label="None" value="none" selected={formData.buttonHoverEffect === "none"} onSelect={(v) => update("buttonHoverEffect", v)}>
                 <div className="h-8 flex items-center justify-center">
@@ -134,19 +124,19 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
               </StyleOption>
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </section>
 
       {/* === LAYOUT & CARDS === */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Cards & Layout</CardTitle>
-          <CardDescription>Global shapes, shadows, and spacing for content cards</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
+      <section className="bs-card bs-card-pad space-y-5">
+        <div>
+          <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
+            Cards &amp; Layout
+          </h3>
+          <p className="text-sm text-bs-fg-muted">Global shapes, shadows, and spacing for content cards</p>
+        </div>
           {/* Border Radius */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Card Corners</Label>
+            <Label className="bs-eyebrow">Card Corners</Label>
             <div className="grid grid-cols-4 gap-2">
               {([
                 { v: "none", label: "Sharp", radius: "rounded-none" },
@@ -163,7 +153,7 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
 
           {/* Shadow Style */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Card Shadow</Label>
+            <Label className="bs-eyebrow">Card Shadow</Label>
             <div className="grid grid-cols-4 gap-2">
               {([
                 { v: "none", label: "Flat", shadow: "shadow-none" },
@@ -180,7 +170,7 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
 
           {/* Spacing */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Section Spacing</Label>
+            <Label className="bs-eyebrow">Section Spacing</Label>
             <div className="grid grid-cols-3 gap-2">
               {([
                 { v: "compact", label: "Compact", gap: "gap-1" },
@@ -197,22 +187,20 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
               ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </section>
 
       {/* === PREMIUM DESIGN FEATURES === */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+      <section className="bs-card bs-card-pad space-y-5">
+        <div>
+          <h3 className="text-[22px] leading-tight flex items-center gap-2" style={sectionTitleStyle}>
             Premium Effects
-            <span className="text-[10px] bg-gradient-to-r from-violet-500 to-pink-500 text-white px-2 py-0.5 rounded-full font-semibold">PRO</span>
-          </CardTitle>
-          <CardDescription>Glass effects, animations, and section dividers</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
+            <span className="bs-chip bs-chip-gold">PRO</span>
+          </h3>
+          <p className="text-sm text-bs-fg-muted">Glass effects, animations, and section dividers</p>
+        </div>
           {/* Glass Effect */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Glassmorphism</Label>
+            <Label className="bs-eyebrow">Glassmorphism</Label>
             <div className="grid grid-cols-3 gap-2">
               <StyleOption label="Solid" value="none" selected={formData.glassEffect === "none"} onSelect={(v) => update("glassEffect", v)}>
                 <div className="w-full h-12 bg-white rounded-lg border flex items-center justify-center">
@@ -232,12 +220,12 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
                 </div>
               </StyleOption>
             </div>
-            <p className="text-[10px] text-muted-foreground">Frosted glass blur on cards and content boxes.</p>
+            <p className="text-[10px] text-bs-fg-muted">Frosted glass blur on cards and content boxes.</p>
           </div>
 
           {/* Scroll Animations */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Scroll Animations</Label>
+            <Label className="bs-eyebrow">Scroll Animations</Label>
             <div className="grid grid-cols-2 gap-2">
               {([
                 { v: "none", label: "None", desc: "Static content" },
@@ -247,7 +235,7 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
               ] as const).map((opt) => (
                 <StyleOption key={opt.v} label={opt.label} value={opt.v} selected={formData.animationType === opt.v} onSelect={(v) => update("animationType", v)}>
                   <div className="h-8 w-full flex items-center justify-center">
-                    <span className="text-[9px] text-muted-foreground leading-tight text-center">{opt.desc}</span>
+                    <span className="text-[9px] text-bs-fg-muted leading-tight text-center">{opt.desc}</span>
                   </div>
                 </StyleOption>
               ))}
@@ -256,7 +244,7 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
 
           {/* Section Dividers — SVG previews */}
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Section Dividers</Label>
+            <Label className="bs-eyebrow">Section Dividers</Label>
             <div className="grid grid-cols-2 gap-2">
               <StyleOption label="Straight" value="none" selected={formData.dividerStyle === "none"} onSelect={(v) => update("dividerStyle", v)}>
                 <div className="w-full h-8 flex flex-col justify-center">
@@ -291,8 +279,7 @@ export function DesignTab({ formData, setFormData }: DesignTabProps) {
               </StyleOption>
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </section>
 
       {/* Hero Section removed — alignment, height, overlay style and opacity
          are now per-section fields in the Content tab via section schemas */}

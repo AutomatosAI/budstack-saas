@@ -1,9 +1,8 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Plus, Newspaper } from "lucide-react";
+import { Plus } from "lucide-react";
 import PostsList from "./posts-list";
 
 export const metadata = {
@@ -35,26 +34,26 @@ export default async function TheWirePage() {
 
   return (
     <div className="space-y-8">
-      {/* Centered Header with Absolute Right Button */}
-      <div className="relative mb-8">
-        <div className="text-center max-w-2xl mx-auto">
-          <div className="section-badge mb-4 inline-flex">
-            <Newspaper className="h-4 w-4" />
-            Content
-          </div>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+      <div className="bs-page-header-compact flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="bs-eyebrow">Content</div>
+          <h1
+            className="bs-page-title"
+            style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+          >
             The Wire
           </h1>
-          <p className="mt-3 text-muted-foreground">
+          <p className="bs-page-subtitle">
             Manage your news and articles.
           </p>
         </div>
-        <div className="mt-4 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mt-0">
-          <Link href="/tenant-admin/the-wire/new">
-            <Button variant="hero" size="lg" className="rounded-xl shadow-lg hover:shadow-xl transition-all">
-              <Plus className="mr-2 h-4 w-4" />
-              New Article
-            </Button>
+        <div className="flex justify-start sm:justify-end">
+          <Link
+            href="/tenant-admin/the-wire/new"
+            className="bs-btn bs-btn-green"
+          >
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            New Article
           </Link>
         </div>
       </div>
