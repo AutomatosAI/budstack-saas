@@ -14,7 +14,7 @@ import type { TemplateLayout } from "@/lib/types/template-layout";
 import { CartProvider } from "./_contexts/CartContext";
 import { getTenantBasePath } from "@/lib/tenant-utils";
 import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrapper";
-import { sanitizeCss } from "@/lib/css-utils";
+import { sanitizeCss, extractGoogleFontsImports } from "@/lib/css-utils";
 import { hexToHsl } from "@/lib/color-utils";
 
 // Extract runtime-safe CSS from a template's styles.css on disk
@@ -314,6 +314,7 @@ export default async function TenantStoreLayout({
           }
           : undefined
       }
+      useTemplatePadding={layout?.settings?.useTemplatePadding === true}
     >
       <CartProvider storeSlug={params.slug}>
         <div className={`min-h-screen ${wrapperClass}`}>
@@ -322,6 +323,10 @@ export default async function TenantStoreLayout({
           {customCss && <style dangerouslySetInnerHTML={{ __html: sanitizeCss(customCss) }} />}
           {/* Load Google Fonts from layout.json settings */}
           {layout?.settings?.googleFontsUrl && <link rel="stylesheet" href={layout.settings.googleFontsUrl} />}
+          {/* Load Google Fonts extracted from styles.css @import (sanitiseCss strips @import) */}
+          {extractGoogleFontsImports(customCss).map((href) => (
+            <link key={href} rel="stylesheet" href={href} />
+          ))}
           {/* Inject legacy template CSS (from filesystem) for sub-page styling */}
           {legacyCss && <style dangerouslySetInnerHTML={{ __html: legacyCss }} />}
           {legacyFontUrl && <link rel="stylesheet" href={legacyFontUrl} />}
