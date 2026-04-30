@@ -1130,7 +1130,7 @@ html {
     0 0 80px -30px rgba(82,217,122,0.22);
 }
 
-/* .budstacks-theme .bs-card/.bs-btn-*/.bs-chip duplicates removed in US-009.
+/* .budstacks-theme .bs-card, .bs-btn-x, .bs-chip duplicates removed in US-009.
    Un-scoped versions in @layer components (below) are now authoritative. */
 
 /* Inline Dr.Green logo treatment in headlines */
