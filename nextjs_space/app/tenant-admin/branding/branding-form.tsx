@@ -91,9 +91,12 @@ interface BrandingFormProps {
   apiEndpoint?: string;
   /** Label for the publish button */
   publishLabel?: string;
+  /** "tenant" (default) loads tenant_templates by id; "marketplace" previews
+   *  the base template at templates/{slug} without a tenantTemplateId. */
+  previewMode?: "tenant" | "marketplace";
 }
 
-export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publishLabel }: BrandingFormProps) {
+export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publishLabel, previewMode = "tenant" }: BrandingFormProps) {
   const templateCss = (activeTemplate as any)?.templateCss as string | null;
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -658,11 +661,15 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 <Eye className="h-4 w-4" />
               </Button>
               {(() => {
-                // Both tenant admins and super admins use the same preview tool
+                // Both tenant admins and super admins use the same preview tool.
+                // In "marketplace" mode the activeTemplate.id is a row in `templates`,
+                // not `tenant_templates`, so we must NOT pass tenantTemplateId — the
+                // preview route would 404. Falling through with just the slug loads
+                // the base template from templates/{slug} in S3.
                 const baseSlug = (activeTemplate as any)?.templates?.slug || tenant.subdomain;
-                const previewHref = activeTemplate?.id
-                  ? `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}`
-                  : `/store/preview/${baseSlug}`;
+                const previewHref = previewMode === "marketplace" || !activeTemplate?.id
+                  ? `/store/preview/${baseSlug}`
+                  : `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}`;
                 return (
                   <a href={previewHref} target="_blank" rel="noopener noreferrer">
                     <Button type="button" variant="outline" size="sm" className="gap-1.5">
@@ -837,7 +844,10 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
               </div>
             );
           }
-          const iframeSrc = `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}&embed=true&t=${Date.now()}`;
+          // Marketplace mode: omit tenantTemplateId — see Preview button comment above.
+          const iframeSrc = previewMode === "marketplace"
+            ? `/store/preview/${baseSlug}?embed=true&t=${Date.now()}`
+            : `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}&embed=true&t=${Date.now()}`;
           console.log('[branding-form] iframe src:', iframeSrc);
           return (
             <div
