@@ -21,13 +21,6 @@ const FONT_SIZE_MAP: Record<string, string> = {
   xl: 'text-4xl sm:text-5xl md:text-6xl lg:text-7xl',
 };
 
-const HEIGHT_MAP: Record<string, string> = {
-  sm: '2.5rem',
-  md: '3.5rem',
-  lg: '4.5rem',
-  xl: '6rem',
-};
-
 const FONT_STYLE_MAP: Record<string, string> = {
   serif: 'font-serif',
   sans: 'font-sans',
@@ -58,7 +51,6 @@ export function TextMarquee(props: SectionProps) {
 
   const sizeClass = FONT_SIZE_MAP[fontSize] || FONT_SIZE_MAP.lg;
   const styleClass = FONT_STYLE_MAP[fontStyle] || FONT_STYLE_MAP['italic-serif'];
-  const trackHeight = HEIGHT_MAP[fontSize] || HEIGHT_MAP.lg;
   const duration = Math.max(10, (100 - speed) * 0.6);
 
   // Only use hardcoded SVGs — no user-supplied HTML
@@ -109,15 +101,16 @@ export function TextMarquee(props: SectionProps) {
   return (
     <section
       ref={ref}
-      className="py-1"
       style={{
         backgroundColor: bgColor,
         borderTop: showBorder ? `1px solid ${borderColor}` : undefined,
         borderBottom: showBorder ? `1px solid ${borderColor}` : undefined,
       }}
     >
-      <div style={{ contain: 'inline-size', overflow: 'clip' }}>
-      <div className="relative w-full" style={{ overflow: 'clip', height: trackHeight }}>
+      {/* Inner band — height is driven by the text itself (leading-none keeps it tight),
+          and a small py-* gives consistent breathing room regardless of fontSize.
+          overflow-hidden clips the marquee horizontally; gradients fade the edges. */}
+      <div className="relative w-full overflow-hidden py-2 sm:py-3">
         <div
           className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
           style={{ background: `linear-gradient(to right, ${bgColor}, transparent)` }}
@@ -131,12 +124,8 @@ export function TextMarquee(props: SectionProps) {
           initial={{ opacity: 0 }}
           animate={inView ? { opacity: 1 } : {}}
           transition={{ duration: 0.8 }}
-          className={`items-center ${sizeClass} ${styleClass}`}
+          className={`flex items-center leading-none ${sizeClass} ${styleClass}`}
           style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            display: 'flex',
             width: 'max-content',
             color: sectionConfig?.textColor || 'hsl(var(--tenant-color-text))',
             animation: `text-marquee-scroll ${duration}s linear infinite ${reverse ? 'reverse' : ''}`,
@@ -150,7 +139,6 @@ export function TextMarquee(props: SectionProps) {
           <span className="inline-flex items-center">{blocks}</span>
           <span className="inline-flex items-center">{blocks}</span>
         </motion.div>
-      </div>
       </div>
 
       <style jsx>{`

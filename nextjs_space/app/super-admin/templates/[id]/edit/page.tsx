@@ -176,6 +176,7 @@ export default async function SuperAdminTemplateEditPage({ params }: { params: {
         activeTemplate={fakeActiveTemplate as any}
         apiEndpoint={`/api/super-admin/templates/${template.id}/branding`}
         publishLabel="Save to Marketplace"
+        previewMode="marketplace"
       />
     </div>
   );
