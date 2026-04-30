@@ -23,6 +23,15 @@ export function HeroFramed({
   const secondaryCtaText = sectionConfig?.secondaryCtaText || '';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '#about';
 
+  // Editorial slots — opt-in, template CSS owns the visual treatment.
+  // eyebrow: small line above the title (e.g. uppercase tracked label)
+  // titleAccent: secondary phrase rendered inside the <h1> as <em>, lets templates
+  //   apply a different font/colour via `h1 em { ... }` (script accent, italic, etc.)
+  // showLogo: lets a template suppress the in-frame logo when the nav already shows it
+  const eyebrow: string | undefined = sectionConfig?.eyebrow;
+  const titleAccent: string | undefined = sectionConfig?.titleAccent;
+  const showLogo: boolean = sectionConfig?.showLogo !== false;
+
   // Frame config
   const framePosition = sectionConfig?.framePosition || 'left'; // 'left' | 'right'
   const frameOpacity = parseFloat(sectionConfig?.frameOpacity ?? '0.85');
@@ -111,7 +120,7 @@ export function HeroFramed({
             style={getFrameStyle()}
           >
             {/* Logo in frame */}
-            {logoUrl && (
+            {showLogo && logoUrl && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -129,6 +138,17 @@ export function HeroFramed({
               </motion.div>
             )}
 
+            {eyebrow && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="eyebrow mb-3 sm:mb-4"
+              >
+                {eyebrow}
+              </motion.div>
+            )}
+
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -140,6 +160,12 @@ export function HeroFramed({
               }}
             >
               {title}
+              {titleAccent && (
+                <>
+                  {' '}
+                  <em>{titleAccent}</em>
+                </>
+              )}
             </motion.h1>
 
             <motion.p
