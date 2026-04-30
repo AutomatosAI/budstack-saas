@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Settings } from "lucide-react";
 import SettingsForm from "./settings-form";
-import { AdminPageHeader } from "@/components/admin/shared";
 
 export default async function PlatformSettingsConfigPage() {
   const user = await currentUser();
@@ -34,12 +33,19 @@ export default async function PlatformSettingsConfigPage() {
 
   return (
     <div className="space-y-8">
-      <AdminPageHeader
-        eyebrow="Configuration"
-        eyebrowIcon={Settings}
-        title="Platform Settings"
-        subtitle="Manage environment variables and system configuration."
-      />
+      {/* Centered Header */}
+      <div className="text-center max-w-2xl mx-auto">
+        <div className="section-badge mb-4 inline-flex">
+          <Settings className="h-4 w-4" />
+          Configuration
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          Platform Settings
+        </h1>
+        <p className="mt-3 text-muted-foreground">
+          Manage environment variables and system configuration.
+        </p>
+      </div>
 
       {/* Settings Form */}
       <SettingsForm config={maskedConfig} />

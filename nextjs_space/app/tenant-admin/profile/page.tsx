@@ -14,7 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AdminPageHeader } from "@/components/admin/shared";
 
 interface TenantData {
   id: string;
@@ -101,12 +100,19 @@ export default function TenantProfilePage() {
 
   return (
     <div className="space-y-8">
-      <AdminPageHeader
-        eyebrow="Profile"
-        eyebrowIcon={User}
-        title="Your Profile"
-        subtitle="Manage your account settings, security, and company information."
-      />
+      {/* Header */}
+      <div className="text-center max-w-2xl mx-auto">
+        <div className="section-badge mb-4 inline-flex">
+          <User className="h-4 w-4" />
+          Profile
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          Your Profile
+        </h1>
+        <p className="mt-3 text-muted-foreground">
+          Manage your account settings, security, and company information.
+        </p>
+      </div>
 
       {/* Company Details Card */}
       <div className="flex justify-center">

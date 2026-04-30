@@ -60,7 +60,6 @@ import {
   BulkActionBar,
   ExportButton,
   RowPill,
-  AdminListCard,
 } from "@/components/admin/shared";
 import type { StatusFilterOption, BulkAction } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
@@ -696,51 +695,75 @@ export function ProductsTable({
 
   return (
     <>
-      <AdminListCard
-        title={hasFilters ? "Results" : "All Products"}
-        titleIcon={Package}
-        count={hasFilters ? totalCount : totalSearchCount}
-        filters={
-          <>
-            <div className="w-full xl:w-72">
-              <SearchInput
-                value={search}
-                onChange={setSearch}
-                placeholder="Search products..."
-                aria-label="Search products"
-                debounceMs={300}
-              />
+      <div className="card-floating overflow-hidden">
+        <div className="border-b border-slate-200/70 px-6 py-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-emerald-500 p-2.5 shadow-sm">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <h2 className="font-display text-2xl font-bold text-foreground">
+                {hasFilters
+                  ? `Results (${totalCount})`
+                  : `All Products (${totalSearchCount})`}
+              </h2>
+              <Badge
+                variant="outline"
+                className="text-sm font-normal border-amber-300/60 bg-amber-50/60 text-amber-800"
+              >
+                {inStockCount} In Stock
+              </Badge>
             </div>
-            <StatusFilter<CategoryFilter>
-              value={categoryFilter}
-              onChange={(value) => setFilter("category", value)}
-              options={categoryOptions}
-              aria-label="Filter by category"
-              placeholder="All Categories"
-              showIcon={false}
-              className="w-[150px]"
-            />
-            <StatusFilter<StockFilter>
-              value={stockFilter}
-              onChange={(value) => setFilter("stock", value)}
-              options={stockOptions}
-              aria-label="Filter by stock status"
-              placeholder="All Stock"
-              showIcon={false}
-              className="w-[140px]"
-            />
-            <RowPill tone="emerald">{inStockCount} In Stock</RowPill>
-          </>
-        }
-        actions={
-          <ExportButton
-            onExport={handleExportAll}
-            recordCount={products.length}
-            theme="tenant-admin"
-            disabled={products.length === 0}
-          />
-        }
-      >
+
+            {/* Search and Filter Controls */}
+            <div className="flex flex-col gap-3 w-full xl:w-auto">
+              {/* Search Input - Full width on mobile */}
+              <div className="w-full xl:w-72">
+                <SearchInput
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Search products..."
+                  aria-label="Search products"
+                  debounceMs={300}
+                />
+              </div>
+
+              {/* Filters Row - Wraps on smaller screens */}
+              <div className="flex flex-wrap gap-2">
+                {/* Category Filter */}
+                <StatusFilter<CategoryFilter>
+                  value={categoryFilter}
+                  onChange={(value) => setFilter("category", value)}
+                  options={categoryOptions}
+                  aria-label="Filter by category"
+                  placeholder="All Categories"
+                  showIcon={false}
+                  className="w-[150px]"
+                />
+
+                {/* Stock Filter */}
+                <StatusFilter<StockFilter>
+                  value={stockFilter}
+                  onChange={(value) => setFilter("stock", value)}
+                  options={stockOptions}
+                  aria-label="Filter by stock status"
+                  placeholder="All Stock"
+                  showIcon={false}
+                  className="w-[140px]"
+                />
+
+                {/* Export Button */}
+                <ExportButton
+                  onExport={handleExportAll}
+                  recordCount={products.length}
+                  theme="tenant-admin"
+                  disabled={products.length === 0}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div>
           {noResults ? (
             <EmptyState
@@ -878,7 +901,7 @@ export function ProductsTable({
 
           {/* Pagination Controls */}
           {products.length > 0 && (
-            <div className="border-t border-white/5">
+            <div className="border-t border-slate-200 bg-slate-50/50">
               <Pagination
                 page={page}
                 pageSize={pageSize}
@@ -892,7 +915,7 @@ export function ProductsTable({
             </div>
           )}
         </div>
-      </AdminListCard>
+      </div>
 
       {/* Bulk Action Bar */}
       <BulkActionBar

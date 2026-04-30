@@ -32,6 +32,3 @@ export {
 export { ExportButton, type ExportButtonProps } from './ExportButton';
 export { RowPill, type RowPillProps, type RowPillTone } from './RowPill';
 export { StatCard, type StatCardProps } from './StatCard';
-export { AdminPageHeader, type AdminPageHeaderProps } from './AdminPageHeader';
-export { AdminListCard, type AdminListCardProps } from './AdminListCard';
-export { AdminStatGrid, type AdminStatGridProps } from './AdminStatGrid';

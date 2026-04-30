@@ -41,11 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
-import {
-  StatCard,
-  AdminPageHeader,
-  AdminStatGrid,
-} from "@/components/admin/shared";
+import { StatCard } from "@/components/admin/shared";
 import { OrdersTable } from "./orders-table";
 
 
@@ -328,15 +324,24 @@ export default function TenantOrdersPage() {
     statusCounts.CANCELLED;
 
   return (
-    <div className="space-y-8">
-      <AdminPageHeader
-        eyebrow="Orders"
-        eyebrowIcon={ShoppingBag}
-        title="Order Management"
-        subtitle="Manage and fulfill customer orders with clarity and speed."
-      />
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Flowa-style Header */}
+      {/* Centered Header */}
+      <div className="text-center max-w-2xl mx-auto mb-8">
+        <div className="section-badge mb-4 inline-flex">
+          <ShoppingBag className="h-4 w-4" />
+          Orders
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          Order Management
+        </h1>
+        <p className="mt-2 max-w-2xl text-muted-foreground mx-auto">
+          Manage and fulfill customer orders with clarity and speed.
+        </p>
+      </div>
 
-      <AdminStatGrid columns={4}>
+      {/* Order Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <StatCard label="Total Orders" value={totalOrders} icon={Package} />
         <StatCard label="Pending" value={statusCounts.PENDING} icon={Clock} />
         <StatCard
@@ -349,7 +354,7 @@ export default function TenantOrdersPage() {
           value={statusCounts.COMPLETED}
           icon={CheckCircle2}
         />
-      </AdminStatGrid>
+      </div>
 
       {/* Orders Table with Search, Filters, and Pagination */}
       <OrdersTable

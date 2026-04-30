@@ -1,6 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -9,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -18,9 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { format } from "date-fns";
-import { Shield, ChevronLeft, ChevronRight, Activity } from "lucide-react";
-import { AdminPageHeader, AdminListCard, RowPill } from "@/components/admin/shared";
-import type { RowPillTone } from "@/components/admin/shared";
+import { Shield, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 
 
 interface AuditLog {
@@ -42,6 +49,7 @@ interface PaginationInfo {
 }
 
 export default function TenantAuditLogsPage() {
+  const { user } = useUser();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
@@ -82,63 +90,86 @@ export default function TenantAuditLogsPage() {
     }
   };
 
-  const getActionTone = (action: string): RowPillTone => {
-    if (action.includes("deleted")) return "red";
-    if (action.includes("created")) return "emerald";
-    if (action.includes("updated")) return "blue";
-    if (action.includes("login")) return "purple";
-    return "slate";
+  const getActionBadgeColor = (action: string) => {
+    if (action.includes("created")) return "default";
+    if (action.includes("updated")) return "secondary";
+    if (action.includes("deleted")) return "destructive";
+    if (action.includes("login")) return "default";
+    return "secondary";
   };
 
   return (
-    <div className="space-y-8">
-      <AdminPageHeader
-        eyebrow="Security"
-        eyebrowIcon={Shield}
-        title="Audit Logs"
-        subtitle="Track all actions and changes in your dispensary."
-      />
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Breadcrumbs */}
+      <div className="text-center max-w-2xl mx-auto mb-8">
+        <div className="section-badge mb-4 inline-flex">
+          <Shield className="h-4 w-4" />
+          Security
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          Audit Logs
+        </h1>
+        <p className="mt-3 text-muted-foreground mx-auto">
+          Track all actions and changes in your dispensary.
+        </p>
+      </div>
 
-      <AdminListCard
-        title="Activity Log"
-        titleIcon={Activity}
-        count={pagination.total}
-        filters={
-          <>
-            <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by action" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Actions</SelectItem>
-                <SelectItem value="product.created">Product Created</SelectItem>
-                <SelectItem value="product.updated">Product Updated</SelectItem>
-                <SelectItem value="product.deleted">Product Deleted</SelectItem>
-                <SelectItem value="order.created">Order Created</SelectItem>
-                <SelectItem value="order.status_changed">Order Status Changed</SelectItem>
-                <SelectItem value="branding.updated">Branding Updated</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={entityFilter} onValueChange={setEntityFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by entity" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Entities</SelectItem>
-                <SelectItem value="Product">Product</SelectItem>
-                <SelectItem value="Order">Order</SelectItem>
-                <SelectItem value="Branding">Branding</SelectItem>
-                <SelectItem value="Webhook">Webhook</SelectItem>
-              </SelectContent>
-            </Select>
-          </>
-        }
-      >
-        <div>
+      <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl overflow-hidden">
+        <CardHeader>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle>Activity Log</CardTitle>
+              <CardDescription>
+                {pagination.total} total events recorded
+              </CardDescription>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select value={actionFilter} onValueChange={setActionFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter by action" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Actions</SelectItem>
+                  <SelectItem value="product.created">
+                    Product Created
+                  </SelectItem>
+                  <SelectItem value="product.updated">
+                    Product Updated
+                  </SelectItem>
+                  <SelectItem value="product.deleted">
+                    Product Deleted
+                  </SelectItem>
+                  <SelectItem value="order.created">Order Created</SelectItem>
+                  <SelectItem value="order.status_changed">
+                    Order Status Changed
+                  </SelectItem>
+                  <SelectItem value="branding.updated">
+                    Branding Updated
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={entityFilter} onValueChange={setEntityFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter by entity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Entities</SelectItem>
+                  <SelectItem value="Product">Product</SelectItem>
+                  <SelectItem value="Order">Order</SelectItem>
+                  <SelectItem value="Branding">Branding</SelectItem>
+                  <SelectItem value="Webhook">Webhook</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
           {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading audit logs...</div>
+            <div className="text-center py-8">Loading audit logs...</div>
           ) : logs.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">No audit logs found</div>
+            <div className="text-center py-8 text-muted-foreground">
+              No audit logs found
+            </div>
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -147,10 +178,18 @@ export default function TenantAuditLogsPage() {
                     <TableRow>
                       <TableHead>Timestamp</TableHead>
                       <TableHead>Action</TableHead>
-                      <TableHead className="hidden sm:table-cell">Entity</TableHead>
-                      <TableHead className="hidden md:table-cell">User</TableHead>
-                      <TableHead className="hidden lg:table-cell">IP Address</TableHead>
-                      <TableHead className="hidden lg:table-cell">Details</TableHead>
+                      <TableHead className="hidden sm:table-cell">
+                        Entity
+                      </TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        User
+                      </TableHead>
+                      <TableHead className="hidden lg:table-cell">
+                        IP Address
+                      </TableHead>
+                      <TableHead className="hidden lg:table-cell">
+                        Details
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -161,15 +200,20 @@ export default function TenantAuditLogsPage() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <RowPill tone={getActionTone(log.action)}>
+                            <Badge
+                              variant={getActionBadgeColor(log.action) as any}
+                            >
                               {log.action}
-                            </RowPill>
+                            </Badge>
+                            {/* Show entity inline on mobile */}
                             <span className="block sm:hidden text-xs text-muted-foreground mt-1">
                               {log.entityType}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell">{log.entityType}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {log.entityType}
+                        </TableCell>
                         <TableCell className="text-sm hidden md:table-cell">
                           {log.userEmail || "System"}
                         </TableCell>
@@ -177,7 +221,9 @@ export default function TenantAuditLogsPage() {
                           {log.ipAddress || "N/A"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground truncate max-w-[200px] hidden lg:table-cell">
-                          {log.metadata ? JSON.stringify(log.metadata) : "No details"}
+                          {log.metadata
+                            ? JSON.stringify(log.metadata)
+                            : "No details"}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -185,18 +231,25 @@ export default function TenantAuditLogsPage() {
                 </Table>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-5 py-4 border-t border-white/5">
+              {/* Pagination */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4">
                 <div className="text-sm text-muted-foreground">
                   Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-                  {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
-                  {pagination.total} results
+                  {Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.total,
+                  )}{" "}
+                  of {pagination.total} results
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto justify-between sm:justify-end">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+                      setPagination((prev) => ({
+                        ...prev,
+                        page: prev.page - 1,
+                      }))
                     }
                     disabled={pagination.page === 1}
                   >
@@ -210,7 +263,10 @@ export default function TenantAuditLogsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
+                      setPagination((prev) => ({
+                        ...prev,
+                        page: prev.page + 1,
+                      }))
                     }
                     disabled={pagination.page >= pagination.totalPages}
                   >
@@ -221,8 +277,8 @@ export default function TenantAuditLogsPage() {
               </div>
             </>
           )}
-        </div>
-      </AdminListCard>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -38,7 +38,6 @@ import {
   Cell,
 } from "recharts";
 import { cn } from "@/lib/utils";
-import { AdminPageHeader } from "@/components/admin/shared";
 
 // Dynamic import of Plotly for code splitting
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -169,51 +168,56 @@ export default function ComprehensiveAnalyticsPage() {
 
   return (
     <div className="space-y-8">
-      <AdminPageHeader
-        eyebrow="Analytics"
-        title="Platform Analytics"
-        subtitle="Comprehensive insights across all dimensions."
-        actions={
-          <div className="flex gap-2">
-            <Button
-              variant={timeRange === "7d" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTimeRange("7d")}
-              className={
-                timeRange === "7d"
-                  ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
-                  : "rounded-xl"
-              }
-            >
-              7 Days
-            </Button>
-            <Button
-              variant={timeRange === "30d" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTimeRange("30d")}
-              className={
-                timeRange === "30d"
-                  ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
-                  : "rounded-xl"
-              }
-            >
-              30 Days
-            </Button>
-            <Button
-              variant={timeRange === "90d" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTimeRange("90d")}
-              className={
-                timeRange === "90d"
-                  ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
-                  : "rounded-xl"
-              }
-            >
-              90 Days
-            </Button>
-          </div>
-        }
-      />
+      {/* Centered Header with Time Range Selector */}
+      <div className="text-center max-w-2xl mx-auto">
+        <div className="section-badge mb-4 inline-flex">
+          Analytics
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          Platform Analytics
+        </h1>
+        <p className="mt-3 text-muted-foreground">
+          Comprehensive insights across all dimensions.
+        </p>
+        <div className="flex gap-2 justify-center mt-6">
+          <Button
+            variant={timeRange === "7d" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTimeRange("7d")}
+            className={
+              timeRange === "7d"
+                ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
+                : "rounded-xl"
+            }
+          >
+            7 Days
+          </Button>
+          <Button
+            variant={timeRange === "30d" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTimeRange("30d")}
+            className={
+              timeRange === "30d"
+                ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
+                : "rounded-xl"
+            }
+          >
+            30 Days
+          </Button>
+          <Button
+            variant={timeRange === "90d" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTimeRange("90d")}
+            className={
+              timeRange === "90d"
+                ? "bg-accent hover:bg-accent/90 text-white rounded-xl"
+                : "rounded-xl"
+            }
+          >
+            90 Days
+          </Button>
+        </div>
+      </div>
 
       {/* ========== SECTION 1: Key Business Metrics ========== */}
       <section>

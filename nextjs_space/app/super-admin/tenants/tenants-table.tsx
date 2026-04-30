@@ -43,7 +43,6 @@ import {
   BulkActionBar,
   ExportButton,
   RowPill,
-  AdminListCard,
 } from "@/components/admin/shared";
 import type { StatusFilterOption, BulkAction } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
@@ -399,39 +398,53 @@ export function TenantsTable({
 
   return (
     <>
-      <AdminListCard
-        title={hasFilters ? "Results" : "All Tenants"}
-        titleIcon={Building2}
-        count={hasFilters ? totalCount : totalSearchCount}
-        filters={
-          <>
-            <div className="w-full sm:w-72">
-              <SearchInput
-                value={search}
-                onChange={setSearch}
-                placeholder="Search tenants..."
-                aria-label="Search tenants"
-                debounceMs={300}
+      <div className="card-floating overflow-hidden">
+        <div className="border-b border-slate-200/70 px-6 py-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-emerald-500 p-2.5 shadow-sm">
+                <Building2 className="h-5 w-5 text-white" />
+              </div>
+              <h2 className="font-display text-2xl font-bold text-foreground">
+                {hasFilters
+                  ? `Results (${totalCount})`
+                  : `All Tenants (${totalSearchCount})`}
+              </h2>
+            </div>
+
+            {/* Search and Filter Controls */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+              {/* Search Input */}
+              <div className="w-full sm:w-72">
+                <SearchInput
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Search tenants..."
+                  aria-label="Search tenants"
+                  debounceMs={300}
+                />
+              </div>
+
+              {/* Status Filter */}
+              <StatusFilter<TenantStatusFilter>
+                value={statusFilter}
+                onChange={(value) => setFilter("status", value)}
+                options={statusOptions}
+                aria-label="Filter by status"
+                placeholder="All Tenants"
+              />
+
+              {/* Export Button */}
+              <ExportButton
+                onExport={handleExportAll}
+                recordCount={tenants.length}
+                theme="super-admin"
+                disabled={tenants.length === 0}
               />
             </div>
-            <StatusFilter<TenantStatusFilter>
-              value={statusFilter}
-              onChange={(value) => setFilter("status", value)}
-              options={statusOptions}
-              aria-label="Filter by status"
-              placeholder="All Tenants"
-            />
-          </>
-        }
-        actions={
-          <ExportButton
-            onExport={handleExportAll}
-            recordCount={tenants.length}
-            theme="super-admin"
-            disabled={tenants.length === 0}
-          />
-        }
-      >
+          </div>
+        </div>
+
         <div>
           {noResults ? (
             <EmptyState
@@ -635,7 +648,7 @@ export function TenantsTable({
 
           {/* Pagination Controls */}
           {tenants.length > 0 && (
-            <div className="border-t border-white/5">
+            <div className="border-t border-slate-200 bg-slate-50/50">
               <Pagination
                 page={page}
                 pageSize={pageSize}
@@ -649,7 +662,7 @@ export function TenantsTable({
             </div>
           )}
         </div>
-      </AdminListCard>
+      </div>
 
       {/* Bulk Action Bar */}
       <BulkActionBar

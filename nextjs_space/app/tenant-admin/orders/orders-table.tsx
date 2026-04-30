@@ -42,7 +42,6 @@ import {
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
-  AdminListCard,
   SearchInput,
   StatusFilter,
   EmptyState,
@@ -519,16 +518,21 @@ export function OrdersTable({
 
   return (
     <>
-      <AdminListCard
-        title={hasFilters ? "Results" : "All Orders"}
-        titleIcon={ShoppingCart}
-        count={hasFilters ? totalCount : totalSearchCount}
-      >
-        <div className="px-5 pt-2 pb-4 border-b border-white/5">
+      <div className="card-floating overflow-hidden">
+        <div className="border-b border-slate-200/70 px-6 py-5">
           <div className="flex flex-col gap-4">
             {/* Title Row */}
             <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-              <div className="flex-1" />
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-emerald-500 p-2.5 shadow-sm">
+                  <ShoppingCart className="h-5 w-5 text-white" />
+                </div>
+                <h2 className="font-display text-2xl font-bold text-foreground">
+                  {hasFilters
+                    ? `Results (${totalCount})`
+                    : `All Orders (${totalSearchCount})`}
+                </h2>
+              </div>
 
               {/* Search and Status Filter */}
               <div className="flex flex-col gap-3 w-full xl:w-auto xl:flex-row xl:items-center">
@@ -880,7 +884,7 @@ export function OrdersTable({
 
           {/* Pagination Controls */}
           {orders.length > 0 && (
-            <div className="border-t border-white/5">
+            <div className="border-t border-slate-200 bg-slate-50/50">
               <Pagination
                 page={page}
                 pageSize={pageSize}
@@ -894,7 +898,7 @@ export function OrdersTable({
             </div>
           )}
         </div>
-      </AdminListCard>
+      </div>
 
       {/* Bulk Action Bar */}
       <BulkActionBar

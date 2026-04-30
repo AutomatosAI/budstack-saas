@@ -13,7 +13,6 @@ import {
 import { prisma } from "@/lib/db";
 import { getTenantUrl } from "@/lib/tenant-utils";
 import { QuickActionsWidget } from "@/components/admin/QuickActionsWidget";
-import { AdminPageHeader } from "@/components/admin/shared";
 
 export default async function TenantAdminDashboard() {
   const user = await currentUser();
@@ -53,12 +52,20 @@ export default async function TenantAdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <AdminPageHeader
-        eyebrow="Dashboard"
-        eyebrowIcon={LayoutDashboard}
-        title={tenant.businessName}
-        subtitle="Manage your storefront, branding, and operations with ease."
-      />
+      {/* Header */}
+      {/* Centered Header */}
+      <div className="text-center max-w-2xl mx-auto mb-8">
+        <div className="section-badge mb-4 inline-flex">
+          <LayoutDashboard className="h-4 w-4" />
+          Dashboard
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          {tenant.businessName}
+        </h1>
+        <p className="mt-2 max-w-2xl text-muted-foreground mx-auto">
+          Manage your storefront, branding, and operations with ease.
+        </p>
+      </div>
 
       {/* Store URL Card */}
       <div className="card-floating p-6">

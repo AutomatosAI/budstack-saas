@@ -20,7 +20,6 @@ import {
   SortableTableHeader,
   ExportButton,
   RowPill,
-  AdminListCard,
 } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
 import { exportToCSV } from "@/lib/admin/csv-export";
@@ -127,30 +126,43 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
   };
 
   return (
-    <AdminListCard
-      title={hasSearchQuery ? "Results" : "All Customers"}
-      titleIcon={Users}
-      count={totalCount}
-      filters={
-        <div className="w-full sm:w-72">
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search customers..."
-            aria-label="Search customers"
-            debounceMs={300}
-          />
+    <div className="card-floating overflow-hidden">
+      <div className="border-b border-slate-200/70 px-6 py-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-emerald-500 p-2.5 shadow-sm">
+              <Users className="h-5 w-5 text-white" />
+            </div>
+            <h2 className="font-display text-2xl font-bold text-foreground">
+              {hasSearchQuery
+                ? `Results (${totalCount})`
+                : `All Customers (${totalCount})`}
+            </h2>
+          </div>
+
+          {/* Search and Export Controls */}
+          <div className="flex flex-col gap-3 w-full sm:w-auto sm:flex-row">
+            <div className="w-full sm:w-72">
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder="Search customers..."
+                aria-label="Search customers"
+                debounceMs={300}
+              />
+            </div>
+
+            {/* Export Button */}
+            <ExportButton
+              onExport={handleExportAll}
+              recordCount={customers.length}
+              theme="tenant-admin"
+              disabled={customers.length === 0}
+            />
+          </div>
         </div>
-      }
-      actions={
-        <ExportButton
-          onExport={handleExportAll}
-          recordCount={customers.length}
-          theme="tenant-admin"
-          disabled={customers.length === 0}
-        />
-      }
-    >
+      </div>
+
       <div>
         {noResults ? (
           <EmptyState
@@ -280,7 +292,7 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
 
         {/* Pagination Controls */}
         {customers.length > 0 && (
-          <div className="border-t border-white/5">
+          <div className="border-t border-slate-200 bg-slate-50/50">
             <Pagination
               page={page}
               pageSize={pageSize}
@@ -294,6 +306,6 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
           </div>
         )}
       </div>
-    </AdminListCard>
+    </div>
   );
 }

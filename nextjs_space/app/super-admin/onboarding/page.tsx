@@ -13,7 +13,6 @@ import { prisma } from "@/lib/db";
 import { format } from "date-fns";
 import { UserPlus } from "lucide-react";
 import OnboardingActions from "./onboarding-actions";
-import { AdminPageHeader } from "@/components/admin/shared";
 
 export default async function OnboardingPage() {
   const user = await currentUser();
@@ -30,12 +29,19 @@ export default async function OnboardingPage() {
 
   return (
     <div className="space-y-8">
-      <AdminPageHeader
-        eyebrow="Onboarding"
-        eyebrowIcon={UserPlus}
-        title="Onboarding Requests"
-        subtitle="Review and approve new tenant applications"
-      />
+      {/* Centered Header */}
+      <div className="text-center max-w-2xl mx-auto">
+        <div className="section-badge mb-4 inline-flex">
+          <UserPlus className="h-4 w-4" />
+          Onboarding
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          Onboarding Requests
+        </h1>
+        <p className="mt-3 text-muted-foreground">
+          Review and approve new tenant applications
+        </p>
+      </div>
 
       {/* Pending Approvals Table */}
       <div className="card-floating overflow-hidden">

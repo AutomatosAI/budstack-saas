@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { Package } from "lucide-react";
-import { AdminPageHeader } from "@/components/admin/shared";
 import { ProductsTable } from "./products-table";
 import { SyncButton } from "./sync-button";
 
@@ -210,13 +209,24 @@ export default async function ProductsPage({
 
   return (
     <div className="space-y-8">
-      <AdminPageHeader
-        eyebrow="Products"
-        eyebrowIcon={Package}
-        title="Product Catalog"
-        subtitle="Manage your product catalog and inventory."
-        actions={<SyncButton />}
-      />
+      {/* Centered Header with Absolute Right Button */}
+      <div className="relative mb-8">
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="section-badge mb-4 inline-flex">
+            <Package className="h-4 w-4" />
+            Products
+          </div>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            Product Catalog
+          </h1>
+          <p className="mt-3 text-muted-foreground">
+            Manage your product catalog and inventory.
+          </p>
+        </div>
+        <div className="mt-4 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mt-0">
+          <SyncButton />
+        </div>
+      </div>
 
       <ProductsTable
         products={products}

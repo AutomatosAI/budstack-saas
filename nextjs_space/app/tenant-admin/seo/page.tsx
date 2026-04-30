@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import { getTenantBaseUrl } from "@/lib/tenant-utils";
 import { Search } from "lucide-react";
 import { SeoPageClient } from "./seo-page-client";
-import { AdminPageHeader } from "@/components/admin/shared";
 
 export default async function SeoPage() {
   const user = await currentUser();
@@ -78,13 +77,17 @@ export default async function SeoPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mb-8">
-        <AdminPageHeader
-          eyebrow="SEO"
-          eyebrowIcon={Search}
-          title="SEO Manager"
-          subtitle="Optimize how your store appears in search engines and social media."
-        />
+      <div className="text-center max-w-2xl mx-auto mb-8">
+        <div className="section-badge mb-4 inline-flex">
+          <Search className="h-4 w-4" />
+          SEO
+        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          SEO Manager
+        </h1>
+        <p className="mt-3 text-muted-foreground mx-auto">
+          Optimize how your store appears in search engines and social media.
+        </p>
       </div>
 
       <SeoPageClient
