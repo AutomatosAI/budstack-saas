@@ -1479,6 +1479,44 @@ html {
   background-color: rgba(82,217,122,0.05) !important;
 }
 
+/* Pastel bg-gradient-to-* washes — Tailwind compiles `from-emerald-50` etc.
+   into CSS custom-property gradient stops, so they bypass the plain
+   bg-* catch-alls above. Flatten them to a subtle dark surface inside
+   .budstacks-theme. Saturated stops (-500, -600) are deliberately
+   untouched so vibrant accent buttons / bars stay vivid. Whole-word
+   class matching ([class~="..."]) prevents -500/-600 from matching
+   here as substrings. */
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-emerald-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-emerald-100"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-teal-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-teal-100"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-cyan-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-cyan-100"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-blue-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-blue-100"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-blue-200"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-purple-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-purple-100"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-pink-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-pink-100"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-amber-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-amber-100"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-orange-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-orange-100"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-rose-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-violet-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-fuchsia-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-slate-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-gray-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-green-50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-green-100"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="from-emerald-50/50"],
+.budstacks-theme [class*="bg-gradient-to-"][class~="via-white"] {
+  background-image: none !important;
+  background-color: rgba(82, 217, 122, 0.06) !important;
+  border-color: rgba(82, 217, 122, 0.18) !important;
+}
+
 /* Muted mid-pill backgrounds (-200, -300, -400) → muted green */
 .budstacks-theme [class*="bg-emerald-2"],
 .budstacks-theme [class*="bg-emerald-3"],
