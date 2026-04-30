@@ -128,9 +128,9 @@ export default async function TenantAdminLayout({
           />
           <HeaderProfile theme="tenant-admin" />
         </div>
-        {/* Main content — 1180px max with responsive 32→64px side padding, 56px top */}
-        <div className="flex-1 overflow-auto px-8 lg:px-16 pt-14 pb-10">
-          <div className="mx-auto max-w-[1180px]">{children}</div>
+        {/* Main content — 1800px max with responsive 16→32px side padding, 56px top */}
+        <div className="flex-1 overflow-auto px-4 md:px-8 pt-14 pb-10">
+          <div className="mx-auto max-w-[1800px]">{children}</div>
         </div>
       </AccessibleAdminLayout>
     </div>
