@@ -123,9 +123,11 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
   const sectionPaddingCss = useMemo(() => {
     const padding = layout.settings?.sectionPadding;
     if (!padding) return '';
-    const heroTypes = ['HeroFullScreen', 'HeroSplit', 'HeroVideo', 'HeroMinimal', 'HeroCollage', 'HeroFramed'];
+    // Sections that own their vertical rhythm — heroes use viewport-height units,
+    // and TextMarquee is a thin accent band that should stay tight to the text.
+    const selfPaddedTypes = ['HeroFullScreen', 'HeroSplit', 'HeroVideo', 'HeroMinimal', 'HeroCollage', 'HeroFramed', 'TextMarquee'];
     const selectors = layout.sections
-      .filter(s => s.visible !== false && s.id && !heroTypes.includes(s.type))
+      .filter(s => s.visible !== false && s.id && !selfPaddedTypes.includes(s.type))
       .map(s => `#${s.id} > section, #${s.id} > div`);
     if (selectors.length === 0) return '';
     // Support responsive: "2rem" or "2rem/3rem/3.5rem" (mobile/sm/md)
