@@ -18,8 +18,11 @@ export function extractGoogleFontsImports(css?: string | null): string[] {
  * Sanitize CSS from S3/external sources.
  *
  * 1. Strip dangerous patterns (XSS, injection)
- * 2. Strip :root --tenant-color-* and --tenant-font-* declarations
- *    — tenant colors come from designSystem → TenantThemeProvider only
+ * 2. Strip :root --tenant-color-* declarations — colors are owned by the
+ *    branding form / designSystem and must not be re-declared by raw CSS.
+ *    --tenant-font-* IS preserved: templates legitimately declare font
+ *    tokens in styles.css :root, and TenantThemeProvider only overwrites
+ *    them when designSystem.typography is populated.
  *
  * Note: @import is stripped here. Use extractGoogleFontsImports() BEFORE
  * calling sanitizeCss to preserve Google Fonts URLs as <link> tags.
@@ -36,11 +39,12 @@ export function sanitizeCss(css?: string | null): string {
     .replace(/-moz-binding\s*:[^;]+;/gi, '')
     .replace(/javascript\s*:/gi, '');
 
-  // Strip :root tenant color/font vars — designSystem is the single source
+  // Strip :root --tenant-color-* — colors come exclusively from designSystem.
+  // --tenant-font-* is intentionally NOT stripped (see fn header).
   result = result.replace(/:root\s*\{([^}]*)\}/g, (_match, body: string) => {
     const cleaned = body
       .split('\n')
-      .filter((line: string) => !line.match(/--tenant-color-|--tenant-font-/))
+      .filter((line: string) => !line.match(/--tenant-color-/))
       .join('\n')
       .trim();
     return cleaned ? `:root {\n${cleaned}\n}` : '';

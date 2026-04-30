@@ -78,9 +78,11 @@ export function TenantThemeProvider({
   };
   const autoFontsUrl = useMemo(() => {
     if (googleFontsUrl) return null; // explicit URL takes precedence
+    // Accept both designSystem shapes (see applyThemeToContainer for context)
     const dsTypo = designSystem?.typography?.fontFamily;
-    const bodyId = dsTypo?.body || dsTypo?.base || (settings as any).fontFamily;
-    const headingId = dsTypo?.heading || (settings as any).headingFontFamily;
+    const dsTypoFlat = designSystem?.typography;
+    const bodyId = dsTypo?.body || dsTypo?.base || dsTypoFlat?.fontBody || dsTypoFlat?.fontBase || (settings as any).fontFamily;
+    const headingId = dsTypo?.heading || dsTypoFlat?.fontHeading || (settings as any).headingFontFamily;
     const ids = new Set<string>();
     if (bodyId && fontIdToGoogleName[bodyId]) ids.add(bodyId);
     if (headingId && headingId !== "same" && fontIdToGoogleName[headingId]) ids.add(headingId);
@@ -334,10 +336,14 @@ function applyThemeToContainer(
     };
 
     // === TYPOGRAPHY ===
-    // Read from designSystem first (branding form saves here), fall back to legacy settings
+    // Read from designSystem first (branding form saves here), fall back to legacy settings.
+    // Accept both shapes:
+    //   - canonical: typography.fontFamily.{body,base,heading} (branding form output)
+    //   - flat:      typography.{fontBody,fontHeading} (Claude-template defaults.json shape)
     const dsTypo = designSystem.typography?.fontFamily;
-    const dsFontBody = dsTypo?.body || dsTypo?.base;
-    const dsFontHeading = dsTypo?.heading;
+    const dsTypoFlat = designSystem.typography;
+    const dsFontBody = dsTypo?.body || dsTypo?.base || dsTypoFlat?.fontBody || dsTypoFlat?.fontBase;
+    const dsFontHeading = dsTypo?.heading || dsTypoFlat?.fontHeading;
 
     // Resolve: full CSS string passes through, short IDs get mapped
     const resolveFont = (val: string | undefined, fallbackId: string) => {
