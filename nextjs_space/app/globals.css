@@ -1034,9 +1034,54 @@ html {
 }
 .budstacks-theme .bg-gradient-to-b.from-slate-50,
 .budstacks-theme .bg-gradient-to-b.from-green-50 { background: #07090A !important; }
-.budstacks-theme .bg-slate-100 { background: #151A1C !important; }
-.budstacks-theme .border-slate-200 { border-color: #222A2C !important; }
+.budstacks-theme .bg-slate-100,
+.budstacks-theme .bg-slate-200 { background: #151A1C !important; }
+
+/* bg-white anywhere inside dark theme → flatten to card-floating panel.
+   Covers `bg-white`, `bg-white/50`, `bg-white/60`, `bg-white/80`, etc. used
+   on Card/Panel wrappers across tenant-admin (orders stat cards,
+   TenantTemplateList, products table, customers table, etc.) */
+.budstacks-theme .bg-white,
+.budstacks-theme [class*="bg-white\/"] {
+  background-color: #151A1C !important;
+}
+
+.budstacks-theme .border-slate-200,
+.budstacks-theme [class*="border-slate-200\/"],
+.budstacks-theme .border-slate-300 { border-color: #222A2C !important; }
+
+/* Slate text scale → cream/light theme tones so dark text on dark
+   surfaces becomes legible. 900/800 = high-contrast cream (titles),
+   700/600 = body cream-grey, 500/400 = muted secondary. */
+.budstacks-theme .text-slate-900,
+.budstacks-theme .text-slate-800 { color: #F2F4F2 !important; }
+.budstacks-theme .text-slate-700,
 .budstacks-theme .text-slate-600 { color: #C6CCC8 !important; }
+.budstacks-theme .text-slate-500,
+.budstacks-theme .text-slate-400 { color: #8A938F !important; }
+
+/* Generic text-foreground/black shadcn fallbacks → cream for legibility */
+.budstacks-theme .text-black { color: #F2F4F2 !important; }
+
+/* bg-slate-800 / bg-slate-900 are typically used as small accent shapes
+   (vertical bars before section headings, status pills, dark CTA buttons).
+   On a dark surface they disappear — flatten to brand green so they read
+   as intentional accents. Large panels using these would be rare and a
+   green fill still reads better than invisible. */
+.budstacks-theme .bg-slate-900,
+.budstacks-theme .bg-slate-800 {
+  background-color: rgba(82, 217, 122, 0.85) !important;
+}
+
+/* Badge variant="secondary" relies on shadcn's --secondary token, which
+   is already dark slate in .budstacks-theme. The default contrast against
+   our dark card is too low — boost it to a cream-tinted pill so System /
+   Custom / Status labels are readable. */
+.budstacks-theme [class*="bg-secondary"]:not(button):not(a) {
+  background-color: rgba(231, 219, 184, 0.14) !important;
+  color: #E8D19E !important;
+  border-color: rgba(231, 219, 184, 0.3) !important;
+}
 .budstacks-theme .section-badge {
   background: rgba(82,217,122,0.06);
   border: 1px solid rgba(82,217,122,0.3);
