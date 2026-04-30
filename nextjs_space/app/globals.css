@@ -1718,6 +1718,150 @@ html {
 }
 
 /* ============================================================
+   TENANT-ADMIN DESIGN SYSTEM — pattern unification
+   ============================================================
+   These rules target the exact JSX patterns each tenant-admin page
+   uses, so without touching individual files we get a unified
+   look-and-feel. Pages were authored at different times with
+   slightly different toolbars, headers, and pills — this block
+   normalizes them. */
+
+/* ---- 1. LIST-CARD WRAPPER (Products / Orders / Customers / Email Templates)
+   Every list page wraps its table in `<Card className="shadow-lg border-slate-200">`.
+   Promote that to a card-floating-equivalent dark surface so the
+   shape is consistent across pages. */
+.budstacks-theme [class~="shadow-lg"][class~="border-slate-200"] {
+  background-color: #151A1C !important;
+  border: 1px solid #222A2C !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+/* ---- 2. LIST-CARD HEADER (the toolbar above each table)
+   Each list page sets a different gradient on `<CardHeader className="border-b bg-gradient-to-r ...">`.
+   Catch-all already kills the gradient — here we ensure the bar
+   reads as a unified header strip with the same border + padding. */
+.budstacks-theme [class~="border-b"][class*="bg-gradient-to-r"] {
+  background: linear-gradient(180deg, rgba(82,217,122,0.04), rgba(82,217,122,0.01)) !important;
+  border-bottom: 1px solid #222A2C !important;
+}
+
+/* List title — "All Products (7)" / "All Orders (17)" / "All Customers (26)".
+   These sit inside CardTitle with text-2xl font-bold text-slate-900.
+   Make them serif + cream-gold so they match the page hero typography. */
+.budstacks-theme [class~="border-b"][class*="bg-gradient-to-r"] [class~="text-2xl"][class~="font-bold"],
+.budstacks-theme [class~="border-b"][class*="bg-gradient-to-r"] [class~="text-2xl"][class~="font-semibold"] {
+  font-family: 'GT Sectra', Georgia, serif !important;
+  color: #fcfcbc !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.005em !important;
+}
+
+/* ---- 3. ANALYTICS SECTION DIVIDERS
+   Pattern: `<section><h2 class="text-2xl font-bold text-slate-900 ..."><div class="w-1 h-6 bg-X rounded-full" />Heading</h2>`.
+   Force cream serif heading + brand-green vertical bar regardless
+   of inline color (slate-900, emerald-500-cyan-500 gradient, etc). */
+.budstacks-theme section > h2 {
+  font-family: 'GT Sectra', Georgia, serif !important;
+  color: #F2F4F2 !important;
+  letter-spacing: -0.01em !important;
+}
+.budstacks-theme section > h2 > div[class*="rounded-full"] {
+  background: linear-gradient(180deg, #52D97A, #8CF0A4) !important;
+  background-image: linear-gradient(180deg, #52D97A, #8CF0A4) !important;
+  width: 3px !important;
+}
+
+/* ---- 4. PAGE HERO HEADING — "Store Analytics" / "Order Management" / "Product Catalog"
+   The display serif title uses `text-foreground` which should resolve
+   to cream — but on a noisy dark gradient background some pages were
+   reading as faint. Force explicit cream-gold for max contrast. */
+.budstacks-theme h1.font-display,
+.budstacks-theme h1[class~="font-display"] {
+  color: #fcfcbc !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* ---- 5. QUICK FILTER CHIPS (Orders page "Quick filters: [Needs Attention] [In Progress]")
+   The chips use bg-amber-100 / bg-blue-100 for the active state and
+   bg-white for idle. Switch them to the brand palette so chips read
+   as gold/green active-states inside the dark theme. */
+.budstacks-theme button[class*="rounded-full"][class*="border-amber"],
+.budstacks-theme button[class*="rounded-full"][class*="hover\\:border-amber"] {
+  background-color: #0F1517 !important;
+  border-color: rgba(231, 219, 184, 0.35) !important;
+  color: #E8D19E !important;
+}
+.budstacks-theme button[class*="rounded-full"][class*="bg-amber-100"][class*="border-amber-300"] {
+  background-color: rgba(231, 219, 184, 0.18) !important;
+  border-color: #E8D19E !important;
+  color: #fcfcbc !important;
+}
+.budstacks-theme button[class*="rounded-full"][class*="border-blue"],
+.budstacks-theme button[class*="rounded-full"][class*="hover\\:border-blue"] {
+  background-color: #0F1517 !important;
+  border-color: rgba(82, 217, 122, 0.3) !important;
+  color: #8CF0A4 !important;
+}
+.budstacks-theme button[class*="rounded-full"][class*="bg-blue-100"][class*="border-blue-300"] {
+  background-color: rgba(82, 217, 122, 0.18) !important;
+  border-color: #52D97A !important;
+  color: #fcfcbc !important;
+}
+
+/* ---- 6. TABLE ROW HOVER (default bg-slate-50/50)
+   Inline-applied to TableRow on most list pages — needs a dark equivalent. */
+.budstacks-theme [class*="bg-slate-50\\/"] {
+  background-color: rgba(34, 42, 44, 0.5) !important;
+}
+.budstacks-theme tr:hover {
+  background-color: rgba(82, 217, 122, 0.04) !important;
+}
+
+/* ---- 7. STAT CARD ICON WELLS
+   Pattern `<div className="rounded-xl bg-emerald-50 p-2.5">` — colored
+   square wrapping an icon. Catch-all flattens bg already; here we
+   ensure border + tint stay consistent and icon is brand-green. */
+.budstacks-theme .rounded-xl[class*="bg-emerald-50"],
+.budstacks-theme .rounded-xl[class*="bg-amber-50"],
+.budstacks-theme .rounded-xl[class*="bg-blue-50"],
+.budstacks-theme .rounded-xl[class*="bg-purple-50"],
+.budstacks-theme .rounded-xl[class*="bg-cyan-50"],
+.budstacks-theme .rounded-xl[class*="bg-slate-100"] {
+  background-color: rgba(82, 217, 122, 0.1) !important;
+  border: 1px solid rgba(82, 217, 122, 0.2);
+}
+
+/* ---- 8. INLINE BADGE OUTLINE (used in list-card titles for counts)
+   `<Badge variant="outline" className="text-sm font-normal">7 In Stock</Badge>`
+   shadcn outline variant uses `bg-background text-foreground` which
+   may render flat — give it explicit cream-tinted border. */
+.budstacks-theme [class~="border"][class~="bg-background"][class~="text-foreground"] {
+  background-color: rgba(231, 219, 184, 0.06) !important;
+  color: #E8D19E !important;
+  border: 1px solid rgba(231, 219, 184, 0.25) !important;
+}
+
+/* ---- 9. SATURATED PILLS in tables (PENDING_SYNC, In Stock, etc.)
+   Order rows show purple PENDING_SYNC pills, products show green In Stock.
+   For a unified look, push status pills toward brand greens (active),
+   gold (pending/sync), muted (inactive). Targets badges with the
+   visible saturated -500/-600 backgrounds that catch-all leaves alone. */
+.budstacks-theme [class*="rounded"][class*="bg-purple-500"],
+.budstacks-theme [class*="rounded"][class*="bg-purple-600"],
+.budstacks-theme [class*="rounded"][class*="bg-violet-500"],
+.budstacks-theme [class*="rounded"][class*="bg-violet-600"],
+.budstacks-theme [class*="rounded"][class*="bg-pink-500"],
+.budstacks-theme [class*="rounded"][class*="bg-pink-600"],
+.budstacks-theme [class*="rounded"][class*="bg-blue-500"],
+.budstacks-theme [class*="rounded"][class*="bg-blue-600"],
+.budstacks-theme [class*="rounded"][class*="bg-cyan-500"] {
+  background-color: rgba(231, 219, 184, 0.18) !important;
+  color: #E8D19E !important;
+}
+
+/* ============================================================
    MOBILE TIGHTENING (super-admin)
    ============================================================
    Super-admin panels were designed desktop-first with generous p-6/p-8
