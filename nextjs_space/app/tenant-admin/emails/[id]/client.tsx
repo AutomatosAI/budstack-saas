@@ -53,7 +53,6 @@ export function TenantEditTemplateClient({
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)]">
       <div className="bs-page-header-centered pb-6 border-b border-bs-border-100">
-        <div className="bs-eyebrow">Email</div>
         <h1
           className="bs-page-title"
           style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}

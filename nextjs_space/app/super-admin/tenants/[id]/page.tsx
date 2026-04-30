@@ -64,10 +64,6 @@ export default async function TenantDetailPage({
       </Link>
 
       <div className="bs-page-header-centered">
-        <div className="bs-eyebrow inline-flex items-center gap-1.5">
-          <Building2 className="h-4 w-4" aria-hidden="true" />
-          Tenant Detail
-        </div>
         <h1 className="bs-page-title" style={sectionTitleStyle}>
           {tenant.businessName}
         </h1>

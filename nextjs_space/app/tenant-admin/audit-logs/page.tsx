@@ -85,7 +85,6 @@ export default function TenantAuditLogsPage() {
   return (
     <div className="space-y-8">
       <div className="bs-page-header-centered">
-        <div className="bs-eyebrow">Security</div>
         <h1
           className="bs-page-title"
           style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}

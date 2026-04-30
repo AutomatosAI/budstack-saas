@@ -157,10 +157,6 @@ export default async function TenantsPage({ searchParams }: TenantsPageProps) {
     <div className="space-y-8">
       <div className="bs-page-header-compact flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="bs-eyebrow inline-flex items-center gap-1.5">
-            <Building2 className="h-4 w-4" aria-hidden="true" />
-            Tenants
-          </div>
           <h1 className="bs-page-title" style={sectionTitleStyle}>
             All Tenants
           </h1>

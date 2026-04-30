@@ -11,10 +11,6 @@ export default function SuperAdminProfilePage() {
   return (
     <div className="space-y-8">
       <div className="bs-page-header-centered">
-        <div className="bs-eyebrow inline-flex items-center gap-1.5">
-          <User className="h-4 w-4" aria-hidden="true" />
-          Profile
-        </div>
         <h1 className="bs-page-title" style={sectionTitleStyle}>
           Your Profile
         </h1>

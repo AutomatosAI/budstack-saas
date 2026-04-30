@@ -72,8 +72,8 @@ export default async function SuperAdminLayout({
           />
           <HeaderProfile theme="super-admin" />
         </div>
-        {/* Main content — 1800px max with responsive 16→32px side padding, 56px top */}
-        <div className="flex-1 overflow-auto px-4 md:px-8 pt-14 pb-10">
+        {/* Main content — 1800px max with responsive 16→32px side padding, snug top */}
+        <div className="flex-1 overflow-auto px-4 md:px-8 pt-6 pb-10">
           <div className="mx-auto max-w-[1800px]">{children}</div>
         </div>
       </AccessibleAdminLayout>

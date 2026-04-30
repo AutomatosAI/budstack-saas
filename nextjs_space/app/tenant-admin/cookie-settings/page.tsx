@@ -31,10 +31,6 @@ export default async function CookieSettingsPage() {
   return (
     <div className="space-y-8">
       <div className="bs-page-header-centered">
-        <div className="bs-eyebrow inline-flex items-center gap-1.5">
-          <Cookie className="h-4 w-4" aria-hidden="true" />
-          Privacy
-        </div>
         <h1 className="bs-page-title">Cookie & Privacy Settings</h1>
         <p className="bs-page-subtitle">
           Configure how cookies are managed on your storefront. Based on your

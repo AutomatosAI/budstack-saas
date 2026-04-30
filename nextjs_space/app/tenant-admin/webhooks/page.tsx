@@ -187,11 +187,7 @@ export default function WebhooksPage() {
       {/* Centered Header with Absolute Right Button */}
       <div className="relative">
         <div className="bs-page-header-centered">
-          <div className="bs-eyebrow inline-flex items-center gap-1.5">
-            <Webhook className="h-4 w-4" aria-hidden="true" />
-            Integrations
-          </div>
-          <h1 className="bs-page-title">Webhooks</h1>
+        <h1 className="bs-page-title">Webhooks</h1>
           <p className="bs-page-subtitle">
             Send real-time event notifications to external systems.
           </p>

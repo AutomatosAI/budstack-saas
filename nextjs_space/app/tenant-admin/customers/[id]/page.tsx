@@ -64,7 +64,6 @@ export default async function CustomerDetailPage({
       />
 
       <header className="bs-page-header-centered">
-        <div className="bs-eyebrow">Customer</div>
         <h1
           className="bs-page-title"
           style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}

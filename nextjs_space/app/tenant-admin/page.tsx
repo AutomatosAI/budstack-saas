@@ -52,7 +52,6 @@ export default async function TenantAdminDashboard() {
   return (
     <div className="space-y-8">
       <header className="bs-page-header-centered">
-        <div className="bs-eyebrow">Dashboard</div>
         <h1
           className="bs-page-title"
           style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}

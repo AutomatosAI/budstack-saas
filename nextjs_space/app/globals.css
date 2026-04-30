@@ -1239,8 +1239,8 @@ html {
   .bs-eyebrow              { @apply inline-flex items-center gap-2 font-mono text-mono-eyebrow uppercase text-bs-gold border border-bs-gold/30 bg-bs-gold/[0.14] px-3.5 py-1.5 rounded-bs-pill; }
   .bs-page-title           { @apply font-display text-display-xl text-bs-fg; font-weight: 500; }
   .bs-page-subtitle        { @apply text-bs-fg-body text-[15px] max-w-[640px]; }
-  .bs-page-header-centered { @apply text-center px-6 pt-14 pb-10; }
-  .bs-page-header-compact  { @apply flex items-end justify-between pt-7 pb-5 mb-6 border-b border-bs-border-100; }
+  .bs-page-header-centered { @apply text-left pt-2 pb-5 mb-6 border-b border-bs-border-100; }
+  .bs-page-header-compact  { @apply flex items-end justify-between pt-2 pb-5 mb-6 border-b border-bs-border-100; }
 
   /* ===== Buttons ===== */
   .bs-btn        { @apply inline-flex items-center gap-2 h-10 px-[22px] rounded-bs-pill font-sans font-medium text-sm transition border whitespace-nowrap; }

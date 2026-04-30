@@ -12,7 +12,6 @@ export default function TenantEmailsPage() {
     <div className="space-y-8">
       <div className="bs-page-header-compact flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="bs-eyebrow">Email</div>
           <h1
             className="bs-page-title"
             style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}

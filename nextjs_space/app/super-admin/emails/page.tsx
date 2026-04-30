@@ -12,10 +12,6 @@ export default function EmailTemplatesPage() {
   return (
     <div className="space-y-8">
       <div className="bs-page-header-compact">
-        <div className="bs-eyebrow inline-flex items-center gap-1.5">
-          <Mail className="h-4 w-4" aria-hidden="true" />
-          Email
-        </div>
         <h1 className="bs-page-title" style={sectionTitleStyle}>
           Email Templates
         </h1>

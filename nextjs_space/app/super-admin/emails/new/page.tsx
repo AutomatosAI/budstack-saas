@@ -49,10 +49,6 @@ export default function NewEmailTemplatePage() {
       </Link>
 
       <div className="bs-page-header-centered">
-        <div className="bs-eyebrow inline-flex items-center gap-1.5">
-          <Mail className="h-4 w-4" aria-hidden="true" />
-          New Template
-        </div>
         <h1 className="bs-page-title" style={sectionTitleStyle}>
           Create Template
         </h1>

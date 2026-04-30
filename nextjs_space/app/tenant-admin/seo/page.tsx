@@ -77,10 +77,6 @@ export default async function SeoPage() {
   return (
     <div>
       <div className="bs-page-header-centered">
-        <div className="bs-eyebrow inline-flex items-center gap-1.5">
-          <Search className="h-4 w-4" aria-hidden="true" />
-          SEO
-        </div>
         <h1 className="bs-page-title">SEO Manager</h1>
         <p className="bs-page-subtitle">
           Optimize how your store appears in search engines and social media.

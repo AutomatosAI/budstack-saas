@@ -103,10 +103,6 @@ export default function TenantProfilePage() {
   return (
     <div className="space-y-8">
       <div className="bs-page-header-centered">
-        <div className="bs-eyebrow inline-flex items-center gap-1.5">
-          <User className="h-4 w-4" aria-hidden="true" />
-          Profile
-        </div>
         <h1 className="bs-page-title">Your Profile</h1>
         <p className="bs-page-subtitle">
           Manage your account settings, security, and company information.

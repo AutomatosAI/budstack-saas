@@ -104,10 +104,6 @@ export default async function TemplatesPage() {
   return (
     <div className="space-y-8">
       <div className="bs-page-header-centered">
-        <div className="bs-eyebrow inline-flex items-center gap-1.5">
-          <Layout className="h-4 w-4" aria-hidden="true" />
-          Themes
-        </div>
         <h1 className="bs-page-title">Theme Management</h1>
         <p className="bs-page-subtitle">
           Manage your store&apos;s design and layout.

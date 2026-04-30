@@ -293,7 +293,6 @@ export default function TenantOrdersPage() {
   return (
     <div className="space-y-8 p-4 sm:p-6 lg:p-8">
       <header className="bs-page-header-centered">
-        <div className="bs-eyebrow">Orders</div>
         <h1
           className="bs-page-title"
           style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}

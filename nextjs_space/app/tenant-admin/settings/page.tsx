@@ -34,7 +34,6 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-8">
       <header className="bs-page-header-centered">
-        <div className="bs-eyebrow">Settings</div>
         <h1
           className="bs-page-title"
           style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
