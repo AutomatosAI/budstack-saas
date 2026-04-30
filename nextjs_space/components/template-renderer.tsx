@@ -5,7 +5,7 @@ import { getSectionComponent } from '@/lib/section-registry';
 import type { SectionProps } from '@/lib/types/section-props';
 import type { TemplateLayout } from '@/lib/types/template-layout';
 import { motion } from 'framer-motion';
-import { sanitizeCss } from '@/lib/css-utils';
+import { sanitizeCss, extractGoogleFontsImports } from '@/lib/css-utils';
 import { hexToHsl } from '@/lib/color-utils';
 
 interface Props {
@@ -91,6 +91,7 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
   const NavComponent = showChrome ? getSectionComponent(navType) : null;
   const FooterComponent = showChrome ? getSectionComponent(footerType) : null;
   const sanitizedCss = useMemo(() => sanitizeCss(customCss), [customCss]);
+  const customCssFontUrls = useMemo(() => extractGoogleFontsImports(customCss), [customCss]);
 
   // Generate per-section color override CSS from layout sections
   const sectionColorCss = useMemo(() => {
@@ -146,6 +147,11 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
         // eslint-disable-next-line @next/next/no-page-custom-font
         <link href={layout.settings.googleFontsUrl} rel="stylesheet" />
       )}
+      {/* Load Google Fonts extracted from styles.css @import (sanitiseCss strips @import) */}
+      {customCssFontUrls.map((href) => (
+        // eslint-disable-next-line @next/next/no-page-custom-font
+        <link key={href} href={href} rel="stylesheet" />
+      ))}
       {/* Must use dangerouslySetInnerHTML — React escapes > to \u003e in JSX children, breaking CSS child combinators */}
       {sanitizedCss && (
         <style dangerouslySetInnerHTML={{ __html: sanitizedCss }} />

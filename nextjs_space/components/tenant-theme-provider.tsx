@@ -12,6 +12,12 @@ interface TenantThemeProviderProps {
     customCss?: string | null;
   };
   googleFontsUrl?: string | null;
+  /**
+   * When true, the template controls its own section padding via py-* classes
+   * and we suppress the TENANT_SCOPED_CSS forced 3rem/4rem rule. Default false
+   * preserves the existing behaviour for templates designed against that rule.
+   */
+  useTemplatePadding?: boolean;
   children: React.ReactNode;
 }
 
@@ -30,6 +36,7 @@ export function TenantThemeProvider({
   tenant,
   tenantTemplate,
   googleFontsUrl,
+  useTemplatePadding = false,
   children,
 }: TenantThemeProviderProps) {
   /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
@@ -107,6 +114,7 @@ export function TenantThemeProvider({
         className={`tenant-theme-container ${getTenantThemeClasses(settings)}`}
         data-hover={hoverEffect}
         data-glass={glassEffectVal}
+        data-padding={useTemplatePadding ? "custom" : "auto"}
         style={{ minHeight: "100vh" }}
       >
         {children}
@@ -208,15 +216,17 @@ const TENANT_SCOPED_CSS = `
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* === SECTION SPACING SCALE === */
-.tenant-theme-container section > div[class*="py-"],
-.tenant-theme-container section > section[class*="py-"] {
+/* === SECTION SPACING SCALE ===
+   Gated to data-padding="auto" so templates can opt out via
+   layout.settings.useTemplatePadding=true and control their own spacing. */
+.tenant-theme-container[data-padding="auto"] section > div[class*="py-"],
+.tenant-theme-container[data-padding="auto"] section > section[class*="py-"] {
   padding-top: calc(3rem * var(--tenant-spacing-scale, 1));
   padding-bottom: calc(3rem * var(--tenant-spacing-scale, 1));
 }
 @media (min-width: 768px) {
-  .tenant-theme-container section > div[class*="py-"],
-  .tenant-theme-container section > section[class*="py-"] {
+  .tenant-theme-container[data-padding="auto"] section > div[class*="py-"],
+  .tenant-theme-container[data-padding="auto"] section > section[class*="py-"] {
     padding-top: calc(4rem * var(--tenant-spacing-scale, 1));
     padding-bottom: calc(4rem * var(--tenant-spacing-scale, 1));
   }

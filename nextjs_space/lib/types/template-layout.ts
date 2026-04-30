@@ -39,5 +39,11 @@ export interface TemplateLayout {
     wrapperClass?: string;
     googleFontsUrl?: string;
     sectionPadding?: string; // e.g. "2rem" or "2rem/3rem/3.5rem" (mobile/sm/md)
+    /**
+     * When true, suppresses TENANT_SCOPED_CSS hardcoded section padding so
+     * the template's own py-* / spacing classes win. Opt-in per template;
+     * existing templates that don't set this flag are unaffected.
+     */
+    useTemplatePadding?: boolean;
   };
 }
