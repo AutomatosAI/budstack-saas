@@ -221,8 +221,8 @@ export async function PUT(req: NextRequest) {
 
       if (hasLayoutSections || hasSectionConfigs || hasSectionColorOverrides || hasNavFooterConfig) {
         // Read existing layout from S3 — tenant's own path, no fallback
+        const existingS3Path = currentTemplate?.s3Path?.replace(/\/+$/, '') || null;
         let baseLayout: any = {};
-        const existingS3Path = currentTemplate?.s3Path;
         if (existingS3Path) {
           try {
             baseLayout = await getJsonFromS3(`${existingS3Path}/layout.json`) || {};
@@ -315,7 +315,7 @@ export async function PUT(req: NextRequest) {
 
         // Auto-generate s3Path if missing so layout sections can be saved.
         // Also copy ALL files from base template so the tenant is self-contained.
-        let s3Path = currentTemplate?.s3Path;
+        let s3Path = currentTemplate?.s3Path?.replace(/\/+$/, '') || null;
         if (!s3Path) {
           const baseSlug = currentTemplate?.templates?.slug || 'default';
           s3Path = `tenants/${tenantId}/templates/${baseSlug}`;
