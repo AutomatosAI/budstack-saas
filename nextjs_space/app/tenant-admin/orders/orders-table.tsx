@@ -17,7 +17,6 @@ import {
   Download,
   ShoppingCart,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -517,18 +516,21 @@ export function OrdersTable({
 
   return (
     <>
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
+      <div className="card-floating overflow-hidden">
+        <div className="border-b border-slate-200/70 px-6 py-5">
           <div className="flex flex-col gap-4">
             {/* Title Row */}
             <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-              <CardTitle className="flex items-center gap-3">
-                <span className="text-2xl font-bold text-slate-900">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-emerald-500 p-2.5 shadow-sm">
+                  <ShoppingCart className="h-5 w-5 text-white" />
+                </div>
+                <h2 className="font-display text-2xl font-bold text-foreground">
                   {hasFilters
                     ? `Results (${totalCount})`
                     : `All Orders (${totalSearchCount})`}
-                </span>
-              </CardTitle>
+                </h2>
+              </div>
 
               {/* Search and Status Filter */}
               <div className="flex flex-col gap-3 w-full xl:w-auto xl:flex-row xl:items-center">
@@ -716,8 +718,8 @@ export function OrdersTable({
                   "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
                   "border hover:shadow-sm",
                   statusFilter === "PROCESSING"
-                    ? "bg-blue-100 border-blue-300 text-blue-800"
-                    : "bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-blue-50",
+                    ? "bg-emerald-100 border-emerald-300 text-emerald-800"
+                    : "bg-white border-slate-200 text-slate-600 hover:border-emerald-300 hover:bg-emerald-50",
                 )}
               >
                 <Loader2 className="w-3.5 h-3.5" />
@@ -727,7 +729,7 @@ export function OrdersTable({
                   className={cn(
                     "ml-1 h-5 px-1.5 text-[10px] font-semibold",
                     statusFilter === "PROCESSING"
-                      ? "bg-blue-200 text-blue-800"
+                      ? "bg-emerald-200 text-emerald-800"
                       : "bg-slate-100 text-slate-600",
                   )}
                 >
@@ -747,9 +749,9 @@ export function OrdersTable({
               )}
             </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="p-0">
+        <div>
           {noResults ? (
             <EmptyState
               icon={Search}
@@ -922,8 +924,8 @@ export function OrdersTable({
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Bulk Action Bar */}
       <BulkActionBar

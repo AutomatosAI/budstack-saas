@@ -5,7 +5,6 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { Users, Search, Phone, ShoppingBag, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -127,22 +126,25 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
   };
 
   return (
-    <Card className="shadow-lg border-slate-200">
-      <CardHeader className="border-b bg-gradient-to-r from-cyan-50 to-blue-50">
+    <div className="card-floating overflow-hidden">
+      <div className="border-b border-slate-200/70 px-6 py-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="flex items-center gap-3 text-2xl font-bold text-slate-900">
-            <span>
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-emerald-500 p-2.5 shadow-sm">
+              <Users className="h-5 w-5 text-white" />
+            </div>
+            <h2 className="font-display text-2xl font-bold text-foreground">
               {hasSearchQuery
                 ? `Results (${totalCount})`
                 : `All Customers (${totalCount})`}
-            </span>
+            </h2>
             <Badge
               variant="outline"
-              className="text-sm font-normal bg-white/60"
+              className="text-sm font-normal border-amber-300/60 bg-amber-50/60 text-amber-800"
             >
               {totalCount} Total
             </Badge>
-          </CardTitle>
+          </div>
 
           {/* Search and Export Controls */}
           <div className="flex flex-col gap-3 w-full sm:w-auto sm:flex-row">
@@ -165,9 +167,9 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
             />
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="p-0">
+      <div>
         {noResults ? (
           <EmptyState
             icon={Search}
@@ -242,7 +244,7 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {/* Avatar with initials */}
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white font-medium text-sm shadow-sm group-hover:shadow-md transition-shadow">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-medium text-sm shadow-sm group-hover:shadow-md transition-shadow">
                           {getInitials(customer.name)}
                         </div>
                         <div className="min-w-0">
@@ -252,7 +254,7 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                           {/* Show email on mobile */}
                           <a
                             href={`mailto:${customer.email}`}
-                            className="text-xs text-slate-500 hover:text-cyan-600 md:hidden truncate block"
+                            className="text-xs text-slate-500 hover:text-emerald-600 md:hidden truncate block"
                           >
                             {customer.email}
                           </a>
@@ -268,13 +270,13 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                     <TableCell className="text-slate-600 hidden md:table-cell">
                       <a
                         href={`mailto:${customer.email}`}
-                        className="hover:text-cyan-600 hover:underline transition-colors"
+                        className="hover:text-emerald-600 hover:underline transition-colors"
                       >
                         {customer.email}
                       </a>
                     </TableCell>
                     <TableCell className="text-center hidden sm:table-cell">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-700 text-sm font-medium">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
                         {customer._count.orders}
                       </span>
                     </TableCell>
@@ -286,7 +288,7 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="hover:bg-cyan-50 hover:text-cyan-700 hover:border-cyan-300 transition-colors"
+                          className="hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 transition-colors"
                         >
                           View Details
                         </Button>
@@ -314,7 +316,7 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
             />
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

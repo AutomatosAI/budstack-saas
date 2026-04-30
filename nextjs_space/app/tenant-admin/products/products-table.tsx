@@ -32,7 +32,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -706,19 +705,25 @@ export function ProductsTable({
 
   return (
     <>
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="border-b bg-gradient-to-r from-emerald-50 to-teal-50">
+      <div className="card-floating overflow-hidden">
+        <div className="border-b border-slate-200/70 px-6 py-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <CardTitle className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-slate-900">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-emerald-500 p-2.5 shadow-sm">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <h2 className="font-display text-2xl font-bold text-foreground">
                 {hasFilters
                   ? `Results (${totalCount})`
                   : `All Products (${totalSearchCount})`}
-              </span>
-              <Badge variant="outline" className="text-sm font-normal">
+              </h2>
+              <Badge
+                variant="outline"
+                className="text-sm font-normal border-amber-300/60 bg-amber-50/60 text-amber-800"
+              >
                 {inStockCount} In Stock
               </Badge>
-            </CardTitle>
+            </div>
 
             {/* Search and Filter Controls */}
             <div className="flex flex-col gap-3 w-full xl:w-auto">
@@ -767,9 +772,9 @@ export function ProductsTable({
               </div>
             </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="p-0">
+        <div>
           {noResults ? (
             <EmptyState
               icon={Search}
@@ -919,8 +924,8 @@ export function ProductsTable({
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Bulk Action Bar */}
       <BulkActionBar

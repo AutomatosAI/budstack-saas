@@ -586,12 +586,12 @@ export default function TenantAnalyticsPage() {
       <div className="space-y-6 sm:space-y-8">
         {/* Section 1: Key Business Metrics */}
         <section>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-4 sm:mb-6 flex items-center gap-2">
-            <div className="w-1 h-5 sm:h-6 bg-gradient-to-b from-emerald-500 to-cyan-500 rounded-full" />
+          <h2 className="font-display text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6 flex items-center gap-2">
+            <div className="w-1 h-5 sm:h-6 bg-emerald-500 rounded-full" />
             Key Business Metrics
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+            <Card className="card-floating-static p-6 bg-transparent border-0 shadow-none">
               <CardHeader className="p-0 pb-4 space-y-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold text-slate-600">
@@ -615,14 +615,14 @@ export default function TenantAnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+            <Card className="card-floating-static p-6 bg-transparent border-0 shadow-none">
               <CardHeader className="p-0 pb-4 space-y-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold text-slate-600">
                     Total Orders
                   </CardTitle>
-                  <div className="rounded-xl bg-amber-50 p-2.5">
-                    <ShoppingCart className="h-5 w-5 text-amber-600" />
+                  <div className="rounded-xl bg-emerald-50 p-2.5">
+                    <ShoppingCart className="h-5 w-5 text-emerald-600" />
                   </div>
                 </div>
               </CardHeader>
@@ -636,14 +636,14 @@ export default function TenantAnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+            <Card className="card-floating-static p-6 bg-transparent border-0 shadow-none">
               <CardHeader className="p-0 pb-4 space-y-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold text-slate-600">
                     Total Customers
                   </CardTitle>
-                  <div className="rounded-xl bg-purple-50 p-2.5">
-                    <Users className="h-5 w-5 text-purple-600" />
+                  <div className="rounded-xl bg-emerald-50 p-2.5">
+                    <Users className="h-5 w-5 text-emerald-600" />
                   </div>
                 </div>
               </CardHeader>
@@ -657,14 +657,14 @@ export default function TenantAnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+            <Card className="card-floating-static p-6 bg-transparent border-0 shadow-none">
               <CardHeader className="p-0 pb-4 space-y-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold text-slate-600">
                     Avg Order Value
                   </CardTitle>
-                  <div className="rounded-xl bg-cyan-50 p-2.5">
-                    <Package className="h-5 w-5 text-cyan-600" />
+                  <div className="rounded-xl bg-emerald-50 p-2.5">
+                    <Package className="h-5 w-5 text-emerald-600" />
                   </div>
                 </div>
               </CardHeader>
@@ -682,15 +682,15 @@ export default function TenantAnalyticsPage() {
 
         {/* Section 2: Revenue Metrics */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <div className="w-1 h-6 bg-slate-900 rounded-full" />
+          <h2 className="font-display text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full" />
             Revenue Overview
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {revenueMetrics.map((metric) => (
               <Card
                 key={metric.label}
-                className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6 relative overflow-hidden group"
+                className="card-floating-static p-6 bg-transparent border-0 shadow-none relative overflow-hidden group"
               >
                 <div className="relative space-y-2">
                   <div className="flex items-center justify-between">
@@ -731,12 +731,12 @@ export default function TenantAnalyticsPage() {
 
         {/* Section 3: Sales Intelligence (Recharts) */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <div className="w-1 h-6 bg-slate-900 rounded-full" />
+          <h2 className="font-display text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full" />
             Sales Intelligence
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+            <Card className="card-floating-static p-6 bg-transparent border-0 shadow-none">
               <CardHeader className="p-0 pb-6">
                 <CardTitle className="flex items-center gap-2 text-slate-900">
                   <TrendingUp className="h-5 w-5 text-emerald-600" />
@@ -778,10 +778,10 @@ export default function TenantAnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white rounded-2xl border border-slate-200/50 shadow-2xl p-6">
+            <Card className="card-floating-static p-6 bg-transparent border-0 shadow-none">
               <CardHeader className="p-0 pb-6">
                 <CardTitle className="flex items-center gap-2 text-slate-900">
-                  <ShoppingCart className="h-5 w-5 text-purple-600" />
+                  <ShoppingCart className="h-5 w-5 text-emerald-600" />
                   Order Volume
                 </CardTitle>
                 <CardDescription>
@@ -820,8 +820,8 @@ export default function TenantAnalyticsPage() {
 
         {/* Section 4: Store Performance (Plotly.js - Living Garden) */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <div className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-cyan-500 rounded-full" />
+          <h2 className="font-display text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full" />
             Store Performance
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -877,7 +877,7 @@ export default function TenantAnalyticsPage() {
             <Card className="lg:col-span-3 overflow-hidden bg-white/80 backdrop-blur border-cyan-100 hover:shadow-lg transition-shadow">
               <div className="p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Package className="h-5 w-5 text-cyan-600" />
+                  <Package className="h-5 w-5 text-emerald-600" />
                   <h3 className="text-lg font-semibold text-slate-800">
                     Top Products by Revenue
                   </h3>
@@ -904,15 +904,15 @@ export default function TenantAnalyticsPage() {
 
         {/* Section 5: Customer Insights */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <div className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-cyan-500 rounded-full" />
+          <h2 className="font-display text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full" />
             Customer Insights
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="border-purple-100 shadow-md hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-purple-900">
-                  <Users className="h-5 w-5 text-purple-600" />
+                  <Users className="h-5 w-5 text-emerald-600" />
                   Customer Growth
                 </CardTitle>
                 <CardDescription>
@@ -955,7 +955,7 @@ export default function TenantAnalyticsPage() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-cyan-600" />
+                    <Users className="h-5 w-5 text-emerald-600" />
                     <h3 className="text-lg font-semibold text-slate-800">
                       Recent Customers
                     </h3>
@@ -963,7 +963,7 @@ export default function TenantAnalyticsPage() {
                   <Button variant="ghost" size="sm" asChild>
                     <Link
                       href="/tenant-admin/customers"
-                      className="text-cyan-600 hover:text-cyan-700"
+                      className="text-emerald-600 hover:text-emerald-700"
                     >
                       View All
                     </Link>
@@ -974,14 +974,14 @@ export default function TenantAnalyticsPage() {
                   {recentCustomers.map((customer) => (
                     <div
                       key={customer.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-slate-100 hover:border-cyan-200 hover:bg-cyan-50/50 transition-all group"
+                      className="flex items-center gap-3 p-3 rounded-lg border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all group"
                     >
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 group-hover:scale-110 transition-transform">
                         {getInitials(customer.name)}
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 truncate group-hover:text-cyan-700 transition-colors">
+                        <p className="font-medium text-slate-800 truncate group-hover:text-emerald-700 transition-colors">
                           {customer.name}
                         </p>
                         <p className="text-sm text-slate-500 truncate">
@@ -1002,8 +1002,8 @@ export default function TenantAnalyticsPage() {
 
         {/* Section 6: Activity & Orders */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <div className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-cyan-500 rounded-full" />
+          <h2 className="font-display text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full" />
             Recent Activity
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1012,7 +1012,7 @@ export default function TenantAnalyticsPage() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <ShoppingBag className="h-5 w-5 text-purple-600" />
+                    <ShoppingBag className="h-5 w-5 text-emerald-600" />
                     <h3 className="text-lg font-semibold text-slate-800">
                       Recent Orders
                     </h3>
@@ -1020,7 +1020,7 @@ export default function TenantAnalyticsPage() {
                   <Button variant="ghost" size="sm" asChild>
                     <Link
                       href="/tenant-admin/orders"
-                      className="text-purple-600 hover:text-purple-700"
+                      className="text-emerald-600 hover:text-emerald-700"
                     >
                       View All
                     </Link>
@@ -1034,7 +1034,7 @@ export default function TenantAnalyticsPage() {
                       className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:border-purple-200 hover:bg-purple-50/50 transition-all group"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 truncate group-hover:text-purple-700 transition-colors">
+                        <p className="font-medium text-slate-800 truncate group-hover:text-emerald-700 transition-colors">
                           {order.orderNumber}
                         </p>
                         <p className="text-sm text-slate-500 truncate">
@@ -1108,8 +1108,8 @@ export default function TenantAnalyticsPage() {
 
         {/* Section 7: Orders by Status (Recharts Pie) */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <div className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-cyan-500 rounded-full" />
+          <h2 className="font-display text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full" />
             Order Status Breakdown
           </h2>
           <Card className="border-emerald-100 shadow-md hover:shadow-lg transition-shadow">
@@ -1157,8 +1157,8 @@ export default function TenantAnalyticsPage() {
 
         {/* Section 8: Top Selling Products */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-            <div className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-cyan-500 rounded-full" />
+          <h2 className="font-display text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full" />
             Top Selling Products
           </h2>
           <Card className="border-emerald-100 shadow-md hover:shadow-lg transition-shadow">
@@ -1176,7 +1176,7 @@ export default function TenantAnalyticsPage() {
                 {analytics.topProducts.map((product: any, index: number) => (
                   <div
                     key={product.id}
-                    className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50/50 to-cyan-50/50 rounded-lg border border-emerald-100 hover:border-emerald-300 hover:shadow-md transition-all group"
+                    className="flex items-center justify-between p-4 bg-emerald-50/50 rounded-lg border border-emerald-100 hover:border-emerald-300 hover:shadow-md transition-all group"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center font-bold text-white text-xl shadow-lg group-hover:scale-110 transition-transform">
