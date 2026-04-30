@@ -95,7 +95,7 @@ export default async function TenantAdminLayout({
   if (!localUser?.tenants) {
     console.error("[tenant-admin] No tenant found for user:", email, "Clerk ID:", user.id);
     return (
-      <div className="min-h-screen canvas-bg flex items-center justify-center">
+      <div className="budstacks-theme min-h-screen canvas-bg flex items-center justify-center">
         <div className="card-floating p-10 text-center max-w-md">
           <h1 className="font-display text-2xl font-bold text-foreground mb-4">
             No Tenant Associated
@@ -112,7 +112,7 @@ export default async function TenantAdminLayout({
   const mockNotifications: Array<{ id: string; type: "SYSTEM_ALERT"; title: string; message: string; timestamp: Date; isRead: boolean }> = [];
 
   return (
-    <div className="flex min-h-screen canvas-bg">
+    <div className="budstacks-theme flex min-h-screen canvas-bg">
       <TenantAdminSidebar
         userName={`${user.firstName || ""} ${user.lastName || ""}`.trim() || "Tenant Admin"}
         userEmail={user.emailAddresses[0]?.emailAddress || ""}
