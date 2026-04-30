@@ -107,38 +107,42 @@ export function TextMarquee(props: SectionProps) {
         borderBottom: showBorder ? `1px solid ${borderColor}` : undefined,
       }}
     >
-      {/* Inner band — height is driven by the text itself (leading-none keeps it tight),
-          and a small py-* gives consistent breathing room regardless of fontSize.
-          overflow-hidden clips the marquee horizontally; gradients fade the edges. */}
-      <div className="relative w-full overflow-hidden py-2 sm:py-3">
-        <div
-          className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
-          style={{ background: `linear-gradient(to right, ${bgColor}, transparent)` }}
-        />
-        <div
-          className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
-          style={{ background: `linear-gradient(to left, ${bgColor}, transparent)` }}
-        />
+      {/* Outer wrapper: contains inline-size so width:max-content children
+          don't expand the parent (was breaking the editor preview pane).
+          overflow:clip clips the marquee horizontally. */}
+      <div style={{ contain: 'inline-size', overflow: 'clip', maxWidth: '100%' }}>
+        {/* Inner band — height is driven by the text itself (leading-none keeps
+            it tight); py-* gives consistent breathing room regardless of fontSize. */}
+        <div className="relative w-full py-2 sm:py-3" style={{ overflow: 'clip' }}>
+          <div
+            className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
+            style={{ background: `linear-gradient(to right, ${bgColor}, transparent)` }}
+          />
+          <div
+            className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 z-10 pointer-events-none"
+            style={{ background: `linear-gradient(to left, ${bgColor}, transparent)` }}
+          />
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.8 }}
-          className={`flex items-center leading-none ${sizeClass} ${styleClass}`}
-          style={{
-            width: 'max-content',
-            color: sectionConfig?.textColor || 'hsl(var(--tenant-color-text))',
-            animation: `text-marquee-scroll ${duration}s linear infinite ${reverse ? 'reverse' : ''}`,
-            fontFamily: fontStyle === 'sans' || fontStyle === 'italic-sans' || fontStyle === 'uppercase-sans' || fontStyle === 'light-sans' || fontStyle === 'bold-sans'
-              ? 'var(--tenant-font-body, sans-serif)'
-              : fontStyle === 'mono' ? 'ui-monospace, monospace'
-              : 'var(--tenant-font-heading, serif)',
-          }}
-        >
-          {/* Double for seamless loop */}
-          <span className="inline-flex items-center">{blocks}</span>
-          <span className="inline-flex items-center">{blocks}</span>
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={inView ? { opacity: 1 } : {}}
+            transition={{ duration: 0.8 }}
+            className={`flex items-center leading-none ${sizeClass} ${styleClass}`}
+            style={{
+              width: 'max-content',
+              color: sectionConfig?.textColor || 'hsl(var(--tenant-color-text))',
+              animation: `text-marquee-scroll ${duration}s linear infinite ${reverse ? 'reverse' : ''}`,
+              fontFamily: fontStyle === 'sans' || fontStyle === 'italic-sans' || fontStyle === 'uppercase-sans' || fontStyle === 'light-sans' || fontStyle === 'bold-sans'
+                ? 'var(--tenant-font-body, sans-serif)'
+                : fontStyle === 'mono' ? 'ui-monospace, monospace'
+                : 'var(--tenant-font-heading, serif)',
+            }}
+          >
+            {/* Double for seamless loop */}
+            <span className="inline-flex items-center">{blocks}</span>
+            <span className="inline-flex items-center">{blocks}</span>
+          </motion.div>
+        </div>
       </div>
 
       <style jsx>{`
