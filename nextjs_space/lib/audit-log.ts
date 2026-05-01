@@ -3,9 +3,19 @@
  *
  * Tracks all significant user and system actions for compliance and debugging.
  * Used for GDPR/HIPAA compliance, security auditing, and troubleshooting.
+ *
+ * IMMUTABILITY POLICY: audit_logs rows MUST never be UPDATEd or DELETEd by
+ * application code. The schema does not enforce this at the DB level (no
+ * trigger), but any code path that mutates an audit row is a compliance bug.
+ * Retention is handled out-of-band by an administrator-run cleanup job, NOT
+ * by interactive request handlers.
+ *
+ * PII REDACTION: createAuditLog automatically redacts sensitive fields in
+ * the metadata JSON via lib/redact.ts. Callers do not need to pre-sanitize.
  */
 
 import { prisma } from "@/lib/db";
+import { sanitizeForLogging } from "@/lib/redact";
 import crypto from "crypto";
 
 export interface AuditLogParams {
@@ -21,7 +31,10 @@ export interface AuditLogParams {
 }
 
 /**
- * Create an audit log entry
+ * Create an audit log entry.
+ *
+ * Sensitive fields in `metadata` are redacted automatically — pass raw values,
+ * the lib will strip emails/names/phones/addresses/credentials before write.
  *
  * @example
  * ```ts
@@ -40,6 +53,10 @@ export interface AuditLogParams {
  */
 export async function createAuditLog(params: AuditLogParams): Promise<void> {
   try {
+    const safeMetadata = params.metadata
+      ? sanitizeForLogging(params.metadata)
+      : {};
+
     await prisma.audit_logs.create({
       data: {
         id: crypto.randomUUID(),
@@ -49,7 +66,7 @@ export async function createAuditLog(params: AuditLogParams): Promise<void> {
         userId: params.userId,
         userEmail: params.userEmail,
         tenantId: params.tenantId,
-        metadata: params.metadata || {},
+        metadata: safeMetadata as any,
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
       },
@@ -112,6 +129,14 @@ export const AUDIT_ACTIONS = {
 
   // Settings
   SETTINGS_UPDATED: "settings.updated",
+
+  // GDPR / Customer privacy
+  CUSTOMER_UPDATED: "customer.updated",
+  CUSTOMER_EMAIL_CHANGED: "customer.email_changed",
+  CUSTOMER_KYC_VERIFIED: "customer.kyc_verified",
+  CUSTOMER_DELETED_GDPR: "customer.deleted_gdpr",
+  ACCOUNT_DATA_EXPORTED: "account.data_exported",
+  ACCOUNT_DELETED_GDPR_SELF: "account.deleted_gdpr_self",
 } as const;
 
 /**

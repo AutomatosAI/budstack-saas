@@ -26,19 +26,6 @@ export interface DrGreenWebhookPayload {
   data?: Record<string, any>;
 }
 
-const SENSITIVE_FIELDS = new Set([
-  "email",
-  "phone",
-  "phoneNumber",
-  "name",
-  "firstName",
-  "lastName",
-  "kycLink",
-  "address",
-  "dateOfBirth",
-  "password",
-]);
-
 const MAX_TIMESTAMP_DRIFT_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
@@ -165,24 +152,6 @@ export function isValidStateTransition(
 
 /**
  * Redact sensitive fields from payload for safe logging.
+ * Re-exported from lib/redact.ts so existing webhook callers keep working.
  */
-export function sanitizeForLogging(
-  data: Record<string, any>,
-): Record<string, any> {
-  const sanitized: Record<string, any> = {};
-
-  for (const [key, value] of Object.entries(data)) {
-    if (SENSITIVE_FIELDS.has(key)) {
-      sanitized[key] =
-        typeof value === "string" && value.length > 0
-          ? `${value.substring(0, 2)}***`
-          : "[REDACTED]";
-    } else if (value && typeof value === "object" && !Array.isArray(value)) {
-      sanitized[key] = sanitizeForLogging(value);
-    } else {
-      sanitized[key] = value;
-    }
-  }
-
-  return sanitized;
-}
+export { sanitizeForLogging } from "@/lib/redact";

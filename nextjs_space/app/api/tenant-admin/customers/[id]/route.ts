@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import crypto from "crypto";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { fetchClientByEmail, updateClient } from "@/lib/doctor-green-api";
+import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 
 /**
  * GET /api/tenant-admin/customers/[id]
@@ -350,31 +350,29 @@ export async function PATCH(
       console.log(`Admin verified KYC for ${kycEmail}`);
     }
 
-    // Create audit log
-    await prisma.audit_logs.create({
-      data: {
-        id: crypto.randomUUID(),
-        action: isEmailChange
-          ? "CUSTOMER_EMAIL_CHANGED"
-          : verifyKyc
-            ? "CUSTOMER_KYC_VERIFIED"
-            : "CUSTOMER_UPDATED",
-        entityType: "User",
-        entityId: params.id,
-        userId: user.id,
-        userEmail: email!,
-        tenantId: existingCustomer.tenantId || undefined,
-        metadata: {
-          targetUserEmail: existingCustomer.email,
-          ...(isEmailChange && {
-            oldEmail: existingCustomer.email,
-            newEmail: normalizedNewEmail,
-            clerkSync: clerkSyncResult,
-            drGreenSync: drGreenSyncResult,
-          }),
-          changes: body,
-        },
+    // Create audit log — createAuditLog redacts PII in metadata automatically
+    await createAuditLog({
+      action: isEmailChange
+        ? AUDIT_ACTIONS.CUSTOMER_EMAIL_CHANGED
+        : verifyKyc
+          ? AUDIT_ACTIONS.CUSTOMER_KYC_VERIFIED
+          : AUDIT_ACTIONS.CUSTOMER_UPDATED,
+      entityType: "User",
+      entityId: params.id,
+      userId: user.id,
+      userEmail: email!,
+      tenantId: existingCustomer.tenantId || undefined,
+      metadata: {
+        targetUserEmail: existingCustomer.email,
+        ...(isEmailChange && {
+          oldEmail: existingCustomer.email,
+          newEmail: normalizedNewEmail,
+          clerkSync: clerkSyncResult,
+          drGreenSync: drGreenSyncResult,
+        }),
+        changes: body,
       },
+      ...getClientInfo(request.headers),
     });
 
     // Build status message for email changes
@@ -485,22 +483,21 @@ export async function DELETE(
       },
     });
 
-    // Create audit log
-    await prisma.audit_logs.create({
-      data: {
-        id: crypto.randomUUID(),
-        action: "CUSTOMER_DELETED_GDPR",
-        entityType: "User",
-        entityId: params.id,
-        userId: user.id,
-        userEmail: email!,
-        tenantId: existingCustomer.tenantId || undefined,
-        metadata: {
-          targetUserEmail: existingCustomer.email,
-          targetUserName: existingCustomer.name,
-          deletionType: "anonymization",
-        },
+    // Create audit log — createAuditLog redacts PII in metadata automatically
+    await createAuditLog({
+      action: AUDIT_ACTIONS.CUSTOMER_DELETED_GDPR,
+      entityType: "User",
+      entityId: params.id,
+      userId: user.id,
+      userEmail: email!,
+      tenantId: existingCustomer.tenantId || undefined,
+      metadata: {
+        targetUserEmail: existingCustomer.email,
+        targetUserName: existingCustomer.name,
+        deletionType: "anonymization",
+        initiatedBy: role === "SUPER_ADMIN" ? "super_admin" : "tenant_admin",
       },
+      ...getClientInfo(request.headers),
     });
 
     return NextResponse.json({
