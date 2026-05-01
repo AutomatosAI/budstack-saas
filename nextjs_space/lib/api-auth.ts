@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
+import { apiError } from "@/lib/api-error";
 
 /**
  * Authenticated user shape returned by getCurrentUser()
@@ -63,11 +64,7 @@ export function withTenantAuth(handler: RouteHandler<TenantAuthContext>) {
 
       return await handler(req, { user, tenantId });
     } catch (error) {
-      console.error(`[${req.method} ${req.nextUrl.pathname}] Error:`, error);
-      return NextResponse.json(
-        { error: "Internal server error" },
-        { status: 500 },
-      );
+      return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
     }
   };
 }
@@ -103,11 +100,7 @@ export function withTenantAuthParams(
 
       return await handler(req, { user, tenantId }, params);
     } catch (error) {
-      console.error(`[${req.method} ${req.nextUrl.pathname}] Error:`, error);
-      return NextResponse.json(
-        { error: "Internal server error" },
-        { status: 500 },
-      );
+      return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
     }
   };
 }
@@ -133,11 +126,32 @@ export function withSuperAdmin(handler: RouteHandler<SuperAdminAuthContext>) {
 
       return await handler(req, { user });
     } catch (error) {
-      console.error(`[${req.method} ${req.nextUrl.pathname}] Error:`, error);
-      return NextResponse.json(
-        { error: "Internal server error" },
-        { status: 500 },
-      );
+      return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
+    }
+  };
+}
+
+/**
+ * Wraps a route handler with super admin auth + route params.
+ * For routes like /api/super-admin/tenants/[id]/route.ts
+ */
+export function withSuperAdminParams(
+  handler: RouteHandlerWithParams<SuperAdminAuthContext>,
+) {
+  return async (
+    req: NextRequest,
+    { params }: { params: Record<string, string> },
+  ) => {
+    try {
+      const user = await getCurrentUser();
+
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      return await handler(req, { user }, params);
+    } catch (error) {
+      return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
     }
   };
 }
@@ -156,11 +170,7 @@ export function withAuth(handler: RouteHandler<AuthContext>) {
 
       return await handler(req, { user });
     } catch (error) {
-      console.error(`[${req.method} ${req.nextUrl.pathname}] Error:`, error);
-      return NextResponse.json(
-        { error: "Internal server error" },
-        { status: 500 },
-      );
+      return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
     }
   };
 }
