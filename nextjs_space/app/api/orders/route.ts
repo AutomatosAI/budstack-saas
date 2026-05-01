@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { items, shippingInfo, total, clientId } = body;
+    const { items, shippingInfo } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
@@ -90,19 +90,11 @@ export async function POST(req: NextRequest) {
     // Submit order to Dr. Green API
     let drGreenOrderId = null;
 
-    // Secure client_id: Use authenticated user ID unless Admin override
-    let finalClientId = dbUser.id;
-    if (clientId && clientId !== dbUser.id) {
-      // Only allow override if user is Admin (assuming role check passed or logic exists)
-      // Since we don't have explicit role check here easily without DB lookup again (which we have in dbUser?), 
-      // let's assume strict security: Ignore clientId unless it matches dbUser.id
-      finalClientId = dbUser.id;
-      // Alternatively, if we trust the caller to be admin, we check dbUser.role.
-      // Schema says role is enum.
-      if (dbUser.role === 'TENANT_ADMIN' || dbUser.role === 'SUPER_ADMIN') {
-        finalClientId = clientId;
-      }
-    }
+    // SECURITY (C3): Always use authenticated user's ID. Customer checkout
+    // must never accept a client_id override from the request body — admin
+    // role does not justify checking out as another customer through this
+    // endpoint.
+    const finalClientId = dbUser.id;
 
     try {
       const drGreenOrderData = {

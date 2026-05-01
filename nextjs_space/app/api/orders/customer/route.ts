@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { getTenantFromRequest } from "@/lib/tenant";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,17 +13,23 @@ export async function GET(req: NextRequest) {
 
     const email = user.emailAddresses[0]?.emailAddress;
 
-    // Fetch all orders for this customer by email linkage (or ensure userId logic is correct)
-    const dbUser = await prisma.users.findFirst({ where: { email } });
+    const tenant = await getTenantFromRequest(req);
+    if (!tenant) {
+      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    }
+
+    const dbUser = await prisma.users.findFirst({
+      where: { email, tenantId: tenant.id },
+    });
 
     if (!dbUser) {
       return NextResponse.json({ orders: [] });
     }
 
-    // Fetch all orders for this customer
     const orders = await prisma.orders.findMany({
       where: {
         userId: dbUser.id,
+        tenantId: tenant.id,
       },
       include: {
         items: true,
