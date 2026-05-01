@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { submitToMarketplace } from "@/lib/marketplace-submission-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(
   request: NextRequest,
@@ -75,9 +76,10 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("[Submit to Marketplace] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to submit template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "tenant-admin.templates.submit-to-marketplace",
+      status: 500,
+      safeMessage: "Failed to submit template",
+    });
   }
 }

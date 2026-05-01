@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { rejectSubmission } from "@/lib/marketplace-review-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(
   request: NextRequest,
@@ -38,9 +39,10 @@ export async function POST(
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("[Reject Submission] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to reject submission" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "super-admin.submissions.reject",
+      status: 500,
+      safeMessage: "Failed to reject submission",
+    });
   }
 }

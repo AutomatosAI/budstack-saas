@@ -5,6 +5,7 @@ import { uploadFile, getFileUrl, deleteS3Directory } from "@/lib/s3";
 import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
 
 export async function PUT(
   req: NextRequest,
@@ -66,10 +67,11 @@ export async function PUT(
     });
   } catch (error: any) {
     console.error("[Template Update] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "super-admin.templates.update",
+      status: 500,
+      safeMessage: "Failed to update template",
+    });
   }
 }
 
@@ -121,10 +123,11 @@ export async function PATCH(
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   } catch (error: any) {
     console.error("[Template PATCH] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "super-admin.templates.patch",
+      status: 500,
+      safeMessage: "Failed to update template",
+    });
   }
 }
 
@@ -334,9 +337,10 @@ export async function DELETE(
     });
   } catch (error: any) {
     console.error("[Template Delete] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to delete template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "super-admin.templates.delete",
+      status: 500,
+      safeMessage: "Failed to delete template",
+    });
   }
 }

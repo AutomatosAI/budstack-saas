@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { deleteS3Directory } from "@/lib/s3";
+import { apiError } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -35,9 +36,10 @@ export async function DELETE(req: NextRequest) {
     });
   } catch (error: any) {
     console.error("[S3 Cleanup] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Cleanup failed" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "super-admin.templates.cleanup-s3",
+      status: 500,
+      safeMessage: "Cleanup failed",
+    });
   }
 }

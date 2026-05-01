@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { uploadFile, getFileUrl } from "@/lib/s3";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(
   request: NextRequest,
@@ -83,9 +84,10 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("[Tenant Preview Upload] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to upload preview image" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "tenant-admin.templates.preview-image.upload",
+      status: 500,
+      safeMessage: "Failed to upload preview image",
+    });
   }
 }
