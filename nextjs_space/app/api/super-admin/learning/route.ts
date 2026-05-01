@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { uploadFile } from "@/lib/s3";
-import { validateUpload } from "@/lib/upload-validation";
+import { validateUploadBuffer } from "@/lib/upload-validation";
 
 function generateSlug(title: string): string {
   return title
@@ -82,39 +82,59 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Handle cover image upload
+  const safeFileName = (raw: string) =>
+    raw
+      .replace(/\.\.\//g, "")
+      .replace(/\.\.\\/g, "")
+      .replace(/[/\\]/g, "_")
+      .slice(0, 200);
+
+  // Handle cover image upload — SECURITY (C10): magic-byte verification
   let coverImageKey: string | null = null;
   const coverImage = formData.get("coverImage") as File | null;
   if (coverImage && coverImage.size > 0) {
-    const validation = validateUpload(coverImage);
+    const buffer = Buffer.from(await coverImage.arrayBuffer());
+    const cleanName = safeFileName(coverImage.name);
+    const validation = await validateUploadBuffer(
+      buffer,
+      coverImage.type,
+      cleanName,
+    );
     if (!validation.valid) {
       return NextResponse.json(
         { error: `Cover image: ${validation.error}` },
         { status: 400 },
       );
     }
-    const buffer = Buffer.from(await coverImage.arrayBuffer());
     coverImageKey = await uploadFile(
       buffer,
-      `learn-cover-${Date.now()}-${coverImage.name}`,
+      `learn-cover-${Date.now()}-${cleanName}`,
+      coverImage.type || undefined,
     );
   }
 
-  // Handle document upload
+  // Handle document upload — SECURITY (C10): magic-byte verification
   let docKey: string | null = docUrl || null;
   const docFile = formData.get("docFile") as File | null;
   if (docFile && docFile.size > 0) {
-    const validation = validateUpload(docFile, { allowDocuments: true });
+    const buffer = Buffer.from(await docFile.arrayBuffer());
+    const cleanName = safeFileName(docFile.name);
+    const validation = await validateUploadBuffer(
+      buffer,
+      docFile.type,
+      cleanName,
+      { allowDocuments: true },
+    );
     if (!validation.valid) {
       return NextResponse.json(
         { error: `Document: ${validation.error}` },
         { status: 400 },
       );
     }
-    const buffer = Buffer.from(await docFile.arrayBuffer());
     docKey = await uploadFile(
       buffer,
-      `learn-doc-${Date.now()}-${docFile.name}`,
+      `learn-doc-${Date.now()}-${cleanName}`,
+      docFile.type || undefined,
     );
   }
 
@@ -196,39 +216,59 @@ export async function PUT(req: NextRequest) {
   const isPublished = formData.get("isPublished");
   const sortOrder = formData.get("sortOrder");
 
-  // Handle cover image upload
+  const safeFileName = (raw: string) =>
+    raw
+      .replace(/\.\.\//g, "")
+      .replace(/\.\.\\/g, "")
+      .replace(/[/\\]/g, "_")
+      .slice(0, 200);
+
+  // Handle cover image upload — SECURITY (C10): magic-byte verification
   let coverImageKey: string | undefined;
   const coverImage = formData.get("coverImage") as File | null;
   if (coverImage && coverImage.size > 0) {
-    const validation = validateUpload(coverImage);
+    const buffer = Buffer.from(await coverImage.arrayBuffer());
+    const cleanName = safeFileName(coverImage.name);
+    const validation = await validateUploadBuffer(
+      buffer,
+      coverImage.type,
+      cleanName,
+    );
     if (!validation.valid) {
       return NextResponse.json(
         { error: `Cover image: ${validation.error}` },
         { status: 400 },
       );
     }
-    const buffer = Buffer.from(await coverImage.arrayBuffer());
     coverImageKey = await uploadFile(
       buffer,
-      `learn-cover-${Date.now()}-${coverImage.name}`,
+      `learn-cover-${Date.now()}-${cleanName}`,
+      coverImage.type || undefined,
     );
   }
 
-  // Handle doc file upload
+  // Handle doc file upload — SECURITY (C10): magic-byte verification
   let docKey: string | undefined;
   const docFile = formData.get("docFile") as File | null;
   if (docFile && docFile.size > 0) {
-    const validation = validateUpload(docFile, { allowDocuments: true });
+    const buffer = Buffer.from(await docFile.arrayBuffer());
+    const cleanName = safeFileName(docFile.name);
+    const validation = await validateUploadBuffer(
+      buffer,
+      docFile.type,
+      cleanName,
+      { allowDocuments: true },
+    );
     if (!validation.valid) {
       return NextResponse.json(
         { error: `Document: ${validation.error}` },
         { status: 400 },
       );
     }
-    const buffer = Buffer.from(await docFile.arrayBuffer());
     docKey = await uploadFile(
       buffer,
-      `learn-doc-${Date.now()}-${docFile.name}`,
+      `learn-doc-${Date.now()}-${cleanName}`,
+      docFile.type || undefined,
     );
   }
 

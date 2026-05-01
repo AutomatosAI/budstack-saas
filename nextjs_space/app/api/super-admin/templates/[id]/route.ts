@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { uploadFile, getFileUrl, deleteS3Directory } from "@/lib/s3";
+import { validateUploadBuffer } from "@/lib/upload-validation";
 import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
@@ -26,21 +27,42 @@ export async function PUT(
     const formData = await req.formData();
     const updateData: Record<string, any> = {};
 
-    // Handle preview image upload
+    // Handle preview image upload — SECURITY (C10): magic-byte verification
     const previewImage = formData.get("previewImage") as File;
     if (previewImage && previewImage.size > 0) {
       const buffer = Buffer.from(await previewImage.arrayBuffer());
-      const fileName = `template-preview-${template.slug}-${Date.now()}-${previewImage.name}`;
-      const s3Key = await uploadFile(buffer, fileName);
+      const sanitizedName = previewImage.name
+        .replace(/\.\.\//g, "")
+        .replace(/\.\.\\/g, "")
+        .replace(/[/\\]/g, "_")
+        .slice(0, 200);
+      const validation = await validateUploadBuffer(
+        buffer,
+        previewImage.type,
+        sanitizedName,
+        { maxSize: 5 * 1024 * 1024 },
+      );
+      if (!validation.valid) {
+        return NextResponse.json(
+          { error: `Preview image: ${validation.error}` },
+          { status: 400 },
+        );
+      }
+      const fileName = `template-preview-${template.slug}-${Date.now()}-${sanitizedName}`;
+      const s3Key = await uploadFile(
+        buffer,
+        fileName,
+        previewImage.type || undefined,
+      );
       updateData.previewUrl = s3Key;
       updateData.thumbnailUrl = s3Key;
     }
 
-    // Handle optional text fields
+    // Handle optional text fields — length-cap before persisting
     const name = formData.get("name") as string;
     const description = formData.get("description") as string;
-    if (name) updateData.name = name;
-    if (description) updateData.description = description;
+    if (name) updateData.name = name.slice(0, 200);
+    if (description) updateData.description = description.slice(0, 5000);
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
