@@ -1,8 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
-import { verifyDrGreenWebhookSignature } from "@/lib/drgreen-webhook-verify";
+import {
+  verifyDrGreenWebhookSignature,
+  validateWebhookTimestamp,
+  sanitizeForLogging,
+} from "@/lib/drgreen-webhook-verify";
 import { decrypt } from "@/lib/encryption";
+
+// SECURITY (C14, M9): Cap payload size to prevent DoS from oversized POSTs.
+const MAX_WEBHOOK_BODY_BYTES = 100_000;
+
+/**
+ * Normalize a timestamp value (string ISO, numeric unix-seconds, or
+ * numeric unix-ms) into an ISO string for the shared validator.
+ */
+function normalizeTimestamp(raw: unknown): string | null {
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const ms = raw > 10_000_000_000 ? raw : raw * 1000;
+    return new Date(ms).toISOString();
+  }
+  if (typeof raw === "string" && raw.length > 0) {
+    if (/^\d+$/.test(raw)) {
+      const num = parseInt(raw, 10);
+      const ms = num > 10_000_000_000 ? num : num * 1000;
+      return new Date(ms).toISOString();
+    }
+    return raw;
+  }
+  return null;
+}
 
 /**
  * Fiat Payment Webhook Handler (Pay-Inn)
@@ -14,10 +41,44 @@ export async function POST(request: NextRequest) {
 
   try {
     rawBody = await request.text();
+
+    // SECURITY (C14, M9): Reject oversized payloads before parse.
+    if (rawBody.length > MAX_WEBHOOK_BODY_BYTES) {
+      console.error("[Fiat Webhook] Payload too large:", rawBody.length);
+      return NextResponse.json(
+        { error: "Payload too large" },
+        { status: 413 },
+      );
+    }
+
     const body = JSON.parse(rawBody);
 
+    // SECURITY (H_a7): Sanitize payload before logging.
     if (process.env.NODE_ENV === 'development') {
-      console.log("[Fiat Webhook] Received:", JSON.stringify(body, null, 2));
+      console.log("[Fiat Webhook] Received:", sanitizeForLogging(body));
+    }
+
+    // SECURITY (C14): Replay protection — reject stale or future-dated
+    // webhooks. Pay-Inn sends `timestamp` (ISO) or `created_at` on payloads.
+    const tsRaw = body?.timestamp ?? body?.created_at;
+    const tsNormalized = normalizeTimestamp(tsRaw);
+    if (tsNormalized) {
+      const tsCheck = validateWebhookTimestamp(tsNormalized);
+      if (!tsCheck.valid) {
+        console.error(
+          `[Fiat Webhook] Replay protection rejected: ${tsCheck.reason}`,
+        );
+        return NextResponse.json(
+          { error: `Webhook replay rejected: ${tsCheck.reason}` },
+          { status: 400 },
+        );
+      }
+    } else if (process.env.NODE_ENV === "production") {
+      console.error("[Fiat Webhook] Missing timestamp in production payload");
+      return NextResponse.json(
+        { error: "Missing timestamp" },
+        { status: 400 },
+      );
     }
 
     // Extract key fields from webhook payload
@@ -49,13 +110,13 @@ export async function POST(request: NextRequest) {
     if (!order) {
       console.error("[Fiat Webhook] Order not found for nonce:", custom);
 
-      // Log webhook anyway for audit
+      // Log webhook anyway for audit (sanitized).
       await prisma.drgreen_webhook_logs.create({
         data: {
           id: crypto.randomUUID(),
           tenantId: "unknown",
           webhookType: "fiat",
-          payload: body,
+          payload: sanitizeForLogging(body),
           processed: false,
           error: "Order not found",
         },
@@ -92,6 +153,27 @@ export async function POST(request: NextRequest) {
       paymentStatus = "PENDING";
     }
 
+    // SECURITY (H_a8): Idempotency — short-circuit if this exact
+    // (payment_id, status) combo has already been recorded. The fiat path
+    // also clears `nonce` after first processing, but a defence-in-depth
+    // explicit check protects against missed-update races.
+    if (
+      payment_id &&
+      order.drGreenInvoiceNum === payment_id &&
+      order.paymentStatus === paymentStatus
+    ) {
+      console.log(
+        "[Fiat Webhook] Duplicate webhook ignored (already at status):",
+        order.id,
+        paymentStatus,
+      );
+      return NextResponse.json({
+        message: "Already processed",
+        orderId: order.id,
+        paymentStatus,
+      });
+    }
+
     // Update order payment status
     const updatedOrder = await prisma.orders.update({
       where: { id: order.id },
@@ -104,7 +186,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Log webhook
+    // Log webhook (sanitized — never persist raw PII).
     await prisma.drgreen_webhook_logs.create({
       data: {
         id: crypto.randomUUID(),
@@ -112,7 +194,7 @@ export async function POST(request: NextRequest) {
         webhookType: "fiat",
         orderId: order.id,
         drGreenOrderId: order.drGreenOrderId || undefined,
-        payload: body,
+        payload: sanitizeForLogging(body),
         processed: true,
         processedAt: new Date(),
       },
@@ -161,7 +243,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const errorPayload = (() => {
-        try { return JSON.parse(rawBody); }
+        try { return sanitizeForLogging(JSON.parse(rawBody)); }
         catch { return { raw: rawBody?.substring(0, 500) || "empty" }; }
       })();
       await prisma.drgreen_webhook_logs.create({

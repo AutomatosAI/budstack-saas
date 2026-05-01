@@ -12,6 +12,9 @@ import {
   type DrGreenWebhookPayload,
 } from "@/lib/drgreen-webhook-verify";
 
+// SECURITY (C14, M9): Cap payload size to prevent DoS from oversized POSTs.
+const MAX_WEBHOOK_BODY_BYTES = 100_000;
+
 /**
  * Dr Green Status Webhook Handler
  *
@@ -20,6 +23,13 @@ import {
  */
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
+
+  // SECURITY (C14, M9): Reject oversized payloads before parse.
+  if (rawBody.length > MAX_WEBHOOK_BODY_BYTES) {
+    console.error("[DrGreen Status] Payload too large:", rawBody.length);
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
+
   let payload: DrGreenWebhookPayload;
 
   try {
@@ -811,7 +821,9 @@ async function logWebhook(
         webhookType: "status",
         drGreenOrderId: payload.orderId || undefined,
         drGreenClientId: payload.clientId || undefined,
-        payload: payload as any,
+        // SECURITY (H_a7): redact PII fields (email/phone/name) before
+        // persisting webhook payload to drgreen_webhook_logs.
+        payload: sanitizeForLogging(payload as Record<string, any>) as any,
         processed,
         processedAt: processed ? new Date() : undefined,
         error,
