@@ -62,7 +62,25 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const settings: TenantSettings = JSON.parse(settingsJSON);
+    // SECURITY (C4): Strip server-managed keys from incoming settings to
+    // close mass-assignment. A tenant admin must NEVER be able to overwrite
+    // clerkOrgId via this endpoint — that field controls the Clerk org used
+    // by /api/super-admin/tenants/[id] DELETE and other privileged paths.
+    const SERVER_MANAGED_SETTINGS_KEYS = ["clerkOrgId"] as const;
+    const incomingSettings = JSON.parse(settingsJSON) as Record<string, unknown>;
+    for (const key of SERVER_MANAGED_SETTINGS_KEYS) {
+      delete incomingSettings[key];
+    }
+    const currentSettings = (tenant.settings as Record<string, unknown>) || {};
+    const preservedServerKeys = Object.fromEntries(
+      SERVER_MANAGED_SETTINGS_KEYS.filter(
+        (k) => currentSettings[k] !== undefined,
+      ).map((k) => [k, currentSettings[k]]),
+    );
+    const settings: TenantSettings = {
+      ...incomingSettings,
+      ...preservedServerKeys,
+    } as TenantSettings;
 
     // Handle file uploads with server-side validation
     const logo = formData.get("logo") as File;

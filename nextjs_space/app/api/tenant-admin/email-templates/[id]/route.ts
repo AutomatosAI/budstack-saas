@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import {
+  sanitizeEmailHtml,
+  sanitizeEmailSubject,
+  EMAIL_HTML_MAX_LENGTH,
+  EMAIL_SUBJECT_MAX_LENGTH,
+} from "@/lib/email-sanitize";
+
+const TEMPLATE_NAME_MAX = 200;
+const TEMPLATE_DESCRIPTION_MAX = 1000;
 
 export async function GET(
   req: NextRequest,
@@ -83,6 +92,21 @@ export async function PUT(
     const body = await req.json();
     const { name, subject, contentHtml, description, isActive } = body;
 
+    // SECURITY (C7): Length caps + HTML allowlist + subject tag-strip.
+    // See lib/email-sanitize.ts for the full email-safe policy.
+    if (typeof contentHtml === "string" && contentHtml.length > EMAIL_HTML_MAX_LENGTH) {
+      return NextResponse.json(
+        { error: `Template HTML exceeds maximum size of ${EMAIL_HTML_MAX_LENGTH} characters` },
+        { status: 400 },
+      );
+    }
+    if (typeof subject === "string" && subject.length > EMAIL_SUBJECT_MAX_LENGTH) {
+      return NextResponse.json(
+        { error: `Subject exceeds maximum length of ${EMAIL_SUBJECT_MAX_LENGTH} characters` },
+        { status: 400 },
+      );
+    }
+
     // Verify ownership before update
     const count = await prisma.email_templates.count({
       where: { id: params.id, tenantId: user.tenants.id },
@@ -98,11 +122,15 @@ export async function PUT(
     const updated = await prisma.email_templates.update({
       where: { id: params.id },
       data: {
-        name,
-        subject,
-        contentHtml,
-        description,
-        isActive,
+        ...(typeof name === "string" && { name: name.slice(0, TEMPLATE_NAME_MAX) }),
+        ...(typeof subject === "string" && { subject: sanitizeEmailSubject(subject) }),
+        ...(typeof contentHtml === "string" && {
+          contentHtml: sanitizeEmailHtml(contentHtml),
+        }),
+        ...(typeof description === "string" && {
+          description: description.slice(0, TEMPLATE_DESCRIPTION_MAX),
+        }),
+        ...(typeof isActive === "boolean" && { isActive }),
         updatedAt: new Date(),
       },
     });

@@ -12,6 +12,23 @@ function generateSlug(title: string): string {
     .substring(0, 80);
 }
 
+// SECURITY (M11): Length caps on every text field. Without these a
+// super-admin (or anyone who compromises a super-admin session) could push
+// a 10MB string into the DB and fan out latency / storage cost.
+const LEARN_TITLE_MAX = 200;
+const LEARN_DESCRIPTION_MAX = 1000;
+const LEARN_CONTENT_MAX = 100_000;
+const LEARN_CATEGORY_MAX = 50;
+const LEARN_TYPE_MAX = 30;
+const LEARN_URL_MAX = 2048;
+const LEARN_TAGS_MAX = 1000;
+
+/** Truncate a FormData string to `max` chars; preserves null/undefined. */
+function clip(value: string | null | undefined, max: number): string | null {
+  if (value == null) return null;
+  return value.slice(0, max);
+}
+
 /** GET — list all learning resources (for super-admin) */
 export async function GET() {
   const user = await getCurrentUser();
@@ -34,14 +51,27 @@ export async function POST(req: NextRequest) {
   }
 
   const formData = await req.formData();
-  const title = formData.get("title") as string;
-  const description = formData.get("description") as string | null;
-  const content = formData.get("content") as string | null;
-  const category = formData.get("category") as string;
-  const type = (formData.get("type") as string) || "article";
-  const videoUrl = formData.get("videoUrl") as string | null;
-  const docUrl = formData.get("docUrl") as string | null;
-  const tags = formData.get("tags") as string | null;
+  const title = clip(formData.get("title") as string | null, LEARN_TITLE_MAX);
+  const description = clip(
+    formData.get("description") as string | null,
+    LEARN_DESCRIPTION_MAX,
+  );
+  const content = clip(
+    formData.get("content") as string | null,
+    LEARN_CONTENT_MAX,
+  );
+  const category = clip(
+    formData.get("category") as string | null,
+    LEARN_CATEGORY_MAX,
+  );
+  const type =
+    clip(formData.get("type") as string | null, LEARN_TYPE_MAX) || "article";
+  const videoUrl = clip(
+    formData.get("videoUrl") as string | null,
+    LEARN_URL_MAX,
+  );
+  const docUrl = clip(formData.get("docUrl") as string | null, LEARN_URL_MAX);
+  const tags = clip(formData.get("tags") as string | null, LEARN_TAGS_MAX);
   const isPublished = formData.get("isPublished") === "true";
   const sortOrder = parseInt(formData.get("sortOrder") as string) || 0;
 
@@ -143,14 +173,26 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const title = formData.get("title") as string | null;
-  const description = formData.get("description") as string | null;
-  const content = formData.get("content") as string | null;
-  const category = formData.get("category") as string | null;
-  const type = formData.get("type") as string | null;
-  const videoUrl = formData.get("videoUrl") as string | null;
-  const docUrl = formData.get("docUrl") as string | null;
-  const tags = formData.get("tags") as string | null;
+  const title = clip(formData.get("title") as string | null, LEARN_TITLE_MAX);
+  const description = clip(
+    formData.get("description") as string | null,
+    LEARN_DESCRIPTION_MAX,
+  );
+  const content = clip(
+    formData.get("content") as string | null,
+    LEARN_CONTENT_MAX,
+  );
+  const category = clip(
+    formData.get("category") as string | null,
+    LEARN_CATEGORY_MAX,
+  );
+  const type = clip(formData.get("type") as string | null, LEARN_TYPE_MAX);
+  const videoUrl = clip(
+    formData.get("videoUrl") as string | null,
+    LEARN_URL_MAX,
+  );
+  const docUrl = clip(formData.get("docUrl") as string | null, LEARN_URL_MAX);
+  const tags = clip(formData.get("tags") as string | null, LEARN_TAGS_MAX);
   const isPublished = formData.get("isPublished");
   const sortOrder = formData.get("sortOrder");
 
