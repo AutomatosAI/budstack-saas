@@ -30,7 +30,7 @@ export function LearnSearch() {
         placeholder="Search docs and guides..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="pl-11 h-12 rounded-xl bg-white border-slate-200 shadow-sm"
+        className="pl-11 h-12 rounded-xl bg-bs-input border-bs-border text-bs-fg placeholder:text-bs-fg-muted shadow-sm focus:border-bs-green/30 focus:ring-2 focus:ring-bs-green/10"
       />
     </form>
   );

@@ -15,7 +15,7 @@ export function MarkdownContent({ content }: { content: string }) {
 
   return (
     <div
-      className="prose prose-slate max-w-none prose-headings:font-display prose-h2:text-2xl prose-h3:text-xl prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-slate-900 prose-pre:text-slate-100"
+      className="prose prose-invert max-w-none prose-headings:font-display prose-headings:text-bs-fg prose-h2:text-2xl prose-h3:text-xl prose-p:text-bs-fg-body prose-li:text-bs-fg-body prose-strong:text-bs-fg prose-a:text-bs-green-soft prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-code:bg-bs-card-2 prose-code:border prose-code:border-bs-border prose-code:text-bs-fg prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-bs-input prose-pre:border prose-pre:border-bs-border prose-pre:text-bs-fg"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

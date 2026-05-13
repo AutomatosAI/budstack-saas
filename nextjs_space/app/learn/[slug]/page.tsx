@@ -109,7 +109,7 @@ export default async function LearnArticlePage({
               {resource.tags.map((tag: string) => (
                 <span
                   key={tag}
-                  className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"
+                  className="text-xs px-2 py-0.5 rounded-full bg-bs-card-2 text-bs-fg-muted border border-bs-border"
                 >
                   {tag}
                 </span>
@@ -137,7 +137,7 @@ export default async function LearnArticlePage({
             href={resource.videoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 p-4 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors mb-8"
+            className="flex items-center gap-3 p-4 rounded-xl bg-bs-card-2 hover:bg-bs-hover border border-bs-border transition-colors mb-8"
           >
             <Play className="h-5 w-5 text-accent" />
             <span className="font-medium">Watch Video</span>

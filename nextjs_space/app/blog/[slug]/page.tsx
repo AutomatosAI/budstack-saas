@@ -262,7 +262,7 @@ export default async function BlogPostPage({ params }: PageProps) {
 
                         {/* Article content */}
                         <div
-                            className="prose prose-lg max-w-none prose-headings:font-display prose-headings:font-bold prose-headings:text-foreground prose-p:text-muted-foreground prose-a:text-accent hover:prose-a:text-accent/80 prose-strong:text-foreground prose-ul:text-muted-foreground prose-li:marker:text-accent"
+                            className="prose prose-invert prose-lg max-w-none prose-headings:font-display prose-headings:font-bold prose-headings:text-bs-fg prose-p:text-bs-fg-body prose-a:text-bs-green-soft hover:prose-a:text-bs-green prose-strong:text-bs-fg prose-ul:text-bs-fg-body prose-li:marker:text-bs-green prose-code:bg-bs-card-2 prose-code:border prose-code:border-bs-border prose-pre:bg-bs-input prose-pre:border prose-pre:border-bs-border"
                             dangerouslySetInnerHTML={{
                                 __html: sanitizeHtml(post.content || ""),
                             }}
