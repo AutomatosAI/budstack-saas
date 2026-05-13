@@ -114,16 +114,16 @@ export default function ContactPage() {
                     {/* Content grid */}
                     <div className="grid gap-8 lg:grid-cols-5">
                         {/* Contact form - larger */}
-                        <div className="card-floating p-8 lg:col-span-3 lg:p-10">
+                        <div className="bs-card p-8 lg:col-span-3 lg:p-10">
                             <div className="mb-8 flex items-center gap-4">
                                 <div className="icon-badge">
                                     <MessageSquare className="h-5 w-5 text-white" />
                                 </div>
                                 <div>
-                                    <h2 className="font-bs-serif text-xl font-medium text-bs-bg">
+                                    <h2 className="font-bs-serif text-xl font-medium text-bs-fg">
                                         Send us a message
                                     </h2>
-                                    <p className="text-sm text-bs-step-300">
+                                    <p className="text-sm text-bs-fg-muted">
                                         Let&apos;s hear from you.
                                     </p>
                                 </div>
@@ -139,7 +139,7 @@ export default function ContactPage() {
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-step-300">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-muted">
                                                     Name
                                                 </FormLabel>
                                                 <FormControl>
@@ -159,7 +159,7 @@ export default function ContactPage() {
                                         name="email"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-step-300">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-muted">
                                                     Email
                                                 </FormLabel>
                                                 <FormControl>
@@ -180,7 +180,7 @@ export default function ContactPage() {
                                         name="phone"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-step-300">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-muted">
                                                     Phone
                                                 </FormLabel>
                                                 <FormControl>
@@ -201,7 +201,7 @@ export default function ContactPage() {
                                         name="message"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-step-300">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-muted">
                                                     Message
                                                 </FormLabel>
                                                 <FormControl>
@@ -232,16 +232,16 @@ export default function ContactPage() {
                         {/* Contact info cards - right side */}
                         <div className="flex flex-col gap-6 lg:col-span-2">
                             {contactInfo.map((info) => (
-                                <div key={info.title} className="card-floating p-6">
+                                <div key={info.title} className="bs-card p-6">
                                     <div className="flex items-center gap-4">
                                         <div className="icon-badge">
                                             <info.icon className="h-5 w-5 text-white" />
                                         </div>
                                         <div>
-                                            <h3 className="font-bs-serif text-base font-medium text-bs-bg">
+                                            <h3 className="font-bs-serif text-base font-medium text-bs-fg">
                                                 {info.title}
                                             </h3>
-                                            <p className="text-bs-step-300">{info.detail}</p>
+                                            <p className="text-bs-fg-muted">{info.detail}</p>
                                         </div>
                                     </div>
                                 </div>
