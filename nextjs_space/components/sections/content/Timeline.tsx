@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { SectionProps } from '@/lib/types/section-props';
+import { headerAlignClasses } from '@/lib/section-align';
 
 interface TimelineEntry {
   year: string;
@@ -39,7 +40,7 @@ export function Timeline(props: SectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center max-w-3xl mx-auto mb-12"
+          className={`${headerAlignClasses(sectionConfig?.textAlign)} max-w-3xl mb-12`}
         >
           <h2
             className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4"

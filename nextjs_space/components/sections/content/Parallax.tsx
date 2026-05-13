@@ -4,6 +4,7 @@ import React from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { SectionProps } from '@/lib/types/section-props';
+import { headerAlignClasses } from '@/lib/section-align';
 
 export function Parallax(props: SectionProps) {
   const { sectionConfig, consultationUrl } = props;
@@ -67,7 +68,7 @@ export function Parallax(props: SectionProps) {
             initial={{ opacity: 0, y: 30 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.8 }}
-            className="max-w-3xl mx-auto text-center"
+            className={`max-w-3xl ${headerAlignClasses(sectionConfig?.textAlign)}`}
           >
             <h2
               className="text-3xl sm:text-4xl md:text-6xl font-bold text-white mb-6"

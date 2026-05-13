@@ -34,8 +34,22 @@ export function ImageShowcase(props: SectionProps) {
     const ctaHref = sectionConfig?.ctaHref || '#';
     const imageUrl = sectionConfig?.imageUrl || null;
     const overlayStyle = sectionConfig?.overlayStyle || 'gradient-left';
-    const theme = sectionConfig?.theme || 'dark'; // 'dark' | 'light'
+    const theme = sectionConfig?.theme || 'dark'; // 'dark' (light text) | 'light' (dark text)
     const isLightTheme = theme === 'light';
+
+    // Overlay strength 0–90 (percent). Drives the gradient alpha so users can dial
+    // how dark the overlay sits on the image.
+    const overlayPercentRaw = Number(sectionConfig?.overlayOpacity);
+    const overlayPercent = Number.isFinite(overlayPercentRaw)
+        ? Math.min(90, Math.max(0, overlayPercentRaw))
+        : 70;
+    const a = overlayPercent / 100;
+    const aMid = Math.max(0, a - 0.25);
+
+    // Overlay base colour: black for dark theme (legible white text),
+    // white for light theme (legible dark text).
+    const overlayRgb = isLightTheme ? '255,255,255' : '0,0,0';
+    const rgba = (alpha: number) => `rgba(${overlayRgb},${alpha.toFixed(2)})`;
 
     // Extract interactive hotspots if configured
     const allHotspots = pageContent?.educationHotspots || [];
@@ -47,23 +61,23 @@ export function ImageShowcase(props: SectionProps) {
 
     const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.15 });
 
-    // Overlay gradients based on style
+    // Overlay gradients keyed off the schema values. Neutral black/white so the
+    // overlay never collides with the tenant heading colour (the prior bug that
+    // rendered "dark text on dark overlay" once a brand heading hue was set).
     const overlayGradients: Record<string, string[]> = {
         'gradient-left': [
-            'linear-gradient(to right, hsl(var(--tenant-color-heading) / 0.92) 0%, hsl(var(--tenant-color-heading) / 0.7) 40%, transparent 100%)',
-            'linear-gradient(to top, hsl(var(--tenant-color-heading) / 0.85) 0%, transparent 50%)',
+            `linear-gradient(to right, ${rgba(a)} 0%, ${rgba(aMid)} 45%, ${rgba(0)} 100%)`,
         ],
         'gradient-center': [
-            'linear-gradient(180deg, hsl(var(--tenant-color-heading) / 0.75) 0%, hsl(var(--tenant-color-heading) / 0.5) 50%, hsl(var(--tenant-color-heading) / 0.8) 100%)',
+            `linear-gradient(180deg, ${rgba(a)} 0%, ${rgba(aMid)} 50%, ${rgba(a)} 100%)`,
         ],
-        dark: [
-            'linear-gradient(180deg, hsl(var(--tenant-color-heading) / 0.8) 0%, hsl(var(--tenant-color-heading) / 0.85) 100%)',
-        ],
+        solid: [rgba(a)],
+        none: [],
     };
 
-    const gradients = overlayGradients[overlayStyle] || overlayGradients['gradient-left'];
-    const isLeft = overlayStyle === 'gradient-left';
+    const gradients = overlayGradients[overlayStyle] ?? overlayGradients['gradient-left'];
     const isCenter = overlayStyle === 'gradient-center';
+    const hasOverlay = overlayStyle !== 'none' && overlayPercent > 0;
 
     return (
         <section ref={ref} className="py-2 px-2 sm:px-2">
@@ -103,13 +117,11 @@ export function ImageShowcase(props: SectionProps) {
                     />
                 )}
 
-                {/* Overlay gradient(s) — skip for light theme */}
-                {!isLightTheme && gradients.map((g, i) => (
+                {/* Overlay gradient(s) — only when there's actually one chosen.
+                    Colour is black for dark theme, white for light theme. */}
+                {hasOverlay && gradients.map((g, i) => (
                     <div key={i} className="absolute inset-0" style={{ background: g }} />
                 ))}
-
-                {/* Subtle dark scrim for text safety — skip for light theme */}
-                {!isLightTheme && <div className="absolute inset-0 bg-black/15" />}
 
                 {/* Content */}
                 <div
@@ -123,11 +135,11 @@ export function ImageShowcase(props: SectionProps) {
                         transition={{ duration: 0.7, delay: 0.1 }}
                         className={`${isCenter ? 'max-w-2xl' : 'max-w-3xl'} backdrop-blur-sm rounded-2xl p-6 sm:p-8 md:p-10`}
                         style={isLightTheme ? {
-                            backgroundColor: 'hsl(var(--tenant-color-background) / 0.85)',
-                            border: '1px solid hsl(var(--tenant-color-border))',
+                            backgroundColor: 'rgba(255,255,255,0.82)',
+                            border: '1px solid rgba(0,0,0,0.08)',
                         } : {
-                            backgroundColor: 'hsl(var(--tenant-color-heading) / 0.6)',
-                            border: '1px solid rgba(255,255,255,0.08)',
+                            backgroundColor: 'rgba(0,0,0,0.45)',
+                            border: '1px solid rgba(255,255,255,0.1)',
                         }}
                     >
                         <motion.h2
@@ -137,7 +149,7 @@ export function ImageShowcase(props: SectionProps) {
                             className="text-2xl sm:text-4xl md:text-5xl font-semibold mb-4 sm:mb-6 tracking-tight leading-tight"
                             style={{
                                 fontFamily: 'var(--tenant-font-heading, sans-serif)',
-                                color: `hsl(var(--tenant-color-heading, ${isLightTheme ? '0 0% 10%' : '0 0% 100%'}))`,
+                                color: isLightTheme ? 'hsl(0 0% 10%)' : '#ffffff',
                             }}
                         >
                             {heading}
@@ -149,8 +161,7 @@ export function ImageShowcase(props: SectionProps) {
                             transition={{ duration: 0.6, delay: 0.3 }}
                             className="text-sm sm:text-base md:text-lg leading-relaxed mb-6 sm:mb-8"
                             style={{
-                                color: `hsl(var(--tenant-color-text, ${isLightTheme ? '0 0% 25%' : '0 0% 92%'}))`,
-                                opacity: isLightTheme ? 1 : 0.85,
+                                color: isLightTheme ? 'hsl(0 0% 25%)' : 'rgba(255,255,255,0.92)',
                             }}
                         >
                             {content}

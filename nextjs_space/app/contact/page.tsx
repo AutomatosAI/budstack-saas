@@ -120,10 +120,10 @@ export default function ContactPage() {
                                     <MessageSquare className="h-5 w-5 text-white" />
                                 </div>
                                 <div>
-                                    <h2 className="font-bs-serif text-xl font-medium text-bs-fg-0">
+                                    <h2 className="font-bs-serif text-xl font-medium text-bs-bg">
                                         Send us a message
                                     </h2>
-                                    <p className="text-sm text-bs-fg-2">
+                                    <p className="text-sm text-bs-step-300">
                                         Let&apos;s hear from you.
                                     </p>
                                 </div>
@@ -139,7 +139,7 @@ export default function ContactPage() {
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-1">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-step-300">
                                                     Name
                                                 </FormLabel>
                                                 <FormControl>
@@ -159,7 +159,7 @@ export default function ContactPage() {
                                         name="email"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-1">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-step-300">
                                                     Email
                                                 </FormLabel>
                                                 <FormControl>
@@ -180,7 +180,7 @@ export default function ContactPage() {
                                         name="phone"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-1">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-step-300">
                                                     Phone
                                                 </FormLabel>
                                                 <FormControl>
@@ -201,7 +201,7 @@ export default function ContactPage() {
                                         name="message"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-fg-1">
+                                                <FormLabel className="text-[11px] font-bs-mono font-medium uppercase tracking-[0.14em] text-bs-step-300">
                                                     Message
                                                 </FormLabel>
                                                 <FormControl>
@@ -238,10 +238,10 @@ export default function ContactPage() {
                                             <info.icon className="h-5 w-5 text-white" />
                                         </div>
                                         <div>
-                                            <h3 className="font-bs-serif text-base font-medium text-bs-fg-0">
+                                            <h3 className="font-bs-serif text-base font-medium text-bs-bg">
                                                 {info.title}
                                             </h3>
-                                            <p className="text-bs-fg-2">{info.detail}</p>
+                                            <p className="text-bs-step-300">{info.detail}</p>
                                         </div>
                                     </div>
                                 </div>

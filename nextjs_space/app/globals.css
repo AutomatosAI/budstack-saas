@@ -1237,6 +1237,21 @@ html {
 @layer components {
   /* ===== Page header ===== */
   .bs-eyebrow              { @apply inline-flex items-center gap-2 font-mono text-mono-eyebrow uppercase text-bs-gold border border-bs-gold/30 bg-bs-gold/[0.14] px-3.5 py-1.5 rounded-bs-pill; }
+
+  /* Store-editor override: strip pill + uppercase so long labels (e.g. "Call-to-Action Color")
+     don't wrap into chunky two-line gold tags inside narrow editor columns. */
+  .store-editor .bs-eyebrow {
+    display: inline-block;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    border-radius: 0;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #E8D19E;
+  }
   .bs-page-title           { @apply font-display text-display-xl text-bs-fg; font-weight: 500; }
   .bs-page-subtitle        { @apply text-bs-fg-body text-[15px] max-w-[640px]; }
   .bs-page-header-centered { @apply text-left pt-2 pb-5 mb-6 border-b border-bs-border-100; }

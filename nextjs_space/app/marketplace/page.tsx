@@ -116,16 +116,16 @@ export default async function MarketplacePage() {
               <div className="p-5">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-display font-bold text-foreground">
+                    <h3 className="font-display font-bold text-bs-bg">
                       {template.name}
                     </h3>
                     {template.sourceType === "COMMUNITY" &&
                       template.authorName && (
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-bs-step-300 mt-1">
                           By {template.authorName}
                         </p>
                       )}
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                    <p className="text-sm text-bs-step-300 line-clamp-2 mt-2">
                       {template.description ||
                         "A professional theme for your store."}
                     </p>
@@ -172,10 +172,10 @@ export default async function MarketplacePage() {
               <div className="mx-auto w-12 h-12 rounded-full bg-bs-bg-2 border border-bs-border flex items-center justify-center mb-4">
                 <Layout className="h-6 w-6 text-bs-fg-3" />
               </div>
-              <h3 className="font-display text-lg font-bold text-foreground mb-2">
+              <h3 className="font-display text-lg font-bold text-bs-bg mb-2">
                 Coming Soon
               </h3>
-              <p className="text-muted-foreground">
+              <p className="text-bs-step-300">
                 Themes are being prepared. Check back soon!
               </p>
             </div>
