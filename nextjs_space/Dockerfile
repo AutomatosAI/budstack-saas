@@ -3,7 +3,7 @@
 # ============================================
 FROM node:20-slim AS deps
 RUN apt-get update -y && apt-get install -y openssl ca-certificates
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.30.2 --activate
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ RUN pnpm install --frozen-lockfile
 # Stage 2: Builder
 # ============================================
 FROM node:20-slim AS builder
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.30.2 --activate
 WORKDIR /app
 
 # Copy dependencies
