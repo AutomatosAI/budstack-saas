@@ -5,6 +5,7 @@ import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { generateSlug } from "@/lib/template-utils";
+import { apiError } from "@/lib/api-error";
 import {
   getOrCreateCustomBase,
   BLANK_LAYOUT,
@@ -148,9 +149,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Create Blank Template Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "tenant-admin.templates.create-blank",
+      status: 500,
+      safeMessage: "Internal server error",
+    });
   }
 }

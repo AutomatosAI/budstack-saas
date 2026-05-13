@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
 
 export async function PATCH(
   request: NextRequest,
@@ -87,9 +88,10 @@ export async function PATCH(
     });
   } catch (error: any) {
     console.error("Template activation error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to activate template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "tenant-admin.templates.activate",
+      status: 500,
+      safeMessage: "Failed to activate template",
+    });
   }
 }

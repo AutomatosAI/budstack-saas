@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { getSubmissionDetail } from "@/lib/marketplace-review-service";
+import { apiError } from "@/lib/api-error";
 
 export async function GET(
   request: NextRequest,
@@ -18,9 +19,10 @@ export async function GET(
     return NextResponse.json(detail);
   } catch (error: any) {
     console.error("[Submission Detail] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to get submission detail" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "super-admin.submissions.detail",
+      status: 500,
+      safeMessage: "Failed to get submission detail",
+    });
   }
 }

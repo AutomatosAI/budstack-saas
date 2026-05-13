@@ -3,13 +3,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { Leaf, Shield, Zap, Heart, Sparkles, Package } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
-
-const iconMap: Record<string, React.ComponentType<any>> = {
-  Leaf, Shield, Zap, Heart, Sparkles, Package,
-};
+import { getIcon } from '@/lib/icon-registry';
+import { headerAlignClasses } from '@/lib/section-align';
 
 interface BentoCard {
   icon: string;
@@ -17,6 +15,13 @@ interface BentoCard {
   description: string;
   span: 'wide' | 'tall' | 'normal';
   imageUrl: string;
+  imageOpacity?: string | number;
+}
+
+function clampOpacity(value: unknown, fallback = 20): number {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(100, Math.max(0, num));
 }
 
 const defaultCards: BentoCard[] = [
@@ -63,7 +68,7 @@ export function BentoGrid(props: SectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center max-w-3xl mx-auto mb-12"
+          className={`${headerAlignClasses(sectionConfig?.textAlign)} max-w-3xl mb-12`}
         >
           <h2
             className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4"
@@ -83,7 +88,7 @@ export function BentoGrid(props: SectionProps) {
 
         <div className={`grid grid-cols-1 ${colsClass[columns] || 'md:grid-cols-3'} gap-4 max-w-6xl mx-auto auto-rows-[minmax(180px,auto)]`}>
           {cards.map((card, index) => {
-            const Icon = iconMap[card.icon] || Sparkles;
+            const Icon = getIcon(card.icon, Sparkles);
             return (
               <motion.div
                 key={index}
@@ -96,17 +101,24 @@ export function BentoGrid(props: SectionProps) {
                   border: '1px solid hsl(var(--tenant-color-border))',
                 }}
               >
-                {card.imageUrl && imageStyle === 'background' && (
-                  <div className="absolute inset-0 z-0">
-                    <Image
-                      src={card.imageUrl}
-                      alt={card.title}
-                      fill
-                      className="object-cover opacity-20 group-hover:opacity-30 transition-opacity duration-300"
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                    />
-                  </div>
-                )}
+                {card.imageUrl && imageStyle === 'background' && (() => {
+                  const opacity = clampOpacity(card.imageOpacity, 20) / 100;
+                  return (
+                    <div className="absolute inset-0 z-0">
+                      <Image
+                        src={card.imageUrl}
+                        alt={card.title}
+                        fill
+                        className="object-cover transition-opacity duration-300"
+                        style={{ opacity }}
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                      />
+                      {opacity > 0.5 && (
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {card.imageUrl && imageStyle === 'cover' && (
                   <div className="absolute inset-0 z-0 overflow-hidden">

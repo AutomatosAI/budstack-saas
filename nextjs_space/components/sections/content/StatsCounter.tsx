@@ -3,12 +3,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useSpring, useMotionValue } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { Users, Package, Star, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
-
-const iconMap: Record<string, React.ComponentType<any>> = {
-  Users, Package, Star, TrendingUp,
-};
+import { getIcon } from '@/lib/icon-registry';
+import { textAlignClass } from '@/lib/section-align';
 
 interface StatItem {
   value: number;
@@ -90,7 +88,7 @@ export function StatsCounter(props: SectionProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6 }}
-            className="text-3xl sm:text-4xl md:text-5xl font-bold text-white text-center mb-10"
+            className={`text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-10 ${textAlignClass(sectionConfig?.textAlign)}`}
             style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
           >
             {heading}
@@ -99,7 +97,7 @@ export function StatsCounter(props: SectionProps) {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {items.map((item, index) => {
-            const Icon = iconMap[item.icon] || TrendingUp;
+            const Icon = getIcon(item.icon, TrendingUp);
             return (
               <motion.div
                 key={index}

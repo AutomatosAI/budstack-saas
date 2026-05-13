@@ -1,52 +1,35 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { currentUser } from "@clerk/nextjs/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
+import { ApiError } from "@/lib/api-error";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  const user = await currentUser();
+export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
+  const template = await prisma.email_templates.findUnique({
+    where: { id: params.id },
+  });
 
-  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!template) {
+    throw new ApiError("Template not found", 404);
   }
 
-  try {
-    const template = await prisma.email_templates.findUnique({
-      where: { id: params.id },
-    });
+  return NextResponse.json(template);
+});
 
-    if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
-    }
+export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
+  const body = await req.json();
+  const {
+    name,
+    subject,
+    contentHtml,
+    description,
+    category,
+    isSystem,
+    isActive,
+  } = body;
 
-    return NextResponse.json(template);
-  } catch (error) {
-    console.error("Failed to fetch template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
-  }
-}
-
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  const user = await currentUser();
-
-  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const body = await req.json();
-    const {
+  const updated = await prisma.email_templates.update({
+    where: { id: params.id },
+    data: {
       name,
       subject,
       contentHtml,
@@ -54,63 +37,17 @@ export async function PUT(
       category,
       isSystem,
       isActive,
-    } = body;
+      updatedAt: new Date(),
+    },
+  });
 
-    const updated = await prisma.email_templates.update({
-      where: { id: params.id },
-      data: {
-        name,
-        subject,
-        contentHtml,
-        description,
-        category,
-        isSystem,
-        isActive,
-        updatedAt: new Date(),
-      },
-    });
+  return NextResponse.json(updated);
+});
 
-    return NextResponse.json(updated);
-  } catch (error) {
-    console.error("Failed to update template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
-  }
-}
+export const DELETE = withSuperAdminParams(async (_req, _ctx, params) => {
+  await prisma.email_templates.delete({
+    where: { id: params.id },
+  });
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  const user = await currentUser();
-
-  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    // Check if system template
-    const template = await prisma.email_templates.findUnique({
-      where: { id: params.id },
-    });
-
-    if (template?.isSystem) {
-      // Option: prevent delete, or allow but with warning.
-      // For now, let's allow it but maybe frontend warns.
-    }
-
-    await prisma.email_templates.delete({
-      where: { id: params.id },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Failed to delete template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
-  }
-}
+  return NextResponse.json({ success: true });
+});

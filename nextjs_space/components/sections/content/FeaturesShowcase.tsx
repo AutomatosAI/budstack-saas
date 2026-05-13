@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
+import { textAlignClass } from '@/lib/section-align';
 
 /**
  * FeaturesShowcase — center product image with feature cards on each side.
@@ -163,7 +164,7 @@ export function FeaturesShowcase(props: SectionProps) {
       <div className="container mx-auto px-6">
         {/* Optional heading */}
         {(heading || subtitle) && (
-          <div className="text-center mb-12 sm:mb-16">
+          <div className={`${textAlignClass(sectionConfig?.textAlign)} mb-12 sm:mb-16`}>
             {heading && (
               <motion.h2
                 initial={{ opacity: 0, y: 20 }}

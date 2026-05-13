@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { addToCart } from "@/lib/drgreen-cart";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(
   request: NextRequest,
@@ -78,26 +79,24 @@ export async function POST(
 
     return NextResponse.json({ cart });
   } catch (error) {
-    console.error("[Cart Add] Error:", error);
-
-    // User-friendly error messages
-    if (error instanceof Error) {
-      if (error.message.includes("consultation")) {
-        return NextResponse.json(
-          {
-            error:
-              "Please complete your medical consultation before adding items to cart",
-          },
-          { status: 400 },
-        );
-      }
-
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    // Pass through known-safe user-facing message.
+    if (error instanceof Error && error.message.includes("consultation")) {
+      return NextResponse.json(
+        {
+          error:
+            "Please complete your medical consultation before adding items to cart",
+        },
+        { status: 400 },
+      );
     }
 
-    return NextResponse.json(
-      { error: "Failed to add item to cart" },
-      { status: 500 },
-    );
+    // SECURITY (H_e1): generic message — Dr Green API errors may include
+    // internal endpoints, IDs, or stack traces.
+    return apiError(error, {
+      route: "store.cart.add",
+      status: 500,
+      safeMessage: "Failed to add item to cart",
+      logContext: { slug: params.slug },
+    });
   }
 }

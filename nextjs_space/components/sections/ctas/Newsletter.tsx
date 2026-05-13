@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Mail, ArrowRight } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
+import { headerAlignClasses } from '@/lib/section-align';
 
 export function Newsletter(props: SectionProps) {
   const { sectionConfig } = props;
@@ -50,7 +51,7 @@ export function Newsletter(props: SectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="max-w-2xl mx-auto text-center"
+          className={`max-w-2xl ${headerAlignClasses(sectionConfig?.textAlign)}`}
         >
           <div className="w-14 h-14 mx-auto mb-6 rounded-full bg-white/10 flex items-center justify-center">
             <Mail size={28} className="text-white" />

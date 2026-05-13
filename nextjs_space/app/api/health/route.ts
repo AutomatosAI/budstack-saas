@@ -22,10 +22,17 @@ export async function GET() {
       status: "healthy",
       latency: `${dbLatency}ms`,
     };
-  } catch (error: any) {
+  } catch (error) {
+    // SECURITY (H_e2): Health endpoint is public — DB error messages can
+    // include connection strings, hostnames, or auth schemes. Log
+    // server-side, return a generic indicator only.
+    console.error(
+      "[Health] DB check failed:",
+      error instanceof Error ? error.message : String(error),
+    );
     checks.services.database = {
       status: "unhealthy",
-      error: error.message,
+      error: "Database check failed",
     };
     checks.status = "degraded";
   }

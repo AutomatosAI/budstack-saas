@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { updateFromGitHub } from "@/lib/tenant-template-upload-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(
   request: NextRequest,
@@ -69,9 +70,10 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("[Update from GitHub] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "tenant-admin.templates.update-from-github",
+      status: 500,
+      safeMessage: "Failed to update template",
+    });
   }
 }

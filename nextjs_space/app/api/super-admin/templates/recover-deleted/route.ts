@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
+import { apiError } from "@/lib/api-error";
 import {
   ListObjectVersionsCommand,
   DeleteObjectCommand,
@@ -279,11 +280,14 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, report });
-  } catch (error: any) {
-    console.error("[Template Recover] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Recovery failed", stack: error.stack },
-      { status: 500 },
-    );
+  } catch (error) {
+    // SECURITY (H_e1): never expose stack/error.message to clients —
+    // recovery context could include S3 keys, internal paths, or DB
+    // constraint names. Client gets a correlationId for support.
+    return apiError(error, {
+      route: "super-admin.templates.recover-deleted",
+      status: 500,
+      safeMessage: "Recovery failed",
+    });
   }
 }

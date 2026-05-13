@@ -10,6 +10,7 @@ import {
   cleanupTempDir,
   type TemplateConfig,
 } from "@/lib/template-utils";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(
   req: NextRequest,
@@ -125,9 +126,10 @@ export async function POST(
     }
   } catch (error: any) {
     console.error("[Super Admin Update from GitHub] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "super-admin.templates.update-from-github",
+      status: 500,
+      safeMessage: "Failed to update template",
+    });
   }
 }

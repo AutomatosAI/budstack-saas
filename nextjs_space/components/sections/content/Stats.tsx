@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { SectionProps } from '@/lib/types/section-props';
+import { textAlignClass } from '@/lib/section-align';
 
 interface StatItem {
   value: number;
@@ -81,7 +82,7 @@ export function Stats(props: SectionProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6 }}
-            className="text-3xl sm:text-4xl md:text-5xl font-bold text-white text-center mb-8"
+            className={`text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-8 ${textAlignClass(sectionConfig?.textAlign)}`}
             style={{ fontFamily: 'var(--tenant-font-heading, sans-serif)' }}
           >
             {heading}

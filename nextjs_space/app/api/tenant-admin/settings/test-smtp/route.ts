@@ -2,7 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { decrypt } from "@/lib/encryption";
+import { apiError } from "@/lib/api-error";
 import nodemailer from "nodemailer";
+
+// SECURITY (H_e3): SMTP errors leak sensitive details — auth responses,
+// hostnames, response codes that aid attackers in fingerprinting. Map
+// known nodemailer error codes to non-actionable client messages while
+// keeping the full error in the server log via apiError().
+function mapSmtpErrorToSafeMessage(err: unknown): string {
+  if (!(err instanceof Error)) return "SMTP connection failed";
+  const code = (err as { code?: string }).code;
+  switch (code) {
+    case "EAUTH":
+      return "SMTP authentication failed — check username/password";
+    case "ECONNECTION":
+    case "ECONNREFUSED":
+      return "SMTP server unreachable — check host and port";
+    case "ETIMEDOUT":
+    case "ESOCKET":
+      return "SMTP connection timed out";
+    case "ENVELOPE":
+      return "SMTP rejected the recipient address";
+    default:
+      return "SMTP connection failed";
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -104,11 +128,11 @@ export async function POST(req: NextRequest) {
       success: true,
       message: "Test email sent successfully.",
     });
-  } catch (error: any) {
-    console.error("Test SMTP Failed:", error);
-    return NextResponse.json(
-      { error: error.message || "SMTP Connection Failed" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiError(error, {
+      route: "tenant-admin.settings.test-smtp",
+      status: 500,
+      safeMessage: mapSmtpErrorToSafeMessage(error),
+    });
   }
 }

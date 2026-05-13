@@ -6,6 +6,7 @@ import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { submitOrder } from "@/lib/drgreen-orders";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
 import { checkUserKycStatus } from "@/app/actions/kyc-check";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(
   request: NextRequest,
@@ -140,9 +141,10 @@ export async function POST(
     return NextResponse.json({ order: orderResponse });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    const stack = error instanceof Error ? error.stack?.split('\n').slice(0, 3).join(' | ') : '';
-    log('UNHANDLED_ERROR', { message: msg, stack });
+    log('UNHANDLED_ERROR', { message: msg });
 
+    // Pass through known-safe user-facing messages — these are cases
+    // where the user can self-correct (no consultation, empty cart).
     if (error instanceof Error) {
       if (error.message.includes("consultation")) {
         return NextResponse.json(
@@ -156,12 +158,16 @@ export async function POST(
           { status: 400 },
         );
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(
-      { error: "Failed to submit order" },
-      { status: 500 },
-    );
+    // SECURITY (H_e1): generic internal error message — orders flow may
+    // raise Dr Green API errors with internal endpoints/IDs in the
+    // message; never propagate them to the storefront client.
+    return apiError(error, {
+      route: "store.orders.submit",
+      status: 500,
+      safeMessage: "Failed to submit order",
+      logContext: { traceId, slug: params.slug },
+    });
   }
 }
