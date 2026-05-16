@@ -41,10 +41,7 @@ export default async function ConsultationPage({
               >
                 Register here
               </h2>
-              <ConsultationForm
-                tenantSlug={tenant.subdomain}
-                tenantId={tenant.id}
-              />
+              <ConsultationForm tenantSlug={tenant.subdomain} />
             </div>
           </div>
         </section>

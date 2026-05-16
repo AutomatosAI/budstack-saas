@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { getTenantFromRequest } from "@/lib/tenant";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,10 +13,15 @@ export async function GET(req: NextRequest) {
 
     const email = user.emailAddresses[0].emailAddress;
 
-    // Find the most recent consultation for this user
+    const tenant = await getTenantFromRequest(req);
+    if (!tenant) {
+      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    }
+
     const consultation = await prisma.consultation_questionnaires.findFirst({
       where: {
         email: email,
+        tenantId: tenant.id,
       },
       orderBy: {
         createdAt: "desc",

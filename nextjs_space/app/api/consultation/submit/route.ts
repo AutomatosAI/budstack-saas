@@ -13,28 +13,68 @@ import { z } from "zod";
 
 import { toAlpha3 as convertToAlpha3CountryCode } from '@/lib/country-codes';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getTenantFromRequest } from '@/lib/tenant';
 
+// SECURITY (C1, C13): Strict whitelist schema — no `.passthrough()`. Every
+// field that lands in the database or is forwarded to Dr. Green must be
+// declared here and length-capped. The tenant is resolved server-side from
+// the request host/path; clients must NOT send a tenantId UUID, only an
+// optional tenantSlug used as a dev-time fallback when the request lacks
+// tenant headers (localhost path-based routing).
 const consultationSchema = z.object({
-  email: z.string().email().max(254),
-  password: z.string().min(8).max(128),
+  // Tenant resolution fallback (subdomain slug only — never a UUID)
+  tenantSlug: z.string().min(1).max(100).optional(),
+
+  // Contact
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
-  tenantId: z.string().uuid(),
+  email: z.string().email().max(254),
+  phoneCode: z.string().max(10).optional().default(""),
+  phoneNumber: z.string().max(30).optional().default(""),
+  dateOfBirth: z.string().max(50).nullable().optional(),
+  gender: z.string().max(50).optional().default(""),
+  password: z.string().min(8).max(128),
+  confirmPassword: z.string().max(128).optional(),
+
+  // Shipping address
+  addressLine1: z.string().max(300).optional().default(""),
+  addressLine2: z.string().max(300).optional().default(""),
+  city: z.string().max(100).optional().default(""),
+  state: z.string().max(100).optional().default(""),
+  postalCode: z.string().max(20).optional().default(""),
+  country: z.string().max(100).optional().default(""),
   countryCode: z.string().min(2).max(3),
-  dateOfBirth: z.string().optional(),
-  phone: z.string().max(20).optional(),
-  conditions: z.array(z.string().max(200)).optional(),
-  medications: z.array(z.string().max(200)).optional(),
-  allergies: z.string().max(1000).optional(),
-  nftTokenId: z.string().max(200).optional(),
-  address: z.object({
-    street: z.string().max(300).optional(),
-    city: z.string().max(100).optional(),
-    state: z.string().max(100).optional(),
-    postalCode: z.string().max(20).optional(),
-    country: z.string().max(100).optional(),
-  }).optional(),
-}).passthrough(); // Allow additional fields from the consultation form
+
+  // Business info (optional)
+  businessType: z.string().max(100).optional().default(""),
+  businessName: z.string().max(200).optional().default(""),
+  businessAddress1: z.string().max(300).optional().default(""),
+  businessAddress2: z.string().max(300).optional().default(""),
+  businessCity: z.string().max(100).optional().default(""),
+  businessState: z.string().max(100).optional().default(""),
+  businessPostalCode: z.string().max(20).optional().default(""),
+  businessCountry: z.string().max(100).optional().default(""),
+  businessCountryCode: z.string().max(3).optional().default(""),
+
+  // Medical conditions
+  medicalConditions: z.array(z.string().max(100)).max(100).optional().default([]),
+  otherCondition: z.string().max(1000).optional().default(""),
+  prescribedMedications: z.array(z.string().max(200)).max(100).optional().default([]),
+  prescribedSupplements: z.string().max(2000).optional().default(""),
+
+  // Medical history (booleans + small strings)
+  hasHeartProblems: z.boolean().optional().default(false),
+  hasCancerTreatment: z.boolean().optional().default(false),
+  hasImmunosuppressants: z.boolean().optional().default(false),
+  hasLiverDisease: z.boolean().optional().default(false),
+  hasPsychiatricHistory: z.boolean().optional().default(false),
+  hasAlcoholAbuse: z.boolean().optional().default(false),
+  hasDrugServices: z.boolean().optional().default(false),
+  alcoholUnitsPerWeek: z.string().max(20).optional().default(""),
+  cannabisReducesMeds: z.boolean().optional().default(false),
+  cannabisFrequency: z.string().max(50).optional().default(""),
+  cannabisAmountPerDay: z.string().max(50).optional().default(""),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,7 +88,6 @@ export async function POST(request: NextRequest) {
 
     const rawBody = await request.json();
 
-    // Validate core fields
     const parseResult = consultationSchema.safeParse(rawBody);
     if (!parseResult.success) {
       const firstError = parseResult.error.errors[0];
@@ -58,7 +97,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = rawBody; // Use raw body since form has many dynamic fields, but core fields are validated
+    // SECURITY (C1, C13): Use ONLY the validated/whitelisted fields. Never
+    // re-introduce `rawBody` here — that would re-open the mass-assignment
+    // hole that allowed clients to inject tenantId, role, drGreenClientId,
+    // adminApproval, etc.
+    const body = parseResult.data;
+
+    // SECURITY (C1): Resolve tenant from the request itself (host/path
+    // headers set by middleware). Never trust a tenantId in the request
+    // body. tenantSlug is accepted only as a dev fallback for path-based
+    // localhost where middleware cannot derive tenant from the API URL.
+    let tenant = await getTenantFromRequest(request);
+    if (!tenant && body.tenantSlug) {
+      tenant = await prisma.tenants.findFirst({
+        where: { subdomain: body.tenantSlug.toLowerCase(), isActive: true },
+      });
+    }
+    if (
+      tenant &&
+      body.tenantSlug &&
+      tenant.subdomain.toLowerCase() !== body.tenantSlug.toLowerCase()
+    ) {
+      return NextResponse.json(
+        { error: "Tenant mismatch between request host and submitted slug" },
+        { status: 400 },
+      );
+    }
+    if (!tenant) {
+      return NextResponse.json(
+        { error: "Tenant not found for this request" },
+        { status: 404 },
+      );
+    }
+    const tenantId = tenant.id;
 
     // 1. Create Clerk User (Auth)
     let clerkUser;
@@ -72,7 +143,7 @@ export async function POST(request: NextRequest) {
           lastName: body.lastName,
           publicMetadata: {
             role: "PATIENT",
-            tenantId: body.tenantId,
+            tenantId,
             consultationCompleted: true
           },
         });
@@ -103,11 +174,11 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       userId = existingUser.id;
       // Update tenantId if not set (e.g. user was created by Clerk webhook without tenant)
-      if (!existingUser.tenantId && body.tenantId) {
+      if (!existingUser.tenantId) {
         await prisma.users.update({
           where: { id: existingUser.id },
           data: {
-            tenantId: body.tenantId,
+            tenantId,
             role: "PATIENT",
             name: `${body.firstName} ${body.lastName}`,
             updatedAt: new Date(),
@@ -129,7 +200,7 @@ export async function POST(request: NextRequest) {
             password: "CLERK_MANAGED_ACCOUNT",
             name: `${body.firstName} ${body.lastName}`,
             role: "PATIENT",
-            tenantId: body.tenantId,
+            tenantId,
             updatedAt: new Date(),
           },
         });
@@ -143,10 +214,10 @@ export async function POST(request: NextRequest) {
           });
           if (raceUser) {
             userId = raceUser.id;
-            if (!raceUser.tenantId && body.tenantId) {
+            if (!raceUser.tenantId) {
               await prisma.users.update({
                 where: { id: raceUser.id },
-                data: { tenantId: body.tenantId, role: "PATIENT", updatedAt: new Date() },
+                data: { tenantId, role: "PATIENT", updatedAt: new Date() },
               });
             }
             console.log(`⚠️  User ${body.email} created by webhook race, using existing account`);
@@ -163,7 +234,7 @@ export async function POST(request: NextRequest) {
     const questionnaire = await prisma.consultation_questionnaires.create({
       data: {
         id: crypto.randomUUID(),
-        tenantId: body.tenantId || null,
+        tenantId,
         // Note: ConsultationQuestionnaire doesn't have userId field
         // User account is linked separately via email
         firstName: body.firstName,
@@ -214,25 +285,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Determine Tenant and Config
-    // If no tenantId, we cannot submit to Dr. Green as we need tenant credentials
-    if (!body.tenantId) {
-      console.warn(
-        "Consultation submitted without Tenant ID, skipping Dr. Green submission.",
-      );
-      return NextResponse.json({
-        success: true,
-        message:
-          "Consultation saved (skipped Dr. Green submission due to missing Tenant ID)",
-        questionnaireId: questionnaire.id,
-      });
-    }
-
     try {
       // Fetch tenant credentials + API URL (respects tenant override > env var > platform config)
-      const { apiKey, secretKey, apiUrl } = await getTenantDrGreenConfig(body.tenantId);
+      const { apiKey, secretKey, apiUrl } = await getTenantDrGreenConfig(tenantId);
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[Consultation] Credentials loaded for tenant ${body.tenantId}`);
+        console.log(`[Consultation] Credentials loaded for tenant ${tenantId}`);
       }
 
       // Format date for Dr. Green API (YYYY-MM-DD)
@@ -393,8 +450,7 @@ export async function POST(request: NextRequest) {
           where: { id: userId },
           data: {
             drGreenClientId: clientId,
-            // Ensure tenantId is set if it wasn't before (though it should be for new users)
-            tenantId: body.tenantId,
+            tenantId,
             updatedAt: new Date(),
           },
         });
@@ -408,7 +464,7 @@ export async function POST(request: NextRequest) {
         entityType: "ConsultationQuestionnaire",
         entityId: questionnaire.id,
         userEmail: body.email,
-        tenantId: body.tenantId || undefined,
+        tenantId,
         metadata: {
           drGreenClientId: clientId,
           firstName: body.firstName,
@@ -420,7 +476,7 @@ export async function POST(request: NextRequest) {
       // Trigger webhook for consultation submitted
       await triggerWebhook({
         event: WEBHOOK_EVENTS.CONSULTATION_SUBMITTED,
-        tenantId: body.tenantId || undefined,
+        tenantId,
         data: {
           questionnaireId: questionnaire.id,
           drGreenClientId: clientId,

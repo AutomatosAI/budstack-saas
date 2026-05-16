@@ -77,12 +77,10 @@ const STEP_NAMES = [
 
 interface ConsultationFormProps {
   tenantSlug: string;
-  tenantId: string;
 }
 
 export function ConsultationForm({
   tenantSlug,
-  tenantId,
 }: ConsultationFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -176,7 +174,10 @@ export function ConsultationForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          tenantId: tenantId, // Include tenant ID
+          // SECURITY: Send the tenant SLUG (public, in URL) — NEVER the
+          // internal tenantId UUID. Server resolves tenant from request
+          // host first; this slug is only used as a localhost dev fallback.
+          tenantSlug,
         }),
       });
 
