@@ -344,39 +344,37 @@
     box-shadow: var(--shadow-glow-orange);
   }
 
-  /* Floating card aliases */
+  /* Floating card aliases — aligned with the dashboard's bs-card token so
+     marketing pages (blog, onboarding, legal, learn, cookies, contact,
+     marketplace) share the same dark surface as /tenant-admin and
+     /super-admin. Was previously a white "flowa" treatment which clashed
+     with the dark BudStacks shell and left text invisible. */
   .card-floating {
-    background: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(24px) saturate(120%);
-    -webkit-backdrop-filter: blur(24px) saturate(120%);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 36px;
-    box-shadow: var(--shadow-flowa);
+    background: #151A1C;
+    border: 1px solid #222A2C;
+    border-radius: 20px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 20px 60px -30px rgba(0,0,0,0.7);
     transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   .card-floating:hover {
     transform: translateY(-6px);
-    box-shadow: var(--shadow-flowa-hover);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 0 0 1px rgba(82,217,122,0.18), 0 24px 70px -28px rgba(0,0,0,0.8);
   }
 
   .card-floating-static {
-    background: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(24px) saturate(120%);
-    -webkit-backdrop-filter: blur(24px) saturate(120%);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 36px;
-    box-shadow: var(--shadow-flowa);
+    background: #151A1C;
+    border: 1px solid #222A2C;
+    border-radius: 20px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 20px 60px -30px rgba(0,0,0,0.7);
   }
 
-  /* Nested card - softer than parent */
+  /* Nested card — slightly lighter dark surface for cards within cards. */
   .card-nested {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(16px) saturate(110%);
-    -webkit-backdrop-filter: blur(16px) saturate(110%);
-    border-radius: 28px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: var(--shadow-tile);
+    background: #1A2123;
+    border: 1px solid #222A2C;
+    border-radius: 16px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset;
   }
 
   /* Tile - minimal elevation */
@@ -1237,6 +1235,21 @@ html {
 @layer components {
   /* ===== Page header ===== */
   .bs-eyebrow              { @apply inline-flex items-center gap-2 font-mono text-mono-eyebrow uppercase text-bs-gold border border-bs-gold/30 bg-bs-gold/[0.14] px-3.5 py-1.5 rounded-bs-pill; }
+
+  /* Store-editor override: strip pill + uppercase so long labels (e.g. "Call-to-Action Color")
+     don't wrap into chunky two-line gold tags inside narrow editor columns. */
+  .store-editor .bs-eyebrow {
+    display: inline-block;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    border-radius: 0;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #E8D19E;
+  }
   .bs-page-title           { @apply font-display text-display-xl text-bs-fg; font-weight: 500; }
   .bs-page-subtitle        { @apply text-bs-fg-body text-[15px] max-w-[640px]; }
   .bs-page-header-centered { @apply text-left pt-2 pb-5 mb-6 border-b border-bs-border-100; }

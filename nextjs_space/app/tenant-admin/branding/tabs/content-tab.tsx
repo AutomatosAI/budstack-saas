@@ -30,6 +30,7 @@ import {
 } from "@/lib/section-schemas";
 import type { FieldSchema, ArrayItemField, SocialPlatform } from "@/lib/section-schemas";
 import { SectionImageUploader, SectionVideoUploader } from "./shared";
+import { ICON_GROUPS, getIcon } from "@/lib/icon-registry";
 import { SectionColourPanel } from "./section-colour-panel";
 import { ProductPicker } from "./product-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -317,6 +318,40 @@ function ArraySubField({
             <SelectItem key={opt} value={opt}>
               {opt.charAt(0).toUpperCase() + opt.slice(1)}
             </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+  if (field.type === "icon") {
+    const currentName = String(v || field.default || "Star");
+    const CurrentIcon = getIcon(currentName);
+    return (
+      <Select value={currentName} onValueChange={onChange}>
+        <SelectTrigger className="mt-1">
+          <span className="flex items-center gap-2">
+            <CurrentIcon className="h-4 w-4" aria-hidden="true" />
+            <span>{currentName}</span>
+          </span>
+        </SelectTrigger>
+        <SelectContent className="max-h-72">
+          {ICON_GROUPS.map((group) => (
+            <div key={group.label}>
+              <div className="px-2 pt-2 pb-1 text-[10px] font-mono uppercase tracking-[0.12em] text-bs-fg-muted">
+                {group.label}
+              </div>
+              {group.icons.map((name) => {
+                const Icon = getIcon(name);
+                return (
+                  <SelectItem key={name} value={name}>
+                    <span className="flex items-center gap-2">
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                      <span>{name}</span>
+                    </span>
+                  </SelectItem>
+                );
+              })}
+            </div>
           ))}
         </SelectContent>
       </Select>

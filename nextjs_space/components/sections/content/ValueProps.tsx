@@ -3,10 +3,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { Star, Shield, Heart, Check } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
-
-const iconMap: Record<string, React.ComponentType<any>> = { Star, Shield, Heart, Check };
+import { getIcon } from '@/lib/icon-registry';
+import { headerAlignClasses } from '@/lib/section-align';
 
 interface ValueProp {
   title: string;
@@ -40,7 +40,7 @@ export function ValueProps(props: SectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center max-w-3xl mx-auto mb-8"
+          className={`${headerAlignClasses(sectionConfig?.textAlign)} max-w-3xl mb-8`}
         >
           <h2
             className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6"
@@ -58,7 +58,7 @@ export function ValueProps(props: SectionProps) {
 
         <div className={`grid md:grid-cols-2 ${items.length === 3 ? 'lg:grid-cols-3 max-w-5xl mx-auto' : 'lg:grid-cols-4'} gap-8`}>
           {items.map((item, index) => {
-            const Icon = iconMap[item.icon] || Star;
+            const Icon = getIcon(item.icon, Star);
             return (
               <motion.div
                 key={index}

@@ -1,69 +1,38 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { currentUser } from "@clerk/nextjs/server";
+import { withSuperAdmin } from "@/lib/api-auth";
+import { apiValidationError } from "@/lib/api-error";
 
-export async function GET(req: NextRequest) {
-  const user = await currentUser();
+export const GET = withSuperAdmin(async () => {
+  const templates = await prisma.email_templates.findMany({
+    orderBy: { updatedAt: "desc" },
+    include: {
+      mappings: true,
+    },
+  });
 
-  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  return NextResponse.json(templates);
+});
+
+export const POST = withSuperAdmin(async (req) => {
+  const body = await req.json();
+  const { name, subject, contentHtml, category, description } = body;
+
+  if (!name || !subject || !contentHtml) {
+    return apiValidationError("Missing required fields", "POST /api/super-admin/email-templates");
   }
 
-  try {
-    const templates = await prisma.email_templates.findMany({
-      orderBy: { updatedAt: "desc" },
-      include: {
-        mappings: true, // See where it's used
-      },
-    });
+  const template = await prisma.email_templates.create({
+    data: {
+      name,
+      subject,
+      contentHtml,
+      category,
+      description,
+      isSystem: true,
+      tenantId: null,
+    },
+  });
 
-    return NextResponse.json(templates);
-  } catch (error) {
-    console.error("Failed to fetch templates:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
-  }
-}
-
-export async function POST(req: NextRequest) {
-  const user = await currentUser();
-
-  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const body = await req.json();
-    const { name, subject, contentHtml, category, description } = body;
-
-    // Basic validation
-    if (!name || !subject || !contentHtml) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 },
-      );
-    }
-
-    const template = await prisma.email_templates.create({
-      data: {
-        name,
-        subject,
-        contentHtml,
-        category,
-        description,
-        isSystem: true, // Super Admin creates system templates by default
-        tenantId: null, // System template
-      },
-    });
-
-    return NextResponse.json(template);
-  } catch (error) {
-    console.error("Failed to create template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
-  }
-}
+  return NextResponse.json(template);
+});

@@ -93,9 +93,10 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("[Tenant Preview Upload] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to upload preview image" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "tenant-admin.templates.preview-image.upload",
+      status: 500,
+      safeMessage: "Failed to upload preview image",
+    });
   }
 }

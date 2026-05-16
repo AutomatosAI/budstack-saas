@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -126,9 +127,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Template Cloning Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "tenant-admin.templates.clone",
+      status: 500,
+      safeMessage: "Internal server error",
+    });
   }
 }

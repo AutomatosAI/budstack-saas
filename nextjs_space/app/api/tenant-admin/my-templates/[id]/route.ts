@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
 
 export async function DELETE(
   req: NextRequest,
@@ -105,9 +106,10 @@ export async function DELETE(
     });
   } catch (error: any) {
     console.error("[Tenant Template Delete] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to delete template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "tenant-admin.my-templates.delete",
+      status: 500,
+      safeMessage: "Failed to delete template",
+    });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { uploadFromGitHub } from "@/lib/tenant-template-upload-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,14 +70,24 @@ export async function POST(request: NextRequest) {
       templateName: tenantTemplate.templateName,
       s3Path: tenantTemplate.s3Path,
     });
-  } catch (error: any) {
-    console.error("[Tenant Template Upload] Error:", error);
+  } catch (error) {
+    // Pass through validation errors (these are pre-vetted strings from
+    // tenant-template-upload-service — safe for client display).
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes("validation failed")) {
+      return apiError(error, {
+        route: "tenant-admin.templates.upload",
+        status: 422,
+        safeMessage: errMsg,
+      });
+    }
 
-    // Return 422 for validation errors, 500 for everything else
-    const status = error.message?.includes("validation failed") ? 422 : 500;
-    return NextResponse.json(
-      { error: error.message || "Failed to upload template" },
-      { status },
-    );
+    // SECURITY (H_e1): generic 500 — upload errors may include S3 keys,
+    // GitHub API responses, or internal fs paths.
+    return apiError(error, {
+      route: "tenant-admin.templates.upload",
+      status: 500,
+      safeMessage: "Failed to upload template",
+    });
   }
 }

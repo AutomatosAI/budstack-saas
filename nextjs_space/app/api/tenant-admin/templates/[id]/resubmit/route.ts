@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { updateFromGitHub } from "@/lib/tenant-template-upload-service";
 import { resubmitToMarketplace } from "@/lib/marketplace-submission-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(
   request: NextRequest,
@@ -80,9 +81,10 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("[Resubmit] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to re-submit template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "tenant-admin.templates.resubmit",
+      status: 500,
+      safeMessage: "Failed to re-submit template",
+    });
   }
 }

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { SectionProps } from '@/lib/types/section-props';
+import { textAlignClass } from '@/lib/section-align';
 
 export function CTAWithImage(props: SectionProps) {
   const { tenant, consultationUrl, heroImageUrl, sectionConfig } = props;
@@ -48,7 +49,7 @@ export function CTAWithImage(props: SectionProps) {
         />
       )}
 
-      <div className="container mx-auto px-6 relative z-10 text-center">
+      <div className={`container mx-auto px-6 relative z-10 ${textAlignClass(sectionConfig?.textAlign)}`}>
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}

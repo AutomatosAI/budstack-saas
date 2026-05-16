@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
+import { textAlignClass } from '@/lib/section-align';
 
 interface LogoItem {
   src: string;
@@ -50,7 +51,7 @@ export function LogoMarquee(props: SectionProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5 }}
-            className="text-center text-sm font-medium uppercase tracking-widest mb-8"
+            className={`text-sm font-medium uppercase tracking-widest mb-8 ${textAlignClass(sectionConfig?.textAlign)}`}
             style={{ color: 'hsl(var(--tenant-color-text) / 0.5)' }}
           >
             {heading}

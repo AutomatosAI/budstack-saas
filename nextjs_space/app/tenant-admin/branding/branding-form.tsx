@@ -636,7 +636,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
 
   // --- Render ---
   return (
-    <div className="flex flex-col lg:flex-row gap-2 lg:gap-6 h-[calc(100vh-7rem)] lg:h-[calc(100vh-10rem)] overflow-hidden">
+    <div className="store-editor flex flex-col lg:flex-row gap-2 lg:gap-6 h-[calc(100vh-7rem)] lg:h-[calc(100vh-10rem)] overflow-hidden">
       {/* LEFT: Editor Sidebar */}
       <div
         className={cn(

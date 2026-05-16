@@ -3,13 +3,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { Leaf, FlaskConical, Truck, ShieldCheck } from 'lucide-react';
+import { Leaf } from 'lucide-react';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
-
-const iconMap: Record<string, React.ComponentType<any>> = {
-  Leaf, FlaskConical, Truck, ShieldCheck,
-};
+import { getIcon } from '@/lib/icon-registry';
+import { headerAlignClasses } from '@/lib/section-align';
 
 interface TabItem {
   label: string;
@@ -48,7 +46,7 @@ export function TabsShowcase(props: SectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center max-w-3xl mx-auto mb-10"
+          className={`${headerAlignClasses(sectionConfig?.textAlign)} max-w-3xl mb-10`}
         >
           <h2
             className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4"
@@ -74,7 +72,7 @@ export function TabsShowcase(props: SectionProps) {
           className="flex flex-wrap justify-center gap-2 mb-10"
         >
           {tabs.map((tab, index) => {
-            const Icon = iconMap[tab.icon] || Leaf;
+            const Icon = getIcon(tab.icon, Leaf);
             const isActive = index === activeIndex;
             return (
               <button
@@ -146,7 +144,7 @@ export function TabsShowcase(props: SectionProps) {
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     {(() => {
-                      const Icon = iconMap[activeTab.icon] || Leaf;
+                      const Icon = getIcon(activeTab.icon, Leaf);
                       return <Icon size={64} style={{ color: 'hsl(var(--tenant-color-primary) / 0.2)' }} />;
                     })()}
                   </div>

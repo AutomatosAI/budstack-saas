@@ -17,7 +17,7 @@ const BG_IMAGE_FIELDS = [
 export interface ArrayItemField {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'number' | 'image' | 'select';
+  type: 'text' | 'textarea' | 'number' | 'image' | 'select' | 'icon';
   default: string | number;
   options?: string[];
   placeholder?: string;
@@ -335,7 +335,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'items', label: 'Items', type: 'array', default: '', itemLabel: 'Value Prop', itemFields: [
         { key: 'title', label: 'Title', type: 'text', default: 'Benefit' },
         { key: 'description', label: 'Description', type: 'textarea', default: '' },
-        { key: 'icon', label: 'Icon', type: 'text', default: 'Star', placeholder: 'Lucide icon name' },
+        { key: 'icon', label: 'Icon', type: 'icon', default: 'Star' },
       ]},
     ],
   },
@@ -463,7 +463,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'items', label: 'Items', type: 'array', default: '', itemLabel: 'Feature', itemFields: [
         { key: 'title', label: 'Title', type: 'text', default: 'Feature' },
         { key: 'description', label: 'Description', type: 'textarea', default: '' },
-        { key: 'icon', label: 'Icon', type: 'text', default: 'Star', placeholder: 'Lucide icon name' },
+        { key: 'icon', label: 'Icon', type: 'icon', default: 'Star' },
         { key: 'imageUrl', label: 'Card Background Image', type: 'image', default: '' },
       ]},
     ],
@@ -492,8 +492,10 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'cards', label: 'Cards', type: 'array', default: '', itemLabel: 'Card', itemFields: [
         { key: 'title', label: 'Title', type: 'text', default: 'Card Title' },
         { key: 'description', label: 'Description', type: 'textarea', default: '' },
-        { key: 'icon', label: 'Icon', type: 'text', default: 'Star', placeholder: 'Lucide icon name' },
+        { key: 'icon', label: 'Icon', type: 'icon', default: 'Star' },
         { key: 'span', label: 'Span', type: 'select', default: 'normal', options: ['normal', 'wide', 'tall'] },
+        { key: 'imageUrl', label: 'Background Image', type: 'image', default: '' },
+        { key: 'imageOpacity', label: 'Image Visibility', type: 'select', default: '20', options: ['10', '20', '30', '40', '50', '60', '70', '80', '100'] },
       ]},
     ],
   },
@@ -598,7 +600,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: '' },
       { key: 'tabs', label: 'Tabs', type: 'array', default: '', itemLabel: 'Tab', itemFields: [
         { key: 'label', label: 'Tab Label', type: 'text', default: 'Tab' },
-        { key: 'icon', label: 'Icon', type: 'text', default: 'Star', placeholder: 'Lucide icon name' },
+        { key: 'icon', label: 'Icon', type: 'icon', default: 'Star' },
         { key: 'title', label: 'Content Title', type: 'text', default: '' },
         { key: 'description', label: 'Content Description', type: 'textarea', default: '' },
         { key: 'imageUrl', label: 'Image', type: 'image', default: '' },
@@ -630,7 +632,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'steps', label: 'Steps', type: 'array', default: '', itemLabel: 'Step', itemFields: [
         { key: 'title', label: 'Title', type: 'text', default: 'Step' },
         { key: 'description', label: 'Description', type: 'textarea', default: '' },
-        { key: 'icon', label: 'Icon', type: 'text', default: 'CheckCircle', placeholder: 'Lucide icon name' },
+        { key: 'icon', label: 'Icon', type: 'icon', default: 'CheckCircle' },
       ]},
       ...BG_IMAGE_FIELDS,
     ],
@@ -645,7 +647,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
         { key: 'label', label: 'Label', type: 'text', default: 'Metric' },
         { key: 'value', label: 'Target Number', type: 'number', default: 100 },
         { key: 'suffix', label: 'Suffix', type: 'text', default: '+', placeholder: '+, %, k, etc.' },
-        { key: 'icon', label: 'Icon', type: 'text', default: 'TrendingUp', placeholder: 'Lucide icon name' },
+        { key: 'icon', label: 'Icon', type: 'icon', default: 'TrendingUp' },
       ]},
       ...BG_IMAGE_FIELDS,
     ],
@@ -660,7 +662,9 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'ctaText', label: 'CTA Button Text', type: 'text', default: '' },
       { key: 'ctaHref', label: 'CTA Link', type: 'url', default: '' },
       { key: 'imageUrl', label: 'Image', type: 'image', default: '' },
-      { key: 'overlayStyle', label: 'Overlay Style', type: 'select', default: 'gradient', options: ['gradient', 'solid', 'none'] },
+      { key: 'overlayStyle', label: 'Overlay Style', type: 'select', default: 'gradient-left', options: ['gradient-left', 'gradient-center', 'solid', 'none'] },
+      { key: 'overlayOpacity', label: 'Overlay Strength', type: 'select', default: '70', options: ['0', '20', '40', '60', '70', '80', '90'] },
+      { key: 'theme', label: 'Text Theme', type: 'select', default: 'dark', options: ['dark', 'light'] },
     ],
   },
   TextMarquee: {
@@ -783,13 +787,38 @@ export function getSectionDefaults(type: string): Record<string, any> {
   return defaults;
 }
 
+/** Common textAlign field auto-injected for any section that has a heading but
+ *  doesn't already declare its own textAlign. Keeps schemas concise while giving
+ *  every header-bearing section a consistent alignment control. */
+const AUTO_TEXT_ALIGN_FIELD: FieldSchema = {
+  key: 'textAlign',
+  label: 'Heading Alignment',
+  type: 'select',
+  default: 'center',
+  options: ['left', 'center', 'right'],
+};
+
 /** Return editable fields for the editor form.
  *  Array fields with itemFields are included (rendered as item editors).
- *  Array fields WITHOUT itemFields are still excluded (no schema to render). */
+ *  Array fields WITHOUT itemFields are still excluded (no schema to render).
+ *  textAlign is auto-injected after heading/subtitle when not already present. */
 export function getEditableFields(type: string): FieldSchema[] {
   const schema = SECTION_SCHEMAS[type];
   if (!schema) return [];
-  return schema.fields.filter((f) => f.type !== 'array' || (f.itemFields && f.itemFields.length > 0));
+  const filtered = schema.fields.filter(
+    (f) => f.type !== 'array' || (f.itemFields && f.itemFields.length > 0),
+  );
+  const hasHeading = filtered.some((f) => f.key === 'heading');
+  const hasTextAlign = filtered.some((f) => f.key === 'textAlign');
+  if (!hasHeading || hasTextAlign) return filtered;
+  const subtitleIdx = filtered.findIndex((f) => f.key === 'subtitle');
+  const headingIdx = filtered.findIndex((f) => f.key === 'heading');
+  const insertAfter = subtitleIdx >= 0 ? subtitleIdx : headingIdx;
+  return [
+    ...filtered.slice(0, insertAfter + 1),
+    AUTO_TEXT_ALIGN_FIELD,
+    ...filtered.slice(insertAfter + 1),
+  ];
 }
 
 /** Group section types by category, excluding nav/footer */
@@ -834,6 +863,14 @@ export function migrateSectionConfig(
       migrated[field.key] = field.default;
     }
     // Array fields with no existing data are omitted — components use their own fallbacks
+  }
+
+  // Preserve auto-injected textAlign across migrations (any section with a heading
+  // gets the alignment control, even if not explicitly declared in the schema).
+  const newHasHeading = schema.fields.some((f) => f.key === 'heading');
+  const newHasTextAlign = schema.fields.some((f) => f.key === 'textAlign');
+  if (newHasHeading && !newHasTextAlign && oldConfig.textAlign !== undefined) {
+    migrated.textAlign = oldConfig.textAlign;
   }
 
   return migrated;

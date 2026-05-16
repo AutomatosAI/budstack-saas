@@ -4,6 +4,7 @@ import { createClient } from '@/lib/doctor-green-api';
 import { prisma } from '@/lib/db';
 import { getCurrentTenant } from '@/lib/tenant';
 import { getTenantDrGreenConfig } from '@/lib/tenant-config';
+import { apiError } from '@/lib/api-error';
 
 export async function POST(req: NextRequest) {
   try {
@@ -159,11 +160,13 @@ export async function POST(req: NextRequest) {
       clientId: result.clientId,
       kycLink: result.kycLink,
     });
-  } catch (error: any) {
-    console.error("Patient registration error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to register patient" },
-      { status: 500 },
-    );
+  } catch (error) {
+    // SECURITY (H_e1): Dr Green client creation errors may include API
+    // endpoints, request IDs, or PII fragments — never propagate raw.
+    return apiError(error, {
+      route: "shop.register",
+      status: 500,
+      safeMessage: "Failed to register patient",
+    });
   }
 }

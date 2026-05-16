@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/super-admin/templates/[id]/detach
@@ -97,9 +98,10 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("[Template Detach] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to detach template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "super-admin.templates.detach",
+      status: 500,
+      safeMessage: "Failed to detach template",
+    });
   }
 }

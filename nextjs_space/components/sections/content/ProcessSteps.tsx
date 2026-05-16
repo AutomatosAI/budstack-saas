@@ -3,12 +3,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { ClipboardList, Search, Truck, CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
-
-const iconMap: Record<string, React.ComponentType<any>> = {
-  ClipboardList, Search, Truck, CheckCircle,
-};
+import { getIcon } from '@/lib/icon-registry';
+import { headerAlignClasses } from '@/lib/section-align';
 
 interface Step {
   title: string;
@@ -57,7 +55,7 @@ export function ProcessSteps(props: SectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center max-w-3xl mx-auto mb-12"
+          className={`${headerAlignClasses(sectionConfig?.textAlign)} max-w-3xl mb-12`}
         >
           <h2
             className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4"
@@ -77,7 +75,7 @@ export function ProcessSteps(props: SectionProps) {
 
         <div className={`relative ${isHorizontal ? 'flex flex-col md:flex-row items-center md:items-start justify-center gap-10 md:gap-0' : 'flex flex-col items-start max-w-2xl mx-auto gap-0'}`}>
           {steps.map((step, index) => {
-            const Icon = iconMap[step.icon] || CheckCircle;
+            const Icon = getIcon(step.icon, CheckCircle);
             const isLast = index === steps.length - 1;
 
             return (

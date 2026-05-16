@@ -28,32 +28,32 @@ const CATEGORY_META: Record<
   "getting-started": {
     label: "Getting Started",
     icon: "rocket",
-    color: "bg-emerald-100 text-emerald-800",
+    color: "bg-emerald-500/10 text-emerald-300 border border-emerald-500/25",
   },
   templates: {
     label: "Templates",
     icon: "palette",
-    color: "bg-purple-100 text-purple-800",
+    color: "bg-purple-500/10 text-purple-300 border border-purple-500/25",
   },
   orders: {
     label: "Orders & Products",
     icon: "shopping-cart",
-    color: "bg-blue-100 text-blue-800",
+    color: "bg-sky-500/10 text-sky-300 border border-sky-500/25",
   },
   integrations: {
     label: "Integrations",
     icon: "plug",
-    color: "bg-amber-100 text-amber-800",
+    color: "bg-amber-500/10 text-amber-300 border border-amber-500/25",
   },
   branding: {
     label: "Branding & Design",
     icon: "paintbrush",
-    color: "bg-pink-100 text-pink-800",
+    color: "bg-pink-500/10 text-pink-300 border border-pink-500/25",
   },
   general: {
     label: "General",
     icon: "book",
-    color: "bg-slate-100 text-slate-800",
+    color: "bg-bs-card-2 text-bs-fg-muted border border-bs-border",
   },
 };
 
@@ -136,8 +136,8 @@ export default async function LearnPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
         {grouped.size === 0 && (
           <div className="card-floating p-12 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-              <BookOpen className="h-6 w-6 text-slate-400" />
+            <div className="mx-auto w-12 h-12 rounded-full bg-bs-card-2 border border-bs-border flex items-center justify-center mb-4">
+              <BookOpen className="h-6 w-6 text-bs-fg-muted" />
             </div>
             <h3 className="font-display text-lg font-bold text-foreground mb-2">
               Coming Soon
@@ -172,7 +172,7 @@ export default async function LearnPage() {
                     <div className="card-floating overflow-hidden hover:scale-[1.01] transition-all duration-300 h-full">
                       {/* Cover Image */}
                       {item.signedCoverImage ? (
-                        <div className="aspect-video bg-slate-100 relative">
+                        <div className="aspect-video bg-bs-bg-2 relative">
                           <img
                             src={item.signedCoverImage}
                             alt={item.title}
@@ -187,7 +187,7 @@ export default async function LearnPage() {
                           )}
                         </div>
                       ) : (
-                        <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
+                        <div className="aspect-video bg-gradient-to-br from-bs-card-2 to-bs-bg-2 flex items-center justify-center">
                           <TypeIcon type={item.type} />
                         </div>
                       )}
@@ -213,7 +213,7 @@ export default async function LearnPage() {
                             {item.tags.slice(0, 3).map((tag: string) => (
                               <span
                                 key={tag}
-                                className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"
+                                className="text-xs px-2 py-0.5 rounded-full bg-bs-card-2 text-bs-fg-muted border border-bs-border"
                               >
                                 {tag}
                               </span>

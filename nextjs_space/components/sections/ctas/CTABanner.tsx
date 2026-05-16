@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { SectionProps } from '@/lib/types/section-props';
+import { textAlignClass } from '@/lib/section-align';
 
 export function CTABanner(props: SectionProps) {
   const { tenant, consultationUrl, sectionConfig } = props;
@@ -38,7 +39,7 @@ export function CTABanner(props: SectionProps) {
           />
         </>
       )}
-      <div className="relative z-10 container mx-auto px-6 text-center">
+      <div className={`relative z-10 container mx-auto px-6 ${textAlignClass(sectionConfig?.textAlign)}`}>
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
