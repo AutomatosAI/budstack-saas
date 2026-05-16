@@ -434,15 +434,47 @@ async function scanClientList(
 }
 
 /**
- * Get client information by Client ID
+ * Get client information by Client ID.
  *
- * GET /dapp/clients/{id} returns 401 — this is a known Dr Green API limitation.
- * Workaround: scan the list endpoint from both ends.
+ * Tries the direct GET /dapp/clients/{id} first. Dr Green's DualAuthGuard
+ * (dr-green-backend/src/strategy/daap.jwt.strategy.ts:229-236) verifies the
+ * signature against JSON.stringify(req.params) for GETs with no query string,
+ * so we pass signBody: { clientId } to match — earlier code signed an empty
+ * string here, which is why the route returned 401 and forced the list-scan
+ * workaround below.
+ *
+ * Falls back to a bidirectional list scan if the direct call fails, so a
+ * future regression in the upstream signature check can't break cart/order
+ * flows.
  */
 export async function fetchClient(
   clientId: string,
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenClient> {
+  try {
+    const response = await doctorGreenRequest<any>(`/dapp/clients/${clientId}`, {
+      config,
+      signBody: { clientId },
+    });
+    const client =
+      response?.data?.client ??
+      response?.client ??
+      response?.data ??
+      response;
+    if (client?.id) {
+      console.log(`[fetchClient] direct GET /dapp/clients/${clientId} succeeded`);
+      return client as DoctorGreenClient;
+    }
+    console.warn(
+      `[fetchClient] direct GET /dapp/clients/${clientId} returned no client, falling back to list scan`,
+    );
+  } catch (e) {
+    console.warn(
+      `[fetchClient] direct GET /dapp/clients/${clientId} failed, falling back to list scan:`,
+      e instanceof Error ? e.message : e,
+    );
+  }
+
   const match = await scanClientList(
     (c: any) => c.id === clientId,
     config,
