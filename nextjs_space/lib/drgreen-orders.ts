@@ -251,7 +251,14 @@ export async function getOrder(params: {
         try {
             const drGreenOrder = await callDrGreenAPI(
                 `/dapp/orders/${order.drGreenOrderId}`,
-                { method: "GET", apiKey, secretKey },
+                {
+                    method: "GET",
+                    apiKey,
+                    secretKey,
+                    // GET with path param, no query — DualAuthGuard signs
+                    // JSON.stringify(req.params). See doctor-green-api.ts fetchClient.
+                    signBody: { orderId: order.drGreenOrderId },
+                },
             );
 
             const orderDetails = (drGreenOrder as any).data?.orderDetails;

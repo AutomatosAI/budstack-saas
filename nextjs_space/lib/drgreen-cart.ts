@@ -171,13 +171,16 @@ export async function getCart(params: {
     // Get client ID
     const clientId = await ensureClientId(userId, tenantId, apiKey, secretKey);
 
-    // Refresh from Dr. Green API
+    // Refresh from Dr. Green API.
+    // clientId goes in the query string so (a) the backend's GetCartsDto can
+    // filter and (b) the signature matches — DualAuthGuard signs the query
+    // string for GETs and JSON.stringify(req.params) when no query is sent.
     const response = await callDrGreenAPI('/dapp/carts', {
       method: "GET",
       apiKey,
       secretKey,
       baseUrl: apiUrl,
-      signBody: { clientId },
+      queryParams: { clientId },
     });
 
     const cartData = (response as any).data?.clients?.[0]?.clientCart?.[0];
@@ -268,7 +271,10 @@ export async function removeFromCart(params: {
     throw new Error("Cart not found");
   }
 
-  // Call Dr. Green API to remove item
+  // Call Dr. Green API to remove a single strain.
+  // strainId MUST be a query param — the backend route reads it via
+  // @Query("strainId"); putting it in the body silently triggers the
+  // "delete entire cart" code path.
   await callDrGreenAPI(
     `/dapp/carts/${cart.drGreenCartId}`,
     {
@@ -276,7 +282,8 @@ export async function removeFromCart(params: {
       apiKey,
       secretKey,
       baseUrl: apiUrl,
-      body: { cartId: cart.drGreenCartId, strainId },
+      queryParams: { strainId },
+      body: { cartId: cart.drGreenCartId },
     },
   );
 
