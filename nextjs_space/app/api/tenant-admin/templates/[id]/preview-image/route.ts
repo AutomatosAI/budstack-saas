@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { uploadFile, getFileUrl } from "@/lib/s3";
-import { apiError } from "@/lib/api-error";
+import { validateUploadBuffer } from "@/lib/upload-validation";
 
 export async function POST(
   request: NextRequest,
@@ -49,23 +49,32 @@ export async function POST(
       );
     }
 
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json(
-        { error: "File must be an image" },
-        { status: 400 },
-      );
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: "Image must be under 5MB" },
-        { status: 400 },
-      );
-    }
-
     const buffer = Buffer.from(await file.arrayBuffer());
-    const fileName = `tenant-template-preview-${id}-${Date.now()}-${file.name}`;
-    const s3Key = await uploadFile(buffer, fileName);
+
+    // SECURITY (C10): Sanitize filename + magic-byte verify content.
+    const sanitizedName = file.name
+      .replace(/\.\.\//g, "")
+      .replace(/\.\.\\/g, "")
+      .replace(/[/\\]/g, "_")
+      .slice(0, 200);
+
+    const validation = await validateUploadBuffer(
+      buffer,
+      file.type,
+      sanitizedName,
+      { maxSize: 5 * 1024 * 1024 },
+    );
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
+    const fileName = `tenant-template-preview-${id}-${Date.now()}-${sanitizedName}`;
+    const s3Key = await uploadFile(
+      buffer,
+      fileName,
+      file.type || undefined,
+      `tenants/${tenantId}/`,
+    );
 
     await prisma.tenant_templates.update({
       where: { id },

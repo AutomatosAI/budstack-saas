@@ -11,6 +11,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createS3Client, getBucketConfig } from "./aws-config";
 import { promises as fs } from "fs";
 import path from "path";
+import { sanitizeSvg } from "./svg-sanitize";
 
 // Map MIME types to file extensions for files uploaded without an extension
 const mimeToExt: Record<string, string> = {
@@ -129,7 +130,7 @@ export async function uploadDirectoryToS3(
         await uploadDir(fullPath, s3Key);
       } else {
         // Upload file
-        const fileContent = await fs.readFile(fullPath);
+        let fileContent: Buffer | string = await fs.readFile(fullPath);
 
         // Determine content type
         let contentType = "application/octet-stream";
@@ -159,12 +160,30 @@ export async function uploadDirectoryToS3(
         };
         contentType = contentTypes[ext] || contentType;
 
+        // SECURITY (C6): SVG is XML and can carry inline <script>,
+        // event handlers, and javascript: URLs. A malicious template
+        // upload could otherwise stage stored XSS that fires inside any
+        // store page that loads the asset. Sanitize at upload time.
+        if (ext === ".svg") {
+          const raw = fileContent.toString("utf-8");
+          fileContent = sanitizeSvg(raw);
+        }
+
+        // SECURITY (C6/C10): Force a Content-Disposition for HTML and
+        // SVG-equivalent files so a browser navigating to a signed URL
+        // does NOT render the file in the bucket origin.
+        const inlineRiskExtensions = new Set([".html", ".htm", ".xhtml"]);
+        const dispositionHeader = inlineRiskExtensions.has(ext)
+          ? { ContentDisposition: `attachment; filename="${entry.name}"` }
+          : {};
+
         await s3Client.send(
           new PutObjectCommand({
             Bucket: bucketName,
             Key: s3Key,
             Body: fileContent,
             ContentType: contentType,
+            ...dispositionHeader,
           }),
         );
 

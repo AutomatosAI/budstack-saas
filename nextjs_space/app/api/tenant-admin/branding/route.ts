@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { uploadFile, getJsonFromS3 } from "@/lib/s3";
-import { validateUpload } from "@/lib/upload-validation";
+import { validateUploadBuffer } from "@/lib/upload-validation";
 import { TenantSettings } from "@/lib/types";
 import { deepMerge } from "@/lib/utils";
 import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
@@ -62,40 +62,101 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const settings: TenantSettings = JSON.parse(settingsJSON);
+    // SECURITY (C4): Strip server-managed keys from incoming settings to
+    // close mass-assignment. A tenant admin must NEVER be able to overwrite
+    // clerkOrgId via this endpoint — that field controls the Clerk org used
+    // by /api/super-admin/tenants/[id] DELETE and other privileged paths.
+    const SERVER_MANAGED_SETTINGS_KEYS = ["clerkOrgId"] as const;
+    const incomingSettings = JSON.parse(settingsJSON) as Record<string, unknown>;
+    for (const key of SERVER_MANAGED_SETTINGS_KEYS) {
+      delete incomingSettings[key];
+    }
+    const currentSettings = (tenant.settings as Record<string, unknown>) || {};
+    const preservedServerKeys = Object.fromEntries(
+      SERVER_MANAGED_SETTINGS_KEYS.filter(
+        (k) => currentSettings[k] !== undefined,
+      ).map((k) => [k, currentSettings[k]]),
+    );
+    const settings: TenantSettings = {
+      ...incomingSettings,
+      ...preservedServerKeys,
+    } as TenantSettings;
+
+    // SECURITY (C10/H_u): Sanitize filenames + magic-byte buffer
+    // verification on every upload. Without these a tenant admin could
+    // claim an image MIME but ship an HTML/JS payload that a browser
+    // would render when the signed URL is followed.
+    const safeName = (raw: string) =>
+      raw
+        .replace(/\.\.\//g, "")
+        .replace(/\.\.\\/g, "")
+        .replace(/[/\\]/g, "_")
+        .slice(0, 200);
+
+    const tenantUploadPrefix = `tenants/${tenantId}/`;
 
     // Handle file uploads with server-side validation
     const logo = formData.get("logo") as File;
     if (logo && logo.size > 0) {
-      const validation = validateUpload(logo);
+      const buffer = Buffer.from(await logo.arrayBuffer());
+      const cleanName = safeName(logo.name);
+      const validation = await validateUploadBuffer(
+        buffer,
+        logo.type,
+        cleanName,
+      );
       if (!validation.valid) {
         return NextResponse.json({ error: `Logo: ${validation.error}` }, { status: 400 });
       }
-      const buffer = Buffer.from(await logo.arrayBuffer());
-      const fileName = `logo-${Date.now()}-${logo.name}`;
-      settings.logoPath = await uploadFile(buffer, fileName, logo.type || undefined);
+      const fileName = `logo-${Date.now()}-${cleanName}`;
+      settings.logoPath = await uploadFile(
+        buffer,
+        fileName,
+        logo.type || undefined,
+        tenantUploadPrefix,
+      );
     }
 
     const heroImage = formData.get("heroImage") as File;
     if (heroImage && heroImage.size > 0) {
-      const validation = validateUpload(heroImage);
+      const buffer = Buffer.from(await heroImage.arrayBuffer());
+      const cleanName = safeName(heroImage.name);
+      const validation = await validateUploadBuffer(
+        buffer,
+        heroImage.type,
+        cleanName,
+      );
       if (!validation.valid) {
         return NextResponse.json({ error: `Hero image: ${validation.error}` }, { status: 400 });
       }
-      const buffer = Buffer.from(await heroImage.arrayBuffer());
-      const fileName = `hero-${Date.now()}-${heroImage.name}`;
-      settings.heroImagePath = await uploadFile(buffer, fileName, heroImage.type || undefined);
+      const fileName = `hero-${Date.now()}-${cleanName}`;
+      settings.heroImagePath = await uploadFile(
+        buffer,
+        fileName,
+        heroImage.type || undefined,
+        tenantUploadPrefix,
+      );
     }
 
     const favicon = formData.get("favicon") as File;
     if (favicon && favicon.size > 0) {
-      const validation = validateUpload(favicon);
+      const buffer = Buffer.from(await favicon.arrayBuffer());
+      const cleanName = safeName(favicon.name);
+      const validation = await validateUploadBuffer(
+        buffer,
+        favicon.type,
+        cleanName,
+      );
       if (!validation.valid) {
         return NextResponse.json({ error: `Favicon: ${validation.error}` }, { status: 400 });
       }
-      const buffer = Buffer.from(await favicon.arrayBuffer());
-      const fileName = `favicon-${Date.now()}-${favicon.name}`;
-      settings.faviconPath = await uploadFile(buffer, fileName, favicon.type || undefined);
+      const fileName = `favicon-${Date.now()}-${cleanName}`;
+      settings.faviconPath = await uploadFile(
+        buffer,
+        fileName,
+        favicon.type || undefined,
+        tenantUploadPrefix,
+      );
     }
 
     // Accept optional templateId override — allows saving to non-active templates (e.g. blank canvas drafts)

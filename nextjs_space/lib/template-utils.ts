@@ -4,6 +4,115 @@ import fetch from "node-fetch";
 import AdmZip from "adm-zip";
 import { SECTION_REGISTRY } from "@/lib/section-registry";
 
+// SECURITY (C5): Caps for ZIP extraction. Without these a malicious GitHub
+// archive could ship a zip-bomb (high compression ratio) or a 100k-file
+// archive that exhausts disk and inodes before validation runs.
+const ZIP_MAX_TOTAL_UNCOMPRESSED = 500 * 1024 * 1024; // 500 MB
+const ZIP_MAX_FILE_UNCOMPRESSED = 50 * 1024 * 1024; // 50 MB per file
+const ZIP_MAX_ENTRIES = 5_000;
+const ZIP_DOWNLOAD_MAX_BYTES = 100 * 1024 * 1024; // 100 MB downloaded archive
+
+/**
+ * SECURITY (C5): Extract a ZIP into `destRoot` while enforcing path
+ * containment, size caps, and entry-count caps. Replaces the
+ * `zip.extractAllTo(...)` call which does NOT validate paths and
+ * happily honours absolute paths and `../` traversals — the classic
+ * ZIP-slip pattern (CVE-2018-1002200).
+ *
+ * Throws on:
+ *   - any entry whose resolved path escapes destRoot
+ *   - absolute paths (starts with `/` or drive letter)
+ *   - symlink entries
+ *   - entry count > ZIP_MAX_ENTRIES
+ *   - cumulative size > ZIP_MAX_TOTAL_UNCOMPRESSED
+ *   - any single file > ZIP_MAX_FILE_UNCOMPRESSED
+ */
+async function safeExtractZip(zip: AdmZip, destRoot: string): Promise<void> {
+  const resolvedRoot = path.resolve(destRoot);
+  const entries = zip.getEntries();
+
+  if (entries.length > ZIP_MAX_ENTRIES) {
+    throw new Error(
+      `ZIP rejected: ${entries.length} entries exceeds limit of ${ZIP_MAX_ENTRIES}`,
+    );
+  }
+
+  let totalBytes = 0;
+
+  for (const entry of entries) {
+    const rawName = entry.entryName;
+
+    // Reject absolute paths and Windows drive paths
+    if (rawName.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(rawName)) {
+      throw new Error(`ZIP rejected: absolute path entry "${rawName}"`);
+    }
+
+    // Reject backslash separators outright — adm-zip should normalise but
+    // a hand-crafted archive may include them as part of a bypass.
+    if (rawName.includes("\\")) {
+      throw new Error(`ZIP rejected: backslash in entry name "${rawName}"`);
+    }
+
+    // Reject NUL bytes
+    if (rawName.includes("\0")) {
+      throw new Error(`ZIP rejected: NUL byte in entry name`);
+    }
+
+    const targetPath = path.resolve(resolvedRoot, rawName);
+    const relativeFromRoot = path.relative(resolvedRoot, targetPath);
+
+    // path.relative returns "" for the root itself, otherwise must not
+    // start with ".." and must not be absolute.
+    if (
+      relativeFromRoot.startsWith("..") ||
+      path.isAbsolute(relativeFromRoot)
+    ) {
+      throw new Error(
+        `ZIP rejected: entry "${rawName}" escapes extraction root`,
+      );
+    }
+
+    // Reject symlink-style entries (mode bit 0xa). adm-zip exposes
+    // attributes on entry.attr; we reject if the symlink bits are set.
+    const externalAttr = (entry as any).header?.attr ?? 0;
+    const unixMode = (externalAttr >>> 16) & 0xffff;
+    const isSymlink = (unixMode & 0xf000) === 0xa000;
+    if (isSymlink) {
+      throw new Error(
+        `ZIP rejected: symlink entry "${rawName}" not allowed`,
+      );
+    }
+
+    if (entry.isDirectory) {
+      await fs.mkdir(targetPath, { recursive: true });
+      continue;
+    }
+
+    const declaredSize = entry.header?.size ?? 0;
+    if (declaredSize > ZIP_MAX_FILE_UNCOMPRESSED) {
+      throw new Error(
+        `ZIP rejected: entry "${rawName}" declared size ${declaredSize} exceeds per-file limit`,
+      );
+    }
+
+    totalBytes += declaredSize;
+    if (totalBytes > ZIP_MAX_TOTAL_UNCOMPRESSED) {
+      throw new Error(
+        `ZIP rejected: cumulative uncompressed size exceeds ${ZIP_MAX_TOTAL_UNCOMPRESSED} bytes`,
+      );
+    }
+
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    const data = entry.getData();
+    if (data.length > ZIP_MAX_FILE_UNCOMPRESSED) {
+      throw new Error(
+        `ZIP rejected: entry "${rawName}" actual size ${data.length} exceeds per-file limit`,
+      );
+    }
+    await fs.writeFile(targetPath, data);
+  }
+}
+
 export interface TemplateConfig {
   id: string;
   name: string;
@@ -83,7 +192,24 @@ export async function downloadGitHubRepo(
 
       const response = await fetch(zipUrl);
       if (response.ok) {
+        // SECURITY (C5): Cap the download size before reading into memory.
+        // GitHub archives are normally <30MB; reject anything > 100MB so a
+        // hostile mirror can't OOM us by streaming gigabytes.
+        const contentLength = parseInt(
+          response.headers.get("content-length") || "0",
+          10,
+        );
+        if (contentLength > ZIP_DOWNLOAD_MAX_BYTES) {
+          throw new Error(
+            `ZIP archive too large: ${contentLength} bytes (max ${ZIP_DOWNLOAD_MAX_BYTES})`,
+          );
+        }
         const buffer = await response.buffer();
+        if (buffer.length > ZIP_DOWNLOAD_MAX_BYTES) {
+          throw new Error(
+            `ZIP archive too large: ${buffer.length} bytes (max ${ZIP_DOWNLOAD_MAX_BYTES})`,
+          );
+        }
         await fs.writeFile(zipPath, buffer);
         downloaded = true;
         usedBranch = branchName;
@@ -99,9 +225,10 @@ export async function downloadGitHubRepo(
 
     console.log(`[Template Utils] ZIP downloaded from branch '${usedBranch}'`);
 
-    // Extract ZIP
+    // SECURITY (C5): Extract ZIP with per-entry path validation, size
+    // caps, and symlink rejection. Replaces unsafe extractAllTo().
     const zip = new AdmZip(zipPath);
-    zip.extractAllTo(tempDir, true);
+    await safeExtractZip(zip, tempDir);
 
     // Find the extracted folder (GitHub adds repo-name-branch format)
     const extractedDirs = await fs.readdir(tempDir);

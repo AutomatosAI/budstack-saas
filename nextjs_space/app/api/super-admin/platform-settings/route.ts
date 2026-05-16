@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { uploadFile } from "@/lib/s3";
+import { validateUploadBuffer } from "@/lib/upload-validation";
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,18 +50,52 @@ export async function POST(req: NextRequest) {
     let logoUrl: string | undefined;
     let faviconUrl: string | undefined;
 
+    // SECURITY (C10): Sanitize filename + magic-byte verification on
+    // platform branding uploads. Without this a super-admin (or anyone
+    // who compromises one) could ship a non-image disguised as one.
+    const safeFileName = (raw: string) =>
+      raw
+        .replace(/\.\.\//g, "")
+        .replace(/\.\.\\/g, "")
+        .replace(/[/\\]/g, "_")
+        .slice(0, 200);
+
     // Upload logo if provided
     if (logoFile && logoFile.size > 0) {
       const logoBuffer = Buffer.from(await logoFile.arrayBuffer());
-      const logoKey = `platform/logo-${Date.now()}-${logoFile.name}`;
-      logoUrl = await uploadFile(logoBuffer, logoKey);
+      const cleanName = safeFileName(logoFile.name);
+      const validation = await validateUploadBuffer(
+        logoBuffer,
+        logoFile.type,
+        cleanName,
+      );
+      if (!validation.valid) {
+        return NextResponse.json(
+          { error: `Logo: ${validation.error}` },
+          { status: 400 },
+        );
+      }
+      const logoKey = `platform/logo-${Date.now()}-${cleanName}`;
+      logoUrl = await uploadFile(logoBuffer, logoKey, logoFile.type || undefined);
     }
 
     // Upload favicon if provided
     if (faviconFile && faviconFile.size > 0) {
       const faviconBuffer = Buffer.from(await faviconFile.arrayBuffer());
-      const faviconKey = `platform/favicon-${Date.now()}-${faviconFile.name}`;
-      faviconUrl = await uploadFile(faviconBuffer, faviconKey);
+      const cleanName = safeFileName(faviconFile.name);
+      const validation = await validateUploadBuffer(
+        faviconBuffer,
+        faviconFile.type,
+        cleanName,
+      );
+      if (!validation.valid) {
+        return NextResponse.json(
+          { error: `Favicon: ${validation.error}` },
+          { status: 400 },
+        );
+      }
+      const faviconKey = `platform/favicon-${Date.now()}-${cleanName}`;
+      faviconUrl = await uploadFile(faviconBuffer, faviconKey, faviconFile.type || undefined);
     }
 
     // Get or create platform settings
