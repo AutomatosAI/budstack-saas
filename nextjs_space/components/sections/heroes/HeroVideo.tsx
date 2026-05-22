@@ -22,22 +22,25 @@ export function HeroVideo({
   const secondaryCtaText = sectionConfig?.secondaryCtaText || '';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '';
   const secondaryCtaStyleKey = (sectionConfig?.secondaryCtaStyle as string) || 'outline-white';
+  // NOTE: every variant must include a `bg-*` class — the storefront's brand
+  // button system (.tenant-theme-container section a[class*="bg-"] in
+  // globals.css) only targets anchors whose className contains "bg-". Without
+  // it the brand editor's shape/padding/font/hover settings won't apply.
   const secondaryStyleMap: Record<string, { className: string; style: React.CSSProperties }> = {
     'outline-white': {
-      className: 'px-10 py-4 text-lg font-semibold text-white rounded-full border-2 transition-all hover:scale-105 hover:bg-white/10 inline-block',
-      style: { borderColor: 'rgba(255, 255, 255, 0.6)', backgroundColor: 'transparent' },
+      className: 'bg-transparent px-10 py-4 text-lg font-semibold text-white rounded-full border-2 transition-all hover:scale-105 hover:bg-white/10 inline-block',
+      style: { borderColor: 'rgba(255, 255, 255, 0.6)' },
     },
     'outline-primary': {
-      className: 'px-10 py-4 text-lg font-semibold rounded-full border-2 transition-all hover:scale-105 inline-block',
+      className: 'bg-transparent px-10 py-4 text-lg font-semibold rounded-full border-2 transition-all hover:scale-105 inline-block',
       style: {
         borderColor: 'hsl(var(--tenant-color-primary))',
         color: 'hsl(var(--tenant-color-primary))',
-        backgroundColor: 'transparent',
       },
     },
     'solid': {
-      className: 'px-10 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-105 hover:opacity-90 inline-block',
-      style: { backgroundColor: 'hsl(var(--tenant-color-primary))' },
+      className: 'bg-[hsl(var(--tenant-color-primary))] px-10 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-105 hover:opacity-90 inline-block',
+      style: {},
     },
   };
   const secondaryStyle = secondaryStyleMap[secondaryCtaStyleKey] || secondaryStyleMap['outline-white'];
@@ -237,8 +240,7 @@ export function HeroVideo({
           {ctaText && (
             <a
               href={ctaHref || '#'}
-              className="px-10 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-105 inline-block"
-              style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
+              className="bg-[hsl(var(--tenant-color-primary))] px-10 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-105 inline-block"
             >
               {ctaText}
             </a>
