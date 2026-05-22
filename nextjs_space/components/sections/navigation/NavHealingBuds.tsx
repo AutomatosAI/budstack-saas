@@ -40,6 +40,7 @@ export function NavHealingBuds(props: SectionProps) {
   // --- Config from defaults.json / sectionConfig ---
   const config = sectionConfig || navigation || {};
   const showCart = config.showCart !== false;
+  const showAuthButton = config.showAuthButton !== false;
   const accentColor = config.accentColor || null; // falls back to CSS var
   const bgColor = config.bgColor || null; // falls back to CSS var
   const signedOutLabel = config.signedOutLabel || 'Connect';
@@ -216,12 +217,14 @@ export function NavHealingBuds(props: SectionProps) {
             </Link>
           )}
 
-          <NavAuthButton
-            basePath={basePath}
-            variant="dark"
-            loginStyle={loginStyle}
-            signedOutLabel={signedOutLabel}
-          />
+          {showAuthButton && (
+            <NavAuthButton
+              basePath={basePath}
+              variant="dark"
+              loginStyle={loginStyle}
+              signedOutLabel={signedOutLabel}
+            />
+          )}
         </div>
 
         {/* Mobile Toggle */}
@@ -314,14 +317,16 @@ export function NavHealingBuds(props: SectionProps) {
                 </Link>
               )}
 
-              <div className="pt-2">
-                <NavAuthButton
-                  basePath={basePath}
-                  variant="dark"
-                  loginStyle="button"
-                  signedOutLabel={signedOutLabel}
-                />
-              </div>
+              {showAuthButton && (
+                <div className="pt-2">
+                  <NavAuthButton
+                    basePath={basePath}
+                    variant="dark"
+                    loginStyle="button"
+                    signedOutLabel={signedOutLabel}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

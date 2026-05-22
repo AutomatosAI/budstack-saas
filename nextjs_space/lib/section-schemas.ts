@@ -89,6 +89,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'ctaHref', label: 'Primary CTA Link', type: 'url', default: '' },
       { key: 'secondaryCtaText', label: 'Secondary CTA Text', type: 'text', default: '' },
       { key: 'secondaryCtaHref', label: 'Secondary CTA Link', type: 'url', default: '' },
+      { key: 'secondaryCtaStyle', label: 'Secondary CTA Style', type: 'select', default: 'outline-white', options: ['outline-white', 'outline-primary', 'solid'] },
       { key: 'videoUrl', label: 'Video', type: 'video', default: '' },
       { key: 'imageUrl', label: 'Fallback Image', type: 'image', default: '' },
       { key: 'watermarkUrl', label: 'Watermark Image', type: 'image', default: '' },
