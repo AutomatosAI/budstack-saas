@@ -6,7 +6,7 @@ const nextConfig = {
   output: process.env.NEXT_OUTPUT_MODE || 'standalone',
   experimental: {
     outputFileTracingRoot: path.join(__dirname, '../'),
-    serverComponentsExternalPackages: ['@prisma/client', '@prisma/engines'],
+    serverComponentsExternalPackages: ['@prisma/client', '@prisma/engines', 'isomorphic-dompurify', 'jsdom'],
   },
   eslint: {
     ignoreDuringBuilds: true,
