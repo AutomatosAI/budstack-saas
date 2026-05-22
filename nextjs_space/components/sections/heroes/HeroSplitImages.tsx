@@ -34,6 +34,7 @@ export function HeroSplitImages({
     pageContent?.home?.heroDescription ||
     'Discover our curated selection of premium products designed to elevate your experience.';
   const ctaText = sectionConfig?.ctaText || 'Get Started';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
   const secondaryCtaText = sectionConfig?.secondaryCtaText || '';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '/contact';
   const badgeText = (sectionConfig?.badgeText as string) || sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || '';
@@ -90,7 +91,7 @@ export function HeroSplitImages({
 
       <div className="flex flex-wrap gap-3 pt-2">
         <a
-          href={consultationUrl}
+          href={ctaHref || '#'}
           className="inline-flex items-center gap-2 px-7 py-3 rounded-full font-semibold text-sm text-white transition-all duration-300 hover:scale-105"
           style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
         >

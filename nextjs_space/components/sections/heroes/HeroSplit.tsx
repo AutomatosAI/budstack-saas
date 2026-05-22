@@ -18,6 +18,7 @@ export function HeroSplit({
   const subtitle = sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Delivered';
   const description = sectionConfig?.description || pageContent?.home?.heroDescription || pageContent?.homeHeroDescription;
   const ctaText = sectionConfig?.ctaText || 'Book Consultation';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
   const secondaryCtaText = sectionConfig?.secondaryCtaText || '';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '#about';
 
@@ -79,7 +80,7 @@ export function HeroSplit({
 
             <div className="flex flex-wrap gap-4">
               <a
-                href={consultationUrl}
+                href={ctaHref || '#'}
                 className="px-8 py-3 text-base font-semibold text-white rounded-lg transition-all hover:opacity-90"
                 style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
               >

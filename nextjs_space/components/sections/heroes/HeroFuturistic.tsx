@@ -34,6 +34,7 @@ export function HeroFuturistic({
   const description =
     sectionConfig?.description || pageContent?.home?.heroDescription;
   const ctaText = sectionConfig?.ctaText || 'Get Started';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
   const secondaryCtaText = sectionConfig?.secondaryCtaText;
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '/products';
 
@@ -203,7 +204,7 @@ export function HeroFuturistic({
             className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4"
           >
             <a
-              href={consultationUrl}
+              href={ctaHref || '#'}
               className="group inline-flex items-center gap-2 px-8 py-4 text-base font-semibold rounded-full transition-all hover:scale-105"
               style={{
                 backgroundColor: `hsl(var(${colorVar}))`,

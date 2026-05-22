@@ -21,6 +21,7 @@ export function HeroFullScreen({
   const subtitle = sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Elevated Experience';
   const description = sectionConfig?.description || pageContent?.home?.heroDescription || pageContent?.homeHeroDescription;
   const ctaText = sectionConfig?.ctaText || 'Book Consultation';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
   const secondaryCtaText = sectionConfig?.secondaryCtaText || '';
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '#about';
 
@@ -213,7 +214,7 @@ export function HeroFullScreen({
             } mt-8`}
         >
           <a
-            href={consultationUrl}
+            href={ctaHref || '#'}
             className="px-8 py-3 text-base font-semibold text-white rounded-full transition-all hover:scale-105"
             style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
           >

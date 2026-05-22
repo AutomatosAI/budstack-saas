@@ -35,6 +35,7 @@ export function HeroShaderGlass({
   const description =
     sectionConfig?.description || pageContent?.home?.heroDescription;
   const ctaText = sectionConfig?.ctaText || 'Get Started';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
   const secondaryCtaText = sectionConfig?.secondaryCtaText;
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '/products';
 
@@ -136,7 +137,7 @@ export function HeroShaderGlass({
               className="flex items-center gap-4 flex-wrap"
             >
               <a
-                href={consultationUrl}
+                href={ctaHref || '#'}
                 className="inline-flex items-center gap-2 px-7 py-3 rounded-full font-medium text-sm text-white transition-all duration-300 hover:scale-105 hover:shadow-lg"
                 style={{
                   backgroundColor: `hsl(var(${glowVar}))`,
