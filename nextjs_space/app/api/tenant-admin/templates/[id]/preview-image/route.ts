@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { uploadFile, getFileUrl } from "@/lib/s3";
 import { validateUploadBuffer } from "@/lib/upload-validation";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(
   request: NextRequest,
