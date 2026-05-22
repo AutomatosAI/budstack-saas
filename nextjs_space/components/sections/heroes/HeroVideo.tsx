@@ -17,7 +17,10 @@ export function HeroVideo({
   const businessName = tenant.businessName;
   const title = sectionConfig?.title || pageContent?.home?.heroTitle || pageContent?.homeHeroTitle || `Welcome to ${businessName}`;
   const subtitle = sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Elevated Experience';
-  const ctaText = sectionConfig?.ctaText || 'Book Consultation';
+  const ctaText = sectionConfig?.ctaText || 'Check Eligibility';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
+  const secondaryCtaText = sectionConfig?.secondaryCtaText || '';
+  const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '';
   const videoUrl = sectionConfig?.videoUrl;
   const watermarkUrl = sectionConfig?.watermarkUrl;
 
@@ -211,13 +214,24 @@ export function HeroVideo({
           transition={{ duration: 0.8, delay: 0.7 }}
           className={`flex flex-col sm:flex-row gap-4 ${isLeft ? 'justify-start' : 'justify-center'}`}
         >
-          <a
-            href={consultationUrl}
-            className="px-10 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-105 inline-block"
-            style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
-          >
-            {ctaText}
-          </a>
+          {ctaText && (
+            <a
+              href={ctaHref || '#'}
+              className="px-10 py-4 text-lg font-semibold text-white rounded-full transition-all hover:scale-105 inline-block"
+              style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
+            >
+              {ctaText}
+            </a>
+          )}
+          {secondaryCtaText && (
+            <a
+              href={secondaryCtaHref || '#'}
+              className="px-10 py-4 text-lg font-semibold text-white rounded-full border-2 transition-all hover:scale-105 hover:bg-white/10 inline-block"
+              style={{ borderColor: 'rgba(255, 255, 255, 0.6)', backgroundColor: 'transparent' }}
+            >
+              {secondaryCtaText}
+            </a>
+          )}
         </motion.div>
       </div>
 

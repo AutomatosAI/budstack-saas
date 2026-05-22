@@ -83,7 +83,10 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
     fields: [
       { key: 'title', label: 'Title', type: 'text', default: 'Watch This' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', default: 'Your tagline here' },
-      { key: 'ctaText', label: 'CTA Button Text', type: 'text', default: 'Learn More' },
+      { key: 'ctaText', label: 'Primary CTA Text', type: 'text', default: 'Check Eligibility' },
+      { key: 'ctaHref', label: 'Primary CTA Link', type: 'url', default: '' },
+      { key: 'secondaryCtaText', label: 'Secondary CTA Text', type: 'text', default: '' },
+      { key: 'secondaryCtaHref', label: 'Secondary CTA Link', type: 'url', default: '' },
       { key: 'videoUrl', label: 'Video', type: 'video', default: '' },
       { key: 'imageUrl', label: 'Fallback Image', type: 'image', default: '' },
       { key: 'watermarkUrl', label: 'Watermark Image', type: 'image', default: '' },
