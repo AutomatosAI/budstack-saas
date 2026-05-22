@@ -16,6 +16,7 @@ export function HeroMinimal({
   const subtitle = sectionConfig?.subtitle || pageContent?.home?.heroSubtitle || pageContent?.homeHeroSubtitle || 'Premium Cannabis, Delivered';
   const description = sectionConfig?.description || pageContent?.home?.heroDescription || pageContent?.homeHeroDescription;
   const ctaText = sectionConfig?.ctaText || 'Get Started';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
 
   return (
     <section
@@ -68,7 +69,7 @@ export function HeroMinimal({
           transition={{ duration: 0.8, delay: 0.45 }}
         >
           <a
-            href={consultationUrl}
+            href={ctaHref || '#'}
             className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-white rounded-full transition-all hover:scale-105 hover:gap-3"
             style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}
           >

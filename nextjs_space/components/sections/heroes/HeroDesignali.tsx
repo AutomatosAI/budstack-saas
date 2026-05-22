@@ -34,6 +34,7 @@ export function HeroDesignali({
   const description =
     sectionConfig?.description || pageContent?.home?.heroDescription;
   const ctaText = sectionConfig?.ctaText || 'Get Started';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
   const secondaryCtaText = sectionConfig?.secondaryCtaText;
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '/products';
   const badgeText = (sectionConfig?.badgeText as string) || subtitle;
@@ -142,7 +143,7 @@ export function HeroDesignali({
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
             <a
-              href={consultationUrl}
+              href={ctaHref || '#'}
               className="group inline-flex items-center gap-2 px-8 py-4 text-base font-semibold rounded-full text-white transition-all duration-300 hover:scale-105 hover:shadow-xl"
               style={{
                 backgroundColor: 'hsl(var(--tenant-color-primary))',

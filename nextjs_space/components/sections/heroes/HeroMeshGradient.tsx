@@ -36,6 +36,7 @@ export function HeroMeshGradient({
   const description =
     sectionConfig?.description || pageContent?.home?.heroDescription;
   const ctaText = sectionConfig?.ctaText || 'Get Started';
+  const ctaHref = sectionConfig?.ctaHref || consultationUrl;
   const secondaryCtaText = sectionConfig?.secondaryCtaText;
   const secondaryCtaHref = sectionConfig?.secondaryCtaHref || '/products';
   const alignment = sectionConfig?.textAlign || pageContent?.home?.heroAlignment || 'left';
@@ -147,7 +148,7 @@ export function HeroMeshGradient({
             }`}
           >
             <a
-              href={consultationUrl}
+              href={ctaHref || '#'}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-full font-medium text-sm transition-all duration-200 hover:scale-105"
               style={{
                 backgroundColor: 'hsl(var(--tenant-color-primary))',
