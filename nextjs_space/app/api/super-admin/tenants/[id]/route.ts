@@ -188,7 +188,14 @@ export async function PATCH(
     let railwayDnsRecords: Array<{ hostlabel: string; requiredValue: string; status: string }> | null = (existingSettings.railwayDnsRecords as Array<{ hostlabel: string; requiredValue: string; status: string }>) || null;
     let domainVerification = existingSettings.domainVerification ?? null;
 
-    if (customDomain !== undefined && customDomain !== existingTenant.customDomain) {
+    const domainChanged =
+      customDomain !== undefined && customDomain !== existingTenant.customDomain;
+    // Recovery: domain saved (e.g. via tenant-admin settings) but never provisioned on Railway
+    const resolvedDomain = customDomain ?? existingTenant.customDomain;
+    const needsRecoveryProvisioning =
+      !domainChanged && !!resolvedDomain && !railwayDomainId;
+
+    if (domainChanged) {
       // Remove old domain from Railway if one was provisioned
       if (existingTenant.customDomain && railwayDomainId) {
         try {
@@ -220,6 +227,23 @@ export async function PATCH(
             { status: 500 },
           );
         }
+      }
+    } else if (needsRecoveryProvisioning) {
+      try {
+        const railwayDomain = await addCustomDomain(resolvedDomain!);
+        railwayDomainId = railwayDomain.id;
+        railwayDnsRecords = railwayDomain.dnsRecords;
+        domainVerification = { status: "pending", checkedAt: new Date().toISOString(), expected: null, found: null };
+        console.log(`✅ Provisioned Railway domain (recovery): ${resolvedDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
+      } catch (error) {
+        console.error("Railway domain recovery provisioning error:", error);
+        return NextResponse.json(
+          {
+            error: "Failed to provision custom domain on Railway. If the domain already exists in Railway, remove it from the Railway dashboard and try again.",
+            details: error instanceof Error ? error.message : "Unknown error",
+          },
+          { status: 500 },
+        );
       }
     }
 

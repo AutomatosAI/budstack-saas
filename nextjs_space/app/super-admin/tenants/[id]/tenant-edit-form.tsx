@@ -353,8 +353,10 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                 if (!dnsRecords || dnsRecords.length === 0) {
                   return (
                     <p className="text-sm text-bs-fg-muted">
-                      DNS records not available yet. Try saving the domain
-                      again.
+                      DNS records not provisioned yet. Click{" "}
+                      <strong className="text-bs-fg">Edit</strong> then{" "}
+                      <strong className="text-bs-fg">Save Changes</strong> to
+                      provision the domain on Railway and fetch DNS records.
                     </p>
                   );
                 }
