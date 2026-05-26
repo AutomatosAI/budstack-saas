@@ -71,6 +71,12 @@ export interface RailwayDnsRecord {
   hostlabel: string;
   requiredValue: string;
   status: string;
+  /** "CNAME" | "A" | "AAAA" | "TXT" | "ALIAS" — only present if Railway returned it. */
+  recordType?: string;
+  /** "ACME_VALIDATION" | "TRAFFIC" — Railway's purpose tag for the record. */
+  purpose?: string;
+  /** The DNS zone the record belongs to (usually the apex). */
+  zone?: string;
 }
 
 export interface RailwayDomain {
@@ -106,6 +112,9 @@ export async function addCustomDomain(
           dnsRecords {
             hostlabel
             requiredValue
+            recordType
+            purpose
+            zone
             status
           }
         }

@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { RowPill } from "@/components/admin/shared";
+import { isApexDomain } from "@/lib/domain-utils";
 
 const sectionTitleStyle = {
   fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
@@ -347,6 +348,8 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                       hostlabel: string;
                       requiredValue: string;
                       status: string;
+                      recordType?: string;
+                      purpose?: string;
                     }>
                   | undefined;
 
@@ -361,18 +364,67 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                   );
                 }
 
+                const customDomain = tenant.customDomain!;
+                const apex = isApexDomain(customDomain);
+                const resolveType = (r: {
+                  recordType?: string;
+                  hostlabel: string;
+                }) =>
+                  r.recordType ?? (r.hostlabel.startsWith("_") ? "TXT" : "CNAME");
+                const hasApexCname = dnsRecords.some(
+                  (r) =>
+                    resolveType(r) === "CNAME" &&
+                    (!r.hostlabel || r.hostlabel === "@"),
+                );
+
                 return (
                   <div className="space-y-3">
+                    {apex && hasApexCname && (
+                      <div className="rounded-bs-sm bg-bs-warning/10 border border-bs-warning/30 p-3 text-sm text-bs-fg space-y-2">
+                        <p className="font-medium">
+                          ⚠️ Apex domain — CNAME at root is not allowed by DNS spec
+                        </p>
+                        <p className="text-bs-fg-muted">
+                          <span className="font-mono text-bs-fg">
+                            {customDomain}
+                          </span>{" "}
+                          is an apex (root) domain. Most registrars (including
+                          one.com) reject CNAME at <code>@</code>. Options:
+                        </p>
+                        <ul className="list-disc pl-5 space-y-1 text-bs-fg-muted">
+                          <li>
+                            Use an <strong>ALIAS</strong> or <strong>ANAME</strong>{" "}
+                            record at <code>@</code> pointing to the value below
+                            (works on registrars that support it — one.com does
+                            not).
+                          </li>
+                          <li>
+                            Move DNS to <strong>Cloudflare</strong> and enable
+                            CNAME flattening — they synthesize A/AAAA records at
+                            apex automatically.
+                          </li>
+                          <li>
+                            Or use a subdomain like{" "}
+                            <code>www.{customDomain}</code> instead and
+                            redirect the apex to it from the registrar.
+                          </li>
+                        </ul>
+                      </div>
+                    )}
                     <p className="text-sm text-bs-fg-muted">
                       Add these records at the registrar for{" "}
                       <strong className="text-bs-fg font-mono">
-                        {tenant.customDomain}
+                        {customDomain}
                       </strong>
                       :
                     </p>
                     {dnsRecords.map((record, i) => {
-                      const isTxt = record.hostlabel.startsWith("_");
-                      const recordType = isTxt ? "TXT" : "CNAME";
+                      const recordType = resolveType(record);
+                      const isCname = recordType === "CNAME";
+                      const isApexCname =
+                        isCname &&
+                        apex &&
+                        (!record.hostlabel || record.hostlabel === "@");
                       return (
                         <div
                           key={i}
@@ -381,10 +433,7 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                           <p>
                             <span className="text-bs-fg-muted">Type:</span>{" "}
                             {recordType}
-                            {!isTxt &&
-                            tenant.customDomain!.split(".").length <= 2
-                              ? " (or ALIAS/ANAME for apex)"
-                              : ""}
+                            {isApexCname ? " (use ALIAS/ANAME at apex)" : ""}
                           </p>
                           <p>
                             <span className="text-bs-fg-muted">Host:</span>{" "}
@@ -409,6 +458,11 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                               />
                             </button>
                           </div>
+                          {record.purpose ? (
+                            <p className="text-bs-fg-muted">
+                              <span>Purpose:</span> {record.purpose}
+                            </p>
+                          ) : null}
                         </div>
                       );
                     })}
@@ -422,12 +476,18 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                 onClick={() => {
                   const dnsRecords = (tenant.settings as any)
                     ?.railwayDnsRecords as
-                    | Array<{ hostlabel: string; requiredValue: string }>
+                    | Array<{
+                        hostlabel: string;
+                        requiredValue: string;
+                        recordType?: string;
+                      }>
                     | undefined;
                   if (!dnsRecords) return;
                   const lines = dnsRecords.map((r, i) => {
-                    const isTxt = r.hostlabel.startsWith("_");
-                    return `${i + 1}. ${isTxt ? "TXT" : "CNAME"}\n   Host: ${r.hostlabel || "@"}\n   Value: ${r.requiredValue}`;
+                    const type =
+                      r.recordType ??
+                      (r.hostlabel.startsWith("_") ? "TXT" : "CNAME");
+                    return `${i + 1}. ${type}\n   Host: ${r.hostlabel || "@"}\n   Value: ${r.requiredValue}`;
                   });
                   copyToClipboard(
                     `DNS Records for ${tenant.customDomain}\n\n${lines.join("\n\n")}`,
