@@ -2,7 +2,6 @@
 import { headers } from 'next/headers';
 import { prisma } from './db';
 import { cache } from 'react';
-import { setTenantContext } from './tenant-context';
 import { getJsonFromS3, getTextFromS3 } from './s3';
 import type { TemplateLayout } from './types/template-layout';
 
@@ -10,8 +9,13 @@ import type { TemplateLayout } from './types/template-layout';
 type Tenant = Awaited<ReturnType<typeof prisma.tenants.findFirst>>;
 
 /**
- * Get the current tenant from request headers (set by middleware)
- * This is cached per request to avoid multiple DB queries
+ * Resolve the current tenant from request headers (set by Next.js middleware).
+ * Cached per request to avoid multiple DB queries.
+ *
+ * PURE resolver (PRD-202 AC-2): it RETURNS the tenant and no longer binds tenant
+ * context as a side-effect. Bind at the request boundary instead — via
+ * runWithTenantContextAsync (Server Components, see app/store/[slug]/layout.tsx)
+ * or withTenantContext (API routes).
  */
 export const getCurrentTenant = cache(async (): Promise<Tenant | null> => {
   const headersList = headers();
@@ -20,7 +24,6 @@ export const getCurrentTenant = cache(async (): Promise<Tenant | null> => {
   const tenantSlug = headersList.get("x-tenant-slug");
 
   if (!subdomain && !customDomain && !tenantSlug) {
-    setTenantContext(null);
     return null;
   }
 
@@ -51,11 +54,9 @@ export const getCurrentTenant = cache(async (): Promise<Tenant | null> => {
       });
     }
 
-    setTenantContext(tenant?.id ?? null);
     return tenant;
   } catch (error) {
     console.error('Error fetching tenant:', error);
-    setTenantContext(null);
     return null;
   }
 });
@@ -154,7 +155,12 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
 }
 
 /**
- * Get tenant from Next.js request (for API routes)
+ * Resolve the tenant from a Next.js request (for API routes).
+ *
+ * PURE resolver (PRD-202 AC-2): it RETURNS the tenant and no longer binds tenant
+ * context as a side-effect. Bind at the request boundary with withTenantContext
+ * (see the pilot at app/api/orders/customer/route.ts); PRD-203's withTenantAuth
+ * composes that wrapper for the bulk route migration.
  */
 export async function getTenantFromRequest(
   req: Request,
@@ -176,10 +182,8 @@ export async function getTenantFromRequest(
       });
 
       if (tenant) {
-        setTenantContext(tenant.id);
         return tenant;
       }
-      setTenantContext(null);
     }
 
     const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
@@ -197,10 +201,8 @@ export async function getTenantFromRequest(
         });
 
         if (tenant) {
-          setTenantContext(tenant.id);
           return tenant;
         }
-        setTenantContext(null);
       }
     }
 
@@ -219,18 +221,14 @@ export async function getTenantFromRequest(
       });
 
       if (tenant) {
-        setTenantContext(tenant.id);
         return tenant;
       }
-      setTenantContext(null);
     }
   } catch (error) {
     console.error('Error fetching tenant from request:', error);
-    setTenantContext(null);
     return null;
   }
 
-  setTenantContext(null);
   return null;
 }
 

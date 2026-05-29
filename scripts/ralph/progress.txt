@@ -210,3 +210,37 @@ wrapped route stays isolated under concurrent load is the Docker-gated US-010.
 Validation: npx tsc --noEmit -> 0. pnpm test:unit -> 30/30 (no regression).
 Files: nextjs_space/app/api/orders/customer/route.ts.
 
+--------------------------------------------------------------------------------
+US-008 — lib/tenant.ts resolvers return-not-set; 11 side-effects removed (AC-2) [DONE]
+--------------------------------------------------------------------------------
+Removed all 11 setTenantContext(...) calls (was lines 23,54,58,179,182,200,203,
+222,225,229,233) AND the `import { setTenantContext } from './tenant-context'`.
+getCurrentTenant and getTenantFromRequest are now PURE resolvers: they RETURN the
+tenant (return values byte-for-byte unchanged) and bind nothing. Docstrings updated
+to state the pure contract and point at the boundary binders (runWithTenantContextAsync
+for SCs, withTenantContext for routes). Confirmed via grep that lib/tenant.ts was the
+ONLY production caller of setTenantContext (only other hit is a comment in the
+concurrency test) -> US-009's deletion is now safe / zero-caller.
+
+>>> RISK FLAG FOR HUMAN REVIEW (migration-window behavior, by design but worth eyes):
+Before this story, every getCurrentTenant/getTenantFromRequest call bound context as
+an enterWith side-effect. The ~96 routes + tenant-scoped Server Components that are
+NOT yet wrapped (everything except the two pilots US-006/007) therefore lose their
+implicit binding here. With TENANT_CONTEXT_STRICT OFF (the prod default, OQ-3), the
+US-005 middleware now WARNs (security.tenant_context_missing) and runs such a query
+UNSCOPED rather than throwing. For queries that already pass an explicit
+`where: { tenantId }` (the prevalent pattern in every route I read — orders,
+orders/customer, consultation/status, conditions) this is harmless: the explicit
+filter still scopes them and the middleware is belt-and-suspenders. For any
+tenant-scoped query that relied SOLELY on the middleware (no explicit tenantId) this
+is a transient cross-tenant exposure until PRD-203 wraps the route. Mitigations, in
+order of safety: (a) set TENANT_CONTEXT_STRICT=true to fail CLOSED (throw, no leak)
+once enough routes are wrapped; (b) monitor the warn events; (c) PRD-203 withTenantAuth
+wraps the remaining routes. This is the exact trade-off the PRD designed the flag for,
+but a full audit of middleware-only-scoped queries is PRD-203's job, not this PRD's.
+Recommend Gerard confirm the strict-flag rollout plan before/with the PRD-203 merge.
+
+Validation: grep setTenantContext lib/tenant.ts -> none. npx tsc --noEmit -> 0.
+pnpm test:unit -> 30/30 (no regression).
+Files: nextjs_space/lib/tenant.ts.
+
