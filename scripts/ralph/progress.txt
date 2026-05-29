@@ -59,3 +59,28 @@ boundary, async resolves to callback value.
 Validation: pnpm test:unit → 10/10 passed (2 smoke + 8 new). tsc --noEmit → 0.
 Files: nextjs_space/lib/tenant-context.ts, nextjs_space/tests/unit/tenant-context.test.ts.
 
+--------------------------------------------------------------------------------
+US-003 — Concurrency unit proof (node-only AC-7)                       [DONE]
+--------------------------------------------------------------------------------
+tests/unit/tenant-context.concurrency.test.ts (4 tests, pure ALS — no DB):
+  POSITIVE PROOF (the AC-7 property): 300 interleaved requests round-robin
+  across 3 tenants, each yielding the microtask queue 5x and re-asserting its
+  bound context after every yield (1500 interleaved observations) → ZERO
+  cross-tenant observation; every request ends on its own tenant; context fully
+  torn down after.
+  ROOT-CAUSE CONTRAST (deterministic, not timing-dependent):
+    (a) enterWith() with no enclosing scope persists into the shared context —
+        after request1 finishes, a later read still sees 'req1' (never popped) —
+        the exact bleed vector on Railway's persistent process.
+    (b) enterWith() overrides an active run() scope in place (honours no
+        boundary) — the enclosing 'outer' becomes 'intruder'.
+    (c) runWithTenantContext() confines its binding — caller is null before and
+        after; one request's binding cannot escape into another's continuation.
+NOTE: I first tried a literal interleaved-enterWith bleed assertion; it did NOT
+reproduce reliably on Node 18.17 because each `await` snapshots the context
+frame. Rather than ship a flaky/contrived assertion, the contrast now proves the
+underlying no-boundary mechanism deterministically. The authoritative full-stack
+red→green interleave proof remains the Docker-gated Postgres test US-010.
+Validation: full pnpm test:unit → 14/14 passed (3 files). tsc --noEmit → 0.
+Files: nextjs_space/tests/unit/tenant-context.concurrency.test.ts.
+
