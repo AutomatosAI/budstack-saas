@@ -25,7 +25,7 @@ Source PRD: `docs/PRDS/REMEDIATION/PRD-216-ci-cd-security-gates.md`.
 - [x] US-007 — Secret-scan workflow (gitleaks) + `.gitleaks.toml` allow-list
 - [x] US-008 — SBOM generation workflow (CycloneDX JSON) + artifact upload
 - [x] US-009 — Flip `eslint.ignoreDuringBuilds:false` in `next.config.js` (conditional BLOCK on lint backlog)
-- [ ] US-010 — Non-blocking test-gate job in `ci.yml` (wires PRD-207 when it lands) → last story, emit RALPH_COMPLETE
+- [x] US-010 — Non-blocking test-gate job in `ci.yml` (wires PRD-207 when it lands) → last story, emit RALPH_COMPLETE
 
 ## Notes
 - US-003 depends on US-001 + US-002. US-010 is the final story.

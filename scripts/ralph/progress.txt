@@ -110,3 +110,19 @@ US-009 Flip eslint.ignoreDuringBuilds:false — DONE 2026-05-29
   NEXTAUTH_SECRET/ENCRYPTION_KEY) after `npx prisma generate`: pnpm build exit 0. `next lint` is
   warnings-only (0 Error lines) so the build's ESLint phase passes (next build fails on errors, not warnings).
 - Re-confirmed post-flip: pnpm lint exit 0 (0 ESLint Error lines), npx tsc --noEmit exit 0.
+
+US-010 Non-blocking test-gate job in ci.yml — DONE 2026-05-29
+- ci.yml: added a SECOND job `test` (parallel to `ci`, no needs:) that mirrors the ci setup
+  (checkout/setup-node@20/pnpm@9/cache/install/prisma generate) then runs the suite with coverage
+  under the SAME 6 build stub env vars (AC-1b).
+- DOUBLE non-blocking (AC-2 allows AND/OR): (1) job-level continue-on-error:true, (2) a run-step
+  guard `pnpm run | grep -qE '(^|\s)test:cov(\s|$)'` that prints a skip notice + exits 0 when the
+  script is absent. PRD-207 has NOT merged (no test:cov, no vitest config) — verified the guard
+  SKIPS cleanly on this tree (dry-run exits 0). Did NOT author any vitest config/test script (PRD-207 scope).
+- Inline comments document the flip-to-blocking recipe (drop continue-on-error + call pnpm test:cov
+  directly + make "test" a required check), AC-1a thresholds (80% baseline / 95% security-critical
+  live in PRD-207 vitest.config.ts, OQ-5), and OQ-1 (Playwright critical-path subset on PR / full on main).
+- Validated: ci.yml parses; jobs=={ci,test}; existing ci steps unchanged (PRD-200 blocking; 202/215 +
+  docs-lint still continue-on-error); test job non-blocking + guarded + full stub env; tsc --noEmit exit 0.
+
+=== ALL 10 STORIES DONE (US-001..US-010) — RALPH_COMPLETE ===
