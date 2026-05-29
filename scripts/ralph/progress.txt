@@ -56,3 +56,11 @@ US-004 Advisory docs-lint (PRD-214) — DONE 2026-05-29
 - Result: flags exactly the 5 real unsubstantiated launch-time claims in docs/BUDSTACK_SALES_PITCH.md
   (PRD-214 AC-8 still open); correctly exempts all reconciled docs (README/ARCHITECTURE/DEPLOYMENT/
   DOMAINS). Validated: node --check ok; gate exits 1 (advisory); ci.yml valid YAML; tsc exit 0.
+
+US-005 Dependabot config — DONE 2026-05-29
+- Added .github/dependabot.yml (v2): two update entries — npm @ /nextjs_space (where package.json +
+  pnpm-lock.yaml live; pnpm read via npm ecosystem) and github-actions @ /. Both weekly (Monday),
+  open-pull-requests-limit 5, labels, and a grouped minor+patch group (majors stay individual).
+  Security updates left default-on (not disabled). Rationale documented in a header comment.
+- Pure config, no app code. Validated: YAML parses; asserted version=2, ecosystems/dirs/schedule/
+  limit/groups keys present; tsc exit 0. Live PR behaviour verified on GitHub post-merge.
