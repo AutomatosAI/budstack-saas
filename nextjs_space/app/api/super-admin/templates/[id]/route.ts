@@ -76,10 +76,16 @@ export async function PUT(
       data: updateData,
     });
 
-    // Return signed URL for immediate display
+    // Return signed URL for immediate display. This route is SUPER_ADMIN-gated
+    // (see role check above) and operates on system-level `templates` whose
+    // preview assets are NOT tenant-scoped, so signing requires the explicit,
+    // audited cross-tenant bypass rather than a tenantId scope.
     let signedPreviewUrl = null;
     if (updateData.previewUrl) {
-      signedPreviewUrl = await getFileUrl(updateData.previewUrl);
+      signedPreviewUrl = await getFileUrl(updateData.previewUrl, {
+        bypassTenantScope: true,
+        reason: "super-admin template preview tooling",
+      });
     }
 
     return NextResponse.json({
