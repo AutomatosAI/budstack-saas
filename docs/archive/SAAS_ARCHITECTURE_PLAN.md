@@ -2,6 +2,8 @@
 # Multi-Tenant Medical Cannabis SaaS Platform
 ## Comprehensive Architecture & Development Plan
 
+> **ARCHIVED 2026-05-29 — point-in-time plan, not current truth.** This Jan-2026 plan describes an NFT-membership model that was **never built** (the schema carries only a vestigial `nftTokenId` field; there is no NFT model/table/flow). Current, code-verified architecture lives in [`../ARCHITECTURE.md`](../ARCHITECTURE.md). Retained for historical reference per PRD-214 OQ-1.
+
 ---
 
 ## 🎯 Executive Summary

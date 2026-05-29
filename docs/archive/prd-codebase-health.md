@@ -1,5 +1,7 @@
 # PRD: Codebase Health — Security, Performance, Dead Code & Build Optimization
 
+> **ARCHIVED 2026-05-29 — partially superseded baseline.** Code-health/boundary items are now tracked in [`../PRDS/REMEDIATION/PRD-209-code-health-boundaries.md`](../PRDS/REMEDIATION/PRD-209-code-health-boundaries.md); security items in PRD-200/204/206/211. **Phase 3 (Performance: N+1 queries, loading skeletons, revalidation, Suspense) and Phase 4 (Build: unused deps, Railway build caching, framer-motion upgrade) are NOT yet adopted into any numbered remediation PRD — this archived doc remains their only home.** Retained per PRD-214 OQ-1.
+
 **Status:** Draft
 **Date:** 2026-04-09
 **Branch:** `codebase-health` (from `main`)

@@ -1,5 +1,7 @@
 # PRD: Super-Admin Chrome Redesign
 
+> **ARCHIVED 2026-05-29 — point-in-time proposal.** Single-surface Super-Admin chrome redesign (dark sidebar / light content panels, reusing the `bs-*` tokens + `.budstacks-theme`). Status at archival: proposal — verify against the current `/super-admin/*` chrome and [`../guides/SUPER_ADMIN_DESIGN_STANDARDS.md`](../guides/SUPER_ADMIN_DESIGN_STANDARDS.md) before resuming. Retained per PRD-214 OQ-1.
+
 ## 1. Introduction
 The BudStacks marketing site is dark-themed (`.budstacks-theme`, `bs-*` token system, GT Sectra serif, green/gold accents). The Super-Admin dashboard at `/super-admin/*` is light-themed (white surfaces, slate text, sans-serif). When the platform owner signs in from the dark marketing site they land on a UI that looks like a different product.
 

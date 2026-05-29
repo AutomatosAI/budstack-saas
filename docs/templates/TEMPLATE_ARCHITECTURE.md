@@ -317,28 +317,36 @@ The `@tailwind` and `@layer` directives are stripped for legacy filesystem-loade
 
 ### S3 Path Resolution
 
-The system tries TWO paths in order:
-1. **Tenant path** — `tenants/{tenantId}/templates/{timestamp}/` (cloned copy with overrides)
-2. **Base path** — `templates/{slug}` (original uploaded template)
+Each tenant owns a **complete copy** of its template at a single path:
 
-First successful `layout.json` find wins. CSS and defaults load from the same path.
+```
+tenants/{tenantId}/templates/{templateSlug}/
+```
+
+There is **no fallback** to a shared base path. `getTemplateAssets(tenantS3Path)` takes one path; `app/store/[slug]/page.tsx:156` confirms "assets are at the tenant's own S3 path — no fallback needed". `layout.json`, `defaults.json`, and `styles.css` all load from this one location. (Onboarding, clone, and create-blank each copy the full base template into the tenant path up front.)
 
 ---
 
 ## Section Component Registry
 
-All pre-built components live in `components/sections/` in the SaaS codebase. They receive standardized `SectionProps` plus per-section `config` overrides from `layout.json`.
+All pre-built components live in `components/sections/` in the SaaS codebase and are registered by name in `lib/section-registry.ts`. They receive standardized `SectionProps` plus per-section `config` overrides from `layout.json`. A `section.type` in `layout.json` **must** match a registered name.
 
-### Heroes
+**The registry has 50 components** (verified against `lib/section-registry.ts`, 2026-05-29): **13 heroes, 24 content, 4 CTAs, 6 navigation, 3 footers.**
+
+### Heroes (13)
+
+`HeroFullScreen`, `HeroSplit`, `HeroVideo`, `HeroMinimal`, `HeroWarpShader`, `HeroMeshGradient`, `HeroAurora`, `HeroShaderGlass`, `HeroDesignali`, `HeroSplitImages`, `HeroFuturistic`, `HeroCollage`, `HeroFramed`
 
 | Component | Description | Image Required? |
 |-----------|-------------|-----------------|
-| `HeroFullScreen` | Full-viewport hero with gradient overlay | No (gradient fallback) |
+| `HeroFullScreen` | Full-viewport hero with gradient overlay (white text) | No (gradient fallback) |
 | `HeroSplit` | Two-column: text + image/gradient | No (gradient fallback) |
 | `HeroVideo` | Video background → image → gradient cascade | No |
 | `HeroMinimal` | Clean, compact hero — gradient only | No |
 
-### Content Sections
+### Content (24)
+
+`ValueProps`, `ProductShowcase`, `Testimonials`, `About`, `Gallery`, `Stats`, `FAQ`, `BlogFeed`, `Features`, `ImageShowcase`, `LogoMarquee`, `BentoGrid`, `Pricing`, `TeamGrid`, `Timeline`, `ComparisonTable`, `Parallax`, `SocialProof`, `TabsShowcase`, `VideoGallery`, `ProcessSteps`, `StatsCounter`, `TextMarquee`, `FeaturesShowcase`
 
 | Component | Description | Image Required? |
 |-----------|-------------|-----------------|
@@ -353,28 +361,38 @@ All pre-built components live in `components/sections/` in the SaaS codebase. Th
 | `Features` | Icon + text feature grid | No |
 | `ImageShowcase` | Full-width image bg + dark overlay + content card | No (gradient fallback) |
 
-### CTAs
+### CTAs (4)
+
+`CTABanner`, `CTAWithImage`, `CTASplit`, `Newsletter`
 
 | Component | Description | Image Required? |
 |-----------|-------------|-----------------|
 | `CTABanner` | Full-width colored banner | No |
 | `CTAWithImage` | CTA with side image/gradient | No (gradient fallback) |
 | `CTASplit` | Two-column CTA | No (gradient fallback) |
+| `Newsletter` | Email-capture CTA | No |
 
-### Navigation
+### Navigation (6)
+
+`NavMinimal`, `NavFull`, `NavTransparent`, `NavDark`, `NavHealingBuds`, `NavPill`
 
 | Component | Best For | Notes |
 |-----------|----------|-------|
 | `NavMinimal` | Clean/luxury themes | Understated, fewer links |
 | `NavFull` | Standard themes | All links + CTA button |
 | `NavTransparent` | Dark themes | White text, blends with hero. **Needs dark hero** |
+| `NavDark` | Dark themes | Solid dark bar |
+| `NavPill` | Modern themes | Floating pill nav |
 
-### Footers
+### Footers (3)
+
+`FooterSimple`, `FooterFull`, `FooterBrand`
 
 | Component | Best For |
 |-----------|----------|
 | `FooterSimple` | Minimal themes — single row |
 | `FooterFull` | Standard themes — multi-column |
+| `FooterBrand` | Brand-forward — logo + sections |
 
 > [!WARNING]
 > `NavTransparent` and `HeroFullScreen` render **white text**. Light-themed templates (background lightness > 50%) should use `NavFull`/`NavMinimal` instead, or add dark overlay CSS in `styles.css`.
@@ -572,7 +590,7 @@ To expand the component library:
 
 ### Option A: Template Creator SubAgent
 
-Located at `templates/budstack-template-creator/`. Interactive interview asks 7 questions and generates all 4 files. See [CLAUDE.md](file:///Users/gkavanagh/Development/HealingBuds/templates/budstack-template-creator/CLAUDE.md) for full instructions.
+Lives in the **separate templates repo** (`HealingBuds/templates/budstack-template-creator/`), not in this codebase. Interactive interview asks 7 questions and generates all 4 files; see its `CLAUDE.md` for full instructions.
 
 ### Option B: Manual Creation
 
@@ -581,3 +599,32 @@ Located at `templates/budstack-template-creator/`. Interactive interview asks 7 
 3. Follow the HSL color rules and section naming conventions
 4. Validate: all section types in `layout.json` must exist in the section registry
 5. Upload via Super Admin or `aws s3 sync`
+
+---
+
+## Template Validation Checklist (baseline)
+
+> Merged from the former `TEMPLATE_BASELINE.md`. Every template ships **exactly 4 data files, no React code.**
+
+**Required files**
+
+- [ ] `layout.json` — valid JSON; section composition + order; `navigation`/`footer` component names; every `type` exists in the registry (the 50 above)
+- [ ] `defaults.json` — design system + content; all colors **raw HSL** (no `hsl()` wrapper)
+- [ ] `template.config.json` — complete marketplace/admin metadata
+- [ ] `styles.css` — `:root` vars (raw HSL); all rules scoped under `.template-{slug}`
+
+**`defaults.json` required fields**
+
+`template`/`slug`, `primaryColor` (raw HSL), `fontFamily`, `designSystem.colors.*` (raw HSL), `designSystem.typography.fontFamily` `{base, heading}`, `valueProps[]`, `pageContent{}`, `navigation{links, cta}`, `footer{copyright, sections}`.
+
+**Color checks**
+
+- [ ] No `hsl()` wrappers in `defaults.json` or `:root` (raw channels only, e.g. `275 70% 55%`)
+- [ ] No hex/rgb values (HSL only)
+- [ ] CSS rules consume vars as `hsl(var(--tenant-color-*))`
+
+**Content checks**
+
+- [ ] No placeholder text (`TODO` / `FIXME` / `Template Name`)
+- [ ] `heroImagePath` is a relative filename or `null`
+- [ ] `settings.wrapperClass` equals `template-{slug}`

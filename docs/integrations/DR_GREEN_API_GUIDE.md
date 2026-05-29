@@ -211,3 +211,56 @@ Sign: {"orderId": "<order-uuid>"}  (signBody)
 3. **Response nesting varies** — some endpoints return `{data: {data: {...}}}`, others `{data: {...}}`. Always check multiple levels.
 4. **Country codes for strains use alpha-3** (ZAF, PRT, GBR) not alpha-2 (ZA, PT, GB).
 5. **Signing GET requests with no query params** — you still need to sign something. Pass a JSON body as `signBody` for signature generation, but don't include it in the actual HTTP request.
+
+---
+
+## Inbound Webhooks & Payments
+
+BudStacks receives three inbound webhooks (verified handlers under `app/api/webhooks/drgreen/`). After an order is placed it sits `PENDING` until admin approval, after which Dr Green generates payment invoices and the payment gateways call back.
+
+```mermaid
+graph TB
+    A[Customer] -->|add to cart / submit order| B[BudStacks API]
+    B -->|cart + order ops| C[Dr Green API]
+    C -->|admin approval → invoices| E[Payment gateways]
+    E -->|CoinRemitter| F[Crypto]
+    E -->|Pay-Inn| G[Fiat]
+    F -->|webhook| H[BudStacks webhook API]
+    G -->|webhook| H
+    C -->|status / kyc webhook| H
+    H -->|update order| I[(PostgreSQL)]
+    H -->|notify tenant| J[Tenant webhook]
+```
+
+### Status webhook — `POST /api/webhooks/drgreen/status`
+
+Dr Green client/order/KYC status. Verified via **`SHA-256(rawPayload + secret)`** (plain hash, constant-time — *not* HMAC), timestamp window ±5 min. Fields are **flat** (top-level), not nested in `data`: `event`, `timestamp`, `clientId?`, `orderId?`, `status?`, `paymentStatus?`, `kycStatus?`, `adminApproval?`, `rejectionReason?`, `kycLink?`, `stock?`, `availability?`, `countryCode?`. Logged to `drgreen_webhook_logs` / `kyc_journey_logs`.
+
+### Crypto payment — `POST /api/webhooks/drgreen/crypto` (CoinRemitter)
+
+Verified via the `x-webhook-signature` header against the tenant `drGreenSecretKey`.
+
+| Field | Meaning |
+|---|---|
+| `invoice_id` | CoinRemitter invoice → stored as `drGreenInvoiceNum` |
+| `status_code` | `0`=Pending, `1`=Paid, `2`=Overpaid, `3`=Underpaid, `4`=Expired, `5`=Cancelled |
+| `coin` | USDT / ETH / BTC / TCN (testnet) |
+| `usd_amount` | USD amount |
+| `address` | crypto address |
+| `custom_data2` | **Dr Green Order ID → order lookup key** |
+| `timestamp` / `created_at` | replay protection |
+
+### Fiat payment — `POST /api/webhooks/drgreen/fiat` (Pay-Inn)
+
+Verified via the `x-webhook-signature` header.
+
+| Field | Meaning |
+|---|---|
+| `payment_id` | Pay-Inn payment → stored as `drGreenInvoiceNum` |
+| `status` | `OK` / `FAILED` |
+| `code` | `200` = success; `>=400` = failure |
+| `amount` / `currency` | amount (currency defaults `USD`) |
+| `custom` | **order `nonce` → order lookup key** (cleared after processing) |
+| `timestamp` / `created_at` | replay protection |
+
+**Status mapping (both gateways):** a paid result sets `orders.paymentStatus = PAID` and `orders.status = CONFIRMED` and fires the tenant `order.confirmed` webhook; failure/expiry maps to the matching `PaymentStatus` enum value (and fires `order.cancelled` on hard failure).

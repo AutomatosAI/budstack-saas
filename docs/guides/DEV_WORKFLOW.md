@@ -4,7 +4,7 @@ To avoid the slowness of building Docker images during active development, use t
 
 ## 🚀 The Strategy
 1. **Docker**: Run all infrastructure services (Postgres, Redis, PgBouncer).
-2. **Local**: Run the Next.js app on your Mac (`npm run dev`) for instant updates (HMR).
+2. **Local**: Run the Next.js app on your Mac (`pnpm dev`) for instant updates (HMR).
 
 ---
 
@@ -14,7 +14,7 @@ To avoid the slowness of building Docker images during active development, use t
 2. **Install Local Dependencies**:
    ```bash
    cd nextjs_space
-   npm install
+   pnpm install
    ```
 
 ## 🔄 Daily Workflow
@@ -30,14 +30,14 @@ docker-compose --env-file .env up -d postgres redis pgbouncer
 Run the app on your host machine to get instant Hot Module Replacement:
 ```bash
 cd nextjs_space
-npm run dev
+pnpm dev
 ```
 
 ### 3. Database Sync (When schema changes)
 If you update `schema.prisma`, sync the Docker database from your local machine:
 ```bash
-npx prisma generate
-npx prisma db push
+pnpm prisma generate
+pnpm prisma db push
 ```
 
 ## 📈 Benefits

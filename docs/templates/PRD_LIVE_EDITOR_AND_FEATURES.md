@@ -1,5 +1,7 @@
 # Product Requirements Document (PRD): Template System Enhancements & Live Editor
 
+> **Status (2026-05-29):** The Live Editor (ComprehensiveBrandingForm + TemplateRenderer) is shipped and live; sections below are enhancement proposals on top of it.
+
 **Date:** 2026-02-26
 **Status:** DRAFT
 **Platform:** BudStack SaaS
@@ -21,7 +23,7 @@ Before defining enhancements, it is critical to outline how the current Live Edi
 ### 2.1 The Data-Driven Model
 The template engine relies on four files stored in S3 (`layout.json`, `defaults.json`, `styles.css`, `template.config.json`) and a database record (`TenantTemplate`).
 - **No React Code:** Templates contain zero structural logic.
-- **Section Registry:** The core SaaS platform maintains a central repository of 24 pre-built React components (`HeroFullScreen`, `ValueProps`, `NavDark`, etc.).
+- **Section Registry:** The core SaaS platform maintains a central repository of 50 pre-built React components (13 heroes, 24 content, 4 CTAs, 6 nav, 3 footers) (`HeroFullScreen`, `ValueProps`, `NavDark`, etc.).
 - **Dynamic Composition:** At runtime, the `TemplateRenderer` loops through `layout.json` and dynamically mounts the corresponding React components from the registry.
 
 ### 2.2 The Live Editor Workflow

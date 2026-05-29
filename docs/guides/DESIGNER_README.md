@@ -97,7 +97,7 @@ yarn dev
 
 1. **Always use CSS variables for colors**
    ```tsx
-   <div style={{ backgroundColor: 'var(--tenant-color-primary)' }}>
+   <div style={{ backgroundColor: 'hsl(var(--tenant-color-primary))' }}>
    ```
 
 2. **Make content tenant-aware**
@@ -117,7 +117,7 @@ yarn dev
 1. **Don't hardcode colors**
    ```tsx
    ❌ <div className="bg-blue-500 text-white">
-   ✅ <div style={{ backgroundColor: 'var(--tenant-color-primary)', color: '#fff' }}>
+   ✅ <div style={{ backgroundColor: 'hsl(var(--tenant-color-primary))', color: '#fff' }}>
    ```
 
 2. **Don't hardcode business names**

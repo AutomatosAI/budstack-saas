@@ -45,7 +45,7 @@
 
 ## 🔐 Security & Compliance
 - SSL/TLS encryption
-- GDPR/HIPAA ready
+- GDPR-aware (EU data handling)
 - Cookie consent management
 - Role-based access control
 - Audit logging
@@ -65,7 +65,7 @@
 - Settings & preferences
 
 ## 🚀 Infrastructure
-- Fast page loads (90+ Lighthouse)
+- Fast page loads (Next.js SSR + image optimization)
 - CDN-optimized assets
 - Auto SSL certificates
 - Horizontal scaling ready

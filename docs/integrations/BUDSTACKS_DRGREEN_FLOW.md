@@ -40,7 +40,7 @@ There are NO global Dr Green credentials. Every API call must pass the tenant's 
 ## Flow 1: Patient Registration (Consultation Submission)
 
 **Trigger:** User submits consultation questionnaire
-**Route:** `POST /api/store/[slug]/consultation`
+**Route:** `POST /api/consultation/submit`
 
 ```
 1. User fills out medical questionnaire in the storefront

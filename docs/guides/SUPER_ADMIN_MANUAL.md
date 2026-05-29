@@ -28,7 +28,7 @@ As a Super Admin, you are responsible for:
 - Managing platform-wide settings
 - Monitoring system health
 - Ensuring compliance
-- Managing NFT licenses
+- Managing tenant provisioning
 - Configuring domains and subdomains
 - Overseeing all tenant operations
 
@@ -89,7 +89,7 @@ Navigate to **Tenants** to see:
 For each tenant, view:
 - **Business Details**: Name, contact, licenses
 - **Store URL**: Subdomain and custom domain
-- **Subscription**: Plan, billing status, NFT ID
+- **Subscription**: Plan, billing status
 - **Statistics**: Orders, revenue, customers
 - **Configuration**: API keys, settings
 
@@ -129,7 +129,7 @@ For each tenant, view:
    - Business licenses
    - Regulatory compliance
    - Contact information
-   - Payment/NFT status
+   - Account/activation status
 
 **Step 3: Approval**
 1. Click on pending application
@@ -144,7 +144,7 @@ Upon approval, the system automatically:
 - Creates tenant admin account
 - Generates unique subdomain
 - Configures DNS (CNAME record via Namecheap)
-- Assigns NFT license
+- Activates the tenant account
 - Sends welcome email with credentials
 
 **Step 5: Initial Setup Support**
@@ -179,25 +179,21 @@ Upon approval, the system automatically:
 - Expected order volume
 - Integration needs
 
-### NFT License Management
+### Tenant Provisioning & Activation
 
-**NFT-Based Licensing Model**
-- 200+ NFTs available
-- Each NFT represents a tenant license
-- NFT purchase required for platform access
-- Transferable ownership
+**Manual Provisioning Model**
+- Tenants are created and activated manually by a super-admin
+- Activate a tenant by setting `isActive` on the tenant record
+- Assign the tenant's template and configure its domain/subdomain
+- No purchase gate controls platform access
 
-**Assigning NFTs**
-1. Verify NFT purchase
-2. Record NFT ID in tenant record
-3. Link NFT to tenant account
-4. Update blockchain record
+**Activating a Tenant**
+1. Create or approve the tenant record
+2. Set `isActive` to enable the account
+3. Assign a template to the tenant
+4. Configure the domain/subdomain
 
-**NFT Tracking**
-- View all NFTs and their status
-- See which tenants own which NFTs
-- Track NFT transfers
-- Monitor NFT marketplace activity
+> **Note:** `tenants.nftTokenId` is an optional legacy field on the tenant record. It does not gate access or activation and can be left empty.
 
 ---
 

@@ -1,5 +1,7 @@
 # PRD: Security Remediation — Phased Fix Plan
 
+> **ARCHIVED 2026-05-29 — superseded foundation doc.** This May-2026 phased fix plan is the origin of the structured remediation suite ([`../PRDS/REMEDIATION/REMEDIATION-INDEX.md`](../PRDS/REMEDIATION/REMEDIATION-INDEX.md), PRD-200–216), which is now the system of record for open items. Retained for historical reference per PRD-214 OQ-1.
+
 **Status:** In Progress
 **Date Started:** 2026-05-01
 **Source audit:** `docs/SECURITY_AUDIT_2026-05-01.md`
