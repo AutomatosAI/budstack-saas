@@ -156,7 +156,6 @@ export async function PATCH(
           {
             error:
               "Failed to create subdomain. Please check Namecheap API credentials and whitelisted IP.",
-            details: error instanceof Error ? error.message : "Unknown error",
           },
           { status: 500 },
         );
@@ -222,7 +221,6 @@ export async function PATCH(
           return NextResponse.json(
             {
               error: "Failed to provision custom domain on Railway. The domain was not saved.",
-              details: error instanceof Error ? error.message : "Unknown error",
             },
             { status: 500 },
           );
@@ -240,7 +238,6 @@ export async function PATCH(
         return NextResponse.json(
           {
             error: "Failed to provision custom domain on Railway. If the domain already exists in Railway, remove it from the Railway dashboard and try again.",
-            details: error instanceof Error ? error.message : "Unknown error",
           },
           { status: 500 },
         );

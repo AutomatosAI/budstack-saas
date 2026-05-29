@@ -465,10 +465,7 @@ export async function PUT(req: NextRequest) {
   } catch (error) {
     console.error("Error updating branding:", error);
     return NextResponse.json(
-      {
-        error: "Failed to update branding",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
+      { error: "Failed to update branding" },
       { status: 500 },
     );
   }

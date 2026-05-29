@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { getCart } from "@/lib/drgreen-cart";
+import { apiError } from "@/lib/api-error";
 
 export async function GET(
   request: NextRequest,
@@ -36,10 +37,9 @@ export async function GET(
 
     return NextResponse.json({ cart });
   } catch (error) {
-    console.error("[Cart GET] Error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to get cart" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/store/[slug]/cart",
+      safeMessage: "Failed to get cart",
+    });
   }
 }

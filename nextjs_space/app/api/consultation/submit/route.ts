@@ -158,8 +158,10 @@ export async function POST(request: NextRequest) {
       }
     } catch (error: any) {
       console.error("Clerk User Creation Error:", error);
+      // Surface Clerk's structured, user-actionable validation message only
+      // (e.g. "email taken", "weak password"); never the raw error.message.
       return NextResponse.json(
-        { error: `Authentication Error: ${error.errors?.[0]?.message || error.message || "Failed to create account"}` },
+        { error: error?.errors?.[0]?.message || "Unable to create your account. Please check your details and try again." },
         { status: 400 }
       );
     }
