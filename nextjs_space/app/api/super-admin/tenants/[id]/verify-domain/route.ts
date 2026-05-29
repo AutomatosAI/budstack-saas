@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { promises as dns } from "dns";
+import { isApexDomain } from "@/lib/domain-utils";
 
 type VerificationStatus = "verified" | "pending" | "misconfigured";
 
@@ -10,14 +11,6 @@ interface VerificationResult {
   checkedAt: string;
   expected: string;
   found: string | null;
-}
-
-/**
- * Simple heuristic: "example.com" (2 parts) = apex, "shop.example.com" (3+) = subdomain.
- * Doesn't handle .co.uk etc — good enough for this phase.
- */
-function isApexDomain(domain: string): boolean {
-  return domain.split(".").length <= 2;
 }
 
 export async function GET(
