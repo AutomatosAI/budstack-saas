@@ -22,7 +22,7 @@ Source PRD: `docs/PRDS/REMEDIATION/PRD-216-ci-cd-security-gates.md`.
 - [x] US-004 — Advisory docs-lint (PRD-214), non-blocking `ci.yml` step
 - [x] US-005 — Dependabot config (`.github/dependabot.yml`)
 - [x] US-006 — CodeQL workflow (`.github/workflows/codeql.yml`)
-- [ ] US-007 — Secret-scan workflow (gitleaks) + `.gitleaks.toml` allow-list
+- [x] US-007 — Secret-scan workflow (gitleaks) + `.gitleaks.toml` allow-list
 - [ ] US-008 — SBOM generation workflow (CycloneDX JSON) + artifact upload
 - [ ] US-009 — Flip `eslint.ignoreDuringBuilds:false` in `next.config.js` (conditional BLOCK on lint backlog)
 - [ ] US-010 — Non-blocking test-gate job in `ci.yml` (wires PRD-207 when it lands) → last story, emit RALPH_COMPLETE

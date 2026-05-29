@@ -1,0 +1,39 @@
+# gitleaks config — PRD-216 US-007 (AC-4).
+#
+# Extends the bundled default ruleset (useDefault = true) and ADDS an allowlist
+# for the THROWAWAY, non-production CI stub values already committed in
+# .github/workflows/ci.yml (and reused by the build/test jobs), so the scanner
+# does not self-flag them.
+#
+# SECURITY: only the already-public throwaway stubs appear below. NEVER add a
+# real secret value to this file. The allowlist targets the exact stub VALUES
+# (not whole files), so a real secret accidentally committed to ci.yml WOULD
+# still be detected.
+
+title = "BudStack gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "CI stub credentials (throwaway, non-production) + example env files"
+# Match against the whole line so a stub value is allowlisted in context
+# regardless of which built-in rule captured it.
+regexTarget = "line"
+regexes = [
+  '''0{64}''',                                       # ENCRYPTION_KEY stub: 64 hex zeros
+  '''pk_test_stub''',                                # Clerk publishable key stub
+  '''sk_test_stub''',                                # Clerk secret key stub
+  '''postgresql://stub:stub@localhost:5432/stub''',  # DATABASE_URL stub
+]
+# Catches NEXTAUTH_SECRET="stub" and the *_stub keys above (gitleaks checks the
+# detected secret for these substrings).
+stopwords = [
+  "stub",
+]
+# Example/sample/test env files never carry real secrets.
+paths = [
+  '''\.env\.example$''',
+  '''\.env\.sample$''',
+  '''\.env\.test$''',
+]

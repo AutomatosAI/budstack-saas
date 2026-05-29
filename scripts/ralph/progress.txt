@@ -73,3 +73,16 @@ US-006 CodeQL workflow — DONE 2026-05-29
   branch-protection decision for Gerard — NOT encoded in YAML (no autofail key exists there).
 - Validated: YAML parses; asserted triggers/perms/language/action-versions; tsc exit 0. Live scan
   verified on GitHub post-merge.
+
+US-007 Secret-scan (gitleaks) + .gitleaks.toml — DONE 2026-05-29
+- Added .github/workflows/secret-scan.yml: gitleaks/gitleaks-action@v2 on PR + push→main + weekly
+  full-history cron (Mon 05:17 UTC, fetch-depth:0). BLOCKING — a detected secret fails the run.
+- Added .gitleaks.toml (repo root): extend useDefault=true + an allowlist for ONLY the throwaway
+  ci.yml stub VALUES — regexes for 0×64 ENCRYPTION_KEY / pk_test_stub / sk_test_stub /
+  postgresql://stub:stub@localhost:5432/stub (regexTarget=line) + stopword "stub" (NEXTAUTH_SECRET)
+  + path allowlist for .env.example/.sample/.test. Allowlisted by VALUE not by whole-file, so a real
+  secret later committed to ci.yml is still caught. No real secret value written.
+- gitleaks CLI NOT installed locally → validated TOML + YAML syntax only; live scan verified on GitHub
+  post-merge (per PROMPT, a missing local CLI is not a block). tsc exit 0.
+- REPO-SETTING FOLLOW-UP (not code): org-owned repos need a free GITLEAKS_LICENSE secret (gitleaks.io);
+  wired by NAME as secrets.GITLEAKS_LICENSE. Gerard to add it in repo settings if AutomatosAI is an org.
