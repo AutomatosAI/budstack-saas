@@ -279,3 +279,54 @@ unsafe enterWith/setTenantContext API have all landed, each typecheck-green and 
 30/30 unit tests passing. Next is Phase 2 (Docker-gated) — gate-checked below.
 ================================================================================
 
+--------------------------------------------------------------------------------
+US-010 — Integration: tenant-isolation concurrency proof (testcontainers) [BLOCKED]
+US-011 — Integration: prisma-middleware-throws (testcontainers)           [BLOCKED]
+--------------------------------------------------------------------------------
+RALPH_BLOCKED: BLOCKED-DOCKER
+Phase 2 gate `docker info` ran and the daemon is DOWN on this box: the Docker CLI is
+present (Client: Docker Engine 27.5.1, context desktop-linux) but the server is
+unreachable — "ERROR: Cannot connect to the Docker daemon at
+unix:///Users/gkavanagh/.docker/run/docker.sock. Is the docker daemon running?"
+(docker info exit 1). testcontainers cannot start a Postgres, so the real-DB proofs
+cannot run.
+NOT DONE, deliberately: per the plan's hard constraints, replacing the integration
+Postgres with a mock to dodge the Docker requirement is an ANTI-PATTERN — these
+stories exist precisely to prove behavior against a real database/$use pipeline, so
+a mocked version would prove nothing. No test files were written for the same reason:
+their acceptance criteria require GREEN tests against real Postgres, which can't be
+validated here, and shipping un-runnable/unvalidated integration harness code (plus
+adding a testcontainers dep) would be half-finished work. Left unchecked in
+IMPLEMENTATION_PLAN.md.
+TO UNBLOCK: start Docker Desktop (or run the ralph loop on a Docker-enabled box),
+then implement US-010 (300-way interleaved cross-tenant proof, the full-stack twin of
+the US-003 node-only proof) and US-011 (assert the hardened middleware throws
+TenantContextMissingError on an implicit-unbound tenant-scoped query with
+TENANT_CONTEXT_STRICT=true) against a real Postgres via testcontainers.
+
+--------------------------------------------------------------------------------
+US-012 — E2E: cross-tenant-no-leak (Playwright)                           [BLOCKED]
+--------------------------------------------------------------------------------
+RALPH_BLOCKED: BLOCKED-NEEDS-AUTH-DECISION
+The Clerk test-auth approach is undecided (PRD-207 OQ-1, owner Gerard). Per the plan,
+do NOT invent an auth shim. A cross-tenant E2E needs two authenticated tenant
+sessions, and how to mint Clerk test sessions in CI is the open human decision.
+Left unchecked pending that call.
+
+================================================================================
+RALPH RUN HALTED — CLEAN STOPPING POINT (as predicted in the plan).
+Done autonomously: US-001..009 (all of Phase 1), 6 commits on
+ralph/prd-202-tenant-context-concurrency (US-001..004 from the prior run +
+US-005..009 this run: 18e82c7, f44a2a4, cc9402b, 59bebdd, edbee66). Every story
+typecheck-green; 30/30 unit tests passing.
+Blocked (environment, not logic): US-010/011 (BLOCKED-DOCKER — daemon down),
+US-012 (BLOCKED-NEEDS-AUTH-DECISION — Clerk test-auth, owner Gerard).
+FOR HUMAN BEFORE MERGE: (1) eyeball the concurrency assertions (US-003/004) and the
+US-008 migration-window risk flag re: unwrapped routes relying on middleware-only
+scoping; (2) decide the TENANT_CONTEXT_STRICT rollout (default OFF now) alongside the
+PRD-203 route migration; (3) run Phase 2 on a Docker box for the real-DB proofs.
+Constraints honoured throughout: no branch switch / no push / main + siblings
+untouched; files staged by name; commits carry no attribution footer; tests load
+.env.test only; no --dangerously-skip-permissions; no @ts-ignore / as any.
+================================================================================
+
