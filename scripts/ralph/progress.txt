@@ -11,3 +11,12 @@ Convention: one short block per finished story —
 BLOCKED stories get a BLOCKED-<REASON> block and do NOT advance the plan checkbox.
 
 ==================================================================
+
+US-001 Vitest unit harness scaffold — DONE 2026-05-29
+  - Added vitest@^2.1.9 + @vitest/coverage-v8@^2.1.9 (pinned 2.x for Node 18.17).
+  - nextjs_space/vitest.config.ts (node env, @/ alias, excludes *.spec.ts),
+    vitest.setup.ts (loads .env.test only, override:true, ENCRYPTION_KEY fallback),
+    .env.test (throwaway test key — un-ignored in root .gitignore).
+  - package.json scripts: test / test:watch / test:cov (e2e scripts untouched).
+  - playwright.config.ts testMatch '**/*.spec.ts' so Vitest & Playwright coexist.
+  - tests/unit/harness-smoke.test.ts green (2/2). tsc --noEmit clean.

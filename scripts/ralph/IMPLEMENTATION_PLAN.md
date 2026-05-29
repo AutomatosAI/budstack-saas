@@ -8,7 +8,7 @@ Branch: `ralph/prd-207-test-harness` · App: `nextjs_space/` · Source PRD: `doc
 
 ## Phase 1 — Vitest unit harness + security suites (AUTONOMOUS, node-only, no Docker/Clerk)
 
-- [ ] US-001 — Vitest unit harness scaffold (config, setup, .env.test, scripts)
+- [x] US-001 — Vitest unit harness scaffold (config, setup, .env.test, scripts)
 - [ ] US-002 — Encryption round-trip + tamper unit tests (AC-9)
 - [ ] US-003 — Dr Green webhook signature + timestamp unit tests (AC-10)
 - [ ] US-004 — API auth wrapper unit tests (AC-11)
