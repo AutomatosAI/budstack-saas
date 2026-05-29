@@ -68,7 +68,7 @@ No cookie-cutter templates. Your store, your identity.
 
 - ✅ Responsive across mobile, tablet, desktop
 - ✅ WCAG 2.1 AA Accessibility compliance
-- ✅ Fast loading (Lighthouse score 90+)
+- ✅ Fast loading (Next.js SSR + image optimization)
 - ✅ Smooth animations and micro-interactions
 - ✅ Touch-optimized UI
 
@@ -126,7 +126,7 @@ Sleep well knowing your customer data is protected:
 
 - 🔒 **AES-256 Encryption** at rest
 - 🌐 **TLS/SSL** for all connections
-- 🛡️ **GDPR/HIPAA Ready** — Data privacy built-in
+- 🛡️ **GDPR-aware** — Data privacy by design
 - 📋 **Audit Logs** — Track all admin actions
 - 🔑 **Role-Based Access** — Super Admin, Tenant Admin, User roles
 - 🪝 **Webhooks** — Real-time event notifications to your systems
