@@ -26,7 +26,7 @@ App in `nextjs_space/` (pnpm). Source PRD:
 ## Stories
 
 - [x] US-001 — Delete the one-time `reset-templates` wipe route (AC-1, AC-2 primary, AC-5a)
-- [ ] US-002 — Security guard module: `requireSameOrigin` + `requireConfirmation` (AC-4, AC-3; new codes)
+- [x] US-002 — Security guard module: `requireSameOrigin` + `requireConfirmation` (AC-4, AC-3; new codes)
 - [ ] US-003 — Extract + harden `RESERVED_SUBDOMAINS` into `lib/reserved-subdomains.ts` + add `_cd` (AC-6)
 - [ ] US-004 — Enforce reserved + format on super-admin tenant rename (AC-7)
 - [ ] US-005 — Apply `requireSameOrigin` to all destructive super-admin handlers (AC-4 100%, AC-2)

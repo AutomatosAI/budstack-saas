@@ -20,3 +20,15 @@ US-001 Delete the one-time reset-templates wipe route — DONE 2026-05-29
   detach POST). Verified nothing imports the deleted route.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (route tree no longer lists reset-templates),
   using ci.yml's 6 stub env vars. No DB needed.
+
+US-002 Security guard module (requireSameOrigin + requireConfirmation) — DONE 2026-05-29
+- lib/security/require-same-origin.ts: requireSameOrigin(req) returns NextResponse|null. Allows
+  Sec-Fetch-Site: same-origin; blocks cross-site/same-site; else compares Origin host vs
+  x-forwarded-host/host; absent same-origin signal → 403 { error, code: "CROSS_ORIGIN_BLOCKED" }.
+  Defence-in-depth on top of Clerk SameSite=Lax (AC-4).
+- lib/security/require-confirmation.ts: requireConfirmation(body, expected) Zod-validates a typed
+  { confirm } body equals the target token; mismatch → 400 { error, code: "CONFIRMATION_MISMATCH" }.
+  Takes a pre-parsed body (caller does req.json().catch(()=>null)) so it's pure + unit-testable (AC-3).
+- New codes returned as a `code` field alongside `error` (lib/api-error.ts envelope has no code field).
+  No callers yet — applied to handlers in US-005/006/007. Pure functions, no DB/network.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0.
