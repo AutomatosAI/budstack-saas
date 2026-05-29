@@ -17,3 +17,23 @@ switch this worktree's branch / never touch main or sibling worktrees; stage
 files by name; commits carry no attribution footer; tests load .env.test only.
 ================================================================================
 
+--------------------------------------------------------------------------------
+US-001 — Vitest unit harness scaffold (idempotent)            [DONE]  commit pending
+--------------------------------------------------------------------------------
+Mirrored the proven PRD-206 harness onto this worktree (base main @ af77b24,
+which has no vitest):
+  - vitest pinned ^2.1.9 + @vitest/coverage-v8 ^2.1.9 (Node here is 18.17.0;
+    vitest 4.x needs Node 20.12+ for node:util styleText — 2.x is the ceiling).
+  - nextjs_space/vitest.config.ts: environment node, setupFiles vitest.setup.ts,
+    include tests/unit/**/*.test.ts + lib/**/*.test.ts, exclude integration/e2e/
+    *.spec.ts, coverage v8 over lib/**, @ alias → repo root (mirrors tsconfig).
+  - nextjs_space/vitest.setup.ts: dotenv loads .env.test ONLY (never real env).
+  - nextjs_space/.env.test: NODE_ENV=test. Root .gitignore gains `!**/.env.test`
+    so the throwaway test env is committable.
+  - package.json scripts: test / test:watch / test:unit (vitest run).
+  - tests/unit/harness-smoke.test.ts: 2 sanity tests.
+Validation: `pnpm test:unit` → 2/2 passed. `npx tsc --noEmit` → exit 0 (also
+confirms main is a clean typecheck baseline for this branch).
+Files: .gitignore, nextjs_space/{vitest.config.ts,vitest.setup.ts,.env.test,
+package.json,pnpm-lock.yaml,tests/unit/harness-smoke.test.ts}.
+

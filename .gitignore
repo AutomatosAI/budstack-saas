@@ -9,6 +9,8 @@ env.*
 !.env.example
 !.env.production.example
 !env.example
+# Throwaway deterministic test env (no real secrets) — committed for the vitest harness.
+!**/.env.test
 
 # Dependencies
 node_modules/
