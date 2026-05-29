@@ -32,3 +32,14 @@ US-002 Security guard module (requireSameOrigin + requireConfirmation) — DONE 
 - New codes returned as a `code` field alongside `error` (lib/api-error.ts envelope has no code field).
   No callers yet — applied to handlers in US-005/006/007. Pure functions, no DB/network.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0.
+
+US-003 Extract + harden RESERVED_SUBDOMAINS into lib/reserved-subdomains.ts + add _cd — DONE 2026-05-29
+- New lib/reserved-subdomains.ts: exports RESERVED_SUBDOMAINS (ReadonlySet), isReservedSubdomain()
+  (case-insensitive + trimmed), isValidSubdomain() (2-30 char, lowercase alnum+hyphen, no lead/trail
+  or double hyphen). Added "_cd" — the custom-domain rewrite placeholder from middleware.ts
+  (example.com -> /store/_cd/...); a tenant claiming it would collide with routing internals (AC-6).
+- app/api/onboarding/route.ts now imports both helpers from the shared module and dropped its inline
+  RESERVED_SUBDOMAINS Set + local isValidSubdomain copy. Behaviour preserved (same regex, same set
+  plus _cd); the existing isValidSubdomain/isReservedSubdomain call sites resolve to the import.
+- Shared module is the single source for US-004 (super-admin rename) to reuse — no duplicate lists.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.
