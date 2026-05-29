@@ -170,8 +170,8 @@
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": "OQ-4 default: closed for write/auth-adjacent, open-with-alarm for public reads. Depends on US-009. If a candidate call site (onboarding, account-delete, account-export) does not exist, note it and skip — do not invent endpoints. Find them via grep; the onboarding route is app/api/onboarding/route.ts per project memory."
+      "passes": true,
+      "notes": "DONE. Enumerated 13 checkRateLimit call sites. Set failMode:'closed' on 5 auth/identity surfaces: onboarding:75, account/delete:39, account/export:34 (the AC-2 three) PLUS signup:34 + auth/reset-password:39 (story title = auth-adjacent; OQ-4 closes that class). Left default 'open' (now alarms via US-009) on consultation/submit (public healthcare intake — availability), all tenant-admin (authed admin convenience reads/writes) and all super-admin call sites (highest-privilege; don't lock an operator out mid-incident). Full per-site rationale table written to progress.txt (AC-4). Config-only one-line edits; 503 + Retry-After + no-leak all inherited from US-009's closed branch. pnpm check:security passes, tsc clean, pnpm test 49 passed. NOTE: extended beyond AC-2's literal three — trivially narrowable if the user prefers only onboarding+account delete/export."
     },
     {
       "id": "US-011",

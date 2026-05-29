@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     // Rate limit by IP — public endpoint that creates orgs + users
     const forwarded = req.headers.get('x-forwarded-for');
     const ip = forwarded?.split(',')[0]?.trim() || 'unknown';
-    const rateLimitResult = await checkRateLimit(`onboarding:${ip}`, { maxRequests: 3, windowMs: 60000 });
+    const rateLimitResult = await checkRateLimit(`onboarding:${ip}`, { maxRequests: 3, windowMs: 60000, failMode: 'closed' });
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }

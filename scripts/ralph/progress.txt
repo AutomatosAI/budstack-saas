@@ -101,3 +101,19 @@ Started: 2026-05-29
 - Untouched: the over-limit 429 path (:72-91) and getRateLimitStatus() are byte-identical to before.
 - AC-tests. tests/unit/rate-limit.test.ts (5 tests): mocks ioredis via `vi.mock('ioredis', ...)` returning a MockRedis class whose multi()/exec()/pttl() read a module-scoped `redisState { count, ttlMs, fail }` (the singleton client is cached, so per-test behaviour is steered by mutating state, reset in beforeEach). Cases: under-limit→success:true; over-limit (count 21 > 20)→429 + Retry-After present; fail-open default (redisState.fail)→success:true AND console.error called with ('ops.rate_limit_failopen', objectContaining{identifier,failMode:'open'}); fail-closed→success:false + status 503 + Retry-After AND event with failMode:'closed'; and a no-leak assertion that the 503 JSON body does not contain 'Redis connection refused'.
 - Validation: pnpm test 49 passed (5 new); pnpm exec tsc --noEmit clean. check:security not run (US-009 touches lib/ only, not app/api — that gate belongs to US-010/US-007).
+
+### US-010 — failMode:'closed' on auth-adjacent rate limiters (DONE 2026-05-29)
+- AC-1. Enumerated all 13 checkRateLimit call sites under app/ + lib/ (grep `checkRateLimit(`). Per-call-site decision (OQ-4: closed for write/auth-adjacent, open-with-alarm for public reads + already-authed admin convenience):
+  CLOSED (5) — fail to 503 on Redis loss so an unmetered flood can't bypass the limiter on identity/credential surfaces:
+    * app/api/onboarding/route.ts:75  (`onboarding:${ip}`) — public org+user creation. Named in AC-2.
+    * app/api/account/delete/route.ts:39 (`account-delete:${id}`) — destructive, 1/hr. Named in AC-2.
+    * app/api/account/export/route.ts:34 (`account-export:${id}`) — GDPR PII export, 3/hr. Named in AC-2.
+    * app/api/signup/route.ts:34 (`signup:${ip}`) — account creation; unmetered = signup spam/account-spray. Story title = "auth/payment-adjacent".
+    * app/api/auth/reset-password/route.ts:39 (`reset-password:${ip}`) — credential reset; unmetered = enumeration + inbox-bombing. Auth-adjacent.
+  OPEN (default, now alarms via US-009) — left fail-open because blocking these during a Redis outage harms availability more than the metering lapse risks:
+    * app/api/consultation/submit/route.ts:84 — PUBLIC patient intake (healthcare). Fail-closed would block legitimate patients; keep open-with-alarm. (Public write, not auth/payment.)
+    * app/api/tenant-admin/products/reorder|bulk, orders/bulk, analytics — already Clerk-authed tenant admins; convenience writes/reads, not identity surfaces.
+    * app/api/super-admin/tenants/route.ts:21 & :116, super-admin/tenants/bulk/route.ts:20 — already highest-privilege authed; an operator may be mid-incident fixing the very Redis outage — do not lock them out.
+- AC-3. The fail-closed 503 is produced entirely by US-009's checkRateLimit closed branch: apiError envelope (status 503, generic safeMessage, no raw error) + Retry-After header. No silent pass and no raw error text — verified by the US-009 no-leak test and pnpm check:security.
+- AC-5/6. pnpm check:security passes (CSS + no-error-leak gates green); pnpm exec tsc --noEmit clean; pnpm test 49 passed (no test changes needed — the 503 mechanics are already covered by rate-limit.test.ts; these are config-only one-line additions).
+- Decision note for the user: I extended the CLOSED set beyond AC-2's literal three (onboarding + account delete/export) to also include signup + reset-password, because the story TITLE scopes to "auth/payment-adjacent" and OQ-4 defaults that class to closed; signup/reset are the highest-risk identity surfaces. consultation/submit was deliberately LEFT open despite being a public write (healthcare availability). Easy to narrow back to the literal three if preferred.
