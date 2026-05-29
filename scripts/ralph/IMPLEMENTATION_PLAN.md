@@ -8,7 +8,7 @@ Worktree: `/Users/gkavanagh/Development/HealingBuds/budstack-saas-prd-206` · Br
 
 ## Phase 1 — Guard + enforcement + call-site migration + unit tests (AUTONOMOUS, node-only, no Docker/Clerk)
 
-- [ ] US-001 — Vitest unit harness scaffold (idempotent) so guard tests can run
+- [x] US-001 — Vitest unit harness scaffold (idempotent) so guard tests can run
 - [ ] US-002 — lib/s3-tenant-guard.ts strict path-segment prefix guard + normaliser (AC-1)
 - [ ] US-003 — Guard bypass-string + traversal unit suite (AC-1a) — core security proof
 - [ ] US-004 — Enforce scope inside getFileUrl + explicit audited bypass (AC-2)
