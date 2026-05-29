@@ -48,3 +48,29 @@ US-005 sanitizeCss tests — closes PRD-200 AC-3a — DONE 2026-05-29
   - PRD-200 AC-3a flipped [x][DONE]; changelog row 0.4 added. PRD-200 now has
     only AC-2a (Railway rotation, Gerard) outstanding.
   - Suite total after US-005: 30 tests / 5 files green. tsc --noEmit clean.
+
+US-006 Coverage thresholds (report-only) for security-critical set (AC-12) — DONE 2026-05-29
+  - vitest.config.ts: thresholds gated behind COVERAGE_ENFORCE env (OQ-4 —
+    defined here, report-only by default; PRD-216 sets COVERAGE_ENFORCE=1 to
+    make it a hard CI gate). 80% lines/branches/functions/statements aggregate;
+    95% per-file on lib/encryption.ts, lib/drgreen-webhook-verify.ts,
+    lib/api-auth.ts, lib/tenant-context.ts (with-tenant-context.ts joins once
+    PRD-202 creates it).
+  - Verified both paths: `pnpm test:cov` -> EXIT 0 (report-only, prints table);
+    `COVERAGE_ENFORCE=1 pnpm test:cov` -> EXIT 1 with all 80% global + four 95%
+    per-file globs firing (proves the gate is wired, not dead config).
+  - Current security-critical coverage is intentionally below 95% this early
+    (encryption ~69%, drgreen ~65%, api-auth ~48%, css-utils ~81%, tenant-context
+    0%) — the seed suites prove the security CONTRACTS, not exhaustive lines.
+    Raising to 95% + flipping enforcement is PRD-216's job once more suites land.
+  - tsc --noEmit clean (glob-key thresholds type-check under Vitest 2.x).
+
+==================================================================
+PHASE 1 COMPLETE — US-001..006 done. Vitest unit harness + 4 security suites
++ report-only coverage gate. 30 tests / 5 files green.
+
+NEXT (gated, not started):
+  Phase 2 US-007..010 — testcontainers Postgres 17. REQUIRES Docker daemon
+  (down on this box). Loop emits RALPH_BLOCKED at US-007 gate (docker info).
+  Phase 3 US-011..015 — Playwright E2E. BLOCKED on PRD-207 OQ-1 (Clerk
+  test-auth approach, owner Gerard). Loop emits RALPH_BLOCKED, no shim invented.
