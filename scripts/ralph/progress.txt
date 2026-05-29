@@ -1,0 +1,37 @@
+# PRD-211 Encryption Fallback + Webhook Hardening — Progress Log
+
+Project: BudStack SaaS
+Feature: ralph/prd-211-encryption-webhook-hardening
+Worktree: /Users/gkavanagh/Development/HealingBuds/budstack-PRD-211
+Base: main (af77b24)
+Started: 2026-05-29
+
+---
+
+## Phase Map (six defects from PRD-211 §1)
+
+- Phase 0  Test harness          US-001            (minimal Vitest — PRD-207 dep, brought in minimally)
+- Phase 1  decrypt fail-closed   US-002, US-003    (HIGH — AC-1/1a/1b)
+- Phase 2  inbound HMAC          US-004            (HIGH — AC-2/2a/2b, OQ-1 dual-accept flag)
+- Phase 3  outbound SSRF         US-005, US-006, US-007  (HIGH elevated — AC-3/3a/3b)
+- Phase 4  migration deadline    US-008            (MEDIUM — AC-4/4a, OQ-2)
+- Phase 5  rate-limit alert      US-009, US-010    (MEDIUM — AC-5/5a, OQ-4)
+- Phase 6  verify-before-resolve US-011, US-012    (MEDIUM — AC-6/6a, OQ-3 platform-secret flag)
+
+## Reversibility / flag gates (default = current behaviour; human flips after coordination)
+
+- DRGREEN_WEBHOOK_LEGACY_HASH_ACCEPT  — temporary dual-accept of legacy plain-hash during HMAC cutover (US-004)
+- DRGREEN_WEBHOOK_SECRET              — enables verify-before-resolve via a platform-level secret (US-011/012)
+- ENCRYPTION_MIGRATION_DEADLINE       — sole driver of the (short) fail-open window (US-008)
+
+## Human / ops follow-ups (NOT done by Ralph)
+
+- [ ] Run nextjs_space/scripts/audit-drgreen-keys.ts against the live DB; if 100% v2, remove `allowUnencryptedMigration: true` from the 3 webhook routes (US-008 AC-4a — needs prod DB)
+- [ ] Provision DRGREEN_WEBHOOK_SECRET + coordinate the HMAC cutover with Dr Green, then enable verify-before-resolve and disable the legacy-hash dual-accept (OQ-1, OQ-3)
+- [ ] Clerk test-auth decision (PRD-207 OQ-1) to land the Playwright webhook-registration-ssrf E2E (US-007 / PRD §12)
+
+---
+
+## Story Status
+
+(Ralph appends one entry per completed story below.)
