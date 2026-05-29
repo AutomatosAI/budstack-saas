@@ -43,3 +43,13 @@ US-003 Extract + harden RESERVED_SUBDOMAINS into lib/reserved-subdomains.ts + ad
   plus _cd); the existing isValidSubdomain/isReservedSubdomain call sites resolve to the import.
 - Shared module is the single source for US-004 (super-admin rename) to reuse — no duplicate lists.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.
+
+US-004 Enforce reserved + format on super-admin tenant rename — DONE 2026-05-29
+- app/api/super-admin/tenants/[id]/route.ts PATCH: when subdomain changes it previously checked
+  ONLY uniqueness. Now, before the uniqueness lookup, it runs isValidSubdomain(String(subdomain))
+  then isReservedSubdomain(String(subdomain)) (imported from @/lib/reserved-subdomains, the US-003
+  module). Invalid format → 400 format error; reserved → 400 { error, code: "RESERVED_SUBDOMAIN" }.
+  Order mirrors onboarding (format first, then reserved). String() guards a non-string JSON body.
+- Closes AC-7: a super-admin can no longer rename a tenant onto a reserved/invalid slug (e.g. api,
+  www, _cd). Persistence/Clerk-slug sync untouched (out of scope) — same raw value still written.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getNamecheapClient } from "@/lib/namecheap-api";
 import { addCustomDomain, removeCustomDomain } from "@/lib/railway-api";
 import { clerkClient } from "@clerk/nextjs/server";
+import { isReservedSubdomain, isValidSubdomain } from "@/lib/reserved-subdomains";
 import crypto from "crypto";
 
 export async function GET(
@@ -95,8 +96,22 @@ export async function PATCH(
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
-    // Check if subdomain is being changed and if it's unique
+    // Check if subdomain is being changed: enforce format + reserved list, then uniqueness
     if (subdomain && subdomain !== existingTenant.subdomain) {
+      const candidate = String(subdomain);
+      if (!isValidSubdomain(candidate)) {
+        return NextResponse.json(
+          { error: "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only" },
+          { status: 400 },
+        );
+      }
+      if (isReservedSubdomain(candidate)) {
+        return NextResponse.json(
+          { error: "This subdomain is reserved. Please choose another.", code: "RESERVED_SUBDOMAIN" },
+          { status: 400 },
+        );
+      }
+
       const subdomainExists = await prisma.tenants.findUnique({
         where: { subdomain },
       });
