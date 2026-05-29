@@ -37,3 +37,25 @@ confirms main is a clean typecheck baseline for this branch).
 Files: .gitignore, nextjs_space/{vitest.config.ts,vitest.setup.ts,.env.test,
 package.json,pnpm-lock.yaml,tests/unit/harness-smoke.test.ts}.
 
+--------------------------------------------------------------------------------
+US-002 — Additive tenant-context API + unit suite (AC-1, OQ-4)         [DONE]
+--------------------------------------------------------------------------------
+lib/tenant-context.ts (additive only — setTenantContext still present, removed
+in US-009 once its callers are gone):
+  - runWithTenantContextAsync<T>(tenantId, fn: () => Promise<T>): Promise<T> —
+    binds the ALS for the whole async chain; context propagates across awaits
+    inside fn and is restored for the caller once the promise settles.
+  - hasTenantContext(): boolean = getStore() !== undefined. This is the key
+    primitive for US-005: it distinguishes an EXPLICIT null (a bound
+    runWithTenantContext(null,...) system query — allowed) from an IMPLICIT
+    unbound context (the leak bug — fail loud). getTenantContext()===null alone
+    cannot tell these apart.
+  - getTenantContext() unchanged (AC-1).
+Unit suite tests/unit/tenant-context.test.ts (8 tests): sync bind+teardown,
+returns callback value, nested-scope restores outer, null+no-context outside,
+explicit-null is bound (hasTenantContext true / id null), bound non-null
+reports true, async context survives an `await new Promise(setTimeout(0))`
+boundary, async resolves to callback value.
+Validation: pnpm test:unit → 10/10 passed (2 smoke + 8 new). tsc --noEmit → 0.
+Files: nextjs_space/lib/tenant-context.ts, nextjs_space/tests/unit/tenant-context.test.ts.
+
