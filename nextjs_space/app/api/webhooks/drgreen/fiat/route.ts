@@ -130,7 +130,6 @@ export async function POST(request: NextRequest) {
     if (order.tenants?.drGreenSecretKey) {
       const secret = decrypt(order.tenants.drGreenSecretKey, {
         allowUnencryptedMigration: true,
-        migrationDeadline: "2026-12-31",
       });
       if (!verifyDrGreenWebhookSignature(rawBody, signature, secret)) {
         console.error("[Fiat Webhook] Signature verification failed");

@@ -77,7 +77,6 @@ export async function POST(request: NextRequest) {
     if (resolved.tenantSecret) {
       const secret = decrypt(resolved.tenantSecret, {
         allowUnencryptedMigration: true,
-        migrationDeadline: "2026-12-31",
       });
       if (!verifyDrGreenWebhookSignature(rawBody, signature, secret)) {
         console.error("[DrGreen Status] Signature verification failed");
