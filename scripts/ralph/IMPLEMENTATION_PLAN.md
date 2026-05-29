@@ -21,7 +21,7 @@ Source PRD: `docs/PRDS/REMEDIATION/PRD-216-ci-cd-security-gates.md`.
 - [x] US-003 — Unified runner + wire grep gates into `ci.yml` (PRD-200 blocking; 202/215 report-only)
 - [x] US-004 — Advisory docs-lint (PRD-214), non-blocking `ci.yml` step
 - [x] US-005 — Dependabot config (`.github/dependabot.yml`)
-- [ ] US-006 — CodeQL workflow (`.github/workflows/codeql.yml`)
+- [x] US-006 — CodeQL workflow (`.github/workflows/codeql.yml`)
 - [ ] US-007 — Secret-scan workflow (gitleaks) + `.gitleaks.toml` allow-list
 - [ ] US-008 — SBOM generation workflow (CycloneDX JSON) + artifact upload
 - [ ] US-009 — Flip `eslint.ignoreDuringBuilds:false` in `next.config.js` (conditional BLOCK on lint backlog)

@@ -64,3 +64,12 @@ US-005 Dependabot config — DONE 2026-05-29
   Security updates left default-on (not disabled). Rationale documented in a header comment.
 - Pure config, no app code. Validated: YAML parses; asserted version=2, ecosystems/dirs/schedule/
   limit/groups keys present; tsc exit 0. Live PR behaviour verified on GitHub post-merge.
+
+US-006 CodeQL workflow — DONE 2026-05-29
+- Added .github/workflows/codeql.yml: triggers on PR→main, push→main, weekly cron (Mon 04:23 UTC).
+  init@v3 + analyze@v3, language javascript-typescript, queries security-and-quality, build-mode none
+  (JS/TS interpreted). permissions: security-events:write, actions:read, contents:read. checkout@v4.
+- OQ-4 (warn-baseline-then-block on new High/Critical) documented in a header comment as a GitHub
+  branch-protection decision for Gerard — NOT encoded in YAML (no autofail key exists there).
+- Validated: YAML parses; asserted triggers/perms/language/action-versions; tsc exit 0. Live scan
+  verified on GitHub post-merge.
