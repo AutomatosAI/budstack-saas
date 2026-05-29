@@ -122,8 +122,8 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Depends on US-005. Reuse assertSafeWebhookUrl — do NOT duplicate the IP logic. These routes are Clerk-auth protected; a full Playwright E2E (PRD-211 §12 webhook-registration-ssrf.spec.ts) needs the Clerk test-auth decision (PRD-207 OQ-1) and is DEFERRED — do not attempt it here, the function-level test + route wiring is the autonomous deliverable. Use apiValidationError/apiError envelope; cross-ref PRD-200 AC-5 (no raw error leak)."
+      "passes": true,
+      "notes": "DONE: reused assertSafeWebhookUrl (no IP logic duplicated). POST app/api/tenant-admin/webhooks/route.ts — after the existing new URL(url) format check, added `try { await assertSafeWebhookUrl(url) } catch { return apiValidationError('Webhook URL is not allowed. Use a public HTTPS endpoint.', 'tenant-admin/webhooks') }`. PATCH app/api/tenant-admin/webhooks/[id]/route.ts (only PATCH updates url; no PUT) — same check inside the existing `if (url)` block after the format catch, route 'tenant-admin/webhooks/[id]'. Both catch blocks bind NO error variable and return a fixed vetted message via apiValidationError (safeMessage path) — never the WebhookUrlError.message (which contains the resolved IP), so no info disclosure. imports added: assertSafeWebhookUrl from @/lib/webhook-ssrf, apiValidationError from @/lib/api-error. Test: tests/unit/webhook-registration-ssrf.test.ts (3, function-level) — rejects http://169.254.169.254/ and https://hooks.foo.railway.internal/ingest; accepts https://hooks.example.com/ingest via injected public resolver. Full HTTP E2E DEFERRED (Clerk test-auth, PRD-207 OQ-1). pnpm test 44 passed; tsc clean; pnpm check:security passes (AC-5a no-leak gate green)."
     },
     {
       "id": "US-008",
