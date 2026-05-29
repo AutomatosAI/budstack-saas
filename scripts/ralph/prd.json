@@ -202,8 +202,8 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": "Depends on US-011 (same pattern). Final story: after marking it [x], write the completion commit and emit RALPH_COMPLETE. Note remaining human/ops follow-ups in the commit body: (1) run audit-drgreen-keys.ts against live DB then remove allowUnencryptedMigration:true (US-008); (2) provision DRGREEN_WEBHOOK_SECRET + coordinate HMAC cutover with Dr Green, then enable verify-before-resolve and disable the legacy-hash dual-accept flag; (3) the Playwright webhook-registration E2E is gated on the Clerk test-auth decision."
+      "passes": true,
+      "notes": "DONE (FINAL — RALPH_COMPLETE emitted). Applied the identical flag-gated verify-before-resolve pattern from US-011 to fiat/route.ts and crypto/route.ts. Each: signature header read early + `const platformSecret = process.env.DRGREEN_WEBHOOK_SECRET; let verifiedByPlatformSecret=false; if(platformSecret){ if(!verifyDrGreenWebhookSignature(rawBody,signature,platformSecret)) return 401; verifiedByPlatformSecret=true; }` inserted AFTER the missing-id 400 guard and BEFORE orders.findFirst (fiat nonce / crypto drGreenOrderId). The now-duplicate per-tenant `const signature` decl was removed (declared once up top) and the per-tenant block became `if (verifiedByPlatformSecret) {} else if (order.tenants?.drGreenSecretKey) {...} else if (NODE_ENV==='production') {...}`. Unset env = byte-identical resolve-then-verify. tests/unit/drgreen-payment-verify-order.test.ts (3): fiat secret-set+invalid sig->401 with orders.findFirst & drgreen_webhook_logs.create NOT called; fiat secret-unset+resolved order w/ tenant secret+invalid sig->401 AFTER orders.findFirst ran (preserves order); crypto secret-set+invalid sig->401 with orders.findFirst NOT called. pnpm test 55 passed; tsc clean; check:security passes. Note: the unset-fiat test resolves a real order (not null) to avoid the 404 branch's inline crypto.randomUUID() which throws under vitest's flaky global crypto — a TEST-ENV artifact only; the prod Next runtime has global crypto."
     }
   ]
 }

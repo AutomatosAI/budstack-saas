@@ -96,6 +96,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing nonce" }, { status: 400 });
     }
 
+    // SECURITY (US-012, AC-6): verify-before-resolve. When a platform-level
+    // DRGREEN_WEBHOOK_SECRET is set, authenticate the HMAC signature BEFORE the
+    // orders.findFirst() below runs on the attacker-controlled nonce — a forged
+    // payload is rejected here with zero DB access. Flag-gated: when unset, the
+    // existing per-tenant resolve-then-verify path below runs unchanged.
+    const signature = request.headers.get("x-webhook-signature") || "";
+    const platformSecret = process.env.DRGREEN_WEBHOOK_SECRET;
+    let verifiedByPlatformSecret = false;
+    if (platformSecret) {
+      if (!verifyDrGreenWebhookSignature(rawBody, signature, platformSecret)) {
+        console.error(
+          "[Fiat Webhook] Platform-secret signature verification failed (pre-resolve)",
+        );
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+      verifiedByPlatformSecret = true;
+    }
+
     // Find order by nonce
     const order = await prisma.orders.findFirst({
       where: {
@@ -126,8 +144,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify signature using tenant's secret
-    const signature = request.headers.get("x-webhook-signature") || "";
-    if (order.tenants?.drGreenSecretKey) {
+    if (verifiedByPlatformSecret) {
+      // Already authenticated against the platform secret before resolve (US-012).
+    } else if (order.tenants?.drGreenSecretKey) {
       const secret = decrypt(order.tenants.drGreenSecretKey, {
         allowUnencryptedMigration: true,
       });

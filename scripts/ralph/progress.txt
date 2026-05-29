@@ -125,3 +125,27 @@ Started: 2026-05-29
 - AC-tests: tests/unit/drgreen-status-verify-order.test.ts (3). Mocks @/lib/db (prisma spies), @/lib/encryption (decrypt->'tenant-secret'), @/lib/email, @/lib/webhook; keeps @/lib/drgreen-webhook-verify REAL so the HMAC + timestamp + payload validators run for real. Calls the route's POST() with a constructed Request (global undici Request, Node 18). (1) secret set + 64-zero-hex invalid sig on kyc.verified -> 401 AND consultation_questionnaires.findFirst, users.findFirst, drgreen_webhook_logs.create NOT called; (2) secret unset + invalid sig + mocked consultation/tenant -> 401 AND consultation_questionnaires.findFirst WAS called (proves old order preserved); (3) secret set + correct HMAC-SHA256 over the exact body on order.shipped with orders.findFirst->null -> 404 (proves platform verify PASSED and resolveTenant ran).
 - Validation: pnpm test 52 passed (3 new); pnpm exec tsc --noEmit clean; pnpm check:security passes.
 - Human follow-up (NEEDS-OPS): provision DRGREEN_WEBHOOK_SECRET in Railway and confirm with Dr Green that they sign with a single platform secret (not per-tenant) before relying on the verify-first path. Until then the flag stays unset and per-tenant resolve-then-verify remains in force.
+
+### US-012 — Verify-before-resolve on fiat + crypto routes (DONE 2026-05-29) — FINAL STORY
+- AC-6/6a. Applied the US-011 flag-gated verify-before-resolve pattern to BOTH payment routes:
+  * app/api/webhooks/drgreen/fiat/route.ts — block inserted after the `if (!custom)` 400 guard, before `prisma.orders.findFirst({ where: { nonce: custom } })`.
+  * app/api/webhooks/drgreen/crypto/route.ts — block inserted after the `if (!custom_data2)` 400 guard, before `prisma.orders.findFirst({ where: { drGreenOrderId: custom_data2 } })`.
+  Each reads the x-webhook-signature header early, then: `const platformSecret = process.env.DRGREEN_WEBHOOK_SECRET; let verifiedByPlatformSecret = false; if (platformSecret) { if (!verifyDrGreenWebhookSignature(rawBody, signature, platformSecret)) return 401; verifiedByPlatformSecret = true; }`. The previously-inline per-tenant `const signature = ...` decl was removed (now declared once in the new block) and `if (order.tenants?.drGreenSecretKey)` became `if (verifiedByPlatformSecret) { /* already authed pre-resolve */ } else if (order.tenants?.drGreenSecretKey) { ...unchanged... } else if (NODE_ENV==='production') { ...unchanged... }`.
+- AC-2 (no breakage): both routes are byte-identical to before when DRGREEN_WEBHOOK_SECRET is unset (verifiedByPlatformSecret stays false; pre-resolve block is a no-op).
+- AC-tests: tests/unit/drgreen-payment-verify-order.test.ts (3). Mocks @/lib/db, @/lib/encryption, @/lib/webhook; verify lib REAL. (1) fiat secret-set + invalid sig -> 401 AND orders.findFirst + drgreen_webhook_logs.create NOT called (zero DB on forged payload); (2) fiat secret-unset + resolved order carrying a tenant secret + invalid sig -> 401 AFTER orders.findFirst ran (resolve-then-verify preserved); (3) crypto secret-set + invalid sig -> 401 AND orders.findFirst NOT called.
+  TEST-ENV note: the unset-fiat case resolves a real order rather than null to avoid the fiat 404 branch's INLINE `crypto.randomUUID()` (status route swallows the equivalent in a try/catch helper; fiat/crypto do not), which throws under vitest's flaky global `crypto`. This is a test-environment artifact only — the production Next.js runtime provides global crypto, so the live 404-logging path is unaffected.
+- Validation: pnpm test 55 passed (3 new); pnpm exec tsc --noEmit clean; pnpm check:security passes.
+
+================================================================================
+RALPH_COMPLETE — all 12 PRD-211 stories (US-001..US-012) implemented, tested
+(55 unit tests), typechecked, and committed on branch
+ralph/prd-211-encryption-webhook-hardening. PRD: encryption + Dr Green webhook
+hardening. Built in-session (the --dangerously-skip-permissions loop mechanism
+is globally disallowed); prd.json `passes` + this log were kept loop-compatible
+throughout.
+================================================================================
+
+REMAINING HUMAN / OPS FOLLOW-UPS (out of Ralph scope — need prod DB / external coordination):
+  1. (US-008) Run `npx tsx scripts/audit-drgreen-keys.ts` against the production DB. Once it reports 100% v2 (exit 0), remove `allowUnencryptedMigration: true` from the three Dr Green webhook routes (status/fiat/crypto) and set a SHORT ENCRYPTION_MIGRATION_DEADLINE in Railway. The audit never decrypts or prints secrets — id/subdomain/class only.
+  2. (US-004 + US-011/US-012) Provision DRGREEN_WEBHOOK_SECRET in Railway and CONFIRM WITH DR GREEN whether they sign webhooks with a single platform secret (enables verify-before-resolve) or per-tenant (keep the flag unset). Then coordinate the HMAC-SHA256 signing cutover; during the window set DRGREEN_WEBHOOK_LEGACY_HASH_ACCEPT=true, and turn it OFF (HMAC-only) once Dr Green is fully migrated.
+  3. (PRD-207 OQ-1) The Playwright webhook-registration-ssrf E2E remains gated on the Clerk test-auth decision — not implemented here (unit coverage stands in for now).
