@@ -19,3 +19,6 @@ Added assertKeyInTenantScope(key, tenantId, { folderPrefix? }) (throws ApiError 
 
 US-003 Guard bypass-string + traversal suite — DONE 2026-05-29
 Added tests/unit/s3-tenant-guard.test.ts (14 tests). Proves the AC-1a bypass set is ALL rejected: nested victim/me substring, prefix-extension sibling (tenantA-evil), parent traversal, url-encoded traversal (..%2F), leading-slash, double-slash, another-tenant-outright; plus malformed-encoding + backslash fail-closed and empty/whitespace tenantId. Accepts in-scope keys (incl. development/ folderPrefix). Asserts thrown error is ApiError status 403. `pnpm test` 15/15 green, tsc exits 0. This is the PRD's #1 success metric (bypass suite all-rejected).
+
+US-004 Enforce scope inside getFileUrl + audited bypass — DONE 2026-05-29
+getFileUrl 2nd param is now a backward-compatible union GetFileUrlOptions = string | { tenantId, contentTypeHint? } | { bypassTenantScope: true, reason, contentTypeHint? }. Legacy string/undefined behaves exactly as before. Extracted applyGetFileUrlScope(): tenant form asserts via guard (folderPrefix from getBucketConfig) BEFORE signing; bypass form emits `console.warn('s3.cross_tenant_sign', {key,reason})` then signs. Video contentType inference preserved in all forms. tsc --noEmit exits 0 with NO edits to the ~18 other callers (the #1 constraint held). Unit tests land in US-010.
