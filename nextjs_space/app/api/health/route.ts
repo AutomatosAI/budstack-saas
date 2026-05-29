@@ -1,60 +1,87 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const checks = {
-    timestamp: new Date().toISOString(),
-    status: "healthy",
-    services: {} as Record<string, any>,
-    version: process.env.npm_package_version || "1.0.0",
-    environment: process.env.NODE_ENV || "development",
-  };
+/**
+ * Health check.
+ *
+ * SECURITY (AC-6): the detailed body (memory, uptime, version, per-service
+ * latency) is a fingerprinting + capacity-probing aid, so it is returned
+ * ONLY to a caller presenting a valid `HEALTH_DETAIL_TOKEN` bearer header
+ * (used by uptime monitoring). Anonymous callers get just `{ status }` plus
+ * the 200/503 code, which is all a liveness probe needs. Fails closed: if
+ * HEALTH_DETAIL_TOKEN is unset, no caller can obtain detail.
+ */
+
+function hasValidDetailToken(req: Request): boolean {
+  const expected = process.env.HEALTH_DETAIL_TOKEN;
+  if (!expected) return false;
+
+  const header = req.headers.get("authorization") ?? "";
+  const provided = header.startsWith("Bearer ") ? header.slice(7) : header;
+
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+export async function GET(req: Request) {
+  let dbHealthy = true;
+  let dbLatencyMs = 0;
 
   try {
-    // Database check
     const startTime = Date.now();
     await prisma.$queryRaw`SELECT 1`;
-    const dbLatency = Date.now() - startTime;
-
-    checks.services.database = {
-      status: "healthy",
-      latency: `${dbLatency}ms`,
-    };
+    dbLatencyMs = Date.now() - startTime;
   } catch (error) {
-    // SECURITY (H_e2): Health endpoint is public — DB error messages can
-    // include connection strings, hostnames, or auth schemes. Log
-    // server-side, return a generic indicator only.
+    // Log server-side only — DB error text can include connection strings,
+    // hostnames, or auth schemes.
     console.error(
       "[Health] DB check failed:",
       error instanceof Error ? error.message : String(error),
     );
-    checks.services.database = {
-      status: "unhealthy",
-      error: "Database check failed",
-    };
-    checks.status = "degraded";
+    dbHealthy = false;
   }
 
-  // Memory usage
+  const statusCode = dbHealthy ? 200 : 503;
+
+  // Anonymous callers: minimal body, no internals.
+  if (!hasValidDetailToken(req)) {
+    return NextResponse.json(
+      { status: dbHealthy ? "ok" : "degraded" },
+      { status: statusCode },
+    );
+  }
+
+  // Authenticated detail (uptime monitoring).
   const memUsage = process.memoryUsage();
-  checks.services.memory = {
-    status: "healthy",
-    heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
-    heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`,
-    rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`,
+  const detail = {
+    timestamp: new Date().toISOString(),
+    status: dbHealthy ? "healthy" : "degraded",
+    version: process.env.npm_package_version || "1.0.0",
+    environment: process.env.NODE_ENV || "development",
+    services: {
+      database: dbHealthy
+        ? { status: "healthy", latency: `${dbLatencyMs}ms` }
+        : { status: "unhealthy", error: "Database check failed" },
+      memory: {
+        status: "healthy",
+        heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
+        heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`,
+        rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`,
+      },
+      uptime: {
+        status: "healthy",
+        seconds: Math.floor(process.uptime()),
+        human: formatUptime(process.uptime()),
+      },
+    },
   };
 
-  // Uptime
-  checks.services.uptime = {
-    status: "healthy",
-    seconds: Math.floor(process.uptime()),
-    human: formatUptime(process.uptime()),
-  };
-
-  const statusCode = checks.status === "healthy" ? 200 : 503;
-  return NextResponse.json(checks, { status: statusCode });
+  return NextResponse.json(detail, { status: statusCode });
 }
 
 function formatUptime(seconds: number): string {

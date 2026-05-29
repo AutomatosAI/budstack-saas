@@ -100,11 +100,10 @@ export async function POST(req: NextRequest) {
       // Validate format by dry-run signing — prevents garbage being stored
       try {
         generateDrGreenSignature("validation_test", normalizedSecret);
-      } catch (err) {
-        const reason = err instanceof Error ? err.message : "could not parse";
+      } catch {
         return NextResponse.json(
           {
-            error: `Secret key format invalid: ${reason}. Please re-paste the Dr Green secret key — ensure nothing is truncated and no extra characters snuck in.`,
+            error: "Secret key format invalid — could not produce a signature. Please re-paste the Dr Green secret key, ensuring nothing is truncated and no extra characters snuck in.",
           },
           { status: 400 },
         );

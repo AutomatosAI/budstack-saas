@@ -116,11 +116,12 @@ export async function GET(
       );
     }
 
-    // Return generic error - NO MOCK FALLBACK (API ONLY)
+    // Return generic error - NO MOCK FALLBACK (API ONLY). Detail is logged
+    // server-side above; never echo the raw error to the storefront client.
     return NextResponse.json(
       {
         success: false,
-        error: `Failed to fetch products: ${errorMessage}`,
+        error: "Failed to fetch products",
         data: [],
         count: 0,
         source: "api_error",

@@ -327,8 +327,8 @@ export default async function TenantStoreLayout({
           {extractGoogleFontsImports(customCss).map((href) => (
             <link key={href} rel="stylesheet" href={href} />
           ))}
-          {/* Inject legacy template CSS (from filesystem) for sub-page styling */}
-          {legacyCss && <style dangerouslySetInnerHTML={{ __html: legacyCss }} />}
+          {/* Inject legacy template CSS (from filesystem) for sub-page styling — sanitized like customCss above */}
+          {legacyCss && <style dangerouslySetInnerHTML={{ __html: sanitizeCss(legacyCss) }} />}
           {legacyFontUrl && <link rel="stylesheet" href={legacyFontUrl} />}
           {/* Skip nav/footer when: data-driven (TemplateRenderer handles it) or legacy (template bundles its own) */}
           {!skipLayoutChrome && renderNavigation()}

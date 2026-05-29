@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { getOrder } from "@/lib/drgreen-orders";
+import { apiError } from "@/lib/api-error";
 
 export async function GET(
   request: NextRequest,
@@ -45,10 +46,9 @@ export async function GET(
 
     return NextResponse.json({ order });
   } catch (error) {
-    console.error("[Order Get] Error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to get order" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/store/[slug]/orders/[orderId]",
+      safeMessage: "Failed to get order",
+    });
   }
 }

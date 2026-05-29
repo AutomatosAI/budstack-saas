@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { removeFromCart } from "@/lib/drgreen-cart";
+import { apiError } from "@/lib/api-error";
 
 export async function DELETE(
   request: NextRequest,
@@ -56,15 +57,9 @@ export async function DELETE(
 
     return NextResponse.json({ cart });
   } catch (error) {
-    console.error("[Cart Remove] Error:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to remove item from cart",
-      },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "DELETE /api/store/[slug]/cart/remove",
+      safeMessage: "Failed to remove item from cart",
+    });
   }
 }

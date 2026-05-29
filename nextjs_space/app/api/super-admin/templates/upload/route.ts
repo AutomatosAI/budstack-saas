@@ -303,10 +303,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("[Template Upload] Error:", error);
     return NextResponse.json(
-      {
-        error: "Failed to upload template",
-        details: error.message || "Unknown error",
-      },
+      { error: "Failed to upload template" },
       { status: 500 },
     );
   }
