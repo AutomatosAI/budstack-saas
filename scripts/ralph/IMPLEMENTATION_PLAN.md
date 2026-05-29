@@ -14,7 +14,7 @@ Worktree: `/Users/gkavanagh/Development/HealingBuds/budstack-saas-prd-206` · Br
 - [x] US-004 — Enforce scope inside getFileUrl + explicit audited bypass (AC-2)
 - [x] US-005 — Enforce final-key scope inside uploadFile (AC-2a)
 - [x] US-006 — Remove bypassable substring checks in the two upload routes (AC-3)
-- [ ] US-007 — Scope the tenant preview-image signing call site (AC-2)
+- [x] US-007 — Scope the tenant preview-image signing call site (AC-2)
 - [ ] US-008 — Explicit audited super-admin bypass for cross-tenant template signing (AC-5)
 - [ ] US-009 — Close the signS3Path absolute-path passthrough in preview (AC-4/AC-4a)
 - [ ] US-010 — Unit tests for getFileUrl + uploadFile scope behaviour (AC-2/AC-2a/AC-5)
