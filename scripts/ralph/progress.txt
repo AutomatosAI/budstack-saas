@@ -53,3 +53,21 @@ US-004 Enforce reserved + format on super-admin tenant rename — DONE 2026-05-2
 - Closes AC-7: a super-admin can no longer rename a tenant onto a reserved/invalid slug (e.g. api,
   www, _cd). Persistence/Clerk-slug sync untouched (out of scope) — same raw value still written.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.
+
+US-005 Apply requireSameOrigin to destructive super-admin handlers — DONE 2026-05-29
+- Added `const originError = requireSameOrigin(req); if (originError) return originError;` right
+  after the SUPER_ADMIN role check (before any DB/S3 mutation) in:
+    * templates/[id]/route.ts DELETE (base-template + S3 wipe; PUT/PATCH left alone — non-destructive)
+    * templates/[id]/detach/route.ts POST (deleteMany tenant_templates) — ALSO trimmed the `report`
+      (tenant business names/subdomains/actions) out of the HTTP response; full report still
+      console.log'd server-side (AC-5 trace-leak fix).
+    * learning/route.ts DELETE (deletes one learning_resources row).
+- Destructive-handler inventory for the AC-4 "100%" metric (each touched by exactly ONE story):
+    * GUARDED here (US-005): templates DELETE, detach POST, learning DELETE.
+    * GUARDED in US-006: tenants/[id] DELETE (also gets typed confirmation there).
+    * GUARDED in US-007: templates/cleanup-s3 DELETE (also gets prefix guard + confirmation there).
+    * Already removed (US-001): tenants/reset-templates (the only destructive GET).
+    * EXCLUDED — non-destructive: migrate-s3-paths (copy/additive), recover-deleted (restore),
+      tenants/bulk + toggle-active (isActive flag flips, reversible). No destructive action remains
+      reachable via GET (AC-2 holds).
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.

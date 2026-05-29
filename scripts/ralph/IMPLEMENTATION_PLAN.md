@@ -29,7 +29,7 @@ App in `nextjs_space/` (pnpm). Source PRD:
 - [x] US-002 — Security guard module: `requireSameOrigin` + `requireConfirmation` (AC-4, AC-3; new codes)
 - [x] US-003 — Extract + harden `RESERVED_SUBDOMAINS` into `lib/reserved-subdomains.ts` + add `_cd` (AC-6)
 - [x] US-004 — Enforce reserved + format on super-admin tenant rename (AC-7)
-- [ ] US-005 — Apply `requireSameOrigin` to all destructive super-admin handlers (AC-4 100%, AC-2)
+- [x] US-005 — Apply `requireSameOrigin` to all destructive super-admin handlers (AC-4 100%, AC-2)
 - [ ] US-006 — Tenant DELETE: typed `{ confirm }` body + stop `cleanupErrors` leak (AC-3, AC-5)
 - [ ] US-007 — Scope + harden `cleanup-s3`: prefix guard + confirmation + audit line (AC-1a, AC-3, AC-8) → RALPH_COMPLETE
 
