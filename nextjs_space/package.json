@@ -128,7 +128,6 @@
     "handlebars": "^4.7.9",
     "input-otp": "1.2.4",
     "ioredis": "^5.9.1",
-    "isomorphic-dompurify": "~2.35.0",
     "jotai": "2.6.0",
     "jsonwebtoken": "9.0.2",
     "lucide-react": "0.446.0",
