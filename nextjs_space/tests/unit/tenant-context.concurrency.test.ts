@@ -64,7 +64,7 @@ describe("baseline contrast — enterWith() escapes its caller; run() confines",
   it("enterWith() with no enclosing scope persists into the shared context (the leak vector)", async () => {
     const unsafe = new AsyncLocalStorage<{ id: string }>();
 
-    // Exactly what the deprecated setTenantContext does inside a route: bind via
+    // The unsafe pattern PRD-202 removed: a resolver binding context via raw
     // enterWith at the top of the async context, with no .run() wrapper.
     const request1 = async () => {
       unsafe.enterWith({ id: "req1" });

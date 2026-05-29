@@ -244,3 +244,38 @@ Validation: grep setTenantContext lib/tenant.ts -> none. npx tsc --noEmit -> 0.
 pnpm test:unit -> 30/30 (no regression).
 Files: nextjs_space/lib/tenant.ts.
 
+--------------------------------------------------------------------------------
+US-009 — Delete setTenantContext/enterWith from lib/tenant-context.ts (AC-1)  [DONE]
+--------------------------------------------------------------------------------
+Deleted the deprecated setTenantContext function (its body was the unsafe
+`tenantContextStorage.enterWith({ tenantId })`) and its @deprecated docblock from
+lib/tenant-context.ts. The file now exports only the safe surface: getTenantContext
+(unchanged, AC-1), hasTenantContext, runWithTenantContext, runWithTenantContextAsync.
+Safe to delete because US-008 already removed the sole production caller.
+Also refreshed one stale comment in tenant-context.concurrency.test.ts that named the
+now-deleted function (it now describes the raw-enterWith anti-pattern generically).
+Local AC-1 grep (the AC-1a CI gate itself is PRD-216, not here):
+  - `setTenantContext` -> ZERO references repo-wide.
+  - `enterWith` CALLS in production code -> ZERO. Remaining `enterWith` hits are all
+    non-calls: Node's own async_hooks.d.ts type defs; explanatory doc comments in
+    lib/tenant-context.ts + lib/tenant-scope-policy.ts + app/store/[slug]/layout.tsx
+    (they describe the removed pattern, they don't invoke it); and the deliberate
+    `unsafe.enterWith(...)` in tenant-context.concurrency.test.ts (US-003) which calls
+    the RAW Node API on a throwaway ALS to prove WHY we removed it.
+  NOTE for PRD-216: a naive repo-wide `grep enterWith` can never be clean while the
+  US-003 contrast test exists, so that gate must match actual `.enterWith(` CALLS in
+  production source (lib/app/components) and/or exclude the contrast test — not the
+  bare substring in comments. Recommend the gate be call-scoped, not substring-scoped.
+Validation: npx tsc --noEmit -> 0. pnpm test:unit -> 30/30.
+Files: nextjs_space/lib/tenant-context.ts,
+  nextjs_space/tests/unit/tenant-context.concurrency.test.ts.
+
+================================================================================
+PHASE 1 COMPLETE (US-001..009). The safe context primitive
+(runWithTenantContext/Async), the node-only concurrency proof, the request wrapper,
+the fail-loud hardened middleware, the two pilot wraps (storefront SC + customer-
+orders API route), the return-not-set resolver refactor, and the deletion of the
+unsafe enterWith/setTenantContext API have all landed, each typecheck-green and with
+30/30 unit tests passing. Next is Phase 2 (Docker-gated) — gate-checked below.
+================================================================================
+
