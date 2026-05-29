@@ -51,3 +51,12 @@ Started: 2026-05-29
 - v2 -> 4 colon-parts AND parts[0]==='v2' AND segments[1..3] non-empty hex; legacy -> exactly 3 non-empty-hex parts; false for plaintext, '', non-hex segment, or wrong part count. Hex test: /^[0-9a-f]+$/i per segment.
 - decrypt() deliberately untouched — US-003 wires this helper in.
 - Tests: tests/unit/encryption.test.ts (7 cases: 5 AC cases + legacy-non-hex + v2-wrong-count). `pnpm test` -> 8 passed; `tsc --noEmit` clean.
+
+### US-003 — decrypt() fails closed (DONE 2026-05-29)
+- THE HIGH-severity contract fix (AC-1, AC-1a). Rewrote decrypt() in nextjs_space/lib/encryption.ts to never return its input ciphertext. Both old fail-open `return text` paths (malformed-shape branch + legacy-decrypt catch) are gone — grep gate `return text` inside decrypt() = 0 (verified).
+- Surviving non-throw paths, all safe: (1) empty input -> ""; (2) !isEncryptedValue(text) AND migration allowed -> return the value via an intent-named `unmigratedPlaintext` local — at that point isEncryptedValue is already false so the value is provably NOT ciphertext (known-plaintext legacy passthrough, the redefined allowUnencryptedMigration semantics); (3) successful AES-256-GCM decrypt -> real plaintext.
+- Everything that IS isEncryptedValue() must decrypt or throw DecryptionError — never returned as-is, even inside the migration window. v2 -> scrypt key; 3-part legacy -> SHA-256 key; tampered/auth-tag-fail/rotated-key all throw.
+- isMigrationAllowed() (:47-63), DecryptionError class, getKey()/getLegacyKey(), encrypt() all untouched.
+- Tests: +1 import (decrypt, DecryptionError) and a `describe("decrypt (fail-closed)")` block with 6 cases — empty->''; v2 round-trip; plaintext throws when migration OFF; tampered v2 (flip last hex digit, shape stays valid) throws; genuinely-non-encrypted value returned as-is under {allowUnencryptedMigration:true, deadline 2099}; v2-shaped-but-bogus value STILL throws under the same open window (proves encrypted-looking always throws). `pnpm test` -> 14 passed; `pnpm exec tsc --noEmit` -> clean.
+- Project-wide tsc clean confirms the 3 webhook routes that pass allowUnencryptedMigration:true still compile against the new signature (US-008 shrinks the deadline).
+- Human follow-up: none for this story.

@@ -54,8 +54,8 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "THE HIGH-severity contract fix. Use isEncryptedValue() from US-002. DecryptionError already exists (lib/encryption.ts:65). isMigrationAllowed() at :47-63 stays for the deadline math. The ONLY surviving non-throw path besides empty-string: a value that is NOT isEncryptedValue() AND migration allowed -> return as-is (reading a known-plaintext legacy value). Never return ciphertext. The 3 webhook routes still pass allowUnencryptedMigration:true (changed in US-008) — confirm they still typecheck after this change."
+      "passes": true,
+      "notes": "DONE: decrypt() in lib/encryption.ts rewritten to fail closed. Both fail-open `return text` paths removed (grep gate: 0 occurrences). Flow: empty->''; !isEncryptedValue(text) -> if migration allowed return the value via named `unmigratedPlaintext` (known-plaintext passthrough, provably not ciphertext) else throw DecryptionError; isEncryptedValue(text) -> split, pick scrypt key (v2) or legacy SHA-256 key, AES-256-GCM decrypt, on any failure throw DecryptionError — never returned as-is even under migration. Tests: encryption.test.ts +6 decrypt cases (empty, round-trip, plaintext-throws-when-migration-off, tampered-v2-throws, non-encrypted-as-is-under-open-window, encrypted-looking-invalid-still-throws-under-migration). pnpm test 14 passed; tsc --noEmit clean (3 webhook routes w/ allowUnencryptedMigration:true still typecheck)."
     },
     {
       "id": "US-004",
