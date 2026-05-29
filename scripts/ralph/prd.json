@@ -72,8 +72,8 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "OQ-1: Dr Green signing-side coordination is human/ops; the dual-accept flag (default OFF = HMAC-only) lets Gerard enable a temporary legacy window if Dr Green can't dual-sign immediately, then disable it. Do NOT remove the timing-safe loop or replay window. Compute HMAC once, compare against both hex and base64 forms exactly as the current loop does."
+      "passes": true,
+      "notes": "DONE: verifyDrGreenWebhookSignature() now computes crypto.createHmac('sha256', secret).update(rawPayload).digest('hex') (true HMAC) instead of createHash(payload+secret). Misleading :33 comment replaced with accurate HMAC description. Extracted signatureMatchesDigest() helper that PRESERVES the length-guard + crypto.timingSafeEqual loop and hex+base64 acceptance; sha256= prefix strip preserved. MAX_TIMESTAMP_DRIFT_MS + validateWebhookTimestamp() untouched. Dual-accept: HMAC tried first; if process.env.DRGREEN_WEBHOOK_LEGACY_HASH_ACCEPT==='true', legacy SHA-256(payload+secret) accepted as fallback; default (unset) = HMAC-only. Tests: tests/unit/drgreen-webhook-verify.test.ts (13 cases) — known HMAC hex+base64+sha256= prefix vectors, legacy rejected when flag off / accepted when on, HMAC still accepted when flag on, wrong/short/empty rejected w/o throw, timestamp >5min + future + malformed rejected. afterEach deletes the flag for isolation. pnpm test 27 passed; tsc clean."
     },
     {
       "id": "US-005",
