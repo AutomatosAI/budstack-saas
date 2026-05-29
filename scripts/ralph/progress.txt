@@ -178,3 +178,35 @@ behavior-preserving (same data, now bound) nature of the split.
 Validation: npx tsc --noEmit -> 0. pnpm test:unit -> 30/30 (no regression).
 Files: nextjs_space/app/store/[slug]/layout.tsx.
 
+--------------------------------------------------------------------------------
+US-007 — Pilot-wrap one tenant-scoped API route via withTenantContext (AC-4) [DONE]
+--------------------------------------------------------------------------------
+app/api/orders/customer/route.ts — the API-route pilot. Picked deliberately: a
+single GET, tenant resolved SOLELY from the request (no ?slug override like
+app/api/tenant/conditions, which would fight the wrapper's request-based binding),
+two tenant-scoped reads (users.findFirst + orders.findMany), every query already
+filtered by tenantId, and zero `any`/`console.log` to muddy the diff. (orders/
+route.ts was rejected as the pilot: Dr-Green API + emails + pre-existing console.log
++ a cross-tenant users.findFirst-by-email — too behavior-sensitive to wrap blind
+without a DB.)
+The wrap: handler renamed to `getCustomerOrders(_req)` and exported as
+`export const GET = withTenantContext(getCustomerOrders)`. Inside, the redundant
+`getTenantFromRequest` self-resolution was REPLACED by `getTenantContext()` (read
+the id the wrapper bound at the boundary); a null id still returns the same 404.
+The explicit `tenantId` filters stay (defense in depth alongside the middleware).
+Type fit: handler is (NextRequest)=>Promise<NextResponse>; NextResponse extends
+Response and Args infers to [] so it satisfies withTenantContext's RouteHandler<[]>
+with no `any`. `_req` is intentionally unused (the wrapper owns resolution);
+tsconfig has no noUnusedParameters so this is clean.
+Behavior-preserving: resolved-tenant path identical; no-tenant path still 404 (the
+wrapper binds explicit null -> getTenantContext() null -> 404). Only change is the
+wrapper resolves the tenant before the 401 auth check now (an extra resolution for
+unauthenticated calls) — benign, no leak (confined in .run(), fresh 401 response).
+Correct both before AND after US-008: the wrapper uses getTenantFromRequest's RETURN
+value, and the handler reads the bound context — neither depends on the (soon-removed)
+enterWith side-effect.
+NOTE: faithful AC-4 demo of the binding doing real work; the full-stack proof that a
+wrapped route stays isolated under concurrent load is the Docker-gated US-010.
+Validation: npx tsc --noEmit -> 0. pnpm test:unit -> 30/30 (no regression).
+Files: nextjs_space/app/api/orders/customer/route.ts.
+
