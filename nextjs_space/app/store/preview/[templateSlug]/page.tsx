@@ -4,6 +4,8 @@ import path from "path";
 import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
 import { TemplateRenderer } from "@/components/template-renderer";
 import { getJsonFromS3, getTextFromS3, getFileUrl } from "@/lib/s3";
+import { isKeyInTenantScope } from "@/lib/s3-tenant-guard";
+import { getBucketConfig } from "@/lib/aws-config";
 import { SECTION_ASSET_KEYS, type TemplateLayout } from "@/lib/types/template-layout";
 import { Tenant } from "@/types/client";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
@@ -68,24 +70,68 @@ function resolvePublicAsset(
   return fs.existsSync(fullPath) ? assetPath : null;
 }
 
-/** Sign an S3 key, handling both absolute and prefix-relative paths */
-async function signS3Path(val: string, s3Prefix: string, contentTypeHint?: string): Promise<string> {
-  const isAbsolute = val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/');
-  return getFileUrl(isAbsolute ? val : `${s3Prefix}/${val}`, contentTypeHint);
+/**
+ * Parse the previewed tenant id out of an already tenant-scoped s3Prefix
+ * (e.g. `tenants/{id}/templates/{slug}` or `development/tenants/{id}/...`).
+ * Returns null for non-tenant prefixes such as the marketplace
+ * `templates/{slug}` base-template preview.
+ */
+function tenantIdFromPrefix(s3Prefix: string): string | null {
+  return s3Prefix.match(/(?:^|\/)tenants\/([^/]+)\//)?.[1] ?? null;
+}
+
+/**
+ * Sign an S3 key that came from (untrusted) template JSON.
+ *
+ * PRD-206 AC-4/AC-4a: an absolute value must NOT be signed verbatim — a
+ * malicious or stale layout.json could point at `tenants/<other>/secret` to
+ * exfiltrate another tenant's object. Relative values resolve under the
+ * current preview's s3Prefix; the resolved key is then re-validated:
+ *   - tenant preview → isKeyInTenantScope (US-002) against the previewed id
+ *   - marketplace    → must stay within the previewed template prefix
+ * Out-of-scope keys return null (skipped, never signed) so the rest of the
+ * page still renders.
+ */
+async function signS3Path(
+  val: string,
+  s3Prefix: string,
+  tenantId: string | null,
+  contentTypeHint?: string,
+): Promise<string | null> {
+  // Never trust traversal/backslash from template JSON.
+  if (val.includes('..') || val.includes('\\')) return null;
+
+  const looksAbsolute =
+    val.startsWith('development/') ||
+    val.startsWith('tenants/') ||
+    val.startsWith('templates/');
+  const key = looksAbsolute ? val : `${s3Prefix}/${val}`;
+
+  if (tenantId) {
+    const { folderPrefix } = await getBucketConfig();
+    if (!isKeyInTenantScope(key, tenantId, { folderPrefix })) return null;
+    return getFileUrl(key, { tenantId, contentTypeHint });
+  }
+
+  // No tenant context (marketplace base-template preview): the resolved key
+  // must stay within the previewed template prefix — reject absolute escapes.
+  if (key !== s3Prefix && !key.startsWith(`${s3Prefix}/`)) return null;
+  return getFileUrl(key, contentTypeHint);
 }
 
 /** Sign all asset URLs in layout sections */
 async function signLayoutAssets(layout: TemplateLayout, s3Prefix: string) {
   if (!layout.sections) return;
 
-  const signingTasks: Array<{ target: any; key: string; promise: Promise<string> }> = [];
+  const tenantId = tenantIdFromPrefix(s3Prefix);
+  const signingTasks: Array<{ target: any; key: string; promise: Promise<string | null> }> = [];
 
   for (const section of layout.sections) {
     for (const key of SECTION_ASSET_KEYS) {
       const val = section.config?.[key];
       if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
         const hint = key === 'videoUrl' && !/\.\w+$/.test(val) ? 'video/mp4' : undefined;
-        signingTasks.push({ target: section.config, key, promise: signS3Path(val, s3Prefix, hint) });
+        signingTasks.push({ target: section.config, key, promise: signS3Path(val, s3Prefix, tenantId, hint) });
       }
     }
     if (section.config) {
@@ -94,14 +140,14 @@ async function signLayoutAssets(layout: TemplateLayout, s3Prefix: string) {
           for (let idx = 0; idx < section.config[arrKey].length; idx++) {
             const item = section.config[arrKey][idx];
             if (typeof item === 'string' && !item.startsWith('http') && !item.startsWith('/') && (item.includes('/') || item.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
-              signingTasks.push({ target: section.config[arrKey], key: String(idx), promise: signS3Path(item, s3Prefix) });
+              signingTasks.push({ target: section.config[arrKey], key: String(idx), promise: signS3Path(item, s3Prefix, tenantId) });
               continue;
             }
             if (!item || typeof item !== 'object') continue;
             for (const itemKey of Object.keys(item)) {
               const v = (item as any)[itemKey];
               if (v && typeof v === 'string' && !v.startsWith('http') && !v.startsWith('/') && (v.includes('/') || v.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
-                signingTasks.push({ target: item, key: itemKey, promise: signS3Path(v, s3Prefix) });
+                signingTasks.push({ target: item, key: itemKey, promise: signS3Path(v, s3Prefix, tenantId) });
               }
             }
           }
@@ -112,7 +158,10 @@ async function signLayoutAssets(layout: TemplateLayout, s3Prefix: string) {
 
   const results = await Promise.allSettled(signingTasks.map(t => t.promise));
   results.forEach((result, i) => {
-    if (result.status === 'fulfilled') {
+    // Only overwrite when signing produced an in-scope URL. A null
+    // (out-of-scope, dropped) or rejected task leaves the raw value untouched —
+    // an unsigned key is never a usable cross-tenant URL, so it won't render.
+    if (result.status === 'fulfilled' && result.value !== null) {
       signingTasks[i].target[signingTasks[i].key] = result.value;
     }
   });
@@ -123,7 +172,7 @@ async function signDefaultAsset(assetPath: string | undefined, s3Prefix: string)
   if (!assetPath) return null;
   if (assetPath.startsWith("http") || assetPath.startsWith("/")) return assetPath;
   try {
-    return await signS3Path(assetPath, s3Prefix);
+    return await signS3Path(assetPath, s3Prefix, tenantIdFromPrefix(s3Prefix));
   } catch {
     return null;
   }
