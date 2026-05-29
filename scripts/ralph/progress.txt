@@ -30,3 +30,15 @@ US-002 PRD-215 PII-in-logs grep gate — DONE 2026-05-29
   literals + substrings like emailAddress); the precise code-only gate correctly reports fewer.
   Do NOT edit those log call sites (PRD-215/213 scope). Flip to BLOCKING once PRD-215 merges.
 - Validated: `node --check` ok; gate exits 1 with 24 findings; `tsc --noEmit` exit 0.
+
+US-003 Unified grep-gate runner + ci.yml wiring — DONE 2026-05-29
+- Added scripts/ci/grep-gates.sh (repo root): cwd-independent runner for the BLOCKING PRD-200
+  set (`pnpm --dir <root>/nextjs_space check:security`); exits non-zero on failure.
+- Added package.json `check:grep-gates:report`: runs both report-only gates
+  (check:no-tenant-escapes + check:no-pii-logs) with `|| true` each — always exits 0, still prints.
+- ci.yml: inserted two steps after Lint, before Build (working-directory nextjs_space, unchanged):
+  (1) BLOCKING `Security grep gates (PRD-200)` → `pnpm check:security`;
+  (2) NON-BLOCKING `Regression grep gates (PRD-202/215 — report-only)` → `pnpm check:grep-gates:report`
+  with `continue-on-error: true` + inline comment to flip-to-blocking when PRD-202/215 merge.
+- Validated: `bash -n` ok; runner exits 0 (PRD-200 pass); report script exits 0 printing 37 findings;
+  ci.yml parses as valid YAML; existing typecheck/lint/build steps untouched; `tsc --noEmit` exit 0.

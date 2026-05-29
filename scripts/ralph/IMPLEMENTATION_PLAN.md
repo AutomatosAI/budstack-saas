@@ -18,7 +18,7 @@ Source PRD: `docs/PRDS/REMEDIATION/PRD-216-ci-cd-security-gates.md`.
 
 - [x] US-001 — PRD-202 grep gate script (no `enterWith(`/`setTenantContext(`)
 - [x] US-002 — PRD-215 PII-in-logs grep gate script
-- [ ] US-003 — Unified runner + wire grep gates into `ci.yml` (PRD-200 blocking; 202/215 report-only)
+- [x] US-003 — Unified runner + wire grep gates into `ci.yml` (PRD-200 blocking; 202/215 report-only)
 - [ ] US-004 — Advisory docs-lint (PRD-214), non-blocking `ci.yml` step
 - [ ] US-005 — Dependabot config (`.github/dependabot.yml`)
 - [ ] US-006 — CodeQL workflow (`.github/workflows/codeql.yml`)

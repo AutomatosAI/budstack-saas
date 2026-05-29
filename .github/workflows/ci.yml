@@ -48,6 +48,21 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # PRD-216 AC-7: PRD-200 string-aware grep gates (CSS sanitize +
+      # error-message-leak). These already pass on this tree, so they gate
+      # the build (blocking).
+      - name: Security grep gates (PRD-200)
+        run: pnpm check:security
+
+      # PRD-216 AC-7: regression guards for PRD-202 (enterWith/setTenantContext)
+      # and PRD-215 (PII in logs). Those source cleanups are NOT merged yet, so
+      # the gates still flag pre-existing debt — run REPORT-ONLY here.
+      # FLIP TO BLOCKING (move into check:security / drop continue-on-error)
+      # once PRD-202 and PRD-215 merge and these gates go green.
+      - name: Regression grep gates (PRD-202/215 — report-only)
+        run: pnpm check:grep-gates:report
+        continue-on-error: true
+
       - name: Build
         run: pnpm build
         env:

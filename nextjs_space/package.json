@@ -11,6 +11,7 @@
     "check:no-tenant-escapes": "node scripts/ci/check-no-tenant-context-escapes.mjs",
     "check:no-pii-logs": "node scripts/ci/check-no-pii-in-logs.mjs",
     "check:security": "node scripts/ci/check-css-sanitized.mjs && node scripts/ci/check-no-error-message-leaks.mjs",
+    "check:grep-gates:report": "node scripts/ci/check-no-tenant-context-escapes.mjs || true; node scripts/ci/check-no-pii-in-logs.mjs || true",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
