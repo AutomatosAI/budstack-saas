@@ -63,6 +63,14 @@ jobs:
         run: pnpm check:grep-gates:report
         continue-on-error: true
 
+      # PRD-216 AC-7b: advisory docs-lint (PRD-214) — warns if retired
+      # auth/domain patterns (next-auth, /api/auth/session, abacus) or
+      # unsubstantiated marketing claims (HIPAA Ready / Lighthouse 90+ /
+      # 5-minute launch) reappear in docs. ALWAYS non-blocking by design.
+      - name: Docs lint (PRD-214 — advisory)
+        run: pnpm check:docs-lint
+        continue-on-error: true
+
       - name: Build
         run: pnpm build
         env:

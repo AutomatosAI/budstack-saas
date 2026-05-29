@@ -42,3 +42,17 @@ US-003 Unified grep-gate runner + ci.yml wiring — DONE 2026-05-29
   with `continue-on-error: true` + inline comment to flip-to-blocking when PRD-202/215 merge.
 - Validated: `bash -n` ok; runner exits 0 (PRD-200 pass); report script exits 0 printing 37 findings;
   ci.yml parses as valid YAML; existing typecheck/lint/build steps untouched; `tsc --noEmit` exit 0.
+
+US-004 Advisory docs-lint (PRD-214) — DONE 2026-05-29
+- Added nextjs_space/scripts/ci/check-docs-lint.mjs + `check:docs-lint` script + a NON-BLOCKING
+  ci.yml step `Docs lint (PRD-214 — advisory)` (continue-on-error: true, after the grep-gate steps).
+- PRD-214 IS present on this branch — used its exact patterns (§"docs-lint", line 144 + AC-8/8a):
+  next-auth, /api/auth/session, abacus, and the HIPAA-Ready / Lighthouse-90+ / 5-minute-launch claims.
+- Line-based prose scan (markdown, so NOT strip-strings.mjs). Designed for LOW false-positives:
+  hyphenated `next-auth` only (not camelCase prose nor NEXTAUTH_SECRET env var); claim phrases not
+  bare HIPAA/"5 min"; + a citation/legacy-marker exemption (stale|legacy|no longer|vestigial|URL|
+  file:line|PRD-NNN|verified…) implementing PRD-214's "adjacent citation marker" rule. Excludes
+  docs/PRDS/ + archive/ (they quote the banned terms to define the policy).
+- Result: flags exactly the 5 real unsubstantiated launch-time claims in docs/BUDSTACK_SALES_PITCH.md
+  (PRD-214 AC-8 still open); correctly exempts all reconciled docs (README/ARCHITECTURE/DEPLOYMENT/
+  DOMAINS). Validated: node --check ok; gate exits 1 (advisory); ci.yml valid YAML; tsc exit 0.
