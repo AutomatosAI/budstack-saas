@@ -185,8 +185,8 @@
         "Typecheck passes"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": "OQ-3 option (a): a single platform-level DRGREEN_WEBHOOK_SECRET removes the pre-verify DB dependency. Implement it FLAG-GATED (default unset = current per-tenant behaviour) so there is zero live breakage before Gerard confirms with Dr Green whether they sign with a single platform secret or per-tenant. The verify-first block reads rawBody (already captured) + the x-webhook-signature header. Do NOT delete the per-tenant fallback. Test via a prisma mock/spy (no Docker). If you cannot wire this safely without a DB read, mark BLOCKED-NEEDS-OQ3 and exit — but the flag-gated approach should be achievable."
+      "passes": true,
+      "notes": "DONE. status/route.ts: after payload-structure + timestamp validation and signature extraction (before the try/resolveTenant), added a flag-gated block: const platformSecret = process.env.DRGREEN_WEBHOOK_SECRET; if set and verifyDrGreenWebhookSignature(rawBody, signature, platformSecret) fails -> return 401 immediately (no DB query, no log row); on success set verifiedByPlatformSecret=true. The per-tenant block now reads `if (verifiedByPlatformSecret) {/* skip — already authed */} else if (resolved.tenantSecret) {...existing...} else {...existing dev/prod...}`. When the env var is unset, verifiedByPlatformSecret stays false and the original resolve-then-verify path is byte-identical. tests/unit/drgreen-status-verify-order.test.ts (3): mock @/lib/db,encryption,email,webhook (keep verify lib REAL); (1) secret set + invalid sig -> 401 AND consultation_questionnaires.findFirst/users.findFirst/drgreen_webhook_logs.create all NOT called; (2) secret unset + invalid sig -> 401 AND consultation_questionnaires.findFirst WAS called (old path preserved); (3) secret set + VALID HMAC over order.shipped w/ unknown orderId -> 404 (proves verify passed + resolve ran). pnpm test 52 passed; tsc clean; check:security passes. Human follow-up: provision DRGREEN_WEBHOOK_SECRET + confirm Dr Green signs with one platform secret before enabling."
     },
     {
       "id": "US-012",
