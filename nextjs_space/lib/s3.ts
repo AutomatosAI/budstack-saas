@@ -46,6 +46,15 @@ export async function uploadFile(
   const scopedPrefix = tenantPrefix ? `${folderPrefix}${tenantPrefix}` : `${folderPrefix}`;
   const key = `${scopedPrefix}uploads/${Date.now()}-${finalName}`;
 
+  // PRD-206 AC-2a: when a tenant prefix is supplied, assert the FINAL key
+  // landed inside that tenant's scope before writing — defence in depth even
+  // if the prefix-building logic later changes. System/super-admin paths
+  // (templates/..., or an empty prefix) carry no tenant id and are skipped.
+  const tenantPrefixMatch = tenantPrefix?.match(/^tenants\/([^/]+)\/$/);
+  if (tenantPrefixMatch) {
+    assertKeyInTenantScope(key, tenantPrefixMatch[1], { folderPrefix });
+  }
+
   await s3Client.send(
     new PutObjectCommand({
       Bucket: bucketName,
