@@ -8,6 +8,8 @@
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 
+export { assertSafeWebhookUrl, WebhookUrlError } from "@/lib/webhook-ssrf";
+
 export interface WebhookEvent {
   event: string;
   tenantId?: string;

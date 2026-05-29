@@ -90,8 +90,8 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "Pure addition — wiring into deliverWebhook is US-006. Use node `dns/promises` lookup with {all:true}. Make the resolver injectable (optional param defaulting to the real lookup) so tests can mock DNS without network. IP range checks: parse IPv4 octets; for IPv6 normalise and check ::1/fe80::/fc00::. OWASP SSRF cheat sheet is the reference. Keep it in lib/webhook.ts (or a new lib/webhook-ssrf.ts imported by webhook.ts) — exported either way for tests + US-007."
+      "passes": true,
+      "notes": "DONE: new lib/webhook-ssrf.ts (no prisma import, so unit tests stay DB/network-free) exports async assertSafeWebhookUrl(url, resolver?) + WebhookUrlError(message, code). Re-exported from lib/webhook.ts for US-006/US-007. Order: parse URL (invalid_url) -> protocol!=='https:' (scheme_blocked) -> host string check localhost/.railway.internal/.internal (internal_host_blocked, BEFORE DNS) -> if host is an IP literal use it directly else resolver(host) (injectable DnsResolver defaulting to dns/promises lookup {all:true}); empty -> dns_empty; then reject if ANY address isBlockedIp (ip_blocked). isBlockedIpv4: 0/8,127/8,10/8,172.16/12,192.168/16,169.254/16 + unparseable. isBlockedIpv6: ::1, ::, fe80::/10, fc00::/7, and ::ffff:v4-mapped delegates to v4. stripBrackets handles [::1]. Tests: tests/unit/webhook-ssrf.test.ts (11) — accepts public https (mock), rejects http, 127.0.0.1, 169.254.169.254, private via mock resolver, 10.0.0.5 literal, foo.railway.internal (asserts resolver NOT called), [::1], mixed public+private (rebinding), malformed URL, and checks stable code 'scheme_blocked'. pnpm test 38 passed; tsc clean."
     },
     {
       "id": "US-006",
