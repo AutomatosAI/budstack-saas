@@ -154,8 +154,8 @@
         "Typecheck passes"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": "Mock ioredis in tests (no real Redis). The existing 429 over-limit path (:72-91) is unchanged. 'Emit event' = a single structured console.error line keyed `ops.rate_limit_failopen` for now (PRD-215 formalises transport — out of scope). Default failMode 'open' so existing callers are byte-compatible; US-010 flips specific call sites to 'closed'."
+      "passes": true,
+      "notes": "DONE. lib/rate-limit.ts: RateLimitConfig gains `failMode?: 'open'|'closed'` (default 'open'). Redis-error catch now emits a structured `console.error('ops.rate_limit_failopen', {identifier, failMode, error})` then branches: open → {success:true}; closed → {success:false, response} where response is apiError(503, safeMessage) + Retry-After header (Math.max(1, ceil(windowMs/1000))). Over-limit 429 path untouched; getRateLimitStatus untouched. tests/unit/rate-limit.test.ts (5): mock ioredis via controllable redisState{count,ttlMs,fail}; under-limit→success, over-limit→429+Retry-After, fail-open→success+event(failMode:open), fail-closed→503+Retry-After+event(failMode:closed), and 503 body carries no raw 'Redis connection refused' text. pnpm test 49 passed; tsc clean."
     },
     {
       "id": "US-010",
