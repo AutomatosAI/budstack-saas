@@ -1,0 +1,236 @@
+{
+  "project": "BudStack SaaS",
+  "branchName": "ralph/prd-207-test-harness",
+  "description": "PRD-207 — Test Strategy Foundation. Stand up the test harness the whole REMEDIATION suite depends on: Vitest (unit) + testcontainers Postgres (integration) + rehabilitated Playwright (E2E). Today effective coverage is ZERO (one E2E spec that auto-skips). Phased, dependency-ordered: Phase 1 (US-001..006) = Vitest unit harness + security-critical unit suites (encryption, drgreen webhook, api-auth, sanitizeCss) + report-only coverage thresholds — node-only, NO Docker/Clerk, fully autonomous, and closes PRD-200 AC-3a (sanitizeCss tests). Phase 2 (US-007..010) = testcontainers Postgres 17 integration harness + typed factories + the PRD-202 tenant-isolation concurrency proof — REQUIRES a running Docker daemon; if `docker info` fails the agent marks the story BLOCKED-DOCKER and emits RALPH_BLOCKED. Phase 3 (US-011..015) = Playwright rehab (programmatic Clerk auth so the suite stops skipping) + four critical-path E2E specs (onboarding, storefront order, consultation/KYC, super-admin) — BLOCKED-NEEDS-AUTH-DECISION pending PRD-207 OQ-1 (Gerard owns the Clerk test-auth approach). App lives in nextjs_space/ (pnpm, Next 14.2.35, Prisma 6.7, Postgres 17, Clerk). Source PRD: docs/PRDS/REMEDIATION/PRD-207-test-strategy-foundation.md. Global rule: integration tests hit a REAL DB via testcontainers, never mocks; tests load .env.test only, NEVER the real .env/Railway secrets; 80% aggregate coverage, 95% on the security-critical module set.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Vitest unit harness scaffold (config, setup, .env.test, scripts)",
+      "description": "As a developer, when I run `pnpm test` a Vitest runner executes against the node environment with `@/` aliases resolving, so unit tests can be written for lib/** server code.",
+      "acceptanceCriteria": [
+        "Add devDependencies `vitest` and `@vitest/coverage-v8` via pnpm (cd nextjs_space)",
+        "Create nextjs_space/vitest.config.ts: node test environment, `@/` alias mapped to ./ to match tsconfig paths, v8 coverage provider, include lib/** and tests/**",
+        "Create nextjs_space/vitest.setup.ts that loads nextjs_space/.env.test (never the real .env) and registers global hooks",
+        "Create nextjs_space/.env.test with a pinned deterministic test ENCRYPTION_KEY (a throwaway test value matching the key format lib/encryption.ts expects — NOT any real/Railway secret) and NODE_ENV=test",
+        "Add package.json scripts: `test`: `vitest run`, `test:watch`: `vitest`, `test:cov`: `vitest run --coverage`; leave existing test:e2e* scripts unchanged",
+        "Add tests/unit/harness-smoke.test.ts that imports something via the `@/` alias and asserts the test ENCRYPTION_KEY is loaded from .env.test",
+        "`pnpm test` runs and the smoke test passes",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Foundation story — everything else lands on this. Read nextjs_space/lib/encryption.ts first to match the exact ENCRYPTION_KEY format/length so the pinned test key is valid. .env.test must contain no real secret values. pnpm install will touch pnpm-lock.yaml — that is expected; stage it by name."
+    },
+    {
+      "id": "US-002",
+      "title": "Encryption round-trip + tamper unit tests (AC-9)",
+      "description": "As an auditor, I want executing tests proving lib/encryption.ts round-trips and fails closed, guarding the PRD-211 fallback contract.",
+      "acceptanceCriteria": [
+        "Create tests/unit/encryption.test.ts covering encrypt()/decrypt() (lib/encryption.ts:77,98)",
+        "Case: encrypt(x) then decrypt() returns x exactly",
+        "Case: a v2-prefixed ciphertext (4-part v2:iv:authTag:ciphertext) decrypts correctly",
+        "Case: a tampered authTag causes decrypt() to throw, not return garbage",
+        "Case: a plain unencrypted value is NOT silently passed through by decrypt() (fails closed)",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "See MEMORY.md project_encryption_v2_prefix: encrypt() writes a 4-part v2:iv:authTag:ciphertext string. Read lib/encryption.ts to confirm the exact decrypt() options/contract before asserting the fail-closed behaviour."
+    },
+    {
+      "id": "US-003",
+      "title": "Dr Green webhook signature + timestamp unit tests (AC-10)",
+      "description": "As an auditor, I want executing tests proving webhook signatures and timestamps are validated, the suite PRD-211 will extend to true HMAC.",
+      "acceptanceCriteria": [
+        "Create tests/unit/drgreen-webhook-verify.test.ts covering verifyDrGreenWebhookSignature() and validateWebhookTimestamp() (lib/drgreen-webhook-verify.ts:36,71)",
+        "Case: a valid signature is accepted",
+        "Case: a tampered payload is rejected",
+        "Case: validateWebhookTimestamp rejects a stale (>5 min) timestamp and accepts a fresh one",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Read lib/drgreen-webhook-verify.ts for the exact signing scheme and secret env var; pin any required secret in .env.test as a throwaway test value. Pure functions — no DB, no network."
+    },
+    {
+      "id": "US-004",
+      "title": "API auth wrapper unit tests (AC-11)",
+      "description": "As an auditor, I want executing tests proving the auth wrappers reject unauthenticated and wrong-role callers and pass the resolved tenantId.",
+      "acceptanceCriteria": [
+        "Create tests/unit/api-auth.test.ts covering withTenantAuth/withSuperAdmin/withAuth (lib/api-auth.ts:45,118,162)",
+        "Clerk auth is mocked at the module boundary (vi.mock of @clerk/nextjs/server) — this is an auth mock, NOT a database mock",
+        "Case: unauthenticated caller is rejected (401)",
+        "Case: wrong-role caller is rejected (403) — e.g. non-super-admin hitting withSuperAdmin",
+        "Case: authorized caller passes through with the resolved tenantId/user in context",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "This is the suite PRD-203's wrapper migration grows. Mock ONLY the Clerk boundary (and any tenant-resolution lookup) — these are unit tests of the wrapper. Read lib/api-auth.ts for the exact rejection shape (apiError envelope)."
+    },
+    {
+      "id": "US-005",
+      "title": "sanitizeCss unit tests — closes PRD-200 AC-3a",
+      "description": "As a security reviewer, I want executing tests proving lib/css-utils.ts sanitizeCss strips dangerous CSS, closing the last code-side PRD-200 item.",
+      "acceptanceCriteria": [
+        "Create tests/unit/css-utils.test.ts covering sanitizeCss() and extractGoogleFontsImports() (lib/css-utils.ts:7,37)",
+        "Case: sanitizeCss strips <script>, expression(), javascript: urls, and behavior/-moz-binding",
+        "Case: sanitizeCss preserves safe declarations (colors, fonts, spacing) unchanged",
+        "Case: extractGoogleFontsImports returns the @import font URLs from a stylesheet",
+        "Update docs/PRDS/REMEDIATION/PRD-200-critical-security-hardening.md: mark AC-3a [DONE] (sanitizeCss unit tests landed on the PRD-207 harness) and add a changelog row",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "This is the PRD-200 AC-3a item that was 'blocked on the harness'. Read lib/css-utils.ts to confirm exactly which patterns sanitizeCss strips before asserting. Keep the PRD-200 edit minimal: AC-3a checkbox + a changelog row only."
+    },
+    {
+      "id": "US-006",
+      "title": "Coverage thresholds (report-only) for the security-critical set (AC-12)",
+      "description": "As a CI gate (future PRD-216), I want coverage thresholds defined so coverage is reported now and can be hard-enforced later.",
+      "acceptanceCriteria": [
+        "vitest.config.ts coverage block sets 80% lines/branches aggregate",
+        "vitest.config.ts sets a 95% per-file threshold for the security-critical set: lib/encryption.ts, lib/drgreen-webhook-verify.ts, lib/api-auth.ts, lib/tenant-context.ts, lib/css-utils.ts",
+        "Thresholds are REPORT-ONLY for now (do not fail the build) — documented with a comment referencing PRD-216 for hard enforcement",
+        "`pnpm test:cov` emits a coverage report including the security-critical modules",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Report-only first per AC-12 and OQ-4: thresholds defined here, hard-fail wired by PRD-216. Do not set thresholds in a way that fails CI yet. END OF PHASE 1: if US-001..006 are all done and the next story (US-007) needs Docker which is unavailable, emit RALPH_BLOCKED with BLOCKED-DOCKER."
+    },
+    {
+      "id": "US-007",
+      "title": "Testcontainers Postgres harness + withPostgres helper (AC-2)",
+      "description": "As a developer, I want a reusable helper that boots a throwaway Postgres 17 container, applies migrations, and returns a Prisma client for integration tests.",
+      "acceptanceCriteria": [
+        "REQUIRES Docker: run `docker info`; if it fails, do NOT implement — commit a BLOCKED marker and emit RALPH_BLOCKED with reason BLOCKED-DOCKER",
+        "Add devDependency `@testcontainers/postgresql` via pnpm",
+        "Create nextjs_space/vitest.integration.config.ts (node env, longer timeout) and a `test:int` script: `vitest run -c vitest.integration.config.ts`",
+        "Create tests/helpers/with-postgres.ts exposing `withPostgres(async (prisma) => {…})` that boots a postgres:17 container, runs `prisma migrate deploy` against it, returns a PrismaClient, and tears the container down on close",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Postgres major MUST be 17 to match production (MEMORY.md). First Docker-dependent story; the budstack dev box currently has NO Docker daemon, so expect BLOCKED-DOCKER until the human starts Docker."
+    },
+    {
+      "id": "US-008",
+      "title": "withPostgres smoke integration test (AC-2)",
+      "description": "As a developer, I want proof the integration harness boots a real DB, applies migrations, and reads a row back.",
+      "acceptanceCriteria": [
+        "REQUIRES Docker: if `docker info` fails, mark BLOCKED-DOCKER and emit RALPH_BLOCKED",
+        "Create tests/integration/with-postgres.smoke.test.ts: boots the container via withPostgres, asserts a migration table exists, inserts and reads back one row",
+        "`pnpm test:int` runs the smoke test green against the real container",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "Depends on US-007. Real DB only — never a mock (global rule). BLOCKED-DOCKER if no daemon."
+    },
+    {
+      "id": "US-009",
+      "title": "Typed seed factories (AC-2b)",
+      "description": "As a test author, I want typed factories with deterministic IDs so integration tests have no inline literal seed rows.",
+      "acceptanceCriteria": [
+        "Create tests/helpers/seed.ts exporting makeTenant(), makeUser(), makeOrder(), makeConsultation() with fixed UUIDs/dates for determinism",
+        "Factories' types match the Prisma schema models",
+        "The US-008 smoke test (or a new one) uses a factory rather than an inline literal row",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Read nextjs_space/prisma/schema.prisma for the exact model fields. Deterministic fixed UUIDs/dates — no Date.now()/random. Factory builders can be authored without Docker, but if validation requires running test:int and Docker is down, mark BLOCKED-DOCKER for the runtime assertion."
+    },
+    {
+      "id": "US-010",
+      "title": "Tenant-isolation concurrency proof (AC-8 / PRD-202 AC-7)",
+      "description": "As Gerard, I want a concurrency test that interleaves requests across tenants and proves zero cross-tenant rows under the tenant-context implementation.",
+      "acceptanceCriteria": [
+        "REQUIRES Docker: if `docker info` fails, mark BLOCKED-DOCKER and emit RALPH_BLOCKED",
+        "Create tests/integration/tenant-isolation.concurrency.test.ts: interleave N concurrent operations across >=2 tenants and assert zero cross-tenant row bleed",
+        "Test passes under the current runWithTenantContext implementation (lib/tenant-context.ts)",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Landing pad for the PRD-202 red->green proof. lib/tenant-context.ts already exports runWithTenantContext; if PRD-202's fix is not yet merged the test documents current behaviour. BLOCKED-DOCKER if no daemon."
+    },
+    {
+      "id": "US-011",
+      "title": "Playwright rehab — programmatic auth so suite stops skipping (AC-3/AC-3a)",
+      "description": "As a CI gate, I want the Playwright suite to execute (not auto-skip) via a programmatic authenticated storageState and a webServer.",
+      "acceptanceCriteria": [
+        "BLOCKED pending OQ-1: the Clerk test-auth approach is Gerard-owned and unresolved — mark BLOCKED-NEEDS-AUTH-DECISION and emit RALPH_BLOCKED rather than guessing",
+        "(When unblocked) Add a Playwright global-setup that establishes an authenticated storageState programmatically (seeded test Clerk user or documented test-auth shim)",
+        "(When unblocked) playwright.config.ts runs against a webServer with a seeded test database",
+        "(When unblocked) tests/admin-design-system.spec.ts executes in CI without a hand-set PLAYWRIGHT_AUTH_STATE",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "PRD-207 OQ-1 is explicitly Owner: Gerard and unresolved. Do NOT invent a Clerk auth shim autonomously — mark BLOCKED-NEEDS-AUTH-DECISION and stop. All of US-012..015 depend on this."
+    },
+    {
+      "id": "US-012",
+      "title": "E2E: onboarding critical path (AC-4)",
+      "description": "As a tester, I want an E2E proving tenant onboarding provisions a Clerk user, tenant row, S3 template copy, and a resolving storefront.",
+      "acceptanceCriteria": [
+        "BLOCKED-NEEDS-AUTH-DECISION until US-011 lands the programmatic auth",
+        "(When unblocked) tests/e2e/onboarding.spec.ts: create tenant -> Clerk user provisioned -> tenant row + S3 template copy exist -> storefront resolves",
+        "(When unblocked) Asserts the data-driven path: no hardcoded template values (PRD-210 rule)",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "Depends on US-011. Asserts MEMORY.md data-driven-template rule (S3 is source of truth)."
+    },
+    {
+      "id": "US-013",
+      "title": "E2E: storefront order critical path (AC-5)",
+      "description": "As a tester, I want an E2E proving a storefront cart->checkout creates an order scoped to the right tenant.",
+      "acceptanceCriteria": [
+        "BLOCKED-NEEDS-AUTH-DECISION until US-011 lands the programmatic auth",
+        "(When unblocked) tests/e2e/storefront-order.spec.ts: open tenant subdomain storefront -> add to cart -> checkout -> order row created and tenant-scoped",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "Depends on US-011. Subdomain routing per MEMORY.md store URL pattern."
+    },
+    {
+      "id": "US-014",
+      "title": "E2E: consultation / KYC submit, no PHI echo (AC-6)",
+      "description": "As a tester, I want an E2E proving consultation/KYC submit succeeds and no PHI is echoed in the response body.",
+      "acceptanceCriteria": [
+        "BLOCKED-NEEDS-AUTH-DECISION until US-011 lands the programmatic auth",
+        "(When unblocked) tests/e2e/consultation-kyc.spec.ts: complete questionnaire -> submit KYC -> assert success and NO PHI in the response body (cross-ref PRD-215 redaction)",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "Depends on US-011. The no-PHI-echo assertion ties to PRD-215 redaction."
+    },
+    {
+      "id": "US-015",
+      "title": "E2E: super-admin renders real audit data (AC-7)",
+      "description": "As a tester, I want an E2E proving the super-admin audit view renders real data, not mock events.",
+      "acceptanceCriteria": [
+        "BLOCKED-NEEDS-AUTH-DECISION until US-011 lands the programmatic auth",
+        "(When unblocked) tests/e2e/super-admin.spec.ts: log in as SUPER_ADMIN -> list tenants -> open audit logs -> assert real audit data (not generateMockEvents)",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "Depends on US-011. This E2E is what proves PRD-209's mock-data removal."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+PRD-207 — Test Strategy Foundation — Ralph Progress Journal
+Branch: ralph/prd-207-test-harness
+App: nextjs_space/ (pnpm, Next 14.2.35, Prisma 6.7, Postgres 17, Clerk)
+Source PRD: docs/PRDS/REMEDIATION/PRD-207-test-strategy-foundation.md
+Started: 2026-05-29
+
+Convention: one short block per finished story —
+  US-XXX <title> — DONE <YYYY-MM-DD>
+    - what landed (files)
+    - any follow-up / caveat
+BLOCKED stories get a BLOCKED-<REASON> block and do NOT advance the plan checkbox.
+
+==================================================================
