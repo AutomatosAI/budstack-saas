@@ -63,7 +63,7 @@ The first-pass review (produced by an earlier agent pass) was re-checked **again
 
 | Phase | Window | Theme | PRDs | Gate |
 |---|---|---|---|---|
-| **R1** | Week 1 (now) | Pre-production blockers — tenant-context concurrency (the one true critical), Next.js bump, local secret-spill purge, `legacyCss` XSS, debug-route removal | PRD-200, 201, 202 | **PRD-202 is the blocker** — cannot onboard a new paying tenant safely until the tenant-context leak is closed. 200/201 are quick same-week hardening. |
+| **R1** | Week 1 (now) | Pre-production blockers — tenant-context concurrency (the one true critical), local secret-spill purge, `legacyCss` XSS, debug-route removal; framework bump + CSP nonces (split to PRD-218) | PRD-200, 201, 202, 218 | **PRD-202 is the blocker** — cannot onboard a new paying tenant safely until the tenant-context leak is closed. 200 code fixes are shipped (AC-2a rotation by Gerard remains); 218 carries the deferred framework/CSP infra. |
 | **R2** | Weeks 2–4 | Tenant-isolation foundation — auth wrapper rollout, input validation sweep, tenant resolution consolidation, S3 signed-URL scoping | PRD-203, 204, 205, 206 | Required before scaling beyond ~5 tenants |
 | **R3** | Weeks 3–8 | Code quality & testing — test infrastructure, schema hardening, code boundaries | PRD-207, 208, 209 | Required for confident refactoring + first enterprise customer |
 | **R4** | Weeks 4–6 | Template & data discipline — kill hardcoded HealingBuds branding, encryption fallback hardening, custom-domain cache fix | PRD-210, 211, 212 | Required before signing a second white-label tenant |
@@ -79,9 +79,10 @@ Phases overlap. R1 must complete before any new tenant onboards. R2 must complet
 
 | PRD | Title | Severity | Effort | Owner |
 |---|---|---|---|---|
-| [**200**](./PRD-200-critical-security-hardening.md) | Security Hardening (Next.js bump, env.windows-dev purge, error redaction, `legacyCss` XSS, info-leak endpoints) | HIGH | 2 days | Gerard + Claude |
+| [**200**](./PRD-200-critical-security-hardening.md) | Security Hardening (env.windows-dev purge, error redaction, `legacyCss` XSS, email-template HTML, info-leak endpoints) — **code fixes shipped; AC-2a rotation (Gerard) remains** | HIGH | ~1 day (mostly shipped) | Gerard + Claude |
 | [**201**](./PRD-201-destructive-endpoint-csrf-hardening.md) | Destructive Super-Admin Endpoint Removal & CSRF Defence-in-Depth | MEDIUM | 1 day | Gerard + Claude |
 | [**202**](./PRD-202-tenant-context-concurrency-fix.md) | Tenant Context Concurrency Fix (`runWithTenantContext` rollout) | **CRITICAL** | 3 days | Gerard + Claude |
+| [**218**](./PRD-218-framework-upgrade-csp-nonce-hardening.md) | Framework Upgrade & CSP Nonce Hardening (Next.js bump + `script-src` nonces) — **split from PRD-200** (AC-1/AC-1a/AC-8) | HIGH (Next advisories) | ~1 day | Gerard + Claude |
 
 ### Phase R2 — Tenant Isolation Foundation
 
@@ -128,7 +129,7 @@ Phases overlap. R1 must complete before any new tenant onboards. R2 must complet
 | # | Finding | PRD |
 |---|---|---|
 | 1 | **[CONFIRMED CRITICAL]** `setTenantContext()` uses deprecated `enterWith()`; Prisma `$use` middleware (`lib/db.ts:110`) depends on it → cross-tenant leak risk under concurrency | PRD-202 |
-| 2 | Next.js 14.2.35 open advisories — HIGH DoS (Server Components / request deserialization) + HIGH SSRF + LOW cache-poisoning (CVE-2025-29927 middleware-bypass already patched in 14.2.25; we are clear). Bump to 15.5.x | PRD-200 |
+| 2 | Next.js 14.2.35 open advisories — HIGH DoS (Server Components / request deserialization) + HIGH SSRF + LOW cache-poisoning (CVE-2025-29927 middleware-bypass already patched in 14.2.25; we are clear). Bump to 15.5.x | PRD-218 _(split from PRD-200)_ |
 | 3 | `env.windows-dev` on local disk with live-looking credentials (gitignored, never committed) → delete + rotate `ENCRYPTION_KEY` et al. | PRD-200 |
 | 4 | `reset-templates` is SUPER_ADMIN-gated debug scaffolding still shipped ("DELETE AFTER USE") that leaks `steps[]` — remove it; add CSRF defence-in-depth to remaining destructive routes | PRD-201 |
 | 5 | 96 of 107 routes hand-roll auth | PRD-203 |
@@ -167,7 +168,7 @@ Phases overlap. R1 must complete before any new tenant onboards. R2 must complet
 | **[ELEVATED → HIGH]** Outbound tenant-webhook SSRF — `lib/webhook.ts:95` POSTs to tenant-supplied URLs with no egress allowlist (`169.254.169.254`, `*.railway.internal` reachable) | PRD-211 |
 | 60+ files at top level of `lib/` with no organisation | PRD-209 |
 | ESLint `ignoreDuringBuilds: true` in `next.config.js` | PRD-216 |
-| CSP retains `script-src 'unsafe-inline'` (no nonces) | PRD-200 |
+| CSP retains `script-src 'unsafe-inline'` (no nonces) | PRD-218 _(split from PRD-200)_ |
 | Mock data imported into super-admin audit log page | PRD-209 |
 | `app/api/webhooks/drgreen/status/route.ts` 857 LOC | PRD-209 |
 | `app/api/consultation/submit/route.ts` 545 LOC | PRD-209 |
@@ -279,15 +280,15 @@ The review identified ~14 quick wins. They are absorbed into PRDs as follows:
 
 | Quick win | PRD §AC |
 |---|---|
-| Delete `env.windows-dev` + rotate secrets | PRD-200 AC-1 |
-| `pnpm add next@^15.5.16` | PRD-200 AC-2 |
-| Wrap `legacyCss` with `sanitizeCss()` | PRD-200 AC-5 |
-| Sanitize super-admin email-templates HTML | PRD-200 AC-6 |
+| Delete `env.windows-dev` (done) + rotate secrets (Gerard) | PRD-200 AC-2 / AC-2a |
+| `pnpm add next@^15.5.16` | **PRD-218 AC-1** (split from PRD-200) |
+| Wrap `legacyCss` with `sanitizeCss()` (done) | PRD-200 AC-3 |
+| Sanitize super-admin email-templates HTML (done) | PRD-200 AC-4 |
 | Remove `?confirm=yes` GET on reset-templates | PRD-201 AC-1 |
 | Add `RESERVED_SUBDOMAINS` check on rename | PRD-201 AC-4 |
 | Wrap path-param routes in `parseUuid()` | PRD-204 AC-1 |
 | Apply `withTenantAuth`/`withSuperAdmin` everywhere | PRD-203 AC-1 |
-| Route `error.message` returns through `apiError()` | PRD-200 AC-7 |
+| Route `error.message` returns through `apiError()` (client leak closed; envelope sweep partial) | PRD-200 AC-5 |
 | Add `(tenantId, createdAt)` index on `orders`; `tenantId` on `users` | PRD-208 AC-4 |
 | Wire Clerk `user.deleted` to delete handler | PRD-213 AC-1 |
 | Enable ESLint `ignoreDuringBuilds: false` | PRD-216 AC-3 |
@@ -312,7 +313,7 @@ The review identified ~14 quick wins. They are absorbed into PRDs as follows:
 
 - The five agent review outputs (synthesised in the 2026-05-29 chat transcript with Claude).
 - [`../../archive/prd-security-remediation.md`](../../archive/prd-security-remediation.md) — May 2026 phased fix plan; the foundation this suite builds on (archived 2026-05-29).
-- [`../../archive/prd-codebase-health.md`](../../archive/prd-codebase-health.md) — codebase-health baseline (archived 2026-05-29). **Coverage gap:** its Phase 3 (performance — N+1 queries, skeletons, revalidation, Suspense) and Phase 4 (build — unused deps, Railway build caching, framer-motion) are **not** yet adopted into any numbered PRD here; that archived doc is their only spec. A future PRD-217 (performance & build) should claim them.
+- [`../../archive/prd-codebase-health.md`](../../archive/prd-codebase-health.md) — codebase-health baseline (archived 2026-05-29). **Coverage gap:** its Phase 3 (performance — N+1 queries, skeletons, revalidation, Suspense) and Phase 4 (build — unused deps, Railway build caching, framer-motion) are **not** yet adopted into any numbered PRD here; that archived doc is their only spec. A future PRD-217 (performance & build) should claim them. _(Note on numbering: PRD-217 remains the open slot for performance & build; **PRD-218** is already taken — it is the framework-upgrade + CSP-nonce slice split out of PRD-200.)_
 - [`../../archive/SECURITY_AUDIT_2026-05-01.md`](../../archive/SECURITY_AUDIT_2026-05-01.md) — most recent third-party-style audit (archived).
 
 ---
@@ -323,4 +324,5 @@ The review identified ~14 quick wins. They are absorbed into PRDs as follows:
 |---|---|---|---|
 | 0.1 | 2026-05-29 | Claude (with Gerard) | Initial draft. 17 PRDs covering all 2026-05-29 review findings. |
 | 0.2 | 2026-05-29 | Claude (Opus 4.8 verification pass) | Pre-flight code verification of every checkable claim. Down-rated PRD-200 (CRITICAL→HIGH) and PRD-201 (CRITICAL→MEDIUM); confirmed PRD-202 CRITICAL (Prisma `$use` middleware depends on the leaky `enterWith()`); elevated PHI-in-logs + outbound webhook SSRF to HIGH; corrected monster-file count (5→14); retracted the false "HMAC" praise (it is a plain SHA-256). Added "Pre-flight verification" section. Re-ordered top-findings so the one true critical leads. |
+| 0.3 | 2026-05-29 | Claude (Opus 4.8) | **PRD-200 split + status reconciled with shipped code.** Added **PRD-218** (framework upgrade + CSP nonces, AC-1/AC-1a/AC-8 lifted from PRD-200) to the R1 index + phasing table. Re-pointed findings #2 (Next.js) and CSP to PRD-218. Corrected the scrambled quick-wins AC numbers (PRD-200 secret-purge AC-1→AC-2/2a, Next AC-2→PRD-218 AC-1, legacyCss AC-5→AC-3, email AC-6→AC-4, apiError AC-7→AC-5) and flagged which are shipped. Noted PRD-217 still reserved for performance & build. |
 | 0.3 | 2026-05-29 | Claude (Opus 4.8 reconciliation) | Count/path reconciliation across index + PRDs: `console.*` 437→839 repo-wide (~450 in app/lib/components, 384 in `scripts/`); `tenant.settings as any` 27→35 (across 34 lines); replaced the unverifiable "19 routes hand-roll `FAILURE_STATUS`" (no such symbol) with the real "33 of 107 routes import `lib/api-error.ts`; ~85 hand-roll `NextResponse.json({ error })`"; fixed all `lib/api-response.ts`→`lib/api-error.ts` (module never existed); refined `getCurrentUser()` "email only"→unscoped `findFirst({where:{email}})` fallback (`lib/resolve-tenant-id.ts:37-40`); fixed PRD-211 decrypt fail-open line `:134`→`:135`. Spot-verified PRD-207/211 code anchors against source (all line-accurate). |

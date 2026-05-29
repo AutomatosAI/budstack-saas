@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[super-admin] Clone from tenant error:", error);
     return NextResponse.json(
-      { error: "Failed to clone", message: error instanceof Error ? error.message : "Unknown error" },
+      { error: "Failed to clone" },
       { status: 500 },
     );
   }

@@ -33,58 +33,37 @@ function isEncryptedValue(value: string): boolean {
   return parts.length === 3 || (parts.length === 4 && parts[0] === "v2");
 }
 
+/**
+ * Diagnose a stored key WITHOUT leaking any byte of decoded material.
+ * Returns only:
+ *   configured — a value is stored
+ *   looksValid — it decrypts AND the signer accepts it (the only signal
+ *                that matters for "is this tenant's key usable")
+ *
+ * SECURITY (AC-7): the previous version returned base64DecodedLen,
+ * base64DecodedFirstByteHex, and the first 30 decoded bytes as text — a
+ * needless oracle over secret bytes even behind super-admin auth. Removed.
+ */
 function inspect(label: string, encrypted: string | null | undefined) {
-  if (!encrypted) return { label, stored: false };
-  const wasEncrypted = isEncryptedValue(encrypted);
+  if (!encrypted) return { label, configured: false, looksValid: false };
+
   let decoded: string;
   try {
-    decoded = wasEncrypted ? decrypt(encrypted) : encrypted;
-  } catch (err) {
-    return {
-      label,
-      stored: true,
-      wasEncrypted,
-      decryptError: err instanceof Error ? err.message : String(err),
-    };
-  }
-
-  const trimmed = decoded.trim();
-  const startsWithDashes = trimmed.startsWith("-----BEGIN");
-  const looksBase64 = /^[A-Za-z0-9+/=\s]+$/.test(trimmed) && trimmed.length > 80;
-
-  let base64DecodedFirstByteHex: string | null = null;
-  let base64DecodedAsTextStart: string | null = null;
-  let base64DecodedLen: number | null = null;
-  try {
-    const bytes = Buffer.from(trimmed, "base64");
-    base64DecodedLen = bytes.length;
-    base64DecodedFirstByteHex = bytes.length > 0 ? bytes[0].toString(16).padStart(2, "0") : null;
-    base64DecodedAsTextStart = bytes.toString("utf-8").slice(0, 30);
+    decoded = isEncryptedValue(encrypted) ? decrypt(encrypted) : encrypted;
   } catch {
-    // ignore — not valid base64
+    // Stored value is corrupt or was encrypted under a different key.
+    return { label, configured: true, looksValid: false };
   }
 
-  // Attempt sign with the stored (decoded) value to see if signer accepts it
-  let signerResult: string;
+  let looksValid = false;
   try {
     generateDrGreenSignature("diagnostic", decoded);
-    signerResult = "OK";
-  } catch (err) {
-    signerResult = err instanceof Error ? err.message : String(err);
+    looksValid = true;
+  } catch {
+    looksValid = false;
   }
 
-  return {
-    label,
-    stored: true,
-    wasEncrypted,
-    decodedLength: trimmed.length,
-    startsWithDashes,
-    looksBase64,
-    base64DecodedLen,
-    base64DecodedFirstByteHex,
-    base64DecodedAsTextStart,
-    signerResult,
-  };
+  return { label, configured: true, looksValid };
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -139,10 +118,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const normalized = normalizeDrGreenKey(secretKey);
     try {
       generateDrGreenSignature("validation_test", normalized);
-    } catch (err) {
-      const reason = err instanceof Error ? err.message : "could not parse";
+    } catch {
       return NextResponse.json(
-        { error: `Secret key format invalid: ${reason}` },
+        { error: "Secret key format invalid — could not produce a signature with the provided value." },
         { status: 400 },
       );
     }

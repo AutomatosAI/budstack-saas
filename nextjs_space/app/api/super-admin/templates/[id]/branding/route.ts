@@ -287,7 +287,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } catch (error) {
     console.error("[super-admin] Marketplace template branding error:", error);
     return NextResponse.json(
-      { error: "Failed to update template", message: error instanceof Error ? error.message : "Unknown error" },
+      { error: "Failed to update template" },
       { status: 500 },
     );
   }

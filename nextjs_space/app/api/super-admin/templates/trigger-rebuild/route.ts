@@ -59,10 +59,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("[Rebuild Trigger] Error:", error);
     return NextResponse.json(
-      {
-        error: "Failed to trigger deployment",
-        details: error.message,
-      },
+      { error: "Failed to trigger deployment" },
       { status: 500 },
     );
   }

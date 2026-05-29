@@ -1,17 +1,23 @@
-"use client";
+import sanitizeHtml from "sanitize-html";
 
-import { useMemo } from "react";
-import DOMPurify from "isomorphic-dompurify";
-
+// Server component: markdown → HTML is sanitised with sanitize-html
+// (htmlparser2, CommonJS) — no DOM/jsdom dependency. The allow-list mirrors
+// the-wire post renderer: only http/https/mailto/tel schemes, and iframes are
+// restricted to YouTube/Vimeo embed hosts.
 /** Simple markdown-to-HTML renderer for learning center articles */
 export function MarkdownContent({ content }: { content: string }) {
-  const html = useMemo(() => {
-    const raw = renderMarkdown(content);
-    return DOMPurify.sanitize(raw, {
-      ADD_TAGS: ["iframe"],
-      ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "target"],
-    });
-  }, [content]);
+  const html = sanitizeHtml(renderMarkdown(content), {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img", "iframe"]),
+    allowedAttributes: {
+      ...sanitizeHtml.defaults.allowedAttributes,
+      a: ["href", "target", "rel"],
+      img: ["src", "alt", "title", "loading", "width", "height"],
+      iframe: ["src", "width", "height", "frameborder", "allow", "allowfullscreen"],
+      code: ["class"],
+    },
+    allowedSchemes: ["http", "https", "mailto", "tel"],
+    allowedIframeHostnames: ["www.youtube.com", "youtube.com", "player.vimeo.com"],
+  });
 
   return (
     <div

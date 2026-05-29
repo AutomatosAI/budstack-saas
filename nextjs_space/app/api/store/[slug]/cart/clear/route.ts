@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { clearCart } from "@/lib/drgreen-cart";
+import { apiError } from "@/lib/api-error";
 
 export async function DELETE(
   request: NextRequest,
@@ -45,12 +46,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: "Cart cleared" });
   } catch (error) {
-    console.error("[Cart Clear] Error:", error);
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Failed to clear cart",
-      },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "DELETE /api/store/[slug]/cart/clear",
+      safeMessage: "Failed to clear cart",
+    });
   }
 }

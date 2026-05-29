@@ -48,11 +48,12 @@ export async function GET(request: NextRequest) {
       error instanceof Error ? error.message : "Unknown error",
     );
 
-    // Return error - NO MOCK FALLBACK (API ONLY)
+    // Return error - NO MOCK FALLBACK (API ONLY). Detail logged above;
+    // never echo the raw upstream error to the client.
     return NextResponse.json(
       {
         success: false,
-        error: `Doctor Green API unavailable: ${error instanceof Error ? error.message : "Unknown error"}`,
+        error: "Doctor Green API unavailable",
         data: [],
         count: 0,
         source: "api_error",

@@ -1,4 +1,4 @@
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtml from "sanitize-html";
 
 // SECURITY (C6): Strict SVG sanitizer for template assets. SVG is a
 // scriptable XML document — without sanitization a malicious template
@@ -7,7 +7,16 @@ import DOMPurify from "isomorphic-dompurify";
 // handlers, and javascript:/data: URLs in href/xlink:href.
 //
 // Only structural SVG elements are kept. Filters/animations are dropped
-// because they can carry script via <set>/<animate> values.
+// because they can carry script via <set>/<animate> values. The <style>
+// ELEMENT is also dropped: sanitize-html does not sanitise CSS inside a
+// <style> block (it warns about exactly this), so an inlined SVG could ship
+// a stylesheet payload. Presentation attributes (fill, stroke, …) and the
+// inline `style` attribute are still allowed, which covers icon/logo styling.
+//
+// Uses sanitize-html (htmlparser2, CommonJS) rather than a DOMPurify/jsdom
+// stack, which breaks the Next server build. The parser is told not to
+// lower-case tags/attributes because SVG is case-sensitive: viewBox,
+// linearGradient, clipPath, gradientUnits etc. must survive verbatim.
 
 const SAFE_SVG_TAGS = [
   "svg",
@@ -35,7 +44,6 @@ const SAFE_SVG_TAGS = [
   "marker",
   "image",
   "switch",
-  "style",
 ];
 
 const SAFE_SVG_ATTRS = [
@@ -125,19 +133,20 @@ const SAFE_SVG_ATTRS = [
  */
 export function sanitizeSvg(svg: string): string {
   if (typeof svg !== "string" || !svg.trim()) return "";
-  const sanitized = DOMPurify.sanitize(svg, {
-    USE_PROFILES: { svg: true, svgFilters: false },
-    ALLOWED_TAGS: SAFE_SVG_TAGS,
-    ALLOWED_ATTR: SAFE_SVG_ATTRS,
-    // Block javascript:, data: (except images), vbscript: in href attrs
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|#|\/|\.\.?\/|[^:]*$)/i,
-    // Drop <foreignObject> entirely — it can host arbitrary HTML
-    FORBID_TAGS: ["foreignObject", "script"],
-    FORBID_ATTR: ["onload", "onerror", "onclick", "onmouseover", "onfocus"],
-    KEEP_CONTENT: false,
+  // Allow-list model: any tag not in SAFE_SVG_TAGS (script, foreignObject,
+  // animate, set, …) is discarded, and any attribute not in SAFE_SVG_ATTRS
+  // (on* handlers, etc.) is stripped. javascript:/vbscript:/data: URLs are
+  // rejected because only http/https/mailto/tel schemes are permitted on the
+  // href/xlink:href attributes that accept a scheme.
+  return sanitizeHtml(svg, {
+    allowedTags: SAFE_SVG_TAGS,
+    allowedAttributes: { "*": SAFE_SVG_ATTRS },
+    // SVG is case-sensitive — keep viewBox/linearGradient/clipPath verbatim.
+    parser: { lowerCaseTags: false, lowerCaseAttributeNames: false },
+    allowedSchemes: ["http", "https", "mailto", "tel"],
+    allowedSchemesAppliedToAttributes: ["href", "xlink:href"],
+    allowProtocolRelative: false,
   });
-  // DOMPurify returns string when SAFE_FOR_TEMPLATES is not set
-  return typeof sanitized === "string" ? sanitized : "";
 }
 
 /**
