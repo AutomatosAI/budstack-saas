@@ -84,3 +84,24 @@ red→green interleave proof remains the Docker-gated Postgres test US-010.
 Validation: full pnpm test:unit → 14/14 passed (3 files). tsc --noEmit → 0.
 Files: nextjs_space/tests/unit/tenant-context.concurrency.test.ts.
 
+--------------------------------------------------------------------------------
+US-004 — withTenantContext request wrapper (AC-3)                      [DONE]
+--------------------------------------------------------------------------------
+lib/with-tenant-context.ts — withTenantContext(handler): resolves the tenant via
+getTenantFromRequest's RETURN value (never a side-effect, so it is correct both
+before and after the US-008 return-not-set refactor), then runs the WHOLE handler
+inside runWithTenantContextAsync(tenant?.id ?? null, () => handler(req, ...args)).
+Variadic Args (extends unknown[]) so it wraps both bare (req) and ({ params })
+route signatures with no `any`. A null resolution is bound EXPLICITLY (anonymous
+storefront request) so the middleware sees a deliberate context, not the
+implicit-unbound failure. Doc note: PRD-203's withTenantAuth composes this; the
+bulk route migration rides on PRD-203 — this PRD wires one pilot (US-007).
+Unit suite tests/unit/with-tenant-context.test.ts (5 tests, resolver mocked at
+the module boundary, real context primitive): binds resolved id around handler +
+tears down; explicit-null binding when no tenant resolves (hasTenantContext
+true); context survives awaits in the handler; extra { params } arg passes
+through; CONCURRENT BLEED TEST — 50 interleaved A/B requests through the wrapper,
+5 post-yield checks each, zero cross-tenant observation.
+Validation: full pnpm test:unit → 19/19 passed (4 files). tsc --noEmit → 0.
+Files: nextjs_space/lib/with-tenant-context.ts, nextjs_space/tests/unit/with-tenant-context.test.ts.
+
