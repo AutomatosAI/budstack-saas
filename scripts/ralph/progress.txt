@@ -105,3 +105,46 @@ through; CONCURRENT BLEED TEST — 50 interleaved A/B requests through the wrapp
 Validation: full pnpm test:unit → 19/19 passed (4 files). tsc --noEmit → 0.
 Files: nextjs_space/lib/with-tenant-context.ts, nextjs_space/tests/unit/with-tenant-context.test.ts.
 
+--------------------------------------------------------------------------------
+US-005 — Harden Prisma middleware: fail loud on implicit-unbound (AC-6/AC-6a) [DONE]
+--------------------------------------------------------------------------------
+lib/tenant-scope-policy.ts (new, pure policy — imports only tenant-context, no cycle):
+  - class TenantContextMissingError extends Error: carries readonly model/action,
+    name = "TenantContextMissingError", actionable message (wrap the boundary /
+    use bypassTenantScope).
+  - contextFreeAllowList = new Set<string>([]) — OQ-2 default-DENY (empty). A model
+    earns a slot here only with a reviewed justification, never to silence a
+    not-yet-wrapped route (those keep working via warn-not-throw).
+  - isStrictTenantContext(env = process.env): env.TENANT_CONTEXT_STRICT === "true".
+    Injectable env map so it is testable without mutating process.env; exact-string
+    match (so "1"/"TRUE"/"false" are all OFF). Default OFF in prod (OQ-3 migration
+    window) — flipped ON once PRD-203's withTenantAuth has wrapped the routes.
+  - decideMissingContext({model,bound,strict,allowList?}) -> "allow"|"warn"|"throw":
+    PURE. bound -> "allow" (explicit-null system query, the AC-6a distinction);
+    else allowList.has(model) -> "allow"; else strict ? "throw" : "warn".
+  - emitTenantContextMissing(model,action): console.warn("security.tenant_context_
+    missing", JSON{event,model,action}) — sanctioned audit channel (warn, not log).
+  - bypassTenantScope<T>(fn): runWithTenantContext(null, fn) — explicit-null binding
+    for deliberate system queries; works sync & async (ALS .run propagates).
+lib/db.ts middleware rewired (the hardening): the old early-return
+  `if (!tenantId || !model || !scoped) return next()` CONFLATED three cases and let
+  a tenant-scoped query on an UNBOUND context silently run unscoped (the leak). Now:
+  (1) not-scoped model -> next(params) unchanged; (2) scoped + tenantId null ->
+  decideMissingContext(bound = hasTenantContext(), strict = isStrictTenantContext());
+  emit on warn|throw; THROW TenantContextMissingError when "throw"; else next()
+  unscoped (explicit-null system query, allow-listed, or migration-window warn);
+  (3) tenantId present -> existing scoping logic byte-for-byte unchanged.
+  Guarded by `if ('$use' in prisma)` so the build-time mock client is untouched.
+tests/unit/tenant-scope-policy.test.ts (11 tests, pure — no DB): full allow/warn/
+  throw matrix incl. bound-beats-strict and injected allow-list; isStrictTenantContext
+  exact-string flag reading; error is an Error subclass carrying model/action+name;
+  emit calls console.warn once with the parsed JSON payload (spy); bypassTenantScope
+  binds explicit null (hasTenantContext true / id null inside, torn down after) for
+  both sync and async fn (context survives an await).
+NOTE: strict-mode is default OFF, so not-yet-wrapped routes WARN (don't break) during
+  the PRD-203 migration; the authoritative real-DB proof that the middleware actually
+  throws under Postgres is the Docker-gated US-011.
+Validation: pnpm test:unit -> 30/30 passed (5 files; +11 new). tsc --noEmit -> 0.
+Files: nextjs_space/lib/tenant-scope-policy.ts, nextjs_space/lib/db.ts,
+  nextjs_space/tests/unit/tenant-scope-policy.test.ts.
+

@@ -1,5 +1,11 @@
 import { PrismaClient } from '@prisma/client'
-import { getTenantContext } from '@/lib/tenant-context';
+import { getTenantContext, hasTenantContext } from '@/lib/tenant-context';
+import {
+  TenantContextMissingError,
+  decideMissingContext,
+  emitTenantContextMissing,
+  isStrictTenantContext,
+} from '@/lib/tenant-scope-policy';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -110,7 +116,29 @@ const applyTenantScope = (where: Record<string, any>, tenantId: string, allowNul
 if ('$use' in prisma) {
   (prisma as any).$use(async (params: any, next: (params: any) => Promise<any>) => {
     const tenantId = getTenantContext();
-    if (!tenantId || !params.model || !tenantScopedModels.has(params.model)) {
+
+    // Not a tenant-scoped model → never touch it.
+    if (!params.model || !tenantScopedModels.has(params.model)) {
+      return next(params);
+    }
+
+    // Tenant-scoped model with no resolved tenant id. Distinguish an EXPLICIT
+    // null (a deliberately bound system/super-admin/webhook/cron query — allowed)
+    // from an IMPLICIT unbound context (the cross-tenant-leak bug — fail loud).
+    if (!tenantId) {
+      const decision = decideMissingContext({
+        model: params.model,
+        bound: hasTenantContext(),
+        strict: isStrictTenantContext(),
+      });
+      if (decision !== 'allow') {
+        emitTenantContextMissing(params.model, params.action);
+      }
+      if (decision === 'throw') {
+        throw new TenantContextMissingError(params.model, params.action);
+      }
+      // 'allow' (explicit null / allow-listed) or 'warn' (migration window):
+      // run unscoped — the warn has already been emitted above.
       return next(params);
     }
 
