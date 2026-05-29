@@ -19,8 +19,8 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": "FOUNDATION — every later test story lands on this. Vitest is NOT installed yet (verified). Read nextjs_space/lib/encryption.ts first; ENCRYPTION_KEY can be any string (scrypt-derived). pnpm install touches pnpm-lock.yaml — stage it by name. Do NOT add a real secret to .env.test. Typecheck = `pnpm exec tsc --noEmit` from nextjs_space."
+      "passes": true,
+      "notes": "DONE: vitest 2.1.9 + @vitest/coverage-v8 2.1.9 (pinned to 2.x for Node 18.17 — vitest 4/vite 8 require Node >=20.19). Added vitest.config.ts (node env, @/->./ alias, v8 coverage of lib/**, include tests/unit/**+lib/**), vitest.setup.ts (loads .env.test via dotenv + deterministic ENCRYPTION_KEY fallback), .env.test (throwaway key — NOT committed: repo .gitignore ignores all .env*), package.json test/test:watch/test:cov scripts, tests/unit/harness-smoke.test.ts. pnpm test green (1 passed), pnpm exec tsc --noEmit clean."
     },
     {
       "id": "US-002",

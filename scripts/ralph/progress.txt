@@ -35,3 +35,13 @@ Started: 2026-05-29
 ## Story Status
 
 (Ralph appends one entry per completed story below.)
+
+### US-001 — Minimal Vitest unit harness (DONE 2026-05-29)
+- Added devDeps vitest@2.1.9 + @vitest/coverage-v8@2.1.9. Pinned to 2.x because local Node is 18.17.0 and vitest 4 / vite 8 require Node >=20.19. If the project moves to Node 20.19+ later, bump to vitest 4.
+- New files: nextjs_space/vitest.config.ts (node env, @/->./ alias, v8 coverage include lib/**, test include tests/unit/**+lib/**); vitest.setup.ts (loads .env.test via dotenv from cwd, plus a deterministic ENCRYPTION_KEY fallback so the suite runs without the file); tests/unit/harness-smoke.test.ts (encrypt/decrypt round-trip via the @/ alias).
+- package.json: added `test` (vitest run), `test:watch`, `test:cov`; e2e scripts untouched.
+- .env.test created but NOT committed — repo .gitignore ignores all .env* with no exception. The vitest.setup.ts fallback keeps the suite self-contained; .env.test is for local override only.
+- Validation: `pnpm test` -> 1 passed; `pnpm exec tsc --noEmit` -> clean (no new or pre-existing errors).
+- Note for later stories: vitest test include is tests/unit/**/*.test.ts + lib/**/*.test.ts; the Playwright spec at tests/admin-design-system.spec.ts is excluded from vitest.
+- Human follow-up: none.
+- This build is running in-session (Claude, normal tools) rather than the headless loop.sh, because the auto-mode classifier blocks `--dangerously-skip-permissions` (the in-session authorize did not override the standing global rule). prd.json `passes` is kept in sync so loop.sh can resume if launched manually.
