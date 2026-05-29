@@ -1,0 +1,10 @@
+# PRD-216 CI/CD Security Gates — Ralph Build Journal
+
+Branch: ralph/prd-216-ci-cd-security-gates (worktree off main)
+Source PRD: docs/PRDS/REMEDIATION/PRD-216-ci-cd-security-gates.md
+Started: 2026-05-29
+
+Append one short block per finished story: `US-XXX <title> — DONE <date>` + 1-2 lines on
+what landed and any follow-up. BLOCKED stories: note the reason and leave the plan box unchecked.
+
+---
