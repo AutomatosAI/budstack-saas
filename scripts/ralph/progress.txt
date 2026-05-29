@@ -101,3 +101,12 @@ US-008 SBOM generation workflow (CycloneDX JSON) — DONE 2026-05-29
   the `sbom-cyclonedx-json` artifact (sbom.cdx.json) from the SBOM workflow run's Artifacts.
 - Validated: YAML parses; asserted triggers/perms/generator/format/path/output + artifact name;
   tsc --noEmit exit 0. SBOM artifact content verified on a real GitHub run post-merge.
+
+US-009 Flip eslint.ignoreDuringBuilds:false — DONE 2026-05-29
+- next.config.js:12 ignoreDuringBuilds true→false (defence-in-depth: `next build` now enforces
+  lint, matching the standalone `pnpm lint` CI step). Left typescript.ignoreBuildErrors:false (:15) untouched.
+- NO lint backlog → the conditional BLOCK path (OQ-2 / RALPH_BLOCKED) did NOT trigger. Verified by
+  actually running the build with ci.yml's exact 6 stub env vars (DATABASE_URL/CLERK keys/BASE_DOMAIN/
+  NEXTAUTH_SECRET/ENCRYPTION_KEY) after `npx prisma generate`: pnpm build exit 0. `next lint` is
+  warnings-only (0 Error lines) so the build's ESLint phase passes (next build fails on errors, not warnings).
+- Re-confirmed post-flip: pnpm lint exit 0 (0 ESLint Error lines), npx tsc --noEmit exit 0.
