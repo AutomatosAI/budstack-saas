@@ -15,7 +15,7 @@ The bug: `lib/tenant-context.ts` binds tenant via the **deprecated `enterWith()`
 - [x] US-003 — Concurrency unit proof: `runWithTenantContext` isolates / `enterWith` leaks (node-only AC-7 proof)
 - [x] US-004 — `withTenantContext` request wrapper `lib/with-tenant-context.ts` (AC-3) + unit suite (incl. concurrent-bleed test)
 - [x] US-005 — Harden Prisma middleware: `TenantContextMissingError` + allow-list + `bypassTenantScope` + flagged throw (AC-6/AC-6a) + pure-helper unit suite
-- [ ] US-006 — Pilot-wrap storefront Server Component `app/store/[slug]/layout.tsx` (AC-5)
+- [x] US-006 — Pilot-wrap storefront Server Component `app/store/[slug]/layout.tsx` (AC-5)
 - [ ] US-007 — Pilot-wrap one tenant-scoped API route via `withTenantContext` (AC-4)
 - [ ] US-008 — Refactor `lib/tenant.ts` resolvers to return-not-set; remove the 11 `setTenantContext` side-effects (AC-2)
 - [ ] US-009 — Remove `setTenantContext`/`enterWith` from `lib/tenant-context.ts` (AC-1 complete)

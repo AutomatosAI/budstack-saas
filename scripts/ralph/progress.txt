@@ -148,3 +148,33 @@ Validation: pnpm test:unit -> 30/30 passed (5 files; +11 new). tsc --noEmit -> 0
 Files: nextjs_space/lib/tenant-scope-policy.ts, nextjs_space/lib/db.ts,
   nextjs_space/tests/unit/tenant-scope-policy.test.ts.
 
+--------------------------------------------------------------------------------
+US-006 — Pilot-wrap storefront Server Component layout (AC-5)           [DONE]
+--------------------------------------------------------------------------------
+app/store/[slug]/layout.tsx — the storefront pilot. getCurrentTenant() resolves
+the tenant via a NON-tenant-scoped `tenants` lookup (not in tenantScopedModels),
+so it correctly runs BEFORE any binding. Everything after — getTenantWithTemplate,
+getTemplateAssets, all the tenant-scoped Prisma reads, and the JSX render — now
+runs inside ONE runWithTenantContextAsync(tenant.id, ...) scope.
+Mechanic (zero-reindent split): the post-resolution body was lifted verbatim into
+a new same-nesting `async function renderTenantStore(tenantId, params, children)`
+(body indentation unchanged — both functions nest one level), and the component
+entry became: resolve tenant -> notFound guard -> `return runWithTenantContextAsync
+(tenant.id, () => renderTenantStore(tenant.id, params, children))`. The single
+`tenant.id` use inside the old body became the `tenantId` param; verified via
+`grep -E '\btenant\b'` that no orphan raw-`tenant` reference remains in the body
+(all other hits are `tenantWithTemplate` / `--tenant-color-*` / the `tenant=` JSX
+prop). This is the explicit boundary binding AC-5 wants — the SC no longer depends
+on the resolver's enterWith side-effect (removed in US-008/009) and cannot leak
+into a concurrent request.
+NO unit test (heavy Server Component: S3 + fs + Prisma + next/navigation; mocking
+that surface proves nothing for a pilot, and the prd.json story lists browser
+verification, not "Tests pass"). LIVE BROWSER VERIFICATION DEFERRED (prd.json
+allows "or document why not"): rendering the storefront needs the full runtime
+stack — Postgres + Clerk + S3 + a seeded tenant — which is exactly the Docker-/
+auth-gated territory of US-010/011/012 + manual QA, not available in this
+autonomous node-only phase. Structural correctness is locked by typecheck and the
+behavior-preserving (same data, now bound) nature of the split.
+Validation: npx tsc --noEmit -> 0. pnpm test:unit -> 30/30 (no regression).
+Files: nextjs_space/app/store/[slug]/layout.tsx.
+
