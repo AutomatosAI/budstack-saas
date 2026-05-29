@@ -71,3 +71,14 @@ US-005 Apply requireSameOrigin to destructive super-admin handlers — DONE 2026
       tenants/bulk + toggle-active (isActive flag flips, reversible). No destructive action remains
       reachable via GET (AC-2 holds).
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.
+
+US-006 Tenant DELETE: typed { confirm } body + stop cleanupErrors leak — DONE 2026-05-29
+- app/api/super-admin/tenants/[id]/route.ts DELETE: added requireSameOrigin guard after the role
+  check (before any DB/Clerk/Railway call), then — after fetching the tenant — requireConfirmation
+  (await req.json().catch(()=>null), expected = tenant.subdomain). Missing/mismatched confirm →
+  400 { error, code: "CONFIRMATION_MISMATCH" } before any deletion (AC-3, AC-4).
+- Response no longer echoes cleanupErrors[] (Clerk org IDs + raw error strings). Now returns
+  { success: true, summary: { deleted: 1 } }. The cleanup failures are still console.error'd per
+  failure AND retained in the TENANT_DELETED audit_logs metadata (server-side only) (AC-5).
+- audit_logs TENANT_DELETED row preserved unchanged — still written with full metadata (AC-8).
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.

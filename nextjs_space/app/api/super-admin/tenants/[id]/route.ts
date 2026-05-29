@@ -5,6 +5,8 @@ import { getNamecheapClient } from "@/lib/namecheap-api";
 import { addCustomDomain, removeCustomDomain } from "@/lib/railway-api";
 import { clerkClient } from "@clerk/nextjs/server";
 import { isReservedSubdomain, isValidSubdomain } from "@/lib/reserved-subdomains";
+import { requireSameOrigin } from "@/lib/security/require-same-origin";
+import { requireConfirmation } from "@/lib/security/require-confirmation";
 import crypto from "crypto";
 
 export async function GET(
@@ -320,6 +322,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const originError = requireSameOrigin(req);
+    if (originError) return originError;
+
     // Fetch tenant with related data needed for cleanup
     const tenant = await prisma.tenants.findUnique({
       where: { id: params.id },
@@ -333,6 +338,12 @@ export async function DELETE(
     if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
+
+    // Require a typed { confirm: <subdomain> } body so a destructive delete cannot fire
+    // from a bare request (defence-in-depth alongside the same-origin check).
+    const body = await req.json().catch(() => null);
+    const confirmationError = requireConfirmation(body, tenant.subdomain);
+    if (confirmationError) return confirmationError;
 
     // Clean up Clerk Organization and Users (best-effort — don't block DB delete)
     const clerkOrgId = (tenant.settings as any)?.clerkOrgId;
@@ -412,9 +423,11 @@ export async function DELETE(
       },
     });
 
+    // Do not echo cleanupErrors (Clerk org IDs + raw error strings) to the client — they remain
+    // in server logs (console.error per failure) and the audit_logs metadata only (PRD-201 AC-5).
     return NextResponse.json({
       success: true,
-      cleanupErrors: cleanupErrors.length > 0 ? cleanupErrors : undefined,
+      summary: { deleted: 1 },
     });
   } catch (error) {
     console.error("Error deleting tenant:", error);
