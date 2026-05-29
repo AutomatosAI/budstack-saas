@@ -16,3 +16,6 @@ Two necessary corollaries (flagged for review): playwright.config.ts got `testMa
 
 US-002 lib/s3-tenant-guard.ts strict prefix guard — DONE 2026-05-29
 Added assertKeyInTenantScope(key, tenantId, { folderPrefix? }) (throws ApiError 403) + isKeyInTenantScope (boolean, for US-009). Pure (no getBucketConfig inside). Normalise: decode percent-escapes once (null if malformed) → reject any '..' or backslash → collapse repeated '/' → strip one leading '/' → strip folderPrefix → require remainder startsWith exact segment `tenants/${tenantId}/`. tsc --noEmit exits 0. Tests land in US-003.
+
+US-003 Guard bypass-string + traversal suite — DONE 2026-05-29
+Added tests/unit/s3-tenant-guard.test.ts (14 tests). Proves the AC-1a bypass set is ALL rejected: nested victim/me substring, prefix-extension sibling (tenantA-evil), parent traversal, url-encoded traversal (..%2F), leading-slash, double-slash, another-tenant-outright; plus malformed-encoding + backslash fail-closed and empty/whitespace tenantId. Accepts in-scope keys (incl. development/ folderPrefix). Asserts thrown error is ApiError status 403. `pnpm test` 15/15 green, tsc exits 0. This is the PRD's #1 success metric (bypass suite all-rejected).
