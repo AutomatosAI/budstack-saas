@@ -18,3 +18,15 @@ US-001 PRD-202 grep gate script — DONE 2026-05-29
   PRD-202 is NOT merged. That detection is the gate WORKING, not a failure — do NOT edit
   lib/tenant.ts (PRD-202 scope). Flip to BLOCKING in ci.yml once PRD-202 removes those calls.
 - Validated: `node --check` ok; gate exits 1 with the 13 findings; `tsc --noEmit` exit 0.
+
+US-002 PRD-215 PII-in-logs grep gate — DONE 2026-05-29
+- Added nextjs_space/scripts/ci/check-no-pii-in-logs.mjs: mirrors the error-leaks gate
+  (blankNonCode + matchParen arg-span scan) to find banned PII identifiers (email, firstName,
+  phone, address, drGreenResponse) inside console.*/logger.* call arguments. Token-boundaried +
+  case-sensitive to keep false-positives low (per US-002 notes). Reports path:line:col + PRD-215/213.
+- Wired package.json script `check:no-pii-logs`. REPORT-ONLY for now: finds 24 real call-site hits
+  (incl. the AC-named app/tenant-admin/layout.tsx + app/actions/kyc-check.ts) because PRD-215
+  redaction is NOT merged. PRD §5 quotes ~42 — that's a crude per-line grep (counts PII in string
+  literals + substrings like emailAddress); the precise code-only gate correctly reports fewer.
+  Do NOT edit those log call sites (PRD-215/213 scope). Flip to BLOCKING once PRD-215 merges.
+- Validated: `node --check` ok; gate exits 1 with 24 findings; `tsc --noEmit` exit 0.
