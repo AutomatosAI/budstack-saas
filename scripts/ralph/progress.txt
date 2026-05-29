@@ -20,3 +20,31 @@ US-001 Vitest unit harness scaffold — DONE 2026-05-29
   - package.json scripts: test / test:watch / test:cov (e2e scripts untouched).
   - playwright.config.ts testMatch '**/*.spec.ts' so Vitest & Playwright coexist.
   - tests/unit/harness-smoke.test.ts green (2/2). tsc --noEmit clean.
+
+US-002 Encryption round-trip + tamper tests (AC-9) — DONE 2026-05-29
+  - tests/unit/encryption.test.ts (5): round-trip; v2 4-part format ("v2" prefix);
+    tampered authTag throws DecryptionError; plain value fails closed (throws,
+    never passes through); empty string handled.
+  - Tests written against actual lib/encryption.ts behaviour (v2:iv:authTag:ct).
+
+US-003 Dr Green webhook signature + timestamp tests (AC-10) — DONE 2026-05-29
+  - tests/unit/drgreen-webhook-verify.test.ts (8): SHA-256(payload+secret) hex
+    accepted; base64 accepted; tampered payload rejected; empty sig/secret reject;
+    fresh ts valid; >5min stale rejected (/expired/i); +10min future rejected
+    (/future/i); missing/unparseable rejected. Throwaway test secret only.
+
+US-004 API auth wrapper tests (AC-11) — DONE 2026-05-29
+  - tests/unit/api-auth.test.ts (7): withTenantAuth null->401, no-tenant->403,
+    authorized admin->200 w/ ctx.tenantId; withSuperAdmin wrong-role->401,
+    SUPER_ADMIN->200; withAuth null->401, any user->200.
+  - Mocks ONLY the auth seam (@/lib/auth-helper getCurrentUser) — auth-boundary
+    mock, not a DB mock. Corrected prd.json guesses (seam name; 401 not 403).
+
+US-005 sanitizeCss tests — closes PRD-200 AC-3a — DONE 2026-05-29
+  - tests/unit/css-utils.test.ts (8): </style><script> breakout -> no '<';
+    expression()/javascript:/behavior/-moz-binding stripped; @import/@charset
+    stripped; safe decls preserved; empty/null -> ''; extractGoogleFontsImports
+    returns google url, ignores non-google, [] for empty.
+  - PRD-200 AC-3a flipped [x][DONE]; changelog row 0.4 added. PRD-200 now has
+    only AC-2a (Railway rotation, Gerard) outstanding.
+  - Suite total after US-005: 30 tests / 5 files green. tsc --noEmit clean.

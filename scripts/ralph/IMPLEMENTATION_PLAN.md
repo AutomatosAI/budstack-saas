@@ -9,10 +9,10 @@ Branch: `ralph/prd-207-test-harness` · App: `nextjs_space/` · Source PRD: `doc
 ## Phase 1 — Vitest unit harness + security suites (AUTONOMOUS, node-only, no Docker/Clerk)
 
 - [x] US-001 — Vitest unit harness scaffold (config, setup, .env.test, scripts)
-- [ ] US-002 — Encryption round-trip + tamper unit tests (AC-9)
-- [ ] US-003 — Dr Green webhook signature + timestamp unit tests (AC-10)
-- [ ] US-004 — API auth wrapper unit tests (AC-11)
-- [ ] US-005 — sanitizeCss unit tests — closes PRD-200 AC-3a
+- [x] US-002 — Encryption round-trip + tamper unit tests (AC-9)
+- [x] US-003 — Dr Green webhook signature + timestamp unit tests (AC-10)
+- [x] US-004 — API auth wrapper unit tests (AC-11)
+- [x] US-005 — sanitizeCss unit tests — closes PRD-200 AC-3a
 - [ ] US-006 — Coverage thresholds (report-only) for the security-critical set (AC-12)
 
 ## Phase 2 — Testcontainers Postgres 17 integration (REQUIRES Docker daemon)
