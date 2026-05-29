@@ -1,0 +1,19 @@
+================================================================================
+RALPH PROGRESS JOURNAL — PRD-202 Tenant Context Concurrency Fix
+================================================================================
+Worktree : /Users/gkavanagh/Development/HealingBuds/budstack-saas-prd-202
+Branch   : ralph/prd-202-tenant-context-concurrency  (base: main @ af77b24)
+App      : nextjs_space/
+PRD      : docs/PRDS/REMEDIATION/PRD-202-tenant-context-concurrency-fix.md
+Plan     : scripts/ralph/IMPLEMENTATION_PLAN.md  (source of truth for checkboxes)
+
+One block per story, appended in execution order. A story is only marked
+[x] in IMPLEMENTATION_PLAN.md after its acceptance criteria are really met
+(typecheck green; tests green where the story has tests). BLOCKED stories are
+left unchecked with a RALPH_BLOCKED marker and the reason.
+
+Constraints in force: never --dangerously-skip-permissions; never push / never
+switch this worktree's branch / never touch main or sibling worktrees; stage
+files by name; commits carry no attribution footer; tests load .env.test only.
+================================================================================
+

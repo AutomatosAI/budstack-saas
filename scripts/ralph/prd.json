@@ -1,0 +1,189 @@
+{
+  "project": "BudStacks SaaS",
+  "branchName": "ralph/prd-202-tenant-context-concurrency",
+  "description": "PRD-202 — Tenant Context Concurrency Fix. Replace the deprecated AsyncLocalStorage enterWith() tenant-context binding (cross-tenant leak vector on Railway's persistent Node process) with the safe runWithTenantContext() scope. Separate tenant resolution from context binding, deliver the withTenantContext request wrapper, harden the Prisma middleware to fail loud on missing context, and prove isolation under concurrency.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Vitest unit harness scaffold (idempotent)",
+      "description": "As the build agent, I need a node-only Vitest harness so tenant-context unit tests can run without Docker or Clerk.",
+      "acceptanceCriteria": [
+        "vitest pinned to 2.1.9 (active Node is 18.17.0; vitest 4.x requires Node 20.12+ for node:util styleText)",
+        "vitest.config.ts with test.include 'tests/unit/**/*.test.ts' and @ path alias to repo root",
+        "package.json gains a 'test:unit' script that runs vitest run",
+        "Re-running the scaffold is idempotent (no duplicate config / deps)",
+        "tests/unit/ exists and an empty/sanity test executes green",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Additive tenant-context API: runWithTenantContextAsync + hasTenantContext",
+      "description": "As a developer, I need an async-typed run variant and a way to distinguish an unbound context from an explicit null, without removing the deprecated setTenantContext yet (back-compat).",
+      "acceptanceCriteria": [
+        "Add runWithTenantContextAsync<T>(tenantId, fn: () => Promise<T>): Promise<T> binding the ALS for the whole async chain (AC-1, OQ-4)",
+        "Add hasTenantContext(): boolean returning tenantContextStorage.getStore() !== undefined (distinguishes implicit-unbound from explicit-null)",
+        "getTenantContext() signature and behaviour unchanged (AC-1)",
+        "setTenantContext stays for now so lib/tenant.ts still compiles (removed later in US-009)",
+        "Unit tests (tests/unit/tenant-context.test.ts): run binds then tears down; nested scope restores the outer value; getTenantContext() outside any scope is null; hasTenantContext() false outside / true inside run(null)",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Concurrency unit proof: runWithTenantContext isolates, enterWith leaks (node-only AC-7 proof)",
+      "description": "As an auditor, I want a node-only test that interleaves tenant contexts and proves runWithTenantContext keeps them isolated while the old enterWith pattern bleeds — the red/green proof the fix matters, without needing Docker/Postgres.",
+      "acceptanceCriteria": [
+        "tests/unit/tenant-context.concurrency.test.ts interleaves >=2 simulated tenant 'requests' with awaits/setTimeout(0) yields to force microtask interleave",
+        "Asserts each runWithTenantContext scope only ever observes its own tenantId across many iterations (zero cross-tenant observation)",
+        "Includes a contrasting case driving a raw enterWith() store the same way and asserting it DOES bleed (documents the baseline the fix removes)",
+        "No Prisma/DB/network — pure ALS semantics",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "withTenantContext request wrapper (lib/with-tenant-context.ts) (AC-3)",
+      "description": "As a developer, I want a higher-order wrapper that resolves the tenant then runs the whole handler inside one bound runWithTenantContext scope, so every Prisma call the handler makes is correctly scoped.",
+      "acceptanceCriteria": [
+        "New lib/with-tenant-context.ts exporting withTenantContext(handler) that resolves the tenant (via getTenantFromRequest's RETURN value) then returns runWithTenantContextAsync(tenantId ?? null, () => handler(req, ctx)) (AC-3)",
+        "Wrapper uses the resolver's return value only — does not depend on any ALS side-effect (works before and after US-008)",
+        "Unit tests (tests/unit/with-tenant-context.test.ts) with the resolver module-mocked: handler observes getTenantContext()===resolved id; two concurrent wrapped handlers for different tenants never observe each other's id (bleed test)",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Harden Prisma middleware: fail loud on missing context (AC-6/AC-6a)",
+      "description": "As a developer, I want a tenant-scoped query that runs with no bound context to fail loudly (throw in strict mode, warn+emit otherwise) instead of silently running unscoped, with an explicit escape hatch for legitimate system queries.",
+      "acceptanceCriteria": [
+        "Add TenantContextMissingError (carries route/model/action) and a context-free allow-list (default-deny; system models enumerated per OQ-2) in lib/db.ts or a small lib/tenant-scope-policy.ts",
+        "Middleware distinguishes implicit-unbound (hasTenantContext()===false) from explicit null (runWithTenantContext(null,...)): implicit null on a tenant-scoped, non-allow-listed model emits security.tenant_context_missing (structured console.warn {route?,model,action}) and throws TenantContextMissingError when strict mode is on; explicit null proceeds unscoped (AC-6/AC-6a)",
+        "Strict mode gated by env flag (e.g. TENANT_CONTEXT_STRICT) defaulting OFF in prod so the ~96 not-yet-wrapped routes (PRD-203 surface) keep working; ON in test (OQ-3 warn-then-throw)",
+        "bypassTenantScope(fn) documented escape hatch = runWithTenantContext(null, fn) with a clear name (AC-6a)",
+        "Pure decision helper (e.g. shouldThrowOnMissingContext(model, hasContext, strict, allowList)) is extracted and unit-tested node-only (tests/unit/tenant-scope-policy.test.ts) — full middleware throw is the Docker integration test US-011",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Pilot-wrap storefront Server Component data path (AC-5)",
+      "description": "As tenant A's customer, the storefront layout must load its tenant-scoped data inside a bound context so concurrent storefront renders cannot bleed. Pilot the Server-Component binding pattern on app/store/[slug]/layout.tsx (the mass SC migration is tracked separately / PRD-203).",
+      "acceptanceCriteria": [
+        "app/store/[slug]/layout.tsx loads its tenant-scoped Prisma data inside runWithTenantContextAsync(tenantId, async () => {...}) (or a thin loadWithTenant helper) per OQ-1 resolution (AC-5)",
+        "tenantId is taken from the resolver's RETURN value, not a side-effect",
+        "No behavioural change for a single tenant; data still renders",
+        "This is an explicitly-scoped pilot of one Server Component path; remaining tenant-scoped Server Components are out of scope here (deferred to PRD-203 mass-wrap)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (or document explicitly if the storefront cannot be rendered locally without real tenant data)"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Pilot-wrap one tenant-scoped API route via withTenantContext (AC-4)",
+      "description": "As a developer, I want one representative tenant-scoped API route wrapped with withTenantContext end-to-end to prove the request-boundary binding pattern. The full 96-route migration is delivered transitively through PRD-203's withTenantAuth.",
+      "acceptanceCriteria": [
+        "One representative tenant-scoped API route exports its handler wrapped in withTenantContext (AC-4 pilot)",
+        "Route behaviour is unchanged for the owning tenant; the handler's Prisma calls now execute inside the bound scope",
+        "A short comment notes the remaining routes are migrated via PRD-203's withTenantAuth (which composes withTenantContext) — not in this PRD's scope",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Refactor lib/tenant.ts resolvers to return-not-set (AC-2)",
+      "description": "As a developer, tenant resolution must be a pure lookup that RETURNS the tenantId — binding happens only at the request boundary (the wrappers from US-004/006/007). Remove the 11 setTenantContext side-effects.",
+      "acceptanceCriteria": [
+        "All 11 setTenantContext(...) calls removed from getCurrentTenant and getTenantFromRequest in lib/tenant.ts; the setTenantContext import is removed (AC-2)",
+        "Both functions still RETURN the resolved tenant (or null) exactly as before — resolution semantics unchanged, only the ALS side-effect is gone",
+        "No remaining caller relies on the side-effect for correctness on the wrapped paths (storefront layout US-006 + the wrapper US-004/007 now bind context explicitly)",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Remove setTenantContext/enterWith from lib/tenant-context.ts (AC-1)",
+      "description": "As a developer, I want the unsafe enterWith()-based setTenantContext deleted so it can never be called again; the only binding APIs are runWithTenantContext / runWithTenantContextAsync.",
+      "acceptanceCriteria": [
+        "setTenantContext and its enterWith() body are deleted from lib/tenant-context.ts (AC-1) — safe because US-008 removed the only callers",
+        "Exports remaining: getTenantContext (unchanged), runWithTenantContext, runWithTenantContextAsync, hasTenantContext",
+        "Local grep confirms zero enterWith( and zero setTenantContext( references in the app source (the enforced CI grep gate AC-1a lives in PRD-216, not this PRD)",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Integration: tenant-isolation concurrency proof (testcontainers) — Docker-gated (AC-7)",
+      "description": "As an auditor, I want the full-stack red/green proof: interleaved N requests across >=2 real tenants against a real Postgres, asserting zero cross-tenant rows are ever observed. Must be red on the enterWith baseline, green after the fix.",
+      "acceptanceCriteria": [
+        "tests/integration/tenant-isolation.concurrency.integration.test.ts seeds tenants A and B with distinct rows, fires Promise.all of interleaved handlers with await/setTimeout(0) yields, asserts each handler only reads/writes its own tenant across thousands of iterations (AC-7)",
+        "Uses the testcontainers Postgres harness (PRD-207 pattern)",
+        "GATE: run 'docker info' first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
+        "Tests pass (when Docker is available)",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Integration: prisma-middleware-throws (testcontainers) — Docker-gated (AC-6)",
+      "description": "As a developer, I want a real-DB test that a tenant-scoped query with no bound context throws TenantContextMissingError, while an explicit runWithTenantContext(null, ...) on an allow-listed system query succeeds.",
+      "acceptanceCriteria": [
+        "tests/integration/prisma-middleware-throws.integration.test.ts asserts throw-on-missing-context (strict mode) and success for an explicit-null allow-listed query (AC-6/AC-6a)",
+        "Uses the testcontainers Postgres harness (PRD-207 pattern)",
+        "GATE: run 'docker info' first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
+        "Tests pass (when Docker is available)",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "E2E: cross-tenant-no-leak (Playwright) — auth-gated",
+      "description": "As an auditor, I want two browser contexts on two tenant subdomains hammering endpoints simultaneously, asserting no tenant ever sees the other's data.",
+      "acceptanceCriteria": [
+        "tests/e2e/cross-tenant-no-leak.spec.ts drives two tenant subdomains concurrently and asserts no cross-tenant data is ever returned",
+        "GATE: Clerk test-auth approach is undecided (PRD-207 OQ-1, owner Gerard). Do NOT invent an auth shim → mark BLOCKED-NEEDS-AUTH-DECISION, emit RALPH_BLOCKED, leave unchecked",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
