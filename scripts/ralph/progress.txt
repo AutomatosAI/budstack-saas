@@ -45,3 +45,9 @@ Started: 2026-05-29
 - Note for later stories: vitest test include is tests/unit/**/*.test.ts + lib/**/*.test.ts; the Playwright spec at tests/admin-design-system.spec.ts is excluded from vitest.
 - Human follow-up: none.
 - This build is running in-session (Claude, normal tools) rather than the headless loop.sh, because the auto-mode classifier blocks `--dangerously-skip-permissions` (the in-session authorize did not override the standing global rule). prd.json `passes` is kept in sync so loop.sh can resume if launched manually.
+
+### US-002 — Export isEncryptedValue() (DONE 2026-05-29)
+- Added exported `isEncryptedValue(text: string): boolean` to nextjs_space/lib/encryption.ts (placed after the DecryptionError class, before encrypt()). Shape-only — no decryption, no auth-tag check.
+- v2 -> 4 colon-parts AND parts[0]==='v2' AND segments[1..3] non-empty hex; legacy -> exactly 3 non-empty-hex parts; false for plaintext, '', non-hex segment, or wrong part count. Hex test: /^[0-9a-f]+$/i per segment.
+- decrypt() deliberately untouched — US-003 wires this helper in.
+- Tests: tests/unit/encryption.test.ts (7 cases: 5 AC cases + legacy-non-hex + v2-wrong-count). `pnpm test` -> 8 passed; `tsc --noEmit` clean.

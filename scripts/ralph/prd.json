@@ -36,8 +36,8 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Pure addition — do NOT change decrypt() yet (that is US-003). encrypt() writes `v2:iv:authTag:ciphertext` (lib/encryption.ts:77-89). decrypt() detects v2 via parts[0]===\"v2\" (:101-106). This helper becomes the single source of truth referenced by US-003 and any ad-hoc part-count check (project memory: project_encryption_v2_prefix.md — a 3-part-only check skips v2 and pipes raw ciphertext downstream). Hex check: /^[0-9a-f]+$/i per segment."
+      "passes": true,
+      "notes": "DONE: added exported isEncryptedValue(text) to lib/encryption.ts (after DecryptionError, before encrypt()). v2 = 4 parts + parts[0]==='v2' + segments[1..3] non-empty hex; legacy = exactly 3 non-empty-hex parts; false for plaintext/''/non-hex/wrong-count. decrypt() untouched (US-003). Tests: tests/unit/encryption.test.ts (7 cases). pnpm test 8 passed, tsc clean."
     },
     {
       "id": "US-003",

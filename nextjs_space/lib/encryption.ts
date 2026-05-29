@@ -70,6 +70,28 @@ export class DecryptionError extends Error {
 }
 
 /**
+ * Recognises an encrypted value shape: 4-part v2 (`v2:iv:authTag:ciphertext`) or
+ * 3-part legacy (`iv:authTag:ciphertext`), each segment non-empty hex. Single
+ * source of truth so callers never misclassify a v2 value as legacy and skip
+ * decryption. Shape-only — it does NOT decrypt or verify the auth tag.
+ */
+export function isEncryptedValue(text: string): boolean {
+  if (!text) return false;
+
+  const parts = text.split(":");
+  const isHex = (segment: string): boolean =>
+    segment.length > 0 && /^[0-9a-f]+$/i.test(segment);
+
+  // v2 shape: v2:iv:authTag:ciphertext
+  if (parts[0] === "v2") {
+    return parts.length === 4 && parts.slice(1).every(isHex);
+  }
+
+  // legacy shape: iv:authTag:ciphertext
+  return parts.length === 3 && parts.every(isHex);
+}
+
+/**
  * Encrypts a string using AES-256-GCM with scrypt-derived key.
  * Returns format: v2:iv:authTag:ciphertext (hex encoded)
  * The v2 prefix distinguishes from legacy SHA-256 derived ciphertext.
