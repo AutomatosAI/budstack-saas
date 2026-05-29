@@ -106,8 +106,8 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "Depends on US-005. Use a local node http server OR a mocked fetch in the test (no Docker/testcontainers needed). Preserve the existing exponential-backoff retry for NON-SSRF failures, but a SSRF block must NOT retry. webhookDelivery model is via prisma.webhookDelivery.create (see :110,134) — in unit tests mock prisma. Keep the existing success/log paths intact."
+      "passes": true,
+      "notes": "DONE: lib/webhook.ts deliverWebhook is now exported and routes through a new private fetchWithSsrfGuard(initialUrl, init) helper. The helper calls await assertSafeWebhookUrl(currentUrl) BEFORE each fetch, sets redirect:'manual', and on a 3xx+Location resolves the Location against the current URL and re-validates on the next loop, max MAX_WEBHOOK_REDIRECTS=2 hops (then throws WebhookUrlError 'too_many_redirects'). In deliverWebhook the guarded fetch is wrapped in an inner try: a WebhookUrlError is caught, logs console.error('webhook.delivery_blocked_ssrf',{webhookId,host,reason:err.code}), records a failed prisma.webhookDelivery.create (response:'Blocked by SSRF guard: <code>'), and RETURNS (no retry into the blocked target); any non-WebhookUrlError is rethrown to the existing outer catch so genuine network failures still retry with the original exponential backoff. Success/log/delivery paths otherwise unchanged. Tests: tests/unit/webhook-delivery-ssrf.test.ts (3) — vi.mock @/lib/db (prisma findUnique+webhookDelivery.create) + vi.stubGlobal fetch; uses literal IPs (public 93.184.216.34, private 10.0.0.5) so NO real DNS: internal URL blocked with fetch NOT called; public->internal 302 fetched exactly once (public hop) and internal Location never fetched; public 200 records success:true/statusCode:200. pnpm test 41 passed; tsc clean."
     },
     {
       "id": "US-007",

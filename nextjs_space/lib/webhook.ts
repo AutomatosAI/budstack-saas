@@ -7,8 +7,12 @@
 
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
+import { assertSafeWebhookUrl, WebhookUrlError } from "@/lib/webhook-ssrf";
 
 export { assertSafeWebhookUrl, WebhookUrlError } from "@/lib/webhook-ssrf";
+
+// Redirects are followed manually so each hop's target can be SSRF-revalidated.
+const MAX_WEBHOOK_REDIRECTS = 2;
 
 export interface WebhookEvent {
   event: string;
@@ -74,9 +78,47 @@ export async function triggerWebhook(params: {
 }
 
 /**
- * Deliver webhook to a specific URL with retry logic
+ * Fetch a webhook target with an SSRF guard on every hop. The initial URL and
+ * each redirect Location are validated by assertSafeWebhookUrl BEFORE the
+ * request is issued, redirects are followed manually up to MAX_WEBHOOK_REDIRECTS,
+ * and a blocked hop throws WebhookUrlError (no request reaches the blocked
+ * target). Non-SSRF fetch failures propagate unchanged.
  */
-async function deliverWebhook(
+async function fetchWithSsrfGuard(
+  initialUrl: string,
+  init: RequestInit,
+): Promise<Response> {
+  let currentUrl = initialUrl;
+
+  for (let hop = 0; hop <= MAX_WEBHOOK_REDIRECTS; hop++) {
+    await assertSafeWebhookUrl(currentUrl);
+
+    const response = await fetch(currentUrl, { ...init, redirect: "manual" });
+
+    const isRedirect = response.status >= 300 && response.status < 400;
+    const location = response.headers.get("location");
+    if (!isRedirect || !location) {
+      return response;
+    }
+
+    // Resolve a relative Location against the current URL; the next loop
+    // iteration re-validates it before any request is made.
+    currentUrl = new URL(location, currentUrl).toString();
+  }
+
+  throw new WebhookUrlError(
+    `Webhook exceeded the redirect limit (${MAX_WEBHOOK_REDIRECTS})`,
+    "too_many_redirects",
+  );
+}
+
+/**
+ * Deliver webhook to a specific URL with retry logic.
+ *
+ * Exported for unit testing. The outbound URL (and every redirect hop) is
+ * SSRF-validated; a blocked target records a failed delivery and is NOT retried.
+ */
+export async function deliverWebhook(
   webhookId: string,
   payload: WebhookEvent,
   attemptCount: number = 1,
@@ -93,17 +135,46 @@ async function deliverWebhook(
     // Generate HMAC signature
     const signature = generateWebhookSignature(payload, webhook.secret);
 
-    // Send webhook
-    const response = await fetch(webhook.url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Webhook-Signature": signature,
-        "X-Webhook-Event": payload.event,
-        "User-Agent": "BudStacks-Webhooks/1.0",
-      },
-      body: JSON.stringify(payload),
-    });
+    // Send webhook — SSRF-guarded on every hop, redirects followed manually.
+    let response: Response;
+    try {
+      response = await fetchWithSsrfGuard(webhook.url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Webhook-Signature": signature,
+          "X-Webhook-Event": payload.event,
+          "User-Agent": "BudStacks-Webhooks/1.0",
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (ssrfError) {
+      if (ssrfError instanceof WebhookUrlError) {
+        let host = "";
+        try {
+          host = new URL(webhook.url).hostname;
+        } catch {
+          host = "";
+        }
+        console.error("webhook.delivery_blocked_ssrf", {
+          webhookId,
+          host,
+          reason: ssrfError.code,
+        });
+        await prisma.webhookDelivery.create({
+          data: {
+            webhookId,
+            event: payload.event,
+            payload: payload as any,
+            success: false,
+            attemptCount,
+            response: `Blocked by SSRF guard: ${ssrfError.code}`,
+          },
+        });
+        return; // Do NOT retry into the same (blocked) target.
+      }
+      throw ssrfError; // Genuine network error -> outer catch handles retry.
+    }
 
     const responseText = await response.text().catch(() => "");
     const success = response.status >= 200 && response.status < 300;
