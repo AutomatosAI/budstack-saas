@@ -26,10 +26,18 @@ export function extractGoogleFontsImports(css?: string | null): string[] {
  *
  * Note: @import is stripped here. Use extractGoogleFontsImports() BEFORE
  * calling sanitizeCss to preserve Google Fonts URLs as <link> tags.
+ *
+ * Tag-breakout: this CSS is injected via dangerouslySetInnerHTML inside a
+ * <style> element, so a payload like `</style><script>…` would escape the
+ * style context. We strip `<` only when it starts a tag (followed by a
+ * letter, `/`, or `!`). This preserves CSS child combinators (`#id > x`)
+ * and media range queries (`@media (width < 700px)`, `<=`), where `<`/`>`
+ * are followed by whitespace, a digit, or `=`.
  */
 export function sanitizeCss(css?: string | null): string {
   if (!css) return '';
   let result = css
+    .replace(/<(?=[a-zA-Z!/])/g, '')
     .replace(/@import[^;]+;/gi, '')
     .replace(/@charset[^;]+;/gi, '')
     .replace(/url\s*\(\s*(['"]?)\s*javascript\s*:/gi, 'url($1blocked:')

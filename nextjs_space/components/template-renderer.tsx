@@ -159,7 +159,7 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
         <style dangerouslySetInnerHTML={{ __html: sanitizedCss }} />
       )}
       {sectionPaddingCss && (
-        <style dangerouslySetInnerHTML={{ __html: sectionPaddingCss }} />
+        <style dangerouslySetInnerHTML={{ __html: sanitizeCss(sectionPaddingCss) }} />
       )}
       {sectionColorCss && (
         <style dangerouslySetInnerHTML={{ __html: sanitizeCss(sectionColorCss) || '' }} />
