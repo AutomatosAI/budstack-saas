@@ -7,6 +7,8 @@ import {
   EMAIL_HTML_MAX_LENGTH,
   EMAIL_SUBJECT_MAX_LENGTH,
 } from "@/lib/email-sanitize";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 const TEMPLATE_NAME_MAX = 200;
 const TEMPLATE_DESCRIPTION_MAX = 1000;
@@ -27,6 +29,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(params.id);
+
     const email = clerkUser.emailAddresses[0]?.emailAddress;
 
     const user = await prisma.users.findFirst({
@@ -40,7 +44,7 @@ export async function GET(
 
     const template = await prisma.email_templates.findFirst({
       where: {
-        id: params.id,
+        id: id,
         tenantId: user.tenants.id, // Strict ownership
       },
     });
@@ -54,11 +58,7 @@ export async function GET(
 
     return NextResponse.json(template);
   } catch (error) {
-    console.error("Error fetching template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/email-templates/[id]" });
   }
 }
 
@@ -77,6 +77,8 @@ export async function PUT(
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const id = parseUuid(params.id);
 
     const email = clerkUser.emailAddresses[0]?.emailAddress;
 
@@ -109,7 +111,7 @@ export async function PUT(
 
     // Verify ownership before update
     const count = await prisma.email_templates.count({
-      where: { id: params.id, tenantId: user.tenants.id },
+      where: { id, tenantId: user.tenants.id },
     });
 
     if (count === 0) {
@@ -120,7 +122,7 @@ export async function PUT(
     }
 
     const updated = await prisma.email_templates.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(typeof name === "string" && { name: name.slice(0, TEMPLATE_NAME_MAX) }),
         ...(typeof subject === "string" && { subject: sanitizeEmailSubject(subject) }),
@@ -137,11 +139,7 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Error updating template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PUT /api/tenant-admin/email-templates/[id]" });
   }
 }
 
@@ -161,6 +159,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(params.id);
+
     const email = clerkUser.emailAddresses[0]?.emailAddress;
 
     const user = await prisma.users.findFirst({
@@ -174,7 +174,7 @@ export async function DELETE(
 
     // Verify ownership
     const template = await prisma.email_templates.findFirst({
-      where: { id: params.id, tenantId: user.tenants.id },
+      where: { id, tenantId: user.tenants.id },
     });
 
     if (!template) {
@@ -186,7 +186,7 @@ export async function DELETE(
 
     // Check if mapped
     const mapping = await prisma.email_event_mappings.findFirst({
-      where: { templateId: params.id },
+      where: { templateId: id },
     });
 
     // Strategy: If mapped, delete the mapping first (Revert to default)
@@ -194,14 +194,10 @@ export async function DELETE(
       await prisma.email_event_mappings.delete({ where: { id: mapping.id } });
     }
 
-    await prisma.email_templates.delete({ where: { id: params.id } });
+    await prisma.email_templates.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "DELETE /api/tenant-admin/email-templates/[id]" });
   }
 }

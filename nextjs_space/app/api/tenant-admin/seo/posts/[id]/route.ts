@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -18,7 +20,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = await params;
+  let id: string;
+  try {
+    id = parseUuid((await params).id);
+  } catch (error) {
+    return apiError(error, { route: "/api/tenant-admin/seo/posts/[id]" });
+  }
   const tenantId = user.tenantId;
 
   if (!tenantId) {
@@ -49,7 +56,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = await params;
+  let id: string;
+  try {
+    id = parseUuid((await params).id);
+  } catch (error) {
+    return apiError(error, { route: "/api/tenant-admin/seo/posts/[id]" });
+  }
   const tenantId = user.tenantId;
 
   if (!tenantId) {

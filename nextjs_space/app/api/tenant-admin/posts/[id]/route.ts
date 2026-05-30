@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 function slugify(text: string) {
   return text
@@ -38,7 +40,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const id = parseUuid(params.id);
 
     const post = await prisma.posts.findUnique({
       where: { id },
@@ -61,11 +63,7 @@ export async function GET(
 
     return NextResponse.json(post);
   } catch (error) {
-    console.error("Error fetching post:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/posts/[id]" });
   }
 }
 
@@ -86,7 +84,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const id = parseUuid(params.id);
     const body = await req.json();
     const validatedData = postSchema.partial().parse(body);
 
@@ -139,11 +137,7 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
-    console.error("Error updating post:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PATCH /api/tenant-admin/posts/[id]" });
   }
 }
 
@@ -164,7 +158,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const id = parseUuid(params.id);
     const localUser = await prisma.users.findFirst({
       where: { email: email },
       include: { tenants: true },
@@ -186,10 +180,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting post:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "DELETE /api/tenant-admin/posts/[id]" });
   }
 }

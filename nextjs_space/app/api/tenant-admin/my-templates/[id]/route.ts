@@ -3,6 +3,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export async function DELETE(
   req: NextRequest,
@@ -16,7 +17,7 @@ export async function DELETE(
     }
 
     const email = user.emailAddresses[0]?.emailAddress;
-    const tenantTemplateId = params.id;
+    const tenantTemplateId = parseUuid(params.id);
 
     // Get user's tenant
     const userRecord = await prisma.users.findUnique({

@@ -118,3 +118,22 @@ US-008 parseUuid rollout — super-admin [id] routes (13 files) — DONE 2026-05
   (wheres, entityId, tenantId) → `id`. verify-domain bare catch{500} → apiError(error,{route}); its
   INNER DNS try/catch left intact.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
+
+US-009 parseUuid rollout — tenant-admin [id] routes (16 files) — DONE 2026-05-30
+- Sync-params, bare catch{500}+no apiError import (customers GET/PATCH/DELETE, email-templates
+  GET/PUT/DELETE, orders/[id], orders/[id]/admin-notes, webhooks/[id] PATCH/DELETE,
+  webhooks/[id]/deliveries): added apiError+parseUuid imports; declared `const id = parseUuid(params.id)`
+  after the role/authz check (or replaced `const tenantTemplateId/orderId = params.id`); swapped each
+  bare catch → apiError(error,{route}) so the thrown 400 propagates instead of being masked as 500.
+- posts/[id] (GET/PATCH/DELETE, destructured `const { id } = params`): → `const id = parseUuid(params.id)`;
+  GET/DELETE catch → apiError; PATCH KEEPS its `z.ZodError → 400` branch and only swaps the trailing
+  500 fallback to apiError.
+- my-templates/[id] + the 6 templates/[id]/* (activate, preview-image, resubmit, submit-to-marketplace,
+  update-from-github, withdraw-submission): already import apiError and end in apiError → only added
+  parseUuid import and replaced `const { id } = await params` / `params.id` with
+  `parseUuid((await params).id)`. preview-image upload magic-byte+maxSize validation left intact (AC-6a).
+- seo/posts/[id] + seo/products/[id] (GET/PUT, async params, NO try/catch at all): localized
+  `let id; try { id = parseUuid((await params).id) } catch (e) { return apiError(e,{route}) }` per
+  handler (same shape as US-008 drgreen-keys) since an uncaught throw here would framework-500.
+- Body validation (Zod) on PATCH/PUT/POST bodies left untouched — deferred to US-011.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).

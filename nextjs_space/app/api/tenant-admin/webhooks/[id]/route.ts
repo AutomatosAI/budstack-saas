@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 /**
  * PATCH /api/tenant-admin/webhooks/[id]
@@ -43,7 +45,7 @@ export async function PATCH(
       );
     }
 
-    const { id } = params;
+    const id = parseUuid(params.id);
     const body = await req.json();
     const { url, events, description, isActive } = body;
 
@@ -93,11 +95,7 @@ export async function PATCH(
 
     return NextResponse.json({ webhook });
   } catch (error) {
-    console.error("[API] Error updating webhook:", error);
-    return NextResponse.json(
-      { error: "Failed to update webhook" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PATCH /api/tenant-admin/webhooks/[id]" });
   }
 }
 
@@ -137,7 +135,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const id = parseUuid(params.id);
 
     // Verify webhook belongs to tenant
     const existingWebhook = await prisma.webhooks.findFirst({
@@ -167,10 +165,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[API] Error deleting webhook:", error);
-    return NextResponse.json(
-      { error: "Failed to delete webhook" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "DELETE /api/tenant-admin/webhooks/[id]" });
   }
 }

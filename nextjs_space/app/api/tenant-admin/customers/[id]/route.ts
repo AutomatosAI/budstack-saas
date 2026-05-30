@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { fetchClientByEmail, updateClient } from "@/lib/doctor-green-api";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 /**
  * GET /api/tenant-admin/customers/[id]
@@ -33,6 +35,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(params.id);
+
     // Fetch local user to get tenantId for authorization
     const localUser = await prisma.users.findFirst({
       where: { email: email },
@@ -44,7 +48,7 @@ export async function GET(
 
     // Get customer
     const customer = await prisma.users.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         email: true,
@@ -119,14 +123,7 @@ export async function GET(
       medicalHistory: medicalHistory[0] || null,
     });
   } catch (error) {
-    console.error(
-      `[GET /api/tenant-admin/customers/${params.id}] Error:`,
-      error,
-    );
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/customers/[id]" });
   }
 }
 
@@ -157,6 +154,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(params.id);
+
     // Fetch local user to get tenantId for authorization
     // Fetch local user to get tenantId for authorization
     const localUser = await prisma.users.findFirst({
@@ -172,7 +171,7 @@ export async function PATCH(
 
     // Get existing customer
     const existingCustomer = await prisma.users.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { id: true, tenantId: true, email: true, drGreenClientId: true },
     });
 
@@ -295,7 +294,7 @@ export async function PATCH(
 
     // Update customer (only allowed fields)
     const updatedCustomer = await prisma.users.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(normalizedNewEmail && { email: normalizedNewEmail }),
         ...(firstName !== undefined && { firstName }),
@@ -358,7 +357,7 @@ export async function PATCH(
           ? AUDIT_ACTIONS.CUSTOMER_KYC_VERIFIED
           : AUDIT_ACTIONS.CUSTOMER_UPDATED,
       entityType: "User",
-      entityId: params.id,
+      entityId: id,
       userId: user.id,
       userEmail: email!,
       tenantId: existingCustomer.tenantId || undefined,
@@ -397,14 +396,7 @@ export async function PATCH(
       }),
     });
   } catch (error) {
-    console.error(
-      `[PATCH /api/tenant-admin/customers/${params.id}] Error:`,
-      error,
-    );
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PATCH /api/tenant-admin/customers/[id]" });
   }
 }
 
@@ -435,6 +427,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(params.id);
+
     // Fetch local user to get tenantId for authorization
     const localUser = await prisma.users.findFirst({
       where: { email: email },
@@ -446,7 +440,7 @@ export async function DELETE(
 
     // Get existing customer
     const existingCustomer = await prisma.users.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { id: true, tenantId: true, email: true, name: true },
     });
 
@@ -468,9 +462,9 @@ export async function DELETE(
     // GDPR Deletion: Anonymize PII (keeping record for order history integrity)
     // Alternative: Hard delete with CASCADE on orders/consultations
     const anonymizedCustomer = await prisma.users.update({
-      where: { id: params.id },
+      where: { id },
       data: {
-        email: `deleted-${params.id}@deleted.com`,
+        email: `deleted-${id}@deleted.com`,
         name: "Deleted User",
         firstName: null,
         lastName: null,
@@ -487,7 +481,7 @@ export async function DELETE(
     await createAuditLog({
       action: AUDIT_ACTIONS.CUSTOMER_DELETED_GDPR,
       entityType: "User",
-      entityId: params.id,
+      entityId: id,
       userId: user.id,
       userEmail: email!,
       tenantId: existingCustomer.tenantId || undefined,
@@ -502,16 +496,9 @@ export async function DELETE(
 
     return NextResponse.json({
       message: "Customer deleted successfully (GDPR compliant)",
-      customerId: params.id,
+      customerId: id,
     });
   } catch (error) {
-    console.error(
-      `[DELETE /api/tenant-admin/customers/${params.id}] Error:`,
-      error,
-    );
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "DELETE /api/tenant-admin/customers/[id]" });
   }
 }

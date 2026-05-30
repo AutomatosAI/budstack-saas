@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 /**
  * PATCH: Update admin notes for an order
@@ -25,7 +27,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const orderId = params.id;
+    const orderId = parseUuid(params.id);
     const body = await req.json();
     const { adminNotes } = body;
 
@@ -81,10 +83,6 @@ export async function PATCH(
       updatedAt: updatedOrder.updatedAt,
     });
   } catch (error) {
-    console.error("Error updating admin notes:", error);
-    return NextResponse.json(
-      { error: "Failed to update admin notes" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PATCH /api/tenant-admin/orders/[id]/admin-notes" });
   }
 }
