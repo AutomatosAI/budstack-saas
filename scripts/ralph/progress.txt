@@ -161,3 +161,26 @@ Webhook route-local resolveTenant -> canonical: NOT a safe like-for-like swap.
   (b) keep business-id resolution route-local but rename it (e.g. resolveDrGreenWebhookTenant)
   so the name 'resolveTenant' is reserved for the one canonical resolver. Either also closes
   the webhook's missing isActive filter on its tenant-by-id fetch.
+
+--------------------------------------------------------------------------------
+US-007  DONE  2026-05-30
+Document the users.email single-tenant assumption + PRD-208 migration spec — AC-3 / AC-3a.
+- prisma/schema.prisma: added a comment block above `model users` (the schema-side half of
+  AC-3). It states the load-bearing invariant — `email @unique` is GLOBAL and `tenantId` is
+  nullable, so one human => AT MOST one tenant, which is the ONLY reason resolving a tenant by
+  email alone (lib/tenant-resolver.ts's fallback) is unambiguous today.
+- Same block carries the PRD-208 MIGRATION SPEC (AC-3a), specified but NOT executed here:
+  drop the global `email @unique`; add `@@unique([email, tenantId])`. Plus the operational
+  caveats — Postgres treats NULLs as DISTINCT so the composite won't dedupe tenantId=NULL rows
+  (backfill all tenantIds, or keep platform/super-admin null + a partial unique index
+  `ON users(email) WHERE tenantId IS NULL`); assert zero (email) collisions before cutover;
+  post-migration one Clerk identity may map to >1 tenant => the resolver's email branch returns
+  AmbiguousTenantResolution (PRD-203 -> 403) and the clerk-org branch MUST stay preferred.
+- Inline annotations on the two affected fields: `email @unique // PRD-208: -> @@unique([email,
+  tenantId])` and `tenantId String? // PRD-208 backfill target; nullable today => global-unique
+  email is load-bearing`.
+- The resolver-side half of AC-3 already shipped in US-002 (lib/tenant-resolver.ts top comment,
+  lines 12-16 / 34), so AC-3 is now documented in BOTH files as required.
+- NO schema change (comments only) — honours "PRD-208 migration is specified, not run". Prisma
+  comments don't reach the generated client, so typecheck is unaffected.
+- Validation: npx tsc --noEmit -> 0 (schema comments don't affect TS). No new test (pure docs).
