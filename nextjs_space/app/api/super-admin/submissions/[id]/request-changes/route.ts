@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { requestChanges } from "@/lib/marketplace-review-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const feedbackSchema = z
+  .object({
+    feedback: z.string().min(1).max(10000),
+  })
+  .strict();
 
 export async function POST(
   request: NextRequest,
@@ -16,10 +24,9 @@ export async function POST(
     }
 
     const id = parseUuid((await params).id);
-    const body = await request.json();
-    const { feedback } = body;
+    const { feedback } = await parseJsonBody(request, feedbackSchema);
 
-    if (!feedback || typeof feedback !== "string" || !feedback.trim()) {
+    if (!feedback.trim()) {
       return NextResponse.json(
         { error: "Feedback is required when requesting changes" },
         { status: 400 },

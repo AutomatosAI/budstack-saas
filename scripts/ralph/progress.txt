@@ -189,3 +189,26 @@ US-011 Zod + parseJsonBody — tenant-admin write routes (26 files) — DONE 202
   upload) deliberately EXCLUDED — they are not JSON bodies; their magic-byte+max-size guards are the
   US-012 AC-6a concern. GET/read catches and read-only handlers left untouched.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
+
+US-012 Zod + parseJsonBody — super-admin write routes + uploads guard (18 files) — DONE 2026-05-30
+- Every super-admin JSON body site now flows through parseJsonBody(req, schema) (size-cap 413 + Zod
+  400); each touched bare catch{500} swapped to apiError(error,{route,safeMessage}) so the 400/413
+  surfaces via ApiError.status pass-through instead of being masked (AC-5).
+- STRICT schemas (reject unknown keys): email-mappings POST, email-templates POST + [id] PUT (maxBytes
+  512KB so a max-size HTML body isn't 413'd once JSON-escaped), test-smtp POST (kept EMAIL_REGEX check),
+  tenants/bulk POST (action enum + tenantIds 1..1000), tenants POST (create: 7-field admin/business),
+  templates/clone-from-tenant, templates/upload (GitHub-URL JSON, not formData), templates/[id] PATCH
+  (isActive bool), submissions/[id]/{edit,reject,request-changes}, tenants/[id]/drgreen-keys POST
+  (localized try/catch — body read sat outside the existing handler wrap).
+- EMPTY-BODY-tolerant (schema.optional() + ?? {}): templates/recover-deleted, tenants/migrate-s3-paths
+  (both accept a bodyless POST).
+- STRIP-mode schema: settings/route (super-admin platform_config — 9 optional+nullable fields; the whole
+  config blob round-trips on save so unknown keys are dropped, not 400'd); GET+POST bare catches → apiError.
+- AC-6a uploads: templates/[id]/branding uploadAsset had NO magic-byte/size guard (real gap, not a
+  regression) → added filename sanitize + validateUploadBuffer, throwing ApiError(.,400) on invalid (outer
+  catch→apiError surfaces the 400). learning POST/PUT (coverImage + docFile), platform-settings POST
+  (logo+favicon), templates/[id] PUT (preview 5MB) already call validateUploadBuffer — verified, not
+  regressed. learning DELETE JSON body wrapped in parseJsonBody(learnDeleteSchema).
+- tenants/[id]/route.ts EXCLUDED (US-004 ownership — one-story-per-file). No route auth refactored
+  (PRD-203 scope). Disk filled mid-run (ENOSPC) and was cleared before the build passed.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). → RALPH_COMPLETE

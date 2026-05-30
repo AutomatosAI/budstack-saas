@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { editSubmission } from "@/lib/marketplace-review-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+
+// Submission files are stringified JSON / CSS; allow up to 512KB each and a
+// 1MB whole-body cap (the four files combined).
+const editSubmissionSchema = z
+  .object({
+    layoutJson: z.string().max(512 * 1024).optional(),
+    defaultsJson: z.string().max(512 * 1024).optional(),
+    configJson: z.string().max(512 * 1024).optional(),
+    stylesCss: z.string().max(512 * 1024).optional(),
+  })
+  .strict();
 
 export async function PUT(
   request: NextRequest,
@@ -16,8 +29,10 @@ export async function PUT(
     }
 
     const id = parseUuid((await params).id);
-    const body = await request.json();
-    const { layoutJson, defaultsJson, configJson, stylesCss } = body;
+    const { layoutJson, defaultsJson, configJson, stylesCss } =
+      await parseJsonBody(request, editSubmissionSchema, {
+        maxBytes: 1024 * 1024,
+      });
 
     if (!layoutJson && !defaultsJson && !configJson && !stylesCss) {
       return NextResponse.json(

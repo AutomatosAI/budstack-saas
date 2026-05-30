@@ -8,6 +8,14 @@ import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+import { z } from "zod";
+
+const templatePatchSchema = z
+  .object({
+    isActive: z.boolean().optional(),
+  })
+  .strict();
 
 export async function PUT(
   req: NextRequest,
@@ -119,7 +127,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
-    const body = await req.json();
+    const body = await parseJsonBody(req, templatePatchSchema);
 
     if (typeof body.isActive === "boolean") {
       await prisma.templates.update({

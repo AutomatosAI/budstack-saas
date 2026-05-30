@@ -5,8 +5,9 @@ import { getJsonFromS3, uploadFile } from "@/lib/s3";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
-import { apiError } from "@/lib/api-error";
+import { apiError, ApiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
+import { validateUploadBuffer } from "@/lib/upload-validation";
 
 /**
  * Super Admin Marketplace Template Branding API
@@ -51,7 +52,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const file = formData.get(fieldName) as File;
       if (!file || file.size === 0) return null;
       const buffer = Buffer.from(await file.arrayBuffer());
-      const fileName = `${prefix}-${Date.now()}-${file.name}`;
+      const cleanName = file.name
+        .replace(/\.\.\//g, "")
+        .replace(/\.\.\\/g, "")
+        .replace(/[/\\]/g, "_")
+        .slice(0, 200);
+      const validation = await validateUploadBuffer(buffer, file.type, cleanName);
+      if (!validation.valid) {
+        throw new ApiError(`${fieldName}: ${validation.error}`, 400);
+      }
+      const fileName = `${prefix}-${Date.now()}-${cleanName}`;
       return await uploadFile(buffer, fileName, file.type || undefined);
     };
 

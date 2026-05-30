@@ -3,6 +3,9 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { uploadFile } from "@/lib/s3";
 import { validateUploadBuffer } from "@/lib/upload-validation";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+import { z } from "zod";
 
 function generateSlug(title: string): string {
   return title
@@ -28,6 +31,12 @@ function clip(value: string | null | undefined, max: number): string | null {
   if (value == null) return null;
   return value.slice(0, max);
 }
+
+const learnDeleteSchema = z
+  .object({
+    id: z.string().min(1).max(200),
+  })
+  .strict();
 
 /** GET — list all learning resources (for super-admin) */
 export async function GET() {
@@ -307,9 +316,11 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = await req.json();
-  if (!id) {
-    return NextResponse.json({ error: "ID is required" }, { status: 400 });
+  let id: string;
+  try {
+    ({ id } = await parseJsonBody(req, learnDeleteSchema));
+  } catch (error) {
+    return apiError(error, { route: "DELETE /api/super-admin/learning" });
   }
 
   await prisma.learning_resources.delete({ where: { id } });
