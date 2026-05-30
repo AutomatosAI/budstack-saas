@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { currentUser, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
@@ -6,6 +7,33 @@ import { fetchClientByEmail, updateClient } from "@/lib/doctor-green-api";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const customerUpdateSchema = z
+  .object({
+    firstName: z.string().max(100).optional(),
+    lastName: z.string().max(100).optional(),
+    phone: z
+      .string()
+      .max(32)
+      .regex(/^[0-9+()\-.\s]*$/, "Invalid phone number")
+      .optional(),
+    address: z
+      .object({
+        street: z.string().max(200),
+        city: z.string().max(120),
+        state: z.string().max(120),
+        zip: z.string().max(20),
+        country: z.string().max(120),
+      })
+      .partial()
+      .strict()
+      .optional(),
+    drGreenClientId: z.string().max(200).optional(),
+    verifyKyc: z.boolean().optional(),
+    newEmail: z.string().email().max(200).optional(),
+  })
+  .strict();
 
 /**
  * GET /api/tenant-admin/customers/[id]
@@ -166,7 +194,7 @@ export async function PATCH(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const body = await request.json();
+    const body = await parseJsonBody(request, customerUpdateSchema);
     const { firstName, lastName, phone, address, drGreenClientId, verifyKyc, newEmail } = body;
 
     // Get existing customer

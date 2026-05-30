@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const productReorderSchema = z
+  .object({
+    products: z
+      .array(
+        z.object({
+          id: z.string().min(1).max(200),
+          displayOrder: z.number().int(),
+        }),
+      )
+      .min(1)
+      .max(1000),
+  })
+  .strict();
 
 /**
  * POST /api/tenant-admin/products/reorder
@@ -31,16 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
-    // Parse request body
-    const body = await request.json();
-    const { products } = body;
-
-    if (!Array.isArray(products) || products.length === 0) {
-      return NextResponse.json(
-        { error: "Invalid products array" },
-        { status: 400 },
-      );
-    }
+    const { products } = await parseJsonBody(request, productReorderSchema);
 
     // Validate all products belong to the tenant
     const productIds = products.map((p: { id: string }) => p.id);
@@ -71,10 +79,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error updating product order:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "POST /api/tenant-admin/products/reorder" });
   }
 }

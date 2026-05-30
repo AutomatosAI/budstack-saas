@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const webhookCreateSchema = z
+  .object({
+    url: z.string().url().max(2000),
+    events: z.array(z.string().min(1).max(100)).min(1).max(50),
+    description: z.string().max(1000).optional(),
+  })
+  .strict();
 
 /**
  * GET /api/tenant-admin/webhooks
@@ -66,25 +77,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
-    const { url, events, description } = body;
-
-    if (!url || !events || !Array.isArray(events) || events.length === 0) {
-      return NextResponse.json(
-        { error: "Invalid request. URL and events are required." },
-        { status: 400 },
-      );
-    }
-
-    // Validate URL
-    try {
-      new URL(url);
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid URL format" },
-        { status: 400 },
-      );
-    }
+    const { url, events, description } = await parseJsonBody(
+      req,
+      webhookCreateSchema,
+    );
 
     // Generate a secret for webhook signature
     const secret = crypto.randomBytes(32).toString("hex");
@@ -115,10 +111,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ webhook }, { status: 201 });
   } catch (error) {
-    console.error("[API] Error creating webhook:", error);
-    return NextResponse.json(
-      { error: "Failed to create webhook" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/tenant-admin/webhooks",
+      safeMessage: "Failed to create webhook",
+    });
   }
 }

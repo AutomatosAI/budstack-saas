@@ -158,3 +158,34 @@ US-010 Zod + parseJsonBody — public store body routes (2 files) — DONE 2026-
   submitOrder/OrderSubmissionData) AND the real frontend payloads (CartContext, checkout/page.tsx) so .strict()
   cannot 400 a legitimate save. cart/clear + cart/remove + orders/route + products/* carry NO body → untouched.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
+
+US-011 Zod + parseJsonBody — tenant-admin write routes (26 files) — DONE 2026-05-30
+- Every tenant-admin JSON body site now flows through parseJsonBody(req, schema) (size-cap 413 +
+  Zod 400); each touched bare catch{500} swapped to apiError(error,{route,safeMessage}) so the
+  400/413 surfaces via ApiError.status pass-through instead of being masked (AC-5).
+- STRICT schemas (reject unknown keys — simple verified bodies): webhooks POST/[id] PATCH,
+  customers/[id] PATCH, products/reorder, products/bulk, orders/bulk, orders/[id]/admin-notes,
+  orders/route PATCH (orderId+status enum, collapsing the hand-rolled presence+validStatuses checks),
+  email-mappings POST, email-templates/clone, select-template, templates/clone, templates/create-blank,
+  templates/upload, templates/[id]/submit-to-marketplace, settings/test-smtp, seo/pages PUT
+  (pageKey enum), seo/posts/[id] PUT, seo/products/[id] PUT.
+- STRIP-mode schemas (no .strict(), tolerate+drop unknown keys — content-editor routes whose clients
+  spread extra keys): email-templates POST/[id] PUT (contentHtml/subject keep their dedicated
+  EMAIL_*_MAX_LENGTH checks; maxBytes raised to 512KB so a max-size HTML body isn't 413'd once
+  JSON-escaped), posts route/[id] (kept postSchema.parse + the z.ZodError→field-level-400 branch for
+  the rich editor; parseJsonBody(req, undefined, {maxBytes:512KB}) owns only the size 413),
+  settings/route (12 optional+nullable fields), tenant/route (kept the precise countryCode ISO check +
+  the UPDATABLE_FIELDS allowlist pick), cookie-settings POST.
+- No-try/catch handlers (seo/pages, seo/posts/[id], seo/products/[id] PUT bodies sat outside any
+  wrap) got a localized `let parsed; try { parsed = await parseJsonBody(...) } catch (e) { return
+  apiError(e,{route}) }` so an uncaught parse throw can't framework-500 past the 400/413.
+- settings/route type-safety: automatosAgentId/smtpPort schema'd as union(string|number) so the
+  existing parseInt() sites were wrapped in String(...) (a typed number can't be passed to parseInt).
+  seo/pages: tightened the `currentPageSeo` cast to Record<string,Record<string,string>|null> because
+  the now-precise pageKey union made the spread-into-typed-literal flag the unknown index signature.
+- Removed dead code uncovered by Zod: VALID_PAGE_KEYS (seo/pages), the PATCH validStatuses array
+  (orders/route), and the manual presence/typeof guards the schemas now own.
+- 4 tenant-admin multipart/formData routes (branding, branding/upload, templates/[id]/preview-image,
+  upload) deliberately EXCLUDED — they are not JSON bodies; their magic-byte+max-size guards are the
+  US-012 AC-6a concern. GET/read catches and read-only handlers left untouched.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).

@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const adminNotesSchema = z
+  .object({
+    adminNotes: z.string().max(5000),
+  })
+  .strict();
 
 /**
  * PATCH: Update admin notes for an order
@@ -28,15 +36,7 @@ export async function PATCH(
     }
 
     const orderId = parseUuid(params.id);
-    const body = await req.json();
-    const { adminNotes } = body;
-
-    if (typeof adminNotes !== "string") {
-      return NextResponse.json(
-        { error: "Admin notes must be a string" },
-        { status: 400 },
-      );
-    }
+    const { adminNotes } = await parseJsonBody(req, adminNotesSchema);
 
     // Get user's tenant
     const localUser = await prisma.users.findFirst({

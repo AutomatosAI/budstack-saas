@@ -47,7 +47,7 @@ App in `nextjs_space/` (pnpm). Source PRD:
 - [x] US-008 — parseUuid rollout: super-admin `[id]` routes (13 files, ex tenants/[id]/route.ts) (AC-1a)
 - [x] US-009 — parseUuid rollout: tenant-admin `[id]` routes (16 files) (AC-1a)
 - [x] US-010 — Zod + parseJsonBody on public store body routes (AC-5, AC-6)
-- [ ] US-011 — Zod + parseJsonBody on tenant-admin write routes (AC-5)
+- [x] US-011 — Zod + parseJsonBody on tenant-admin write routes (AC-5)
 - [ ] US-012 — Zod + parseJsonBody on super-admin write routes + uploads guard (AC-5, AC-6a) → RALPH_COMPLETE
 
 ## Notes

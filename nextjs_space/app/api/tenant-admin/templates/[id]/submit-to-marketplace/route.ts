@@ -5,6 +5,16 @@ import { submitToMarketplace } from "@/lib/marketplace-submission-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const submitMarketplaceSchema = z
+  .object({
+    description: z.string().max(5000).optional(),
+    category: z.string().max(100).optional(),
+    tags: z.array(z.string().max(50)).max(50).optional(),
+  })
+  .strict();
 
 export async function POST(
   request: NextRequest,
@@ -48,8 +58,10 @@ export async function POST(
       );
     }
 
-    const body = await request.json();
-    const { description, category, tags } = body;
+    const { description, category, tags } = await parseJsonBody(
+      request,
+      submitMarketplaceSchema,
+    );
 
     const submission = await submitToMarketplace(id, {
       description,
