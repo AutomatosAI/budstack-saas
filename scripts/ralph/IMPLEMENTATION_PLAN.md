@@ -19,7 +19,7 @@ Merge order: **202 → 205** (205 is stacked on 202; merge 202 first and 205's P
 - [x] US-005 — `middleware.ts` host derivation (`:50-100`) consumes the shared `parseHostToTenantHint` so middleware + resolver cannot drift (AC-2a)
 - [ ] US-006 — Webhook route-local `resolveTenant` (`app/api/webhooks/drgreen/status/route.ts`) delegates to the canonical resolver (helper swap only; verify-before-lookup ordering stays for PRD-211) (AC-2)  _(RALPH_BLOCKED: BLOCKED-PRD211 — the route-local resolver resolves by Dr Green business ids (clientId/orderId/strainId) + returns the per-tenant secret; the canonical resolver has only headers/host/slug/clerk kinds and returns {tenantId,tenant}. A literal swap would 404 every webhook. PRD defers the real delegation to PRD-211's verify-before-lookup reorder (§"this PRD only swaps the helper"; "PRD-211 …once it delegates"). Webhook file left UNTOUCHED to avoid conflicting with PRD-211. See progress.txt.)_
 - [x] US-007 — Document the `users.email @unique` single-tenant assumption in `lib/tenant-resolver.ts` + `prisma/schema.prisma` comment; specify the PRD-208 `@@unique([email, tenantId])` migration path — no schema change here (AC-3/AC-3a)
-- [ ] US-008 — Local grep gates: zero `setTenantContext`/`enterWith` in the resolver (AC-1a); zero standalone `subdomain`/`customDomain` `findFirst` tenant lookups outside `lib/tenant-resolver.ts` (AC-2b) + a success-metric check script
+- [x] US-008 — Local grep gates: zero `setTenantContext`/`enterWith` in the resolver (AC-1a); zero standalone `subdomain`/`customDomain` `findFirst` tenant lookups outside `lib/tenant-resolver.ts` (AC-2b) + a success-metric check script
 
 ## Phase 2 — Integration tests (REQUIRES Docker daemon)
 

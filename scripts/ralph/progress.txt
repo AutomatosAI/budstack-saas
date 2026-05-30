@@ -163,6 +163,45 @@ Webhook route-local resolveTenant -> canonical: NOT a safe like-for-like swap.
   the webhook's missing isActive filter on its tenant-by-id fetch.
 
 --------------------------------------------------------------------------------
+US-008  DONE  2026-05-30
+Local grep gates — AC-1a + AC-2b + §7 success metrics (success-metric check script).
+- New scripts/ci/check-tenant-resolver-gates.mjs (follows the existing scripts/ci/*.mjs
+  convention; reuses strip-strings.mjs blankNonCode/matchParen so string/comment tokens
+  can't false-trip). Wired in package.json: `check:tenant-resolver` standalone + appended to
+  the `check:security` aggregate.
+- GATE 1 (AC-1a / §7 "setTenantContext/enterWith inside any resolver: 0"): asserts
+  lib/tenant-resolver.ts contains zero setTenantContext(/enterWith( calls — the resolver
+  RETURNS, never binds. PASS.
+- GATE 2 (AC-2b / §7 "findFirst on subdomain/customDomain outside the resolver: 0"): asserts
+  zero prisma.tenants.findFirst({where:{subdomain|customDomain}}) outside the resolver. The
+  where-object is isolated via a brace matcher before testing the host keys, so an id-keyed
+  lookup that merely SELECTS subdomain/customDomain columns does NOT trip it (that class
+  caused 12 spurious hits on a naive whole-arg scan — now correctly ignored). PASS.
+- 3 findFirst host-key sites existed; dispositioned:
+  (1) app/api/consultation/submit/route.ts — the dev/localhost tenantSlug fallback was an 8th
+      ad-hoc `findFirst({where:{subdomain,isActive}})` resolution path (no lower-case retry).
+      REFACTORED to delegate: `resolveTenant({kind:'slug', slug: body.tenantSlug})` then
+      `?.tenant`. Now shares the uniform isActive + lower-case-retry rule-set.
+  (2) app/api/super-admin/tenants/[id]/route.ts:114 — customDomain availability/uniqueness
+      check (must match across ALL tenants incl. inactive, excluding self) — NOT request
+      resolution; the isActive-scoped canonical resolver cannot express it. EXEMPTED with an
+      auditable `// tenant-gate:allow(uniqueness)` pragma.
+  (3) app/api/super-admin/templates/clone-from-tenant/route.ts:31 — super-admin clone-by-
+      subdomain of an explicitly named tenant; intentionally not isActive-scoped (admins clone
+      from deactivated tenants). EXEMPTED with `// tenant-gate:allow(admin-lookup)`.
+- DELIBERATELY out of this grep gate's scope (documented in the script header): findUnique
+  by `subdomain`/`customDomain` (a @unique column → a by-unique-constraint point lookup, not
+  the findFirst "scan-first-row" smell AC-2b/§7 name); and the "no inactive tenant resolves on
+  ANY path" guarantee (AC-1b), which is proven by the real-DB integration test (US-009) and the
+  cross-tenant E2E (US-011), not by a static grep. AC-2b/§7 both say findFirst explicitly.
+- Self-test (throwaway app/__gate_selftest__.ts, then removed): the negative findFirst-where-
+  subdomain case FAILED the gate (1 violation), the id-keyed-select case did NOT trip, and the
+  pragma'd case passed — proving the gate is not vacuous and the exemption path works.
+- Validation: pnpm run check:tenant-resolver -> both gates PASS (exit 0); pnpm test:unit ->
+  74/74 green (regression; the "db down" stderr lines are the intentional error-swallow
+  backward-compat delegator tests); npx tsc --noEmit -> 0.
+
+--------------------------------------------------------------------------------
 US-007  DONE  2026-05-30
 Document the users.email single-tenant assumption + PRD-208 migration spec — AC-3 / AC-3a.
 - prisma/schema.prisma: added a comment block above `model users` (the schema-side half of

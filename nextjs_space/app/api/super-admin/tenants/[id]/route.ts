@@ -111,6 +111,9 @@ export async function PATCH(
 
     // Check if custom domain is being changed and if it's unique
     if (customDomain && customDomain !== existingTenant.customDomain) {
+      // tenant-gate:allow(uniqueness) — PRD-205 AC-2b: super-admin custom-domain-availability
+      // check, NOT request tenant resolution. Spans all tenants (incl. inactive) excluding
+      // self, which the isActive-scoped canonical resolveTenant cannot express.
       const domainExists = await prisma.tenants.findFirst({
         where: {
           customDomain,

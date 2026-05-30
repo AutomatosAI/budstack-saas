@@ -28,6 +28,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Find the tenant by subdomain
+    // tenant-gate:allow(admin-lookup) — PRD-205 AC-2b: super-admin clone-by-subdomain of an
+    // explicitly supplied tenant, NOT request tenant resolution. Intentionally not
+    // isActive-scoped (admins clone templates from deactivated tenants too), so it cannot
+    // route through the isActive-enforcing canonical resolveTenant.
     const tenant = await prisma.tenants.findFirst({
       where: { subdomain },
     });
