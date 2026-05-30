@@ -67,7 +67,8 @@ export const GET = withSuperAdmin(async (req) => {
           const count = await deleteS3Directory(`${tt.s3Path}/`);
           steps.push(`S3: deleted ${count} objects at ${tt.s3Path}/`);
         } catch (err) {
-          steps.push(`S3: FAILED ${tt.s3Path}/ — ${err}`);
+          console.error(`[reset-templates] S3 delete failed for ${tt.s3Path}/:`, err);
+          steps.push(`S3: FAILED ${tt.s3Path}/`);
         }
       }
     }
@@ -84,7 +85,9 @@ export const GET = withSuperAdmin(async (req) => {
       steps,
     });
   } catch (error) {
-    steps.push(`FATAL: ${error instanceof Error ? error.message : String(error)}`);
+    // AC-5: keep the raw cause in the server log only; the body gets a generic step.
+    console.error("[reset-templates] FATAL:", error);
+    steps.push("FATAL: reset failed (see server logs)");
     return NextResponse.json({ error: "Reset failed", steps }, { status: 500 });
   }
 });

@@ -38,6 +38,18 @@ describe("classifySource — the wrapped / allow-listed / violation matrix", () 
     expect(result.violations).toContain("GET");
   });
 
+  it("classifies the CLI's non-vacuousness canary as exactly one violation (US-010 AC-4b)", () => {
+    // This is byte-for-byte the fixture check-auth-wrappers.ts runs before it
+    // trusts a green result. If the classifier ever regresses to pass bare
+    // handlers, this test AND the CLI's fail-closed canary both trip — the gate
+    // can never report "violations 0" vacuously.
+    const result = classifySource(
+      "/api/__vacuousness_canary__",
+      "export async function GET() { return new Response('x'); }",
+    );
+    expect(result.violations).toEqual(["GET"]);
+  });
+
   it("passes a route wrapped in an approved wrapper", () => {
     const src = `import { withTenantAuth } from "@/lib/api-auth";
 export const GET = withTenantAuth(async (req, { tenantId }) => new Response(tenantId));`;

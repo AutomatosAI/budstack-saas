@@ -5,10 +5,14 @@
  * (see check-auth-wrappers.core.ts), and prints a wrapped / allow-listed /
  * violation report.
  *
- * Exit code is ADVISORY by default (US-002 — the repo still has ~95 unwrapped
- * routes). Pass `--strict` (or AUTH_WRAPPERS_STRICT=true) to exit non-zero on
- * any violation; US-010 wires `--strict` into `pnpm check:auth-wrappers` to make
- * the gate blocking once the rollout (US-006..009) is complete.
+ * As of US-010 the rollout (US-006..009) is complete, so `pnpm check:auth-wrappers`
+ * runs with `--strict` — any violation exits non-zero (the gate is BLOCKING
+ * locally). CI runs it as a non-blocking advisory step; PRD-216 makes CI blocking.
+ * Omitting `--strict` (or AUTH_WRAPPERS_STRICT=true) still gives an advisory run.
+ *
+ * Two fail-closed self-checks (US-010) stop the gate ever passing vacuously: a
+ * bare-handler canary that MUST classify as a violation, and a guard that the
+ * scan found at least one route file.
  *
  * Run from `nextjs_space/`:  pnpm check:auth-wrappers
  */
@@ -32,9 +36,32 @@ function main(): void {
   const cwd = process.cwd();
   const apiDir = join(cwd, "app", "api");
 
+  // Non-vacuousness self-test (US-010, AC-4b): a known-bare handler MUST be a
+  // violation. If the classifier ever regresses to pass everything, this trips
+  // first — fail-closed regardless of --strict (a broken gate is never "green").
+  const canary = classifySource(
+    "/api/__vacuousness_canary__",
+    "export async function GET() { return new Response('x'); }",
+  );
+  if (canary.violations.length !== 1) {
+    console.error(
+      "✗ check:auth-wrappers is VACUOUS: the bare-handler canary was not flagged — " +
+        "the classifier is broken. Refusing to report a passing gate.",
+    );
+    process.exit(1);
+  }
+
   const results: RouteClassification[] = findRouteFiles(apiDir)
     .sort()
     .map((file) => classifySource(deriveApiPath(relative(cwd, file)), readFileSync(file, "utf8")));
+
+  if (results.length === 0) {
+    console.error(
+      `✗ check:auth-wrappers scanned 0 route files under ${apiDir} — the gate is ` +
+        "misconfigured (wrong cwd or moved api dir). Refusing to pass vacuously.",
+    );
+    process.exit(1);
+  }
 
   let wrapped = 0;
   let allowListed = 0;

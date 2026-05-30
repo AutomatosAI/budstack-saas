@@ -489,3 +489,65 @@ Next: US-010 (flip the gate to BLOCKING via --strict: 0 unwrapped non-allow-list
   and tenants/reset-templates steps[] error.message-in-body; add a NON-blocking CI step
   (blocking CI = PRD-216); add a non-vacuousness fixture check).
 
+================================================================================
+US-010 DONE — gate flipped to BLOCKING + advisory CI + non-vacuousness self-tests
+2026-05-30
+
+WHAT CHANGED
+  package.json:
+    - check:auth-wrappers -> "tsx scripts/check-auth-wrappers.ts --strict" (was
+      report-only). --strict makes any violation exit 1: the gate is now BLOCKING
+      locally (`pnpm check:auth-wrappers` fails on an unwrapped handler).
+    - check:security now chains the strict auth gate after 205's three grep gates
+      (css-sanitized + no-error-message-leaks + tenant-resolver) — one command
+      runs the whole static-security surface.
+  .github/workflows/ci.yml:
+    - new "Security gates (advisory)" step: `pnpm check:security`,
+      continue-on-error: true. NON-blocking by design — PRD-216 promotes it to a
+      required gate (mirrors how 205 left its grep gates advisory for 216).
+  scripts/check-auth-wrappers.ts: two FAIL-CLOSED self-tests so the gate can never
+    pass vacuously —
+    (1) __vacuousness_canary__: classifies a known-bare GET; if it is NOT exactly
+        one violation the classifier is broken -> exit 1 regardless of --strict.
+    (2) zero-files guard: if the scan finds 0 route files (wrong cwd / moved api
+        dir) -> exit 1 rather than report a green "0 violations".
+  tests/unit/check-auth-wrappers.test.ts: +1 test locking the canary fixture
+    byte-for-byte to violations === ["GET"] (10 -> 11 tests). If a refactor makes
+    the canary stop tripping, this test fails alongside the CLI self-check.
+
+AC-5 ERROR-LEAK SWEEP (error.message / String(error) in app/api response bodies)
+  SANITIZED (the 2 US-006-flagged routes — were leaking into the body):
+    super-admin/tenants/[id] DELETE: 3 cleanupErrors.push(`...${error.message}`)
+      -> generic strings; full error kept server-side via console.error(..., error).
+    super-admin/tenants/reset-templates: S3 step `...${err}` and the FATAL catch
+      `...${error.message}` -> generic steps[]; raw cause logged server-side only.
+  CLEAN (verified, no change): products/list + orders/submit — msg / err.message
+    used ONLY for .includes() control-flow + server logging; bodies are static or
+    apiError() safeMessage.
+  FLAGGED FOR HUMAN REVIEW (deliberate trusted-admin diagnostics, NOT caught by the
+  PRD-specified direct-NextResponse.json grep, so left intact — sanitizing would
+  regress diagnostic UX; the AC-5 grep gate stays green):
+    test-smtp (super-admin): returns err.message in the JSON to surface SMTP config
+      failures to the admin running the connectivity test.
+    templates/upload (tenant-admin): returns errMsg ONLY when
+      errMsg.includes("validation failed") — pre-vetted strings, in-code comment
+      already documents the gating. Both are admin-only; if PRD-216 widens the grep
+      to indirected bodies, give each an explicit allow pragma rather than mangle.
+
+VALIDATE (205 node_modules symlinked then removed)
+  - tsc --noEmit -> exit 0.
+  - check:auth-wrappers --strict -> exit 0: "107 files | 144 handlers | wrapped 129
+    | allow-listed 15 | violations 0". Canary + zero-files self-tests both pass —
+    the gate is BLOCKING and provably non-vacuous.
+  - check-no-error-message-leaks.mjs -> pass ("no error.message/err.message in
+    app/api Response.json bodies").
+  - vitest check-auth-wrappers -> 11/11 (incl. the new canary lock).
+
+PHASE 1 (US-001..010) COMPLETE: inventory + allow-list, AST gate (blocking locally
++ advisory CI), context-binding wrappers, hardened getCurrentUser, tenant-scoped
+customer/profile, all 107 routes wrapped-or-allow-listed.
+Next: US-011 (integration) is Docker-gated — run `docker info`; expect
+BLOCKED-DOCKER. US-012 (E2E) is BLOCKED-NEEDS-AUTH-DECISION (Clerk test-auth,
+PRD-207 OQ-1, Gerard). Both -> emit RALPH_BLOCKED, leave unchecked: the expected
+clean autonomous stop on this Docker-down dev box.
+

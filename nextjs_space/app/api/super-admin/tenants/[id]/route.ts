@@ -305,9 +305,9 @@ export const DELETE = withSuperAdminParams(async (_req, { user }, params) => {
         await client.organizations.deleteOrganization(clerkOrgId);
         console.log(`🗑️ Deleted Clerk org: ${clerkOrgId}`);
       } catch (error: any) {
-        const msg = `Failed to delete Clerk org ${clerkOrgId}: ${error.message}`;
-        console.error(msg);
-        cleanupErrors.push(msg);
+        // AC-5: log full detail server-side; the body must never carry error.message.
+        console.error(`Failed to delete Clerk org ${clerkOrgId}:`, error);
+        cleanupErrors.push(`Failed to delete Clerk org ${clerkOrgId}`);
       }
     }
 
@@ -324,9 +324,8 @@ export const DELETE = withSuperAdminParams(async (_req, { user }, params) => {
           console.log(`🗑️ Deleted Clerk user: ${cu.id} (${tenantUser.email})`);
         }
       } catch (error: any) {
-        const msg = `Failed to delete Clerk user ${tenantUser.email}: ${error.message}`;
-        console.error(msg);
-        cleanupErrors.push(msg);
+        console.error(`Failed to delete Clerk user ${tenantUser.email}:`, error);
+        cleanupErrors.push(`Failed to delete Clerk user ${tenantUser.email}`);
       }
     }
 
@@ -337,9 +336,8 @@ export const DELETE = withSuperAdminParams(async (_req, { user }, params) => {
         await removeCustomDomain(railwayDomainId);
         console.log(`🗑️ Removed Railway domain for tenant: ${tenant.customDomain}`);
       } catch (error: any) {
-        const msg = `Failed to remove Railway domain ${railwayDomainId}: ${error.message}`;
-        console.error(msg);
-        cleanupErrors.push(msg);
+        console.error(`Failed to remove Railway domain ${railwayDomainId}:`, error);
+        cleanupErrors.push(`Failed to remove Railway domain ${railwayDomainId}`);
       }
     }
 
