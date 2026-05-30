@@ -137,3 +137,24 @@ US-009 parseUuid rollout — tenant-admin [id] routes (16 files) — DONE 2026-0
   handler (same shape as US-008 drgreen-keys) since an uncaught throw here would framework-500.
 - Body validation (Zod) on PATCH/PUT/POST bodies left untouched — deferred to US-011.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
+
+US-010 Zod + parseJsonBody — public store body routes (2 files) — DONE 2026-05-30
+- Only 2 store routes read a body (grep req/request.json under app/api/store/): cart/add POST and
+  orders/submit POST. Both already parseSlug + end in apiError, so the parseJsonBody 400/413 surfaces
+  clean (ApiError.status pass-through) without touching their catches (AC-5, AC-6).
+- cart/add: added module-level cartAddSchema = z.object({ strainId: string 1..200, quantity: int 1..1000,
+  size: union(literal 2|5|10) }).strict(); replaced `await request.json()` + the 3 hand-rolled checks
+  (missing-fields / size-in-[2,5,10] / quantity<1) with `parseJsonBody(request, cartAddSchema)` — Zod now
+  enforces all three, so the manual 400 blocks were removed (schema is the single source of truth).
+- orders/submit: added orderSubmitSchema.strict() — shippingInfo is a .strict() object (address1 1..200,
+  address2 ≤200 optional [client always sends "" so optional, not min(1)], city/state ≤120, postalCode ≤20,
+  country ≤120, countryCode ≤10 optional) matching OrderSubmissionData["shippingInfo"]; cartItems is an
+  OPTIONAL .max(500) array of .passthrough() items ({ strainId 1..200, quantity int 1..10000 }) — passthrough
+  preserves the client's nested `strain` blob (checkout/page.tsx sends strainId/quantity/strain{...}) so the
+  DB Json cart-sync + Dr Green submit still see every key; loose because clientCartItems is typed any[].
+  Replaced `await request.json()` + the manual shippingInfo presence check with
+  `parseJsonBody(request, orderSubmitSchema)`; kept the log('REQUEST_BODY',...) trace intact.
+- Schema field shapes verified against downstream consumers (lib/drgreen-cart addToCart, lib/drgreen-orders
+  submitOrder/OrderSubmissionData) AND the real frontend payloads (CartContext, checkout/page.tsx) so .strict()
+  cannot 400 a legitimate save. cart/clear + cart/remove + orders/route + products/* carry NO body → untouched.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
