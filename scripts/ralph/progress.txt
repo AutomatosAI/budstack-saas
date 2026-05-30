@@ -82,3 +82,22 @@ US-006 Tenant DELETE: typed { confirm } body + stop cleanupErrors leak — DONE 
   failure AND retained in the TENANT_DELETED audit_logs metadata (server-side only) (AC-5).
 - audit_logs TENANT_DELETED row preserved unchanged — still written with full metadata (AC-8).
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.
+
+US-007 Scope + harden cleanup-s3 (prefix guard + same-origin + confirmation + audit) — DONE 2026-05-30
+- app/api/super-admin/templates/cleanup-s3/route.ts DELETE previously accepted any
+  ?prefix=templates/... incl. bare `templates/` (wipe ALL templates). Now the prefix must match
+  /^templates\/([a-zA-Z0-9._-]+)\/?$/ — a SINGLE non-empty slug segment, safe chars only, and the
+  extracted slug is rejected if it contains ".." (no traversal). Bare templates/ no longer matches
+  (empty slug group) (AC-1a). normalizedPrefix is rebuilt as `templates/${slug}/` (not raw input).
+- Added requireSameOrigin guard after the role check, then requireConfirmation(body, slug) — caller
+  must resend { confirm: "<slug>" } matching the targeted slug (await req.json().catch(()=>null));
+  mismatch → 400 CONFIRMATION_MISMATCH before any S3 delete (AC-3, AC-4).
+- Added a structured destructive-action audit line via console.error("[S3 Cleanup][AUDIT]", {...}):
+  action, actor (email||id), targetPrefix, filesDeleted, ISO timestamp (AC-8). Replaced the old
+  plain console.log. JSDoc updated to document the new contract.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.
+
+=== ALL 7 STORIES DONE (US-001..US-007) — RALPH_COMPLETE ===
+PRD-201 destructive-endpoint removal + CSRF defence-in-depth landed in 7 commits on
+ralph/prd-201-destructive-endpoint-csrf-hardening. Deferred (need PRD-207 harness): the Vitest unit
+tests for require-same-origin/require-confirmation and the integration/E2E tests from PRD §12.

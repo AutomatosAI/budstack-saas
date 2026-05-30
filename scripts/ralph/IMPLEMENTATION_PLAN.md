@@ -31,7 +31,7 @@ App in `nextjs_space/` (pnpm). Source PRD:
 - [x] US-004 — Enforce reserved + format on super-admin tenant rename (AC-7)
 - [x] US-005 — Apply `requireSameOrigin` to all destructive super-admin handlers (AC-4 100%, AC-2)
 - [x] US-006 — Tenant DELETE: typed `{ confirm }` body + stop `cleanupErrors` leak (AC-3, AC-5)
-- [ ] US-007 — Scope + harden `cleanup-s3`: prefix guard + confirmation + audit line (AC-1a, AC-3, AC-8) → RALPH_COMPLETE
+- [x] US-007 — Scope + harden `cleanup-s3`: prefix guard + confirmation + audit line (AC-1a, AC-3, AC-8) → RALPH_COMPLETE
 
 ## Notes
 - US-004 depends on US-003. US-005/006/007 depend on US-002. US-007 is the final story.
