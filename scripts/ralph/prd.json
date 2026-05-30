@@ -1,18 +1,17 @@
 {
   "project": "BudStacks SaaS",
-  "branchName": "ralph/prd-205-tenant-resolution-consolidation",
-  "description": "PRD-205 — Tenant Resolution Consolidation. Collapse the 7 divergent tenant-resolution helpers (lib/tenant.ts x5, lib/resolve-tenant-id.ts, the drgreen webhook route-local resolveTenant) plus the duplicate host derivation in middleware.ts into ONE canonical resolveTenant(input) in lib/tenant-resolver.ts. The canonical resolver RETURNS {tenantId, tenant} | null (never binds the ALS — PRD-202 owns binding), enforces isActive on every kind, returns a typed AmbiguousTenantResolution for multi-tenant email instead of a silent first-row pick, and shares one parseHostToTenantHint with middleware. Every other helper becomes a thin delegator. STACKED on the ralph/prd-202 branch (strict dependency: resolver must return-not-bind).",
+  "branchName": "ralph/prd-203-auth-wrapper-migration",
+  "description": "PRD-203 — Auth Wrapper Migration. Roll the two well-built-but-barely-used auth wrappers (lib/api-auth.ts: withTenantAuth/withTenantAuthParams/withSuperAdmin/withSuperAdminParams/withAuth) out to all 107 app/api/**/route.ts files (only 12 use one today; ~95 hand-roll `getCurrentUser() + if(!user) return 401`). Delete the hand-rolled blocks; handlers read user/tenantId from the wrapper context arg. Fix two correctness bugs underneath: (1) getCurrentUser tenant resolution is host-blind and its email fallback is unscoped/ambiguity-blind — wire it to 205's ambiguity-aware canonical resolveTenant and add a typed UserNotProvisionedError for the Clerk user.created race; (2) customer/profile does a no-tenant findFirst({where:{email}}) on GET+PATCH = cross-tenant leak — wrap it and resolve within the bound tenant context. Add a ts-morph CI gate (scripts/check-auth-wrappers.ts + pnpm check:auth-wrappers) that fails the build on any unwrapped, non-allow-listed handler. STACKED on ralph/prd-205 @ 06674ce (chain 202->205->203): strict deps PRD-202 (wrapper composes runWithTenantContext) + PRD-205 (wrapper/getCurrentUser call the canonical resolver). Soft overlap with PRD-204 (validation runs inside the wrapped handler; both touch the same route files — expect merge-time reconciliation).",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Shared host parser lib/parse-host.ts parseHostToTenantHint(host) (AC-2a)",
-      "description": "As a developer, I want one host-parsing utility that maps a request host to a tenant hint (subdomain | customDomain | null) so middleware.ts and the canonical resolver cannot drift.",
+      "title": "Route inventory + AUTH_PUBLIC_ROUTES allow-list (AC-4a/OQ-1)",
+      "description": "As a developer, I want every app/api route enumerated and categorized, and a small reviewed allow-list of the genuinely public/signature-verified routes, so the gate and the migration batches have one source of truth.",
       "acceptanceCriteria": [
-        "New lib/parse-host.ts exports parseHostToTenantHint(host: string): { kind: 'subdomain'; subdomain: string } | { kind: 'customDomain'; host: string } | null",
-        "Lifts the existing apex / multi-part-TLD handling (OQ-3, commit 6d6a381 / current middleware.ts + getTenantFromRequest logic) — strips port, treats www as no-subdomain, ignores localhost/127.0.0.1, uses NEXT_PUBLIC_BASE_DOMAIN (default budstacks.io) to split slug.<base> subdomains from apex custom domains",
-        "Pure function — no DB, no headers(), no ALS; deterministic for a given host + base domain",
-        "Unit tests (tests/unit/parse-host.test.ts): slug.budstacks.io -> subdomain; apex custom domain -> customDomain; www.budstacks.io -> null; localhost/127.0.0.1 -> null; host:port stripped; base domain itself -> null",
-        "Tests pass",
+        "All 107 app/api/**/route.ts files enumerated and categorized: super-admin (withSuperAdmin) | tenant-admin (withTenantAuth) | any-authenticated (withAuth) | public-allow-list. Inventory captured in scripts/ralph/route-inventory.md (or a comment block) with the chosen wrapper per route",
+        "AUTH_PUBLIC_ROUTES exported from lib/api-auth.ts (or a new lib/auth-public-routes.ts) as a small commented constant; every entry has a one-line justification (health = liveness; webhooks/** = own signature verification per PRD-211; store/[slug]/** = public storefront reads; clerk/auth callbacks = pre-auth)",
+        "Default-deny intent documented: anything not on the allow-list MUST be wrapped",
+        "No route handler bodies changed in this story (inventory + constant only)",
         "Typecheck passes"
       ],
       "priority": 1,
@@ -21,15 +20,12 @@
     },
     {
       "id": "US-002",
-      "title": "Canonical lib/tenant-resolver.ts resolveTenant(input) (AC-1/AC-1a/AC-1b)",
-      "description": "As a developer, I call resolveTenant(input) with a discriminated union of the legitimate sources and get a {tenantId, tenant} | null (or typed ambiguous) back — one rule-set, no ALS side-effect.",
+      "title": "check-auth-wrappers AST gate + pnpm script + unit test (AC-4/AC-4b/OQ-4)",
+      "description": "As a developer, CI must fail when a route exports an HTTP handler that is not an approved wrapper and is not allow-listed. Build the gate now (report-only — repo still has ~95 unwrapped); it flips to blocking in US-009.",
       "acceptanceCriteria": [
-        "lib/tenant-resolver.ts exports resolveTenant(input) where input is { kind: 'headers' } | { kind: 'host'; host: string; pathname: string } | { kind: 'slug'; slug: string } | { kind: 'clerk'; clerkOrgId: string; email: string }",
-        "Returns Promise<{ tenantId: string; tenant: Tenant } | null>; an email matching >1 active tenant returns a typed AmbiguousTenantResolution (exported) instead of a silent first-row pick (AC-1b)",
-        "isActive: true is enforced on EVERY kind, including the clerk/email fallback (closes the #6 inactive-tenant gap) (AC-1b)",
-        "headers kind reads x-tenant-slug then x-tenant-subdomain then x-tenant-custom-domain (preserving getCurrentTenant precedence); host kind uses parseHostToTenantHint + the /store/{slug} path match; clerk kind prefers the clerkOrgId->settings match over the email fallback",
-        "RETURN-not-bind: the resolver makes ZERO setTenantContext/enterWith calls (AC-1a)",
-        "Unit tests (tests/unit/tenant-resolver.test.ts) with prisma + headers module-mocked: each kind resolves the right tenant; inactive tenant -> null on every kind; ambiguous email -> AmbiguousTenantResolution; a spy proves no setTenantContext call",
+        "scripts/check-auth-wrappers.ts parses every app/api/**/route.ts via ts-morph (AST, not regex — catches re-exports/aliases per OQ-4), finds each exported GET/POST/PUT/PATCH/DELETE, and classifies its initializer as wrapped (withTenantAuth|withTenantAuthParams|withSuperAdmin|withSuperAdminParams|withAuth) | allow-listed (AUTH_PUBLIC_ROUTES) | VIOLATION",
+        "Exposed as `pnpm check:auth-wrappers`; prints the offending file -> handler list and a wrapped/total summary; exit code is currently advisory (US-009 makes it exit non-zero)",
+        "Unit test (tests/unit/check-auth-wrappers.test.ts): a fixture route with a bare exported GET is flagged VIOLATION; a wrapped route passes; an allow-listed route passes",
         "Tests pass",
         "Typecheck passes"
       ],
@@ -39,14 +35,14 @@
     },
     {
       "id": "US-003",
-      "title": "Collapse lib/tenant.ts resolvers to delegators (AC-2)",
-      "description": "As a developer, getCurrentTenant/getCurrentTenantId/requireTenant/getTenantBySlug/getTenantFromRequest keep their signatures but delegate the lookup to the canonical resolver — the bespoke host parsing and any remaining divergence is gone.",
+      "title": "Harden getCurrentUser + resolve-tenant-id (AC-2/AC-2a)",
+      "description": "As a newly-signed-up or multi-tenant user, my auth must resolve correctly: ambiguous email -> 403 (not a silent first-row pick), and a valid Clerk session with no DB row yet -> retryable 409 (not a silent unauthorized null).",
       "acceptanceCriteria": [
-        "getCurrentTenant = cache(async () => (await resolveTenant({ kind: 'headers' }))?.tenant ?? null) — cache() kept (OQ-1); getCurrentTenantId + requireTenant keep delegating to it with identical throw-on-null ergonomics",
-        "getTenantBySlug(slug) delegates to resolveTenant({ kind: 'slug', slug }) (lower-case retry now lives in the canonical resolver)",
-        "getTenantFromRequest(req) delegates to resolveTenant({ kind: 'host', host, pathname }) — its bespoke host/subdomain/customDomain parsing is deleted in favour of the shared util",
-        "All five keep their existing return shapes/signatures; behaviour identical except the closed isActive gap; no setTenantContext import remains in lib/tenant.ts",
-        "Unit tests (tests/unit/tenant-delegators.test.ts) with resolveTenant module-mocked: each delegator forwards the right input kind and unwraps the result correctly (requireTenant throws on null)",
+        "getCurrentUser (lib/auth-helper.ts) resolves the tenant via 205's canonical resolveTenant({kind:'clerk'}) (isActive-enforced, ambiguity-aware) instead of the in-place unscoped email findFirst; on AmbiguousTenantResolution it returns/propagates a typed result the wrapper renders as 403 (not a guess)",
+        "A valid Clerk session whose DB user row does not exist yet returns a typed UserNotProvisionedError (-> 409 retryable) rather than null-that-looks-like-401; the Clerk user.created provisioning ordering is documented in a comment",
+        "resolve-tenant-id.ts keeps its signature; any remaining unscoped fallback is removed in favour of the canonical path (205 already made resolveTenantIdFromClerkOrg delegate — this story consumes its typed ambiguous result end-to-end)",
+        "Unit tests (tests/unit/auth-helper.test.ts): ambiguous email -> 403-typed path; valid session + no row -> UserNotProvisionedError; happy path -> {user, tenantId}",
+        "No console.log in prod code (structured console.warn for auth.tenant_resolution_ambiguous / auth.user_not_provisioned audit lines is acceptable)",
         "Tests pass",
         "Typecheck passes"
       ],
@@ -56,14 +52,14 @@
     },
     {
       "id": "US-004",
-      "title": "resolveTenantIdFromClerkOrg delegates to canonical; close inactive email fallback (AC-1b/AC-2)",
-      "description": "As an operator, a deactivated tenant must resolve to null even through the Clerk-org / email path. resolveTenantIdFromClerkOrg becomes a thin delegator to resolveTenant({kind:'clerk'}).",
+      "title": "Tenant-scope + wrap customer/profile GET+PATCH (AC-3)",
+      "description": "As tenant A's customer, /api/customer/profile must return only my tenant-A row even if a tenant-B user shares my email. Wrap the route and resolve within the bound tenant context.",
       "acceptanceCriteria": [
-        "lib/resolve-tenant-id.ts resolveTenantIdFromClerkOrg(orgId, email) delegates to resolveTenant({ kind: 'clerk', clerkOrgId: orgId, email }) and returns the tenantId (or null)",
-        "The previously-unscoped users.findFirst({where:{email}}) fallback now goes through the canonical resolver's isActive-enforced, ambiguity-aware path (AC-1b) — an inactive tenant no longer resolves via the user relation",
-        "An ambiguous (>1 tenant) email surfaces the typed ambiguous result to the caller rather than a silent first-row id (consumed by PRD-203 as 403)",
-        "Existing return type/signature preserved for current callers",
-        "Unit tests (tests/unit/resolve-tenant-id.test.ts) with resolveTenant mocked: org match returns id; inactive tenant -> null; ambiguous email -> ambiguous (not a silent id)",
+        "app/api/customer/profile/route.ts GET + PATCH are wrapped (withAuth or withTenantAuth) so they run inside one bound tenant scope; the hand-rolled currentUser()/getCurrentUser block is deleted",
+        "The findFirst({where:{email}}) at :25 and the PATCH lookup at :79 are tenant-scoped — either an explicit tenantId filter or reliance on the now-bound Prisma $use scoping (PRD-202) — so a tenant-A session can never read or mutate a tenant-B row sharing the email",
+        "Success payload shape is unchanged for the legitimate same-tenant caller",
+        "Unit test (tests/unit/customer-profile.test.ts) with prisma mocked: the GET/PATCH lookups are issued with a tenant filter (or under a bound context); no unscoped email-only query remains",
+        "Cross-tenant proof against real Postgres is deferred to US-010 (Docker-gated) and US-011 (E2E)",
         "Tests pass",
         "Typecheck passes"
       ],
@@ -73,13 +69,13 @@
     },
     {
       "id": "US-005",
-      "title": "middleware.ts consumes the shared parseHostToTenantHint (AC-2a)",
-      "description": "As a developer, the host->subdomain->customDomain derivation in middleware.ts must be the SAME code the resolver uses, so they cannot drift.",
+      "title": "Migrate super-admin routes to withSuperAdmin/Params (AC-1/AC-1a)",
+      "description": "As an auditor, every super-admin route must enforce SUPER_ADMIN via the wrapper, not a copy-pasted role check. Migrate the ~25 remaining super-admin routes (33 total, 8 already wrapped).",
       "acceptanceCriteria": [
-        "middleware.ts host-derivation block (~:50-100) is replaced by a call to parseHostToTenantHint(host) from lib/parse-host.ts; the x-tenant-subdomain / x-tenant-custom-domain / x-tenant-slug headers it sets are unchanged in name + value",
-        "No second host-parsing implementation remains in middleware.ts",
-        "Behaviour preserved: the same hosts that resolved a subdomain/customDomain before still set the same headers (verified by reasoning + the parse-host unit fixtures)",
-        "Edge runtime compatible — parseHostToTenantHint stays pure (no node-only APIs) so it is importable from middleware",
+        "Every app/api/super-admin/**/route.ts handler uses withSuperAdmin (no [param]) or withSuperAdminParams ([id]/[slug] routes); the hand-rolled `getCurrentUser() + if(!user||role!==SUPER_ADMIN) return 401` blocks are deleted",
+        "Handlers read user/tenantId from the wrapper context arg — they do NOT re-call getCurrentUser() inside the body (AC-1a)",
+        "Success payloads unchanged; only the auth + error edge is unified; any error.message in a response body is removed in favour of the wrapper's apiError() path",
+        "`pnpm check:auth-wrappers` shows the super-admin group fully wrapped (wrapped count rises by the migrated number)",
         "Typecheck passes"
       ],
       "priority": 5,
@@ -88,14 +84,14 @@
     },
     {
       "id": "US-006",
-      "title": "Webhook route-local resolveTenant delegates to canonical (AC-2)",
-      "description": "As a developer, the drgreen status webhook's route-local resolveTenant must call the one canonical resolver instead of re-implementing a lookup. Helper swap only — the verify-before-lookup ordering fix is PRD-211, not here.",
+      "title": "Migrate tenant-admin routes batch 1 to withTenantAuth/Params (AC-1/AC-1a)",
+      "description": "Migrate roughly the first half of the 43 tenant-admin routes (3 already wrapped) to the tenant-admin wrappers.",
       "acceptanceCriteria": [
-        "app/api/webhooks/drgreen/status/route.ts route-local resolveTenant(...) is replaced by a call to the canonical resolveTenant (appropriate kind for the webhook payload's tenant hint)",
-        "Lookup ORDER relative to signature verification is left exactly as-is (explicitly noted as PRD-211's job) — this story changes only WHICH resolver is called, not WHEN",
-        "Webhook behaviour for a valid payload is unchanged; isActive is now enforced consistently",
-        "A short comment references PRD-211 for the verify-before-lookup reordering",
-        "Typecheck passes"
+        "~Half of app/api/tenant-admin/**/route.ts handlers use withTenantAuth / withTenantAuthParams; hand-rolled auth blocks deleted; user/tenantId read from context (AC-1a)",
+        "Each migrated handler that previously asserted tenant presence keeps that guarantee via the wrapper (withTenantAuth asserts tenantId present -> 403 if missing)",
+        "Success payloads unchanged; error.message leaks removed from migrated routes",
+        "Typecheck passes after the batch",
+        "`pnpm check:auth-wrappers` violation count drops by the migrated number"
       ],
       "priority": 6,
       "passes": false,
@@ -103,14 +99,14 @@
     },
     {
       "id": "US-007",
-      "title": "Document users.email single-tenant assumption + specify PRD-208 migration (AC-3/AC-3a)",
-      "description": "As an auditor, the load-bearing 'resolve by email is safe because email is globally unique' assumption must be written down, and the migration to per-tenant uniqueness specified (not executed).",
+      "title": "Migrate tenant-admin routes batch 2 to withTenantAuth/Params (AC-1/AC-1a)",
+      "description": "Migrate the remaining tenant-admin routes to the tenant-admin wrappers.",
       "acceptanceCriteria": [
-        "lib/tenant-resolver.ts carries a clear doc block: the email fallback is only safe while users.email is globally @unique with nullable tenantId (one human cannot exist in two tenants); the ambiguous-result path is what makes the future multi-tenant case safe",
-        "prisma/schema.prisma gets a comment on users.email noting the single-tenant-per-user coupling and pointing to the PRD-208 migration",
-        "The PRD-208 migration is specified in-repo (the resolver doc block or a short scripts/ralph note): drop global @unique, add @@unique([email, tenantId]), backfill existing single rows trivially, Clerk-org-mapping implication — NOT executed in this PRD (no schema change / no migration file)",
-        "No prisma migration is generated and no schema field is altered (comment-only)",
-        "Typecheck passes"
+        "All remaining app/api/tenant-admin/**/route.ts handlers use withTenantAuth / withTenantAuthParams; hand-rolled auth blocks deleted; user/tenantId read from context (AC-1a)",
+        "Routes with mixed methods (e.g. GET tenant-admin + POST tenant-admin) wrap each exported method",
+        "Success payloads unchanged; error.message leaks removed from migrated routes",
+        "Typecheck passes after the batch",
+        "`pnpm check:auth-wrappers` shows the entire tenant-admin group wrapped"
       ],
       "priority": 7,
       "passes": false,
@@ -118,14 +114,13 @@
     },
     {
       "id": "US-008",
-      "title": "Local grep gates + success-metric check (AC-1a/AC-2b)",
-      "description": "As the build agent, I want local checks proving the consolidation actually held: no ALS mutation in the resolver, and no tenant lookups outside the canonical file.",
+      "title": "Migrate remaining authenticated routes + confirm public allow-list (AC-1/AC-4a)",
+      "description": "Migrate the remaining authenticated routes (tenant, orders, consultation, account, user, signup, shop, onboarding, doctor-green, customer) to the appropriate wrapper, and confirm the genuinely public/signature-verified routes (store/**, webhooks/**, health, clerk callbacks) are on AUTH_PUBLIC_ROUTES rather than wrapped.",
       "acceptanceCriteria": [
-        "A small script scripts/ralph/check-prd-205.sh (or documented grep commands) asserts: zero setTenantContext/.enterWith( calls inside lib/tenant-resolver.ts (AC-1a)",
-        "Asserts zero standalone findFirst({ where: { subdomain ... }}) / customDomain tenant lookups OUTSIDE lib/tenant-resolver.ts in app/ + lib/ (AC-2b) — middleware uses the header hint, not a DB lookup, so it is clean",
-        "Documents the count: distinct tenant-resolution implementations = 1 canonical + thin delegators (success metric)",
-        "The check is the local stand-in for the enforced CI gate, which lives in PRD-216",
-        "Running the check passes (exit 0)",
+        "Each remaining authenticated route uses withAuth (any logged-in user) or withTenantAuth (tenant-scoped) as appropriate to its current role check; hand-rolled blocks deleted; user/tenantId from context",
+        "store/**, webhooks/**, health, and any pre-auth callback routes are confirmed present in AUTH_PUBLIC_ROUTES with justification (NOT wrapped) — webhooks keep their own signature verification (PRD-211)",
+        "Any route that is neither clearly authenticated nor clearly public is flagged in scripts/ralph/route-inventory.md for human review rather than guessed (default-deny: if unsure, wrap it)",
+        "Success payloads unchanged; error.message leaks removed from migrated routes",
         "Typecheck passes"
       ],
       "priority": 8,
@@ -134,13 +129,14 @@
     },
     {
       "id": "US-009",
-      "title": "Integration: tenant-resolver active/inactive + ambiguous (testcontainers) — Docker-gated (AC-1b)",
-      "description": "As an auditor, I want the canonical resolver proven against real Postgres: active resolves, inactive resolves to null on every kind, and a multi-tenant email collision returns the typed ambiguous result.",
+      "title": "Flip gate to blocking + error.message grep gate + non-blocking CI step (AC-4/AC-4b/AC-5)",
+      "description": "As the build agent, close the loop: the gate now fails on any unwrapped non-allow-listed handler, a grep gate proves no error.message leaks in app/api responses, and a (non-blocking) CI step is added — the blocking CI wiring formally lives in PRD-216.",
       "acceptanceCriteria": [
-        "tests/integration/tenant-resolver.integration.test.ts seeds an active tenant, an inactive tenant, and a pre-migration multi-tenant email collision; asserts active-only resolution per kind and ambiguous handling against real Postgres (AC-1b)",
-        "Uses the testcontainers Postgres harness (PRD-207 pattern)",
-        "GATE: run 'docker info' first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
-        "Tests pass (when Docker is available)",
+        "scripts/check-auth-wrappers.ts now exits non-zero on any VIOLATION; `pnpm check:auth-wrappers` -> 0 unwrapped, non-allow-listed handlers (wrapped+allow-listed == 107)",
+        "A grep gate (scripts/check-auth-wrappers.ts or a sibling scripts/ci script, added to pnpm check:security) asserts zero `error.message` / `String(error)` inside NextResponse.json(...) across app/api/** (AC-5, shared intent with PRD-200)",
+        "A non-blocking `pnpm check:auth-wrappers` step is added to .github/workflows/ci.yml (commented that PRD-216 promotes it to blocking alongside the test gate) — mirrors how PRD-205 left local gates for PRD-216 to enforce",
+        "A deliberately-unwrapped fixture route proves the gate exits non-zero (then removed) — non-vacuousness check",
+        "Running `pnpm check:auth-wrappers` passes (exit 0) with the real tree fully migrated",
         "Typecheck passes"
       ],
       "priority": 9,
@@ -149,12 +145,13 @@
     },
     {
       "id": "US-010",
-      "title": "Integration: resolver-delegators consistent with canonical (testcontainers) — Docker-gated (AC-2)",
-      "description": "As a developer, I want the delegators (getCurrentTenant/getTenantBySlug/getTenantFromRequest/resolveTenantIdFromClerkOrg) proven to return values consistent with the canonical resolver against real Postgres.",
+      "title": "Integration: customer-profile cross-tenant + wrapper rollout (testcontainers) — Docker-gated (AC-3a)",
+      "description": "As an auditor, prove against real Postgres that customer/profile is tenant-scoped (two tenants, same email -> each sees only its own row on GET+PATCH) and that a migrated route enforces 401 anon / 403 wrong-tenant / 200 correct.",
       "acceptanceCriteria": [
-        "tests/integration/resolver-delegators.integration.test.ts asserts each delegator returns the same tenant the canonical resolver returns for the equivalent input (AC-2)",
-        "Uses the testcontainers Postgres harness (PRD-207 pattern)",
-        "GATE: run 'docker info' first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
+        "tests/integration/customer-profile.tenant-scope.integration.test.ts seeds two tenants with the SAME customer email; asserts GET and PATCH each see only the caller's tenant row (AC-3a)",
+        "tests/integration/auth-wrapper.rollout.integration.test.ts spot-checks a migrated tenant route (401 anon, 403 wrong tenant, 200 correct) and a migrated super-admin route",
+        "Uses the testcontainers Postgres harness (PRD-207 pattern); substituting a DB mock to dodge Docker is FORBIDDEN",
+        "GATE: run `docker info` first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
         "Tests pass (when Docker is available)",
         "Typecheck passes"
       ],
@@ -164,10 +161,10 @@
     },
     {
       "id": "US-011",
-      "title": "E2E: inactive-tenant-404 (Playwright) — auth-gated",
-      "description": "As an auditor, I want a deactivated tenant's subdomain AND custom domain to both fail to resolve (no storefront served) from every entry path, in a real browser.",
+      "title": "E2E: customer-profile cross-tenant isolation (Playwright) — auth-gated",
+      "description": "As an auditor, prove end-to-end in a real browser that two tenant subdomains sharing a customer email never leak each other's profile.",
       "acceptanceCriteria": [
-        "tests/e2e/inactive-tenant-404.spec.ts drives a deactivated tenant's subdomain and custom domain and asserts no storefront is served from any entry path",
+        "tests/e2e/customer-profile-isolation.spec.ts drives two tenant subdomains with the same customer email and asserts no cross-tenant profile bleed on view + edit",
         "GATE: Clerk test-auth approach is undecided (PRD-207 OQ-1, owner Gerard). Do NOT invent an auth shim -> mark BLOCKED-NEEDS-AUTH-DECISION, emit RALPH_BLOCKED, leave unchecked",
         "Typecheck passes"
       ],
