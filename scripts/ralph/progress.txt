@@ -39,3 +39,31 @@ Shared host parser lib/parse-host.ts parseHostToTenantHint(host) — AC-2a.
 - tests/unit/parse-host.test.ts: 9 cases (subdomain, :port strip, custom apex+sub, www.*,
   base apex, localhost/127.0.0.1, empty/null, custom base-domain arg, multi-label subdomain).
 - Validation: pnpm test:unit -> 39/39 green (9 new + 30 inherited from 202); npx tsc --noEmit -> 0.
+
+--------------------------------------------------------------------------------
+US-002  DONE  2026-05-30
+Canonical lib/tenant-resolver.ts resolveTenant(input) — AC-1 / AC-1a / AC-1b.
+- New lib/tenant-resolver.ts: the ONE resolver. Discriminated input union
+  {headers}|{host,pathname}|{slug}|{clerk,clerkOrgId,email}; overloaded so only the
+  clerk path's return type carries AmbiguousTenantResolution. RETURNS {tenantId,tenant}
+  | null (clerk: | AmbiguousTenantResolution) and NEVER binds the ALS (no
+  setTenantContext/enterWith import) — binding stays PRD-202's runWithTenantContext.
+- isActive:true on EVERY kind (subdomain, customDomain, clerk-org settings JSON filter,
+  email fallback). Closes the resolve-tenant-id.ts inactive/unscoped email gap (AC-1b).
+- Email -> >1 distinct ACTIVE tenant returns a typed AmbiguousTenantResolution (emits
+  tenant.resolution_ambiguous) instead of a silent first-row pick; only-inactive matches
+  emit tenant.resolved_inactive_blocked and resolve null; same-tenant dupes dedupe to one.
+- Clerk-org uses a Prisma typed JSON filter settings:{path:["clerkOrgId"],equals} (not raw
+  $queryRaw) so isActive is enforceable and there's no column-casing risk; try/catch warns
+  and falls through to the email path.
+- Tenant type imported from @prisma/client (type tenants) rather than inferred off `prisma`
+  — lib/db.ts's build-time mock widens the exported prisma to `any`, which would otherwise
+  collapse the inferred Tenant + the email .map/.filter params to any/unknown.
+- tests/unit/tenant-resolver.test.ts: 19 cases. Module-boundary mocks of @/lib/db +
+  next/headers (DB-mock dodging Docker is NOT used to fake the integration proof — that's
+  US-009); tenant-context runs REAL so the AC-1a return-not-bind proof is meaningful
+  (getTenantContext()/hasTenantContext() asserted unbound before AND after every kind).
+  Covers per-kind resolution, header precedence, /store/{slug} path win, lower-case retry,
+  inactive->null per kind, clerk-org isActive filter, email single/inactive/ambiguous/dedupe/
+  fallback/none.
+- Validation: pnpm test:unit -> 58/58 green (19 new + 39 inherited); npx tsc --noEmit -> 0.

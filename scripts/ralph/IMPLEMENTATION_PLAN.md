@@ -13,7 +13,7 @@ Merge order: **202 → 205** (205 is stacked on 202; merge 202 first and 205's P
 ## Phase 1 — canonical resolver + delegators + local gates (AUTONOMOUS, node-only)
 
 - [x] US-001 — Shared host parser `lib/parse-host.ts` `parseHostToTenantHint(host)` (lift the apex / multi-part-TLD handling, OQ-3) + unit suite (AC-2a)
-- [ ] US-002 — Canonical `lib/tenant-resolver.ts` `resolveTenant(input)` discriminated union (`headers`/`host`/`slug`/`clerk`), uniform `isActive`, **return-not-bind**, typed `AmbiguousTenantResolution` (AC-1/AC-1a/AC-1b) + unit suite (no-`setTenantContext` spy, inactive→null per kind, ambiguous email)
+- [x] US-002 — Canonical `lib/tenant-resolver.ts` `resolveTenant(input)` discriminated union (`headers`/`host`/`slug`/`clerk`), uniform `isActive`, **return-not-bind**, typed `AmbiguousTenantResolution` (AC-1/AC-1a/AC-1b) + unit suite (no-`setTenantContext` spy, inactive→null per kind, ambiguous email)
 - [ ] US-003 — Collapse `lib/tenant.ts` (`getCurrentTenant`/`getCurrentTenantId`/`requireTenant`/`getTenantBySlug`/`getTenantFromRequest`) to thin delegators on the canonical resolver; keep `cache()`/throw ergonomics; bespoke host parsing removed in favour of the shared util (AC-2) + delegator unit tests
 - [ ] US-004 — `lib/resolve-tenant-id.ts` `resolveTenantIdFromClerkOrg` → delegate to `resolveTenant({ kind: 'clerk' })`; close the unscoped/inactive email fallback (AC-1b/AC-2) + unit test
 - [ ] US-005 — `middleware.ts` host derivation (`:50-100`) consumes the shared `parseHostToTenantHint` so middleware + resolver cannot drift (AC-2a)
