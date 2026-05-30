@@ -68,8 +68,8 @@
         "BROWSER SMOKE confirming Clerk + Turnstile still load under the nonce CSP is a HUMAN follow-up (AC-2b) — recorded in progress.txt"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "DONE (version-accurate vs the literal AC wording). VERIFIED IN INSTALLED SOURCE: (1) Clerk @clerk/nextjs ^6.39.3 app-router ClerkProvider auto-resolves the nonce from the x-nonce request header (then falls back to the CSP header) ONLY when the `dynamic` prop is set — and it OVERRIDES any explicit `nonce` prop (dist/esm/app-router/server/ClerkProvider.js:18,72). So the correct integration is <ClerkProvider dynamic> (added in app/layout.tsx), NOT nonce={nonce}. (2) Next app-render reads the nonce from the *request* Content-Security-Policy header (dist/server/app-render/app-render.js:572) to nonce framework bootstrap + next/script; US-003 only set the response CSP, so middleware.ts now ALSO sets requestHeaders Content-Security-Policy (variant irrelevant — only the token is parsed; browser never sees it). (3) Both next/script <Script> tags (app/tenant-admin/branding/branding-form.tsx:895 PageAgent CDN; components/admin/AutomatosWidgetWrapper.tsx:48 /automatos-widget.js) are 'use client' so cannot read headers(); they auto-receive the nonce via HeadManagerContext (dist/client/script.js) and under 'strict-dynamic' their nonced loader trusts the external script transitively — no manual prop needed or possible. (4) dangerouslySetInnerHTML audit across app/** + components/**: ZERO inline <script> sinks — every hit is a <style> (sanitizeCss), a hardcoded SVG, or sanitized HTML content in a <div>; scripts injected via innerHTML never execute, so none are script-src concerns. Added 2 guard unit tests (nonce contains none of < > & U+2028 U+2029 that Clerk/Next reject; nonce round-trips through the 'nonce-...' parser). pnpm test 19 passed; tsc exit 0; pnpm build exit 0. OQ-2 + AC-2b browser smoke recorded in progress.txt as the human gate."
     },
     {
       "id": "US-005",

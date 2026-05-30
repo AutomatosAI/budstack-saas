@@ -41,13 +41,38 @@ DoS/SSRF advisories REQUIRES the Next 15.x major bump. Recorded against OQ-1.
   >> HUMAN GATE (AC-2b): browser smoke — Clerk login + a storefront page under the
      nonce CSP, DevTools console shows ZERO CSP violations. Must pass before prod.
 
+[US-004] DONE — Nonce propagation to Clerk + inline-script audit (AC-2a).
+  VERIFIED against the INSTALLED package source, not docs:
+  - Clerk ^6.39.3: app-router ClerkProvider reads the nonce from the x-nonce
+    request header (CSP-header fallback) but ONLY when the `dynamic` prop is set,
+    and it OVERRIDES any explicit nonce prop (ClerkProvider.js:18,72). => added
+    <ClerkProvider dynamic> in app/layout.tsx (NOT nonce={nonce}, which is dead).
+  - Next reads the nonce from the *request* CSP header (app-render.js:572) to
+    nonce framework bootstrap + next/script. US-003 set only the response CSP, so
+    middleware.ts now ALSO sets requestHeaders Content-Security-Policy. Without
+    this every framework script is blocked under strict-dynamic (white screen).
+  - The 2 next/script <Script> tags (branding-form PageAgent CDN; AutomatosWidget
+    /automatos-widget.js) are 'use client' => can't read headers(); they auto-get
+    the nonce via HeadManagerContext (client/script.js). strict-dynamic then trusts
+    the external scripts transitively through the nonced loader.
+  - dangerouslySetInnerHTML sweep (app/** + components/**): ZERO inline <script>;
+    all hits are <style> (sanitizeCss), hardcoded SVG, or sanitized HTML in a <div>.
+    Browsers never execute script inserted via innerHTML => no script-src concern.
+  +2 guard unit tests (nonce excludes < > & U+2028 U+2029; nonce round-trips the
+  'nonce-...' parser). pnpm test 19 passed; tsc exit 0; pnpm build exit 0.
+  >> HUMAN GATE (AC-2b): browser smoke must confirm Clerk login + Cloudflare
+     Turnstile + the PageAgent/Automatos widgets all load with ZERO console CSP
+     violations under the nonce policy.
+
 [OQ / HUMAN FOLLOW-UPS — carried for Gerard, do NOT auto-resolve]
   OQ-1 (AC-1):  Next 15.x is the ONLY way to clear the HIGH DoS/SSRF advisories
                 (14.2.35 is already the newest 14.2.x). US-005 attempts the bump on
                 this worktree; go/no-go + AC-1a App-Router smoke is Gerard's call.
-  OQ-2 (AC-2a): inline-script reliance (Clerk, Cloudflare Turnstile, storefront
-                template embeds) — enumerated in US-004; anything we don't control
-                that needs 'unsafe-inline' is a documented deviation, not a silent
-                policy relax.
+  OQ-2 (AC-2a): RESOLVED in US-004 — inline-script reliance enumerated against the
+                installed source. No app-authored inline <script> remains; Clerk +
+                Turnstile + the two widget <Script>s are nonced/transitively trusted
+                under strict-dynamic. The only residual risk is runtime (a tenant
+                template embedding its own inline <script>) — caught by AC-2b smoke,
+                not a code gap. No 'unsafe-inline' was re-introduced.
   AC-2b:        nonce-CSP browser smoke (above) — owned by Gerard.
 

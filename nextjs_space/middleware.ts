@@ -1,6 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { applyCsp, generateNonce, variantForServedPath } from "@/lib/security/csp";
+import { applyCsp, buildCsp, generateNonce, variantForServedPath } from "@/lib/security/csp";
 
 // Define public routes
 const isPublicRoute = createRouteMatcher([
@@ -49,10 +49,17 @@ export default clerkMiddleware(async (auth, req) => {
   requestHeaders.delete('x-tenant-custom-domain');
 
   // SECURITY (PRD-218, AC-2): one fresh nonce per request. Exposed to Server
-  // Components / <Script> / <ClerkProvider> via the x-nonce request header and
+  // Components / <ClerkProvider dynamic> via the x-nonce request header and
   // bound into the response CSP below — request and response nonce must match.
   const nonce = generateNonce();
   requestHeaders.set('x-nonce', nonce);
+  // Next's app-render + next/script read the nonce from the *request* CSP
+  // header (not x-nonce) to nonce the framework bootstrap + <Script> tags —
+  // without this they are blocked under 'strict-dynamic' and the page never
+  // hydrates. The variant is irrelevant on the request copy (only the
+  // 'nonce-…' token is parsed and the browser never sees this header); each
+  // response still gets its precise per-variant policy via applyCsp below.
+  requestHeaders.set('Content-Security-Policy', buildCsp({ nonce, variant: 'base' }));
 
   const currentHost = hostname.replace(/(:\d+)/, '');
   const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";

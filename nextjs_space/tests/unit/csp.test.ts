@@ -26,6 +26,20 @@ describe("generateNonce", () => {
     const seen = new Set(Array.from({ length: 50 }, () => generateNonce()));
     expect(seen.size).toBe(50);
   });
+
+  it("never contains the chars Clerk/Next reject in a nonce", () => {
+    // Clerk (app-router/server/utils) and Next reject a nonce containing
+    // < > & or the U+2028 / U+2029 line separators: it would be dropped and the
+    // page would fail to hydrate under strict-dynamic. base64 cannot produce
+    // these, but guard against a future encoding change.
+    const forbidden = ["<", ">", "&", String.fromCharCode(0x2028), String.fromCharCode(0x2029)];
+    for (let i = 0; i < 100; i++) {
+      const n = generateNonce();
+      for (const ch of forbidden) {
+        expect(n.includes(ch)).toBe(false);
+      }
+    }
+  });
 });
 
 describe("buildCsp", () => {
@@ -76,6 +90,18 @@ describe("buildCsp", () => {
     expect(scriptSrc).toContain("https://*.clerk.accounts.dev");
     expect(scriptSrc).toContain("https://challenges.cloudflare.com");
   });
+
+  it("embeds a nonce token recoverable by the framework's 'nonce-...' parser", () => {
+    // Next (app-render) + Clerk both extract the nonce by scanning script-src
+    // for a 'nonce-XXX' token. Prove the policy we emit is parseable that way
+    // and round-trips back to the exact nonce.
+    const scriptSrc = directive(buildCsp({ nonce: NONCE, variant: "base" }), "script-src");
+    const token = scriptSrc
+      .split(" ")
+      .find((s) => s.startsWith("'nonce-") && s.endsWith("'"));
+    expect(token).toBeDefined();
+    expect(token?.slice("'nonce-".length, -1)).toBe(NONCE);
+  });
 });
 
 describe("variantForServedPath", () => {
@@ -104,7 +130,7 @@ describe("applyCsp", () => {
     expect(csp).not.toBeNull();
     expect(csp).toContain(`'nonce-${NONCE}'`);
     expect(csp).toContain("frame-ancestors 'self'");
-    // Headers can only hold one value for a given name — assert it equals the built policy.
+    // Headers can only hold one value for a given name - assert it equals the built policy.
     expect(csp).toBe(buildCsp({ nonce: NONCE, variant: "store" }));
   });
 
