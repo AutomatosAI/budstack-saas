@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { editSubmission } from "@/lib/marketplace-review-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export async function PUT(
   request: NextRequest,
@@ -14,7 +15,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
+    const id = parseUuid((await params).id);
     const body = await request.json();
     const { layoutJson, defaultsJson, configJson, stylesCss } = body;
 

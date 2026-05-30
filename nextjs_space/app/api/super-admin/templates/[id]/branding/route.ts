@@ -5,6 +5,8 @@ import { getJsonFromS3, uploadFile } from "@/lib/s3";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 /**
  * Super Admin Marketplace Template Branding API
@@ -21,8 +23,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(params.id);
+
     const template = await prisma.templates.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!template || !template.slug) {
@@ -285,10 +289,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     return NextResponse.json({ success: true, message: "Marketplace template updated" });
   } catch (error) {
-    console.error("[super-admin] Marketplace template branding error:", error);
-    return NextResponse.json(
-      { error: "Failed to update template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/super-admin/templates/[id]/branding",
+      safeMessage: "Failed to update template",
+    });
   }
 }

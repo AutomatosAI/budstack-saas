@@ -7,6 +7,7 @@ import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export async function PUT(
   req: NextRequest,
@@ -18,8 +19,10 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(params.id);
+
     const template = await prisma.templates.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
     if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
@@ -72,7 +75,7 @@ export async function PUT(
     updateData.updatedAt = new Date();
 
     await prisma.templates.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 
@@ -107,8 +110,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(params.id);
+
     const template = await prisma.templates.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
     if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
@@ -118,7 +123,7 @@ export async function PATCH(
 
     if (typeof body.isActive === "boolean") {
       await prisma.templates.update({
-        where: { id: params.id },
+        where: { id },
         data: { isActive: body.isActive, updatedAt: new Date() },
       });
 
@@ -126,7 +131,7 @@ export async function PATCH(
       await createAuditLog({
         action: body.isActive ? AUDIT_ACTIONS.TEMPLATE.UPDATED : AUDIT_ACTIONS.TEMPLATE.UPDATED,
         entityType: "template",
-        entityId: params.id,
+        entityId: id,
         userId: user.id,
         userEmail: email!,
         metadata: {
@@ -166,7 +171,7 @@ export async function DELETE(
 
     const email = user.emailAddresses[0]?.emailAddress;
 
-    const templateId = params.id;
+    const templateId = parseUuid(params.id);
 
     // Find template and check for active usage
     const template = await prisma.templates.findUnique({

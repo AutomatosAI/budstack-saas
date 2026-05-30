@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 /**
  * POST /api/super-admin/templates/[id]/detach
@@ -23,7 +24,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const templateId = params.id;
+    const templateId = parseUuid(params.id);
 
     // Find the template and all its references
     const template = await prisma.templates.findUnique({

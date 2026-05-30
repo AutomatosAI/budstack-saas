@@ -99,3 +99,22 @@ US-007 parseSlug rollout — tenant/[slug] + tenant/conditions/[slug] — DONE 2
   the validated `slug`. Bare catch{500} → apiError(error,{route}). Left the `tenantSlug` QUERY param
   (getTenantBySlug) untouched — it is not the dynamic route param (US-007 scope is the [slug] segment).
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
+
+US-008 parseUuid rollout — super-admin [id] routes (13 files) — DONE 2026-05-30
+- submissions/[id]/{route,approve,edit,reject,request-changes}: async Promise params, all import+end
+  in apiError → `const { id } = await params` → `const id = parseUuid((await params).id)`. Body parsing
+  in edit/reject/request-changes left untouched (US-012 scope).
+- email-templates/[id]/route.ts (withSuperAdminParams GET/PUT/DELETE): `const id = parseUuid(params.id)`
+  per handler; all 4 `where:{id:params.id}` → `where:{id}`. HOC try/catch→apiError surfaces the 400.
+- templates/[id]/detach + update-from-github: `parseUuid(params.id)` (detach sync, github await params).
+- templates/[id]/route.ts (PUT/PATCH/DELETE): parseUuid per handler; wheres → `{id}`; PATCH
+  `entityId:params.id` → `entityId:id`.
+- templates/[id]/branding/route.ts (custom catch): added apiError import; parseUuid + where→{id};
+  bare catch → apiError(error,{route,safeMessage}).
+- tenants/[id]/drgreen-keys/route.ts (GET+POST, NO handler try/catch): localized
+  `let id; try{id=parseUuid(params.id)}catch(e){return apiError(e,{route})}` per handler (avoids a
+  framework 500 since these had no error wrap); `where:{id:params.id}` → `where:{id}`.
+- tenants/[id]/{toggle-active (withSuperAdminParams), verify-domain}: parseUuid; all `params.id`
+  (wheres, entityId, tenantId) → `id`. verify-domain bare catch{500} → apiError(error,{route}); its
+  INNER DNS try/catch left intact.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
