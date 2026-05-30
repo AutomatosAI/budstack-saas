@@ -1,16 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
 
-export async function GET(req: NextRequest) {
+export const GET = withSuperAdmin(async (_req) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const config = await prisma.platform_config.findUnique({
       where: { id: "config" },
     });
@@ -36,16 +30,10 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withSuperAdmin(async (req) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await req.json();
     const {
       drGreenApiUrl,
@@ -129,4 +117,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

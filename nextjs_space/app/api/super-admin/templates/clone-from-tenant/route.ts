@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { copyS3Directory } from "@/lib/s3";
 
@@ -12,14 +12,8 @@ import { copyS3Directory } from "@/lib/s3";
  * If targetTemplateId is provided, overwrites that template's S3 files.
  * Otherwise creates a new marketplace template.
  */
-export async function POST(req: NextRequest) {
+export const POST = withSuperAdmin(async (req) => {
   try {
-    const user = await currentUser();
-
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await req.json();
     const { subdomain, targetTemplateId } = body;
 
@@ -115,4 +109,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
 
@@ -15,13 +15,8 @@ import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
  * POST /api/super-admin/tenants/migrate-s3-paths
  * Body: { tenantId?: string, dryRun?: boolean, backfill?: boolean }
  */
-export async function POST(req: NextRequest) {
+export const POST = withSuperAdmin(async (req) => {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await req.json().catch(() => ({}));
     const targetTenantId = body.tenantId || null;
     const dryRun = body.dryRun === true;
@@ -245,4 +240,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

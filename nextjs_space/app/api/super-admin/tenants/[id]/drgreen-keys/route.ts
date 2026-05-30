@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { encrypt, decrypt } from "@/lib/encryption";
 import { generateDrGreenSignature } from "@/lib/drgreen-api-client";
@@ -66,12 +66,7 @@ function inspect(label: string, encrypted: string | null | undefined) {
   return { label, configured: true, looksValid };
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
   const tenant = await prisma.tenants.findUnique({
     where: { id: params.id },
     select: {
@@ -98,14 +93,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     apiKey: inspect("apiKey", tenant.drGreenApiKey),
     secretKey: inspect("secretKey", tenant.drGreenSecretKey),
   });
-}
+});
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withSuperAdminParams(async (req, _ctx, params) => {
   const tenant = await prisma.tenants.findUnique({ where: { id: params.id } });
   if (!tenant) {
     return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
@@ -145,4 +135,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     updated: Object.keys(update),
     tenant: { id: tenant.id, subdomain: tenant.subdomain },
   });
-}
+});

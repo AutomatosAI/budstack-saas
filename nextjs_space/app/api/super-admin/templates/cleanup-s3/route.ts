@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { deleteS3Directory } from "@/lib/s3";
 import { apiError } from "@/lib/api-error";
 
@@ -9,13 +9,8 @@ export const dynamic = "force-dynamic";
  * DELETE /api/super-admin/templates/cleanup-s3?prefix=templates/healingbuds/
  * Cleans orphaned S3 template files when DB record is already gone.
  */
-export async function DELETE(req: NextRequest) {
+export const DELETE = withSuperAdmin(async (req) => {
   try {
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const prefix = req.nextUrl.searchParams.get("prefix");
     if (!prefix || !prefix.startsWith("templates/")) {
       return NextResponse.json(
@@ -42,4 +37,4 @@ export async function DELETE(req: NextRequest) {
       safeMessage: "Cleanup failed",
     });
   }
-}
+});

@@ -1,28 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { uploadFile } from "@/lib/s3";
 import { validateUploadBuffer } from "@/lib/upload-validation";
 
-export async function POST(req: NextRequest) {
+export const POST = withSuperAdmin(async (req) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check if user is super admin
-    // In hybrid mode, we might trust the role from token (user.role) or check DB. 
-    // Checking DB provides double safety.
-    const dbUser = await prisma.users.findUnique({
-      where: { email: user.email! },
-    });
-
-    if (dbUser?.role !== "SUPER_ADMIN" && user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const formData = await req.formData();
 
     // Extract form fields
@@ -148,22 +131,10 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
-export async function GET(req: NextRequest) {
+export const GET = withSuperAdmin(async (_req) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Role check
-    if (user.role !== 'SUPER_ADMIN') {
-      // Optional: db check
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const settings = await prisma.platform_settings.findUnique({
       where: { id: "platform" },
     });
@@ -184,4 +155,4 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

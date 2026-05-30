@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
 import { apiError } from "@/lib/api-error";
@@ -47,13 +47,8 @@ async function readJsonFromS3<T = any>(key: string): Promise<T | null> {
   }
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withSuperAdmin(async (req) => {
   try {
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await req.json().catch(() => ({}));
     const slug = (body.slug || "").toString().trim().toLowerCase();
     const execute = body.execute === true;
@@ -290,4 +285,4 @@ export async function POST(req: NextRequest) {
       safeMessage: "Recovery failed",
     });
   }
-}
+});

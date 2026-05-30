@@ -1,20 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { approveSubmission } from "@/lib/marketplace-review-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const POST = withSuperAdminParams(async (request, { user }, params) => {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id } = await params;
+    const { id } = params;
     const template = await approveSubmission(id, user.id);
 
     await createAuditLog({
@@ -43,4 +35,4 @@ export async function POST(
       safeMessage: "Failed to approve submission",
     });
   }
-}
+});

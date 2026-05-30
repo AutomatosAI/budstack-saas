@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -6,26 +7,10 @@ export const dynamic = "force-dynamic";
  * ONE-TIME CLEANUP ROUTE — DELETE AFTER USE
  * GET /api/super-admin/tenants/reset-templates?subdomain=healingbuds&confirm=yes
  */
-export async function GET(req: NextRequest) {
+export const GET = withSuperAdmin(async (req) => {
   const steps: string[] = [];
 
   try {
-    // Step 1: Auth
-    steps.push("Starting auth check...");
-    let user: any;
-    try {
-      const { getCurrentUser } = await import("@/lib/auth-helper");
-      user = await getCurrentUser();
-      steps.push(`Auth: ${user ? `${user.role} (${user.email})` : "no user"}`);
-    } catch (authErr) {
-      steps.push(`Auth FAILED: ${authErr}`);
-      return NextResponse.json({ steps }, { status: 500 });
-    }
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized", steps }, { status: 401 });
-    }
-
     // Step 2: Parse params
     const subdomain = req.nextUrl.searchParams.get("subdomain");
     const confirm = req.nextUrl.searchParams.get("confirm");
@@ -102,8 +87,8 @@ export async function GET(req: NextRequest) {
     steps.push(`FATAL: ${error instanceof Error ? error.message : String(error)}`);
     return NextResponse.json({ error: "Reset failed", steps }, { status: 500 });
   }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withSuperAdmin(async (req) => {
   return GET(req);
-}
+});

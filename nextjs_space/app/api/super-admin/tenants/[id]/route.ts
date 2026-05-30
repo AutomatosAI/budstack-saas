@@ -1,22 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getNamecheapClient } from "@/lib/namecheap-api";
 import { addCustomDomain, removeCustomDomain } from "@/lib/railway-api";
 import { clerkClient } from "@clerk/nextjs/server";
 import crypto from "crypto";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const tenant = await prisma.tenants.findUnique({
       where: { id: params.id },
       include: {
@@ -62,19 +53,10 @@ export async function GET(
       { status: 500 },
     );
   }
-}
+});
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await req.json();
     const {
       isActive,
@@ -295,19 +277,10 @@ export async function PATCH(
       { status: 500 },
     );
   }
-}
+});
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const DELETE = withSuperAdminParams(async (_req, { user }, params) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Fetch tenant with related data needed for cleanup
     const tenant = await prisma.tenants.findUnique({
       where: { id: params.id },
@@ -411,4 +384,4 @@ export async function DELETE(
       { status: 500 },
     );
   }
-}
+});

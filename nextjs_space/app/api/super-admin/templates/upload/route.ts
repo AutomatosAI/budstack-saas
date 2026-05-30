@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import fs from "fs/promises";
 import path from "path";
@@ -14,17 +14,8 @@ import {
   type TemplateConfig,
 } from "@/lib/template-utils";
 
-export async function POST(req: NextRequest) {
+export const POST = withSuperAdmin(async (req, { user }) => {
   try {
-    // Check authentication
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Unauthorized - Super Admin access required" },
-        { status: 401 },
-      );
-    }
-
     const body = await req.json();
     const { templateName, githubUrl, structureType = "default", branch } = body;
 
@@ -247,7 +238,7 @@ export async function POST(req: NextRequest) {
         entityType: "template",
         entityId: template.id,
         userId: user.id,
-        userEmail: user.emailAddresses[0]?.emailAddress!,
+        userEmail: user.email!,
         metadata: {
           templateSlug: config.id,
           templateName: config.name,
@@ -307,4 +298,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

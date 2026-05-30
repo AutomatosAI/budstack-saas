@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { promises as dns } from "dns";
 import { isApexDomain } from "@/lib/domain-utils";
@@ -13,17 +13,8 @@ interface VerificationResult {
   found: string | null;
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const tenant = await prisma.tenants.findUnique({
       where: { id: params.id },
       select: {
@@ -151,4 +142,4 @@ export async function GET(
       { status: 500 },
     );
   }
-}
+});

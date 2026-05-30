@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 
@@ -13,16 +13,8 @@ import { apiError } from "@/lib/api-error";
  *
  * TEMPORARY — remove after cannabizz cleanup.
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const POST = withSuperAdminParams(async (_req, _ctx, params) => {
   try {
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const templateId = params.id;
 
     // Find the template and all its references
@@ -104,4 +96,4 @@ export async function POST(
       safeMessage: "Failed to detach template",
     });
   }
-}
+});

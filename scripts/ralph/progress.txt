@@ -244,3 +244,62 @@ Validate (via 205's identical install, borrowed by symlink, removed after):
 Next: US-006 (migrate ~25 of 33 super-admin routes -> withSuperAdmin/Params;
   delete hand-rolled blocks; read user/tenantId from context).
 
+================================================================================
+US-006 DONE — 2026-05-30 — migrate 25 super-admin routes -> withSuperAdmin/Params
+================================================================================
+
+Scope: 25 of 33 super-admin routes were hand-rolled (currentUser()/getCurrentUser()
++ a `role !== "SUPER_ADMIN"` 401 block). The other 8 already imported a wrapper.
+All 25 are now wrapped — 13 flat -> withSuperAdmin, 12 [id]/Params -> withSuperAdminParams:
+  withSuperAdmin: analytics, learning, platform-settings, settings,
+    templates/{cleanup-s3,clone-from-tenant,create-blank,recover-deleted,
+    trigger-rebuild,upload}, tenants/{migrate-s3-paths,reset-templates}, tenants(route).
+  withSuperAdminParams: submissions/[id]/{approve,edit,reject,request-changes,route},
+    templates/[id]/{branding,detach,route,update-from-github},
+    tenants/[id]/{drgreen-keys,route,verify-domain}.
+
+Transform (lowest-risk, AC-1/AC-1a): removed ONLY the auth block; KEPT each
+handler's try/catch + body verbatim (success payloads unchanged, NFR backward-compat).
+  - signature -> export const M = withSuperAdmin(async (req,{user}) => …) or
+    withSuperAdminParams(async (req,{user},params) => …); closing `}` -> `});`.
+  - Shape B `user.emailAddresses[0]?.emailAddress` -> `user.email`; `user.id` stays
+    (getCurrentUser already returns the Clerk id, so audit-log userId refs hold).
+  - params read from the 3rd wrapper arg — dropped `await params` (Next 14 resolved
+    object). Unused req/ctx underscore-prefixed (_req/_ctx) — no noUnusedParameters trip.
+  - imports: removed NextRequest/currentUser/getCurrentUser (+ unused), added wrapper.
+  - Context (US-003): withSuperAdmin/Params bind EXPLICIT null — the deliberate
+    cross-tenant system scope these admin queries need (never user.tenantId).
+
+Two non-mechanical removals (auth-only, body otherwise intact):
+  - platform-settings POST: a SECOND DB role-gate (dbUser = findUnique on user.email
+    then check role) was a redundant re-auth — removed; the wrapper's SUPER_ADMIN
+    check is now the single source (AC-1a: no re-auth in the body).
+  - tenants/reset-templates: a dynamic `import("@/lib/auth-helper")` auth block
+    (with steps.push logging of the gate) removed; create-blank uses redirect() so
+    its now-unused NextResponse import was dropped.
+
+Validate (205's identical install, symlinked then removed):
+  - tsc --noEmit -> exit 0 (TSC_OK).
+  - gate advisory: "107 files | 144 handlers | wrapped 54 | allow-listed 13 |
+    violations 77" (was wrapped 17 / violations 114 — +37 handlers crossed; the
+    `grep super-admin` of the violations list returns ZERO; non-vacuous).
+  - grep app/api/super-admin: no leftover getCurrentUser(/currentUser(, no
+    publicMetadata. Spot-checked git diff of templates/[id] + tenants/[id] (the two
+    largest): bodies preserved, user.email mapping correct, params intact, and
+    `{user}` is live in tenants/[id] DELETE (audit userId/userEmail at :365-366).
+
+US-010 FOLLOW-UP (AC-5, do NOT fix here — out of US-006 scope, would change payloads):
+  Two now-migrated super-admin routes surface error text in their RESPONSE BODY,
+  pre-existing and kept verbatim by the transform:
+    - tenants/[id] DELETE returns `cleanupErrors[]` carrying Clerk/Railway SDK
+      `error.message` (best-effort cleanup diagnostics).
+    - tenants/reset-templates returns `steps[]` incl. `FATAL: ${error.message}` on
+      its 500 path (an explicit debug/diagnostic endpoint).
+  Both are SUPER_ADMIN-only and the strings are downstream-service messages (not the
+  app's own stack/DB internals), but AC-5's error.message grep gate (US-010) lands on
+  migrated routes — US-010 must sanitize these or carry a scoped, justified exception.
+
+Next: US-007 (tenant-admin batch 1 — ~20 [id]/Params routes -> withTenantAuth/
+  withTenantAuthParams; ctx is {user,tenantId}, tenantId guaranteed non-null, binds
+  user.tenantId; role check accepts TENANT_ADMIN or SUPER_ADMIN). Same KEEP-body transform.
+
