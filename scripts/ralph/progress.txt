@@ -27,3 +27,12 @@ US-002 deepMerge prototype pollution fix — DONE 2026-05-30
 - Semantics preserved exactly: override-wins-unless-undefined/null/empty-string, arrays replace
   wholesale, plain objects deep-merge. Only the three poison keys are now dropped.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
+
+US-003 parseJsonBody size-cap helper — DONE 2026-05-30
+- New nextjs_space/lib/validation/body.ts: async parseJsonBody<T>(req, schema?, {maxBytes?}).
+  Reads req.text() (not .json()) so it can measure Buffer.byteLength BEFORE parsing; over the cap
+  (default 256KB) → ApiError 413; unparseable JSON → ApiError 400; if a Zod schema is supplied,
+  safeParse failure → ApiError 400 (AC-6). Empty body → undefined (schema, if present, decides).
+- Pure async helper, no DB/network; callers must not also call req.json() (single-use stream).
+- No callers yet — adopted by body routes in US-005/010/011/012.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
