@@ -5,12 +5,15 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { addToCart } from "@/lib/drgreen-cart";
 import { apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { slug: string } },
 ) {
   try {
+    parseSlug(params.slug);
+
     const user = await currentUser();
 
     if (!user) {

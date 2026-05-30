@@ -5,12 +5,16 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { getOrder } from "@/lib/drgreen-orders";
 import { apiError } from "@/lib/api-error";
+import { parseSlug, parseUuid } from "@/lib/validation/parse-uuid";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string; orderId: string } },
 ) {
   try {
+    parseSlug(params.slug);
+    const orderId = parseUuid(params.orderId);
+
     const user = await currentUser();
 
     if (!user?.emailAddresses?.[0]?.emailAddress) {
@@ -37,7 +41,7 @@ export async function GET(
 
     // Get order (with Dr. Green sync)
     const order = await getOrder({
-      orderId: params.orderId,
+      orderId,
       userId: dbUser.id,
       tenantId: tenant.id,
       apiKey: drGreenConfig.apiKey,

@@ -7,6 +7,7 @@ import { submitOrder } from "@/lib/drgreen-orders";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
 import { checkUserKycStatus } from "@/app/actions/kyc-check";
 import { apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
 
 export async function POST(
   request: NextRequest,
@@ -18,6 +19,7 @@ export async function POST(
   };
 
   try {
+    parseSlug(params.slug);
     log('START', { slug: params.slug });
 
     const user = await currentUser();

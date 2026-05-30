@@ -70,3 +70,22 @@ US-005 customer/profile PATCH Zod + caps — DONE 2026-05-30
 - users.address is Prisma Json? — the typed zod object is assignable to InputJsonValue (tsc confirmed).
   No client callers of /api/customer/profile exist in the repo, so the typed-object contract is safe.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
+
+US-006 parseSlug/parseUuid rollout — store/[slug]/* (9 files) — DONE 2026-05-30
+- Added parseSlug(params.slug) to all 9: cart/{route,add,clear,remove}, orders/{route,submit,[orderId]},
+  products/{route,featured}. orders/[orderId] also parseUuid(params.orderId) and now passes the
+  validated `orderId` to getOrder (was params.orderId raw). products/featured binds
+  `const slug = parseSlug(params.slug)` (slug feeds getTenantBySlug); the other 7 resolve tenant from
+  middleware headers via getCurrentTenant() so slug is validated as a BARE statement (no unused var) (AC-1a).
+- 400 propagation: parseSlug/parseUuid throw ApiError("Invalid request",400). apiError()'s ApiError
+  pass-through branch returns error.status BEFORE the opts.status fallback, so even cart/add and
+  orders/submit (which pass status:500) surface a clean 400. Verified against lib/api-error.ts:74-80.
+- Two custom-catch storefront routes (products/route, products/featured) never call apiError — their
+  catches return storefront-shaped JSON (data:[], missingCredentials). Added a leading
+  `if (error instanceof ApiError) return apiError(error,{route})` guard so the slug 400 is not masked
+  as their generic 500; real Dr Green API errors still flow through the existing storefront handling.
+- orders/route had a bare catch{500} + no apiError import → swapped to apiError(error,{route,safeMessage})
+  so the slug 400 propagates (other 6 already ended in apiError).
+- Body validation (Zod/parseJsonBody) on cart/add + orders/submit POST bodies is OUT OF SCOPE here
+  (US-010) — only param validation added this story.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
