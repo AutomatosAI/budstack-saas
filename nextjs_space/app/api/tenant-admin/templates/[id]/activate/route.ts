@@ -1,31 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const PATCH = withTenantAuthParams(
+  async (_request, { user, tenantId }, params) => {
   try {
-    // 1. Authentication
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // 2. Get tenant
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "No tenant found" }, { status: 400 });
-    }
-
-    const { id } = await params;
+    const { id } = params;
     const templateId = id;
 
     // 3. Verify template belongs to tenant
@@ -94,4 +76,4 @@ export async function PATCH(
       safeMessage: "Failed to activate template",
     });
   }
-}
+});

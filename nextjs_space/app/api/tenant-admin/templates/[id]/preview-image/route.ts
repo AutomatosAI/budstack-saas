@@ -1,32 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { uploadFile, getFileUrl } from "@/lib/s3";
 import { validateUploadBuffer } from "@/lib/upload-validation";
 import { apiError } from "@/lib/api-error";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const POST = withTenantAuthParams(
+  async (request, { tenantId }, params) => {
   try {
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "No tenant found" },
-        { status: 400 },
-      );
-    }
-
-    const { id } = await params;
+    const { id } = params;
 
     // Verify the template belongs to this tenant
     const template = await prisma.tenant_templates.findFirst({
@@ -100,4 +82,4 @@ export async function POST(
       safeMessage: "Failed to upload preview image",
     });
   }
-}
+});

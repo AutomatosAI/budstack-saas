@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import {
   sanitizeEmailHtml,
@@ -11,37 +11,12 @@ import {
 const TEMPLATE_NAME_MAX = 200;
 const TEMPLATE_DESCRIPTION_MAX = 1000;
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const GET = withTenantAuthParams(async (_request, { tenantId }, params) => {
   try {
-    const clerkUser = await currentUser();
-
-    if (
-      !clerkUser ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(
-        (clerkUser.publicMetadata.role as string) || "",
-      )
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = clerkUser.emailAddresses[0]?.emailAddress;
-
-    const user = await prisma.users.findFirst({
-      where: { email: email },
-      include: { tenants: true },
-    });
-
-    if (!user?.tenants) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
-    }
-
     const template = await prisma.email_templates.findFirst({
       where: {
         id: params.id,
-        tenantId: user.tenants.id, // Strict ownership
+        tenantId: tenantId, // Strict ownership
       },
     });
 
@@ -60,35 +35,10 @@ export async function GET(
       { status: 500 },
     );
   }
-}
+});
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const PUT = withTenantAuthParams(async (req, { tenantId }, params) => {
   try {
-    const clerkUser = await currentUser();
-
-    if (
-      !clerkUser ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(
-        (clerkUser.publicMetadata.role as string) || "",
-      )
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = clerkUser.emailAddresses[0]?.emailAddress;
-
-    const user = await prisma.users.findFirst({
-      where: { email: email },
-      include: { tenants: true },
-    });
-
-    if (!user?.tenants) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
-    }
-
     const body = await req.json();
     const { name, subject, contentHtml, description, isActive } = body;
 
@@ -109,7 +59,7 @@ export async function PUT(
 
     // Verify ownership before update
     const count = await prisma.email_templates.count({
-      where: { id: params.id, tenantId: user.tenants.id },
+      where: { id: params.id, tenantId: tenantId },
     });
 
     if (count === 0) {
@@ -143,38 +93,13 @@ export async function PUT(
       { status: 500 },
     );
   }
-}
+});
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const DELETE = withTenantAuthParams(async (_request, { tenantId }, params) => {
   try {
-    const clerkUser = await currentUser();
-
-    if (
-      !clerkUser ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(
-        (clerkUser.publicMetadata.role as string) || "",
-      )
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = clerkUser.emailAddresses[0]?.emailAddress;
-
-    const user = await prisma.users.findFirst({
-      where: { email: email },
-      include: { tenants: true },
-    });
-
-    if (!user?.tenants) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
-    }
-
     // Verify ownership
     const template = await prisma.email_templates.findFirst({
-      where: { id: params.id, tenantId: user.tenants.id },
+      where: { id: params.id, tenantId: tenantId },
     });
 
     if (!template) {
@@ -204,4 +129,4 @@ export async function DELETE(
       { status: 500 },
     );
   }
-}
+});

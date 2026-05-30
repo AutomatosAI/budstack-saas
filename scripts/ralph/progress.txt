@@ -303,3 +303,46 @@ Next: US-007 (tenant-admin batch 1 — ~20 [id]/Params routes -> withTenantAuth/
   withTenantAuthParams; ctx is {user,tenantId}, tenantId guaranteed non-null, binds
   user.tenantId; role check accepts TENANT_ADMIN or SUPER_ADMIN). Same KEEP-body transform.
 
+=== US-007 — tenant-admin [id]/Params routes batch 1 — DONE (2026-05-30) ===
+Migrated 14 tenant-admin dynamic ([id]) param routes -> withTenantAuthParams (all
+TENANT_ADMIN|SUPER_ADMIN, tenantId guaranteed non-null, binds the caller's own
+user.tenantId via PRD-202 runWithTenantContextAsync). KEEP-body transform: only the
+auth edge + hand-rolled tenant lookup removed; success payloads byte-for-byte unchanged.
+
+8 Shape A (no DB user-record needed, ctx {tenantId}; subagent-written, re-validated):
+  seo/posts/[id] (GET,PUT), seo/products/[id] (GET,PUT),
+  templates/[id]/activate (PATCH), templates/[id]/preview-image (POST),
+  templates/[id]/resubmit (POST), templates/[id]/submit-to-marketplace (POST),
+  templates/[id]/update-from-github (POST), templates/[id]/withdraw-submission (POST)
+6 Shape B (hand-migrated this iteration):
+  orders/[id] (GET, {tenantId})
+  orders/[id]/admin-notes (PATCH, {tenantId}; dropped users.findFirst+include tenants,
+    localUser.tenants.id -> ctx tenantId)
+  webhooks/[id] (PATCH,DELETE, {user,tenantId}; audit userId=user.id,
+    userEmail=user.email!; dropped users.findFirst tenantId lookup)
+  webhooks/[id]/deliveries (GET, {tenantId}; req kept for searchParams)
+  my-templates/[id] (DELETE, {user,tenantId}; KEPT the route-specific
+    `user.role !== "TENANT_ADMIN"` exclusion, now sourced from ctx — this route forbids
+    SUPER_ADMIN delete; preserved exactly; dropped users.findUnique)
+  email-templates/[id] (GET,PUT,DELETE, {tenantId}; collapsed the clerkUser + DB-`user`
+    two-step, every `user.tenants.id` -> ctx tenantId; GET/DELETE req unused -> _request)
+
+FLAGGED, NOT migrated (deliberate — SUPER_ADMIN cross-tenant escape; a tenant-binding
+wrapper binds the admin's OWN tenant and would break documented super-admin reach.
+Defer to human review / revisit in US-009):
+  customers/[id] (GET,PATCH,DELETE) — TENANT_ADMIN restricted to own tenant, but
+    SUPER_ADMIN reads ANY tenant's customer (explicit `role===TENANT_ADMIN && mismatch`).
+  posts/[id] (GET,PATCH,DELETE) — `role!=="SUPER_ADMIN" && tenantId mismatch` bypass
+    (comment in source: "Allow SUPER_ADMIN to bypass tenant check").
+
+Validate: `tsc --noEmit` EXIT 0. check:auth-wrappers (report-only): wrapped 54->73
+  (+19 handlers == exactly these 14 files), allow-listed 13, violations 58. The ONLY
+  tenant-admin [id] routes still in the violations list are customers/[id] + posts/[id]
+  (the 2 flags) — every other tenant-admin [id] route cleared. AC-5: all 14 catch blocks
+  return static messages / apiError safeMessage — no error.message in any response body.
+
+Next: US-008 (tenant-admin batch 2 — the ~24 FLAT routes still listed: analytics,
+  branding(+upload), cookie-settings, email-mappings, email-templates(+clone), orders(+bulk),
+  products/bulk|reorder|sync, select-template, seo/pages, settings(+test-smtp), submissions,
+  templates/clone|create-blank|upload, tenant, upload, webhooks -> withTenantAuth/Params).
+

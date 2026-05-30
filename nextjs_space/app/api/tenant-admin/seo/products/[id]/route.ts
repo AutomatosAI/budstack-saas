@@ -1,29 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
-
 // GET - Fetch product SEO
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  const user = await getCurrentUser();
-
-  if (
-    !user ||
-    (user.role !== "TENANT_ADMIN" &&
-      user.role !== "SUPER_ADMIN")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const tenantId = user.tenantId;
-
-  if (!tenantId) {
-    return NextResponse.json({ error: "No tenant" }, { status: 400 });
-  }
+export const GET = withTenantAuthParams(async (_request, { tenantId }, params) => {
+  const { id } = params;
 
   const product = await prisma.products.findFirst({
     where: { id, tenantId: tenantId },
@@ -35,26 +16,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   return NextResponse.json(product);
-}
+});
 
 // PUT - Update product SEO
-export async function PUT(request: NextRequest, { params }: RouteParams) {
-  const user = await getCurrentUser();
-
-  if (
-    !user ||
-    (user.role !== "TENANT_ADMIN" &&
-      user.role !== "SUPER_ADMIN")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const tenantId = user.tenantId;
-
-  if (!tenantId) {
-    return NextResponse.json({ error: "No tenant" }, { status: 400 });
-  }
+export const PUT = withTenantAuthParams(async (request, { tenantId }, params) => {
+  const { id } = params;
 
   // Verify product belongs to tenant
   const existingProduct = await prisma.products.findFirst({
@@ -84,4 +50,4 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   });
 
   return NextResponse.json(updated);
-}
+});

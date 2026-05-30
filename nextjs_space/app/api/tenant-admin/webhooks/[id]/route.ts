@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 
@@ -8,41 +8,8 @@ import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
  *
  * Update a webhook
  */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const PATCH = withTenantAuthParams(async (req, { user, tenantId }, params) => {
   try {
-    const user = await currentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
-
-    if (!email) {
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
-    }
-
-    if (role !== "TENANT_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const localUser = await prisma.users.findFirst({
-      where: { email: email },
-      select: { tenantId: true },
-    });
-
-    const tenantId = localUser?.tenantId;
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "No tenant associated with user" },
-        { status: 400 },
-      );
-    }
-
     const { id } = params;
     const body = await req.json();
     const { url, events, description, isActive } = body;
@@ -85,7 +52,7 @@ export async function PATCH(
       entityType: "Webhook",
       entityId: webhook.id,
       userId: user.id,
-      userEmail: email!,
+      userEmail: user.email!,
       tenantId,
       metadata: { url, events, description, isActive },
       ...clientInfo,
@@ -99,44 +66,15 @@ export async function PATCH(
       { status: 500 },
     );
   }
-}
+});
 
 /**
  * DELETE /api/tenant-admin/webhooks/[id]
  *
  * Delete a webhook
  */
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const DELETE = withTenantAuthParams(async (req, { user, tenantId }, params) => {
   try {
-    const user = await currentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
-
-    if (role !== "TENANT_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const localUser = await prisma.users.findFirst({
-      where: { email: email },
-      select: { tenantId: true },
-    });
-
-    const tenantId = localUser?.tenantId;
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "No tenant associated with user" },
-        { status: 400 },
-      );
-    }
-
     const { id } = params;
 
     // Verify webhook belongs to tenant
@@ -159,7 +97,7 @@ export async function DELETE(
       entityType: "Webhook",
       entityId: id,
       userId: user.id,
-      userEmail: email!,
+      userEmail: user.email!,
       tenantId,
       metadata: { webhookUrl: existingWebhook.url },
       ...clientInfo,
@@ -173,4 +111,4 @@ export async function DELETE(
       { status: 500 },
     );
   }
-}
+});

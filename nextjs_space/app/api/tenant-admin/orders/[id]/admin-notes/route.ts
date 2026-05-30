@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 
 /**
@@ -7,24 +7,8 @@ import { prisma } from "@/lib/db";
  * Only accessible to tenant admins and super admins
  * Notes are internal and not visible to customers
  */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const PATCH = withTenantAuthParams(async (req, { tenantId }, params) => {
   try {
-    const user = await currentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
-
-    if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const orderId = params.id;
     const body = await req.json();
     const { adminNotes } = body;
@@ -36,21 +20,11 @@ export async function PATCH(
       );
     }
 
-    // Get user's tenant
-    const localUser = await prisma.users.findFirst({
-      where: { email: email },
-      include: { tenants: true },
-    });
-
-    if (!localUser?.tenants) {
-      return NextResponse.json({ error: "No tenant found" }, { status: 404 });
-    }
-
     // Verify the order belongs to this tenant
     const order = await prisma.orders.findFirst({
       where: {
         id: orderId,
-        tenantId: localUser.tenants.id,
+        tenantId: tenantId,
       },
     });
 
@@ -87,4 +61,4 @@ export async function PATCH(
       { status: 500 },
     );
   }
-}
+});
