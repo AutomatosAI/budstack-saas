@@ -17,8 +17,8 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "DONE: vitest 2.1.9 + @vitest/coverage-v8 2.1.9 (pinned to match PRD-211 / Node-18 parity). Added vitest.config.ts (node env, @/->./ alias, v8 coverage of lib/**, include tests/unit/**+lib/**), vitest.setup.ts (loads .env.test only), tests/unit/harness-smoke.test.ts, and package.json test/test:watch/test:cov scripts. Ran under Node 20 (nvm, .nvmrc=20). pnpm test green (1 passed); pnpm exec tsc --noEmit clean (exit 0)."
     },
     {
       "id": "US-002",

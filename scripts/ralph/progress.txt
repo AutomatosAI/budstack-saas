@@ -15,3 +15,8 @@ DoS/SSRF advisories REQUIRES the Next 15.x major bump. Recorded against OQ-1.
 
 ================================ STORY LOG ================================
 
+[US-001] DONE — Minimal Vitest unit harness.
+  vitest 2.1.9 + @vitest/coverage-v8 2.1.9; vitest.config.ts (node env, @/ alias,
+  v8 coverage lib/**), vitest.setup.ts (loads .env.test only), harness-smoke test,
+  package.json test/test:watch/test:cov. Node 20. pnpm test green; tsc clean.
+

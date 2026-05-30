@@ -9,6 +9,9 @@
     "check:css-sanitized": "node scripts/ci/check-css-sanitized.mjs",
     "check:no-error-leaks": "node scripts/ci/check-no-error-message-leaks.mjs",
     "check:security": "node scripts/ci/check-css-sanitized.mjs && node scripts/ci/check-no-error-message-leaks.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
@@ -42,7 +45,9 @@
     "tailwindcss": "3.3.3",
     "tailwindcss-animate": "1.0.7",
     "ts-node": "10.9.2",
-    "typescript": "5.2.2"
+    "typescript": "5.2.2",
+    "vitest": "2.1.9",
+    "@vitest/coverage-v8": "2.1.9"
   },
   "pnpm": {
     "overrides": {
