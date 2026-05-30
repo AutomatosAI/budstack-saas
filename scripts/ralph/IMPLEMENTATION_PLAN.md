@@ -37,7 +37,7 @@ App in `nextjs_space/` (pnpm). Source PRD:
 
 ## Stories
 
-- [ ] US-001 — `parseUuid` + `parseSlug` helpers in `lib/validation/parse-uuid.ts` (AC-1)
+- [x] US-001 — `parseUuid` + `parseSlug` helpers in `lib/validation/parse-uuid.ts` (AC-1)
 - [ ] US-002 — Fix `deepMerge` prototype pollution (DANGEROUS_KEYS skip) (AC-2)
 - [ ] US-003 — `parseJsonBody` body-size-cap helper in `lib/validation/body.ts` (AC-6)
 - [ ] US-004 — Strict `tenant-settings` schema + wire `super-admin/tenants/[id]` (parseUuid + settings) (AC-4)
