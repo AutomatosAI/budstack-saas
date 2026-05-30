@@ -67,3 +67,25 @@ Canonical lib/tenant-resolver.ts resolveTenant(input) — AC-1 / AC-1a / AC-1b.
   inactive->null per kind, clerk-org isActive filter, email single/inactive/ambiguous/dedupe/
   fallback/none.
 - Validation: pnpm test:unit -> 58/58 green (19 new + 39 inherited); npx tsc --noEmit -> 0.
+
+--------------------------------------------------------------------------------
+US-003  DONE  2026-05-30
+Collapse lib/tenant.ts resolution helpers to thin delegators — AC-2.
+- getCurrentTenant (still cache()-wrapped) -> resolveTenant({kind:'headers'}); the
+  header precedence (slug->subdomain->customDomain) + isActive now live ONLY in the
+  resolver. getTenantBySlug -> resolveTenant({kind:'slug'}) (lower-case retry moved into
+  the resolver's bySubdomain). getTenantFromRequest -> resolveTenant({kind:'host'}) (the
+  /store/{slug} path-win + host derivation now via the shared parseHostToTenantHint).
+- Each delegator keeps its prior ergonomics: getCurrentTenant/getTenantBySlug/
+  getTenantFromRequest keep the try/catch -> console.error -> null swallow (backward-compat,
+  behaviour identical); requireTenant still throws "Tenant not found or inactive";
+  getCurrentTenantId still reuses the cached getCurrentTenant. Signatures unchanged.
+- Removed: the `import { headers }` and all three bespoke subdomain/customDomain findFirst
+  blocks. The only remaining prisma.tenants.* in the file are the type-only alias (line 9)
+  and getTenantWithTemplate's findUnique-by-id (template fetch, out of scope) — zero
+  standalone host/slug resolution lookups remain (sets up the AC-2b grep gate, US-008).
+- tests/unit/tenant-delegators.test.ts: 12 cases. Module-boundary mock of @/lib/tenant-resolver
+  + react cache()->identity; asserts each helper calls the resolver with the correct
+  discriminated input, unwraps .tenant/.tenantId, and preserves throw/swallow ergonomics
+  (incl. Host-header-over-URL precedence in getTenantFromRequest).
+- Validation: pnpm test:unit -> 70/70 green (12 new + 58 inherited); npx tsc --noEmit -> 0.
