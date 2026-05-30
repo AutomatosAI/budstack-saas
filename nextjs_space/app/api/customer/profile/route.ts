@@ -1,122 +1,94 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 
 /**
- * GET /api/customer/profile
- * Get current user's profile
- * Authorization: Authenticated user
+ * GET /api/customer/profile — the current customer's profile.
+ *
+ * withAuth binds the HOST tenant around the handler, so the users lookup below
+ * is auto-scoped by the lib/db tenant middleware (users is a tenant-scoped
+ * model). This closes the prior host-blind `findFirst({ where: { email } })`
+ * cross-tenant leak (PRD-203 AC-3): a customer from another tenant hitting this
+ * storefront now misses (404) instead of reading their foreign row.
  */
-export async function GET(request: NextRequest) {
-  try {
-    // Check authentication
-    const clerkUser = await currentUser();
-    if (!clerkUser?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (_req, { user }) => {
+  const email = user.email;
+  if (!email) {
+    return NextResponse.json({ error: "Email required" }, { status: 400 });
+  }
 
-    // Get user profile - try to find by Clerk ID (if stored in externalId or id if synced) or email
-    // Assuming migration maps Clerk ID to User ID or we look up by email
-    const email = clerkUser.emailAddresses[0]?.emailAddress;
-    if (!email) {
-      return NextResponse.json({ error: "Email required" }, { status: 400 });
-    }
-
-    const user = await prisma.users.findFirst({
-      where: { email: email }, // Lookup by email for now as reliable link
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        address: true,
-        isActive: true,
-        createdAt: true,
-        tenantId: true,
-        _count: {
-          select: {
-            orders: true,
-          },
+  const profile = await prisma.users.findFirst({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      address: true,
+      isActive: true,
+      createdAt: true,
+      tenantId: true,
+      _count: {
+        select: {
+          orders: true,
         },
       },
-    });
+    },
+  });
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ profile: user });
-  } catch (error) {
-    console.error("[GET /api/customer/profile] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+  if (!profile) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
-}
+
+  return NextResponse.json({ profile });
+});
 
 /**
- * PATCH /api/customer/profile
- * Update current user's profile
- * Authorization: Authenticated user
+ * PATCH /api/customer/profile — update the current customer's profile.
+ * Tenant-scoped via the same withAuth host binding as GET (AC-3).
  */
-export async function PATCH(request: NextRequest) {
-  try {
-    // Check authentication
-    const clerkUser = await currentUser();
-    if (!clerkUser?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const PATCH = withAuth(async (req, { user }) => {
+  const email = user.email;
 
-    const email = clerkUser.emailAddresses[0]?.emailAddress;
+  const body = await req.json();
+  const { firstName, lastName, phone, address } = body;
 
-    const body = await request.json();
-    const { firstName, lastName, phone, address } = body;
+  // Tenant-scoped by the bound host tenant — no foreign row can be selected.
+  const existingUser = await prisma.users.findFirst({
+    where: { email },
+  });
 
-    // Find user by email first to get ID
-    const existingUser = await prisma.users.findFirst({
-      where: { email: email }
-    });
-
-    if (!existingUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // Update user profile
-    const updatedUser = await prisma.users.update({
-      where: { id: existingUser.id },
-      data: {
-        ...(firstName !== undefined && { firstName }),
-        ...(lastName !== undefined && { lastName }),
-        ...(phone !== undefined && { phone }),
-        ...(address !== undefined && { address }),
-        // Update name for backward compatibility
-        ...(firstName && lastName && { name: `${firstName} ${lastName}` }),
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        address: true,
-        isActive: true,
-        createdAt: true,
-      },
-    });
-
-    return NextResponse.json({
-      message: "Profile updated successfully",
-      profile: updatedUser,
-    });
-  } catch (error) {
-    console.error("[PATCH /api/customer/profile] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+  if (!existingUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
-}
+
+  const updatedUser = await prisma.users.update({
+    where: { id: existingUser.id },
+    data: {
+      ...(firstName !== undefined && { firstName }),
+      ...(lastName !== undefined && { lastName }),
+      ...(phone !== undefined && { phone }),
+      ...(address !== undefined && { address }),
+      // Update name for backward compatibility
+      ...(firstName && lastName && { name: `${firstName} ${lastName}` }),
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      address: true,
+      isActive: true,
+      createdAt: true,
+    },
+  });
+
+  return NextResponse.json({
+    message: "Profile updated successfully",
+    profile: updatedUser,
+  });
+});

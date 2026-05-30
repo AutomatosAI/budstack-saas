@@ -201,3 +201,46 @@ Validate (via 205's identical install, borrowed by symlink, removed after):
 Next: US-005 (wrap + tenant-scope customer/profile GET+PATCH in withAuth — close
   the :25/:79 no-tenant findFirst with the bound host tenant).
 
+================================================================================
+DONE — US-005 — Tenant-scope customer/profile via withAuth — 2026-05-30
+================================================================================
+Change (app/api/customer/profile/route.ts): GET+PATCH were hand-rolled —
+currentUser() + an UNSCOPED prisma.users.findFirst({where:{email}}) (the :25/:79
+host-blind cross-tenant leak: with PRD-208's per-tenant email uniqueness a shared
+email would select an arbitrary tenant's row). Both handlers are now
+export const GET/PATCH = withAuth(async (req,{user}) => …):
+  - withAuth (US-003) binds the HOST tenant via runWithTenantContextAsync; users
+    is a tenantScopedModel in lib/db.ts, so the $use middleware now injects
+    tenantId into the findFirst/update where — the lookup is confined to the
+    storefront's tenant. A foreign customer (row in another tenant) now MISSES
+    (404) instead of reading their row (AC-3). The leak is closed by the binding,
+    not by a hand-added where clause (single source of truth = the middleware).
+  - email is read from the wrapper context (user.email), never a re-call of
+    getCurrentUser/currentUser in the body (AC-1a).
+  - Per-route try/catch + console.error removed — withAuth's catch routes errors
+    through apiError (generic 500 + correlationId, never error.message; AC-5).
+    The explicit 400 "Email required" and 404 "User not found" returns are
+    PRESERVED (contract unchanged, NFR backward-compat).
+
+Behavior note (intended, not a regression): a valid Clerk session with NO db row
+now surfaces as getCurrentUser's 409 UserNotProvisionedError (US-004) rather than
+this route's old 404 — that is exactly AC-2a. The route's own 404 still fires for
+a resolved user whose row is absent IN THE HOST TENANT (the closed leak).
+
+Tests (tests/unit/customer-profile.test.ts, 6): module-boundary mocks for
+getCurrentUser + getTenantFromRequest + prisma; REAL context primitive. Prove the
+profile findFirst/update execute INSIDE the bound host-tenant scope (getTenantContext()
+=== "host-tenant" captured at DB-call time — the necessary condition for the
+middleware to scope), plus 400-no-email (no query), 404-miss, 401-anon (handler
+skipped), and PATCH update-by-id within scope. Real-DB row-filtering proof is
+US-011 (Docker-gated).
+
+Validate (via 205's identical install, borrowed by symlink, removed after):
+  - tsc --noEmit (project) -> exit 0, 0 errors.
+  - vitest customer-profile + api-auth + auth-helper -> 25 passed.
+  - gate advisory run MOVED as expected: "107 files | 144 handlers | wrapped 17 |
+    allow-listed 13 | violations 114" (was wrapped 15 / violations 116 — the two
+    customer/profile handlers crossed from violation to wrapped; non-vacuous).
+Next: US-006 (migrate ~25 of 33 super-admin routes -> withSuperAdmin/Params;
+  delete hand-rolled blocks; read user/tenantId from context).
+
