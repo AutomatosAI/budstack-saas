@@ -89,3 +89,13 @@ US-006 parseSlug/parseUuid rollout — store/[slug]/* (9 files) — DONE 2026-05
 - Body validation (Zod/parseJsonBody) on cart/add + orders/submit POST bodies is OUT OF SCOPE here
   (US-010) — only param validation added this story.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
+
+US-007 parseSlug rollout — tenant/[slug] + tenant/conditions/[slug] — DONE 2026-05-30
+- tenant/[slug]/route.ts: `const { slug } = params` → `const slug = parseSlug(params.slug)` (slug feeds
+  tenants.findUnique subdomain lookup). Removed the now-redundant manual `if (!slug)` 400 block —
+  parseSlug already rejects empty/invalid. Bare catch{500} → apiError(error,{route}) so the 400 surfaces.
+- tenant/conditions/[slug]/route.ts: bound `const slug = parseSlug(params.slug)` at top of try and
+  swapped both `slug: params.slug` uses (current-tenant + master-tenant fallback conditions lookups) to
+  the validated `slug`. Bare catch{500} → apiError(error,{route}). Left the `tenantSlug` QUERY param
+  (getTenantBySlug) untouched — it is not the dynamic route param (US-007 scope is the [slug] segment).
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).

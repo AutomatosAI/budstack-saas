@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getTenantFromRequest, getTenantBySlug } from "@/lib/tenant";
+import { apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
 
 export async function GET(
   request: Request,
   { params }: { params: { slug: string } },
 ) {
   try {
+    const slug = parseSlug(params.slug);
     const { searchParams } = new URL(request.url);
     const tenantSlug = searchParams.get("tenantSlug");
 
@@ -26,7 +29,7 @@ export async function GET(
       where: {
         tenantId_slug: {
           tenantId: tenant.id,
-          slug: params.slug,
+          slug,
         },
       },
     });
@@ -44,7 +47,7 @@ export async function GET(
           where: {
             tenantId_slug: {
               tenantId: masterTenant.id,
-              slug: params.slug,
+              slug,
             },
           },
         });
@@ -60,10 +63,6 @@ export async function GET(
 
     return NextResponse.json(condition);
   } catch (error) {
-    console.error("Error fetching condition:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant/conditions/[slug]" });
   }
 }
