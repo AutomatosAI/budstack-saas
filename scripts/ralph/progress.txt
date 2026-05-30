@@ -104,3 +104,48 @@ Validate (via 205's identical install, borrowed by symlink, removed after):
     so it correctly reports a violation, pending its US-009 -> withAuth conversion.
 Next: US-003 (harden the 5 wrappers to compose runWithTenantContextAsync binding).
 
+================================================================================
+DONE — US-003 — Harden auth wrappers to bind tenant context (AC-1b) — 2026-05-30
+================================================================================
+Change (lib/api-auth.ts): the 5 wrappers previously did the role check only and
+called handler() in the bare request scope (no tenant context). Each now runs the
+handler INSIDE PRD-202's runWithTenantContextAsync, so the lib/db.ts middleware
+sees an explicit, confined scope:
+  - withTenantAuth / withTenantAuthParams -> runWithTenantContextAsync(tenantId,…)
+    (the user's own tenant, already asserted non-null by the 403 check).
+  - withSuperAdmin / withSuperAdminParams -> runWithTenantContextAsync(null,…)
+    (EXPLICIT null = deliberate cross-tenant system query; hasTenantContext()
+    stays true, so the middleware does NOT treat it as the unbound-leak bug).
+  - withAuth -> resolves the HOST tenant via getTenantFromRequest(req) and runs
+    runWithTenantContextAsync(hostTenant?.id ?? null, …). This is what will scope
+    customer/profile (US-005) to the storefront tenant.
+
+withAuth params fix (US-001 design note): withAuth previously returned (req)=>…
+and DROPPED Next's { params }. It now takes RouteHandlerWithParams<AuthContext>,
+accepts the optional route context, and forwards params (defaulting to {}) as the
+handler's 3rd arg — so param'd any-auth routes (store/[slug]/**, tenant/[slug])
+won't break on migration. withAuth had ZERO call sites today, so the signature
+change breaks nothing; the 5-wrapper count (and the US-002 gate's APPROVED_WRAPPERS
+list) is preserved — no withAuthParams added.
+
+Imports added: getTenantFromRequest (@/lib/tenant), runWithTenantContextAsync
+(@/lib/tenant-context). Role-check 401/403 short-circuits are unchanged and stay
+OUTSIDE the binding (they never touch tenant-scoped models). getCurrentUser still
+runs BEFORE binding (it resolves WHO the user is, incl. tenantId — cannot itself
+be tenant-scoped; US-004 hardens it). No route bodies changed (AC-1b).
+
+Tests (tests/unit/api-auth.test.ts, 12): module-boundary mocks for getCurrentUser
++ getTenantFromRequest, REAL context primitive. Proves each wrapper binds the
+right scope (asserted via getTenantContext/hasTenantContext inside the handler),
+tears the scope down after settle (no caller leak), forwards params for the
+*Params variants + withAuth, and still returns 401/403 with the handler NOT run.
+
+Validate (via 205's identical install, borrowed by symlink, removed after):
+  - tsc --noEmit (project) -> exit 0, 0 errors.
+  - vitest api-auth + with-tenant-context + check-auth-wrappers -> 27 passed.
+  - gate advisory run UNCHANGED: "107 files | 144 handlers | wrapped 15 |
+    allow-listed 13 | violations 116" (US-003 changes wrapper internals, not which
+    routes are wrapped — correct).
+Next: US-004 (harden getCurrentUser: ambiguous email -> 403, not-provisioned ->
+  409; consume 205's resolveTenant; remove any unscoped fallback).
+
