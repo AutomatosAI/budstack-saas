@@ -58,3 +58,15 @@ US-004 tenant-settings schema + wire super-admin/tenants/[id] — DONE 2026-05-3
   settings 400) propagate instead of being masked as 500. NextResponse still used for 401/404/intended
   Namecheap+Railway 500s and success bodies.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
+
+US-005 customer/profile PATCH Zod + caps — DONE 2026-05-30
+- app/api/customer/profile/route.ts PATCH: replaced `await request.json()` (fields written straight
+  to Prisma, no caps) with `parseJsonBody(request, profileUpdateSchema)` (AC-3). profileUpdateSchema
+  is .partial().strict(): firstName/lastName max 100, phone max 32 + phone-char regex, address an
+  optional .partial().strict() object (street≤200, city/state≤120, zip≤20, country≤120). Unknown top
+  level or address keys → 400; oversized body → 413 (parseJsonBody 256KB cap).
+- Swapped PATCH bare `catch {500}` → `apiError(error, { route: "PATCH /api/customer/profile" })` so the
+  Zod/size 400/413 propagate instead of being masked as 500. GET handler untouched (no body).
+- users.address is Prisma Json? — the typed zod object is assignable to InputJsonValue (tsc confirmed).
+  No client callers of /api/customer/profile exist in the repo, so the typed-object contract is safe.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
