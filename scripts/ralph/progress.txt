@@ -551,3 +551,29 @@ BLOCKED-DOCKER. US-012 (E2E) is BLOCKED-NEEDS-AUTH-DECISION (Clerk test-auth,
 PRD-207 OQ-1, Gerard). Both -> emit RALPH_BLOCKED, leave unchecked: the expected
 clean autonomous stop on this Docker-down dev box.
 
+================================================================================
+RALPH_BLOCKED — Phase 1 complete; Phase 2/3 halted on environment gates
+2026-05-30
+
+US-011 (integration tests, testcontainers) — BLOCKED-DOCKER.
+  Gate check run first: `docker info` -> "Cannot connect to the Docker daemon at
+  unix:///Users/gkavanagh/.docker/run/docker.sock. Is the docker daemon running?"
+  No daemon on this dev box. The story REQUIRES a real Postgres via testcontainers
+  (customer-profile two-tenant same-email scope proof + auth-wrapper 401/403/200
+  rollout proof). PRD hard constraint: substituting a DB mock to dodge Docker is
+  FORBIDDEN. Left UNCHECKED in the plan. Unblock: start Docker Desktop, re-run.
+
+US-012 (Playwright E2E, customer-profile cross-tenant isolation) —
+  BLOCKED-NEEDS-AUTH-DECISION.
+  The Clerk test-auth approach is undecided (PRD-207 OQ-1, owner Gerard). Did NOT
+  invent an auth shim. Left UNCHECKED. Unblock: Gerard's Clerk test-auth call.
+
+This is the expected, correct autonomous stop. Phase 1 (US-001..010) landed in
+full: route inventory + AUTH_PUBLIC_ROUTES allow-list (US-001), AST auth-wrapper
+gate — blocking locally via --strict + advisory CI, fail-closed canary +
+zero-files self-tests (US-002/US-010), context-binding wrappers (US-003), hardened
+getCurrentUser 403/409 (US-004), tenant-scoped customer/profile (US-005), all 107
+routes wrapped-or-allow-listed (US-006..009), error.message-leak sweep (US-010).
+Final gate: 107 files | 144 handlers | wrapped 129 | allow-listed 15 | violations 0.
+Commits: US-007 d83e8fe · US-008 480bee8 · US-009 9dc2ea3 · US-010 3169215.
+
