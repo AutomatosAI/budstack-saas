@@ -69,3 +69,38 @@ Validate: tsc --noEmit -> exit 0, 0 errors project-wide (ran via 205's identical
   node_modules of its own). New file clean.
 Next: US-002 (check-auth-wrappers ts-morph AST gate, report-only).
 
+================================================================================
+DONE — US-002 — check-auth-wrappers AST gate (report-only) — 2026-05-30
+================================================================================
+Deliverables:
+  - scripts/check-auth-wrappers.core.ts: pure AST classifier (no fs / no process
+    side effects). classifySource() -> wrapped | allow-listed | violation per
+    exported HTTP handler. APPROVED_WRAPPERS = the 5 api-auth wrappers.
+    deriveApiPath() maps app/api/.../route.ts -> /api/... (preserves [param]).
+  - scripts/check-auth-wrappers.ts: CLI — recursive route scan, prints VIOLATIONS
+    + summary. Advisory by default; --strict / AUTH_WRAPPERS_STRICT=true exits 1
+    on any violation (US-010 wires --strict to make the gate blocking).
+  - tests/unit/check-auth-wrappers.test.ts: 10 tests (deriveApiPath incl. abs
+    path; bare fn -> violation; wrapped -> pass; allow-listed -> pass; OQ-4:
+    aliased import, re-export of indirectly-wrapped const, per-method
+    classification, non-handler export ignored).
+  - package.json: + "check:auth-wrappers": "tsx scripts/check-auth-wrappers.ts".
+
+DEVIATION (OQ-4): the AC names ts-morph; ts-morph is NOT in the lockfile and not
+  in any reachable install (the worktree has no node_modules, and the borrow-205
+  strategy is lockfile-pinned so it can't be added). Used the TypeScript compiler
+  API (typescript 5.2.2, already installed) instead — the same AST engine ts-morph
+  is a thin wrapper over. Satisfies OQ-4's "AST, not regex" intent: follows import
+  aliases (withAuth as guard), const indirection, and re-exports. Zero new deps.
+  Rationale recorded in the core file header.
+
+Validate (via 205's identical install, borrowed by symlink, removed after):
+  - tsc --noEmit -> exit 0, 0 errors.
+  - vitest tests/unit/check-auth-wrappers.test.ts -> 10 passed.
+  - tsx scripts/check-auth-wrappers.ts -> advisory run, exit 0:
+    "Summary: 107 files | 144 handlers | wrapped 15 | allow-listed 13 | violations 116".
+    Gate is non-vacuous: wrapped 15 = per-handler count across the 12 wrapped
+    files; orders/customer uses lib/with-tenant-context (not an APPROVED_WRAPPER)
+    so it correctly reports a violation, pending its US-009 -> withAuth conversion.
+Next: US-003 (harden the 5 wrappers to compose runWithTenantContextAsync binding).
+
