@@ -36,3 +36,25 @@ US-003 parseJsonBody size-cap helper — DONE 2026-05-30
 - Pure async helper, no DB/network; callers must not also call req.json() (single-use stream).
 - No callers yet — adopted by body routes in US-005/010/011/012.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
+
+US-004 tenant-settings schema + wire super-admin/tenants/[id] — DONE 2026-05-30
+- New nextjs_space/lib/validation/tenant-settings.ts exports tenantSettingsSchema (.strict(),
+  canonical contract for PRD-208), tenantSettingsLenientSchema (.passthrough(), rollout-safe), and
+  type TenantSettings. ~60 known settings keys enumerated (from a repo-wide settings.* grep + the
+  PATCH domain-metadata keys), all optional + nullable, scalars bounded (customCSS capped at 200KB
+  as an XSS-payload bound), structural sub-objects left as z.unknown() for PRD-208 to tighten (AC-4).
+- DELIBERATE DEVIATION from a literal .strict() WIRING: app/super-admin/tenants/[id]/tenant-edit-form.tsx
+  spreads the ENTIRE existing tenant.settings blob back into every PATCH (line 107-112), so a strict
+  schema at the route would 400 every legitimate super-admin save (and there is NO DB to test against).
+  The route therefore validates with the LENIENT schema (bounds known keys, tolerates unknowns); the
+  strict schema is exported for PRD-208 to apply once clients send partials and tests exist. Documented
+  in the module JSDoc. Only the low-traffic super-admin route is touched; the customer-facing
+  tenant-admin settings saves (branding/cookie-settings/settings) are out of scope.
+- super-admin/tenants/[id]/route.ts: parseUuid(params.id) added to GET/PATCH/DELETE (every params.id
+  use now flows through the validated `id`); caller `settings` validated via tenantSettingsLenientSchema
+  before the merge (mismatch → apiValidationError 400); server-managed keys (railwayDomainId/
+  railwayDnsRecords/domainVerification) still applied AFTER caller settings so they can't be spoofed.
+- Swapped all 3 bare `catch {500}` blocks to `apiError(error, { route })` so the parseUuid 400 (and the
+  settings 400) propagate instead of being masked as 500. NextResponse still used for 401/404/intended
+  Namecheap+Railway 500s and success bodies.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).
