@@ -17,3 +17,13 @@ US-001 parseUuid + parseSlug helpers — DONE 2026-05-30
 - Accept `unknown` and string-guard internally so a non-string JSON/param value is a clean 400 too.
 - No callers yet — wired into routes in US-006..009 (rollout). Pure functions, no DB/network.
 - Validated: tsc --noEmit exit 0; pnpm build exit 0 (full route tree compiled, stub env per ci.yml).
+
+US-002 deepMerge prototype pollution fix — DONE 2026-05-30
+- lib/utils.ts: added module-level DANGEROUS_KEYS = Set(["__proto__","constructor","prototype"])
+  and `if (DANGEROUS_KEYS.has(key)) continue;` as the FIRST statement in the Object.keys loop, so
+  the guard applies at every recursion level (nested overrides can't smuggle __proto__ either) (AC-2).
+- Root cause documented inline: JSON.parse'd payloads carry "__proto__" as an OWN enumerable key, so
+  Object.keys yields it and `result["__proto__"]=val` would hit the prototype setter.
+- Semantics preserved exactly: override-wins-unless-undefined/null/empty-string, arrays replace
+  wholesale, plain objects deep-merge. Only the three poison keys are now dropped.
+- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml).

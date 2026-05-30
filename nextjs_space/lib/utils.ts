@@ -6,6 +6,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Keys that, if copied onto an object, can poison Object.prototype. A
+ * JSON.parse'd payload carries "__proto__" as an OWN enumerable key (unlike an
+ * object literal), so Object.keys() yields it and a naive assignment hits the
+ * prototype setter. Skip these at every recursion level (PRD-204 AC-2).
+ */
+const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+/**
  * Deep merge two objects. Override values win unless undefined/null/empty string.
  * Arrays are NOT merged — overrides replace entirely.
  */
@@ -14,6 +22,7 @@ export function deepMerge(base: any, overrides: any): any {
   if (!overrides) return base;
   const result = { ...base };
   for (const key of Object.keys(overrides)) {
+    if (DANGEROUS_KEYS.has(key)) continue;
     const val = overrides[key];
     if (val && typeof val === 'object' && !Array.isArray(val)) {
       result[key] = deepMerge(base[key], val);
