@@ -130,3 +130,34 @@ middleware.ts host derivation consumes the shared parseHostToTenantHint — AC-2
 - No new test (the parser is already covered by parse-host.test.ts; behaviour-equivalence is
   by construction — same classification, same rewrites). Full suite re-run as a regression gate.
 - Validation: pnpm test:unit -> 74/74 green (no new; regression gate); npx tsc --noEmit -> 0.
+
+--------------------------------------------------------------------------------
+US-006  RALPH_BLOCKED  2026-05-30  (BLOCKED-PRD211)
+Webhook route-local resolveTenant -> canonical: NOT a safe like-for-like swap.
+- On reading app/api/webhooks/drgreen/status/route.ts:143, the route-local
+  resolveTenant(event, ids) resolves a tenant from Dr Green BUSINESS identifiers:
+  clientId -> consultation_questionnaires.drGreenClientId / users.drGreenClientId;
+  orderId -> orders.drGreenOrderId; strainId -> products(slug|id). It also returns the
+  per-tenant webhook SECRET (tenant.drGreenSecretKey) and, for inventory, a multi-tenant
+  broadcast array (tenantIds[]).
+- The canonical resolveTenant(input) (AC-1, locked in US-002) accepts ONLY
+  {headers}|{host}|{slug}|{clerk} and returns {tenantId, tenant} | null (clerk:
+  | Ambiguous). It has NO clientId/orderId/strainId kind and returns no secret. So a
+  literal "replace with the canonical one" (AC-2 / PRD line 68) would make every Dr Green
+  webhook 404 — it cannot resolve a webhook payload.
+- The PRD itself defers the real delegation to PRD-211: line 93 "Webhook pre-verify-lookup
+  ordering fix -> PRD-211 (this PRD only swaps the helper)"; line 166 "PRD-211 … fixes the
+  webhook resolver's verify-before-lookup ordering ONCE IT DELEGATES to the canonical
+  resolver"; OQ-4 (owner Gerard) is still open on whether the route needs a tenant before
+  signature verify at all. Safely completing the swap is coupled to PRD-211's verify->lookup
+  reorder, which is explicitly OUT OF SCOPE here.
+- DECISION: leave the webhook file UNTOUCHED (PRD-211 owns the next edit to this function;
+  touching it now for a cosmetic rename would only create a merge conflict with 211) and
+  mark US-006 BLOCKED-PRD211 — unchecked, per the ralph "never mark [x] unless AC really met"
+  rule. No code change, no test.
+- RECOMMENDATION for PRD-211: after reordering verify-before-lookup, either (a) add canonical
+  kinds {kind:'drgreenClientId'|'drgreenOrderId'|'strainId'} (returning the full tenant row so
+  the secret comes via resolved.tenant.drGreenSecretKey) and route the webhook through them, or
+  (b) keep business-id resolution route-local but rename it (e.g. resolveDrGreenWebhookTenant)
+  so the name 'resolveTenant' is reserved for the one canonical resolver. Either also closes
+  the webhook's missing isActive filter on its tenant-by-id fetch.
