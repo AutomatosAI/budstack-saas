@@ -64,10 +64,43 @@ DoS/SSRF advisories REQUIRES the Next 15.x major bump. Recorded against OQ-1.
      Turnstile + the PageAgent/Automatos widgets all load with ZERO console CSP
      violations under the nonce policy.
 
+[US-005] DEFERRED (passes:false) — Next 15.5.x bump ATTEMPTED then REVERTED (AC-1 open).
+  Per the AC cascade clause: attempted on this worktree, did NOT commit a broken build.
+  - next@15.5.18 is the `backport` dist-tag; peer react '^18.2.0 || 19.x' => React 18.2
+    STAYS. No React 19 / @types/react 19 cascade. eslint-config-next bumped alongside.
+  - tsc --noEmit PASSED clean. The wall is `next build` route-type validation: Next 15
+    makes route-handler `params` + page `searchParams` ASYNC (Promise). First failure:
+    app/api/store/[slug]/cart/add/route.ts — "Type { params: { slug: string } } is not a
+    valid type for the function's second argument". tsc alone CANNOT catch this — Next
+    injects the generated .next/types route stubs only during `build`.
+  - Blast radius measured: 41 dynamic route handlers (params) + 33 dynamic pages/layouts
+    (params/searchParams) = ~74 files. Exceeds "small and safe in-session" => REVERTED
+    (git checkout of package.json, pnpm-lock.yaml, next.config.js, next-env.d.ts + the 2
+    headers() sites). Re-ran `pnpm install` to restore the 14.2.35 tree.
+  - GOTCHA for the next operator: the bump's build left stale Next-15 route stubs in
+    .next/types/ that expect `params: Promise<any>`; those made a clean Next-14 tsc throw
+    ~50 TS2344 errors until `.next` was deleted. Always `rm -rf .next` after reverting.
+  - Post-revert baseline RE-VERIFIED GREEN on 14.2.35: tsc exit 0, 19/19 unit tests,
+    pnpm build clean (Middleware 79.6 kB).
+  - WHY passes stays FALSE: AC-1 ("pnpm audit shows ZERO HIGH/CRITICAL for next") is
+    UNMET. A security story must not flip green while these HIGH `next` advisories are
+    still open: GHSA-h25m-26qc-wcjf (DoS, HTTP req deserialization), GHSA-q4gf-8mx6-v5v3
+    + GHSA-8h8q-6873-q5fj (DoS, Server Components), GHSA-c4j6-fc7j-m34r (SSRF),
+    GHSA-36qx-fr4f-26g5 (middleware/proxy auth bypass). Unrelated HIGHs (fast-uri,
+    fast-xml-builder, js-cookie via clerk) are NOT fixed by the next bump — separate work.
+  - RECOMMENDED PATH (Gerard's go/no-go, OQ-1): `npx @next/codemod@canary
+    next-async-request-api` to mechanically async-ify the ~74 params/searchParams sites,
+    then re-run build + the AC-1a App-Router browser smoke. That codemod sweep is itself
+    a worktree-sized change that wants its own review pass, not a tail-end of US-005.
+  >> HUMAN GATE (AC-1a): App-Router behaviour smoke (storefront / tenant-admin /
+     super-admin) after any committed bump — Gerard's call, independent of build status.
+
 [OQ / HUMAN FOLLOW-UPS — carried for Gerard, do NOT auto-resolve]
   OQ-1 (AC-1):  Next 15.x is the ONLY way to clear the HIGH DoS/SSRF advisories
-                (14.2.35 is already the newest 14.2.x). US-005 attempts the bump on
-                this worktree; go/no-go + AC-1a App-Router smoke is Gerard's call.
+                (14.2.35 is already the newest 14.2.x). US-005 ATTEMPTED the bump and
+                REVERTED it — clean tsc but ~74-file async params/searchParams build
+                cascade (full analysis in the US-005 log above). go/no-go on running the
+                next-async-request-api codemod + AC-1a App-Router smoke is Gerard's call.
   OQ-2 (AC-2a): RESOLVED in US-004 — inline-script reliance enumerated against the
                 installed source. No app-authored inline <script> remains; Clerk +
                 Turnstile + the two widget <Script>s are nonced/transitively trusted

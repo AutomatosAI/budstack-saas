@@ -85,7 +85,7 @@
       ],
       "priority": 5,
       "passes": false,
-      "notes": ""
+      "notes": "DEFERRED to human go/no-go (OQ-1). Bump ATTEMPTED on this worktree under Node 20 then REVERTED per the AC cascade clause. Findings: next@15.5.18 (the `backport` dist-tag) keeps React 18.2 (peer react '^18.2.0 || 19.x') so NO React 19 cascade. tsc --noEmit passed clean; the blocker is `next build` route-type validation — Next 15 makes route-handler `params` and page `searchParams` async (Promise), failing 41 dynamic route handlers + 33 dynamic pages/layouts (~74 files), e.g. app/api/store/[slug]/cart/add/route.ts 'Type { params: { slug: string } } is not a valid second argument'. tsc alone does NOT catch this (Next injects generated route types only during build). Blast radius exceeds 'small and safe' -> reverted; did NOT commit a broken build. Post-revert baseline RE-VERIFIED green: tsc exit 0 (after clearing stale .next/types from the bump), 19/19 unit tests, pnpm build clean (Middleware 79.6 kB). passes stays FALSE because AC-1 is unmet: HIGH `next` advisories remain OPEN (GHSA-h25m-26qc-wcjf DoS, GHSA-q4gf-8mx6-v5v3 + GHSA-8h8q-6873-q5fj DoS RSC, GHSA-c4j6-fc7j-m34r SSRF, GHSA-36qx-fr4f-26g5 middleware bypass) — a security story must not be green while HIGH CVEs persist. Recommended path (Gerard's call, OQ-1): run `npx @next/codemod@canary next-async-request-api` to mechanically async-ify the ~74 params/searchParams sites, then full App-Router browser smoke (AC-1a, human). Unrelated HIGHs (fast-uri, fast-xml-builder, js-cookie via clerk) are NOT cleared by the next bump."
     }
   ]
 }
