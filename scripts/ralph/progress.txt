@@ -402,3 +402,90 @@ Next: US-009 (remaining auth routes: account/export|delete, consultation/status|
   withTenantAuth; resolve tenant-admin customers/[id]+posts/[id] flags + upload host-resolved;
   confirm store/* + webhooks/* + health on AUTH_PUBLIC_ROUTES allow-list).
 
+================================================================================
+=== US-009 DONE (2026-05-30) — remaining auth routes -> withAuth + allow-list ===
+================================================================================
+Closed the last 25 gate violations: 23 handlers wrapped in withAuth across 18 route
+files + 2 pre-auth routes added to AUTH_PUBLIC_ROUTES. Every one of the 107 route
+files is now wrapped-or-allow-listed (gate: violations 0). KEEP-body transform;
+success payloads byte-for-byte unchanged; handlers read `user` from the wrapper ctx
+(AC-1a). withAuth binds the HOST tenant (US-003), so any-authenticated routes scope
+to the storefront tenant.
+
+2 pre-auth routes -> AUTH_PUBLIC_ROUTES (lib/auth-public-routes.ts; resolves the
+US-001 "needs human decision" + onboarding open questions; allow-list now 15):
+  consultation/submit — anonymous patient intake: resolves tenant by host, then
+    MINTS the Clerk user + DB user + questionnaire; cannot require a session (own IP
+    rate-limit + Zod whitelist). Same pre-auth posture as signup.
+  onboarding — pre-auth tenant registration: creates the Clerk user + org + tenant
+    before any session exists (own IP rate-limit + Zod; Clerk rollback on DB fail).
+  (signup was already allow-listed.)
+
+5 hand-migrated (nuanced) -> withAuth:
+  orders (POST,GET {user}) — order create/list for the logged-in customer. NUANCE:
+    customer display name now reads dbUser.firstName (the DB row), NOT user.firstName
+    (AuthUser has no firstName/lastName) — corrected during the migration.
+  orders/customer (GET {user}) — swapped the PRD-202 with-tenant-context PILOT for
+    withAuth; reads tenantId from getTenantContext() (withAuth binds host tenant) +
+    findFirst({email,tenantId}). Removes the last non-APPROVED_WRAPPER from the gate.
+  tenant/[slug] (GET {user},{slug}) — PRESERVED the route-specific ownership gate
+    (role!==SUPER_ADMIN && user.tenantId!==tenant.id -> 403): own-tenant-or-superadmin,
+    NOT the generic {TA,SA} drift, so kept in-body verbatim.
+
+2 hand-migrated + FLAGGED FOR HUMAN REVIEW (deliberate dual-role SUPER_ADMIN
+cross-tenant bypass — the US-007 deferrals) -> withAuth:
+  tenant-admin/customers/[id] (GET,PATCH,DELETE) and
+  tenant-admin/posts/[id]    (GET,PATCH,DELETE)
+  Both admit {TENANT_ADMIN (own tenant only), SUPER_ADMIN (ANY tenant)}. A tenant-
+  binding wrapper (withTenantAuthParams) would bind the admin's OWN tenant and 403 a
+  null-tenant super-admin — regressing the documented cross-tenant reach. withAuth
+  binds the host tenant INERTLY (handlers look up by findUnique/findFirst on the [id],
+  never a tenant-scoped list) and the dual-role authz is PRESERVED in-body verbatim:
+    customers/[id]: keeps `if(!email)401`, `{TA,SA} else 401`, `!localUser && role!==SA
+      -> 404`, and `role===TA && resource.tenantId!==localUser.tenantId -> 403`.
+    posts/[id]:     keeps `{TA,SA} else 401` and `role!==SA && post.tenantId!==
+      localUser?.tenantId -> 403` ("Allow SUPER_ADMIN to bypass tenant check").
+  Gate-compatible (withAuth is an APPROVED_WRAPPER) but the deliberate cross-tenant
+  escape needs explicit human sign-off — do NOT silently re-narrow to a tenant wrapper.
+
+13 subagent-migrated (precise KEEP-body spec; re-validated by me — tsc=0 + grep +
+diff spot-check) -> withAuth:
+  account/delete, account/export, user/profile, consultation/status, shop/register,
+  tenant-admin/upload (the US-008 host-resolved deferral — tenant from
+  getCurrentTenantId(), now exactly the host tenant the wrapper binds),
+  store/[slug]/cart, store/[slug]/cart/add, store/[slug]/cart/remove,
+  store/[slug]/cart/clear, store/[slug]/orders, store/[slug]/orders/[orderId],
+  store/[slug]/orders/submit
+  (the AUTHENTICATED customer sub-routes of the storefront; the PUBLIC browse store
+  routes + webhooks/* + health stay on the allow-list — gate-confirmed, not modified).
+
+GUARD-RESTORE FIX (cross-user leak averted): the original hand-rolled auth in 5 of
+the subagent files was a COMBINED guard
+  `if (!user?.emailAddresses?.[0]?.emailAddress) return 401`
+i.e. the email presence check WAS the auth gate. Collapsing it to `const email =
+user.email` with no guard would let a no-email session fall through to
+`prisma.users.findFirst({where:{email: undefined}})` — an UNSCOPED query = cross-user
+read. Restored `if(!email) return 401` (recovered byte-exact from the git diff of the
+pre-migration file) in all 5:
+  consultation/status, shop/register, store/[slug]/cart/remove,
+  store/[slug]/cart/clear, AND store/[slug]/orders/[orderId].
+  The subagent self-flagged the first 4 but MISSED orders/[orderId]; found by mapping
+  every combined-guard removal in the full diff to its file and cross-checking against
+  the `if(!email)` grep (only orders/[orderId] was left unmatched). All 5 now guarded.
+
+Validate (205's identical install, symlinked then removed):
+  - tsc --noEmit -> exit 0 (noUnusedLocals/noUnusedParameters = structural proof every
+    destructured {user} ctx is consumed and all refs resolve).
+  - check:auth-wrappers (report-only): "107 files | 144 handlers | wrapped 129 |
+    allow-listed 15 | violations 0" — was wrapped 106 / allow-listed 13 / violations 25
+    at US-008; +23 handlers wrapped + 2 allow-listed = the 25 cleared. Non-vacuous.
+  - vitest api-auth + auth-helper + customer-profile + check-auth-wrappers -> 35 passed.
+  - AC-5: every migrated handler returns static messages / apiError safeMessage — no
+    error.message / String(error) in any response body.
+
+Next: US-010 (flip the gate to BLOCKING via --strict: 0 unwrapped non-allow-listed +
+  wrapped+allow-listed == 107; add the error.message-leak grep gate — must sanitize or
+  carry a scoped exception for the US-006-flagged tenants/[id] DELETE cleanupErrors[]
+  and tenants/reset-templates steps[] error.message-in-body; add a NON-blocking CI step
+  (blocking CI = PRD-216); add a non-vacuousness fixture check).
+

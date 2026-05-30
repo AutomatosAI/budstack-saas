@@ -1,23 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { clearCart } from "@/lib/drgreen-cart";
 import { apiError } from "@/lib/api-error";
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { slug: string } },
-) {
+export const DELETE = withAuth(async (_request, { user }) => {
   try {
-    const user = await currentUser();
-
-    if (!user?.emailAddresses?.[0]?.emailAddress) {
+    const email = user.email;
+    if (!email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const email = user.emailAddresses[0].emailAddress;
 
     // Find linked DB user
     const dbUser = await prisma.users.findFirst({ where: { email } });
@@ -51,4 +45,4 @@ export async function DELETE(
       safeMessage: "Failed to clear cart",
     });
   }
-}
+});

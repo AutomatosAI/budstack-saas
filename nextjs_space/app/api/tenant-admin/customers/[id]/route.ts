@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser, clerkClient } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
+import { clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { fetchClientByEmail, updateClient } from "@/lib/doctor-green-api";
@@ -10,20 +11,10 @@ import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
  * Get customer details
  * Authorization: TENANT_ADMIN or SUPER_ADMIN
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const GET = withAuth(async (_request, { user }, params) => {
   try {
-    // Check authentication
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
-    const email = primaryEmail || user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
+    const email = user.email;
+    const role = user.role;
 
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
@@ -128,26 +119,17 @@ export async function GET(
       { status: 500 },
     );
   }
-}
+});
 
 /**
  * PATCH /api/tenant-admin/customers/[id]
  * Update customer profile
  * Authorization: TENANT_ADMIN or SUPER_ADMIN
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const PATCH = withAuth(async (request, { user }, params) => {
   try {
-    // Check authentication
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
+    const email = user.email;
+    const role = user.role;
 
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
@@ -406,26 +388,17 @@ export async function PATCH(
       { status: 500 },
     );
   }
-}
+});
 
 /**
  * DELETE /api/tenant-admin/customers/[id]
  * GDPR deletion - hard delete or anonymize customer
  * Authorization: TENANT_ADMIN or SUPER_ADMIN
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const DELETE = withAuth(async (request, { user }, params) => {
   try {
-    // Check authentication
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
+    const email = user.email;
+    const role = user.role;
 
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
@@ -514,4 +487,4 @@ export async function DELETE(
       { status: 500 },
     );
   }
-}
+});

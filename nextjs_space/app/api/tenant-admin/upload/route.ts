@@ -1,17 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { uploadFile } from "@/lib/s3";
 import { getBucketConfig } from "@/lib/aws-config";
 import { validateUploadBuffer } from "@/lib/upload-validation";
 import { getCurrentTenantId } from "@/lib/tenant";
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, { user }) => {
   try {
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
+    if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -67,4 +63,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

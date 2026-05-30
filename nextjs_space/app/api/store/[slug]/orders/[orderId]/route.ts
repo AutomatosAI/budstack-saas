@@ -1,23 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { getOrder } from "@/lib/drgreen-orders";
 import { apiError } from "@/lib/api-error";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { slug: string; orderId: string } },
-) {
+export const GET = withAuth(async (_request, { user }, { orderId }) => {
   try {
-    const user = await currentUser();
-
-    if (!user?.emailAddresses?.[0]?.emailAddress) {
+    const email = user.email;
+    if (!email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const email = user.emailAddresses[0].emailAddress;
 
     // Find linked DB user
     const dbUser = await prisma.users.findFirst({ where: { email } });
@@ -37,7 +31,7 @@ export async function GET(
 
     // Get order (with Dr. Green sync)
     const order = await getOrder({
-      orderId: params.orderId,
+      orderId: orderId,
       userId: dbUser.id,
       tenantId: tenant.id,
       apiKey: drGreenConfig.apiKey,
@@ -51,4 +45,4 @@ export async function GET(
       safeMessage: "Failed to get order",
     });
   }
-}
+});

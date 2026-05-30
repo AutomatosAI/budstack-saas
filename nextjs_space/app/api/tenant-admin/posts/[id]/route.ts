@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
@@ -21,24 +21,14 @@ const postSchema = z.object({
   published: z.boolean().default(false),
 });
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const GET = withAuth(async (_req, { user }, { id }) => {
   try {
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
+    const email = user.email;
+    const role = user.role;
 
     if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const { id } = params;
 
     const post = await prisma.posts.findUnique({
       where: { id },
@@ -67,26 +57,17 @@ export async function GET(
       { status: 500 },
     );
   }
-}
+});
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const PATCH = withAuth(async (req, { user }, { id }) => {
   try {
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
+    const email = user.email;
+    const role = user.role;
 
     if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
     const body = await req.json();
     const validatedData = postSchema.partial().parse(body);
 
@@ -145,26 +126,17 @@ export async function PATCH(
       { status: 500 },
     );
   }
-}
+});
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const DELETE = withAuth(async (_req, { user }, { id }) => {
   try {
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
+    const email = user.email;
+    const role = user.role;
 
     if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
     const localUser = await prisma.users.findFirst({
       where: { email: email },
       include: { tenants: true },
@@ -192,4 +164,4 @@ export async function DELETE(
       { status: 500 },
     );
   }
-}
+});

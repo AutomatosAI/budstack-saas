@@ -11,9 +11,10 @@
  *
  * Only genuinely public READS and pre-auth / signature-verified endpoints
  * belong here. Storefront cart / orders / submit are AUTHENTICATED (`withAuth`),
- * NOT public — they are deliberately absent. `consultation/submit` is also
- * deliberately absent pending the human posture call in US-009 (it resolves a
- * tenant by host and may accept anonymous intake — wrap-vs-allow is unresolved).
+ * NOT public — they are deliberately absent. `consultation/submit` and
+ * `onboarding` ARE listed: both are pre-auth intake that MINT the Clerk user
+ * (and, for onboarding, the tenant) — they cannot require a session because
+ * they create it (same posture as `signup`). Resolved in US-009.
  *
  * Patterns use the Next.js app-router path with `[param]` placeholders, as
  * derived from each file path: `app/api/<segments>/route.ts` → `/api/<segments>`.
@@ -57,6 +58,16 @@ export const AUTH_PUBLIC_ROUTES: readonly PublicRoute[] = [
   {
     pattern: "/api/signup",
     reason: "Pre-auth account creation; no Clerk session exists yet.",
+  },
+  {
+    pattern: "/api/consultation/submit",
+    reason:
+      "Pre-auth patient intake: resolves tenant by host, then MINTS the Clerk user + DB user + questionnaire; cannot require a session (own IP rate-limit + Zod whitelist).",
+  },
+  {
+    pattern: "/api/onboarding",
+    reason:
+      "Pre-auth tenant registration: creates the Clerk user + Clerk org + tenant before any session exists (own IP rate-limit + Zod, Clerk rollback on DB failure).",
   },
   {
     pattern: "/api/auth/reset-password",

@@ -1,20 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { slug: string } },
-) {
+export const GET = withAuth(async (_req, { user }) => {
   try {
-    const user = await currentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
+    const email = user.email;
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
     }
@@ -55,4 +46,4 @@ export async function GET(
       { status: 500 },
     );
   }
-}
+});

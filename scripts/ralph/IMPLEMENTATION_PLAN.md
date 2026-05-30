@@ -22,7 +22,7 @@ Counts (verified 2026-05-30 against this worktree): **107** route files; **12** 
 - [x] US-006 — Migrate super-admin routes (25 of 33) → `withSuperAdmin`/`withSuperAdminParams`; delete hand-rolled blocks; read `user`/`tenantId` from context (AC-1/AC-1a)
 - [x] US-007 — Migrate tenant-admin routes **batch 1** (~half of 43) → `withTenantAuth`/`withTenantAuthParams` (AC-1/AC-1a)
 - [x] US-008 — Migrate tenant-admin routes **batch 2** (remainder) → `withTenantAuth`/`withTenantAuthParams` (AC-1/AC-1a)
-- [ ] US-009 — Migrate remaining authenticated routes (tenant/orders/consultation/account/user/signup/shop/onboarding/doctor-green/customer) → `withAuth`/`withTenantAuth`; confirm store/webhooks/health on `AUTH_PUBLIC_ROUTES`; flag anything ambiguous for human review (AC-1/AC-4a)
+- [x] US-009 — Migrate remaining authenticated routes (tenant/orders/consultation/account/user/signup/shop/onboarding/doctor-green/customer) → `withAuth`/`withTenantAuth`; confirm store/webhooks/health on `AUTH_PUBLIC_ROUTES`; flag anything ambiguous for human review (AC-1/AC-4a)
 - [ ] US-010 — Flip gate to **blocking** (0 unwrapped non-allow-listed; wrapped+allow-listed == 107) + `error.message`-leak grep gate (AC-5) + non-blocking CI step (blocking CI = PRD-216) + non-vacuousness fixture check (AC-4/AC-4b/AC-5)
 
 ## Phase 2 — Integration tests (REQUIRES Docker daemon)

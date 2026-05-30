@@ -1,22 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { slug: string } },
-) {
+export const GET = withAuth(async (_request, { user }, { slug }) => {
   try {
-    const { slug } = params;
-
     if (!slug) {
       return NextResponse.json({ error: "Slug is required" }, { status: 400 });
-    }
-
-    // Require authentication — this route exposes settings and branding
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const tenant = await prisma.tenants.findUnique({
@@ -55,4 +44,4 @@ export async function GET(
       { status: 500 },
     );
   }
-}
+});

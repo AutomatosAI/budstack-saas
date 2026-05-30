@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
@@ -8,25 +8,16 @@ import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
 import { checkUserKycStatus } from "@/app/actions/kyc-check";
 import { apiError } from "@/lib/api-error";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { slug: string } },
-) {
+export const POST = withAuth(async (request, { user }, { slug }) => {
   const traceId = `order-${Date.now()}`;
   const log = (step: string, data?: any) => {
     console.log(`[${traceId}] ${step}`, data !== undefined ? JSON.stringify(data) : '');
   };
 
   try {
-    log('START', { slug: params.slug });
+    log('START', { slug });
 
-    const user = await currentUser();
-    if (!user) {
-      log('FAIL: No Clerk user');
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
+    const email = user.email;
     if (!email) {
       log('FAIL: No email on Clerk user');
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
@@ -167,7 +158,7 @@ export async function POST(
       route: "store.orders.submit",
       status: 500,
       safeMessage: "Failed to submit order",
-      logContext: { traceId, slug: params.slug },
+      logContext: { traceId, slug },
     });
   }
-}
+});
