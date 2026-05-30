@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { decrypt } from "@/lib/encryption";
 import { apiError } from "@/lib/api-error";
@@ -28,31 +28,13 @@ function mapSmtpErrorToSafeMessage(err: unknown): string {
   }
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const user = await currentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
-
-    if (!email) {
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
-    }
-
-    if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const localUser = await prisma.users.findFirst({
-      where: { email: email },
-      include: { tenants: true },
+    const tenant = await prisma.tenants.findUnique({
+      where: { id: tenantId },
     });
 
-    if (!localUser?.tenants) {
+    if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
@@ -65,7 +47,7 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
 
-    const settings = localUser.tenants.settings as any;
+    const settings = tenant.settings as any;
     const smtp = settings?.smtp;
 
     if (!smtp || !smtp.host || !smtp.user || !smtp.password) {
@@ -100,12 +82,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`[TenantSMTP] Verifying connection for ${localUser.tenants.id}...`);
+    console.log(`[TenantSMTP] Verifying connection for ${tenantId}...`);
     await transporter.verify();
 
     const fromAddress = smtp.fromEmail
-      ? `"${smtp.fromName || localUser.tenants.businessName}" <${smtp.fromEmail}>`
-      : `"${localUser.tenants.businessName}" <${smtp.user}>`;
+      ? `"${smtp.fromName || tenant.businessName}" <${smtp.fromEmail}>`
+      : `"${tenant.businessName}" <${smtp.user}>`;
 
     await transporter.sendMail({
       from: fromAddress,
@@ -135,4 +117,4 @@ export async function POST(req: NextRequest) {
       safeMessage: mapSmtpErrorToSafeMessage(error),
     });
   }
-}
+});

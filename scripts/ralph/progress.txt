@@ -346,3 +346,59 @@ Next: US-008 (tenant-admin batch 2 — the ~24 FLAT routes still listed: analyti
   products/bulk|reorder|sync, select-template, seo/pages, settings(+test-smtp), submissions,
   templates/clone|create-blank|upload, tenant, upload, webhooks -> withTenantAuth/Params).
 
+================================================================================
+=== US-008 DONE (2026-05-30) — tenant-admin batch 2: FLAT routes -> withTenantAuth ===
+Migrated 23 FLAT tenant-admin routes to withTenantAuth (role {TENANT_ADMIN,SUPER_ADMIN},
+non-null tenantId, ctx-bound to user.tenantId via PRD-202 runWithTenantContextAsync).
+KEEP-body transform; success payloads byte-for-byte unchanged. Handlers read user/tenantId
+from the wrapper ctx — never re-call getCurrentUser() (AC-1a).
+
+3 hand-migrated this iteration (nuanced — needed a role-narrowing call + ctx divergence):
+  analytics (GET, {user,tenantId}; dropped generic-401 role drift; PRESERVED
+    checkRateLimit(user.id) block; removed tenantId guard)
+  webhooks [flat] (GET {_request,tenantId}; POST {user,tenantId} uses req.json/headers,
+    audit userId=user.id userEmail=user.email||undefined; both generic-401 drift dropped;
+    no-tenant 400 -> wrapper 403, accepted normalization)
+  settings/test-smtp (POST {tenantId}; was unscoped users.findFirst({email}) include tenants
+    — replaced with prisma.tenants.findUnique({id: tenantId}); localUser.tenants.{settings,
+    businessName,id} -> tenant.{settings,businessName}/ctx tenantId. Closes the last
+    unscoped-email tenant lookup in flat tenant-admin; role set unchanged {TA,SA})
+
+20 subagent-written (precise KEEP-body spec; forbidden build/git/tsc/install — pure edits;
+re-validated by me via tsc=0 + grep + diff spot-check of orders/select-template/posts/settings):
+  branding (PUT {tenantId}; POST delegates to PUT), branding/upload (POST {tenantId}),
+  cookie-settings (GET {_request,tenantId}; POST {request,tenantId}; uses Request not NextRequest),
+  email-mappings (GET/POST/DELETE {tenantId}), email-templates/clone (POST {tenantId}),
+  email-templates [flat] (GET {_request,tenantId}; POST {tenantId}),
+  orders/bulk (POST {user,tenantId}), orders [flat] (GET/PATCH {tenantId}; dropped generic
+    403 "Forbidden" drift — admitted {TA,SA} == wrapper set), posts [flat] (POST {user,tenantId};
+    GET {_request,tenantId}), products/bulk (POST {user,tenantId}),
+  products/reorder (POST {user,tenantId}), products/sync (POST {_request,tenantId}),
+  select-template (POST {tenantId}; dropped generic 403 "Forbidden - Tenant admin access
+    required" drift — admitted both roles == wrapper set), seo/pages (GET/PUT {tenantId}),
+  settings [flat] (POST {user,tenantId}; preserved tenants.findUnique + audit log),
+  submissions (GET {_request,tenantId}), templates/clone (POST {user,tenantId}),
+  templates/create-blank (POST {user,tenantId}), templates/upload (POST {user,tenantId}),
+  tenant (GET {_request,tenantId}; PATCH {tenantId})
+
+DEFERRED to US-009 (NOT a bypass — tenant-source mismatch, not user.tenantId):
+  upload (POST) — tenant from getCurrentTenantId() (HOST/header-resolved storefront tenant,
+    not user.tenantId) + SUPER_ADMIN-without-tenant allowance. Belongs to withAuth (host tenant).
+
+Role-narrowing rule (consistent w/ US-007): generic 401/403 admitting {TA,SA} == wrapper set
+-> DROP as drift; route-specific exclusion -> PRESERVE. No SUPER_ADMIN cross-tenant escape
+among the FLAT routes (those are the customers/[id]+posts/[id] flags -> US-009).
+
+Validate: `tsc --noEmit` EXIT 0. check:auth-wrappers (report-only): 107 files, 144 handlers,
+  wrapped 106, allow-listed 13, violations 25. Every remaining tenant-admin violation is a
+  deferred case: customers/[id], posts/[id] (US-007 flags), upload (host-resolved) — all
+  US-009. grep: no currentUser/getCurrentUser/emailAddresses/publicMetadata.role left in any
+  FLAT tenant-admin route. AC-5: all catch blocks return static messages / apiError safeMessage
+  — no error.message in any response body. tsc=0 under noUnusedLocals/noUnusedParameters is the
+  structural proof every destructured {user,tenantId} is actually consumed and all refs resolve.
+
+Next: US-009 (remaining auth routes: account/export|delete, consultation/status|submit,
+  onboarding, orders(+customer), shop/register, tenant/[slug], user/profile -> withAuth/
+  withTenantAuth; resolve tenant-admin customers/[id]+posts/[id] flags + upload host-resolved;
+  confirm store/* + webhooks/* + health on AUTH_PUBLIC_ROUTES allow-list).
+

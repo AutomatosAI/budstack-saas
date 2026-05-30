@@ -1,53 +1,21 @@
-import { getCurrentUser } from "@/lib/auth-helper";
-import { NextRequest, NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 const VALID_PAGE_KEYS = ["home", "about", "contact", "faq"];
 
 // GET - Fetch tenant page SEO
-export async function GET() {
-  const user = await getCurrentUser();
-
-  if (
-    !user ||
-    (user.role !== "TENANT_ADMIN" &&
-      user.role !== "SUPER_ADMIN")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const tenantId = user.tenantId;
-
-  if (!tenantId) {
-    return NextResponse.json({ error: "No tenant" }, { status: 400 });
-  }
-
+export const GET = withTenantAuth(async (_request, { tenantId }) => {
   const tenant = await prisma.tenants.findUnique({
     where: { id: tenantId },
     select: { pageSeo: true },
   });
 
   return NextResponse.json({ pageSeo: tenant?.pageSeo || {} });
-}
+});
 
 // PUT - Update tenant page SEO
-export async function PUT(request: NextRequest) {
-  const user = await getCurrentUser();
-
-  if (
-    !user ||
-    (user.role !== "TENANT_ADMIN" &&
-      user.role !== "SUPER_ADMIN")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const tenantId = user.tenantId;
-
-  if (!tenantId) {
-    return NextResponse.json({ error: "No tenant" }, { status: 400 });
-  }
-
+export const PUT = withTenantAuth(async (request, { tenantId }) => {
   const body = await request.json();
   const { pageKey, seo } = body;
 
@@ -93,4 +61,4 @@ export async function PUT(request: NextRequest) {
   });
 
   return NextResponse.json({ pageSeo: updated.pageSeo || {} });
-}
+});

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 
 const TENANT_SELECT = {
@@ -21,16 +21,10 @@ const TENANT_SELECT = {
  *
  * Fetch tenant data for the authenticated tenant admin.
  */
-export async function GET() {
+export const GET = withTenantAuth(async (_request, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || !user.tenantId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const tenant = await prisma.tenants.findUnique({
-      where: { id: user.tenantId },
+      where: { id: tenantId },
       select: TENANT_SELECT,
     });
 
@@ -49,7 +43,7 @@ export async function GET() {
       { status: 500 },
     );
   }
-}
+});
 
 const ISO_COUNTRY_RE = /^[A-Z]{2}$/;
 
@@ -69,14 +63,8 @@ const UPDATABLE_FIELDS = [
  *
  * Update tenant company details.
  */
-export async function PATCH(req: NextRequest) {
+export const PATCH = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || !user.tenantId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await req.json();
 
     // Validate countryCode if provided
@@ -105,7 +93,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const tenant = await prisma.tenants.update({
-      where: { id: user.tenantId },
+      where: { id: tenantId },
       data,
       select: TENANT_SELECT,
     });
@@ -118,4 +106,4 @@ export async function PATCH(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

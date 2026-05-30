@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth-helper';
+import { NextResponse } from 'next/server';
+import { withTenantAuth } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { encrypt } from '@/lib/encryption';
 import { AUDIT_ACTIONS, createAuditLog, getClientInfo } from '@/lib/audit-log';
@@ -19,23 +19,8 @@ function normalizeDrGreenKey(raw: string): string {
   return trimmed;
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withTenantAuth(async (req, { user, tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant ID not found in user metadata" }, { status: 400 });
-    }
-
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
     });
@@ -164,4 +149,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

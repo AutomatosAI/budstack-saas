@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import crypto from "crypto";
@@ -17,41 +17,13 @@ import crypto from "crypto";
  *
  * Note: Bulk cancel is NOT allowed - cancellation requires individual confirmation
  */
-export async function POST(request: NextRequest) {
+export const POST = withTenantAuth(async (request, { user, tenantId }) => {
   try {
-    // Check authentication and authorization
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
-
-    if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Rate limiting
     const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }
-
-    // Get user's tenant ID
-    const localUser = await prisma.users.findFirst({
-      where: { email: email },
-      select: { tenantId: true },
-    });
-
-    if (!localUser?.tenantId) {
-      return NextResponse.json(
-        { error: "No tenant associated with user" },
-        { status: 403 },
-      );
-    }
-
-    const tenantId = localUser.tenantId;
 
     const body = await request.json();
     const { action, orderIds } = body;
@@ -121,7 +93,7 @@ export async function POST(request: NextRequest) {
         entityType: "Order",
         entityId: order.id,
         userId: user.id,
-        userEmail: email!,
+        userEmail: user.email!,
         tenantId: tenantId,
         metadata: {
           orderNumber: order.orderNumber,
@@ -157,4 +129,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

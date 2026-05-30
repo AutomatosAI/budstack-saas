@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import {
   sanitizeEmailHtml,
@@ -12,23 +12,8 @@ const TEMPLATE_NAME_MAX = 200;
 const TEMPLATE_DESCRIPTION_MAX = 1000;
 const TEMPLATE_CATEGORY_MAX = 100;
 
-export async function GET(req: NextRequest) {
+export const GET = withTenantAuth(async (_request, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
-    }
-
     const templates = await prisma.email_templates.findMany({
       where: {
         OR: [{ tenantId: tenantId }, { isSystem: true }],
@@ -49,25 +34,10 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
-    }
-
     const body = await req.json();
     const {
       name,
@@ -156,4 +126,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

@@ -21,7 +21,7 @@ Counts (verified 2026-05-30 against this worktree): **107** route files; **12** 
 - [x] US-005 — Wrap + tenant-scope `app/api/customer/profile/route.ts` GET+PATCH in `withAuth` (`:25`/`:79` no-tenant `findFirst` closed by the bound host tenant) + unit test; cross-tenant real-DB proof deferred to US-011/US-012 (AC-3)
 - [x] US-006 — Migrate super-admin routes (25 of 33) → `withSuperAdmin`/`withSuperAdminParams`; delete hand-rolled blocks; read `user`/`tenantId` from context (AC-1/AC-1a)
 - [x] US-007 — Migrate tenant-admin routes **batch 1** (~half of 43) → `withTenantAuth`/`withTenantAuthParams` (AC-1/AC-1a)
-- [ ] US-008 — Migrate tenant-admin routes **batch 2** (remainder) → `withTenantAuth`/`withTenantAuthParams` (AC-1/AC-1a)
+- [x] US-008 — Migrate tenant-admin routes **batch 2** (remainder) → `withTenantAuth`/`withTenantAuthParams` (AC-1/AC-1a)
 - [ ] US-009 — Migrate remaining authenticated routes (tenant/orders/consultation/account/user/signup/shop/onboarding/doctor-green/customer) → `withAuth`/`withTenantAuth`; confirm store/webhooks/health on `AUTH_PUBLIC_ROUTES`; flag anything ambiguous for human review (AC-1/AC-4a)
 - [ ] US-010 — Flip gate to **blocking** (0 unwrapped non-allow-listed; wrapped+allow-listed == 107) + `error.message`-leak grep gate (AC-5) + non-blocking CI step (blocking CI = PRD-216) + non-vacuousness fixture check (AC-4/AC-4b/AC-5)
 

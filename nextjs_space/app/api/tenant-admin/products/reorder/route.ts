@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -7,28 +7,12 @@ import { checkRateLimit } from "@/lib/rate-limit";
  * POST /api/tenant-admin/products/reorder
  * Update product display order
  */
-export async function POST(request: NextRequest) {
+export const POST = withTenantAuth(async (request, { user, tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      (user.role !== "TENANT_ADMIN" &&
-        user.role !== "SUPER_ADMIN")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Rate limiting
     const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
-    }
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
     // Parse request body
@@ -77,4 +61,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

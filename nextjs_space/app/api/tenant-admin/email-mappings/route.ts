@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 
 const SYSTEM_EVENTS = [
@@ -12,21 +12,8 @@ const SYSTEM_EVENTS = [
   "subscriptionUpdated",
 ];
 
-export async function GET(req: NextRequest) {
+export const GET = withTenantAuth(async (_request, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
-    }
     const results = [];
 
     for (const event of SYSTEM_EVENTS) {
@@ -74,22 +61,10 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-    if (!tenantId)
-      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
-
     const { eventType, templateId } = await req.json();
 
     if (!eventType || !templateId) {
@@ -136,22 +111,10 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
-export async function DELETE(req: NextRequest) {
+export const DELETE = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-    if (!tenantId)
-      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
-
     const { searchParams } = new URL(req.url);
     const eventType = searchParams.get("eventType");
 
@@ -187,4 +150,4 @@ export async function DELETE(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
