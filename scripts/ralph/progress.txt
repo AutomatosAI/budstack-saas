@@ -18,9 +18,9 @@ Loop contract (in-session ralph, NO --dangerously-skip-permissions):
   block here -> commit (stage by name, no attribution footer).
 
 Environment gates expected on this box:
-  - Docker daemon DOWN  -> US-010 BLOCKED-DOCKER (testcontainers; DB mock FORBIDDEN)
-  - Clerk test-auth undecided (PRD-207 OQ-1, Gerard) -> US-011 BLOCKED-NEEDS-AUTH-DECISION
-  => expected clean stop: Phase 1 (US-001..009) lands; halt at US-010.
+  - Docker daemon DOWN  -> US-011 BLOCKED-DOCKER (testcontainers; DB mock FORBIDDEN)
+  - Clerk test-auth undecided (PRD-207 OQ-1, Gerard) -> US-012 BLOCKED-NEEDS-AUTH-DECISION
+  => expected clean stop: Phase 1 (US-001..010) lands; halt at US-011.
 
 ================================================================================
 SCAFFOLD — 2026-05-30
@@ -30,4 +30,42 @@ IMPLEMENTATION_PLAN.md, this journal) reset from the inherited 205 copies to 203
 Route landscape verified in-worktree: 107 route.ts; 12 wrapped; tenant-admin 43,
 super-admin 33, store 9 (public), webhooks 4 (sig-verified), + misc singletons.
 Next: US-001 (route inventory + AUTH_PUBLIC_ROUTES allow-list).
+
+================================================================================
+DONE — US-001 — Route inventory + AUTH_PUBLIC_ROUTES allow-list — 2026-05-30
+================================================================================
+Deliverables:
+  - lib/auth-public-routes.ts: AUTH_PUBLIC_ROUTES (13 reviewed public/pre-auth/
+    sig-verified patterns, each justified) + isAuthPublicRoute() matcher
+    ([param] segment -> one-segment wildcard). Default-deny documented in-file.
+    US-002 wires the matcher into the gate; not consumed yet.
+  - scripts/ralph/route-inventory.md: all 107 routes categorized with observed
+    posture + chosen wrapper. Super-admin 33 (8 wrapped), tenant-admin 43 (3),
+    any-authenticated 17 (1 bound via withTenantContext today), public 13,
+    needs-decision 1. 33+43+17+1+13 = 107.
+
+Posture method: AST/grep over the worktree; NO handler bodies changed (AC-4a).
+  - 12 wrapped today = 11 via lib/api-auth (8 super-admin + 3 tenant-admin)
+    + 1 via lib/with-tenant-context (orders/customer).
+  - ~44 call getCurrentUser, ~37 call raw currentUser() + hand-roll the role
+    check; all collapse to the wrapper context arg in US-006..009 (AC-1a).
+
+Findings carried forward:
+  - DESIGN (US-003): withAuth currently returns (req)=>… and DROPS Next's
+    {params}. Param'd any-auth routes (store/[slug]/**, tenant/[slug]) read
+    params from that 2nd arg -> withAuth MUST forward ...args (like
+    with-tenant-context already does) or they break on migration. Tagged
+    (+params) in the inventory.
+  - NEEDS HUMAN DECISION (US-009): consultation/submit — resolves tenant by host,
+    only optionally reads the user; public anonymous intake (-> allow-list) vs
+    customers-only (-> withAuth) is unresolved. Left OFF the allow-list so the
+    gate keeps flagging it (default-deny).
+  - onboarding: a fresh admin may have no tenantId yet -> use withAuth, NOT
+    withTenantAuth (its 403-on-missing-tenant would break onboarding). Confirm in
+    US-009.
+
+Validate: tsc --noEmit -> exit 0, 0 errors project-wide (ran via 205's identical
+  install borrowed by symlink; symlink removed after — worktree has no
+  node_modules of its own). New file clean.
+Next: US-002 (check-auth-wrappers ts-morph AST gate, report-only).
 

@@ -14,7 +14,7 @@ Counts (verified 2026-05-30 against this worktree): **107** route files; **12** 
 
 ## Phase 1 — gate + correctness + wrapper rollout (AUTONOMOUS, node-only)
 
-- [ ] US-001 — Route inventory (`scripts/ralph/route-inventory.md`) + `AUTH_PUBLIC_ROUTES` allow-list constant with per-entry justification; default-deny documented; no handler bodies changed (AC-4a/OQ-1)
+- [x] US-001 — Route inventory (`scripts/ralph/route-inventory.md`) + `AUTH_PUBLIC_ROUTES` allow-list constant with per-entry justification; default-deny documented; no handler bodies changed (AC-4a/OQ-1)
 - [ ] US-002 — `scripts/check-auth-wrappers.ts` ts-morph AST gate + `pnpm check:auth-wrappers` + unit test (fixture unwrapped→VIOLATION, wrapped→pass, allow-listed→pass); **report-only** until US-010 (AC-4/AC-4b/OQ-4)
 - [ ] US-003 — Harden auth wrappers to compose tenant-context binding: `withTenantAuth`/`withTenantAuthParams` bind `user.tenantId`, `withSuperAdmin`/`withSuperAdminParams` bind explicit `null` (deliberate cross-tenant system query), `withAuth` binds the host-resolved tenant — all via PRD-202's `runWithTenantContextAsync`; no route bodies change + unit tests (AC-1b)
 - [ ] US-004 — Harden `getCurrentUser` (`lib/auth-helper.ts`): consume 205's ambiguity-aware `resolveTenant({kind:'clerk'})` → typed 403; add `UserNotProvisionedError` → 409 for the `user.created` race; remove any unscoped fallback + unit tests (AC-2/AC-2a)
