@@ -149,3 +149,55 @@ Validate (via 205's identical install, borrowed by symlink, removed after):
 Next: US-004 (harden getCurrentUser: ambiguous email -> 403, not-provisioned ->
   409; consume 205's resolveTenant; remove any unscoped fallback).
 
+================================================================================
+DONE — US-004 — Harden getCurrentUser (ambiguous->403, race->409) — 2026-05-30
+================================================================================
+Change (lib/auth-helper.ts): getCurrentUser now consumes 205's canonical resolver
+DIRECTLY (resolveTenant({kind:'clerk',clerkOrgId,email})) instead of the old
+resolveTenantIdFromClerkOrg delegator. The delegator collapses BOTH "ambiguous"
+and "not-found" into null — it cannot surface the ambiguity signal AC-2 needs.
+Calling resolveTenant directly lets getCurrentUser branch on the typed result:
+  - isAmbiguousTenantResolution(resolved) -> throw AmbiguousTenantError (403).
+    Email maps to >1 ACTIVE tenant; we refuse to authenticate against an
+    arbitrary tenant. Resolver already emitted tenant.resolution_ambiguous; the
+    email/candidate count stay in its audit log, never the 403 body (generic msg).
+  - resolved?.tenantId ?? null otherwise.
+
+Two typed ApiError subclasses added (so the wrappers' existing catch -> apiError
+maps them to status + safe message, no stack leak):
+  - AmbiguousTenantError  extends ApiError(403) — "could not be matched to a
+    single organization."
+  - UserNotProvisionedError extends ApiError(409) — "still being set up. Please
+    retry." The user.created RACE (AC-2a): a valid Clerk session can arrive before
+    the webhook writes the users row (keyed by EMAIL — app/api/webhooks/clerk).
+    Probe is GUARDED to the hot-path-cheap case: only when tenantId == null && email
+    (a resolved tenant already implies a provisioned row -> no extra query; no email
+    -> nothing to key on). No row -> 409 retryable + console.warn audit
+    (auth.user_not_provisioned, clerkUserId only, NO PII), never a silent null the
+    wrappers would misreport as 401/403.
+
+currentUser() try/catch retained: an expired/malformed Clerk token throws ->
+caught -> return null (clean 401 via the wrappers), not a caught 500. Return shape
+UNCHANGED (7 keys: id,email,name,image,role,tenantId,clerkOrgId) so api-auth.ts's
+AuthUser type is unaffected and the wrapper/migration work rides on top untouched.
+resolve-tenant-id.ts left in place (still used elsewhere; has its own test) — only
+getCurrentUser stopped importing it.
+
+Tests (tests/unit/auth-helper.test.ts, 7): module-boundary mocks for currentUser
+(@clerk/nextjs/server), prisma.users.findUnique (@/lib/db), and resolveTenant —
+but the REAL isAmbiguousTenantResolution guard is kept (spread importOriginal,
+mirrors resolve-tenant-id.test.ts) so the ambiguous->403 classification is genuine,
+not stubbed. Cases: no session -> null; currentUser throws -> null (not 500);
+resolved tenant -> user scoped + provisioning probe SKIPPED; ambiguous -> 403 +
+no probe; valid session + no row -> 409 + audit warn asserted; row-exists-but-no-
+tenant (super-admin/unassigned) -> user with tenantId null; no-email -> user,
+probe skipped.
+
+Validate (via 205's identical install, borrowed by symlink, removed after):
+  - tsc --noEmit (project) -> exit 0, 0 errors.
+  - vitest auth-helper + api-auth + resolve-tenant-id -> 23 passed.
+  - gate advisory run UNCHANGED: "107 files | 144 handlers | wrapped 15 |
+    allow-listed 13 | violations 116" (US-004 changes a lib, not route wrapping).
+Next: US-005 (wrap + tenant-scope customer/profile GET+PATCH in withAuth — close
+  the :25/:79 no-tenant findFirst with the bound host tenant).
+
