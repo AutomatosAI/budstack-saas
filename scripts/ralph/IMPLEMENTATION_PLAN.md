@@ -25,8 +25,8 @@ Merge order: **202 → 205** (205 is stacked on 202; merge 202 first and 205's P
 
 > Gate: run `docker info` first. If no daemon → BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked.
 
-- [ ] US-009 — Integration: `tenant-resolver.integration.test.ts` (testcontainers) — seed active + inactive tenants and a multi-tenant email collision; assert active-only resolution + ambiguous handling against real Postgres — Docker-gated (AC-1b)  _(BLOCKED-DOCKER if no daemon)_
-- [ ] US-010 — Integration: `resolver-delegators.integration.test.ts` (testcontainers) — every delegator returns values consistent with the canonical resolver — Docker-gated (AC-2)  _(BLOCKED-DOCKER if no daemon)_
+- [ ] US-009 — Integration: `tenant-resolver.integration.test.ts` (testcontainers) — seed active + inactive tenants and a multi-tenant email collision; assert active-only resolution + ambiguous handling against real Postgres — Docker-gated (AC-1b)  _(RALPH_BLOCKED: BLOCKED-DOCKER — docker daemon down on this box (binary present, `docker info` rc=1). testcontainers needs a live daemon; substituting a DB mock to dodge it is explicitly FORBIDDEN (PRD §6 / hard constraints). Left unchecked. See progress.txt.)_
+- [ ] US-010 — Integration: `resolver-delegators.integration.test.ts` (testcontainers) — every delegator returns values consistent with the canonical resolver — Docker-gated (AC-2)  _(RALPH_BLOCKED: BLOCKED-DOCKER — same daemon-down gate as US-009; no DB mock substituted. Left unchecked. See progress.txt.)_
 
 ## Phase 3 — Playwright E2E (BLOCKED on PRD-207 OQ-1, owner Gerard)
 

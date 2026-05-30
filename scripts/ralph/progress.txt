@@ -223,3 +223,59 @@ Document the users.email single-tenant assumption + PRD-208 migration spec — A
 - NO schema change (comments only) — honours "PRD-208 migration is specified, not run". Prisma
   comments don't reach the generated client, so typecheck is unaffected.
 - Validation: npx tsc --noEmit -> 0 (schema comments don't affect TS). No new test (pure docs).
+
+--------------------------------------------------------------------------------
+US-009  RALPH_BLOCKED  2026-05-30  (BLOCKED-DOCKER)
+Integration tenant-resolver.integration.test.ts (testcontainers) — real-Postgres active/
+inactive + ambiguous-email proof (AC-1b).
+- Phase 2 gate per IMPLEMENTATION_PLAN: run `docker info` first. Result on this box:
+  daemon DOWN — `docker info` exits 1 (the docker BINARY is present, but no daemon is
+  listening). testcontainers spins up an ephemeral Postgres container and therefore needs a
+  live daemon; it cannot run here.
+- Per PRD §6 / the hard constraints, substituting a mocked Prisma/DB to make this "pass"
+  WITHOUT Docker is explicitly an ANTI-PATTERN ("replacing a real integration DB with a mock
+  to dodge the Docker requirement"). The whole point of US-009 is a REAL-DB proof that an
+  inactive tenant resolves to null and a multi-tenant email yields AmbiguousTenantResolution.
+- DECISION: write NO test file, leave US-009 unchecked, emit RALPH_BLOCKED (BLOCKED-DOCKER).
+  This is the planned, expected autonomous stopping point ("Docker is DOWN here, so the loop is
+  expected to complete Phase 1 then halt with RALPH_BLOCKED at US-009").
+- TO UNBLOCK (human): start Docker Desktop / a dockerd, then re-run this story. The unit suite
+  already exercises the same active-only + ambiguous logic at the module boundary (19 cases in
+  tenant-resolver.test.ts); US-009 adds the real-Postgres confirmation on top.
+
+--------------------------------------------------------------------------------
+US-010  RALPH_BLOCKED  2026-05-30  (BLOCKED-DOCKER)
+Integration resolver-delegators.integration.test.ts (testcontainers) — every delegator
+consistent with the canonical resolver against real Postgres (AC-2).
+- Same Phase 2 Docker gate as US-009 (daemon down). testcontainers required; no live daemon.
+- No DB mock substituted (same forbidden-anti-pattern reasoning). NO test file written; left
+  unchecked; RALPH_BLOCKED (BLOCKED-DOCKER).
+- Delegator behaviour is already covered at the module boundary by tenant-delegators.test.ts
+  (12 cases) + resolve-tenant-id.test.ts (4 cases); US-010 is the real-DB cross-check, deferred
+  to when a daemon is available.
+
+--------------------------------------------------------------------------------
+US-011  RALPH_BLOCKED  2026-05-30  (BLOCKED-NEEDS-AUTH-DECISION)
+E2E inactive-tenant-404.spec.ts (Playwright) — a deactivated tenant's subdomain AND custom
+domain fail to resolve from every entry path.
+- Phase 3 gate: the Clerk test-auth approach is UNDECIDED (PRD-207 OQ-1, owner Gerard). The plan
+  is explicit: "Do NOT invent a shim". A storefront E2E that exercises real entry paths needs an
+  authenticated/seeded Clerk context; fabricating a bypass would both be insecure and pre-empt
+  Gerard's pending decision.
+- DECISION: write NO spec, leave US-011 unchecked, emit RALPH_BLOCKED
+  (BLOCKED-NEEDS-AUTH-DECISION). Independent of Docker — it stays blocked even once a daemon is
+  up, until the auth approach is chosen.
+- TO UNBLOCK (human): resolve PRD-207 OQ-1 (Clerk test-auth strategy), then author the spec
+  against it.
+
+================================================================================
+PHASE 1 COMPLETE (US-001..US-008) — autonomous run halted at the Phase 2 Docker gate.
+  Landed:   US-001 parse-host · US-002 canonical resolver · US-003 lib/tenant delegators ·
+            US-004 clerk-org delegator (inactive/ambiguous email gap closed) · US-005 middleware
+            shares the host parser · US-007 users.email assumption + PRD-208 migration spec ·
+            US-008 local AC-1a/AC-2b grep gates (+ consultation/submit 8th-path refactor).
+  Blocked:  US-006 BLOCKED-PRD211 (webhook business-id resolver; PRD defers the real delegation
+            to PRD-211's verify-before-lookup reorder) · US-009/US-010 BLOCKED-DOCKER (no daemon)
+            · US-011 BLOCKED-NEEDS-AUTH-DECISION (PRD-207 OQ-1, Gerard).
+  Merge order: 202 -> 205 (205 is STACKED on 202's return-not-bind primitive).
+================================================================================
