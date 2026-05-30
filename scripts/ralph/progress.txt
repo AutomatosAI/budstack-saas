@@ -111,3 +111,22 @@ resolve-tenant-id.ts resolveTenantIdFromClerkOrg -> clerk delegator — AC-1b / 
   resolved id pass-through (clerkOrgId+email forwarded), null->null, ambiguous->null,
   omitted-email -> email:undefined forwarded.
 - Validation: pnpm test:unit -> 74/74 green (4 new + 70 inherited); npx tsc --noEmit -> 0.
+
+--------------------------------------------------------------------------------
+US-005  DONE  2026-05-30
+middleware.ts host derivation consumes the shared parseHostToTenantHint — AC-2a.
+- The third host->subdomain/customDomain duplication (the old :50-100 block: currentHost
+  port-strip, baseDomain, isLocalhost, the PRIORITY-1 `.endsWith('.'+baseDomain) && !www`
+  subdomain extraction, the PRIORITY-2 custom-domain condition) is replaced by a single
+  `const hint = parseHostToTenantHint(hostname)`. PRIORITY 1 now gates on
+  hint?.kind==='subdomain' (subdomain = hint.subdomain); PRIORITY 2 on hint?.kind==='customDomain'
+  (header = hint.host). middleware + lib/tenant-resolver.ts can no longer drift.
+- DELIBERATELY left in middleware (not host->tenant mapping): the path REWRITES
+  (/store/${subdomain}, /store/_cd), the API/platform/__clerk carve-outs, and the dev-only
+  `.abacusai.app` skip (now `NODE_ENV==='development' && hint.host.includes('.abacusai.app')`).
+  Removed the now-unused currentHost/baseDomain/isLocalhost locals.
+- Edge-safe: parseHostToTenantHint is pure (no DB/headers/ALS) and reads NEXT_PUBLIC_BASE_DOMAIN
+  (build-inlined) itself, so it imports cleanly into the Edge middleware runtime.
+- No new test (the parser is already covered by parse-host.test.ts; behaviour-equivalence is
+  by construction — same classification, same rewrites). Full suite re-run as a regression gate.
+- Validation: pnpm test:unit -> 74/74 green (no new; regression gate); npx tsc --noEmit -> 0.

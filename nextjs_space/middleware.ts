@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { parseHostToTenantHint } from "@/lib/parse-host";
 
 // Define public routes
 const isPublicRoute = createRouteMatcher([
@@ -47,21 +48,20 @@ export default clerkMiddleware(async (auth, req) => {
   requestHeaders.delete('x-tenant-subdomain');
   requestHeaders.delete('x-tenant-custom-domain');
 
-  const currentHost = hostname.replace(/(:\d+)/, '');
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
-  const isLocalhost = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
+  // PRD-205 (AC-2a): the host→tenant-hint classification is shared with the canonical
+  // resolver via parseHostToTenantHint, so middleware and lib/tenant-resolver.ts cannot
+  // drift. The path REWRITES + the API/platform/clerk-proxy carve-outs (and the dev-only
+  // .abacusai.app skip below) stay here — they are middleware-specific, not host→tenant
+  // mapping. parseHostToTenantHint reads NEXT_PUBLIC_BASE_DOMAIN itself and strips the port.
+  const hint = parseHostToTenantHint(hostname);
 
   let tenantFound = false;
 
   // PRIORITY 1: Subdomain-based routing (REWRITE)
   // Rewrite slug.budstacks.io/foo -> /store/slug/foo
   // Returns early — all storefront pages are public
-  if (
-    !isLocalhost &&
-    currentHost.endsWith(`.${baseDomain}`) &&
-    !currentHost.startsWith('www.')
-  ) {
-    const subdomain = currentHost.replace(`.${baseDomain}`, '');
+  if (hint?.kind === 'subdomain') {
+    const subdomain = hint.subdomain;
     requestHeaders.set('x-tenant-subdomain', subdomain);
 
     // API routes: don't rewrite path — APIs already include slug in their URL.
@@ -91,13 +91,10 @@ export default clerkMiddleware(async (auth, req) => {
   // matches app/store/[slug]/. The _cd placeholder slug is never used for DB
   // lookups — getCurrentTenant() resolves via the x-tenant-custom-domain header.
   if (
-    !isLocalhost &&
-    !(process.env.NODE_ENV === 'development' && currentHost.includes('.abacusai.app')) &&
-    !currentHost.endsWith(`.${baseDomain}`) &&
-    currentHost !== baseDomain &&
-    !currentHost.startsWith('www.')
+    hint?.kind === 'customDomain' &&
+    !(process.env.NODE_ENV === 'development' && hint.host.includes('.abacusai.app'))
   ) {
-    requestHeaders.set('x-tenant-custom-domain', currentHost);
+    requestHeaders.set('x-tenant-custom-domain', hint.host);
 
     // API routes: don't rewrite path, just forward the header
     if (pathname.startsWith('/api/')) {
