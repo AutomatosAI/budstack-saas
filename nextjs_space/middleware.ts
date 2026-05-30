@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { applyCsp, generateNonce, variantForServedPath } from "@/lib/security/csp";
 
 // Define public routes
 const isPublicRoute = createRouteMatcher([
@@ -47,11 +48,15 @@ export default clerkMiddleware(async (auth, req) => {
   requestHeaders.delete('x-tenant-subdomain');
   requestHeaders.delete('x-tenant-custom-domain');
 
+  // SECURITY (PRD-218, AC-2): one fresh nonce per request. Exposed to Server
+  // Components / <Script> / <ClerkProvider> via the x-nonce request header and
+  // bound into the response CSP below — request and response nonce must match.
+  const nonce = generateNonce();
+  requestHeaders.set('x-nonce', nonce);
+
   const currentHost = hostname.replace(/(:\d+)/, '');
   const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
   const isLocalhost = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-
-  let tenantFound = false;
 
   // PRIORITY 1: Subdomain-based routing (REWRITE)
   // Rewrite slug.budstacks.io/foo -> /store/slug/foo
@@ -70,20 +75,20 @@ export default clerkMiddleware(async (auth, req) => {
       if (!isPublicRoute(req)) {
         const { userId, redirectToSignIn } = await auth();
         if (!userId) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+          return applyCsp(NextResponse.json({ error: "Unauthorized" }, { status: 401 }), nonce, "base");
         }
       }
-      return NextResponse.next({ request: { headers: requestHeaders } });
+      return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, "base");
     }
 
     // Platform routes: don't rewrite — these live outside /store/
     if (pathname.startsWith('/auth/') || pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin') || pathname.startsWith('/onboarding')) {
-      return NextResponse.next({ request: { headers: requestHeaders } });
+      return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, variantForServedPath(pathname));
     }
 
     // Page routes: rewrite to internal store route
     url.pathname = `/store/${subdomain}${pathname}`;
-    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    return applyCsp(NextResponse.rewrite(url, { request: { headers: requestHeaders } }), nonce, "store");
   }
 
   // PRIORITY 2: Custom domain routing (REWRITE)
@@ -104,32 +109,32 @@ export default clerkMiddleware(async (auth, req) => {
       if (!isPublicRoute(req)) {
         const { userId } = await auth();
         if (!userId) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+          return applyCsp(NextResponse.json({ error: "Unauthorized" }, { status: 401 }), nonce, "base");
         }
       }
-      return NextResponse.next({ request: { headers: requestHeaders } });
+      return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, "base");
     }
 
     // Clerk proxy: /__clerk/* must reach next.config.js rewrite, not get rewritten to /store/_cd/
     if (pathname.startsWith('/__clerk')) {
-      return NextResponse.next({ request: { headers: requestHeaders } });
+      return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, "base");
     }
 
     // Platform routes: don't rewrite
     if (pathname.startsWith('/auth/') || pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin') || pathname.startsWith('/onboarding')) {
-      return NextResponse.next({ request: { headers: requestHeaders } });
+      return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, variantForServedPath(pathname));
     }
 
     // Page routes: rewrite to internal store route with placeholder slug
     url.pathname = `/store/_cd${pathname}`;
-    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    return applyCsp(NextResponse.rewrite(url, { request: { headers: requestHeaders } }), nonce, "store");
   }
 
   // 2. Authentication Check (only for non-subdomain, non-custom-domain requests)
   if (!isPublicRoute(req)) {
     const { userId, redirectToSignIn } = await auth();
     if (!userId) {
-      return redirectToSignIn({ returnBackUrl: req.url });
+      return applyCsp(redirectToSignIn({ returnBackUrl: req.url }), nonce, "base");
     }
   }
 
@@ -138,13 +143,16 @@ export default clerkMiddleware(async (auth, req) => {
   if (storeMatch) {
     const tenantSlug = storeMatch[1];
     requestHeaders.set('x-tenant-slug', tenantSlug);
-    tenantFound = true;
   }
 
-  // If we modified headers, return response with them
-  if (tenantFound) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
+  // All requests forward with the nonce + per-request CSP. The static
+  // next.config.js CSP was removed (PRD-218) — every response must carry the
+  // policy from here so no page renders without it.
+  return applyCsp(
+    NextResponse.next({ request: { headers: requestHeaders } }),
+    nonce,
+    variantForServedPath(pathname),
+  );
 });
 
 export const config = {

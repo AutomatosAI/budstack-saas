@@ -27,3 +27,27 @@ DoS/SSRF advisories REQUIRES the Next 15.x major bump. Recorded against OQ-1.
   kept for CSP2). admin=+unsafe-eval, store=frame-ancestors 'self'. 10 unit tests.
   pnpm test 11 passed; tsc clean.
 
+[US-003] DONE — Per-request nonce + CSP wired into middleware (AC-2).
+  middleware.ts: one nonce per request -> requestHeaders.set('x-nonce', nonce) (SSR
+  reads via headers()); EVERY return path wrapped in applyCsp(res, nonce, variant)
+  so no response escapes the policy. variantForServedPath() picks store/admin/base.
+  next.config.js: removed the static Content-Security-Policy header entries (a config
+  header can't carry a per-request nonce, and two CSPs enforce as an intersection) —
+  kept all other security headers + store X-Frame-Options SAMEORIGIN. Moved
+  variantForServedPath + applyCsp into lib/security/csp.ts (Clerk-free => unit-testable).
+  tests/unit/csp.test.ts now 16 cases. pnpm test 17 passed; tsc exit 0; pnpm build
+  exit 0 (Middleware 79.6kB; 'Dynamic server usage' lines are pre-existing benign
+  notices on auth API routes that read headers(), not failures).
+  >> HUMAN GATE (AC-2b): browser smoke — Clerk login + a storefront page under the
+     nonce CSP, DevTools console shows ZERO CSP violations. Must pass before prod.
+
+[OQ / HUMAN FOLLOW-UPS — carried for Gerard, do NOT auto-resolve]
+  OQ-1 (AC-1):  Next 15.x is the ONLY way to clear the HIGH DoS/SSRF advisories
+                (14.2.35 is already the newest 14.2.x). US-005 attempts the bump on
+                this worktree; go/no-go + AC-1a App-Router smoke is Gerard's call.
+  OQ-2 (AC-2a): inline-script reliance (Clerk, Cloudflare Turnstile, storefront
+                template embeds) — enumerated in US-004; anything we don't control
+                that needs 'unsafe-inline' is a documented deviation, not a silent
+                policy relax.
+  AC-2b:        nonce-CSP browser smoke (above) — owned by Gerard.
+

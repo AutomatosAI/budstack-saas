@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildCsp, generateNonce, type CspVariant } from "@/lib/security/csp";
+import {
+  applyCsp,
+  buildCsp,
+  generateNonce,
+  variantForServedPath,
+  type CspVariant,
+} from "@/lib/security/csp";
 
 const VARIANTS: CspVariant[] = ["base", "admin", "store"];
 const NONCE = "TESTNONCEabc123==";
@@ -69,5 +75,46 @@ describe("buildCsp", () => {
     const scriptSrc = directive(buildCsp({ nonce: NONCE, variant: "base" }), "script-src");
     expect(scriptSrc).toContain("https://*.clerk.accounts.dev");
     expect(scriptSrc).toContain("https://challenges.cloudflare.com");
+  });
+});
+
+describe("variantForServedPath", () => {
+  it("maps /store paths to the store variant", () => {
+    expect(variantForServedPath("/store/acme")).toBe("store");
+    expect(variantForServedPath("/store/_cd/products")).toBe("store");
+  });
+
+  it("maps the two analytics pages to the admin variant", () => {
+    expect(variantForServedPath("/tenant-admin/analytics")).toBe("admin");
+    expect(variantForServedPath("/super-admin/analytics")).toBe("admin");
+  });
+
+  it("maps everything else to base", () => {
+    expect(variantForServedPath("/")).toBe("base");
+    expect(variantForServedPath("/dashboard")).toBe("base");
+    expect(variantForServedPath("/tenant-admin/settings")).toBe("base");
+    expect(variantForServedPath("/api/foo")).toBe("base");
+  });
+});
+
+describe("applyCsp", () => {
+  it("sets exactly one Content-Security-Policy header carrying the nonce + variant policy", () => {
+    const res = applyCsp(new Response(null), NONCE, "store");
+    const csp = res.headers.get("Content-Security-Policy");
+    expect(csp).not.toBeNull();
+    expect(csp).toContain(`'nonce-${NONCE}'`);
+    expect(csp).toContain("frame-ancestors 'self'");
+    // Headers can only hold one value for a given name — assert it equals the built policy.
+    expect(csp).toBe(buildCsp({ nonce: NONCE, variant: "store" }));
+  });
+
+  it("returns the same response object it was given (mutates in place)", () => {
+    const res = new Response(null);
+    expect(applyCsp(res, NONCE, "base")).toBe(res);
+  });
+
+  it("emits the base policy (frame-ancestors 'none') for the base variant", () => {
+    const res = applyCsp(new Response(null), NONCE, "base");
+    expect(res.headers.get("Content-Security-Policy")).toContain("frame-ancestors 'none'");
   });
 });

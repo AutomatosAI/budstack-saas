@@ -74,3 +74,33 @@ export function buildCsp({
 
   return directives.join("; ");
 }
+
+/**
+ * Pick the CSP variant for the path actually being served (after middleware
+ * rewrites). Analytics pages need 'unsafe-eval' (plotly); store pages need
+ * frame-ancestors 'self' for the editor iframe viewport switcher.
+ */
+export function variantForServedPath(servedPath: string): CspVariant {
+  if (servedPath.startsWith("/store")) return "store";
+  if (
+    servedPath === "/tenant-admin/analytics" ||
+    servedPath === "/super-admin/analytics"
+  ) {
+    return "admin";
+  }
+  return "base";
+}
+
+/**
+ * Attach the per-request nonce CSP to a response. Replaces the static
+ * next.config.js CSP — a config header cannot carry a per-request nonce, so the
+ * policy is emitted in the per-request edge (middleware) instead.
+ */
+export function applyCsp<T extends { headers: Headers }>(
+  res: T,
+  nonce: string,
+  variant: CspVariant,
+): T {
+  res.headers.set("Content-Security-Policy", buildCsp({ nonce, variant }));
+  return res;
+}

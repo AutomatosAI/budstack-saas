@@ -52,8 +52,8 @@
         "BROWSER SMOKE (Clerk login + storefront under nonce CSP, zero console CSP violations) is a HUMAN follow-up (AC-2b) — recorded in progress.txt, not marked done here"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "DONE: middleware.ts now generates one nonce = generateNonce() per request, sets requestHeaders.set('x-nonce', nonce) (so SSR reads it via headers()), and wraps EVERY return path (subdomain/custom-domain API 401 + next, platform routes, store rewrites, redirectToSignIn, final catch-all) in applyCsp(res, nonce, variant). variant chosen by variantForServedPath(pathname) for platform/catch-all, 'store' for store rewrites, 'base' for API/auth gates. next.config.js: removed the Content-Security-Policy header entries (kept X-Content-Type-Options, Referrer-Policy, Permissions-Policy, HSTS, COOP/CORP, X-Frame-Options + store SAMEORIGIN) so only ONE CSP (the per-request middleware one) is emitted. Moved variantForServedPath + applyCsp into lib/security/csp.ts (Clerk-free, unit-testable). tests/unit/csp.test.ts now 16 cases (+variantForServedPath store/admin/base mapping, +applyCsp single-header/nonce/variant/identity). pnpm test 17 passed; pnpm exec tsc --noEmit exit 0; pnpm build exit 0 (route table + Middleware 79.6kB emitted; the 'Dynamic server usage' lines are pre-existing benign notices on auth API routes that read headers()). AC-2b browser smoke (Clerk login + storefront, zero console CSP violations) recorded as HUMAN follow-up in progress.txt."
     },
     {
       "id": "US-004",
