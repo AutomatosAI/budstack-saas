@@ -34,8 +34,8 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "DONE: lib/security/csp.ts exports generateNonce() (16 random bytes via Web Crypto getRandomValues + btoa — works in Edge middleware AND Node, no node:crypto) and buildCsp({nonce,variant}). script-src='self' 'nonce-X' 'strict-dynamic' + Clerk/Cloudflare host allowlist (CSP2 fallback), NO 'unsafe-inline'; admin adds 'unsafe-eval' (plotly); store frame-ancestors 'self' vs base/admin 'none'. All other directives copied verbatim from next.config.js (style-src keeps 'unsafe-inline' — AC-2 scopes the change to script-src). tests/unit/csp.test.ts: 10 cases (per-variant no-unsafe-inline + nonce, frame-ancestors, unsafe-eval, object-src none, host allowlist). pnpm test 11 passed; tsc clean."
     },
     {
       "id": "US-003",

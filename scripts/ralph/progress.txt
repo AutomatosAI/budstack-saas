@@ -20,3 +20,10 @@ DoS/SSRF advisories REQUIRES the Next 15.x major bump. Recorded against OQ-1.
   v8 coverage lib/**), vitest.setup.ts (loads .env.test only), harness-smoke test,
   package.json test/test:watch/test:cov. Node 20. pnpm test green; tsc clean.
 
+[US-002] DONE — CSP builder + nonce module (lib/security/csp.ts).
+  generateNonce() = 16 random bytes via Web Crypto (Edge+Node safe) + btoa.
+  buildCsp({nonce,variant}) mirrors next.config.js directive-for-directive but
+  script-src drops 'unsafe-inline' for 'nonce-X' 'strict-dynamic' (+ host allowlist
+  kept for CSP2). admin=+unsafe-eval, store=frame-ancestors 'self'. 10 unit tests.
+  pnpm test 11 passed; tsc clean.
+
