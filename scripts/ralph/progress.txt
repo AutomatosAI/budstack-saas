@@ -1,0 +1,17 @@
+PRD-218 — Framework Upgrade & CSP Nonce Hardening
+Branch: ralph/prd-218-framework-upgrade-csp-nonce-hardening
+Base: origin/main @ af77b24
+Runtime: Node 20 (nvm) — required for the Next 15 bump; .nvmrc=20
+Source PRD: docs/PRDS/REMEDIATION/PRD-218-framework-upgrade-csp-nonce-hardening.md
+
+Mode: in-session build (the autonomous --dangerously-skip-permissions Ralph loop
+stays disabled per global rules). Per-story: implement -> unit test -> pnpm test +
+tsc --noEmit (+ build where config/runtime touched) -> flip prd.json passes:true +
+notes -> commit feat(prd-218): US-0XX — ...
+
+KEY CONSTRAINT DISCOVERED: 14.2.35 is ALREADY the latest 14.2.x. The PRD's
+"latest 14.2.x patch" fallback for AC-1 does NOT exist — clearing the HIGH
+DoS/SSRF advisories REQUIRES the Next 15.x major bump. Recorded against OQ-1.
+
+================================ STORY LOG ================================
+

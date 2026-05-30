@@ -1,0 +1,91 @@
+{
+  "project": "BudStack SaaS",
+  "branchName": "ralph/prd-218-framework-upgrade-csp-nonce-hardening",
+  "description": "PRD-218 — Framework Upgrade & CSP Nonce Hardening (the deferred infra slice split out of PRD-200). Two findings: (1) Next.js 14.2.35 carries HIGH DoS (Server Components / HTTP request deserialization) + HIGH SSRF-in-server-actions advisories — cleared at 15.5.x (AC-1). NOTE 14.2.35 is ALREADY the latest 14.2.x, so the PRD's 14.2.x-patch fallback does NOT exist — clearing the HIGH advisories REQUIRES the 15.x major bump (Node floor >=18.18; repo .nvmrc=20, Node 20.20 available via nvm). (2) CSP retains script-src 'unsafe-inline' (MEDIUM) — migrate to a per-request nonce so a missed XSS sink still cannot execute (AC-2). CSP today is STATIC in next.config.js headers() (base/admin/store variants); a per-request nonce MUST move to middleware.ts (config headers cannot vary per request). 'unsafe-inline' exists because Clerk + Next inject inline scripts, so the nonce must propagate to <ClerkProvider nonce> + every <Script>. App lives in nextjs_space/ (pnpm 10, Next 14.2.35, React 18.2, Clerk, Prisma 6.7). NO Vitest on main — US-001 stands up a minimal unit harness. Source PRD: docs/PRDS/REMEDIATION/PRD-218-framework-upgrade-csp-nonce-hardening.md. BROWSER-SMOKE + MAJOR-DECISION GATES (PRD OQ-1/OQ-2/AC-1a/AC-2b) are owned by Gerard and recorded as human follow-ups in progress.txt — do NOT falsely mark a browser-verified AC done; this in-session build delivers the safe, unit/build-verifiable slice and prepares the bump on the worktree. Global rules: immutable updates; client errors via apiError()/apiValidationError() (no raw error leak); no console.log in prod code (console.error ok); no @ts-ignore/as any; keep style-src 'unsafe-inline' (only script-src must drop it per AC-2); NEVER git add -A, commit .env*, or touch main/other worktrees; do NOT run the autonomous --dangerously-skip-permissions loop.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Minimal Vitest unit harness (config, setup, scripts)",
+      "description": "As a developer, when I run `pnpm test` in nextjs_space a Vitest node-environment runner executes with the `@/` alias resolving, so the CSP/nonce units can be written and run. No Vitest exists on main.",
+      "acceptanceCriteria": [
+        "cd nextjs_space; add devDependencies `vitest` + `@vitest/coverage-v8` (pin 2.x for Node-18 compat parity with PRD-211)",
+        "Create nextjs_space/vitest.config.ts: node test environment, `@/` alias mapped to ./, v8 coverage, include lib/** and tests/unit/**",
+        "Create nextjs_space/vitest.setup.ts (loads .env.test only, never the real .env)",
+        "Add package.json scripts: `test`: `vitest run`, `test:watch`: `vitest`, `test:cov`: `vitest run --coverage`; leave test:e2e* unchanged",
+        "Add tests/unit/harness-smoke.test.ts asserting a trivial truth so the runner is proven",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "CSP builder + nonce module, unit-tested (AC-2 core)",
+      "description": "As a developer, I want one pure module that generates a per-request nonce and builds the CSP string for the base/admin/store variants with script-src driven by the nonce (no 'unsafe-inline'), so the policy is testable and reused by middleware.",
+      "acceptanceCriteria": [
+        "Create nextjs_space/lib/security/csp.ts exporting generateNonce(): string (base64, >=128-bit from crypto) and buildCsp({ nonce, variant: 'base'|'admin'|'store' }): string",
+        "script-src = \"'self' 'nonce-<nonce>' 'strict-dynamic' https://*.clerk.accounts.dev https://challenges.cloudflare.com\" (host allowlist kept for CSP2 fallback) and contains NO 'unsafe-inline'",
+        "admin variant adds 'unsafe-eval' to script-src (plotly.js) and frame-ancestors 'none'; store variant uses frame-ancestors 'self'; base uses frame-ancestors 'none'",
+        "Preserve all other directives from the current next.config.js policy (style-src keeps 'unsafe-inline', img-src, connect-src, frame-src, font-src, media-src, object-src 'none', base-uri 'self', form-action, upgrade-insecure-requests)",
+        "Add tests/unit/csp.test.ts: every variant has no 'unsafe-inline' in script-src; nonce is present + unique per call; object-src 'none'; admin has 'unsafe-eval'; store frame-ancestors 'self' vs base/admin 'none'",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Wire per-request nonce + CSP into middleware (AC-2)",
+      "description": "As an operator, I want the per-request nonce generated in middleware, exposed to the app via an x-nonce request header, and the matching CSP attached to every response, so the static next.config.js CSP can be retired and the policy varies per request.",
+      "acceptanceCriteria": [
+        "In middleware.ts generate nonce = generateNonce() once per request; set requestHeaders.set('x-nonce', nonce); choose variant by path (store=/store/*, admin=/tenant-admin/analytics + /super-admin/analytics, else base)",
+        "Attach Content-Security-Policy (buildCsp) to the response on EVERY return path (NextResponse.next / NextResponse.rewrite / json) via a small helper so no path is missed",
+        "Remove the Content-Security-Policy entries from next.config.js headers() (KEEP the other security headers: X-Content-Type-Options, Referrer-Policy, Permissions-Policy, HSTS, COOP/CORP, X-Frame-Options); avoid emitting two CSP headers",
+        "Add tests/unit/middleware-csp.test.ts (or csp-apply test) asserting the helper sets exactly one CSP header with the nonce and correct variant",
+        "pnpm build succeeds and `pnpm exec tsc --noEmit` is clean",
+        "Tests pass",
+        "Typecheck passes",
+        "BROWSER SMOKE (Clerk login + storefront under nonce CSP, zero console CSP violations) is a HUMAN follow-up (AC-2b) — recorded in progress.txt, not marked done here"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Propagate nonce to ClerkProvider + inline-script audit (AC-2a)",
+      "description": "As a developer, I want the nonce passed to ClerkProvider and every <Script>, and every legitimate inline script enumerated and either nonce-tagged or documented, so the strict CSP does not break auth/analytics/template embeds.",
+      "acceptanceCriteria": [
+        "Root layout reads nonce via headers().get('x-nonce') and passes it to <ClerkProvider nonce={nonce}> (verify @clerk/nextjs supports the nonce prop at the installed version; document if not)",
+        "Any next/script <Script> in app/** receives nonce={nonce}",
+        "Enumerate inline <script> / dangerouslySetInnerHTML script sinks across app/** and storefront template embeds; nonce-tag the ones we control; document Clerk + Cloudflare Turnstile + any template inline-script reliance as OQ-2 findings in progress.txt",
+        "grep shows no un-nonced inline <script> remaining in app code we control (deviations documented)",
+        "Typecheck passes",
+        "BROWSER SMOKE confirming Clerk + Turnstile still load under the nonce CSP is a HUMAN follow-up (AC-2b) — recorded in progress.txt"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Attempt Next 15.5.x major bump on the worktree (AC-1)",
+      "description": "As an operator, I want the Next bump attempted in isolation under Node 20 so the HIGH advisories clear, with a clean build+typecheck gate — committing only if green, else capturing the OQ-1 breakage analysis for Gerard's go/no-go.",
+      "acceptanceCriteria": [
+        "Under Node 20 (nvm use 20): attempt next@15.5.18 + eslint-config-next@15.5.18; if Next 15 requires it, react@19 + react-dom@19 + @types/react@19 + @types/react-dom@19",
+        "Run `pnpm build` + `pnpm exec tsc --noEmit`; fix contained App-Router breakages (async cookies()/headers()/draftMode(), next/image, caching) where small and safe",
+        "`pnpm audit --prod` shows ZERO HIGH/CRITICAL for next post-bump (AC-1)",
+        "If build+typecheck GREEN: commit the bump. If breakage cascades beyond a safe in-session fix: REVERT the bump from the working tree, do NOT commit a broken build, and record the exact breakages as OQ-1 decision input in progress.txt",
+        "AC-1a manual smoke (storefront / tenant-admin / super-admin App-Router behaviour diffs) is a HUMAN follow-up regardless of build outcome — recorded in progress.txt",
+        "Typecheck passes (only if the bump is committed green; otherwise the pre-bump tree stays green)"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
