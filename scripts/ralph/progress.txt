@@ -26,3 +26,16 @@ basing on main would not compile against the return-not-bind primitive). Merge
 order is 202 -> 205.
 
 ================================================================================
+
+--------------------------------------------------------------------------------
+US-001  DONE  2026-05-30
+Shared host parser lib/parse-host.ts parseHostToTenantHint(host) — AC-2a.
+- New lib/parse-host.ts: pure host→tenant-hint mapping ({subdomain} | {customDomain} | null).
+  Lifted verbatim from middleware.ts:50-100 + getTenantFromRequest host parsing: strip :port;
+  null on localhost/127.0.0.1, www.*, and the base-domain apex; slug.<base> -> subdomain;
+  any other host -> customDomain. Pure (no DB/headers/ALS) so middleware (US-005) can import it
+  on the Edge runtime. The dev-only .abacusai.app preview carve-out is intentionally left in
+  middleware (deploy-specific, not part of the host->tenant mapping).
+- tests/unit/parse-host.test.ts: 9 cases (subdomain, :port strip, custom apex+sub, www.*,
+  base apex, localhost/127.0.0.1, empty/null, custom base-domain arg, multi-label subdomain).
+- Validation: pnpm test:unit -> 39/39 green (9 new + 30 inherited from 202); npx tsc --noEmit -> 0.
