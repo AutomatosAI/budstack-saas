@@ -89,3 +89,25 @@ Collapse lib/tenant.ts resolution helpers to thin delegators — AC-2.
   discriminated input, unwraps .tenant/.tenantId, and preserves throw/swallow ergonomics
   (incl. Host-header-over-URL precedence in getTenantFromRequest).
 - Validation: pnpm test:unit -> 70/70 green (12 new + 58 inherited); npx tsc --noEmit -> 0.
+
+--------------------------------------------------------------------------------
+US-004  DONE  2026-05-30
+resolve-tenant-id.ts resolveTenantIdFromClerkOrg -> clerk delegator — AC-1b / AC-2.
+- resolveTenantIdFromClerkOrg(clerkOrgId, userEmail?) now delegates to
+  resolveTenant({kind:'clerk', clerkOrgId, email:userEmail}); signature (string|null)
+  unchanged. Returns resolved.tenantId, or null when the resolver returns null OR an
+  AmbiguousTenantResolution.
+- Closes two gaps the old impl had: (1) the raw `$queryRaw SELECT id FROM tenants WHERE
+  settings->>'clerkOrgId'` had NO isActive and the email fallback (users.findFirst ->
+  dbUser.tenants.id) was unscoped/inactive — both are now isActive-enforced in the resolver;
+  (2) the email fallback used to silently pick dbUser.tenants.id — ambiguous (>1 active)
+  now returns null (deny). The resolver already emits tenant.resolution_ambiguous, so we
+  do not double-log; we just refuse to guess. Dropped the raw SQL (column-casing risk) and
+  the now-unused `prisma` import.
+- Sole caller lib/auth-helper.ts consumes the string|null directly into the user object's
+  tenantId, so null-on-ambiguous == safe deny (no silent cross-tenant id leak).
+- tests/unit/resolve-tenant-id.test.ts: 4 cases. Overrides resolveTenant but keeps the REAL
+  isAmbiguousTenantResolution guard so the ambiguous->null path is genuinely exercised:
+  resolved id pass-through (clerkOrgId+email forwarded), null->null, ambiguous->null,
+  omitted-email -> email:undefined forwarded.
+- Validation: pnpm test:unit -> 74/74 green (4 new + 70 inherited); npx tsc --noEmit -> 0.
