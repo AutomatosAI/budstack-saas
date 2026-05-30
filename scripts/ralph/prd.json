@@ -1,0 +1,187 @@
+{
+  "project": "BudStack SaaS",
+  "branchName": "ralph/prd-204-input-validation-sweep",
+  "description": "PRD-204 Input Validation Sweep — guard raw path-param ids into Prisma (parseUuid/parseSlug across ~41 dynamic routes), fix deepMerge prototype pollution, add a body-size-cap JSON helper, validate the customer/profile PATCH and super-admin tenant settings blob with Zod, and roll Zod onto remaining body routes.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "parseUuid + parseSlug validation helpers",
+      "description": "As a developer, I need shared helpers that reject malformed path params at the boundary so raw ids never reach Prisma.",
+      "acceptanceCriteria": [
+        "Create lib/validation/parse-uuid.ts exporting parseUuid(value: string): string and parseSlug(value: string): string",
+        "parseUuid: trim, test against lenient UUID regex /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; on mismatch throw new ApiError('Invalid request', 400)",
+        "parseSlug: trim, lowercase-validate against /^[a-z0-9][a-z0-9-]{0,62}$/; on mismatch throw new ApiError('Invalid request', 400); return the trimmed value",
+        "Both reject empty/whitespace input with ApiError 400",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Fix deepMerge prototype pollution",
+      "description": "As a developer, I need deepMerge to ignore __proto__/constructor/prototype keys so a JSON.parse'd payload cannot pollute Object.prototype.",
+      "acceptanceCriteria": [
+        "Add const DANGEROUS_KEYS = new Set(['__proto__','constructor','prototype']) in lib/utils.ts",
+        "Skip dangerous keys (continue) as the first check inside the Object.keys loop, at every recursion level",
+        "Preserve existing semantics: override wins unless undefined/null/empty-string; arrays replace wholesale; plain objects deep-merge",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "parseJsonBody body-size-cap helper",
+      "description": "As a developer, I need a JSON body parser that enforces a size cap and optional Zod schema so large or malformed payloads are rejected uniformly.",
+      "acceptanceCriteria": [
+        "Create lib/validation/body.ts exporting async parseJsonBody<T>(req: Request, schema?: ZodSchema<T>, opts?: { maxBytes?: number })",
+        "Default maxBytes 256*1024; read raw text, if byte length exceeds cap throw new ApiError('Request body too large', 413)",
+        "Invalid JSON throws new ApiError('Invalid request', 400)",
+        "If schema provided, run schema.parse and translate ZodError to new ApiError('Invalid request', 400)",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Strict tenant-settings schema + wire super-admin tenants/[id]",
+      "description": "As a security engineer, I need the super-admin tenant settings blob validated against a strict allow-list schema (exported for PRD-208) and the route id parsed as a UUID.",
+      "acceptanceCriteria": [
+        "Enumerate ALL legitimate tenant settings keys by grepping settings.* / settings?.[ access across app + lib (clerkOrgId, railwayDomainId, domain metadata, tenant-admin settings keys)",
+        "Create lib/validation/tenant-settings.ts exporting tenantSettingsSchema (z.object({...known optional}).strict()) and type TenantSettings",
+        "super-admin/tenants/[id] PATCH: parseUuid(params.id); validate caller-supplied settings with tenantSettingsSchema.partial() before the merge; unknown keys rejected with 400",
+        "No legitimate save key omitted from the schema (verify by enumeration, since no DB locally)",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Validate customer/profile PATCH with Zod + caps",
+      "description": "As a security engineer, I need the customer profile update body validated and length-capped so unvalidated free-form data never reaches Prisma.",
+      "acceptanceCriteria": [
+        "Zod schema: firstName/lastName optional string max 100; phone optional string max 32 matching a permissive phone pattern; address optional typed object (street/city/state/zip/country strings, each capped)",
+        "PATCH uses parseJsonBody(request, schema) and returns apiValidationError on invalid input (not a generic 500)",
+        "Only validated fields written to Prisma; existing name-backfill behaviour preserved",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "parseSlug/parseUuid rollout: store/[slug]/* (9 files)",
+      "description": "As a security engineer, I need every store storefront route to validate its slug (and orderId) before DB lookups.",
+      "acceptanceCriteria": [
+        "All 9 store/[slug] route files call parseSlug(params.slug) before any DB use: cart/{add,clear,remove,route}, orders/{route,submit}, orders/[orderId]/route, products/{route,featured}",
+        "store/[slug]/orders/[orderId]/route also calls parseUuid(params.orderId)",
+        "Bare catch blocks in touched files swapped to return apiError(error, { route }) so the 400 propagates instead of becoming 500",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "parseSlug rollout: tenant/[slug] + tenant/conditions/[slug]",
+      "description": "As a security engineer, I need the tenant lookup routes to validate their slug param.",
+      "acceptanceCriteria": [
+        "tenant/[slug]/route and tenant/conditions/[slug]/route call parseSlug(params.slug) before DB use",
+        "Bare catch blocks swapped to apiError(error, { route })",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "parseUuid rollout: super-admin [id] routes (13 files)",
+      "description": "As a security engineer, I need every super-admin dynamic route to validate its id param (excluding tenants/[id]/route.ts handled in US-004).",
+      "acceptanceCriteria": [
+        "All super-admin [id] route files call parseUuid(params.id): email-templates/[id]; submissions/[id]/{approve,edit,reject,request-changes,route}; templates/[id]/{branding,detach,route,update-from-github}; tenants/[id]/{drgreen-keys,toggle-active,verify-domain}",
+        "Excludes tenants/[id]/route.ts (already done in US-004)",
+        "Bare catch blocks swapped to apiError(error, { route })",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "parseUuid rollout: tenant-admin [id] routes (16 files)",
+      "description": "As a security engineer, I need every tenant-admin dynamic route to validate its id param before DB use or string interpolation.",
+      "acceptanceCriteria": [
+        "All tenant-admin [id] route files call parseUuid(params.id): customers/[id]; email-templates/[id]; my-templates/[id]; orders/[id]/{admin-notes,route}; posts/[id]; seo/posts/[id]; seo/products/[id]; templates/[id]/{activate,preview-image,resubmit,submit-to-marketplace,update-from-github,withdraw-submission}; webhooks/[id]/{deliveries,route}",
+        "customers/[id] interpolation into deleted-${id}@deleted.com is now guarded by parseUuid",
+        "Bare catch blocks swapped to apiError(error, { route })",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Zod + parseJsonBody on public store body routes",
+      "description": "As a security engineer, I need the highest-risk public storefront write routes to validate and size-cap their bodies.",
+      "acceptanceCriteria": [
+        "store/[slug]/cart/add, cart/remove, orders/submit each define a Zod schema and parse the body via parseJsonBody(request, schema)",
+        "Numeric quantities bounded (min 1, sane max); ids in body validated; invalid input returns 400 via apiValidationError",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Zod + parseJsonBody on tenant-admin write routes",
+      "description": "As a security engineer, I need tenant-admin create/update routes to validate and size-cap their JSON bodies.",
+      "acceptanceCriteria": [
+        "Tenant-admin write handlers (posts, seo, email-templates, webhooks, orders admin-notes, customers) parse bodies via parseJsonBody with a Zod schema",
+        "Each schema caps string lengths and rejects unknown top-level fields where practical",
+        "Invalid input returns 400 via apiValidationError; no bare 500 swallow on validation failure",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Zod + parseJsonBody on super-admin write routes + uploads guard (final)",
+      "description": "As a security engineer, I need the remaining super-admin write routes validated and confirmation that upload routes keep magic-byte + max-file-size checks. Final story.",
+      "acceptanceCriteria": [
+        "Remaining super-admin write handlers (submissions edit/approve/reject/request-changes, templates branding/update-from-github, tenants verify-domain/drgreen-keys, onboarding) parse bodies via parseJsonBody with a Zod schema",
+        "Verify upload routes still enforce magic-byte validation + max file size (AC-6a) — leave intact, do not regress",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
