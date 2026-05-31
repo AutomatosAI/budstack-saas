@@ -4,6 +4,24 @@ import { prisma } from '@/lib/db';
 import { encrypt } from '@/lib/encryption';
 import { AUDIT_ACTIONS, createAuditLog, getClientInfo } from '@/lib/audit-log';
 import { generateDrGreenSignature } from '@/lib/drgreen-api-client';
+import { z } from 'zod';
+import { apiError } from '@/lib/api-error';
+import { parseJsonBody } from '@/lib/validation/body';
+
+const settingsUpdateSchema = z.object({
+  customDomain: z.string().max(255).optional().nullable(),
+  drGreenApiUrl: z.string().max(2000).optional().nullable(),
+  drGreenApiKey: z.string().max(10000).optional().nullable(),
+  drGreenSecretKey: z.string().max(10000).optional().nullable(),
+  automatosApiKey: z.string().max(2000).optional().nullable(),
+  automatosAgentId: z.union([z.string(), z.number()]).optional().nullable(),
+  smtpHost: z.string().max(255).optional().nullable(),
+  smtpPort: z.union([z.string(), z.number()]).optional().nullable(),
+  smtpUser: z.string().max(255).optional().nullable(),
+  smtpPassword: z.string().max(1000).optional().nullable(),
+  smtpFromEmail: z.string().max(320).optional().nullable(),
+  smtpFromName: z.string().max(255).optional().nullable(),
+});
 
 /**
  * Normalize Dr Green keys to the stored format the signer expects:
@@ -29,7 +47,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
-    const body = await req.json();
+    const body = await parseJsonBody(req, settingsUpdateSchema);
     const {
       customDomain,
       drGreenApiUrl,
@@ -50,7 +68,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       customDomain: customDomain || null,
       drGreenApiUrl: drGreenApiUrl || null,
       automatosApiKey: automatosApiKey || null,
-      automatosAgentId: automatosAgentId ? parseInt(automatosAgentId, 10) : null,
+      automatosAgentId: automatosAgentId ? parseInt(String(automatosAgentId), 10) : null,
     };
 
     // Update settings JSON for SMTP
@@ -58,7 +76,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
     const smtpSettings = {
       ...currentSettings.smtp, // keep existing (e.g. if partial update)
       host: smtpHost,
-      port: parseInt(smtpPort || "587"),
+      port: parseInt(String(smtpPort || "587"), 10),
       user: smtpUser,
       fromEmail: smtpFromEmail,
       fromName: smtpFromName,
@@ -143,10 +161,9 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
     console.log('Settings updated successfully');
     return NextResponse.json({ success: true, message: 'Settings updated successfully' });
   } catch (error) {
-    console.error("Error updating settings detailed:", error);
-    return NextResponse.json(
-      { error: "Failed to update settings" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/tenant-admin/settings",
+      safeMessage: "Failed to update settings",
+    });
   }
 });

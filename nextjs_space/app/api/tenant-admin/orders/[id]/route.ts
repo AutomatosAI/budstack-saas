@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 /**
  * GET /api/tenant-admin/orders/[id]
@@ -10,10 +12,12 @@ import { prisma } from "@/lib/db";
  */
 export const GET = withTenantAuthParams(async (_request, { tenantId }, params) => {
   try {
+    const id = parseUuid(params.id);
+
     // Fetch order with items and user data
     const order = await prisma.orders.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId: tenantId,
       },
       select: {
@@ -77,10 +81,6 @@ export const GET = withTenantAuthParams(async (_request, { tenantId }, params) =
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Error fetching order:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch order" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/orders/[id]" });
   }
 });

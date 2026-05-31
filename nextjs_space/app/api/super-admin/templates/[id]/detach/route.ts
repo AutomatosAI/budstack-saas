@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
+import { requireSameOrigin } from "@/lib/security/require-same-origin";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 /**
  * POST /api/super-admin/templates/[id]/detach
@@ -13,9 +15,12 @@ import { apiError } from "@/lib/api-error";
  *
  * TEMPORARY — remove after cannabizz cleanup.
  */
-export const POST = withSuperAdminParams(async (_req, _ctx, params) => {
+export const POST = withSuperAdminParams(async (req, _ctx, params) => {
   try {
-    const templateId = params.id;
+    const originError = requireSameOrigin(req);
+    if (originError) return originError;
+
+    const templateId = parseUuid(params.id);
 
     // Find the template and all its references
     const template = await prisma.templates.findUnique({
@@ -83,10 +88,11 @@ export const POST = withSuperAdminParams(async (_req, _ctx, params) => {
 
     console.log("[Template Detach]", JSON.stringify(report, null, 2));
 
+    // Full report (tenant names/subdomains/actions) is logged server-side only — not returned
+    // to the client to avoid leaking an internal operation trace (PRD-201 AC-5).
     return NextResponse.json({
       success: true,
       message: `Template "${template.name}" detached from all tenants. You can now delete it.`,
-      report,
     });
   } catch (error: any) {
     console.error("[Template Detach] Error:", error);

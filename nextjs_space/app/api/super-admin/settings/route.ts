@@ -1,7 +1,22 @@
 import { NextResponse } from "next/server";
 import { withSuperAdmin } from "@/lib/api-auth";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const platformConfigSchema = z.object({
+  drGreenApiUrl: z.string().max(2000).optional().nullable(),
+  awsBucketName: z.string().max(255).optional().nullable(),
+  awsFolderPrefix: z.string().max(255).optional().nullable(),
+  awsRegion: z.string().max(64).optional().nullable(),
+  awsAccessKeyId: z.string().max(500).optional().nullable(),
+  awsSecretAccessKey: z.string().max(500).optional().nullable(),
+  emailServer: z.string().max(2000).optional().nullable(),
+  emailFrom: z.string().max(320).optional().nullable(),
+  redisUrl: z.string().max(2000).optional().nullable(),
+});
 
 export const GET = withSuperAdmin(async (_req) => {
   try {
@@ -24,17 +39,15 @@ export const GET = withSuperAdmin(async (_req) => {
 
     return NextResponse.json(maskedConfig);
   } catch (error) {
-    console.error("Error fetching platform config:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch config" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/super-admin/settings",
+      safeMessage: "Failed to fetch config",
+    });
   }
 });
 
 export const POST = withSuperAdmin(async (req) => {
   try {
-    const body = await req.json();
     const {
       drGreenApiUrl,
       awsBucketName,
@@ -45,7 +58,7 @@ export const POST = withSuperAdmin(async (req) => {
       emailServer,
       emailFrom,
       redisUrl,
-    } = body;
+    } = await parseJsonBody(req, platformConfigSchema);
 
     const dataToUpdate: any = {
       drGreenApiUrl: drGreenApiUrl || null,
@@ -111,10 +124,9 @@ export const POST = withSuperAdmin(async (req) => {
       message: "Settings updated successfully",
     });
   } catch (error) {
-    console.error("Error updating platform config:", error);
-    return NextResponse.json(
-      { error: "Failed to update settings" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/super-admin/settings",
+      safeMessage: "Failed to update settings",
+    });
   }
 });

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
 
-export const GET = withAuth(async (_request, { user }, { slug }) => {
+export const GET = withAuth(async (_request, { user }, params) => {
   try {
-    if (!slug) {
-      return NextResponse.json({ error: "Slug is required" }, { status: 400 });
-    }
+    const slug = parseSlug(params.slug);
 
     const tenant = await prisma.tenants.findUnique({
       where: {
@@ -38,10 +38,6 @@ export const GET = withAuth(async (_request, { user }, { slug }) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching tenant:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant/[slug]" });
   }
 });

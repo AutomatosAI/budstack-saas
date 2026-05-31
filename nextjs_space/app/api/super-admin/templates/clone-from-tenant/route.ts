@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { copyS3Directory } from "@/lib/s3";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const cloneFromTenantSchema = z
+  .object({
+    subdomain: z.string().min(1).max(100),
+    targetTemplateId: z.string().max(200).optional(),
+  })
+  .strict();
 
 /**
  * Clone a tenant's customized template to a marketplace template.
@@ -14,12 +24,10 @@ import { copyS3Directory } from "@/lib/s3";
  */
 export const POST = withSuperAdmin(async (req) => {
   try {
-    const body = await req.json();
-    const { subdomain, targetTemplateId } = body;
-
-    if (!subdomain) {
-      return NextResponse.json({ error: "subdomain is required" }, { status: 400 });
-    }
+    const { subdomain, targetTemplateId } = await parseJsonBody(
+      req,
+      cloneFromTenantSchema,
+    );
 
     // Find the tenant by subdomain
     // tenant-gate:allow(admin-lookup) — PRD-205 AC-2b: super-admin clone-by-subdomain of an
@@ -103,10 +111,9 @@ export const POST = withSuperAdmin(async (req) => {
       editUrl: `/super-admin/templates/${targetTemplate.id}/edit`,
     });
   } catch (error) {
-    console.error("[super-admin] Clone from tenant error:", error);
-    return NextResponse.json(
-      { error: "Failed to clone" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/super-admin/templates/clone-from-tenant",
+      safeMessage: "Failed to clone",
+    });
   }
 });

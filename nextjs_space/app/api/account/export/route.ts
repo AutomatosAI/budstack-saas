@@ -27,6 +27,7 @@ export const GET = withAuth(async (request, { user }) => {
     const rate = await checkRateLimit(`account-export:${user.id}`, {
       maxRequests: 3,
       windowMs: 60 * 60 * 1000,
+      failMode: "closed",
     });
     if (!rate.success) return rate.response;
 

@@ -43,11 +43,6 @@ export const POST = withAuth(async (req, { user }) => {
     const uploadPrefix = tenantId ? `tenants/${tenantId}/` : '';
     const key = await uploadFile(buffer, sanitizedName, file.type, uploadPrefix);
 
-    // Verify the final key is within the expected tenant scope
-    if (tenantId && !key.includes(`tenants/${tenantId}/`)) {
-      return NextResponse.json({ error: "Upload path violation" }, { status: 500 });
-    }
-
     const { bucketName, region } = await getBucketConfig();
     const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
 

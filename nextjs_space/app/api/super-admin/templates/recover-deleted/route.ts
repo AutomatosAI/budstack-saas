@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
 import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const recoverDeletedSchema = z
+  .object({
+    slug: z.string().max(200).optional(),
+    execute: z.boolean().optional(),
+  })
+  .strict();
 import {
   ListObjectVersionsCommand,
   DeleteObjectCommand,
@@ -49,7 +58,7 @@ async function readJsonFromS3<T = any>(key: string): Promise<T | null> {
 
 export const POST = withSuperAdmin(async (req) => {
   try {
-    const body = await req.json().catch(() => ({}));
+    const body = (await parseJsonBody(req, recoverDeletedSchema.optional())) ?? {};
     const slug = (body.slug || "").toString().trim().toLowerCase();
     const execute = body.execute === true;
 

@@ -7,11 +7,22 @@ import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { requireSameOrigin } from "@/lib/security/require-same-origin";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+import { z } from "zod";
+
+const templatePatchSchema = z
+  .object({
+    isActive: z.boolean().optional(),
+  })
+  .strict();
 
 export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
   try {
+    const id = parseUuid(params.id);
     const template = await prisma.templates.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
     if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
@@ -64,14 +75,20 @@ export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
     updateData.updatedAt = new Date();
 
     await prisma.templates.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 
-    // Return signed URL for immediate display
+    // Return signed URL for immediate display. This route is SUPER_ADMIN-gated
+    // (see role check above) and operates on system-level `templates` whose
+    // preview assets are NOT tenant-scoped, so signing requires the explicit,
+    // audited cross-tenant bypass rather than a tenantId scope.
     let signedPreviewUrl = null;
     if (updateData.previewUrl) {
-      signedPreviewUrl = await getFileUrl(updateData.previewUrl);
+      signedPreviewUrl = await getFileUrl(updateData.previewUrl, {
+        bypassTenantScope: true,
+        reason: "super-admin template preview tooling",
+      });
     }
 
     return NextResponse.json({
@@ -91,18 +108,19 @@ export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
 
 export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
   try {
+    const id = parseUuid(params.id);
     const template = await prisma.templates.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
     if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
-    const body = await req.json();
+    const body = await parseJsonBody(req, templatePatchSchema);
 
     if (typeof body.isActive === "boolean") {
       await prisma.templates.update({
-        where: { id: params.id },
+        where: { id },
         data: { isActive: body.isActive, updatedAt: new Date() },
       });
 
@@ -110,7 +128,7 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       await createAuditLog({
         action: body.isActive ? AUDIT_ACTIONS.TEMPLATE.UPDATED : AUDIT_ACTIONS.TEMPLATE.UPDATED,
         entityType: "template",
-        entityId: params.id,
+        entityId: id,
         userId: user.id,
         userEmail: email!,
         metadata: {
@@ -139,9 +157,12 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
 
 export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
   try {
+    const originError = requireSameOrigin(req);
+    if (originError) return originError;
+
     const email = user.email;
 
-    const templateId = params.id;
+    const templateId = parseUuid(params.id);
 
     // Find template and check for active usage
     const template = await prisma.templates.findUnique({

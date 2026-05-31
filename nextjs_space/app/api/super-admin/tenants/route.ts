@@ -1,10 +1,25 @@
 import { NextResponse } from "next/server";
 // Force rebuild: 1
+import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
 import crypto from "crypto";
+
+const createTenantSchema = z
+  .object({
+    businessName: z.string().min(1).max(200),
+    subdomain: z.string().min(1).max(100),
+    countryCode: z.string().max(10).optional().nullable(),
+    adminEmail: z.string().min(1).max(320),
+    adminFirstName: z.string().max(120).optional().nullable(),
+    adminLastName: z.string().max(120).optional().nullable(),
+    adminPassword: z.string().min(1).max(200),
+  })
+  .strict();
 
 /**
  * GET /api/super-admin/tenants
@@ -88,11 +103,10 @@ export const GET = withSuperAdmin(async (request, { user }) => {
       },
     });
   } catch (error) {
-    console.error("[GET /api/super-admin/tenants] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/super-admin/tenants",
+      safeMessage: "Internal server error",
+    });
   }
 });
 
@@ -108,7 +122,6 @@ export const POST = withSuperAdmin(async (request, { user }) => {
       return rateLimitResult.response;
     }
 
-    const body = await request.json();
     const {
       businessName,
       subdomain,
@@ -117,14 +130,7 @@ export const POST = withSuperAdmin(async (request, { user }) => {
       adminFirstName,
       adminLastName,
       adminPassword,
-    } = body;
-
-    if (!businessName || !subdomain || !adminEmail || !adminPassword) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 },
-      );
-    }
+    } = await parseJsonBody(request, createTenantSchema);
 
     const existingTenant = await prisma.tenants.findUnique({
       where: { subdomain },
@@ -217,10 +223,9 @@ export const POST = withSuperAdmin(async (request, { user }) => {
       { status: 201 },
     );
   } catch (error) {
-    console.error("[POST /api/super-admin/tenants] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/super-admin/tenants",
+      safeMessage: "Internal server error",
+    });
   }
 });

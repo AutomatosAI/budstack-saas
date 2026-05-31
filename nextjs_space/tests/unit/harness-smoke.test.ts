@@ -1,12 +1,13 @@
-import { describe, it, expect } from 'vitest';
-import { getTenantContext } from '@/lib/tenant-context';
+import { describe, it, expect } from "vitest";
+import { encrypt, decrypt } from "@/lib/encryption";
 
-describe('vitest harness smoke', () => {
-  it('runs and resolves the @/ alias', () => {
-    expect(typeof getTenantContext).toBe('function');
-  });
+describe("vitest harness smoke", () => {
+  it("round-trips a string through encrypt()/decrypt()", () => {
+    const plaintext = "harness-smoke-value";
+    const ciphertext = encrypt(plaintext);
 
-  it('loads NODE_ENV from .env.test', () => {
-    expect(process.env.NODE_ENV).toBe('test');
+    expect(ciphertext).not.toBe(plaintext);
+    expect(ciphertext.startsWith("v2:")).toBe(true);
+    expect(decrypt(ciphertext)).toBe(plaintext);
   });
 });

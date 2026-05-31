@@ -5,6 +5,7 @@
 
 import { NextResponse } from 'next/server';
 import Redis from 'ioredis';
+import { apiError } from '@/lib/api-error';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 let redisClient: Redis | null = null;
@@ -30,6 +31,20 @@ export interface RateLimitConfig {
    * @default 60000 (1 minute)
    */
   windowMs?: number;
+  /**
+   * What to do when the Redis backend is unreachable.
+   * - "open" (default): allow the request through — availability beats
+   *   enforcement for public reads where blocking real users is worse than
+   *   a brief lapse in metering.
+   * - "closed": reject with 503 — enforcement beats availability for
+   *   auth/write-adjacent endpoints where an unmetered flood is the bigger
+   *   risk. US-010 opts specific call sites into this.
+   *
+   * Either way the Redis failure emits an `ops.rate_limit_failopen` event so
+   * the outage is observable.
+   * @default "open"
+   */
+  failMode?: 'open' | 'closed';
 }
 
 /**
@@ -51,7 +66,7 @@ export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig = {}
 ): Promise<{ success: true } | { success: false; response: NextResponse }> {
-  const { maxRequests = 20, windowMs = 60000 } = config;
+  const { maxRequests = 20, windowMs = 60000, failMode = 'open' } = config;
   const now = Date.now();
   const window = Math.floor(now / windowMs);
   const key = `rate-limit:${identifier}:${window}`;
@@ -90,9 +105,32 @@ export async function checkRateLimit(
       };
     }
   } catch (error) {
-    // Fail-open: allow the request through when Redis is unavailable.
-    // Blocking legitimate users is worse than temporarily losing rate limiting.
-    console.warn('[RateLimit] Redis unavailable — allowing request through (fail-open):', error instanceof Error ? error.message : error);
+    // Redis is unreachable. Emit a structured ops event so the outage is
+    // observable now — PRD-215 will formalise the transport; for today a
+    // single keyed console.error line is the contract.
+    console.error('ops.rate_limit_failopen', {
+      identifier,
+      failMode,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    if (failMode === 'closed') {
+      // Enforcement beats availability here: reject rather than wave through
+      // an unmetered flood. 503 + Retry-After via the vetted apiError
+      // envelope so no raw Redis error text reaches the client.
+      const retryAfter = Math.max(1, Math.ceil(windowMs / 1000));
+      const response = apiError(new Error('Rate limiter backend unavailable'), {
+        route: 'rate-limit',
+        status: 503,
+        safeMessage: 'Service temporarily unavailable. Please retry shortly.',
+        logContext: { identifier, failMode },
+      });
+      response.headers.set('Retry-After', retryAfter.toString());
+      return { success: false, response };
+    }
+
+    // failMode 'open' (default): availability wins — allow the request
+    // through. Blocking legitimate users is worse than a brief metering lapse.
     return { success: true };
   }
 

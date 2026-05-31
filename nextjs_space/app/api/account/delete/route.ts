@@ -33,6 +33,7 @@ export const DELETE = withAuth(async (request, { user }) => {
     const rate = await checkRateLimit(`account-delete:${user.id}`, {
       maxRequests: 1,
       windowMs: 60 * 60 * 1000,
+      failMode: "closed",
     });
     if (!rate.success) return rate.response;
 

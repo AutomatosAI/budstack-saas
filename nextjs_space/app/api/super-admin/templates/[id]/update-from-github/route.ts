@@ -11,10 +11,11 @@ import {
   type TemplateConfig,
 } from "@/lib/template-utils";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export const POST = withSuperAdminParams(async (req, { user }, params) => {
   try {
-    const { id } = params;
+    const id = parseUuid(params.id);
 
     const template = await prisma.templates.findUnique({
       where: { id },

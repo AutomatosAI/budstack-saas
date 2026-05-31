@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const orderUpdateSchema = z
+  .object({
+    orderId: z.string().min(1).max(200),
+    status: z.enum(["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"]),
+  })
+  .strict();
 
 /** Default pagination settings */
 const DEFAULT_PAGE_SIZE = 20;
@@ -206,21 +216,7 @@ export const GET = withTenantAuth(async (req, { tenantId }) => {
 // PATCH: Update order status
 export const PATCH = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const body = await req.json();
-    const { orderId, status } = body;
-
-    if (!orderId || !status) {
-      return NextResponse.json(
-        { error: "Order ID and status are required" },
-        { status: 400 },
-      );
-    }
-
-    // Validate status
-    const validStatuses = ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"];
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    }
+    const { orderId, status } = await parseJsonBody(req, orderUpdateSchema);
 
     // Verify the order belongs to this tenant
     const order = await prisma.orders.findFirst({
@@ -254,10 +250,9 @@ export const PATCH = withTenantAuth(async (req, { tenantId }) => {
 
     return NextResponse.json({ order: updatedOrder });
   } catch (error) {
-    console.error("Error updating order status:", error);
-    return NextResponse.json(
-      { error: "Failed to update order status" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "PATCH /api/tenant-admin/orders",
+      safeMessage: "Failed to update order status",
+    });
   }
 });

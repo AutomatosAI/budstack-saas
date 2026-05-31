@@ -1,6 +1,32 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/validation/body";
+import { apiError } from "@/lib/api-error";
+
+/**
+ * Validated, length-capped shape for the customer profile PATCH body
+ * (PRD-204 AC-3). All fields optional (partial update); unknown keys rejected.
+ */
+const profileUpdateSchema = z
+  .object({
+    firstName: z.string().max(100),
+    lastName: z.string().max(100),
+    phone: z.string().max(32).regex(/^[0-9+()\-.\s]*$/, "Invalid phone number"),
+    address: z
+      .object({
+        street: z.string().max(200),
+        city: z.string().max(120),
+        state: z.string().max(120),
+        zip: z.string().max(20),
+        country: z.string().max(120),
+      })
+      .partial()
+      .strict(),
+  })
+  .partial()
+  .strict();
 
 /**
  * GET /api/customer/profile — the current customer's profile.
@@ -50,45 +76,51 @@ export const GET = withAuth(async (_req, { user }) => {
  * Tenant-scoped via the same withAuth host binding as GET (AC-3).
  */
 export const PATCH = withAuth(async (req, { user }) => {
-  const email = user.email;
+  try {
+    const email = user.email;
 
-  const body = await req.json();
-  const { firstName, lastName, phone, address } = body;
+    const { firstName, lastName, phone, address } = await parseJsonBody(
+      req,
+      profileUpdateSchema,
+    );
 
-  // Tenant-scoped by the bound host tenant — no foreign row can be selected.
-  const existingUser = await prisma.users.findFirst({
-    where: { email },
-  });
+    // Tenant-scoped by the bound host tenant — no foreign row can be selected.
+    const existingUser = await prisma.users.findFirst({
+      where: { email },
+    });
 
-  if (!existingUser) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!existingUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const updatedUser = await prisma.users.update({
+      where: { id: existingUser.id },
+      data: {
+        ...(firstName !== undefined && { firstName }),
+        ...(lastName !== undefined && { lastName }),
+        ...(phone !== undefined && { phone }),
+        ...(address !== undefined && { address }),
+        // Update name for backward compatibility
+        ...(firstName && lastName && { name: `${firstName} ${lastName}` }),
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        address: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json({
+      message: "Profile updated successfully",
+      profile: updatedUser,
+    });
+  } catch (error) {
+    return apiError(error, { route: "PATCH /api/customer/profile" });
   }
-
-  const updatedUser = await prisma.users.update({
-    where: { id: existingUser.id },
-    data: {
-      ...(firstName !== undefined && { firstName }),
-      ...(lastName !== undefined && { lastName }),
-      ...(phone !== undefined && { phone }),
-      ...(address !== undefined && { address }),
-      // Update name for backward compatibility
-      ...(firstName && lastName && { name: `${firstName} ${lastName}` }),
-    },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      firstName: true,
-      lastName: true,
-      phone: true,
-      address: true,
-      isActive: true,
-      createdAt: true,
-    },
-  });
-
-  return NextResponse.json({
-    message: "Profile updated successfully",
-    profile: updatedUser,
-  });
 });

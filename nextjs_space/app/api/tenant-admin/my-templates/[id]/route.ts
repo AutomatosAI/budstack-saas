@@ -3,10 +3,11 @@ import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export const DELETE = withTenantAuthParams(async (req, { user, tenantId }, params) => {
   try {
-    const tenantTemplateId = params.id;
+    const tenantTemplateId = parseUuid(params.id);
 
     if (user.role !== "TENANT_ADMIN") {
       return NextResponse.json(

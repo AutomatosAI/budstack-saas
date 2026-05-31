@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 /**
  * GET /api/tenant-admin/webhooks/[id]/deliveries
@@ -9,7 +11,7 @@ import { prisma } from "@/lib/db";
  */
 export const GET = withTenantAuthParams(async (req, { tenantId }, params) => {
   try {
-    const { id } = params;
+    const id = parseUuid(params.id);
 
     // Verify webhook belongs to tenant
     const webhook = await prisma.webhooks.findFirst({
@@ -45,10 +47,6 @@ export const GET = withTenantAuthParams(async (req, { tenantId }, params) => {
       },
     });
   } catch (error) {
-    console.error("[API] Error fetching webhook deliveries:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch webhook deliveries" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/webhooks/[id]/deliveries" });
   }
 });

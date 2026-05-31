@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
@@ -7,6 +8,35 @@ import { submitOrder } from "@/lib/drgreen-orders";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
 import { checkUserKycStatus } from "@/app/actions/kyc-check";
 import { apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const orderSubmitSchema = z
+  .object({
+    shippingInfo: z
+      .object({
+        address1: z.string().min(1).max(200),
+        address2: z.string().max(200).optional(),
+        city: z.string().min(1).max(120),
+        state: z.string().min(1).max(120),
+        postalCode: z.string().min(1).max(20),
+        country: z.string().min(1).max(120),
+        countryCode: z.string().max(10).optional(),
+      })
+      .strict(),
+    cartItems: z
+      .array(
+        z
+          .object({
+            strainId: z.string().min(1).max(200),
+            quantity: z.number().int().min(1).max(10000),
+          })
+          .passthrough(),
+      )
+      .max(500)
+      .optional(),
+  })
+  .strict();
 
 export const POST = withAuth(async (request, { user }, { slug }) => {
   const traceId = `order-${Date.now()}`;
@@ -15,6 +45,7 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
   };
 
   try {
+    parseSlug(slug);
     log('START', { slug });
 
     const email = user.email;
@@ -35,28 +66,15 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       drGreenClientId: dbUser.drGreenClientId || 'NONE',
     });
 
-    const body = await request.json();
-    const { shippingInfo, cartItems } = body;
+    const { shippingInfo, cartItems } = await parseJsonBody(
+      request,
+      orderSubmitSchema,
+    );
     log('REQUEST_BODY', {
       hasShippingInfo: !!shippingInfo,
       cartItemCount: cartItems?.length || 0,
       shippingCountry: shippingInfo?.country,
     });
-
-    if (
-      !shippingInfo ||
-      !shippingInfo.address1 ||
-      !shippingInfo.city ||
-      !shippingInfo.state ||
-      !shippingInfo.postalCode ||
-      !shippingInfo.country
-    ) {
-      log('FAIL: Missing shipping info');
-      return NextResponse.json(
-        { error: "Missing required shipping information" },
-        { status: 400 },
-      );
-    }
 
     const tenant = await getCurrentTenant();
     if (!tenant) {

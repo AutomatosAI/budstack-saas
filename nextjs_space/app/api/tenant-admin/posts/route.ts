@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
 
 // Slugify helper
 function slugify(text: string) {
@@ -15,16 +17,16 @@ function slugify(text: string) {
 }
 
 const postSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  content: z.string().min(1, "Content is required"),
-  excerpt: z.string().optional(),
-  coverImage: z.string().optional(),
+  title: z.string().min(1, "Title is required").max(300),
+  content: z.string().min(1, "Content is required").max(100_000),
+  excerpt: z.string().max(5000).optional(),
+  coverImage: z.string().max(2000).optional(),
   published: z.boolean().default(false),
 });
 
 export const POST = withTenantAuth(async (req, { user, tenantId }) => {
   try {
-    const body = await req.json();
+    const body = await parseJsonBody(req, undefined, { maxBytes: 512 * 1024 });
     const validatedData = postSchema.parse(body);
 
     // Generate base slug
@@ -62,11 +64,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
-    console.error("Error creating post:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "POST /api/tenant-admin/posts" });
   }
 });
 

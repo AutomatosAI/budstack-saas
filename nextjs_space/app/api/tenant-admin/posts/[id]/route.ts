@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
 
 function slugify(text: string) {
   return text
@@ -14,14 +17,14 @@ function slugify(text: string) {
 }
 
 const postSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  content: z.string().min(1, "Content is required"),
-  excerpt: z.string().optional(),
-  coverImage: z.string().optional(),
+  title: z.string().min(1, "Title is required").max(300),
+  content: z.string().min(1, "Content is required").max(100_000),
+  excerpt: z.string().max(5000).optional(),
+  coverImage: z.string().max(2000).optional(),
   published: z.boolean().default(false),
 });
 
-export const GET = withAuth(async (_req, { user }, { id }) => {
+export const GET = withAuth(async (_req, { user }, { id: rawId }) => {
   try {
     const email = user.email;
     const role = user.role;
@@ -29,6 +32,8 @@ export const GET = withAuth(async (_req, { user }, { id }) => {
     if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const id = parseUuid(rawId);
 
     const post = await prisma.posts.findUnique({
       where: { id },
@@ -51,15 +56,11 @@ export const GET = withAuth(async (_req, { user }, { id }) => {
 
     return NextResponse.json(post);
   } catch (error) {
-    console.error("Error fetching post:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/posts/[id]" });
   }
 });
 
-export const PATCH = withAuth(async (req, { user }, { id }) => {
+export const PATCH = withAuth(async (req, { user }, { id: rawId }) => {
   try {
     const email = user.email;
     const role = user.role;
@@ -68,7 +69,8 @@ export const PATCH = withAuth(async (req, { user }, { id }) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const id = parseUuid(rawId);
+    const body = await parseJsonBody(req, undefined, { maxBytes: 512 * 1024 });
     const validatedData = postSchema.partial().parse(body);
 
     const localUser = await prisma.users.findFirst({
@@ -120,15 +122,11 @@ export const PATCH = withAuth(async (req, { user }, { id }) => {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
-    console.error("Error updating post:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PATCH /api/tenant-admin/posts/[id]" });
   }
 });
 
-export const DELETE = withAuth(async (_req, { user }, { id }) => {
+export const DELETE = withAuth(async (_req, { user }, { id: rawId }) => {
   try {
     const email = user.email;
     const role = user.role;
@@ -137,6 +135,7 @@ export const DELETE = withAuth(async (_req, { user }, { id }) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(rawId);
     const localUser = await prisma.users.findFirst({
       where: { email: email },
       include: { tenants: true },
@@ -158,10 +157,6 @@ export const DELETE = withAuth(async (_req, { user }, { id }) => {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting post:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "DELETE /api/tenant-admin/posts/[id]" });
   }
 });

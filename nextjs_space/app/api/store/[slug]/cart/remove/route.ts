@@ -5,9 +5,12 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { removeFromCart } from "@/lib/drgreen-cart";
 import { apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
 
-export const DELETE = withAuth(async (request, { user }) => {
+export const DELETE = withAuth(async (request, { user }, params) => {
   try {
+    parseSlug(params.slug);
+
     const email = user.email;
     if (!email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

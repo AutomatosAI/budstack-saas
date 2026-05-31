@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
+import { apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
 
-export const GET = withAuth(async (_req, { user }) => {
+export const GET = withAuth(async (_req, { user }, params) => {
   try {
+    parseSlug(params.slug);
+
     const email = user.email;
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
@@ -40,10 +44,9 @@ export const GET = withAuth(async (_req, { user }) => {
 
     return NextResponse.json({ orders });
   } catch (error) {
-    console.error("Tenant orders fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch orders" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/store/[slug]/orders",
+      safeMessage: "Failed to fetch orders",
+    });
   }
 });

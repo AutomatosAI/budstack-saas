@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { getSubmissionDetail } from "@/lib/marketplace-review-service";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
   try {
-    const { id } = params;
+    const id = parseUuid(params.id);
     const detail = await getSubmissionDetail(id);
 
     return NextResponse.json(detail);

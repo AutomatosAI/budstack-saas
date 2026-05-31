@@ -5,9 +5,13 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { getOrder } from "@/lib/drgreen-orders";
 import { apiError } from "@/lib/api-error";
+import { parseSlug, parseUuid } from "@/lib/validation/parse-uuid";
 
-export const GET = withAuth(async (_request, { user }, { orderId }) => {
+export const GET = withAuth(async (_request, { user }, params) => {
   try {
+    parseSlug(params.slug);
+    const orderId = parseUuid(params.orderId);
+
     const email = user.email;
     if (!email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -31,7 +35,7 @@ export const GET = withAuth(async (_request, { user }, { orderId }) => {
 
     // Get order (with Dr. Green sync)
     const order = await getOrder({
-      orderId: orderId,
+      orderId,
       userId: dbUser.id,
       tenantId: tenant.id,
       apiKey: drGreenConfig.apiKey,

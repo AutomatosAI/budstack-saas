@@ -1,16 +1,24 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { requestChanges } from "@/lib/marketplace-review-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const feedbackSchema = z
+  .object({
+    feedback: z.string().min(1).max(10000),
+  })
+  .strict();
 
 export const POST = withSuperAdminParams(async (request, { user }, params) => {
   try {
-    const { id } = params;
-    const body = await request.json();
-    const { feedback } = body;
+    const id = parseUuid(params.id);
+    const { feedback } = await parseJsonBody(request, feedbackSchema);
 
-    if (!feedback || typeof feedback !== "string" || !feedback.trim()) {
+    if (!feedback.trim()) {
       return NextResponse.json(
         { error: "Feedback is required when requesting changes" },
         { status: 400 },

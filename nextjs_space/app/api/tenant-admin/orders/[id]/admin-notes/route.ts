@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const adminNotesSchema = z
+  .object({
+    adminNotes: z.string().max(5000),
+  })
+  .strict();
 
 /**
  * PATCH: Update admin notes for an order
@@ -9,16 +19,8 @@ import { prisma } from "@/lib/db";
  */
 export const PATCH = withTenantAuthParams(async (req, { tenantId }, params) => {
   try {
-    const orderId = params.id;
-    const body = await req.json();
-    const { adminNotes } = body;
-
-    if (typeof adminNotes !== "string") {
-      return NextResponse.json(
-        { error: "Admin notes must be a string" },
-        { status: 400 },
-      );
-    }
+    const orderId = parseUuid(params.id);
+    const { adminNotes } = await parseJsonBody(req, adminNotesSchema);
 
     // Verify the order belongs to this tenant
     const order = await prisma.orders.findFirst({
@@ -55,10 +57,6 @@ export const PATCH = withTenantAuthParams(async (req, { tenantId }, params) => {
       updatedAt: updatedOrder.updatedAt,
     });
   } catch (error) {
-    console.error("Error updating admin notes:", error);
-    return NextResponse.json(
-      { error: "Failed to update admin notes" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PATCH /api/tenant-admin/orders/[id]/admin-notes" });
   }
 });

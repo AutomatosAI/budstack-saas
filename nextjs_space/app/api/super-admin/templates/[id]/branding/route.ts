@@ -5,6 +5,9 @@ import { getJsonFromS3, uploadFile } from "@/lib/s3";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
+import { apiError, ApiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { validateUploadBuffer } from "@/lib/upload-validation";
 
 /**
  * Super Admin Marketplace Template Branding API
@@ -15,8 +18,9 @@ import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
  */
 export const POST = withSuperAdminParams(async (req, _ctx, params) => {
   try {
+    const id = parseUuid(params.id);
     const template = await prisma.templates.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!template || !template.slug) {
@@ -41,7 +45,16 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
       const file = formData.get(fieldName) as File;
       if (!file || file.size === 0) return null;
       const buffer = Buffer.from(await file.arrayBuffer());
-      const fileName = `${prefix}-${Date.now()}-${file.name}`;
+      const cleanName = file.name
+        .replace(/\.\.\//g, "")
+        .replace(/\.\.\\/g, "")
+        .replace(/[/\\]/g, "_")
+        .slice(0, 200);
+      const validation = await validateUploadBuffer(buffer, file.type, cleanName);
+      if (!validation.valid) {
+        throw new ApiError(`${fieldName}: ${validation.error}`, 400);
+      }
+      const fileName = `${prefix}-${Date.now()}-${cleanName}`;
       return await uploadFile(buffer, fileName, file.type || undefined);
     };
 
@@ -279,10 +292,9 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
 
     return NextResponse.json({ success: true, message: "Marketplace template updated" });
   } catch (error) {
-    console.error("[super-admin] Marketplace template branding error:", error);
-    return NextResponse.json(
-      { error: "Failed to update template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/super-admin/templates/[id]/branding",
+      safeMessage: "Failed to update template",
+    });
   }
 });

@@ -1,17 +1,23 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const emailCloneSchema = z
+  .object({
+    originalTemplateId: z.string().min(1).max(200),
+    eventType: z.string().min(1).max(100),
+  })
+  .strict();
 
 export const POST = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const { originalTemplateId, eventType } = await req.json();
-
-    if (!originalTemplateId || !eventType) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 },
-      );
-    }
+    const { originalTemplateId, eventType } = await parseJsonBody(
+      req,
+      emailCloneSchema,
+    );
 
     // 1. Fetch Original Template
     const original = await prisma.email_templates.findUnique({
@@ -60,10 +66,8 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
 
     return NextResponse.json({ success: true, newTemplateId: newTemplate.id });
   } catch (error) {
-    console.error("Error cloning template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/tenant-admin/email-templates/clone",
+    });
   }
 });

@@ -3,6 +3,8 @@ import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { promises as dns } from "dns";
 import { isApexDomain } from "@/lib/domain-utils";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 type VerificationStatus = "verified" | "pending" | "misconfigured";
 
@@ -15,8 +17,10 @@ interface VerificationResult {
 
 export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
   try {
+    const id = parseUuid(params.id);
+
     const tenant = await prisma.tenants.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         customDomain: true,
@@ -120,7 +124,7 @@ export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
     const existingSettings =
       (tenant.settings as Record<string, unknown>) || {};
     await prisma.tenants.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         settings: {
           ...existingSettings,
@@ -136,10 +140,6 @@ export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
       ...verification,
     });
   } catch (error) {
-    console.error("Error verifying domain:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/super-admin/tenants/[id]/verify-domain" });
   }
 });

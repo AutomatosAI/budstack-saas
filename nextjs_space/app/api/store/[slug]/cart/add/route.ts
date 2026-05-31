@@ -1,13 +1,26 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { addToCart } from "@/lib/drgreen-cart";
 import { apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const cartAddSchema = z
+  .object({
+    strainId: z.string().min(1).max(200),
+    quantity: z.number().int().min(1).max(1000),
+    size: z.union([z.literal(2), z.literal(5), z.literal(10)]),
+  })
+  .strict();
 
 export const POST = withAuth(async (request, { user }, { slug }) => {
   try {
+    parseSlug(slug);
+
     const email = user.email;
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
@@ -21,30 +34,10 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       return NextResponse.json({ error: "User not found in database" }, { status: 404 });
     }
 
-    const body = await request.json();
-    const { strainId, quantity, size } = body;
-
-    // Validate input
-    if (!strainId || !quantity || !size) {
-      return NextResponse.json(
-        { error: "Missing required fields: strainId, quantity, size" },
-        { status: 400 },
-      );
-    }
-
-    if (![2, 5, 10].includes(size)) {
-      return NextResponse.json(
-        { error: "Size must be 2, 5, or 10 grams" },
-        { status: 400 },
-      );
-    }
-
-    if (quantity < 1) {
-      return NextResponse.json(
-        { error: "Quantity must be at least 1" },
-        { status: 400 },
-      );
-    }
+    const { strainId, quantity, size } = await parseJsonBody(
+      request,
+      cartAddSchema,
+    );
 
     // Resolve tenant from middleware headers (works for subdomain, path, and custom domain routing)
     const tenant = await getCurrentTenant();

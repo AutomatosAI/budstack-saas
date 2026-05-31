@@ -4,9 +4,12 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { getCart } from "@/lib/drgreen-cart";
 import { apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
 
-export const GET = withAuth(async (_request, { user }) => {
+export const GET = withAuth(async (_request, { user }, params) => {
   try {
+    parseSlug(params.slug);
+
     // Resolve tenant from middleware headers (works for subdomain, path, and custom domain routing)
     const tenant = await getCurrentTenant();
 

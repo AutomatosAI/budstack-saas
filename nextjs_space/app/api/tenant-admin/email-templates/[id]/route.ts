@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import {
@@ -7,15 +8,31 @@ import {
   EMAIL_HTML_MAX_LENGTH,
   EMAIL_SUBJECT_MAX_LENGTH,
 } from "@/lib/email-sanitize";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
 
 const TEMPLATE_NAME_MAX = 200;
 const TEMPLATE_DESCRIPTION_MAX = 1000;
 
+// Strip-mode (see create route): handler slices/sanitizes and keeps the precise
+// contentHtml/subject length checks; Zod bounds types + caps metadata. Raised
+// maxBytes so a max-size contentHtml survives JSON escaping.
+const emailTemplateUpdateSchema = z.object({
+  name: z.string().max(1000).optional(),
+  subject: z.string().optional(),
+  contentHtml: z.string().optional(),
+  description: z.string().max(5000).optional(),
+  isActive: z.boolean().optional(),
+});
+
 export const GET = withTenantAuthParams(async (_request, { tenantId }, params) => {
   try {
+    const id = parseUuid(params.id);
+
     const template = await prisma.email_templates.findFirst({
       where: {
-        id: params.id,
+        id: id,
         tenantId: tenantId, // Strict ownership
       },
     });
@@ -29,17 +46,17 @@ export const GET = withTenantAuthParams(async (_request, { tenantId }, params) =
 
     return NextResponse.json(template);
   } catch (error) {
-    console.error("Error fetching template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/email-templates/[id]" });
   }
 });
 
 export const PUT = withTenantAuthParams(async (req, { tenantId }, params) => {
   try {
-    const body = await req.json();
+    const id = parseUuid(params.id);
+
+    const body = await parseJsonBody(req, emailTemplateUpdateSchema, {
+      maxBytes: 512 * 1024,
+    });
     const { name, subject, contentHtml, description, isActive } = body;
 
     // SECURITY (C7): Length caps + HTML allowlist + subject tag-strip.
@@ -59,7 +76,7 @@ export const PUT = withTenantAuthParams(async (req, { tenantId }, params) => {
 
     // Verify ownership before update
     const count = await prisma.email_templates.count({
-      where: { id: params.id, tenantId: tenantId },
+      where: { id, tenantId: tenantId },
     });
 
     if (count === 0) {
@@ -70,7 +87,7 @@ export const PUT = withTenantAuthParams(async (req, { tenantId }, params) => {
     }
 
     const updated = await prisma.email_templates.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(typeof name === "string" && { name: name.slice(0, TEMPLATE_NAME_MAX) }),
         ...(typeof subject === "string" && { subject: sanitizeEmailSubject(subject) }),
@@ -87,19 +104,17 @@ export const PUT = withTenantAuthParams(async (req, { tenantId }, params) => {
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Error updating template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PUT /api/tenant-admin/email-templates/[id]" });
   }
 });
 
 export const DELETE = withTenantAuthParams(async (_request, { tenantId }, params) => {
   try {
+    const id = parseUuid(params.id);
+
     // Verify ownership
     const template = await prisma.email_templates.findFirst({
-      where: { id: params.id, tenantId: tenantId },
+      where: { id, tenantId: tenantId },
     });
 
     if (!template) {
@@ -111,7 +126,7 @@ export const DELETE = withTenantAuthParams(async (_request, { tenantId }, params
 
     // Check if mapped
     const mapping = await prisma.email_event_mappings.findFirst({
-      where: { templateId: params.id },
+      where: { templateId: id },
     });
 
     // Strategy: If mapped, delete the mapping first (Revert to default)
@@ -119,14 +134,10 @@ export const DELETE = withTenantAuthParams(async (_request, { tenantId }, params
       await prisma.email_event_mappings.delete({ where: { id: mapping.id } });
     }
 
-    await prisma.email_templates.delete({ where: { id: params.id } });
+    await prisma.email_templates.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "DELETE /api/tenant-admin/email-templates/[id]" });
   }
 });

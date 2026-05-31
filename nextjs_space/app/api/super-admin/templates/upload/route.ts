@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import fs from "fs/promises";
@@ -7,6 +8,8 @@ import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { convertLovableTemplate } from "@/lib/lovable-converter";
 import { randomUUID } from "crypto";
 import { uploadDirectoryToS3 } from "@/lib/s3";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
 import {
   downloadGitHubRepo,
   generateSlug,
@@ -14,35 +17,19 @@ import {
   type TemplateConfig,
 } from "@/lib/template-utils";
 
+const uploadTemplateSchema = z
+  .object({
+    templateName: z.string().min(1).max(200),
+    githubUrl: z.string().min(1).max(500),
+    structureType: z.enum(["default", "lovable"]).optional(),
+    branch: z.string().max(200).optional(),
+  })
+  .strict();
+
 export const POST = withSuperAdmin(async (req, { user }) => {
   try {
-    const body = await req.json();
-    const { templateName, githubUrl, structureType = "default", branch } = body;
-
-    if (
-      !templateName ||
-      typeof templateName !== "string" ||
-      !templateName.trim()
-    ) {
-      return NextResponse.json(
-        { error: "Template name is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!githubUrl || typeof githubUrl !== "string") {
-      return NextResponse.json(
-        { error: "GitHub URL is required" },
-        { status: 400 },
-      );
-    }
-
-    if (structureType !== "default" && structureType !== "lovable") {
-      return NextResponse.json(
-        { error: 'Invalid structure type. Must be "default" or "lovable"' },
-        { status: 400 },
-      );
-    }
+    const { templateName, githubUrl, structureType = "default", branch } =
+      await parseJsonBody(req, uploadTemplateSchema);
 
     console.log(`[Template Upload] Structure type: ${structureType}`);
 
@@ -292,10 +279,9 @@ export const POST = withSuperAdmin(async (req, { user }) => {
       throw uploadError;
     }
   } catch (error: any) {
-    console.error("[Template Upload] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to upload template" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/super-admin/templates/upload",
+      safeMessage: "Failed to upload template",
+    });
   }
 });

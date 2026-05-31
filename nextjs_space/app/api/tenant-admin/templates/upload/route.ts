@@ -3,22 +3,23 @@ import { withTenantAuth } from "@/lib/api-auth";
 import { uploadFromGitHub } from "@/lib/tenant-template-upload-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const uploadSchema = z
+  .object({
+    templateName: z.string().min(1).max(200),
+    githubUrl: z.string().min(1).max(500),
+  })
+  .strict();
 
 export const POST = withTenantAuth(async (request, { user, tenantId }) => {
   try {
-    const body = await request.json();
-    const { templateName, githubUrl } = body;
+    const { templateName, githubUrl } = await parseJsonBody(request, uploadSchema);
 
-    if (!templateName || typeof templateName !== "string" || !templateName.trim()) {
+    if (!templateName.trim()) {
       return NextResponse.json(
         { error: "Template name is required" },
-        { status: 400 },
-      );
-    }
-
-    if (!githubUrl || typeof githubUrl !== "string") {
-      return NextResponse.json(
-        { error: "GitHub URL is required" },
         { status: 400 },
       );
     }

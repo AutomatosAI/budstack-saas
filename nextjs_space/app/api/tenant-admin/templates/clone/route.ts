@@ -4,19 +4,19 @@ import { prisma } from "@/lib/db";
 import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/validation/body";
 import crypto from "crypto";
+
+const cloneSchema = z
+  .object({
+    baseTemplateId: z.string().min(1).max(200),
+  })
+  .strict();
 
 export const POST = withTenantAuth(async (request, { user, tenantId }) => {
   try {
-    const body = await request.json();
-    const { baseTemplateId } = body;
-
-    if (!baseTemplateId) {
-      return NextResponse.json(
-        { error: "Missing baseTemplateId" },
-        { status: 400 },
-      );
-    }
+    const { baseTemplateId } = await parseJsonBody(request, cloneSchema);
 
     // 3. Fetch Base Template
     const baseTemplate = await prisma.templates.findUnique({

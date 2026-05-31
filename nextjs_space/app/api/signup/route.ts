@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResult = await checkRateLimit(`signup:${ip}`, {
       maxRequests: 10,
       windowMs: 60 * 60 * 1000,
+      failMode: "closed",
     });
     if (!rateLimitResult.success) {
       return rateLimitResult.response;

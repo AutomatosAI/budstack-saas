@@ -1,10 +1,27 @@
 import { NextResponse } from "next/server";
 import { withTenantAuthParams } from "@/lib/api-auth";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const seoUpdateSchema = z
+  .object({
+    title: z.string().max(300).optional(),
+    description: z.string().max(1000).optional(),
+    ogImage: z.string().max(2000).optional(),
+  })
+  .strict();
 
 // GET - Fetch post SEO
 export const GET = withTenantAuthParams(async (_request, { tenantId }, params) => {
-  const { id } = params;
+  let id: string;
+  try {
+    id = parseUuid(params.id);
+  } catch (error) {
+    return apiError(error, { route: "/api/tenant-admin/seo/posts/[id]" });
+  }
 
   const post = await prisma.posts.findFirst({
     where: { id, tenantId: tenantId },
@@ -20,7 +37,12 @@ export const GET = withTenantAuthParams(async (_request, { tenantId }, params) =
 
 // PUT - Update post SEO
 export const PUT = withTenantAuthParams(async (request, { tenantId }, params) => {
-  const { id } = params;
+  let id: string;
+  try {
+    id = parseUuid(params.id);
+  } catch (error) {
+    return apiError(error, { route: "/api/tenant-admin/seo/posts/[id]" });
+  }
 
   // Verify post belongs to tenant
   const existingPost = await prisma.posts.findFirst({
@@ -31,8 +53,13 @@ export const PUT = withTenantAuthParams(async (request, { tenantId }, params) =>
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
   }
 
-  const body = await request.json();
-  const { title, description, ogImage } = body;
+  let parsed;
+  try {
+    parsed = await parseJsonBody(request, seoUpdateSchema);
+  } catch (error) {
+    return apiError(error, { route: "PUT /api/tenant-admin/seo/posts/[id]" });
+  }
+  const { title, description, ogImage } = parsed;
 
   // Build SEO object, removing empty values
   const seo: Record<string, string> = {};

@@ -3,12 +3,12 @@ import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export const PATCH = withTenantAuthParams(
   async (_request, { user, tenantId }, params) => {
   try {
-    const { id } = params;
-    const templateId = id;
+    const templateId = parseUuid(params.id);
 
     // 3. Verify template belongs to tenant
     const template = await prisma.tenant_templates.findFirst({

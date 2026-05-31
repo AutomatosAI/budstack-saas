@@ -5,11 +5,12 @@ import { updateFromGitHub } from "@/lib/tenant-template-upload-service";
 import { resubmitToMarketplace } from "@/lib/marketplace-submission-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export const POST = withTenantAuthParams(
   async (_request, { user, tenantId }, params) => {
   try {
-    const { id } = params;
+    const id = parseUuid(params.id);
 
     // Verify template belongs to tenant and is custom
     const template = await prisma.tenant_templates.findFirst({

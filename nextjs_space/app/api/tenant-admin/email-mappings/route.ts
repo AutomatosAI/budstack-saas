@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const emailMappingSchema = z
+  .object({
+    eventType: z.string().min(1).max(100),
+    templateId: z.string().min(1).max(200),
+  })
+  .strict();
 
 const SYSTEM_EVENTS = [
   "welcome",
@@ -65,14 +75,10 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
 
 export const POST = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const { eventType, templateId } = await req.json();
-
-    if (!eventType || !templateId) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 },
-      );
-    }
+    const { eventType, templateId } = await parseJsonBody(
+      req,
+      emailMappingSchema,
+    );
 
     // Verify Template Ownership (Security)
     const template = await prisma.email_templates.findFirst({
@@ -105,11 +111,7 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error updating mapping:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "POST /api/tenant-admin/email-mappings" });
   }
 });
 

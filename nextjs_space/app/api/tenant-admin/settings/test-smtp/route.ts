@@ -2,8 +2,16 @@ import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { decrypt } from "@/lib/encryption";
+import { z } from "zod";
 import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
 import nodemailer from "nodemailer";
+
+const testSmtpSchema = z
+  .object({
+    testEmail: z.string().min(1).max(320),
+  })
+  .strict();
 
 // SECURITY (H_e3): SMTP errors leak sensitive details — auth responses,
 // hostnames, response codes that aid attackers in fingerprinting. Map
@@ -38,14 +46,7 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
-    const body = await req.json();
-    const { testEmail } = body;
-
-    if (!testEmail)
-      return NextResponse.json(
-        { error: "Test email required" },
-        { status: 400 },
-      );
+    const { testEmail } = await parseJsonBody(req, testSmtpSchema);
 
     const settings = tenant.settings as any;
     const smtp = settings?.smtp;
