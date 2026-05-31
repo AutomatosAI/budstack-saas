@@ -70,6 +70,28 @@ export class DecryptionError extends Error {
 }
 
 /**
+ * Recognises an encrypted value shape: 4-part v2 (`v2:iv:authTag:ciphertext`) or
+ * 3-part legacy (`iv:authTag:ciphertext`), each segment non-empty hex. Single
+ * source of truth so callers never misclassify a v2 value as legacy and skip
+ * decryption. Shape-only — it does NOT decrypt or verify the auth tag.
+ */
+export function isEncryptedValue(text: string): boolean {
+  if (!text) return false;
+
+  const parts = text.split(":");
+  const isHex = (segment: string): boolean =>
+    segment.length > 0 && /^[0-9a-f]+$/i.test(segment);
+
+  // v2 shape: v2:iv:authTag:ciphertext
+  if (parts[0] === "v2") {
+    return parts.length === 4 && parts.slice(1).every(isHex);
+  }
+
+  // legacy shape: iv:authTag:ciphertext
+  return parts.length === 3 && parts.every(isHex);
+}
+
+/**
  * Encrypts a string using AES-256-GCM with scrypt-derived key.
  * Returns format: v2:iv:authTag:ciphertext (hex encoded)
  * The v2 prefix distinguishes from legacy SHA-256 derived ciphertext.
@@ -90,32 +112,37 @@ export function encrypt(text: string): string {
 }
 
 /**
- * Decrypts a string. Supports both formats:
- *   - v2:iv:authTag:ciphertext (scrypt-derived key)
- *   - iv:authTag:ciphertext (legacy SHA-256 key — auto-detected)
- * Throws DecryptionError on failure instead of returning empty string.
+ * Decrypts a string produced by encrypt() (or a legacy iv:authTag:ciphertext
+ * value). Fails closed: returns real plaintext, "" for empty input, or a
+ * genuinely-unencrypted value during the migration window — and otherwise throws
+ * DecryptionError. It NEVER returns an encrypted-looking input as if it were
+ * plaintext (that fail-open path was the defect this fixes).
  */
 export function decrypt(text: string, options?: DecryptOptions): string {
   if (!text) return "";
 
-  const parts = text.split(":");
-  const isV2 = parts[0] === "v2";
-
-  // v2 format: v2:iv:authTag:ciphertext (4 parts)
-  // legacy format: iv:authTag:ciphertext (3 parts)
-  const expectedParts = isV2 ? 4 : 3;
-
-  if (parts.length !== expectedParts) {
+  // A value that does not look encrypted is treated as a genuinely-unencrypted
+  // legacy value still awaiting migration. isEncryptedValue(text) is false here,
+  // so `text` is by definition NOT ciphertext — returning it is a known-plaintext
+  // passthrough, never a fail-open. Allowed ONLY inside the migration window;
+  // outside it, the unexpected shape is a hard failure.
+  if (!isEncryptedValue(text)) {
     if (isMigrationAllowed(options)) {
-      return text;
+      const unmigratedPlaintext = text;
+      return unmigratedPlaintext;
     }
     throw new DecryptionError("Encrypted value is not in the expected format.");
   }
 
+  // The value IS encrypted-looking (valid v2 or legacy hex shape, per
+  // isEncryptedValue). From here it must decrypt successfully or throw — it is
+  // never returned as-is, even under migration.
+  const parts = text.split(":");
+  const isV2 = parts[0] === "v2";
   const [ivHex, authTagHex, encryptedHex] = isV2 ? parts.slice(1) : parts;
 
   try {
-    // Use scrypt key for v2, legacy SHA-256 key for old ciphertext
+    // scrypt key for v2, legacy SHA-256 key for old ciphertext.
     const key = isV2 ? getKey() : getLegacyKey();
     const iv = Buffer.from(ivHex, "hex");
     const authTag = Buffer.from(authTagHex, "hex");
@@ -128,13 +155,6 @@ export function decrypt(text: string, options?: DecryptOptions): string {
 
     return decrypted;
   } catch (error) {
-    // If v2 decryption failed, don't try legacy — the prefix is explicit
-    if (!isV2) {
-      // Legacy format might fail if key was already rotated — try migration
-      if (isMigrationAllowed(options)) {
-        return text;
-      }
-    }
     throw new DecryptionError("Decryption failed — key may have been rotated or data corrupted.", error);
   }
 }

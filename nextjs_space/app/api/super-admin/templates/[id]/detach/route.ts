@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
+import { requireSameOrigin } from "@/lib/security/require-same-origin";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 
 /**
@@ -23,6 +24,9 @@ export async function POST(
     if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const originError = requireSameOrigin(req);
+    if (originError) return originError;
 
     const templateId = parseUuid(params.id);
 
@@ -92,10 +96,11 @@ export async function POST(
 
     console.log("[Template Detach]", JSON.stringify(report, null, 2));
 
+    // Full report (tenant names/subdomains/actions) is logged server-side only — not returned
+    // to the client to avoid leaking an internal operation trace (PRD-201 AC-5).
     return NextResponse.json({
       success: true,
       message: `Template "${template.name}" detached from all tenants. You can now delete it.`,
-      report,
     });
   } catch (error: any) {
     console.error("[Template Detach] Error:", error);

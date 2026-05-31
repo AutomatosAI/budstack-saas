@@ -4,8 +4,9 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
+import { assertSafeWebhookUrl } from "@/lib/webhook-ssrf";
 
 const webhookCreateSchema = z
   .object({
@@ -81,6 +82,17 @@ export async function POST(req: NextRequest) {
       req,
       webhookCreateSchema,
     );
+
+    // SSRF egress guard — reject non-https / internal / private-resolving URLs
+    // up front (generic message; never leak the resolved address).
+    try {
+      await assertSafeWebhookUrl(url);
+    } catch {
+      return apiValidationError(
+        "Webhook URL is not allowed. Use a public HTTPS endpoint.",
+        "tenant-admin/webhooks",
+      );
+    }
 
     // Generate a secret for webhook signature
     const secret = crypto.randomBytes(32).toString("hex");

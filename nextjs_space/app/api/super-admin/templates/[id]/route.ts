@@ -7,6 +7,7 @@ import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { requireSameOrigin } from "@/lib/security/require-same-origin";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 import { z } from "zod";
@@ -176,6 +177,9 @@ export async function DELETE(
     if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const originError = requireSameOrigin(req);
+    if (originError) return originError;
 
     const email = user.emailAddresses[0]?.emailAddress;
 

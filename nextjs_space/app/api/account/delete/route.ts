@@ -39,6 +39,7 @@ export async function DELETE(request: NextRequest) {
     const rate = await checkRateLimit(`account-delete:${clerkUser.id}`, {
       maxRequests: 1,
       windowMs: 60 * 60 * 1000,
+      failMode: "closed",
     });
     if (!rate.success) return rate.response;
 

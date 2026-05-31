@@ -3,9 +3,10 @@ import { z } from "zod";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
+import { assertSafeWebhookUrl } from "@/lib/webhook-ssrf";
 
 const webhookUpdateSchema = z
   .object({
@@ -69,6 +70,19 @@ export async function PATCH(
 
     if (!existingWebhook) {
       return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
+    }
+
+    // SSRF egress guard — same check as creation (generic message, no leak).
+    // URL format is already validated by webhookUpdateSchema (z.string().url()).
+    if (url) {
+      try {
+        await assertSafeWebhookUrl(url);
+      } catch {
+        return apiValidationError(
+          "Webhook URL is not allowed. Use a public HTTPS endpoint.",
+          "tenant-admin/webhooks/[id]",
+        );
+      }
     }
 
     const webhook = await prisma.webhooks.update({

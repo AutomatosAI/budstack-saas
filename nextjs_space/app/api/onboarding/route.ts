@@ -6,6 +6,7 @@ import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
 import crypto from "crypto";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isReservedSubdomain, isValidSubdomain } from "@/lib/reserved-subdomains";
 
 const onboardingSchema = z.object({
   businessName: z.string().min(1).max(100),
@@ -23,20 +24,6 @@ const onboardingSchema = z.object({
   countryCode: z.string().length(2).regex(/^[A-Z]{2}$/),
   templateId: z.string().max(100).optional(),
 });
-
-/** Reserved subdomains that cannot be registered */
-const RESERVED_SUBDOMAINS = new Set([
-  'www', 'api', 'admin', 'super-admin', 'mail', 'smtp', 'ftp',
-  'app', 'dashboard', 'help', 'support', 'status', 'docs',
-  'blog', 'store', 'shop', 'cdn', 'assets', 'static', 'media',
-  'auth', 'login', 'signup', 'register', 'account', 'billing',
-  'budstacks', 'budstack',
-]);
-
-/** Validate subdomain format: lowercase alphanumeric + hyphens, 2-30 chars */
-function isValidSubdomain(subdomain: string): boolean {
-  return /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/.test(subdomain) && !subdomain.includes('--');
-}
 
 const TEMPLATE_PRESETS = {
   modern: {
@@ -72,7 +59,7 @@ export async function POST(req: NextRequest) {
     // Rate limit by IP — public endpoint that creates orgs + users
     const forwarded = req.headers.get('x-forwarded-for');
     const ip = forwarded?.split(',')[0]?.trim() || 'unknown';
-    const rateLimitResult = await checkRateLimit(`onboarding:${ip}`, { maxRequests: 3, windowMs: 60000 });
+    const rateLimitResult = await checkRateLimit(`onboarding:${ip}`, { maxRequests: 3, windowMs: 60000, failMode: 'closed' });
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }
@@ -106,7 +93,7 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-    if (RESERVED_SUBDOMAINS.has(normalizedSubdomain)) {
+    if (isReservedSubdomain(normalizedSubdomain)) {
       return NextResponse.json(
         { error: "This subdomain is reserved. Please choose another." },
         { status: 400 },

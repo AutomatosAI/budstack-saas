@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db";
 import { getNamecheapClient } from "@/lib/namecheap-api";
 import { addCustomDomain, removeCustomDomain } from "@/lib/railway-api";
 import { clerkClient } from "@clerk/nextjs/server";
+import { isReservedSubdomain, isValidSubdomain } from "@/lib/reserved-subdomains";
+import { requireSameOrigin } from "@/lib/security/require-same-origin";
+import { requireConfirmation } from "@/lib/security/require-confirmation";
 import crypto from "crypto";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { tenantSettingsLenientSchema } from "@/lib/validation/tenant-settings";
@@ -98,8 +101,22 @@ export async function PATCH(
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
-    // Check if subdomain is being changed and if it's unique
+    // Check if subdomain is being changed: enforce format + reserved list, then uniqueness
     if (subdomain && subdomain !== existingTenant.subdomain) {
+      const candidate = String(subdomain);
+      if (!isValidSubdomain(candidate)) {
+        return NextResponse.json(
+          { error: "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only" },
+          { status: 400 },
+        );
+      }
+      if (isReservedSubdomain(candidate)) {
+        return NextResponse.json(
+          { error: "This subdomain is reserved. Please choose another.", code: "RESERVED_SUBDOMAIN" },
+          { status: 400 },
+        );
+      }
+
       const subdomainExists = await prisma.tenants.findUnique({
         where: { subdomain },
       });
@@ -321,6 +338,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const originError = requireSameOrigin(req);
+    if (originError) return originError;
+
     const id = parseUuid(params.id);
 
     // Fetch tenant with related data needed for cleanup
@@ -336,6 +356,12 @@ export async function DELETE(
     if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
+
+    // Require a typed { confirm: <subdomain> } body so a destructive delete cannot fire
+    // from a bare request (defence-in-depth alongside the same-origin check).
+    const body = await req.json().catch(() => null);
+    const confirmationError = requireConfirmation(body, tenant.subdomain);
+    if (confirmationError) return confirmationError;
 
     // Clean up Clerk Organization and Users (best-effort — don't block DB delete)
     const clerkOrgId = (tenant.settings as any)?.clerkOrgId;
@@ -415,9 +441,11 @@ export async function DELETE(
       },
     });
 
+    // Do not echo cleanupErrors (Clerk org IDs + raw error strings) to the client — they remain
+    // in server logs (console.error per failure) and the audit_logs metadata only (PRD-201 AC-5).
     return NextResponse.json({
       success: true,
-      cleanupErrors: cleanupErrors.length > 0 ? cleanupErrors : undefined,
+      summary: { deleted: 1 },
     });
   } catch (error) {
     return apiError(error, { route: "DELETE /api/super-admin/tenants/[id]" });
