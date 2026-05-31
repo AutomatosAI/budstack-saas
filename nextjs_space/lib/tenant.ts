@@ -1,9 +1,9 @@
 
-import { headers } from 'next/headers';
 import { prisma } from './db';
 import { cache } from 'react';
 import { getJsonFromS3, getTextFromS3 } from './s3';
 import type { TemplateLayout } from './types/template-layout';
+import { resolveTenant } from './tenant-resolver';
 
 // Extract Tenant type from Prisma query result
 type Tenant = Awaited<ReturnType<typeof prisma.tenants.findFirst>>;
@@ -12,49 +12,16 @@ type Tenant = Awaited<ReturnType<typeof prisma.tenants.findFirst>>;
  * Resolve the current tenant from request headers (set by Next.js middleware).
  * Cached per request to avoid multiple DB queries.
  *
- * PURE resolver (PRD-202 AC-2): it RETURNS the tenant and no longer binds tenant
- * context as a side-effect. Bind at the request boundary instead — via
- * runWithTenantContextAsync (Server Components, see app/store/[slug]/layout.tsx)
- * or withTenantContext (API routes).
+ * PRD-205: a thin delegator onto the canonical resolveTenant({ kind: 'headers' }).
+ * The header precedence (slug → subdomain → customDomain) and isActive filtering
+ * now live in one place (lib/tenant-resolver.ts). Still a PURE resolver (PRD-202
+ * AC-2): RETURNS the tenant, never binds context — bind at the request boundary via
+ * runWithTenantContextAsync (Server Components) or withTenantContext (API routes).
  */
 export const getCurrentTenant = cache(async (): Promise<Tenant | null> => {
-  const headersList = headers();
-  const subdomain = headersList.get("x-tenant-subdomain");
-  const customDomain = headersList.get("x-tenant-custom-domain");
-  const tenantSlug = headersList.get("x-tenant-slug");
-
-  if (!subdomain && !customDomain && !tenantSlug) {
-    return null;
-  }
-
   try {
-    let tenant: Tenant | null = null;
-
-    if (tenantSlug) {
-      // Path-based routing: /store/{slug}
-      tenant = await prisma.tenants.findFirst({
-        where: {
-          subdomain: tenantSlug,
-          isActive: true,
-        },
-      });
-    } else if (subdomain) {
-      tenant = await prisma.tenants.findFirst({
-        where: {
-          subdomain: subdomain,
-          isActive: true,
-        },
-      });
-    } else if (customDomain) {
-      tenant = await prisma.tenants.findFirst({
-        where: {
-          customDomain: customDomain,
-          isActive: true,
-        },
-      });
-    }
-
-    return tenant;
+    const resolved = await resolveTenant({ kind: 'headers' });
+    return resolved?.tenant ?? null;
   } catch (error) {
     console.error('Error fetching tenant:', error);
     return null;
@@ -127,27 +94,15 @@ export async function requireTenant(): Promise<Tenant> {
 }
 
 /**
- * Get tenant by slug (subdomain)
+ * Get tenant by slug (subdomain).
+ *
+ * PRD-205: delegates to resolveTenant({ kind: 'slug' }). The lower-case retry and
+ * isActive filtering now live in the canonical resolver's bySubdomain.
  */
 export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
   try {
-    let tenant = await prisma.tenants.findFirst({
-      where: {
-        subdomain: slug,
-        isActive: true,
-      },
-    });
-
-    if (!tenant && slug !== slug.toLowerCase()) {
-      tenant = await prisma.tenants.findFirst({
-        where: {
-          subdomain: slug.toLowerCase(),
-          isActive: true,
-        },
-      });
-    }
-
-    return tenant;
+    const resolved = await resolveTenant({ kind: 'slug', slug });
+    return resolved?.tenant ?? null;
   } catch (error) {
     console.error("Error fetching tenant by slug:", error);
     return null;
@@ -157,78 +112,28 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
 /**
  * Resolve the tenant from a Next.js request (for API routes).
  *
- * PURE resolver (PRD-202 AC-2): it RETURNS the tenant and no longer binds tenant
- * context as a side-effect. Bind at the request boundary with withTenantContext
- * (see the pilot at app/api/orders/customer/route.ts); PRD-203's withTenantAuth
- * composes that wrapper for the bulk route migration.
+ * PRD-205: delegates to resolveTenant({ kind: 'host' }). The /store/{slug} path
+ * win, the subdomain/customDomain derivation (now via the shared parseHostToTenantHint)
+ * and isActive filtering all live in the canonical resolver. Still a PURE resolver
+ * (PRD-202 AC-2): RETURNS the tenant, never binds — bind at the request boundary with
+ * withTenantContext; PRD-203's withTenantAuth composes that wrapper.
  */
 export async function getTenantFromRequest(
   req: Request,
 ): Promise<Tenant | null> {
-  // Try to get tenant from headers (set by middleware)
   const url = new URL(req.url);
   const host = req.headers.get('host') || url.host;
-  const pathname = url.pathname;
 
   try {
-    const pathMatch = pathname.match(/^\/store\/([^\/]+)/);
-    if (pathMatch) {
-      const tenantSlug = pathMatch[1];
-      const tenant = await prisma.tenants.findFirst({
-        where: {
-          subdomain: tenantSlug,
-          isActive: true,
-        },
-      });
-
-      if (tenant) {
-        return tenant;
-      }
-    }
-
-    const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
-    const currentHost = host.replace(/:\d+$/, '');
-
-    // Check if it's a subdomain request (slug.budstacks.io)
-    if (currentHost.endsWith(`.${baseDomain}`)) {
-      const subdomain = currentHost.replace(`.${baseDomain}`, '');
-      if (subdomain && subdomain !== 'www') {
-        const tenant = await prisma.tenants.findFirst({
-          where: {
-            subdomain,
-            isActive: true,
-          },
-        });
-
-        if (tenant) {
-          return tenant;
-        }
-      }
-    }
-
-    // Custom domain lookup — host is not a budstacks.io subdomain
-    if (
-      !currentHost.endsWith(`.${baseDomain}`) &&
-      currentHost !== baseDomain &&
-      !currentHost.includes('localhost') &&
-      !currentHost.includes('127.0.0.1')
-    ) {
-      const tenant = await prisma.tenants.findFirst({
-        where: {
-          customDomain: currentHost,
-          isActive: true,
-        },
-      });
-
-      if (tenant) {
-        return tenant;
-      }
-    }
+    const resolved = await resolveTenant({
+      kind: 'host',
+      host,
+      pathname: url.pathname,
+    });
+    return resolved?.tenant ?? null;
   } catch (error) {
     console.error('Error fetching tenant from request:', error);
     return null;
   }
-
-  return null;
 }
 

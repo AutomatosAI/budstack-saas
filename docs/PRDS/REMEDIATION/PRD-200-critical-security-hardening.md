@@ -1,6 +1,6 @@
 # PRD-200 — Security Hardening (secret purge, error redaction, `legacyCss` XSS, email-template HTML, info-leak endpoints)
 
-> **Status:** Code fixes shipped & gated green (AC-2, AC-2b, AC-3, AC-3b, AC-4, AC-5a, AC-6, AC-7 — CI gate `pnpm check:security`). Framework bump (AC-1/AC-1a) + CSP nonces (AC-8) rehomed to [PRD-218](./PRD-218-framework-upgrade-csp-nonce-hardening.md). **Closeable once AC-2a (Railway key rotation — Gerard) lands**; only the AC-3a `sanitizeCss` unit tests still await PRD-207's Vitest harness.
+> **Status:** Code fixes shipped & gated green (AC-2, AC-2b, AC-3, AC-3a, AC-3b, AC-4, AC-5a, AC-6, AC-7 — CI gate `pnpm check:security`). Framework bump (AC-1/AC-1a) + CSP nonces (AC-8) rehomed to [PRD-218](./PRD-218-framework-upgrade-csp-nonce-hardening.md). **Closeable once AC-2a (Railway key rotation — Gerard) lands** — the last code/test item AC-3a (`sanitizeCss` unit tests) shipped on the PRD-207 harness.
 > **Phase:** R1 — Pre-Production Blocker
 > **Severity:** HIGH _(down-rated from the first-pass "CRITICAL" — see [Pre-flight verification](./REMEDIATION-INDEX.md#pre-flight-verification--2026-05-29); none of these components is an open auth-bypass, but together they are the HTTP-edge hygiene a paying tenant's security questionnaire will probe first)_
 > **Module(s) touched:** `package.json`, `app/store/[slug]/layout.tsx`, `app/api/super-admin/email-templates/route.ts`, `lib/email-sanitize.ts`, `app/api/super-admin/tenants/[id]/drgreen-keys/route.ts`, `app/api/health/route.ts`, `lib/css-utils.ts`, `scripts/ci/check-css-sanitized.mjs` + `scripts/ci/check-no-error-message-leaks.mjs` (added), repo-root `env.windows-dev` (deleted), `.env.example` (added)
@@ -60,7 +60,7 @@ This PRD purges + rotates the local secret file, closes the `legacyCss` sink, sa
 **`legacyCss` XSS:**
 
 - [x] **AC-3** **[DONE]** `app/store/[slug]/layout.tsx:331` wraps `legacyCss` in `sanitizeCss(...)`, identical to the `customCss` path at `:323`. No raw `legacyCss` reaches `dangerouslySetInnerHTML`.
-- [ ] **AC-3a** **[TEST→207]** `sanitizeCss()` unit tests (`</style><script>`, `expression(...)`, `url(javascript:...)`, `@import url(//evil)`, comment-break payloads) — no Vitest harness exists yet; lands with PRD-207.
+- [x] **AC-3a** **[DONE]** `sanitizeCss()` unit tests (`</style><script>` tag-breakout, `expression(...)`, `url(javascript:...)`, `behavior`/`-moz-binding`, `@import`/`@charset`, safe-declaration preservation) landed on the PRD-207 Vitest harness at `nextjs_space/tests/unit/css-utils.test.ts` (8 cases, green).
 - [x] **AC-3b** **[DONE]** the only two CSS `dangerouslySetInnerHTML` sinks (`:323`, `:331`) are both `sanitizeCss`-wrapped, enforced by the wired CI gate `pnpm check:css-sanitized` (`scripts/ci/check-css-sanitized.mjs`) — green.
 
 **Email-template HTML:**
@@ -209,3 +209,4 @@ No visible UI change. Storefront renders identically once `legacyCss` is sanitis
 | 0.1 | 2026-05-29 | Claude (with Gerard) | Initial draft from 2026-05-29 review. |
 | 0.2 | 2026-05-29 | Claude (Opus 4.8) | Severity down-rated CRITICAL→HIGH after verification; Next.js framing corrected (CVE-2025-29927 already patched; real exposure is DoS/SSRF); `legacyCss` line + `drgreen-keys` decode-leak lines + `kyc`/health paths verified against code. |
 | 0.3 | 2026-05-29 | Claude (Opus 4.8) | **Status flipped to closeable.** Code fixes shipped & code-verified: AC-2 (env purge + `.env.example`), AC-2b (history-clean), AC-3 (`legacyCss` sanitised), AC-4 (email HTML zod+sanitise), AC-6 (health token-gated), AC-7 (drgreen-keys decode-leak removed). AC-3b + AC-5a CI grep gates verified **wired & green** (`pnpm check:security`). AC-5 marked PARTIAL (client leak closed + gated; envelope/correlation-id → PRD-215). **AC-1/AC-1a (Next bump) + AC-8 (CSP nonces) rehomed to PRD-218**; only the AC-3a `sanitizeCss` unit tests await PRD-207's Vitest harness; OQ-4 resolved. **Only AC-2a (Railway key rotation, Gerard) remains to fully close.** |
+| 0.4 | 2026-05-29 | Claude (Opus 4.8) | **AC-3a [DONE].** `sanitizeCss()` unit tests landed on the PRD-207 Vitest harness (`nextjs_space/tests/unit/css-utils.test.ts`, 8 cases green: tag-breakout, `expression()`, `javascript:`/`data:` urls, `behavior`/`-moz-binding`, `@import`/`@charset`, safe-declaration preservation). Last code/test item closed — **only AC-2a (Railway key rotation, Gerard) remains.** |

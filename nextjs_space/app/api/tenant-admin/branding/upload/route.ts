@@ -64,14 +64,11 @@ export async function POST(req: NextRequest) {
       tenantUploadPrefix,
     );
 
-    if (tenantId && !cloudStoragePath.includes(`tenants/${tenantId}/`)) {
-      return NextResponse.json(
-        { error: "Upload path violation" },
-        { status: 500 },
-      );
-    }
-
-    const signedUrl = await getFileUrl(cloudStoragePath);
+    // Tenant uploads are scope-asserted at sign time; super-admin system
+    // uploads (no tenant context) sign without a tenant scope.
+    const signedUrl = tenantId
+      ? await getFileUrl(cloudStoragePath, { tenantId })
+      : await getFileUrl(cloudStoragePath);
 
     return NextResponse.json({ url: signedUrl, key: cloudStoragePath });
   } catch (error) {

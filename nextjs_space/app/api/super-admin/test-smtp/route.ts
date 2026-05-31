@@ -1,17 +1,24 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { decrypt } from "@/lib/encryption";
 import nodemailer from "nodemailer";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { apiValidationError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const POST = withSuperAdmin(async (req) => {
-  const body = await req.json();
-  const { testEmail } = body;
+const testSmtpSchema = z
+  .object({
+    testEmail: z.string().min(1).max(320),
+  })
+  .strict();
 
-  if (!testEmail || typeof testEmail !== "string" || !EMAIL_REGEX.test(testEmail)) {
+export const POST = withSuperAdmin(async (req) => {
+  const { testEmail } = await parseJsonBody(req, testSmtpSchema);
+
+  if (!EMAIL_REGEX.test(testEmail)) {
     return apiValidationError(
       "Valid test email address is required",
       "POST /api/super-admin/test-smtp",

@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import crypto from "crypto";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const productBulkSchema = z
+  .object({
+    action: z.enum(["set-in-stock", "set-out-of-stock", "delete"]),
+    productIds: z.array(z.string().min(1).max(200)).min(1).max(1000),
+  })
+  .strict();
 
 /**
  * POST /api/tenant-admin/products/bulk
@@ -43,29 +53,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const { action, productIds } = body;
-
-    // Validate request
-    if (
-      !action ||
-      !["set-in-stock", "set-out-of-stock", "delete"].includes(action)
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            'Invalid action. Must be "set-in-stock", "set-out-of-stock", or "delete".',
-        },
-        { status: 400 },
-      );
-    }
-
-    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
-      return NextResponse.json(
-        { error: "No product IDs provided." },
-        { status: 400 },
-      );
-    }
+    const { action, productIds } = await parseJsonBody(
+      request,
+      productBulkSchema,
+    );
 
     // Get products to update (ensure they belong to this tenant)
     const productsToUpdate = await prisma.products.findMany({
@@ -156,10 +147,6 @@ export async function POST(request: NextRequest) {
       action,
     });
   } catch (error) {
-    console.error("[POST /api/tenant-admin/products/bulk] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "POST /api/tenant-admin/products/bulk" });
   }
 }

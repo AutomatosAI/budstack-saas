@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
 
 function slugify(text: string) {
   return text
@@ -14,10 +17,10 @@ function slugify(text: string) {
 }
 
 const postSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  content: z.string().min(1, "Content is required"),
-  excerpt: z.string().optional(),
-  coverImage: z.string().optional(),
+  title: z.string().min(1, "Title is required").max(300),
+  content: z.string().min(1, "Content is required").max(100_000),
+  excerpt: z.string().max(5000).optional(),
+  coverImage: z.string().max(2000).optional(),
   published: z.boolean().default(false),
 });
 
@@ -38,7 +41,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const id = parseUuid(params.id);
 
     const post = await prisma.posts.findUnique({
       where: { id },
@@ -61,11 +64,7 @@ export async function GET(
 
     return NextResponse.json(post);
   } catch (error) {
-    console.error("Error fetching post:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/posts/[id]" });
   }
 }
 
@@ -86,8 +85,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    const body = await req.json();
+    const id = parseUuid(params.id);
+    const body = await parseJsonBody(req, undefined, { maxBytes: 512 * 1024 });
     const validatedData = postSchema.partial().parse(body);
 
     const localUser = await prisma.users.findFirst({
@@ -139,11 +138,7 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
-    console.error("Error updating post:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PATCH /api/tenant-admin/posts/[id]" });
   }
 }
 
@@ -164,7 +159,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const id = parseUuid(params.id);
     const localUser = await prisma.users.findFirst({
       where: { email: email },
       include: { tenants: true },
@@ -186,10 +181,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting post:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "DELETE /api/tenant-admin/posts/[id]" });
   }
 }

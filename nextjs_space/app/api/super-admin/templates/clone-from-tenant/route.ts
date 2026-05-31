@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { copyS3Directory } from "@/lib/s3";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const cloneFromTenantSchema = z
+  .object({
+    subdomain: z.string().min(1).max(100),
+    targetTemplateId: z.string().max(200).optional(),
+  })
+  .strict();
 
 /**
  * Clone a tenant's customized template to a marketplace template.
@@ -20,14 +30,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { subdomain, targetTemplateId } = body;
-
-    if (!subdomain) {
-      return NextResponse.json({ error: "subdomain is required" }, { status: 400 });
-    }
+    const { subdomain, targetTemplateId } = await parseJsonBody(
+      req,
+      cloneFromTenantSchema,
+    );
 
     // Find the tenant by subdomain
+    // tenant-gate:allow(admin-lookup) — PRD-205 AC-2b: super-admin clone-by-subdomain of an
+    // explicitly supplied tenant, NOT request tenant resolution. Intentionally not
+    // isActive-scoped (admins clone templates from deactivated tenants too), so it cannot
+    // route through the isActive-enforcing canonical resolveTenant.
     const tenant = await prisma.tenants.findFirst({
       where: { subdomain },
     });
@@ -105,10 +117,9 @@ export async function POST(req: NextRequest) {
       editUrl: `/super-admin/templates/${targetTemplate.id}/edit`,
     });
   } catch (error) {
-    console.error("[super-admin] Clone from tenant error:", error);
-    return NextResponse.json(
-      { error: "Failed to clone" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/super-admin/templates/clone-from-tenant",
+      safeMessage: "Failed to clone",
+    });
   }
 }

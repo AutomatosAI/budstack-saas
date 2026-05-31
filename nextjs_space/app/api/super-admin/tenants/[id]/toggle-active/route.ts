@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { ApiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 import { createAuditLog } from "@/lib/audit-log";
 
 /**
@@ -10,8 +11,10 @@ import { createAuditLog } from "@/lib/audit-log";
  * Authorization: SUPER_ADMIN only
  */
 export const PATCH = withSuperAdminParams(async (_req, { user }, params) => {
+  const id = parseUuid(params.id);
+
   const tenant = await prisma.tenants.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { id: true, businessName: true, subdomain: true, isActive: true },
   });
 
@@ -20,7 +23,7 @@ export const PATCH = withSuperAdminParams(async (_req, { user }, params) => {
   }
 
   const updatedTenant = await prisma.tenants.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       isActive: !tenant.isActive,
     },
@@ -29,10 +32,10 @@ export const PATCH = withSuperAdminParams(async (_req, { user }, params) => {
   await createAuditLog({
     action: tenant.isActive ? "TENANT_DEACTIVATED" : "TENANT_ACTIVATED",
     entityType: "Tenant",
-    entityId: params.id,
+    entityId: id,
     userId: user.id,
     userEmail: user.email,
-    tenantId: params.id,
+    tenantId: id,
     metadata: {
       businessName: tenant.businessName,
       subdomain: tenant.subdomain,

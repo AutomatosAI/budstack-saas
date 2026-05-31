@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchProducts } from "@/lib/doctor-green-api";
 import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
+import { ApiError, apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
 
 /**
  * GET /api/store/[slug]/products
@@ -15,7 +17,7 @@ export async function GET(
   let tenant = null;
 
   try {
-    const { slug } = params;
+    parseSlug(params.slug);
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("id");
 
@@ -87,6 +89,10 @@ export async function GET(
       source: "api",
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return apiError(error, { route: "GET /api/store/[slug]/products" });
+    }
+
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
     console.error("Doctor Green API Error:", errorMessage);

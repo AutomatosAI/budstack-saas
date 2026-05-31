@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Ralph Wiggum Build Loop (Claude) — PRD-211 Encryption Fallback + Webhook Hardening
-# Run from the worktree root: /Users/gkavanagh/Development/HealingBuds/budstack-PRD-211
+# Ralph Wiggum Build Loop (Claude) — PRD-206 S3 Signed URL Tenant Scoping
+# Run from the worktree root: /Users/gkavanagh/Development/HealingBuds/budstack-saas-prd-206
 # Usage:
-#   ./scripts/ralph/loop.sh           # Build mode (runs until RALPH_COMPLETE / RALPH_BLOCKED)
-#   ./scripts/ralph/loop.sh 3         # Max 3 iterations (e.g. just US-001..003)
-#   ./scripts/ralph/loop.sh build 3   # Build mode, max 3 iterations
+#   ./scripts/ralph/loop.sh           # Build mode (default, runs until COMPLETE/BLOCKED)
+#   ./scripts/ralph/loop.sh 10        # Max 10 iterations (e.g. just Phase 1: US-001..010)
+#   ./scripts/ralph/loop.sh build 10  # Build mode, max 10 iterations
 
 set -e
 
@@ -33,21 +33,24 @@ done
 PROMPT_FILE="scripts/ralph/PROMPT_build.md"
 
 if [[ ! -f "$PROMPT_FILE" ]]; then
-  echo -e "${RED}Error: $PROMPT_FILE not found — run this from the worktree root (budstack-PRD-211/).${NC}"
+  echo -e "${RED}Error: $PROMPT_FILE not found — run this from the worktree root (budstack-saas-prd-206/).${NC}"
   exit 1
 fi
 
 seconds_until_next_hour() {
+  local now=$(date +%s)
   local current_minute=$(date +%M)
   local current_second=$(date +%S)
   local seconds_past_hour=$((10#$current_minute * 60 + 10#$current_second))
-  echo $((3600 - seconds_past_hour))
+  local seconds_until=$((3600 - seconds_past_hour))
+  echo $seconds_until
 }
 
 seconds_until_daily_reset() {
   local reset_hour=5
   local now=$(date +%s)
   local today_reset=$(date -v${reset_hour}H -v0M -v0S +%s 2>/dev/null || date -d "today ${reset_hour}:00:00" +%s)
+
   if [[ $now -ge $today_reset ]]; then
     local tomorrow_reset=$((today_reset + 86400))
     echo $((tomorrow_reset - now))
@@ -59,6 +62,7 @@ seconds_until_daily_reset() {
 countdown() {
   local seconds=$1
   local message=$2
+
   while [[ $seconds -gt 0 ]]; do
     local hours=$((seconds / 3600))
     local minutes=$(((seconds % 3600) / 60))
@@ -73,13 +77,17 @@ countdown() {
 is_usage_limit_error() {
   local output="$1"
   local exit_code="$2"
+
   [[ "$exit_code" -eq 0 ]] && return 1
+
   if echo "$output" | grep '^{' | jq -e 'select(.type == "result") | select(.subtype | test("error.*limit|rate_limit"))' &>/dev/null; then
     return 0
   fi
+
   local error_text
   error_text=$(echo "$output" | grep -v '^{' || true)
   error_text+=$(echo "$output" | grep '^{' | jq -r 'select(.type == "result" and .is_error == true) | .result // empty' 2>/dev/null || true)
+
   if [[ "$error_text" =~ "You've hit your limit" ]] || [[ "$error_text" =~ "You have hit your limit" ]]; then
     return 0
   fi
@@ -94,15 +102,22 @@ is_usage_limit_error() {
 
 get_sleep_duration() {
   local output="$1"
+
   if [[ "$output" =~ "try again in "([0-9]+)" minute" ]]; then
-    echo $(( ${BASH_REMATCH[1]} * 60 + 60 )); return
+    echo $(( ${BASH_REMATCH[1]} * 60 + 60 ))
+    return
   fi
+
   if [[ "$output" =~ "try again in "([0-9]+)" hour" ]]; then
-    echo $(( ${BASH_REMATCH[1]} * 3600 + 60 )); return
+    echo $(( ${BASH_REMATCH[1]} * 3600 + 60 ))
+    return
   fi
+
   if [[ "$output" =~ (daily|day|24.?hour) ]]; then
-    seconds_until_daily_reset; return
+    seconds_until_daily_reset
+    return
   fi
+
   local wait_time=$(seconds_until_next_hour)
   [[ $wait_time -lt 300 ]] && wait_time=300
   echo $wait_time
@@ -111,23 +126,28 @@ get_sleep_duration() {
 handle_usage_limit() {
   local output="$1"
   local sleep_duration=$(get_sleep_duration "$output")
+
   echo ""
   echo -e "${YELLOW}=== Usage Limit Detected ===${NC}"
   echo -e "${YELLOW}Waiting for reset...${NC}"
   echo ""
+
   local resume_time=$(date -v+${sleep_duration}S "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -d "+${sleep_duration} seconds" "+%Y-%m-%d %H:%M:%S")
   echo -e "Expected resume: ${CYAN}${resume_time}${NC}"
   echo ""
+
   countdown $sleep_duration "Waiting..."
+
   echo ""
   echo -e "${GREEN}Resuming...${NC}"
   echo ""
+
   CONSECUTIVE_FAILURES=0
 }
 
-echo -e "${GREEN}Ralph loop: BUILD mode — PRD-211 Encryption Fallback + Webhook Hardening${NC}"
-echo -e "${CYAN}12 stories (US-001..US-012). All autonomous: live cutovers are flag-gated (HMAC dual-accept, DRGREEN_WEBHOOK_SECRET, ENCRYPTION_MIGRATION_DEADLINE).${NC}"
-echo -e "${CYAN}Human follow-ups only: live key audit + flag removal (needs prod DB), Dr Green HMAC coordination, Clerk-gated Playwright E2E.${NC}"
+echo -e "${GREEN}Ralph loop: BUILD mode — PRD-206 S3 Signed URL Tenant Scoping${NC}"
+echo -e "${CYAN}Phase 1 (US-001..010) runs autonomously. Phase 2 (US-011/012) needs a Docker daemon.${NC}"
+echo -e "${CYAN}Phase 3 (US-013) is gated on PRD-207 OQ-1 (Clerk test-auth decision) and will halt as BLOCKED.${NC}"
 [[ $MAX_ITERATIONS -gt 0 ]] && echo "Max iterations: $MAX_ITERATIONS"
 echo "Press Ctrl+C to stop"
 echo "---"
@@ -184,10 +204,13 @@ while true; do
     CONSECUTIVE_FAILURES=$((CONSECUTIVE_FAILURES + 1))
     echo ""
     echo -e "${RED}=== Error (exit code: $EXIT_CODE) ===${NC}"
+    echo -e "${RED}Output:${NC}"
     echo "$OUTPUT" | tail -20
     echo ""
+
     BACKOFF=$((30 * (2 ** (CONSECUTIVE_FAILURES - 1))))
     [[ $BACKOFF -gt 300 ]] && BACKOFF=300
+
     echo -e "${YELLOW}Retrying in ${BACKOFF}s... (consecutive failures: $CONSECUTIVE_FAILURES)${NC}"
     countdown $BACKOFF "Waiting..."
     ITERATION=$((ITERATION - 1))
@@ -196,24 +219,17 @@ while true; do
 
   CONSECUTIVE_FAILURES=0
 
-  if [[ "$RESULT_MSG" =~ RALPH_ABORT ]]; then
-    echo ""
-    echo -e "${RED}=== Ralph Abort ===${NC}"
-    echo -e "${RED}Agent reported it drifted out of the worktree/branch. Loop halted — inspect git state.${NC}"
-    break
-  fi
-
   if [[ "$RESULT_MSG" =~ RALPH_COMPLETE ]]; then
     echo ""
     echo -e "${GREEN}=== Ralph Complete ===${NC}"
-    echo -e "${GREEN}PRD-211: all 12 stories done. Human follow-ups remain (live key audit + flag removal, Dr Green HMAC cutover, Clerk-gated E2E) — see the final commit body.${NC}"
+    echo -e "${GREEN}PRD-206: all currently-executable stories finished. Docker-gated (US-011/012) and Clerk-auth-gated (US-013) stories remain BLOCKED for the human.${NC}"
     break
   fi
 
   if [[ "$RESULT_MSG" =~ RALPH_BLOCKED ]]; then
     echo ""
     echo -e "${YELLOW}=== Ralph Blocked ===${NC}"
-    echo -e "${YELLOW}Hit a BLOCKED story. Loop halted — see the latest commit for the reason.${NC}"
+    echo -e "${YELLOW}Hit a BLOCKED story (needs Docker daemon, or the PRD-207 OQ-1 Clerk test-auth decision). Loop halted — see the latest commit for the reason.${NC}"
     break
   fi
 

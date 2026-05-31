@@ -1,8 +1,22 @@
 import { getCurrentUser } from "@/lib/auth-helper";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
 
-const VALID_PAGE_KEYS = ["home", "about", "contact", "faq"];
+const seoPagesSchema = z
+  .object({
+    pageKey: z.enum(["home", "about", "contact", "faq"]),
+    seo: z
+      .object({
+        title: z.string().max(300).optional(),
+        description: z.string().max(1000).optional(),
+        ogImage: z.string().max(2000).optional(),
+      })
+      .optional(),
+  })
+  .strict();
 
 // GET - Fetch tenant page SEO
 export async function GET() {
@@ -48,12 +62,13 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "No tenant" }, { status: 400 });
   }
 
-  const body = await request.json();
-  const { pageKey, seo } = body;
-
-  if (!pageKey || !VALID_PAGE_KEYS.includes(pageKey)) {
-    return NextResponse.json({ error: "Invalid page key" }, { status: 400 });
+  let parsed;
+  try {
+    parsed = await parseJsonBody(request, seoPagesSchema);
+  } catch (error) {
+    return apiError(error, { route: "PUT /api/tenant-admin/seo/pages" });
   }
+  const { pageKey, seo } = parsed;
 
   // Get current pageSeo
   const tenant = await prisma.tenants.findUnique({
@@ -61,7 +76,8 @@ export async function PUT(request: NextRequest) {
     select: { pageSeo: true },
   });
 
-  const currentPageSeo = (tenant?.pageSeo as Record<string, unknown>) || {};
+  const currentPageSeo =
+    (tenant?.pageSeo as Record<string, Record<string, string> | null>) || {};
 
   // Build SEO object for this page, removing empty values
   const pageSeoData: Record<string, string> = {};

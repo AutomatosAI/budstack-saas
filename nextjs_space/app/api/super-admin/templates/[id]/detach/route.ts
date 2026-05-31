@@ -3,6 +3,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 /**
  * POST /api/super-admin/templates/[id]/detach
@@ -27,7 +28,7 @@ export async function POST(
     const originError = requireSameOrigin(req);
     if (originError) return originError;
 
-    const templateId = params.id;
+    const templateId = parseUuid(params.id);
 
     // Find the template and all its references
     const template = await prisma.templates.findUnique({
