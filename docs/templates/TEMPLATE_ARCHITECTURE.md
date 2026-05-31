@@ -2,7 +2,8 @@
 
 **Last Updated:** 2026-02-11  
 **Version:** 3.0.0  
-**Status:** Production Standard
+**Status:** Production Standard — verified 2026-05-29 against `nextjs_space/lib/template-utils.ts`, `template-registry.ts`, and `prisma/schema.prisma`.
+**Describes:** Data-driven template system, 50-component registry, S3 as source of truth (no hardcoded presets post-PRD-210).
 
 ---
 
