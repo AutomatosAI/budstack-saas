@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { uploadFile, getFileUrl } from "@/lib/s3";
 import { validateUploadBuffer } from "@/lib/upload-validation";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export async function POST(
   request: NextRequest,
@@ -26,7 +27,7 @@ export async function POST(
       );
     }
 
-    const { id } = await params;
+    const id = parseUuid((await params).id);
 
     // Verify the template belongs to this tenant
     const template = await prisma.tenant_templates.findFirst({
@@ -85,7 +86,7 @@ export async function POST(
       },
     });
 
-    const signedUrl = await getFileUrl(s3Key);
+    const signedUrl = await getFileUrl(s3Key, { tenantId });
 
     return NextResponse.json({
       success: true,

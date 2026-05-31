@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { withdrawSubmission } from "@/lib/marketplace-submission-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export async function POST(
   request: NextRequest,
@@ -26,7 +27,7 @@ export async function POST(
       );
     }
 
-    const { id } = await params;
+    const id = parseUuid((await params).id);
 
     // Find the active submission for this template
     const submission = await prisma.marketplace_submissions.findFirst({

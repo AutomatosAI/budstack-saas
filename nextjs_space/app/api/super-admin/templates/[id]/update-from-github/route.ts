@@ -11,6 +11,7 @@ import {
   type TemplateConfig,
 } from "@/lib/template-utils";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export async function POST(
   req: NextRequest,
@@ -22,7 +23,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
+    const id = parseUuid((await params).id);
 
     const template = await prisma.templates.findUnique({
       where: { id },

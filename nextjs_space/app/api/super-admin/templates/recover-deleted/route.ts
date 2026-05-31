@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
 import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const recoverDeletedSchema = z
+  .object({
+    slug: z.string().max(200).optional(),
+    execute: z.boolean().optional(),
+  })
+  .strict();
 import {
   ListObjectVersionsCommand,
   DeleteObjectCommand,
@@ -54,7 +63,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json().catch(() => ({}));
+    const body = (await parseJsonBody(req, recoverDeletedSchema.optional())) ?? {};
     const slug = (body.slug || "").toString().trim().toLowerCase();
     const execute = body.execute === true;
 

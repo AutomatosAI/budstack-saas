@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import { apiError, apiValidationError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+import { assertSafeWebhookUrl } from "@/lib/webhook-ssrf";
+
+const webhookCreateSchema = z
+  .object({
+    url: z.string().url().max(2000),
+    events: z.array(z.string().min(1).max(100)).min(1).max(50),
+    description: z.string().max(1000).optional(),
+  })
+  .strict();
 
 /**
  * GET /api/tenant-admin/webhooks
@@ -66,23 +78,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
-    const { url, events, description } = body;
+    const { url, events, description } = await parseJsonBody(
+      req,
+      webhookCreateSchema,
+    );
 
-    if (!url || !events || !Array.isArray(events) || events.length === 0) {
-      return NextResponse.json(
-        { error: "Invalid request. URL and events are required." },
-        { status: 400 },
-      );
-    }
-
-    // Validate URL
+    // SSRF egress guard — reject non-https / internal / private-resolving URLs
+    // up front (generic message; never leak the resolved address).
     try {
-      new URL(url);
+      await assertSafeWebhookUrl(url);
     } catch {
-      return NextResponse.json(
-        { error: "Invalid URL format" },
-        { status: 400 },
+      return apiValidationError(
+        "Webhook URL is not allowed. Use a public HTTPS endpoint.",
+        "tenant-admin/webhooks",
       );
     }
 
@@ -115,10 +123,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ webhook }, { status: 201 });
   } catch (error) {
-    console.error("[API] Error creating webhook:", error);
-    return NextResponse.json(
-      { error: "Failed to create webhook" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/tenant-admin/webhooks",
+      safeMessage: "Failed to create webhook",
+    });
   }
 }

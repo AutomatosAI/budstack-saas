@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { updateFromGitHub } from "@/lib/tenant-template-upload-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export async function POST(
   request: NextRequest,
@@ -26,7 +27,7 @@ export async function POST(
       );
     }
 
-    const { id } = await params;
+    const id = parseUuid((await params).id);
 
     // Verify the template belongs to this tenant
     const template = await prisma.tenant_templates.findFirst({

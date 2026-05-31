@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchProducts } from "@/lib/doctor-green-api";
 import { getTenantBySlug } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
+import { ApiError, apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
 
 /**
  * GET /api/store/[slug]/products/featured?ids=id1,id2,id3
@@ -26,7 +28,7 @@ export async function GET(
       return NextResponse.json({ success: true, data: [] });
     }
 
-    const { slug } = params;
+    const slug = parseSlug(params.slug);
     const tenant = await getTenantBySlug(slug);
     if (!tenant) {
       return NextResponse.json(
@@ -53,6 +55,10 @@ export async function GET(
       count: ordered.length,
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return apiError(error, { route: "GET /api/store/[slug]/products/featured" });
+    }
+
     const msg = error instanceof Error ? error.message : "Unknown error";
 
     if (msg.includes("MISSING_CREDENTIALS")) {

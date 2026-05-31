@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { withSuperAdmin } from "@/lib/api-auth";
-import { apiValidationError, ApiError } from "@/lib/api-error";
+import { ApiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
 import { createAuditLog } from "@/lib/audit-log";
+
+const bulkActionSchema = z
+  .object({
+    action: z.enum(["activate", "deactivate"]),
+    tenantIds: z.array(z.string().min(1).max(200)).min(1).max(1000),
+  })
+  .strict();
 
 /**
  * POST /api/super-admin/tenants/bulk
@@ -22,22 +31,7 @@ export const POST = withSuperAdmin(async (request, { user }) => {
     return rateLimitResult.response;
   }
 
-  const body = await request.json();
-  const { action, tenantIds } = body;
-
-  if (!action || !["activate", "deactivate"].includes(action)) {
-    return apiValidationError(
-      'Invalid action. Must be "activate" or "deactivate".',
-      "POST /api/super-admin/tenants/bulk",
-    );
-  }
-
-  if (!tenantIds || !Array.isArray(tenantIds) || tenantIds.length === 0) {
-    return apiValidationError(
-      "No tenant IDs provided.",
-      "POST /api/super-admin/tenants/bulk",
-    );
-  }
+  const { action, tenantIds } = await parseJsonBody(request, bulkActionSchema);
 
   const tenantsToUpdate = await prisma.tenants.findMany({
     where: { id: { in: tenantIds } },

@@ -4,7 +4,13 @@ import { prisma } from "@/lib/db";
 import { getNamecheapClient } from "@/lib/namecheap-api";
 import { addCustomDomain, removeCustomDomain } from "@/lib/railway-api";
 import { clerkClient } from "@clerk/nextjs/server";
+import { isReservedSubdomain, isValidSubdomain } from "@/lib/reserved-subdomains";
+import { requireSameOrigin } from "@/lib/security/require-same-origin";
+import { requireConfirmation } from "@/lib/security/require-confirmation";
 import crypto from "crypto";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { tenantSettingsLenientSchema } from "@/lib/validation/tenant-settings";
+import { apiError, apiValidationError } from "@/lib/api-error";
 
 export async function GET(
   req: NextRequest,
@@ -17,8 +23,10 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(params.id);
+
     const tenant = await prisma.tenants.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         users: {
           where: { role: "TENANT_ADMIN" },
@@ -56,11 +64,7 @@ export async function GET(
 
     return NextResponse.json({ tenant });
   } catch (error) {
-    console.error("Error fetching tenant:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/super-admin/tenants/[id]" });
   }
 }
 
@@ -75,6 +79,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(params.id);
+
     const body = await req.json();
     const {
       isActive,
@@ -88,15 +94,29 @@ export async function PATCH(
 
     // Get tenant before update
     const existingTenant = await prisma.tenants.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingTenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
-    // Check if subdomain is being changed and if it's unique
+    // Check if subdomain is being changed: enforce format + reserved list, then uniqueness
     if (subdomain && subdomain !== existingTenant.subdomain) {
+      const candidate = String(subdomain);
+      if (!isValidSubdomain(candidate)) {
+        return NextResponse.json(
+          { error: "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only" },
+          { status: 400 },
+        );
+      }
+      if (isReservedSubdomain(candidate)) {
+        return NextResponse.json(
+          { error: "This subdomain is reserved. Please choose another.", code: "RESERVED_SUBDOMAIN" },
+          { status: 400 },
+        );
+      }
+
       const subdomainExists = await prisma.tenants.findUnique({
         where: { subdomain },
       });
@@ -111,10 +131,13 @@ export async function PATCH(
 
     // Check if custom domain is being changed and if it's unique
     if (customDomain && customDomain !== existingTenant.customDomain) {
+      // tenant-gate:allow(uniqueness) — PRD-205 AC-2b: super-admin custom-domain-availability
+      // check, NOT request tenant resolution. Spans all tenants (incl. inactive) excluding
+      // self, which the isActive-scoped canonical resolveTenant cannot express.
       const domainExists = await prisma.tenants.findFirst({
         where: {
           customDomain,
-          id: { not: params.id },
+          id: { not: id },
         },
       });
 
@@ -252,10 +275,27 @@ export async function PATCH(
     if (countryCode !== undefined) updateData.countryCode = countryCode;
     if (isActive !== undefined) updateData.isActive = isActive;
 
+    // Validate caller-supplied settings (PRD-204 AC-4). The LENIENT schema
+    // bounds known (sensitive + free-text) keys but tolerates unknown keys,
+    // because the super-admin edit form round-trips the whole settings blob on
+    // every save. The strict export (tenantSettingsSchema) is reserved for
+    // PRD-208 once clients are migrated to send partials.
+    let validatedSettings: Record<string, unknown> = {};
+    if (settings !== undefined && settings !== null) {
+      const parsedSettings = tenantSettingsLenientSchema.safeParse(settings);
+      if (!parsedSettings.success) {
+        return apiValidationError(
+          "Invalid tenant settings",
+          "PATCH /api/super-admin/tenants/[id]",
+        );
+      }
+      validatedSettings = parsedSettings.data as Record<string, unknown>;
+    }
+
     // Merge settings: preserve existing, overlay caller's settings, then overlay domain metadata
     const mergedSettings = {
       ...existingSettings,
-      ...(settings || {}),
+      ...validatedSettings,
       railwayDomainId,
       railwayDnsRecords,
       domainVerification,
@@ -264,7 +304,7 @@ export async function PATCH(
 
     // Update tenant
     const tenant = await prisma.tenants.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 
@@ -274,10 +314,10 @@ export async function PATCH(
         id: crypto.randomUUID(),
         action: "TENANT_UPDATED",
         entityType: "Tenant",
-        entityId: params.id,
+        entityId: id,
         userId: user.id,
         userEmail: user.email,
-        tenantId: params.id,
+        tenantId: id,
         metadata: {
           changes: updateData,
         },
@@ -286,11 +326,7 @@ export async function PATCH(
 
     return NextResponse.json(tenant);
   } catch (error) {
-    console.error("Error updating tenant:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PATCH /api/super-admin/tenants/[id]" });
   }
 }
 
@@ -305,9 +341,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const originError = requireSameOrigin(req);
+    if (originError) return originError;
+
+    const id = parseUuid(params.id);
+
     // Fetch tenant with related data needed for cleanup
     const tenant = await prisma.tenants.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         users: {
           select: { id: true, email: true },
@@ -318,6 +359,12 @@ export async function DELETE(
     if (!tenant) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
+
+    // Require a typed { confirm: <subdomain> } body so a destructive delete cannot fire
+    // from a bare request (defence-in-depth alongside the same-origin check).
+    const body = await req.json().catch(() => null);
+    const confirmationError = requireConfirmation(body, tenant.subdomain);
+    if (confirmationError) return confirmationError;
 
     // Clean up Clerk Organization and Users (best-effort — don't block DB delete)
     const clerkOrgId = (tenant.settings as any)?.clerkOrgId;
@@ -370,13 +417,13 @@ export async function DELETE(
     // Null out activeTenantTemplateId first to break circular FK
     // (tenants -> tenant_templates -> tenants cascade would deadlock otherwise)
     await prisma.tenants.update({
-      where: { id: params.id },
+      where: { id },
       data: { activeTenantTemplateId: null },
     });
 
     // Delete tenant from DB (cascade handles related records)
     await prisma.tenants.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     // Create audit log
@@ -385,7 +432,7 @@ export async function DELETE(
         id: crypto.randomUUID(),
         action: "TENANT_DELETED",
         entityType: "Tenant",
-        entityId: params.id,
+        entityId: id,
         userId: user.id,
         userEmail: user.email,
         metadata: {
@@ -397,15 +444,13 @@ export async function DELETE(
       },
     });
 
+    // Do not echo cleanupErrors (Clerk org IDs + raw error strings) to the client — they remain
+    // in server logs (console.error per failure) and the audit_logs metadata only (PRD-201 AC-5).
     return NextResponse.json({
       success: true,
-      cleanupErrors: cleanupErrors.length > 0 ? cleanupErrors : undefined,
+      summary: { deleted: 1 },
     });
   } catch (error) {
-    console.error("Error deleting tenant:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "DELETE /api/super-admin/tenants/[id]" });
   }
 }

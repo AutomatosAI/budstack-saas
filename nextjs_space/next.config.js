@@ -72,43 +72,12 @@ const nextConfig = {
   },
   // Security headers — CSP, framing, transport security
   async headers() {
-    // Base CSP — defaults to deny everything not explicitly allowed.
-    // - frame-ancestors 'none' is the modern replacement for X-Frame-Options
-    // - object-src 'none' blocks Flash/PDF embed exploits
-    // - base-uri 'self' prevents <base> tag hijacking
-    // - upgrade-insecure-requests forces HTTPS for any HTTP subresource
-    // - form-action 'self' restricts where forms can POST
-    // 'unsafe-inline' on script-src is retained because Clerk + Next inject
-    // inline scripts; migrating to nonce-based CSP is a larger refactor.
-    const cspDirectives = [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com data:",
-      "img-src 'self' data: blob: https://*.amazonaws.com https://img.clerk.com https://stage-api.drgreennft.com https://api.drgreennft.com https://cdn.abacus.ai",
-      "media-src 'self' blob: https://*.amazonaws.com",
-      "connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.com https://*.drgreennft.com https://*.amazonaws.com wss://*.clerk.accounts.dev",
-      "frame-src 'self' https://challenges.cloudflare.com https://*.clerk.accounts.dev",
-      "frame-ancestors 'none'",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self' https://*.clerk.accounts.dev",
-      "upgrade-insecure-requests",
-    ];
-    const baseCSP = cspDirectives.join("; ");
-
-    // Admin analytics pages need unsafe-eval for plotly.js charting library
-    const adminCSP = baseCSP.replace(
-      "script-src 'self' 'unsafe-inline'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-    );
-
-    // Store pages: allow self-framing for iframe-based viewport switcher
-    const storeCSP = baseCSP.replace(
-      "frame-ancestors 'none'",
-      "frame-ancestors 'self'"
-    );
-
+    // SECURITY (PRD-218, AC-2): the Content-Security-Policy is now emitted
+    // per-request in middleware.ts so script-src carries a fresh nonce +
+    // 'strict-dynamic' instead of 'unsafe-inline'. A static config header
+    // cannot vary per request, so CSP must NOT be set here too — two CSP
+    // headers would be enforced as an intersection and fight the nonce policy.
+    // The non-CSP security headers below stay static (they never vary).
     const securityHeaders = [
       { key: 'X-Content-Type-Options', value: 'nosniff' },
       { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -148,33 +117,20 @@ const nextConfig = {
     ];
 
     return [
-      // All pages: hardened base CSP + cross-origin isolation
+      // All pages: static security headers (CSP is set per-request in middleware)
       {
         source: '/(.*)',
         headers: [
           ...securityHeaders,
-          { key: 'Content-Security-Policy', value: baseCSP },
         ],
       },
-      // Admin analytics: allow unsafe-eval for plotly.js
-      {
-        source: '/tenant-admin/analytics',
-        headers: [
-          { key: 'Content-Security-Policy', value: adminCSP },
-        ],
-      },
-      {
-        source: '/super-admin/analytics',
-        headers: [
-          { key: 'Content-Security-Policy', value: adminCSP },
-        ],
-      },
-      // Store pages: allow self-framing for iframe-based viewport switcher in editor
+      // Store pages: relax X-Frame-Options to SAMEORIGIN for the editor iframe
+      // viewport switcher — the legacy-browser analog of the CSP frame-ancestors
+      // 'self' that middleware sets for the store variant.
       {
         source: '/store/:path*',
         headers: [
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-          { key: 'Content-Security-Policy', value: storeCSP },
         ],
       },
     ];
