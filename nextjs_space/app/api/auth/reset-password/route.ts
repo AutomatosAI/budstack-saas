@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResult = await checkRateLimit(`reset-password:${ip}`, {
       maxRequests: 5,
       windowMs: 60_000,
+      failMode: 'closed',
     });
     if (!rateLimitResult.success) {
       return rateLimitResult.response;

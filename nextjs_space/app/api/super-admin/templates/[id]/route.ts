@@ -7,6 +7,7 @@ import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { requireSameOrigin } from "@/lib/security/require-same-origin";
 
 export async function PUT(
   req: NextRequest,
@@ -169,6 +170,9 @@ export async function DELETE(
     if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const originError = requireSameOrigin(req);
+    if (originError) return originError;
 
     const email = user.emailAddresses[0]?.emailAddress;
 

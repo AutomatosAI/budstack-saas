@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import { assertSafeWebhookUrl } from "@/lib/webhook-ssrf";
+import { apiValidationError } from "@/lib/api-error";
 
 /**
  * PATCH /api/tenant-admin/webhooks/[id]
@@ -64,6 +66,16 @@ export async function PATCH(
         return NextResponse.json(
           { error: "Invalid URL format" },
           { status: 400 },
+        );
+      }
+
+      // SSRF egress guard — same check as creation (generic message, no leak).
+      try {
+        await assertSafeWebhookUrl(url);
+      } catch {
+        return apiValidationError(
+          "Webhook URL is not allowed. Use a public HTTPS endpoint.",
+          "tenant-admin/webhooks/[id]",
         );
       }
     }

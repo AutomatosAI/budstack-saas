@@ -58,6 +58,28 @@ export async function POST(request: NextRequest) {
   const { event, clientId, orderId, strainId } = payload;
   const signature = request.headers.get("x-webhook-signature") || "";
 
+  // SECURITY (US-011, AC-6): verify-before-resolve. When a platform-level
+  // DRGREEN_WEBHOOK_SECRET is provisioned, authenticate the webhook with it
+  // BEFORE any tenant-resolution DB query touches attacker-controlled body
+  // identifiers (clientId/orderId/strainId). Timestamp + structure are already
+  // validated above. A forged payload is rejected here with zero DB access and
+  // no log row (cheap rejection — avoids unauthenticated log-flooding).
+  //
+  // Flag-gated: when the env var is unset (the default until Dr Green confirms
+  // they sign with one platform secret), this block is skipped and the existing
+  // per-tenant resolve-then-verify path below runs EXACTLY as before.
+  const platformSecret = process.env.DRGREEN_WEBHOOK_SECRET;
+  let verifiedByPlatformSecret = false;
+  if (platformSecret) {
+    if (!verifyDrGreenWebhookSignature(rawBody, signature, platformSecret)) {
+      console.error(
+        "[DrGreen Status] Platform-secret signature verification failed (pre-resolve)",
+      );
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+    verifiedByPlatformSecret = true;
+  }
+
   console.log(
     `[DrGreen Status] Event: ${event}`,
     sanitizeForLogging({ clientId, orderId, strainId }),
@@ -74,10 +96,13 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Signature Verification (per-tenant secret) ---
-    if (resolved.tenantSecret) {
+    if (verifiedByPlatformSecret) {
+      // Already authenticated against the platform secret before tenant
+      // resolution (US-011). The per-tenant secret would not match the one
+      // that signed this request, so the per-tenant check is skipped.
+    } else if (resolved.tenantSecret) {
       const secret = decrypt(resolved.tenantSecret, {
         allowUnencryptedMigration: true,
-        migrationDeadline: "2026-12-31",
       });
       if (!verifyDrGreenWebhookSignature(rawBody, signature, secret)) {
         console.error("[DrGreen Status] Signature verification failed");
