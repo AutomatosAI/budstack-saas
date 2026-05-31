@@ -17,7 +17,7 @@
       ],
       "priority": 1,
       "passes": false,
-      "notes": ""
+      "notes": "Foundation story — everything else lands on this. Read nextjs_space/lib/encryption.ts first to match the exact ENCRYPTION_KEY format/length so the pinned test key is valid. .env.test must contain no real secret values. pnpm install will touch pnpm-lock.yaml — that is expected; stage it by name."
     },
     {
       "id": "US-002",
@@ -32,7 +32,7 @@
       ],
       "priority": 2,
       "passes": false,
-      "notes": ""
+      "notes": "See MEMORY.md project_encryption_v2_prefix: encrypt() writes a 4-part v2:iv:authTag:ciphertext string. Read lib/encryption.ts to confirm the exact decrypt() options/contract before asserting the fail-closed behaviour."
     },
     {
       "id": "US-003",
@@ -48,7 +48,7 @@
       ],
       "priority": 3,
       "passes": false,
-      "notes": ""
+      "notes": "Read lib/drgreen-webhook-verify.ts for the exact signing scheme and secret env var; pin any required secret in .env.test as a throwaway test value. Pure functions — no DB, no network."
     },
     {
       "id": "US-004",
@@ -64,7 +64,7 @@
       ],
       "priority": 4,
       "passes": false,
-      "notes": ""
+      "notes": "This is the suite PRD-203's wrapper migration grows. Mock ONLY the Clerk boundary (and any tenant-resolution lookup) — these are unit tests of the wrapper. Read lib/api-auth.ts for the exact rejection shape (apiError envelope)."
     },
     {
       "id": "US-005",
@@ -79,7 +79,7 @@
       ],
       "priority": 5,
       "passes": false,
-      "notes": ""
+      "notes": "This is the PRD-200 AC-3a item that was 'blocked on the harness'. Read lib/css-utils.ts to confirm exactly which patterns sanitizeCss strips before asserting. Keep the PRD-200 edit minimal: AC-3a checkbox + a changelog row only."
     },
     {
       "id": "US-006",
@@ -94,7 +94,7 @@
       ],
       "priority": 6,
       "passes": false,
-      "notes": ""
+      "notes": "Report-only first per AC-12 and OQ-4: thresholds defined here, hard-fail wired by PRD-216. Do not set thresholds in a way that fails CI yet. END OF PHASE 1: if US-001..006 are all done and the next story (US-007) needs Docker which is unavailable, emit RALPH_BLOCKED with BLOCKED-DOCKER."
     },
     {
       "id": "US-007",
