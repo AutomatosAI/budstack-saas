@@ -1,209 +1,113 @@
 {
   "project": "BudStack SaaS",
-  "branchName": "ralph/prd-211-encryption-webhook-hardening",
-  "description": "PRD-211 — Encryption Fallback + Webhook Hardening. Six server-side crypto/edge defects across the encryption helper and the two DISTINCT Dr Green webhook subsystems (inbound callback verifier vs outbound tenant notifier — opposite trust directions, do not conflate). (1) decrypt() silently returns ciphertext AS plaintext on its failure paths (HIGH); (2) inbound verifier is a plain SHA-256 hash, not HMAC (HIGH); (3) outbound webhook deliver has no SSRF egress filter — tenant URL fetched directly (HIGH, elevated); (4) migration deadline hardcoded 2026-12-31, too far out (MEDIUM); (5) rate limiter fails open silently on Redis down, no alert (MEDIUM); (6) inbound webhook resolves tenant from attacker input BEFORE verifying signature (MEDIUM). App lives in nextjs_space/ (pnpm 10, Next 14.2.35, Prisma 6.7, Postgres 17, ioredis, zod 3.23.8, Clerk). NO Vitest yet — US-001 stands up a minimal unit harness (PRD-207 dep, brought in minimally). All fixes are flag-gated/reversible where they touch live signing or egress so nothing breaks before Gerber/Dr Green coordination (HMAC dual-accept flag, DRGREEN_WEBHOOK_SECRET verify-before-resolve flag default off, env-driven migration deadline). Source PRD: docs/PRDS/REMEDIATION/PRD-211-encryption-webhook-hardening.md. Global rules: decrypt must FAIL CLOSED (never return its input); keep timing-safe compare + 5-min replay window on the inbound verifier; use the apiError()/apiValidationError() envelope (lib/api-error.ts) for any client-facing error — never leak raw error text; immutable updates; tests load .env.test only, NEVER real secrets.",
+  "branchName": "ralph/prd-201-destructive-endpoint-csrf-hardening",
+  "description": "PRD-201 — Destructive Super-Admin Endpoint Removal & CSRF Defence-in-Depth. Delete the leftover one-time template-wipe route, add a reusable same-origin guard + typed confirmation body to destructive super-admin handlers, stop leaking internal operation traces, and close the RESERVED_SUBDOMAINS (_cd + rename) gaps.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Minimal Vitest unit harness (config, setup, .env.test, scripts)",
-      "description": "As a developer, when I run `pnpm test` in nextjs_space a Vitest runner executes node-environment unit tests with the `@/` alias resolving, so the PRD-211 security units can be written and run.",
+      "title": "Delete the one-time reset-templates wipe route",
+      "description": "As an incident responder, I want the leftover 'DELETE AFTER USE' one-time template-wipe route gone so a destructive S3+DB wipe is no longer reachable via GET (prefetch/link-scan/history).",
       "acceptanceCriteria": [
-        "cd nextjs_space; add devDependencies `vitest` and `@vitest/coverage-v8` via pnpm",
-        "Create nextjs_space/vitest.config.ts: node test environment, `@/` alias mapped to ./ (match tsconfig paths), v8 coverage provider, setupFiles ./vitest.setup.ts, include lib/** and tests/unit/**",
-        "Create nextjs_space/vitest.setup.ts that loads nextjs_space/.env.test (never the real .env)",
-        "Create nextjs_space/.env.test with a throwaway deterministic ENCRYPTION_KEY (any non-real string — getKey() runs scryptSync over it, so any value works), ENCRYPTION_MIGRATION_DEADLINE unset, NODE_ENV=test",
-        "Add package.json scripts: `test`: `vitest run`, `test:watch`: `vitest`, `test:cov`: `vitest run --coverage`; leave existing test:e2e* scripts unchanged",
-        "Add tests/unit/harness-smoke.test.ts importing lib/encryption via `@/lib/encryption` and asserting encrypt()/decrypt() round-trips a string",
-        "`pnpm test` runs and the smoke test passes",
-        "Tests pass",
-        "Typecheck passes"
+        "Delete app/api/super-admin/tenants/reset-templates/route.ts (AC-1); capability retired per OQ-1 (no POST reimplementation unless Gerard requests it)",
+        "Removes the GET-reachable destructive wipe and its leaked steps[] trace (AC-2 primary, AC-5)",
+        "Nothing imports the route (verified) — no other code references it",
+        "Typecheck passes",
+        "pnpm build passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "DONE: vitest 2.1.9 + @vitest/coverage-v8 2.1.9 (pinned to 2.x for Node 18.17 — vitest 4/vite 8 require Node >=20.19). Added vitest.config.ts (node env, @/->./ alias, v8 coverage of lib/**, include tests/unit/**+lib/**), vitest.setup.ts (loads .env.test via dotenv + deterministic ENCRYPTION_KEY fallback), .env.test (throwaway key — NOT committed: repo .gitignore ignores all .env*), package.json test/test:watch/test:cov scripts, tests/unit/harness-smoke.test.ts. pnpm test green (1 passed), pnpm exec tsc --noEmit clean."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-002",
-      "title": "Export isEncryptedValue() — single source of truth (AC-1b)",
-      "description": "As a developer, I want one exported helper that recognises both the 4-part v2 and 3-part legacy encrypted shapes, so no caller mis-classifies a v2 value as legacy and skips decryption.",
+      "title": "Add security guard module (requireSameOrigin + requireConfirmation)",
+      "description": "As a developer, I want reusable defence-in-depth guards so destructive super-admin handlers can reject cross-origin requests and require a typed confirmation token.",
       "acceptanceCriteria": [
-        "Export `isEncryptedValue(text: string): boolean` from nextjs_space/lib/encryption.ts",
-        "Returns true for v2 shape: 4 colon-parts AND parts[0]===\"v2\" AND parts[1..3] are non-empty hex",
-        "Returns true for legacy shape: exactly 3 colon-parts, all non-empty hex (iv:authTag:ciphertext)",
-        "Returns false for plaintext, empty string, and malformed values (wrong part count, non-hex segments)",
-        "Add tests/unit/encryption.test.ts cases: v2 ciphertext from encrypt() -> true; a hand-built 3-part hex value -> true; plaintext 'hello' -> false; 'v2:nothex:..' -> false; '' -> false",
-        "Tests pass",
-        "Typecheck passes"
+        "lib/security/require-same-origin.ts exports requireSameOrigin(req): rejects absent/cross-site Origin or Sec-Fetch-Site with 403 + code CROSS_ORIGIN_BLOCKED (AC-4)",
+        "lib/security/require-confirmation.ts exports a Zod { confirm } parser that returns 400 + code CONFIRMATION_MISMATCH when confirm does not equal the expected target (AC-3)",
+        "Pure functions, no DB/network; usable by any route handler",
+        "Typecheck passes",
+        "pnpm build passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "DONE: added exported isEncryptedValue(text) to lib/encryption.ts (after DecryptionError, before encrypt()). v2 = 4 parts + parts[0]==='v2' + segments[1..3] non-empty hex; legacy = exactly 3 non-empty-hex parts; false for plaintext/''/non-hex/wrong-count. decrypt() untouched (US-003). Tests: tests/unit/encryption.test.ts (7 cases). pnpm test 8 passed, tsc clean."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-003",
-      "title": "decrypt() fails closed — never returns its input (AC-1, AC-1a)",
-      "description": "As a developer, decrypt() either returns real plaintext or throws DecryptionError — it never hands back the ciphertext I gave it.",
+      "title": "Extract + harden RESERVED_SUBDOMAINS (add _cd)",
+      "description": "As a tenant, I cannot claim a routing-structural slug like _cd. Extract RESERVED_SUBDOMAINS from the onboarding route into a shared module and add _cd.",
       "acceptanceCriteria": [
-        "Remove the `return text` at lib/encryption.ts:110 (malformed-shape branch) and :134 (legacy-decrypt catch under isMigrationAllowed) — both now throw DecryptionError",
-        "Grep gate: `return text` occurrences inside decrypt() = 0",
-        "Redefine allowUnencryptedMigration semantics: a value may be returned as-is ONLY when `!isEncryptedValue(text)` (i.e. it genuinely does not look encrypted) AND migration is allowed; an encrypted-looking value that fails to decrypt ALWAYS throws",
-        "decrypt('') still returns '' (unchanged empty-string guard at :99)",
-        "encrypt()->decrypt() round-trips v2 ciphertext unchanged",
-        "tests/unit/encryption.test.ts: decrypt('not-encrypted-plaintext') throws DecryptionError when migration NOT allowed; decrypt(tampered v2 value) throws DecryptionError; decrypt of a non-encrypted value with allowUnencryptedMigration+future deadline returns it as-is; round-trip passes",
-        "Tests pass",
-        "Typecheck passes"
+        "lib/reserved-subdomains.ts exports RESERVED_SUBDOMAINS (incl. _cd), isReservedSubdomain(), and isValidSubdomain() (AC-6)",
+        "app/api/onboarding/route.ts imports from the shared module; onboarding behavior unchanged",
+        "_cd present in RESERVED_SUBDOMAINS (middleware.ts custom-domain placeholder)",
+        "Typecheck passes",
+        "pnpm build passes"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "DONE: decrypt() in lib/encryption.ts rewritten to fail closed. Both fail-open `return text` paths removed (grep gate: 0 occurrences). Flow: empty->''; !isEncryptedValue(text) -> if migration allowed return the value via named `unmigratedPlaintext` (known-plaintext passthrough, provably not ciphertext) else throw DecryptionError; isEncryptedValue(text) -> split, pick scrypt key (v2) or legacy SHA-256 key, AES-256-GCM decrypt, on any failure throw DecryptionError — never returned as-is even under migration. Tests: encryption.test.ts +6 decrypt cases (empty, round-trip, plaintext-throws-when-migration-off, tampered-v2-throws, non-encrypted-as-is-under-open-window, encrypted-looking-invalid-still-throws-under-migration). pnpm test 14 passed; tsc --noEmit clean (3 webhook routes w/ allowUnencryptedMigration:true still typecheck)."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-004",
-      "title": "Inbound verifier -> true HMAC-SHA256, dual-accept flag (AC-2, AC-2a, AC-2b)",
-      "description": "As a security reviewer, the inbound Dr Green verifier is true HMAC-SHA256 — timing-safe, hex/base64, with the 5-min replay window — describable without caveat, with a flagged dual-accept window so live webhooks are not dropped during cutover.",
+      "title": "Enforce reserved + format check on super-admin tenant rename",
+      "description": "As a tenant, a super-admin rename of my subdomain re-runs the same validation as create, so I cannot be renamed onto a reserved/invalid slug.",
       "acceptanceCriteria": [
-        "verifyDrGreenWebhookSignature() (lib/drgreen-webhook-verify.ts:36-65) computes `crypto.createHmac(\"sha256\", secret).update(rawPayload).digest(\"hex\")` instead of `createHash(\"sha256\").update(rawPayload + secret)`",
-        "Replace the misleading :33 comment ('plain hash, NOT HMAC') with an accurate HMAC description",
-        "PRESERVE: length-check + crypto.timingSafeEqual (:53-62), both hex AND base64 acceptance, the `sha256=` prefix strip (:51)",
-        "PRESERVE unchanged: MAX_TIMESTAMP_DRIFT_MS (:29) and validateWebhookTimestamp() (:71-96)",
-        "Dual-accept cutover: if env DRGREEN_WEBHOOK_LEGACY_HASH_ACCEPT==='true', ALSO accept the legacy createHash(payload+secret) value (try HMAC first, legacy second); default (unset) accepts HMAC only",
-        "tests/unit/drgreen-webhook-verify.test.ts: matches a known HMAC-SHA256 vector; rejects a plain-H(payload+secret) value when flag off; accepts it when flag on; rejects wrong/short signature; validateWebhookTimestamp rejects a >5-min-old timestamp",
-        "Tests pass",
-        "Typecheck passes"
+        "app/api/super-admin/tenants/[id]/route.ts PATCH validates a changed subdomain via isValidSubdomain + isReservedSubdomain (AC-7)",
+        "Reserved/invalid slug rejected with 400 + code RESERVED_SUBDOMAIN before any DB write",
+        "Uses the shared lib/reserved-subdomains.ts from US-003",
+        "Typecheck passes",
+        "pnpm build passes"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "DONE: verifyDrGreenWebhookSignature() now computes crypto.createHmac('sha256', secret).update(rawPayload).digest('hex') (true HMAC) instead of createHash(payload+secret). Misleading :33 comment replaced with accurate HMAC description. Extracted signatureMatchesDigest() helper that PRESERVES the length-guard + crypto.timingSafeEqual loop and hex+base64 acceptance; sha256= prefix strip preserved. MAX_TIMESTAMP_DRIFT_MS + validateWebhookTimestamp() untouched. Dual-accept: HMAC tried first; if process.env.DRGREEN_WEBHOOK_LEGACY_HASH_ACCEPT==='true', legacy SHA-256(payload+secret) accepted as fallback; default (unset) = HMAC-only. Tests: tests/unit/drgreen-webhook-verify.test.ts (13 cases) — known HMAC hex+base64+sha256= prefix vectors, legacy rejected when flag off / accepted when on, HMAC still accepted when flag on, wrong/short/empty rejected w/o throw, timestamp >5min + future + malformed rejected. afterEach deletes the flag for isolation. pnpm test 27 passed; tsc clean."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-005",
-      "title": "assertSafeWebhookUrl() SSRF egress guard (AC-3)",
-      "description": "As an operator, outbound webhook URLs are validated against an SSRF blocklist (scheme, private/link-local/loopback/metadata/internal ranges) before any request is made.",
+      "title": "Apply requireSameOrigin to all destructive super-admin handlers",
+      "description": "As an attacker with a cross-site foothold, every destructive super-admin mutation rejects my request on the Origin/Sec-Fetch-Site signal, independent of Clerk SameSite.",
       "acceptanceCriteria": [
-        "Add exported async `assertSafeWebhookUrl(url: string): Promise<void>` to nextjs_space/lib/webhook.ts (throws an Error with a stable code/message on rejection)",
-        "Reject non-https schemes (only `https:` allowed)",
-        "DNS-resolve the host (dns/promises lookup, all addresses) and reject if ANY resolved IP is: loopback 127.0.0.0/8 or ::1; link-local 169.254.0.0/16 (incl 169.254.169.254) or fe80::/10; RFC-1918 10/8, 172.16/12, 192.168/16; unique-local IPv6 fc00::/7; 0.0.0.0",
-        "Reject hosts ending in `.railway.internal` or `.internal` (string check, before/independent of DNS)",
-        "Accept a normal public https URL (e.g. https://example.com/webhook)",
-        "tests/unit/webhook-ssrf.test.ts: rejects http://x, https://127.0.0.1, https://169.254.169.254, https://10.0.0.5 (mock lookup), https://foo.railway.internal, https://[::1]; accepts https://example.com (mock lookup to a public IP)",
-        "Tests pass",
-        "Typecheck passes"
+        "requireSameOrigin guard applied to every destructive super-admin handler (tenant DELETE, template DELETE, cleanup-s3 DELETE, learning DELETE, recover-deleted/migrate-s3-paths/detach POST) (AC-4 100%)",
+        "Confirm no destructive (delete/reset/purge) action remains reachable via GET (AC-2)",
+        "Guard returns before any mutation/DB/S3 call",
+        "Typecheck passes",
+        "pnpm build passes"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "DONE: new lib/webhook-ssrf.ts (no prisma import, so unit tests stay DB/network-free) exports async assertSafeWebhookUrl(url, resolver?) + WebhookUrlError(message, code). Re-exported from lib/webhook.ts for US-006/US-007. Order: parse URL (invalid_url) -> protocol!=='https:' (scheme_blocked) -> host string check localhost/.railway.internal/.internal (internal_host_blocked, BEFORE DNS) -> if host is an IP literal use it directly else resolver(host) (injectable DnsResolver defaulting to dns/promises lookup {all:true}); empty -> dns_empty; then reject if ANY address isBlockedIp (ip_blocked). isBlockedIpv4: 0/8,127/8,10/8,172.16/12,192.168/16,169.254/16 + unparseable. isBlockedIpv6: ::1, ::, fe80::/10, fc00::/7, and ::ffff:v4-mapped delegates to v4. stripBrackets handles [::1]. Tests: tests/unit/webhook-ssrf.test.ts (11) — accepts public https (mock), rejects http, 127.0.0.1, 169.254.169.254, private via mock resolver, 10.0.0.5 literal, foo.railway.internal (asserts resolver NOT called), [::1], mixed public+private (rebinding), malformed URL, and checks stable code 'scheme_blocked'. pnpm test 38 passed; tsc clean."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-006",
-      "title": "Wire SSRF guard into deliverWebhook + redirect re-validation (AC-3, AC-3a)",
-      "description": "As an operator, outbound delivery calls assertSafeWebhookUrl before fetch and re-validates every redirect hop, so a tenant URL cannot reach internal infra directly or via a 302.",
+      "title": "Tenant DELETE: typed confirmation body + stop trace leak",
+      "description": "As an operator, the tenant-delete endpoint requires a typed { confirm: <subdomain> } body and never echoes the internal cleanup trace.",
       "acceptanceCriteria": [
-        "In deliverWebhook (lib/webhook.ts:77-104), call `await assertSafeWebhookUrl(webhook.url)` BEFORE `fetch` (:95); on rejection do NOT fetch, log `webhook.delivery_blocked_ssrf` with {webhookId, host, reason}, record a failed webhookDelivery, and do NOT retry into the same target",
-        "Set fetch `redirect: \"manual\"`; on a 3xx with a Location, re-run assertSafeWebhookUrl on the resolved Location and follow manually, max 2 hops; a blocked hop fails the delivery (no internal request issued)",
-        "Export deliverWebhook (or a thin testable wrapper) so it can be unit-tested",
-        "tests/unit/webhook-delivery-ssrf.test.ts: delivery to an internal URL is blocked before fetch (fetch spy NOT called for the internal target); a public->internal 302 is blocked at hop re-validation (no fetch to the internal Location)",
-        "Tests pass",
-        "Typecheck passes"
+        "tenants/[id] DELETE requires JSON body { confirm } matching the tenant subdomain via requireConfirmation; mismatch → 400 CONFIRMATION_MISMATCH (AC-3)",
+        "Response no longer returns cleanupErrors[]; returns { success, summary: { deleted: n } } with the trace console.error-logged server-side only (AC-5)",
+        "Existing audit_logs TENANT_DELETED row preserved (AC-8)",
+        "Typecheck passes",
+        "pnpm build passes"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "DONE: lib/webhook.ts deliverWebhook is now exported and routes through a new private fetchWithSsrfGuard(initialUrl, init) helper. The helper calls await assertSafeWebhookUrl(currentUrl) BEFORE each fetch, sets redirect:'manual', and on a 3xx+Location resolves the Location against the current URL and re-validates on the next loop, max MAX_WEBHOOK_REDIRECTS=2 hops (then throws WebhookUrlError 'too_many_redirects'). In deliverWebhook the guarded fetch is wrapped in an inner try: a WebhookUrlError is caught, logs console.error('webhook.delivery_blocked_ssrf',{webhookId,host,reason:err.code}), records a failed prisma.webhookDelivery.create (response:'Blocked by SSRF guard: <code>'), and RETURNS (no retry into the blocked target); any non-WebhookUrlError is rethrown to the existing outer catch so genuine network failures still retry with the original exponential backoff. Success/log/delivery paths otherwise unchanged. Tests: tests/unit/webhook-delivery-ssrf.test.ts (3) — vi.mock @/lib/db (prisma findUnique+webhookDelivery.create) + vi.stubGlobal fetch; uses literal IPs (public 93.184.216.34, private 10.0.0.5) so NO real DNS: internal URL blocked with fetch NOT called; public->internal 302 fetched exactly once (public hop) and internal Location never fetched; public 200 records success:true/statusCode:200. pnpm test 41 passed; tsc clean."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-007",
-      "title": "Validate webhook URL at registration time (AC-3b)",
-      "description": "As a tenant admin, when I save a webhook with an internal or non-https URL I get a validation error up front, not a silent accept that fails later.",
+      "title": "Scope + harden cleanup-s3 (prefix + confirmation + audit)",
+      "description": "As an operator, the S3 cleanup route cannot target a bare/over-broad prefix, requires same-origin + typed confirmation, and writes a destructive-action audit line.",
       "acceptanceCriteria": [
-        "In nextjs_space/app/api/tenant-admin/webhooks/route.ts POST handler, after the existing `new URL(url)` format check (:81), call `await assertSafeWebhookUrl(url)` and on rejection return apiValidationError (lib/api-error.ts) with status 400 and NO raw error text leaked",
-        "Apply the same assertSafeWebhookUrl check in nextjs_space/app/api/tenant-admin/webhooks/[id]/route.ts wherever url is created/updated (PUT/PATCH)",
-        "tests/unit/webhook-registration-ssrf.test.ts: assertSafeWebhookUrl rejects 'http://169.254.169.254/' and a *.railway.internal URL (function-level); accepts a public https URL",
-        "`pnpm check:security` passes (no error-message leak)",
-        "Tests pass",
-        "Typecheck passes"
+        "cleanup-s3 rejects bare/over-broad prefixes — requires templates/{slug}/ with a non-empty slug segment and no '..' traversal (AC-1a)",
+        "Requires same-origin (US-002) + typed { confirm } matching the slug (AC-3); GET unaffected (route is DELETE-only)",
+        "Writes a structured console.error audit line (actor, target prefix, action, timestamp) (AC-8)",
+        "Typecheck passes",
+        "pnpm build passes",
+        "Final story — emit RALPH_COMPLETE"
       ],
       "priority": 7,
-      "passes": true,
-      "notes": "DONE: reused assertSafeWebhookUrl (no IP logic duplicated). POST app/api/tenant-admin/webhooks/route.ts — after the existing new URL(url) format check, added `try { await assertSafeWebhookUrl(url) } catch { return apiValidationError('Webhook URL is not allowed. Use a public HTTPS endpoint.', 'tenant-admin/webhooks') }`. PATCH app/api/tenant-admin/webhooks/[id]/route.ts (only PATCH updates url; no PUT) — same check inside the existing `if (url)` block after the format catch, route 'tenant-admin/webhooks/[id]'. Both catch blocks bind NO error variable and return a fixed vetted message via apiValidationError (safeMessage path) — never the WebhookUrlError.message (which contains the resolved IP), so no info disclosure. imports added: assertSafeWebhookUrl from @/lib/webhook-ssrf, apiValidationError from @/lib/api-error. Test: tests/unit/webhook-registration-ssrf.test.ts (3, function-level) — rejects http://169.254.169.254/ and https://hooks.foo.railway.internal/ingest; accepts https://hooks.example.com/ingest via injected public resolver. Full HTTP E2E DEFERRED (Clerk test-auth, PRD-207 OQ-1). pnpm test 44 passed; tsc clean; pnpm check:security passes (AC-5a no-leak gate green)."
-    },
-    {
-      "id": "US-008",
-      "title": "Shrink migration deadline + key audit script (AC-4, AC-4a)",
-      "description": "As an operator, the fail-open window is driven solely by ENCRYPTION_MIGRATION_DEADLINE (short, days not months) and an audit script can confirm every drGreenSecretKey is v2-encrypted before the flag is retired.",
-      "acceptanceCriteria": [
-        "Remove the hardcoded `migrationDeadline: \"2026-12-31\"` literal from app/api/webhooks/drgreen/status/route.ts:80, fiat/route.ts:133, crypto/route.ts:152 — the decrypt() calls rely solely on ENCRYPTION_MIGRATION_DEADLINE (lib/encryption.ts:5,52)",
-        "Grep gate: `2026-12-31` occurrences across the three routes = 0",
-        "Add nextjs_space/scripts/audit-drgreen-keys.ts: reads all tenants.drGreenSecretKey, classifies each via isEncryptedValue() as v2 / legacy-3-part / plaintext, prints counts and a non-zero exit if any non-v2 remain (does NOT print secret values)",
-        "Document in scripts/ralph/progress.txt that retiring allowUnencryptedMigration:true (removing it from the 3 routes) is a follow-up gated on running this audit against the live DB and confirming 100% v2 (NEEDS-DB, human/ops)",
-        "Typecheck passes"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": "DONE: removed the hardcoded migrationDeadline: \"2026-12-31\" line from all three routes (status/route.ts, fiat/route.ts, crypto/route.ts) — each decrypt() call now passes only { allowUnencryptedMigration: true } so the window is driven SOLELY by ENCRYPTION_MIGRATION_DEADLINE (lib/encryption.ts DEFAULT_MIGRATION_DEADLINE). Grep gate: 0 occurrences of 2026-12-31 across app/api/webhooks/drgreen/. Added nextjs_space/scripts/audit-drgreen-keys.ts (mirrors sibling audit-drgreen-client-ids.ts pattern: new PrismaClient(), relative import of isEncryptedValue from ../lib/encryption, main()+$disconnect+exit). classify(secret): unset if falsy, plaintext if !isEncryptedValue, else v2 when startsWith('v2:') else legacy. Prints per-class counts + lists non-v2 tenants by subdomain/id ONLY (never the secret) and process.exit(1) if any legacy/plaintext remain. Shape-only, never decrypts, needs no ENCRYPTION_KEY. NOT run by Ralph (live-DB; the auto-mode classifier correctly blocked execution — expected). Validated by static type-check (tsc on the file, no DB): clean. Project tsc clean; pnpm test 44 passed. Human follow-up (NEEDS-DB) documented in progress.txt: run the audit against prod, confirm 100% v2, THEN remove allowUnencryptedMigration:true from the 3 routes."
-    },
-    {
-      "id": "US-009",
-      "title": "Rate-limit fail-open alert + explicit failMode (AC-5)",
-      "description": "As an operator, when Redis is down I get an alert event and the fail-open-vs-closed choice is explicit per call site — not a silent console.warn.",
-      "acceptanceCriteria": [
-        "In lib/rate-limit.ts checkRateLimit, the Redis-error catch (:92-97) emits an `ops.rate_limit_failopen` event (structured console.error with {identifier, error} until PRD-215 alerting lands) IN ADDITION to allowing/denying",
-        "checkRateLimit accepts an explicit `failMode: \"open\" | \"closed\"` in its config (default \"open\" to preserve current behaviour)",
-        "failMode \"open\": on Redis error, emit ops.rate_limit_failopen AND return { success: true }",
-        "failMode \"closed\": on Redis error, emit ops.rate_limit_failopen AND return { success: false, response } where response is a 503 with a Retry-After header, built via the apiError envelope (no raw error text)",
-        "tests/unit/rate-limit.test.ts: Redis-down mock with failMode 'open' -> success true AND ops.rate_limit_failopen emitted; failMode 'closed' -> success false with 503 + Retry-After; happy path under limit still succeeds; over-limit still 429",
-        "Tests pass",
-        "Typecheck passes"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": "DONE. lib/rate-limit.ts: RateLimitConfig gains `failMode?: 'open'|'closed'` (default 'open'). Redis-error catch now emits a structured `console.error('ops.rate_limit_failopen', {identifier, failMode, error})` then branches: open → {success:true}; closed → {success:false, response} where response is apiError(503, safeMessage) + Retry-After header (Math.max(1, ceil(windowMs/1000))). Over-limit 429 path untouched; getRateLimitStatus untouched. tests/unit/rate-limit.test.ts (5): mock ioredis via controllable redisState{count,ttlMs,fail}; under-limit→success, over-limit→429+Retry-After, fail-open→success+event(failMode:open), fail-closed→503+Retry-After+event(failMode:closed), and 503 body carries no raw 'Redis connection refused' text. pnpm test 49 passed; tsc clean."
-    },
-    {
-      "id": "US-010",
-      "title": "failMode:'closed' on auth/payment-adjacent rate limiters (AC-5a)",
-      "description": "As an operator, write/auth-adjacent endpoints fail closed (503) on Redis loss while public reads stay fail-open-with-alarm.",
-      "acceptanceCriteria": [
-        "Enumerate checkRateLimit call sites (grep `checkRateLimit(` under app/ and lib/)",
-        "Set failMode:'closed' on onboarding (org/user creation) and account delete/export call sites; leave public storefront/read call sites at default 'open'",
-        "A fail-closed 503 returns the apiError envelope with Retry-After — no silent pass and no raw error text",
-        "Document the per-call-site decision (which set to closed vs open and why) in scripts/ralph/progress.txt",
-        "`pnpm check:security` passes",
-        "Typecheck passes"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "DONE. Enumerated 13 checkRateLimit call sites. Set failMode:'closed' on 5 auth/identity surfaces: onboarding:75, account/delete:39, account/export:34 (the AC-2 three) PLUS signup:34 + auth/reset-password:39 (story title = auth-adjacent; OQ-4 closes that class). Left default 'open' (now alarms via US-009) on consultation/submit (public healthcare intake — availability), all tenant-admin (authed admin convenience reads/writes) and all super-admin call sites (highest-privilege; don't lock an operator out mid-incident). Full per-site rationale table written to progress.txt (AC-4). Config-only one-line edits; 503 + Retry-After + no-leak all inherited from US-009's closed branch. pnpm check:security passes, tsc clean, pnpm test 49 passed. NOTE: extended beyond AC-2's literal three — trivially narrowable if the user prefers only onboarding+account delete/export."
-    },
-    {
-      "id": "US-011",
-      "title": "Verify-before-resolve on status route (platform-secret flag) (AC-6, AC-6a)",
-      "description": "As an attacker forging a Dr Green webhook, my payload is rejected at signature verification BEFORE any DB query runs on my chosen clientId/orderId.",
-      "acceptanceCriteria": [
-        "In app/api/webhooks/drgreen/status/route.ts, when env DRGREEN_WEBHOOK_SECRET is set: verify the signature with it (HMAC via verifyDrGreenWebhookSignature) + validateWebhookTimestamp BEFORE calling resolveTenant() (:68); a failing signature returns 401 with NO prisma.*.findFirst/findUnique on body identifiers having executed",
-        "When DRGREEN_WEBHOOK_SECRET is unset: preserve the existing per-tenant resolve-then-verify path EXACTLY (no behaviour change), so nothing breaks before the platform secret is provisioned",
-        "tests/unit/drgreen-status-verify-order.test.ts: with DRGREEN_WEBHOOK_SECRET set and an invalid signature, a prisma spy shows resolveTenant's queries (consultation_questionnaires.findFirst :150 / users.findFirst :166) are NOT called and the response is 401",
-        "Tests pass",
-        "Typecheck passes"
-      ],
-      "priority": 11,
-      "passes": true,
-      "notes": "DONE. status/route.ts: after payload-structure + timestamp validation and signature extraction (before the try/resolveTenant), added a flag-gated block: const platformSecret = process.env.DRGREEN_WEBHOOK_SECRET; if set and verifyDrGreenWebhookSignature(rawBody, signature, platformSecret) fails -> return 401 immediately (no DB query, no log row); on success set verifiedByPlatformSecret=true. The per-tenant block now reads `if (verifiedByPlatformSecret) {/* skip — already authed */} else if (resolved.tenantSecret) {...existing...} else {...existing dev/prod...}`. When the env var is unset, verifiedByPlatformSecret stays false and the original resolve-then-verify path is byte-identical. tests/unit/drgreen-status-verify-order.test.ts (3): mock @/lib/db,encryption,email,webhook (keep verify lib REAL); (1) secret set + invalid sig -> 401 AND consultation_questionnaires.findFirst/users.findFirst/drgreen_webhook_logs.create all NOT called; (2) secret unset + invalid sig -> 401 AND consultation_questionnaires.findFirst WAS called (old path preserved); (3) secret set + VALID HMAC over order.shipped w/ unknown orderId -> 404 (proves verify passed + resolve ran). pnpm test 52 passed; tsc clean; check:security passes. Human follow-up: provision DRGREEN_WEBHOOK_SECRET + confirm Dr Green signs with one platform secret before enabling."
-    },
-    {
-      "id": "US-012",
-      "title": "Verify-before-resolve on fiat + crypto routes (AC-6, AC-6a)",
-      "description": "As an attacker forging a fiat/crypto webhook, my payload is rejected at signature verification before orders.findFirst runs on my chosen orderId.",
-      "acceptanceCriteria": [
-        "Apply the same DRGREEN_WEBHOOK_SECRET verify-before-resolve flag-gated reorder to app/api/webhooks/drgreen/fiat/route.ts (orders.findFirst :100, verify :135) and crypto/route.ts (orders.findFirst :117, verify :154)",
-        "When DRGREEN_WEBHOOK_SECRET unset: existing resolve-then-verify behaviour preserved exactly on both routes",
-        "Zero prisma findFirst/findUnique on body identifiers before signature verify when the platform secret is set (assert via prisma spy on at least the fiat route test)",
-        "tests/unit cover fiat (and crypto if quick): invalid signature with platform secret set -> 401, orders.findFirst NOT called",
-        "This is the LAST executable story — emit RALPH_COMPLETE on completion",
-        "Tests pass",
-        "Typecheck passes"
-      ],
-      "priority": 12,
-      "passes": true,
-      "notes": "DONE (FINAL — RALPH_COMPLETE emitted). Applied the identical flag-gated verify-before-resolve pattern from US-011 to fiat/route.ts and crypto/route.ts. Each: signature header read early + `const platformSecret = process.env.DRGREEN_WEBHOOK_SECRET; let verifiedByPlatformSecret=false; if(platformSecret){ if(!verifyDrGreenWebhookSignature(rawBody,signature,platformSecret)) return 401; verifiedByPlatformSecret=true; }` inserted AFTER the missing-id 400 guard and BEFORE orders.findFirst (fiat nonce / crypto drGreenOrderId). The now-duplicate per-tenant `const signature` decl was removed (declared once up top) and the per-tenant block became `if (verifiedByPlatformSecret) {} else if (order.tenants?.drGreenSecretKey) {...} else if (NODE_ENV==='production') {...}`. Unset env = byte-identical resolve-then-verify. tests/unit/drgreen-payment-verify-order.test.ts (3): fiat secret-set+invalid sig->401 with orders.findFirst & drgreen_webhook_logs.create NOT called; fiat secret-unset+resolved order w/ tenant secret+invalid sig->401 AFTER orders.findFirst ran (preserves order); crypto secret-set+invalid sig->401 with orders.findFirst NOT called. pnpm test 55 passed; tsc clean; check:security passes. Note: the unset-fiat test resolves a real order (not null) to avoid the 404 branch's inline crypto.randomUUID() which throws under vitest's flaky global crypto — a TEST-ENV artifact only; the prod Next runtime has global crypto."
+      "passes": false,
+      "notes": ""
     }
   ]
 }
