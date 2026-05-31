@@ -1,57 +1,332 @@
-# PRD-206 — S3 Signed URL Tenant Scoping — Ralph Build Journal
+================================================================================
+RALPH PROGRESS JOURNAL — PRD-202 Tenant Context Concurrency Fix
+================================================================================
+Worktree : /Users/gkavanagh/Development/HealingBuds/budstack-saas-prd-202
+Branch   : ralph/prd-202-tenant-context-concurrency  (base: main @ af77b24)
+App      : nextjs_space/
+PRD      : docs/PRDS/REMEDIATION/PRD-202-tenant-context-concurrency-fix.md
+Plan     : scripts/ralph/IMPLEMENTATION_PLAN.md  (source of truth for checkboxes)
 
-Branch: ralph/prd-206-s3-tenant-scoping
-Worktree: /Users/gkavanagh/Development/HealingBuds/budstack-saas-prd-206
-App: nextjs_space/
-Source PRD: docs/PRDS/REMEDIATION/PRD-206-s3-signed-url-tenant-scoping.md
+One block per story, appended in execution order. A story is only marked
+[x] in IMPLEMENTATION_PLAN.md after its acceptance criteria are really met
+(typecheck green; tests green where the story has tests). BLOCKED stories are
+left unchecked with a RALPH_BLOCKED marker and the reason.
 
-One short block appended per finished story: `US-XXX <title> — DONE <date>` + 1-2 lines on what landed and any follow-up. BLOCKED stories get a `US-XXX — BLOCKED-<reason> <date>` block and stay unchecked in IMPLEMENTATION_PLAN.md.
+Constraints in force: never --dangerously-skip-permissions; never push / never
+switch this worktree's branch / never touch main or sibling worktrees; stage
+files by name; commits carry no attribution footer; tests load .env.test only.
+================================================================================
 
----
+--------------------------------------------------------------------------------
+US-001 — Vitest unit harness scaffold (idempotent)            [DONE]  commit pending
+--------------------------------------------------------------------------------
+Mirrored the proven PRD-206 harness onto this worktree (base main @ af77b24,
+which has no vitest):
+  - vitest pinned ^2.1.9 + @vitest/coverage-v8 ^2.1.9 (Node here is 18.17.0;
+    vitest 4.x needs Node 20.12+ for node:util styleText — 2.x is the ceiling).
+  - nextjs_space/vitest.config.ts: environment node, setupFiles vitest.setup.ts,
+    include tests/unit/**/*.test.ts + lib/**/*.test.ts, exclude integration/e2e/
+    *.spec.ts, coverage v8 over lib/**, @ alias → repo root (mirrors tsconfig).
+  - nextjs_space/vitest.setup.ts: dotenv loads .env.test ONLY (never real env).
+  - nextjs_space/.env.test: NODE_ENV=test. Root .gitignore gains `!**/.env.test`
+    so the throwaway test env is committable.
+  - package.json scripts: test / test:watch / test:unit (vitest run).
+  - tests/unit/harness-smoke.test.ts: 2 sanity tests.
+Validation: `pnpm test:unit` → 2/2 passed. `npx tsc --noEmit` → exit 0 (also
+confirms main is a clean typecheck baseline for this branch).
+Files: .gitignore, nextjs_space/{vitest.config.ts,vitest.setup.ts,.env.test,
+package.json,pnpm-lock.yaml,tests/unit/harness-smoke.test.ts}.
 
-US-001 Vitest unit harness scaffold — DONE 2026-05-29
-Added vitest.config.ts (node env, @/ alias → root, v8 coverage on lib/**, include tests/unit + lib *.test.ts), vitest.setup.ts (loads .env.test only), .env.test (NODE_ENV=test, no secrets), tests/unit/harness-smoke.test.ts, and package.json scripts test/test:watch. `pnpm test` green (1 passed), `pnpm exec tsc --noEmit` exits 0.
-Env note: active shell Node is v18.17.0 (repo .nvmrc says 20) — vitest 4.x needs Node 20.12+ (uses node:util styleText), so pinned vitest + @vitest/coverage-v8 to 2.1.9, which runs on both Node 18.17 and 20. If the box moves to Node 20 the harness still works; revisit only if you want vitest 4.
-Two necessary corollaries (flagged for review): playwright.config.ts got `testMatch: '**/*.spec.ts'` so Playwright (testDir './tests') no longer grabs the new vitest `*.test.ts` files; root .gitignore got `!**/.env.test` so the throwaway test env is committable (it was caught by `.env*`).
+--------------------------------------------------------------------------------
+US-002 — Additive tenant-context API + unit suite (AC-1, OQ-4)         [DONE]
+--------------------------------------------------------------------------------
+lib/tenant-context.ts (additive only — setTenantContext still present, removed
+in US-009 once its callers are gone):
+  - runWithTenantContextAsync<T>(tenantId, fn: () => Promise<T>): Promise<T> —
+    binds the ALS for the whole async chain; context propagates across awaits
+    inside fn and is restored for the caller once the promise settles.
+  - hasTenantContext(): boolean = getStore() !== undefined. This is the key
+    primitive for US-005: it distinguishes an EXPLICIT null (a bound
+    runWithTenantContext(null,...) system query — allowed) from an IMPLICIT
+    unbound context (the leak bug — fail loud). getTenantContext()===null alone
+    cannot tell these apart.
+  - getTenantContext() unchanged (AC-1).
+Unit suite tests/unit/tenant-context.test.ts (8 tests): sync bind+teardown,
+returns callback value, nested-scope restores outer, null+no-context outside,
+explicit-null is bound (hasTenantContext true / id null), bound non-null
+reports true, async context survives an `await new Promise(setTimeout(0))`
+boundary, async resolves to callback value.
+Validation: pnpm test:unit → 10/10 passed (2 smoke + 8 new). tsc --noEmit → 0.
+Files: nextjs_space/lib/tenant-context.ts, nextjs_space/tests/unit/tenant-context.test.ts.
 
-US-002 lib/s3-tenant-guard.ts strict prefix guard — DONE 2026-05-29
-Added assertKeyInTenantScope(key, tenantId, { folderPrefix? }) (throws ApiError 403) + isKeyInTenantScope (boolean, for US-009). Pure (no getBucketConfig inside). Normalise: decode percent-escapes once (null if malformed) → reject any '..' or backslash → collapse repeated '/' → strip one leading '/' → strip folderPrefix → require remainder startsWith exact segment `tenants/${tenantId}/`. tsc --noEmit exits 0. Tests land in US-003.
+--------------------------------------------------------------------------------
+US-003 — Concurrency unit proof (node-only AC-7)                       [DONE]
+--------------------------------------------------------------------------------
+tests/unit/tenant-context.concurrency.test.ts (4 tests, pure ALS — no DB):
+  POSITIVE PROOF (the AC-7 property): 300 interleaved requests round-robin
+  across 3 tenants, each yielding the microtask queue 5x and re-asserting its
+  bound context after every yield (1500 interleaved observations) → ZERO
+  cross-tenant observation; every request ends on its own tenant; context fully
+  torn down after.
+  ROOT-CAUSE CONTRAST (deterministic, not timing-dependent):
+    (a) enterWith() with no enclosing scope persists into the shared context —
+        after request1 finishes, a later read still sees 'req1' (never popped) —
+        the exact bleed vector on Railway's persistent process.
+    (b) enterWith() overrides an active run() scope in place (honours no
+        boundary) — the enclosing 'outer' becomes 'intruder'.
+    (c) runWithTenantContext() confines its binding — caller is null before and
+        after; one request's binding cannot escape into another's continuation.
+NOTE: I first tried a literal interleaved-enterWith bleed assertion; it did NOT
+reproduce reliably on Node 18.17 because each `await` snapshots the context
+frame. Rather than ship a flaky/contrived assertion, the contrast now proves the
+underlying no-boundary mechanism deterministically. The authoritative full-stack
+red→green interleave proof remains the Docker-gated Postgres test US-010.
+Validation: full pnpm test:unit → 14/14 passed (3 files). tsc --noEmit → 0.
+Files: nextjs_space/tests/unit/tenant-context.concurrency.test.ts.
 
-US-003 Guard bypass-string + traversal suite — DONE 2026-05-29
-Added tests/unit/s3-tenant-guard.test.ts (14 tests). Proves the AC-1a bypass set is ALL rejected: nested victim/me substring, prefix-extension sibling (tenantA-evil), parent traversal, url-encoded traversal (..%2F), leading-slash, double-slash, another-tenant-outright; plus malformed-encoding + backslash fail-closed and empty/whitespace tenantId. Accepts in-scope keys (incl. development/ folderPrefix). Asserts thrown error is ApiError status 403. `pnpm test` 15/15 green, tsc exits 0. This is the PRD's #1 success metric (bypass suite all-rejected).
+--------------------------------------------------------------------------------
+US-004 — withTenantContext request wrapper (AC-3)                      [DONE]
+--------------------------------------------------------------------------------
+lib/with-tenant-context.ts — withTenantContext(handler): resolves the tenant via
+getTenantFromRequest's RETURN value (never a side-effect, so it is correct both
+before and after the US-008 return-not-set refactor), then runs the WHOLE handler
+inside runWithTenantContextAsync(tenant?.id ?? null, () => handler(req, ...args)).
+Variadic Args (extends unknown[]) so it wraps both bare (req) and ({ params })
+route signatures with no `any`. A null resolution is bound EXPLICITLY (anonymous
+storefront request) so the middleware sees a deliberate context, not the
+implicit-unbound failure. Doc note: PRD-203's withTenantAuth composes this; the
+bulk route migration rides on PRD-203 — this PRD wires one pilot (US-007).
+Unit suite tests/unit/with-tenant-context.test.ts (5 tests, resolver mocked at
+the module boundary, real context primitive): binds resolved id around handler +
+tears down; explicit-null binding when no tenant resolves (hasTenantContext
+true); context survives awaits in the handler; extra { params } arg passes
+through; CONCURRENT BLEED TEST — 50 interleaved A/B requests through the wrapper,
+5 post-yield checks each, zero cross-tenant observation.
+Validation: full pnpm test:unit → 19/19 passed (4 files). tsc --noEmit → 0.
+Files: nextjs_space/lib/with-tenant-context.ts, nextjs_space/tests/unit/with-tenant-context.test.ts.
 
-US-004 Enforce scope inside getFileUrl + audited bypass — DONE 2026-05-29
-getFileUrl 2nd param is now a backward-compatible union GetFileUrlOptions = string | { tenantId, contentTypeHint? } | { bypassTenantScope: true, reason, contentTypeHint? }. Legacy string/undefined behaves exactly as before. Extracted applyGetFileUrlScope(): tenant form asserts via guard (folderPrefix from getBucketConfig) BEFORE signing; bypass form emits `console.warn('s3.cross_tenant_sign', {key,reason})` then signs. Video contentType inference preserved in all forms. tsc --noEmit exits 0 with NO edits to the ~18 other callers (the #1 constraint held). Unit tests land in US-010.
+--------------------------------------------------------------------------------
+US-005 — Harden Prisma middleware: fail loud on implicit-unbound (AC-6/AC-6a) [DONE]
+--------------------------------------------------------------------------------
+lib/tenant-scope-policy.ts (new, pure policy — imports only tenant-context, no cycle):
+  - class TenantContextMissingError extends Error: carries readonly model/action,
+    name = "TenantContextMissingError", actionable message (wrap the boundary /
+    use bypassTenantScope).
+  - contextFreeAllowList = new Set<string>([]) — OQ-2 default-DENY (empty). A model
+    earns a slot here only with a reviewed justification, never to silence a
+    not-yet-wrapped route (those keep working via warn-not-throw).
+  - isStrictTenantContext(env = process.env): env.TENANT_CONTEXT_STRICT === "true".
+    Injectable env map so it is testable without mutating process.env; exact-string
+    match (so "1"/"TRUE"/"false" are all OFF). Default OFF in prod (OQ-3 migration
+    window) — flipped ON once PRD-203's withTenantAuth has wrapped the routes.
+  - decideMissingContext({model,bound,strict,allowList?}) -> "allow"|"warn"|"throw":
+    PURE. bound -> "allow" (explicit-null system query, the AC-6a distinction);
+    else allowList.has(model) -> "allow"; else strict ? "throw" : "warn".
+  - emitTenantContextMissing(model,action): console.warn("security.tenant_context_
+    missing", JSON{event,model,action}) — sanctioned audit channel (warn, not log).
+  - bypassTenantScope<T>(fn): runWithTenantContext(null, fn) — explicit-null binding
+    for deliberate system queries; works sync & async (ALS .run propagates).
+lib/db.ts middleware rewired (the hardening): the old early-return
+  `if (!tenantId || !model || !scoped) return next()` CONFLATED three cases and let
+  a tenant-scoped query on an UNBOUND context silently run unscoped (the leak). Now:
+  (1) not-scoped model -> next(params) unchanged; (2) scoped + tenantId null ->
+  decideMissingContext(bound = hasTenantContext(), strict = isStrictTenantContext());
+  emit on warn|throw; THROW TenantContextMissingError when "throw"; else next()
+  unscoped (explicit-null system query, allow-listed, or migration-window warn);
+  (3) tenantId present -> existing scoping logic byte-for-byte unchanged.
+  Guarded by `if ('$use' in prisma)` so the build-time mock client is untouched.
+tests/unit/tenant-scope-policy.test.ts (11 tests, pure — no DB): full allow/warn/
+  throw matrix incl. bound-beats-strict and injected allow-list; isStrictTenantContext
+  exact-string flag reading; error is an Error subclass carrying model/action+name;
+  emit calls console.warn once with the parsed JSON payload (spy); bypassTenantScope
+  binds explicit null (hasTenantContext true / id null inside, torn down after) for
+  both sync and async fn (context survives an await).
+NOTE: strict-mode is default OFF, so not-yet-wrapped routes WARN (don't break) during
+  the PRD-203 migration; the authoritative real-DB proof that the middleware actually
+  throws under Postgres is the Docker-gated US-011.
+Validation: pnpm test:unit -> 30/30 passed (5 files; +11 new). tsc --noEmit -> 0.
+Files: nextjs_space/lib/tenant-scope-policy.ts, nextjs_space/lib/db.ts,
+  nextjs_space/tests/unit/tenant-scope-policy.test.ts.
 
-US-005 Enforce final-key scope inside uploadFile — DONE 2026-05-29
-After the final key is computed and before PutObject, if tenantPrefix matches ^tenants/([^/]+)/$ the extracted tenantId is asserted via assertKeyInTenantScope(key, id, { folderPrefix }) (folderPrefix already destructured at line 35). Non-tenant prefixes (super-admin templates/, empty) skip the assertion. NO signature change → all ~15 callers compile. tsc exits 0. Note: by construction key = folderPrefix+tenantPrefix+uploads/... so this is defence-in-depth; US-010 exercises the throw path via a misconfigured (leading-slash) folderPrefix that the guard won't strip.
+--------------------------------------------------------------------------------
+US-006 — Pilot-wrap storefront Server Component layout (AC-5)           [DONE]
+--------------------------------------------------------------------------------
+app/store/[slug]/layout.tsx — the storefront pilot. getCurrentTenant() resolves
+the tenant via a NON-tenant-scoped `tenants` lookup (not in tenantScopedModels),
+so it correctly runs BEFORE any binding. Everything after — getTenantWithTemplate,
+getTemplateAssets, all the tenant-scoped Prisma reads, and the JSX render — now
+runs inside ONE runWithTenantContextAsync(tenant.id, ...) scope.
+Mechanic (zero-reindent split): the post-resolution body was lifted verbatim into
+a new same-nesting `async function renderTenantStore(tenantId, params, children)`
+(body indentation unchanged — both functions nest one level), and the component
+entry became: resolve tenant -> notFound guard -> `return runWithTenantContextAsync
+(tenant.id, () => renderTenantStore(tenant.id, params, children))`. The single
+`tenant.id` use inside the old body became the `tenantId` param; verified via
+`grep -E '\btenant\b'` that no orphan raw-`tenant` reference remains in the body
+(all other hits are `tenantWithTemplate` / `--tenant-color-*` / the `tenant=` JSX
+prop). This is the explicit boundary binding AC-5 wants — the SC no longer depends
+on the resolver's enterWith side-effect (removed in US-008/009) and cannot leak
+into a concurrent request.
+NO unit test (heavy Server Component: S3 + fs + Prisma + next/navigation; mocking
+that surface proves nothing for a pilot, and the prd.json story lists browser
+verification, not "Tests pass"). LIVE BROWSER VERIFICATION DEFERRED (prd.json
+allows "or document why not"): rendering the storefront needs the full runtime
+stack — Postgres + Clerk + S3 + a seeded tenant — which is exactly the Docker-/
+auth-gated territory of US-010/011/012 + manual QA, not available in this
+autonomous node-only phase. Structural correctness is locked by typecheck and the
+behavior-preserving (same data, now bound) nature of the split.
+Validation: npx tsc --noEmit -> 0. pnpm test:unit -> 30/30 (no regression).
+Files: nextjs_space/app/store/[slug]/layout.tsx.
 
-US-006 Remove bypassable substring checks in the two upload routes — DONE 2026-05-29
-Deleted the post-upload `key.includes(\`tenants/${tenantId}/\`)` guards from both app/api/tenant-admin/upload/route.ts and app/api/tenant-admin/branding/upload/route.ts — they were substring checks (the exact AC-3 anti-pattern) and are now redundant since uploadFile asserts final-key scope (US-005) and getFileUrl asserts at sign time (US-004). branding/upload's getFileUrl call is now scoped via a super-admin-preserving ternary: `tenantId ? getFileUrl(path, { tenantId }) : getFileUrl(path)` (user.tenantId is undefined for SUPER_ADMIN system uploads, which must still sign). tenant-admin/upload builds a public URL (no getFileUrl) so only the substring check was removed; uploadFile's own assertion now backstops it (throws ApiError 403 → caught → 500). grep for `.includes(...tenants/` across app/: 0 matches (AC-3 success metric met). tsc --noEmit exit 0, no other callers touched.
+--------------------------------------------------------------------------------
+US-007 — Pilot-wrap one tenant-scoped API route via withTenantContext (AC-4) [DONE]
+--------------------------------------------------------------------------------
+app/api/orders/customer/route.ts — the API-route pilot. Picked deliberately: a
+single GET, tenant resolved SOLELY from the request (no ?slug override like
+app/api/tenant/conditions, which would fight the wrapper's request-based binding),
+two tenant-scoped reads (users.findFirst + orders.findMany), every query already
+filtered by tenantId, and zero `any`/`console.log` to muddy the diff. (orders/
+route.ts was rejected as the pilot: Dr-Green API + emails + pre-existing console.log
++ a cross-tenant users.findFirst-by-email — too behavior-sensitive to wrap blind
+without a DB.)
+The wrap: handler renamed to `getCustomerOrders(_req)` and exported as
+`export const GET = withTenantContext(getCustomerOrders)`. Inside, the redundant
+`getTenantFromRequest` self-resolution was REPLACED by `getTenantContext()` (read
+the id the wrapper bound at the boundary); a null id still returns the same 404.
+The explicit `tenantId` filters stay (defense in depth alongside the middleware).
+Type fit: handler is (NextRequest)=>Promise<NextResponse>; NextResponse extends
+Response and Args infers to [] so it satisfies withTenantContext's RouteHandler<[]>
+with no `any`. `_req` is intentionally unused (the wrapper owns resolution);
+tsconfig has no noUnusedParameters so this is clean.
+Behavior-preserving: resolved-tenant path identical; no-tenant path still 404 (the
+wrapper binds explicit null -> getTenantContext() null -> 404). Only change is the
+wrapper resolves the tenant before the 401 auth check now (an extra resolution for
+unauthenticated calls) — benign, no leak (confined in .run(), fresh 401 response).
+Correct both before AND after US-008: the wrapper uses getTenantFromRequest's RETURN
+value, and the handler reads the bound context — neither depends on the (soon-removed)
+enterWith side-effect.
+NOTE: faithful AC-4 demo of the binding doing real work; the full-stack proof that a
+wrapped route stays isolated under concurrent load is the Docker-gated US-010.
+Validation: npx tsc --noEmit -> 0. pnpm test:unit -> 30/30 (no regression).
+Files: nextjs_space/app/api/orders/customer/route.ts.
 
-US-007 Scope the tenant preview-image signing call site — DONE 2026-05-29
-app/api/tenant-admin/templates/[id]/preview-image/route.ts line 88: `getFileUrl(s3Key)` → `getFileUrl(s3Key, { tenantId })`. tenantId (user.tenantId) is hard-guarded at lines 22-27 (returns 400 when absent), so it is a guaranteed non-empty string at the sign call — no super-admin/undefined path to worry about here (unlike branding/upload). The uploaded key already uses prefix `tenants/${tenantId}/`, so the guard passes for legitimate uploads and now throws ApiError 403 if a future bug ever signs an out-of-scope key. tsc --noEmit exit 0.
+--------------------------------------------------------------------------------
+US-008 — lib/tenant.ts resolvers return-not-set; 11 side-effects removed (AC-2) [DONE]
+--------------------------------------------------------------------------------
+Removed all 11 setTenantContext(...) calls (was lines 23,54,58,179,182,200,203,
+222,225,229,233) AND the `import { setTenantContext } from './tenant-context'`.
+getCurrentTenant and getTenantFromRequest are now PURE resolvers: they RETURN the
+tenant (return values byte-for-byte unchanged) and bind nothing. Docstrings updated
+to state the pure contract and point at the boundary binders (runWithTenantContextAsync
+for SCs, withTenantContext for routes). Confirmed via grep that lib/tenant.ts was the
+ONLY production caller of setTenantContext (only other hit is a comment in the
+concurrency test) -> US-009's deletion is now safe / zero-caller.
 
-US-008 Explicit audited super-admin bypass for cross-tenant template signing — DONE 2026-05-29
-app/api/super-admin/templates/[id]/route.ts PUT handler line ~82: `getFileUrl(updateData.previewUrl)` → `getFileUrl(updateData.previewUrl, { bypassTenantScope: true, reason: "super-admin template preview tooling" })`. This route is SUPER_ADMIN-gated (line 17, `publicMetadata.role !== "SUPER_ADMIN"` → 401) and uploads its preview WITHOUT a tenant prefix (uploadFile called with 3 args at line 53-57), so the key is a system `templates`-level asset with no tenant id — a tenantId scope can't apply. The bypass is the explicit, audited path: getFileUrl emits `console.warn("s3.cross_tenant_sign", {key, reason})` (US-004) so every cross-tenant sign is logged. AC-5 met (super-admin cross-tenant signing is explicit + audited, never silent). tsc --noEmit exit 0.
+>>> RISK FLAG FOR HUMAN REVIEW (migration-window behavior, by design but worth eyes):
+Before this story, every getCurrentTenant/getTenantFromRequest call bound context as
+an enterWith side-effect. The ~96 routes + tenant-scoped Server Components that are
+NOT yet wrapped (everything except the two pilots US-006/007) therefore lose their
+implicit binding here. With TENANT_CONTEXT_STRICT OFF (the prod default, OQ-3), the
+US-005 middleware now WARNs (security.tenant_context_missing) and runs such a query
+UNSCOPED rather than throwing. For queries that already pass an explicit
+`where: { tenantId }` (the prevalent pattern in every route I read — orders,
+orders/customer, consultation/status, conditions) this is harmless: the explicit
+filter still scopes them and the middleware is belt-and-suspenders. For any
+tenant-scoped query that relied SOLELY on the middleware (no explicit tenantId) this
+is a transient cross-tenant exposure until PRD-203 wraps the route. Mitigations, in
+order of safety: (a) set TENANT_CONTEXT_STRICT=true to fail CLOSED (throw, no leak)
+once enough routes are wrapped; (b) monitor the warn events; (c) PRD-203 withTenantAuth
+wraps the remaining routes. This is the exact trade-off the PRD designed the flag for,
+but a full audit of middleware-only-scoped queries is PRD-203's job, not this PRD's.
+Recommend Gerard confirm the strict-flag rollout plan before/with the PRD-203 merge.
 
-US-009 Close the signS3Path absolute-path passthrough in preview — DONE 2026-05-29
-app/store/preview/[templateSlug]/page.tsx. Removed the AC-4 hole: the old signS3Path treated any value starting with development/|tenants/|templates/ as "absolute" and signed it VERBATIM, so a layout.json value `tenants/<other>/secret.png` would be signed cross-tenant. New behaviour: (1) reject `..`/backslash up front; (2) resolve relative values under the current s3Prefix; (3) re-validate the resolved key — tenant preview uses isKeyInTenantScope(key, tenantId, {folderPrefix}) (the no-throw boolean from US-002, exercised by US-003's 15-test bypass suite), marketplace preview requires the key to stay within the previewed `templates/{slug}` prefix; (4) out-of-scope → return null (skip, never sign) so the rest of the page still renders. tenantId is derived from the already-tenant-scoped s3Prefix via tenantIdFromPrefix() (regex `(?:^|/)tenants/([^/]+)/`) — no hardcoded template values, no new data source (per AC notes). Threaded tenantId into ALL signS3Path calls incl. the two array-item calls. signLayoutAssets still uses Promise.allSettled and now only overwrites the target when the result is a non-null in-scope URL, so a dropped asset never breaks the others (AC-4a). signature of signLayoutAssets/signDefaultAsset unchanged (tenantId derived internally from the s3Prefix they already receive), so no outer call sites changed. tsc --noEmit exit 0; pnpm test 15/15 green (no regression).
-BROWSER VERIFY — NOT RUN LOCALLY (honest status, per AC notes). The preview route requires either real AWS S3 bucket data (marketplace path calls getJsonFromS3 for templates/{slug}/layout.json) or a live Postgres tenant_templates row + tenant S3 assets (tenant path), plus Clerk. This worktree has no real .env (tests load .env.test only, which holds no secrets) and Docker is down, so the page cannot be driven to the point where signS3Path runs without fabricating infra/creds — which the constraints forbid. The security property is nonetheless proven transitively: signS3Path now delegates the scope decision to isKeyInTenantScope, and US-003 already proves that guard rejects the full AC-1a bypass set (cross-tenant `tenants/<other>/`, prefix-extension `tenantA-evil`, parent + url-encoded traversal, leading/double slash, backslash, malformed-encoding). Recommend a human run the dev-browser check once real S3/DB preview data is available (or fold it into the Phase-3 E2E, US-013).
+Validation: grep setTenantContext lib/tenant.ts -> none. npx tsc --noEmit -> 0.
+pnpm test:unit -> 30/30 (no regression).
+Files: nextjs_space/lib/tenant.ts.
 
-US-010 Unit tests for getFileUrl + uploadFile scope behaviour — DONE 2026-05-29
-Added tests/unit/s3.test.ts (7 tests). Module-boundary mocks only (allowed, NOT a DB mock): vi.mock('@/lib/aws-config') stubs getBucketConfig + createS3Client, vi.mock('@aws-sdk/s3-request-presigner') stubs getSignedUrl — no network/AWS/creds. The tenant-scope guard and ApiError run REAL, so these exercise the real guard on the real signing path. getFileUrl coverage: out-of-scope { tenantId } THROWS ApiError 403 and getSignedUrl is asserted never-called (no presigned URL leaks); in-scope { tenantId } signs; { bypassTenantScope, reason } signs cross-tenant AND console.warn('s3.cross_tenant_sign', ...reason) is asserted (AC-5 audit); legacy no-options and legacy string-contentTypeHint both still sign (back-compat). uploadFile coverage (AC-2a): the throw path is forced WITHOUT a DB mock by setting a misconfigured leading-slash folderPrefix '/dev/' — uploadFile concatenates it verbatim into key=`/dev/tenants/B/uploads/...` but normaliseKey strips the single leading '/' first, so '/dev/' no longer matches and the remainder 'dev/tenants/B/...' is outside 'tenants/B/' → ApiError 403, and PutObject (send) is asserted never-called; the normal 'tenants/B/' upload with folderPrefix 'dev/' returns a key matching /^dev\/tenants\/B\/uploads\/\d+-logo\.png$/ and sends once. `pnpm test` 22/22 green (15 prior + 7 new), tsc --noEmit exit 0.
-PHASE 1 COMPLETE (US-001..US-010). Next is US-011 which is Docker-gated.
+--------------------------------------------------------------------------------
+US-009 — Delete setTenantContext/enterWith from lib/tenant-context.ts (AC-1)  [DONE]
+--------------------------------------------------------------------------------
+Deleted the deprecated setTenantContext function (its body was the unsafe
+`tenantContextStorage.enterWith({ tenantId })`) and its @deprecated docblock from
+lib/tenant-context.ts. The file now exports only the safe surface: getTenantContext
+(unchanged, AC-1), hasTenantContext, runWithTenantContext, runWithTenantContextAsync.
+Safe to delete because US-008 already removed the sole production caller.
+Also refreshed one stale comment in tenant-context.concurrency.test.ts that named the
+now-deleted function (it now describes the raw-enterWith anti-pattern generically).
+Local AC-1 grep (the AC-1a CI gate itself is PRD-216, not here):
+  - `setTenantContext` -> ZERO references repo-wide.
+  - `enterWith` CALLS in production code -> ZERO. Remaining `enterWith` hits are all
+    non-calls: Node's own async_hooks.d.ts type defs; explanatory doc comments in
+    lib/tenant-context.ts + lib/tenant-scope-policy.ts + app/store/[slug]/layout.tsx
+    (they describe the removed pattern, they don't invoke it); and the deliberate
+    `unsafe.enterWith(...)` in tenant-context.concurrency.test.ts (US-003) which calls
+    the RAW Node API on a throwaway ALS to prove WHY we removed it.
+  NOTE for PRD-216: a naive repo-wide `grep enterWith` can never be clean while the
+  US-003 contrast test exists, so that gate must match actual `.enterWith(` CALLS in
+  production source (lib/app/components) and/or exclude the contrast test — not the
+  bare substring in comments. Recommend the gate be call-scoped, not substring-scoped.
+Validation: npx tsc --noEmit -> 0. pnpm test:unit -> 30/30.
+Files: nextjs_space/lib/tenant-context.ts,
+  nextjs_space/tests/unit/tenant-context.concurrency.test.ts.
 
----
+================================================================================
+PHASE 1 COMPLETE (US-001..009). The safe context primitive
+(runWithTenantContext/Async), the node-only concurrency proof, the request wrapper,
+the fail-loud hardened middleware, the two pilot wraps (storefront SC + customer-
+orders API route), the return-not-set resolver refactor, and the deletion of the
+unsafe enterWith/setTenantContext API have all landed, each typecheck-green and with
+30/30 unit tests passing. Next is Phase 2 (Docker-gated) — gate-checked below.
+================================================================================
 
-US-011 — BLOCKED-DOCKER 2026-05-29
-Phase 2 gate (IMPLEMENTATION_PLAN.md): ran `docker info` → exit 1, "Cannot connect to the Docker daemon at unix:///Users/gkavanagh/.docker/run/docker.sock. Is the docker daemon running?" (Docker client 27.5.1 present, but no server). testcontainers needs a live daemon to start Postgres 17, so the upload-scope integration test (AC-2a/AC-3) cannot run. Left UNCHECKED. NO code written — substituting a non-container DB mock to dodge the Docker requirement is an explicit anti-pattern, so the story waits. Unblock: start Docker Desktop, re-run; the story should add tests/integration/upload-scope.test.ts driving uploadFile against a real Postgres + asserting cross-tenant final keys are rejected.
+--------------------------------------------------------------------------------
+US-010 — Integration: tenant-isolation concurrency proof (testcontainers) [BLOCKED]
+US-011 — Integration: prisma-middleware-throws (testcontainers)           [BLOCKED]
+--------------------------------------------------------------------------------
+RALPH_BLOCKED: BLOCKED-DOCKER
+Phase 2 gate `docker info` ran and the daemon is DOWN on this box: the Docker CLI is
+present (Client: Docker Engine 27.5.1, context desktop-linux) but the server is
+unreachable — "ERROR: Cannot connect to the Docker daemon at
+unix:///Users/gkavanagh/.docker/run/docker.sock. Is the docker daemon running?"
+(docker info exit 1). testcontainers cannot start a Postgres, so the real-DB proofs
+cannot run.
+NOT DONE, deliberately: per the plan's hard constraints, replacing the integration
+Postgres with a mock to dodge the Docker requirement is an ANTI-PATTERN — these
+stories exist precisely to prove behavior against a real database/$use pipeline, so
+a mocked version would prove nothing. No test files were written for the same reason:
+their acceptance criteria require GREEN tests against real Postgres, which can't be
+validated here, and shipping un-runnable/unvalidated integration harness code (plus
+adding a testcontainers dep) would be half-finished work. Left unchecked in
+IMPLEMENTATION_PLAN.md.
+TO UNBLOCK: start Docker Desktop (or run the ralph loop on a Docker-enabled box),
+then implement US-010 (300-way interleaved cross-tenant proof, the full-stack twin of
+the US-003 node-only proof) and US-011 (assert the hardened middleware throws
+TenantContextMissingError on an implicit-unbound tenant-scoped query with
+TENANT_CONTEXT_STRICT=true) against a real Postgres via testcontainers.
 
-US-012 — BLOCKED-DOCKER 2026-05-29
-Same Phase 2 gate (no Docker daemon). The preview-sign-scope integration test (AC-4) likewise needs testcontainers Postgres 17. Left UNCHECKED, no code written. Unblock: start Docker, re-run.
+--------------------------------------------------------------------------------
+US-012 — E2E: cross-tenant-no-leak (Playwright)                           [BLOCKED]
+--------------------------------------------------------------------------------
+RALPH_BLOCKED: BLOCKED-NEEDS-AUTH-DECISION
+The Clerk test-auth approach is undecided (PRD-207 OQ-1, owner Gerard). Per the plan,
+do NOT invent an auth shim. A cross-tenant E2E needs two authenticated tenant
+sessions, and how to mint Clerk test sessions in CI is the open human decision.
+Left unchecked pending that call.
 
-US-013 — BLOCKED-NEEDS-AUTH-DECISION 2026-05-29
-Phase 3 gate (IMPLEMENTATION_PLAN.md) + PRD-207 OQ-1 (owner: Gerard): the Clerk test-auth approach for Playwright E2E is undecided. Per the hard constraint, do NOT invent an auth shim. The "cross-tenant asset read blocked" E2E waits on the human auth decision. Left UNCHECKED, no code written.
+================================================================================
+RALPH RUN HALTED — CLEAN STOPPING POINT (as predicted in the plan).
+Done autonomously: US-001..009 (all of Phase 1), 6 commits on
+ralph/prd-202-tenant-context-concurrency (US-001..004 from the prior run +
+US-005..009 this run: 18e82c7, f44a2a4, cc9402b, 59bebdd, edbee66). Every story
+typecheck-green; 30/30 unit tests passing.
+Blocked (environment, not logic): US-010/011 (BLOCKED-DOCKER — daemon down),
+US-012 (BLOCKED-NEEDS-AUTH-DECISION — Clerk test-auth, owner Gerard).
+FOR HUMAN BEFORE MERGE: (1) eyeball the concurrency assertions (US-003/004) and the
+US-008 migration-window risk flag re: unwrapped routes relying on middleware-only
+scoping; (2) decide the TENANT_CONTEXT_STRICT rollout (default OFF now) alongside the
+PRD-203 route migration; (3) run Phase 2 on a Docker box for the real-DB proofs.
+Constraints honoured throughout: no branch switch / no push / main + siblings
+untouched; files staged by name; commits carry no attribution footer; tests load
+.env.test only; no --dangerously-skip-permissions; no @ts-ignore / as any.
+================================================================================
 
-RALPH_BLOCKED — autonomous run halts here. Terminal state as designed: Phase 1 (US-001..US-010) landed; US-011/US-012 BLOCKED-DOCKER (no daemon on this box); US-013 BLOCKED-NEEDS-AUTH-DECISION (PRD-207 OQ-1, owner Gerard). The security guard, its bypass-string proof (US-003), helper enforcement (US-004/US-005), the four migrated call sites (US-006/US-007/US-008/US-009), and the getFileUrl/uploadFile unit suite (US-010) are all committed on ralph/prd-206-s3-tenant-scoping. The container- and auth-gated tests wait for the human.
