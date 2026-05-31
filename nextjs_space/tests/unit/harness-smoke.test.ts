@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, it, expect } from "vitest";
+import { encrypt, decrypt } from "@/lib/encryption";
 
-// Proves the Vitest runner + ts resolution + @/ alias are wired before any
-// PRD-218 security units are added.
 describe("vitest harness smoke", () => {
-  it("runs a trivial assertion", () => {
-    expect(1 + 1).toBe(2);
+  it("round-trips a string through encrypt()/decrypt()", () => {
+    const plaintext = "harness-smoke-value";
+    const ciphertext = encrypt(plaintext);
+
+    expect(ciphertext).not.toBe(plaintext);
+    expect(ciphertext.startsWith("v2:")).toBe(true);
+    expect(decrypt(ciphertext)).toBe(plaintext);
   });
 });

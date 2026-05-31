@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import { assertSafeWebhookUrl } from "@/lib/webhook-ssrf";
+import { apiValidationError } from "@/lib/api-error";
 
 /**
  * GET /api/tenant-admin/webhooks
@@ -83,6 +85,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Invalid URL format" },
         { status: 400 },
+      );
+    }
+
+    // SSRF egress guard — reject non-https / internal / private-resolving URLs
+    // up front (generic message; never leak the resolved address).
+    try {
+      await assertSafeWebhookUrl(url);
+    } catch {
+      return apiValidationError(
+        "Webhook URL is not allowed. Use a public HTTPS endpoint.",
+        "tenant-admin/webhooks",
       );
     }
 
