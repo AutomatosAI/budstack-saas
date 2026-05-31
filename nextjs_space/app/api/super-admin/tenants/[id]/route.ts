@@ -10,6 +10,7 @@ import { requireConfirmation } from "@/lib/security/require-confirmation";
 import crypto from "crypto";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { tenantSettingsLenientSchema } from "@/lib/validation/tenant-settings";
+import { parseTenantSettings } from "@/lib/tenant-settings";
 import { apiError, apiValidationError } from "@/lib/api-error";
 
 export async function GET(
@@ -366,8 +367,12 @@ export async function DELETE(
     const confirmationError = requireConfirmation(body, tenant.subdomain);
     if (confirmationError) return confirmationError;
 
+    // PRD-208: parse-on-read instead of `settings as any`. Never throws — a
+    // malformed blob yields {} and the best-effort cleanup simply skips.
+    const tenantSettings = parseTenantSettings(tenant.settings, { tenantId: id });
+
     // Clean up Clerk Organization and Users (best-effort — don't block DB delete)
-    const clerkOrgId = (tenant.settings as any)?.clerkOrgId;
+    const clerkOrgId = tenantSettings.clerkOrgId;
     const cleanupErrors: string[] = [];
 
     if (clerkOrgId) {
@@ -402,7 +407,7 @@ export async function DELETE(
     }
 
     // Clean up Railway custom domain (best-effort)
-    const railwayDomainId = (tenant.settings as any)?.railwayDomainId;
+    const railwayDomainId = tenantSettings.railwayDomainId;
     if (railwayDomainId) {
       try {
         await removeCustomDomain(railwayDomainId);
