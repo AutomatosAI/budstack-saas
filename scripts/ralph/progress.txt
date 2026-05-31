@@ -136,16 +136,3 @@ Started: 2026-05-29
   TEST-ENV note: the unset-fiat case resolves a real order rather than null to avoid the fiat 404 branch's INLINE `crypto.randomUUID()` (status route swallows the equivalent in a try/catch helper; fiat/crypto do not), which throws under vitest's flaky global `crypto`. This is a test-environment artifact only — the production Next.js runtime provides global crypto, so the live 404-logging path is unaffected.
 - Validation: pnpm test 55 passed (3 new); pnpm exec tsc --noEmit clean; pnpm check:security passes.
 
-================================================================================
-RALPH_COMPLETE — all 12 PRD-211 stories (US-001..US-012) implemented, tested
-(55 unit tests), typechecked, and committed on branch
-ralph/prd-211-encryption-webhook-hardening. PRD: encryption + Dr Green webhook
-hardening. Built in-session (the --dangerously-skip-permissions loop mechanism
-is globally disallowed); prd.json `passes` + this log were kept loop-compatible
-throughout.
-================================================================================
-
-REMAINING HUMAN / OPS FOLLOW-UPS (out of Ralph scope — need prod DB / external coordination):
-  1. (US-008) Run `npx tsx scripts/audit-drgreen-keys.ts` against the production DB. Once it reports 100% v2 (exit 0), remove `allowUnencryptedMigration: true` from the three Dr Green webhook routes (status/fiat/crypto) and set a SHORT ENCRYPTION_MIGRATION_DEADLINE in Railway. The audit never decrypts or prints secrets — id/subdomain/class only.
-  2. (US-004 + US-011/US-012) Provision DRGREEN_WEBHOOK_SECRET in Railway and CONFIRM WITH DR GREEN whether they sign webhooks with a single platform secret (enables verify-before-resolve) or per-tenant (keep the flag unset). Then coordinate the HMAC-SHA256 signing cutover; during the window set DRGREEN_WEBHOOK_LEGACY_HASH_ACCEPT=true, and turn it OFF (HMAC-only) once Dr Green is fully migrated.
-  3. (PRD-207 OQ-1) The Playwright webhook-registration-ssrf E2E remains gated on the Clerk test-auth decision — not implemented here (unit coverage stands in for now).
