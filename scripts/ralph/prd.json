@@ -1,187 +1,219 @@
 {
   "project": "BudStack SaaS",
-  "branchName": "ralph/prd-204-input-validation-sweep",
-  "description": "PRD-204 Input Validation Sweep — guard raw path-param ids into Prisma (parseUuid/parseSlug across ~41 dynamic routes), fix deepMerge prototype pollution, add a body-size-cap JSON helper, validate the customer/profile PATCH and super-admin tenant settings blob with Zod, and roll Zod onto remaining body routes.",
+  "branchName": "ralph/prd-206-s3-tenant-scoping",
+  "description": "PRD-206 — S3 Signed URL Tenant Scoping. Move the tenant-prefix assertion INTO the S3 helper layer so every signed URL / upload is checked against the caller's `tenants/{tenantId}/` prefix before it is issued. Today `getFileUrl(key)` (lib/s3.ts:60) signs ANY key with no caller-tenant check, `uploadFile` (lib/s3.ts:28) trusts a caller-supplied prefix, the two upload routes guard with a BYPASSABLE substring `.includes('tenants/{id}/')` check, and `signS3Path` (app/store/preview/[templateSlug]/page.tsx:72) has an absolute-path passthrough that signs `tenants/<other>/...` verbatim. Fix: a strict path-segment-prefix guard in a new lib/s3-tenant-guard.ts, enforced inside getFileUrl + uploadFile, with an explicit audited super-admin bypass; remove the route substring checks; close the preview passthrough. CRITICAL CONSTRAINT: getFileUrl has ~20 callers and uploadFile ~15 across the app — the scope argument MUST be added in a BACKWARD-COMPATIBLE way (new options form accepted alongside the legacy form) so per-story typecheck stays green; this PRD migrates ONLY the 4 security-relevant call sites named below, NOT all callers (the 'zero unscoped calls' CI gate is PRD-216). App lives in nextjs_space/ (pnpm 10.30.2, Next 14.2.35, Prisma 6.7). Error envelope: lib/api-error.ts (ApiError class: `new ApiError(message, status, safeForClient?)`). S3 keys carry an optional folderPrefix from getBucketConfig() (e.g. 'development/') that the guard MUST account for. Source PRD: docs/PRDS/REMEDIATION/PRD-206-s3-signed-url-tenant-scoping.md. Phased: Phase 1 (US-001..010) autonomous node-only (Vitest unit) — guard + enforcement + the 4 call-site migrations + unit tests; Phase 2 (US-011..012) integration tests REQUIRE a Docker daemon (testcontainers + S3 mock) — BLOCKED-DOCKER if `docker info` fails; Phase 3 (US-013) Playwright E2E BLOCKED-NEEDS-AUTH-DECISION on PRD-207 OQ-1 (Clerk test-auth, owner Gerard). Global rules: NEVER hardcode template-specific values (S3 is source of truth); immutable updates; no console.log in production code (test files may log); .env.test holds only throwaway test values, never real/Railway secrets.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "parseUuid + parseSlug validation helpers",
-      "description": "As a developer, I need shared helpers that reject malformed path params at the boundary so raw ids never reach Prisma.",
+      "title": "Vitest unit harness scaffold (idempotent) so guard tests can run",
+      "description": "As a developer, I need a node-environment Vitest runner so the security-critical guard tests (US-003, US-010) can execute, because this worktree branched from main which has no unit-test harness.",
       "acceptanceCriteria": [
-        "Create lib/validation/parse-uuid.ts exporting parseUuid(value: string): string and parseSlug(value: string): string",
-        "parseUuid: trim, test against lenient UUID regex /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; on mismatch throw new ApiError('Invalid request', 400)",
-        "parseSlug: trim, lowercase-validate against /^[a-z0-9][a-z0-9-]{0,62}$/; on mismatch throw new ApiError('Invalid request', 400); return the trimmed value",
-        "Both reject empty/whitespace input with ApiError 400",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "From nextjs_space/: if vitest.config.ts already exists, EXTEND it minimally rather than overwrite; otherwise add devDependencies via `pnpm add -D vitest @vitest/coverage-v8`",
+        "Create (or extend) nextjs_space/vitest.config.ts: node test environment, `@/` alias mapped to ./ to match tsconfig paths, v8 coverage provider, include 'lib/**' and 'tests/**'",
+        "Create nextjs_space/vitest.setup.ts that loads nextjs_space/.env.test and registers global hooks",
+        "Create nextjs_space/.env.test containing ONLY NODE_ENV=test (no real secrets — the guard needs no encryption key)",
+        "Add package.json scripts: `test`: `vitest run`, `test:watch`: `vitest` (leave existing test:e2e* scripts unchanged)",
+        "Add tests/unit/harness-smoke.test.ts that imports something via the `@/` alias and asserts true",
+        "`cd nextjs_space && pnpm test` runs and the smoke test passes",
+        "Tests pass",
+        "Typecheck passes"
       ],
       "priority": 1,
       "passes": false,
-      "notes": "Foundation story — everything else lands on this. Read nextjs_space/lib/encryption.ts first to match the exact ENCRYPTION_KEY format/length so the pinned test key is valid. .env.test must contain no real secret values. pnpm install will touch pnpm-lock.yaml — that is expected; stage it by name."
+      "notes": "Foundation story. This worktree has its own node_modules (already installed by host). `pnpm add -D` will touch package.json + pnpm-lock.yaml — stage those by name. Keep the config minimal; do NOT pull in jsdom or Clerk. .env.test contains NO secret values. If a parallel PRD-207 later adds a richer harness on main that's a future merge concern, not yours."
     },
     {
       "id": "US-002",
-      "title": "Fix deepMerge prototype pollution",
-      "description": "As a developer, I need deepMerge to ignore __proto__/constructor/prototype keys so a JSON.parse'd payload cannot pollute Object.prototype.",
+      "title": "lib/s3-tenant-guard.ts — strict path-segment prefix guard + normaliser (AC-1)",
+      "description": "As a developer, I want assertKeyInTenantScope(key, tenantId) that throws ApiError(403) unless key is within the caller's tenants/{tenantId}/ prefix, using a STRICT path-segment prefix (not substring .includes).",
       "acceptanceCriteria": [
-        "Add const DANGEROUS_KEYS = new Set(['__proto__','constructor','prototype']) in lib/utils.ts",
-        "Skip dangerous keys (continue) as the first check inside the Object.keys loop, at every recursion level",
-        "Preserve existing semantics: override wins unless undefined/null/empty-string; arrays replace wholesale; plain objects deep-merge",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "Create nextjs_space/lib/s3-tenant-guard.ts exporting `export function assertKeyInTenantScope(key: string, tenantId: string, opts?: { folderPrefix?: string }): void`",
+        "Throws `new ApiError('Cross-tenant S3 access denied', 403)` (import from '@/lib/api-error') when out of scope or tenantId is empty",
+        "Normalise before comparing: percent-decode once (reject if decode throws); REJECT any key containing '..' or a backslash; collapse repeated '/'; strip a single leading '/'; strip opts.folderPrefix from the start if present",
+        "After normalising, assert the remainder begins with the exact segment `tenants/${tenantId}/` (trailing slash enforces a segment boundary) — NOT a substring match anywhere in the string",
+        "Also export a boolean helper `export function isKeyInTenantScope(key, tenantId, opts?): boolean` (the non-throwing form signS3Path will use in US-009)",
+        "File is < 800 lines, functions < 50 lines, no console.log",
+        "Typecheck passes"
       ],
       "priority": 2,
       "passes": false,
-      "notes": "See MEMORY.md project_encryption_v2_prefix: encrypt() writes a 4-part v2:iv:authTag:ciphertext string. Read lib/encryption.ts to confirm the exact decrypt() options/contract before asserting the fail-closed behaviour."
+      "notes": "Implements PRD §4 AC-1. The whole point is to defeat the bypassable `.includes` check at upload/route.ts:51 and branding/upload/route.ts:67. ApiError signature (lib/api-error.ts:21): `new ApiError(message, status=500, safeForClient=true)` — so `new ApiError('Cross-tenant S3 access denied', 403)` is correct and apiError() will pass its message through. folderPrefix comes from getBucketConfig() (lib/aws-config.ts) e.g. 'development/'; the guard takes it as an arg so it stays pure/testable (no S3 calls inside the guard). Do NOT call getBucketConfig inside the guard — callers pass folderPrefix. No tests in THIS story (US-003 owns them)."
     },
     {
       "id": "US-003",
-      "title": "parseJsonBody body-size-cap helper",
-      "description": "As a developer, I need a JSON body parser that enforces a size cap and optional Zod schema so large or malformed payloads are rejected uniformly.",
+      "title": "Guard bypass-string + traversal unit suite (AC-1a) — core security proof",
+      "description": "As an auditor, I want executing tests proving the strict guard REJECTS every bypass string the old substring check allowed, because this is the central security guarantee of PRD-206.",
       "acceptanceCriteria": [
-        "Create lib/validation/body.ts exporting async parseJsonBody<T>(req: Request, schema?: ZodSchema<T>, opts?: { maxBytes?: number })",
-        "Default maxBytes 256*1024; read raw text, if byte length exceeds cap throw new ApiError('Request body too large', 413)",
-        "Invalid JSON throws new ApiError('Invalid request', 400)",
-        "If schema provided, run schema.parse and translate ZodError to new ApiError('Invalid request', 400)",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "Create nextjs_space/tests/unit/s3-tenant-guard.test.ts",
+        "ACCEPTS in-scope keys: `tenants/{id}/templates/x/logo.png` and (with folderPrefix:'development/') `development/tenants/{id}/uploads/1-a.png`",
+        "REJECTS the full bypass set from AC-1a: `tenants/<victim>/x/tenants/<me>/y`, `tenants/<me>-evil/file`, `tenants/<me>/../<victim>/secret`, URL-encoded `tenants/<me>/..%2F<victim>/secret`, a leading-slash trick `/tenants/<victim>/...`, and double-slash `tenants//<victim>/...`",
+        "REJECTS empty/whitespace tenantId and a key that is another tenant outright `tenants/<victim>/logo.png`",
+        "Asserts the thrown error is an ApiError with status 403",
+        "`cd nextjs_space && pnpm test` shows this suite green",
+        "Tests pass",
+        "Typecheck passes"
       ],
       "priority": 3,
       "passes": false,
-      "notes": "Read lib/drgreen-webhook-verify.ts for the exact signing scheme and secret env var; pin any required secret in .env.test as a throwaway test value. Pure functions — no DB, no network."
+      "notes": "Implements PRD §4 AC-1a and §12 (s3-tenant-guard.test.ts). Use placeholder ids like 'tenantA' (me) and 'tenantB' (victim). This suite is the PRD's #1 success metric ('Bypass-string test suite: all rejected'). If any bypass string is NOT rejected, the guard in US-002 is wrong — fix the guard, not the test. Coverage target for the guard is 95% (security-critical)."
     },
     {
       "id": "US-004",
-      "title": "Strict tenant-settings schema + wire super-admin tenants/[id]",
-      "description": "As a security engineer, I need the super-admin tenant settings blob validated against a strict allow-list schema (exported for PRD-208) and the route id parsed as a UUID.",
+      "title": "Enforce scope inside getFileUrl + explicit audited bypass (AC-2)",
+      "description": "As a developer, I call getFileUrl(key, { tenantId }) and it asserts scope before signing; a super-admin uses getFileUrl(key, { bypassTenantScope: true, reason }) which signs and logs an audit event — never an implicit unscoped call for the migrated sites.",
       "acceptanceCriteria": [
-        "Enumerate ALL legitimate tenant settings keys by grepping settings.* / settings?.[ access across app + lib (clerkOrgId, railwayDomainId, domain metadata, tenant-admin settings keys)",
-        "Create lib/validation/tenant-settings.ts exporting tenantSettingsSchema (z.object({...known optional}).strict()) and type TenantSettings",
-        "super-admin/tenants/[id] PATCH: parseUuid(params.id); validate caller-supplied settings with tenantSettingsSchema.partial() before the merge; unknown keys rejected with 400",
-        "No legitimate save key omitted from the schema (verify by enumeration, since no DB locally)",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "Change getFileUrl (lib/s3.ts:60) second parameter to accept a scope union: `{ tenantId: string; contentTypeHint?: string } | { bypassTenantScope: true; reason: string; contentTypeHint?: string }` AND still accept the legacy `contentTypeHint?: string` (and undefined) form — do NOT make scope required",
+        "When called with `{ tenantId }`: fetch folderPrefix via getBucketConfig() and call assertKeyInTenantScope(key, tenantId, { folderPrefix }) BEFORE signing",
+        "When called with `{ bypassTenantScope: true, reason }`: skip the assertion, sign, and emit a structured audit log line `s3.cross_tenant_sign` including the key and reason (use console.warn with a JSON-ish prefix; PRD-215 will formalise it)",
+        "Legacy string/undefined second arg behaves EXACTLY as today (signs, applies contentTypeHint) — the ~20 existing callers must still compile and behave unchanged",
+        "contentTypeHint resolution (video ext inference at lib/s3.ts:66-72) is preserved in all three forms",
+        "`cd nextjs_space && pnpm exec tsc --noEmit` exits 0 with NO changes to the other ~18 call sites",
+        "Typecheck passes"
       ],
       "priority": 4,
       "passes": false,
-      "notes": "This is the suite PRD-203's wrapper migration grows. Mock ONLY the Clerk boundary (and any tenant-resolution lookup) — these are unit tests of the wrapper. Read lib/api-auth.ts for the exact rejection shape (apiError envelope)."
+      "notes": "Implements PRD §4 AC-2 + AC-5 (the audit-emitting bypass path lives here; US-008 calls it). CRITICAL: getFileUrl has ~20 callers (run `grep -rn getFileUrl --include=*.ts --include=*.tsx app lib`). Breaking the signature (making scope required) will fail typecheck across storefront/learn/marketplace/onboarding pages — those are OUT OF SCOPE for PRD-206 (PRD-216 migrates them). The backward-compatible union is mandatory. Discriminate the second arg at runtime: `typeof scope === 'string' || scope == null` → legacy; else `'tenantId' in scope` vs `'bypassTenantScope' in scope`. Keep getFileUrl < 50 lines — extract a small `resolveScope` helper if needed. No unit tests here (US-010 owns them)."
     },
     {
       "id": "US-005",
-      "title": "Validate customer/profile PATCH with Zod + caps",
-      "description": "As a security engineer, I need the customer profile update body validated and length-capped so unvalidated free-form data never reaches Prisma.",
+      "title": "Enforce final-key scope inside uploadFile (AC-2a)",
+      "description": "As a developer, I want uploadFile to assert the FINAL computed key is within tenants/{tenantId}/ when a tenant prefix was supplied, so an upload can never land outside the caller's prefix even if the prefix logic changes.",
       "acceptanceCriteria": [
-        "Zod schema: firstName/lastName optional string max 100; phone optional string max 32 matching a permissive phone pattern; address optional typed object (street/city/state/zip/country strings, each capped)",
-        "PATCH uses parseJsonBody(request, schema) and returns apiValidationError on invalid input (not a generic 500)",
-        "Only validated fields written to Prisma; existing name-backfill behaviour preserved",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "In uploadFile (lib/s3.ts:28) after the final `key` is computed (line 46) and BEFORE the PutObjectCommand send: if the supplied tenantPrefix matches `^tenants/([^/]+)/$`, extract the tenantId and call assertKeyInTenantScope(key, tenantId, { folderPrefix }) using the folderPrefix already destructured from getBucketConfig()",
+        "Non-tenant prefixes (e.g. super-admin `templates/...`, or empty prefix for platform-settings/learning) skip the assertion — those are the system/super-admin upload paths and must keep working",
+        "Do NOT change uploadFile's parameter list — the ~15 existing callers must compile unchanged",
+        "`cd nextjs_space && pnpm exec tsc --noEmit` exits 0",
+        "Typecheck passes"
       ],
       "priority": 5,
       "passes": false,
-      "notes": "This is the PRD-200 AC-3a item that was 'blocked on the harness'. Read lib/css-utils.ts to confirm exactly which patterns sanitizeCss strips before asserting. Keep the PRD-200 edit minimal: AC-3a checkbox + a changelog row only."
+      "notes": "Implements PRD §4 AC-2a. The final key is `${folderPrefix}${tenantPrefix}uploads/${Date.now()}-${finalName}` (lib/s3.ts:45-46). With tenantPrefix='tenants/{id}/' the key is e.g. 'development/tenants/{id}/uploads/...', so passing folderPrefix into the guard lets the prefix-strip succeed. uploadFile already calls getBucketConfig() (line 35) so folderPrefix is in scope. This deliberately needs NO signature change — keeping all 15 callers green is the constraint. No unit tests here (US-010)."
     },
     {
       "id": "US-006",
-      "title": "parseSlug/parseUuid rollout: store/[slug]/* (9 files)",
-      "description": "As a security engineer, I need every store storefront route to validate its slug (and orderId) before DB lookups.",
+      "title": "Remove bypassable substring checks in the two upload routes (AC-3)",
+      "description": "As a developer, I want the route-level `.includes('tenants/{id}/')` checks gone so the helper-level guard (US-005) is the single source of truth, and the routes thread tenantId into the signer.",
       "acceptanceCriteria": [
-        "All 9 store/[slug] route files call parseSlug(params.slug) before any DB use: cart/{add,clear,remove,route}, orders/{route,submit}, orders/[orderId]/route, products/{route,featured}",
-        "store/[slug]/orders/[orderId]/route also calls parseUuid(params.orderId)",
-        "Bare catch blocks in touched files swapped to return apiError(error, { route }) so the 400 propagates instead of becoming 500",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "Delete the substring check at app/api/tenant-admin/upload/route.ts:51-53 (`if (tenantId && !key.includes(...)) return 'Upload path violation'`) — uploadFile (US-005) now asserts via the guard",
+        "Delete the equivalent substring check at app/api/tenant-admin/branding/upload/route.ts:67-72",
+        "In branding/upload/route.ts change `getFileUrl(cloudStoragePath)` (line 74) to `getFileUrl(cloudStoragePath, { tenantId })` so the returned signed URL is also scope-asserted",
+        "Both routes still pass `tenants/${tenantId}/` as the uploadFile prefix (unchanged) so US-005's assertion fires for tenant uploads",
+        "`cd nextjs_space && pnpm exec tsc --noEmit` exits 0",
+        "Typecheck passes"
       ],
       "priority": 6,
       "passes": false,
-      "notes": "Report-only first per AC-12 and OQ-4: thresholds defined here, hard-fail wired by PRD-216. Do not set thresholds in a way that fails CI yet. END OF PHASE 1: if US-001..006 are all done and the next story (US-007) needs Docker which is unavailable, emit RALPH_BLOCKED with BLOCKED-DOCKER."
+      "notes": "Implements PRD §4 AC-3 (success metric: 'Substring .includes scope checks remaining in route handlers: 0'). Both routes already compute tenantId (upload/route.ts:18 via getCurrentTenantId(); branding/upload/route.ts:19 via user.tenantId). For SUPER_ADMIN with no tenantId the prefix is '' and US-005 skips assertion — preserve that branch. Keep the diff to deleting the checks + the one getFileUrl arg change; do not refactor the routes."
     },
     {
       "id": "US-007",
-      "title": "parseSlug rollout: tenant/[slug] + tenant/conditions/[slug]",
-      "description": "As a security engineer, I need the tenant lookup routes to validate their slug param.",
+      "title": "Scope the tenant preview-image signing call site (AC-2)",
+      "description": "As tenant A's admin, when I upload a template preview image, the signed URL returned is asserted against my tenant prefix.",
       "acceptanceCriteria": [
-        "tenant/[slug]/route and tenant/conditions/[slug]/route call parseSlug(params.slug) before DB use",
-        "Bare catch blocks swapped to apiError(error, { route })",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "In app/api/tenant-admin/templates/[id]/preview-image/route.ts change `getFileUrl(s3Key)` (line 88) to `getFileUrl(s3Key, { tenantId })` (tenantId is already in scope at line 21)",
+        "uploadFile there already passes `tenants/${tenantId}/` (line 77) so US-005 asserts the upload too — leave it",
+        "`cd nextjs_space && pnpm exec tsc --noEmit` exits 0",
+        "Typecheck passes"
       ],
       "priority": 7,
       "passes": false,
-      "notes": ""
+      "notes": "Implements one of the four PRD §16 named call sites (preview-image/route.ts:88, previously an unguarded getFileUrl). Minimal one-line change. The route returns 400 'No tenant found' if tenantId is absent (line 22) so tenantId is always present at the sign call."
     },
     {
       "id": "US-008",
-      "title": "parseUuid rollout: super-admin [id] routes (13 files)",
-      "description": "As a security engineer, I need every super-admin dynamic route to validate its id param (excluding tenants/[id]/route.ts handled in US-004).",
+      "title": "Explicit audited super-admin bypass for cross-tenant template signing (AC-5)",
+      "description": "As a super-admin, I can still sign across tenants for legitimate template tooling, but only via an explicit bypass that logs an audit event — never an implicit unscoped sign.",
       "acceptanceCriteria": [
-        "All super-admin [id] route files call parseUuid(params.id): email-templates/[id]; submissions/[id]/{approve,edit,reject,request-changes,route}; templates/[id]/{branding,detach,route,update-from-github}; tenants/[id]/{drgreen-keys,toggle-active,verify-domain}",
-        "Excludes tenants/[id]/route.ts (already done in US-004)",
-        "Bare catch blocks swapped to apiError(error, { route })",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "In app/api/super-admin/templates/[id]/route.ts change `getFileUrl(updateData.previewUrl)` (line 82) to `getFileUrl(updateData.previewUrl, { bypassTenantScope: true, reason: 'super-admin template preview tooling' })`",
+        "The call remains gated by the existing `user.publicMetadata.role !== 'SUPER_ADMIN'` check at the top of PUT (line 17)",
+        "Confirm the `s3.cross_tenant_sign` audit log line (implemented in US-004) is emitted on this path",
+        "`cd nextjs_space && pnpm exec tsc --noEmit` exits 0",
+        "Typecheck passes"
       ],
       "priority": 8,
       "passes": false,
-      "notes": ""
+      "notes": "Implements PRD §4 AC-5 + resolves OQ-1 (per-call explicit reason + audit, NOT blanket bypass). This is super-admin base-template tooling (templates/{slug}/ paths, not tenant-scoped) so bypass is the correct, audited path — see PRD OQ-3 (base-template reads are a super-admin/system operation). Do not weaken the SUPER_ADMIN gate."
     },
     {
       "id": "US-009",
-      "title": "parseUuid rollout: tenant-admin [id] routes (16 files)",
-      "description": "As a security engineer, I need every tenant-admin dynamic route to validate its id param before DB use or string interpolation.",
+      "title": "Close the signS3Path absolute-path passthrough in preview (AC-4/AC-4a)",
+      "description": "As a storefront visitor, the preview page never signs another tenant's S3 object: a template-JSON value pointing at tenants/<other>/ is dropped, not signed.",
       "acceptanceCriteria": [
-        "All tenant-admin [id] route files call parseUuid(params.id): customers/[id]; email-templates/[id]; my-templates/[id]; orders/[id]/{admin-notes,route}; posts/[id]; seo/posts/[id]; seo/products/[id]; templates/[id]/{activate,preview-image,resubmit,submit-to-marketplace,update-from-github,withdraw-submission}; webhooks/[id]/{deliveries,route}",
-        "customers/[id] interpolation into deleted-${id}@deleted.com is now guarded by parseUuid",
-        "Bare catch blocks swapped to apiError(error, { route })",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "In app/store/preview/[templateSlug]/page.tsx remove the absolute-path passthrough in signS3Path (line 72-75) that signs values starting with 'tenants/' or 'development/' verbatim",
+        "signS3Path resolves the value within the CURRENT tenant/template s3Prefix and uses isKeyInTenantScope (US-002) against the previewed tenant's id; if the resolved key is out of scope, return null/skip (do NOT sign) rather than throwing (preview must render the rest of the page)",
+        "Thread the previewed tenantId from the resolved tenant/template through signLayoutAssets → signS3Path (derive it from the s3Prefix `tenants/{id}/...`, or from the resolved tenant); add NO hardcoded template-specific value",
+        "signLayoutAssets already uses Promise.allSettled — a dropped (null) asset must not break the others",
+        "`cd nextjs_space && pnpm exec tsc --noEmit` exits 0",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: load a preview page and confirm in-scope assets still render (out-of-scope values simply do not render)"
       ],
       "priority": 9,
       "passes": false,
-      "notes": ""
+      "notes": "Implements PRD §4 AC-4 + AC-4a and finding #8. The s3Prefix passed into signLayoutAssets/signS3Path is already tenant-scoped ('tenants/{id}/templates/{slug}'), so the tenantId can be parsed from it without new data sources (data-driven template rule: no template names/slugs hardcoded). Browser verify is best-effort — if the preview route needs auth/data the agent cannot provide locally, state that explicitly in progress.txt instead of claiming success. Keep getFileUrl callers in this file on the scoped form where a tenantId is known; the array-item signS3Path calls (lines 97,104) must also pass the tenantId."
     },
     {
       "id": "US-010",
-      "title": "Zod + parseJsonBody on public store body routes",
-      "description": "As a security engineer, I need the highest-risk public storefront write routes to validate and size-cap their bodies.",
+      "title": "Unit tests for getFileUrl + uploadFile scope behaviour (AC-2/AC-2a/AC-5)",
+      "description": "As an auditor, I want executing tests proving getFileUrl throws on an out-of-scope key, signs in-scope, logs the audit event on bypass, and uploadFile rejects a final key outside scope.",
       "acceptanceCriteria": [
-        "store/[slug]/cart/add, cart/remove, orders/submit each define a Zod schema and parse the body via parseJsonBody(request, schema)",
-        "Numeric quantities bounded (min 1, sane max); ids in body validated; invalid input returns 400 via apiValidationError",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "Create nextjs_space/tests/unit/s3.test.ts mocking '@/lib/aws-config' (createS3Client, getBucketConfig) and '@aws-sdk/s3-request-presigner' (getSignedUrl) so no network/AWS is needed",
+        "getFileUrl(outOfScopeKey, { tenantId }) THROWS ApiError 403 (assert it never calls getSignedUrl)",
+        "getFileUrl(inScopeKey, { tenantId }) returns the (mocked) signed URL",
+        "getFileUrl(key, { bypassTenantScope: true, reason }) returns a signed URL AND emits the s3.cross_tenant_sign log (spy on console.warn)",
+        "getFileUrl(key) legacy form still returns a signed URL (back-compat)",
+        "uploadFile(buf, name, type, 'tenants/B/') with a mocked getBucketConfig folderPrefix that would push the key outside tenants/B/ THROWS via the guard; a normal tenants/B/ upload succeeds",
+        "`cd nextjs_space && pnpm test` is green",
+        "Tests pass",
+        "Typecheck passes"
       ],
       "priority": 10,
       "passes": false,
-      "notes": ""
+      "notes": "Implements PRD §12 s3.test.ts. Use vitest vi.mock for the aws-config + presigner module boundaries (this is a module-boundary mock, NOT a DB mock — allowed). The throw-path tests need no mock at all (the guard throws before any S3 call). Keep folderPrefix consistent between the getBucketConfig mock and the expected key. This is the last autonomous Phase 1 story — if Docker is down, the loop will BLOCK on US-011 next."
     },
     {
       "id": "US-011",
-      "title": "Zod + parseJsonBody on tenant-admin write routes",
-      "description": "As a security engineer, I need tenant-admin create/update routes to validate and size-cap their JSON bodies.",
+      "title": "Integration: upload-scope (testcontainers) — Docker-gated (AC-2a/AC-3)",
+      "description": "As an auditor, I want an integration test proving a tenant-A upload lands under tenants/A/ and an attempt to coerce a tenants/B/ prefix is rejected, against a real Postgres + S3 mock.",
       "acceptanceCriteria": [
-        "Tenant-admin write handlers (posts, seo, email-templates, webhooks, orders admin-notes, customers) parse bodies via parseJsonBody with a Zod schema",
-        "Each schema caps string lengths and rejects unknown top-level fields where practical",
-        "Invalid input returns 400 via apiValidationError; no bare 500 swallow on validation failure",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "GATE: run `docker info >/dev/null 2>&1` FIRST. If it fails, do NOT implement — commit `chore(prd-206): US-011 — BLOCKED-DOCKER (no Docker daemon for testcontainers)`, leave the checkbox UNCHECKED, append a progress note, and emit RALPH_BLOCKED",
+        "If Docker is up: create nextjs_space/tests/integration/upload-scope.integration.test.ts using testcontainers (Postgres 17 to match prod) + an S3 mock/localstack",
+        "Proves: tenant A upload → key under tenants/A/; a coerced tenants/B/ prefix is rejected by the guard (AC-2a, AC-3)",
+        "Never replace the real DB with a mock to pass — integration tests hit a REAL container",
+        "`cd nextjs_space && pnpm test:int` green (add the script if absent)",
+        "Typecheck passes"
       ],
       "priority": 11,
       "passes": false,
-      "notes": ""
+      "notes": "Implements PRD §12 upload-scope.integration.test.ts. Docker is EXPECTED to be DOWN on this box right now → this story should BLOCK-DOCKER cleanly and halt the loop. Do NOT try to fake the container. Postgres major MUST be 17."
     },
     {
       "id": "US-012",
-      "title": "Zod + parseJsonBody on super-admin write routes + uploads guard (final)",
-      "description": "As a security engineer, I need the remaining super-admin write routes validated and confirmation that upload routes keep magic-byte + max-file-size checks. Final story.",
+      "title": "Integration: preview-sign-scope (testcontainers) — Docker-gated (AC-4)",
+      "description": "As an auditor, I want an integration test proving a template-JSON value pointing at tenants/B/ previewed in tenant A's context is dropped, not signed.",
       "acceptanceCriteria": [
-        "Remaining super-admin write handlers (submissions edit/approve/reject/request-changes, templates branding/update-from-github, tenants verify-domain/drgreen-keys, onboarding) parse bodies via parseJsonBody with a Zod schema",
-        "Verify upload routes still enforce magic-byte validation + max file size (AC-6a) — leave intact, do not regress",
-        "tsc --noEmit passes",
-        "pnpm build passes"
+        "GATE: run `docker info >/dev/null 2>&1` FIRST. If it fails, commit `chore(prd-206): US-012 — BLOCKED-DOCKER`, leave UNCHECKED, append a progress note, emit RALPH_BLOCKED",
+        "If Docker is up: create nextjs_space/tests/integration/preview-sign-scope.integration.test.ts",
+        "Proves a tenants/B/ value previewed under tenant A is dropped (null), not signed (AC-4)",
+        "Hits a real container, not a mock",
+        "`cd nextjs_space && pnpm test:int` green",
+        "Typecheck passes"
       ],
       "priority": 12,
       "passes": false,
-      "notes": ""
+      "notes": "Implements PRD §12 preview-sign-scope.integration.test.ts. Same Docker gate as US-011. Depends on US-009 (signS3Path fix) and US-011's harness scaffolding."
+    },
+    {
+      "id": "US-013",
+      "title": "E2E: cross-tenant asset read blocked (Playwright) — auth-gated",
+      "description": "As tenant A, a flow that requests a signed URL for a known tenant-B object returns 403/blocked and zero tenant-B bytes.",
+      "acceptanceCriteria": [
+        "GATE: this depends on PRD-207 OQ-1 (how Playwright authenticates against Clerk in test), owner Gerard, UNRESOLVED. Do NOT invent a Clerk test-auth shim or disable auth. Commit `chore(prd-206): US-013 — BLOCKED-NEEDS-AUTH-DECISION (PRD-207 OQ-1, owner Gerard)`, leave UNCHECKED, append a progress note, emit RALPH_BLOCKED",
+        "(When unblocked) create nextjs_space/tests/e2e/cross-tenant-asset-read.spec.ts asserting 403/blocked and zero tenant-B bytes",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "Implements PRD §12 cross-tenant-asset-read.spec.ts. Playwright exists (test:e2e script) but the suite auto-skips without the Clerk test-auth decision (same blocker as PRD-207 Phase 3). BLOCK cleanly — never guess past the gate."
     }
   ]
 }

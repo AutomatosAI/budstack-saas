@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# Ralph Wiggum Build Loop (Claude) — PRD-207 Test Strategy Foundation
+# Ralph Wiggum Build Loop (Claude) — PRD-206 S3 Signed URL Tenant Scoping
+# Run from the worktree root: /Users/gkavanagh/Development/HealingBuds/budstack-saas-prd-206
 # Usage:
 #   ./scripts/ralph/loop.sh           # Build mode (default, runs until COMPLETE/BLOCKED)
-#   ./scripts/ralph/loop.sh 6         # Max 6 iterations (e.g. just Phase 1: US-001..006)
-#   ./scripts/ralph/loop.sh build 6   # Build mode, max 6 iterations
+#   ./scripts/ralph/loop.sh 10        # Max 10 iterations (e.g. just Phase 1: US-001..010)
+#   ./scripts/ralph/loop.sh build 10  # Build mode, max 10 iterations
 
 set -e
 
@@ -32,7 +33,7 @@ done
 PROMPT_FILE="scripts/ralph/PROMPT_build.md"
 
 if [[ ! -f "$PROMPT_FILE" ]]; then
-  echo -e "${RED}Error: $PROMPT_FILE not found — run this from the repo root (budstack-saas/).${NC}"
+  echo -e "${RED}Error: $PROMPT_FILE not found — run this from the worktree root (budstack-saas-prd-206/).${NC}"
   exit 1
 fi
 
@@ -144,9 +145,9 @@ handle_usage_limit() {
   CONSECUTIVE_FAILURES=0
 }
 
-echo -e "${GREEN}Ralph loop: BUILD mode — PRD-207 Test Strategy Foundation${NC}"
-echo -e "${CYAN}Phase 1 (US-001..006) runs autonomously. Phase 2 (US-007/008/010) needs a Docker daemon.${NC}"
-echo -e "${CYAN}Phase 3 (US-011..015) is gated on OQ-1 (Clerk test-auth decision) and will halt as BLOCKED.${NC}"
+echo -e "${GREEN}Ralph loop: BUILD mode — PRD-206 S3 Signed URL Tenant Scoping${NC}"
+echo -e "${CYAN}Phase 1 (US-001..010) runs autonomously. Phase 2 (US-011/012) needs a Docker daemon.${NC}"
+echo -e "${CYAN}Phase 3 (US-013) is gated on PRD-207 OQ-1 (Clerk test-auth decision) and will halt as BLOCKED.${NC}"
 [[ $MAX_ITERATIONS -gt 0 ]] && echo "Max iterations: $MAX_ITERATIONS"
 echo "Press Ctrl+C to stop"
 echo "---"
@@ -221,14 +222,14 @@ while true; do
   if [[ "$RESULT_MSG" =~ RALPH_COMPLETE ]]; then
     echo ""
     echo -e "${GREEN}=== Ralph Complete ===${NC}"
-    echo -e "${GREEN}PRD-207: all currently-executable stories finished. Docker-gated (US-007/008/010) and Clerk-auth-gated (US-011..015) stories remain BLOCKED for the human.${NC}"
+    echo -e "${GREEN}PRD-206: all currently-executable stories finished. Docker-gated (US-011/012) and Clerk-auth-gated (US-013) stories remain BLOCKED for the human.${NC}"
     break
   fi
 
   if [[ "$RESULT_MSG" =~ RALPH_BLOCKED ]]; then
     echo ""
     echo -e "${YELLOW}=== Ralph Blocked ===${NC}"
-    echo -e "${YELLOW}Hit a BLOCKED story (needs Docker daemon, or the OQ-1 Clerk test-auth decision). Loop halted — see the latest commit for the reason.${NC}"
+    echo -e "${YELLOW}Hit a BLOCKED story (needs Docker daemon, or the PRD-207 OQ-1 Clerk test-auth decision). Loop halted — see the latest commit for the reason.${NC}"
     break
   fi
 

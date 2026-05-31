@@ -86,7 +86,7 @@ export async function POST(
       },
     });
 
-    const signedUrl = await getFileUrl(s3Key);
+    const signedUrl = await getFileUrl(s3Key, { tenantId });
 
     return NextResponse.json({
       success: true,

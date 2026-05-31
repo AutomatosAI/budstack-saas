@@ -6,7 +6,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
-  // Playwright owns .spec.ts files; Vitest owns the unit .test.ts files.
+  /* Only E2E specs run under Playwright; vitest owns tests/unit + tests/integration (*.test.ts). */
   testMatch: '**/*.spec.ts',
   /* Run tests in files in parallel */
   fullyParallel: true,

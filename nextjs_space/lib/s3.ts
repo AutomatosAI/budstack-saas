@@ -9,6 +9,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createS3Client, getBucketConfig } from "./aws-config";
+import { assertKeyInTenantScope } from "./s3-tenant-guard";
 import { promises as fs } from "fs";
 import path from "path";
 import { sanitizeSvg } from "./svg-sanitize";
@@ -45,6 +46,15 @@ export async function uploadFile(
   const scopedPrefix = tenantPrefix ? `${folderPrefix}${tenantPrefix}` : `${folderPrefix}`;
   const key = `${scopedPrefix}uploads/${Date.now()}-${finalName}`;
 
+  // PRD-206 AC-2a: when a tenant prefix is supplied, assert the FINAL key
+  // landed inside that tenant's scope before writing — defence in depth even
+  // if the prefix-building logic later changes. System/super-admin paths
+  // (templates/..., or an empty prefix) carry no tenant id and are skipped.
+  const tenantPrefixMatch = tenantPrefix?.match(/^tenants\/([^/]+)\/$/);
+  if (tenantPrefixMatch) {
+    assertKeyInTenantScope(key, tenantPrefixMatch[1], { folderPrefix });
+  }
+
   await s3Client.send(
     new PutObjectCommand({
       Bucket: bucketName,
@@ -57,9 +67,48 @@ export async function uploadFile(
   return key; // Return the cloud_storage_path
 }
 
-export async function getFileUrl(key: string, contentTypeHint?: string): Promise<string> {
+/**
+ * Scope argument for getFileUrl (PRD-206). Backward-compatible: the legacy
+ * `contentTypeHint?: string` (or undefined) form still works alongside the
+ * new tenant-scoped form and the explicit audited super-admin bypass.
+ */
+export type GetFileUrlOptions =
+  | string
+  | { tenantId: string; contentTypeHint?: string }
+  | { bypassTenantScope: true; reason: string; contentTypeHint?: string };
+
+/**
+ * Apply the tenant-scope policy and resolve the effective contentTypeHint.
+ * Tenant form asserts the key is in the caller's prefix BEFORE signing; the
+ * bypass form skips the assertion but emits an audit line.
+ */
+function applyGetFileUrlScope(
+  key: string,
+  options: GetFileUrlOptions | undefined,
+  folderPrefix: string,
+): string | undefined {
+  if (options == null || typeof options === "string") {
+    return options ?? undefined;
+  }
+  if ("tenantId" in options) {
+    assertKeyInTenantScope(key, options.tenantId, { folderPrefix });
+    return options.contentTypeHint;
+  }
+  // Explicit, audited cross-tenant sign (PRD-215 will formalise this line).
+  console.warn(
+    "s3.cross_tenant_sign",
+    JSON.stringify({ key, reason: options.reason }),
+  );
+  return options.contentTypeHint;
+}
+
+export async function getFileUrl(
+  key: string,
+  options?: GetFileUrlOptions,
+): Promise<string> {
+  const { bucketName, folderPrefix } = await getBucketConfig();
+  const contentTypeHint = applyGetFileUrlScope(key, options, folderPrefix);
   const s3Client = await createS3Client();
-  const { bucketName } = await getBucketConfig();
 
   // Infer content type for video files so browsers can play them
   // (fixes files uploaded before ContentType was set on PutObject)
