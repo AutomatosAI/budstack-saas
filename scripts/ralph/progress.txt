@@ -1,0 +1,111 @@
+PRD-218 — Framework Upgrade & CSP Nonce Hardening
+Branch: ralph/prd-218-framework-upgrade-csp-nonce-hardening
+Base: origin/main @ af77b24
+Runtime: Node 20 (nvm) — required for the Next 15 bump; .nvmrc=20
+Source PRD: docs/PRDS/REMEDIATION/PRD-218-framework-upgrade-csp-nonce-hardening.md
+
+Mode: in-session build (the autonomous --dangerously-skip-permissions Ralph loop
+stays disabled per global rules). Per-story: implement -> unit test -> pnpm test +
+tsc --noEmit (+ build where config/runtime touched) -> flip prd.json passes:true +
+notes -> commit feat(prd-218): US-0XX — ...
+
+KEY CONSTRAINT DISCOVERED: 14.2.35 is ALREADY the latest 14.2.x. The PRD's
+"latest 14.2.x patch" fallback for AC-1 does NOT exist — clearing the HIGH
+DoS/SSRF advisories REQUIRES the Next 15.x major bump. Recorded against OQ-1.
+
+================================ STORY LOG ================================
+
+[US-001] DONE — Minimal Vitest unit harness.
+  vitest 2.1.9 + @vitest/coverage-v8 2.1.9; vitest.config.ts (node env, @/ alias,
+  v8 coverage lib/**), vitest.setup.ts (loads .env.test only), harness-smoke test,
+  package.json test/test:watch/test:cov. Node 20. pnpm test green; tsc clean.
+
+[US-002] DONE — CSP builder + nonce module (lib/security/csp.ts).
+  generateNonce() = 16 random bytes via Web Crypto (Edge+Node safe) + btoa.
+  buildCsp({nonce,variant}) mirrors next.config.js directive-for-directive but
+  script-src drops 'unsafe-inline' for 'nonce-X' 'strict-dynamic' (+ host allowlist
+  kept for CSP2). admin=+unsafe-eval, store=frame-ancestors 'self'. 10 unit tests.
+  pnpm test 11 passed; tsc clean.
+
+[US-003] DONE — Per-request nonce + CSP wired into middleware (AC-2).
+  middleware.ts: one nonce per request -> requestHeaders.set('x-nonce', nonce) (SSR
+  reads via headers()); EVERY return path wrapped in applyCsp(res, nonce, variant)
+  so no response escapes the policy. variantForServedPath() picks store/admin/base.
+  next.config.js: removed the static Content-Security-Policy header entries (a config
+  header can't carry a per-request nonce, and two CSPs enforce as an intersection) —
+  kept all other security headers + store X-Frame-Options SAMEORIGIN. Moved
+  variantForServedPath + applyCsp into lib/security/csp.ts (Clerk-free => unit-testable).
+  tests/unit/csp.test.ts now 16 cases. pnpm test 17 passed; tsc exit 0; pnpm build
+  exit 0 (Middleware 79.6kB; 'Dynamic server usage' lines are pre-existing benign
+  notices on auth API routes that read headers(), not failures).
+  >> HUMAN GATE (AC-2b): browser smoke — Clerk login + a storefront page under the
+     nonce CSP, DevTools console shows ZERO CSP violations. Must pass before prod.
+
+[US-004] DONE — Nonce propagation to Clerk + inline-script audit (AC-2a).
+  VERIFIED against the INSTALLED package source, not docs:
+  - Clerk ^6.39.3: app-router ClerkProvider reads the nonce from the x-nonce
+    request header (CSP-header fallback) but ONLY when the `dynamic` prop is set,
+    and it OVERRIDES any explicit nonce prop (ClerkProvider.js:18,72). => added
+    <ClerkProvider dynamic> in app/layout.tsx (NOT nonce={nonce}, which is dead).
+  - Next reads the nonce from the *request* CSP header (app-render.js:572) to
+    nonce framework bootstrap + next/script. US-003 set only the response CSP, so
+    middleware.ts now ALSO sets requestHeaders Content-Security-Policy. Without
+    this every framework script is blocked under strict-dynamic (white screen).
+  - The 2 next/script <Script> tags (branding-form PageAgent CDN; AutomatosWidget
+    /automatos-widget.js) are 'use client' => can't read headers(); they auto-get
+    the nonce via HeadManagerContext (client/script.js). strict-dynamic then trusts
+    the external scripts transitively through the nonced loader.
+  - dangerouslySetInnerHTML sweep (app/** + components/**): ZERO inline <script>;
+    all hits are <style> (sanitizeCss), hardcoded SVG, or sanitized HTML in a <div>.
+    Browsers never execute script inserted via innerHTML => no script-src concern.
+  +2 guard unit tests (nonce excludes < > & U+2028 U+2029; nonce round-trips the
+  'nonce-...' parser). pnpm test 19 passed; tsc exit 0; pnpm build exit 0.
+  >> HUMAN GATE (AC-2b): browser smoke must confirm Clerk login + Cloudflare
+     Turnstile + the PageAgent/Automatos widgets all load with ZERO console CSP
+     violations under the nonce policy.
+
+[US-005] DEFERRED (passes:false) — Next 15.5.x bump ATTEMPTED then REVERTED (AC-1 open).
+  Per the AC cascade clause: attempted on this worktree, did NOT commit a broken build.
+  - next@15.5.18 is the `backport` dist-tag; peer react '^18.2.0 || 19.x' => React 18.2
+    STAYS. No React 19 / @types/react 19 cascade. eslint-config-next bumped alongside.
+  - tsc --noEmit PASSED clean. The wall is `next build` route-type validation: Next 15
+    makes route-handler `params` + page `searchParams` ASYNC (Promise). First failure:
+    app/api/store/[slug]/cart/add/route.ts — "Type { params: { slug: string } } is not a
+    valid type for the function's second argument". tsc alone CANNOT catch this — Next
+    injects the generated .next/types route stubs only during `build`.
+  - Blast radius measured: 41 dynamic route handlers (params) + 33 dynamic pages/layouts
+    (params/searchParams) = ~74 files. Exceeds "small and safe in-session" => REVERTED
+    (git checkout of package.json, pnpm-lock.yaml, next.config.js, next-env.d.ts + the 2
+    headers() sites). Re-ran `pnpm install` to restore the 14.2.35 tree.
+  - GOTCHA for the next operator: the bump's build left stale Next-15 route stubs in
+    .next/types/ that expect `params: Promise<any>`; those made a clean Next-14 tsc throw
+    ~50 TS2344 errors until `.next` was deleted. Always `rm -rf .next` after reverting.
+  - Post-revert baseline RE-VERIFIED GREEN on 14.2.35: tsc exit 0, 19/19 unit tests,
+    pnpm build clean (Middleware 79.6 kB).
+  - WHY passes stays FALSE: AC-1 ("pnpm audit shows ZERO HIGH/CRITICAL for next") is
+    UNMET. A security story must not flip green while these HIGH `next` advisories are
+    still open: GHSA-h25m-26qc-wcjf (DoS, HTTP req deserialization), GHSA-q4gf-8mx6-v5v3
+    + GHSA-8h8q-6873-q5fj (DoS, Server Components), GHSA-c4j6-fc7j-m34r (SSRF),
+    GHSA-36qx-fr4f-26g5 (middleware/proxy auth bypass). Unrelated HIGHs (fast-uri,
+    fast-xml-builder, js-cookie via clerk) are NOT fixed by the next bump — separate work.
+  - RECOMMENDED PATH (Gerard's go/no-go, OQ-1): `npx @next/codemod@canary
+    next-async-request-api` to mechanically async-ify the ~74 params/searchParams sites,
+    then re-run build + the AC-1a App-Router browser smoke. That codemod sweep is itself
+    a worktree-sized change that wants its own review pass, not a tail-end of US-005.
+  >> HUMAN GATE (AC-1a): App-Router behaviour smoke (storefront / tenant-admin /
+     super-admin) after any committed bump — Gerard's call, independent of build status.
+
+[OQ / HUMAN FOLLOW-UPS — carried for Gerard, do NOT auto-resolve]
+  OQ-1 (AC-1):  Next 15.x is the ONLY way to clear the HIGH DoS/SSRF advisories
+                (14.2.35 is already the newest 14.2.x). US-005 ATTEMPTED the bump and
+                REVERTED it — clean tsc but ~74-file async params/searchParams build
+                cascade (full analysis in the US-005 log above). go/no-go on running the
+                next-async-request-api codemod + AC-1a App-Router smoke is Gerard's call.
+  OQ-2 (AC-2a): RESOLVED in US-004 — inline-script reliance enumerated against the
+                installed source. No app-authored inline <script> remains; Clerk +
+                Turnstile + the two widget <Script>s are nonced/transitively trusted
+                under strict-dynamic. The only residual risk is runtime (a tenant
+                template embedding its own inline <script>) — caught by AC-2b smoke,
+                not a code gap. No 'unsafe-inline' was re-introduced.
+  AC-2b:        nonce-CSP browser smoke (above) — owned by Gerard.
+
