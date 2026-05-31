@@ -1,20 +1,17 @@
 {
-  "project": "BudStack SaaS",
-  "branchName": "ralph/prd-207-test-harness",
-  "description": "PRD-207 — Test Strategy Foundation. Stand up the test harness the whole REMEDIATION suite depends on: Vitest (unit) + testcontainers Postgres (integration) + rehabilitated Playwright (E2E). Today effective coverage is ZERO (one E2E spec that auto-skips). Phased, dependency-ordered: Phase 1 (US-001..006) = Vitest unit harness + security-critical unit suites (encryption, drgreen webhook, api-auth, sanitizeCss) + report-only coverage thresholds — node-only, NO Docker/Clerk, fully autonomous, and closes PRD-200 AC-3a (sanitizeCss tests). Phase 2 (US-007..010) = testcontainers Postgres 17 integration harness + typed factories + the PRD-202 tenant-isolation concurrency proof — REQUIRES a running Docker daemon; if `docker info` fails the agent marks the story BLOCKED-DOCKER and emits RALPH_BLOCKED. Phase 3 (US-011..015) = Playwright rehab (programmatic Clerk auth so the suite stops skipping) + four critical-path E2E specs (onboarding, storefront order, consultation/KYC, super-admin) — BLOCKED-NEEDS-AUTH-DECISION pending PRD-207 OQ-1 (Gerard owns the Clerk test-auth approach). App lives in nextjs_space/ (pnpm, Next 14.2.35, Prisma 6.7, Postgres 17, Clerk). Source PRD: docs/PRDS/REMEDIATION/PRD-207-test-strategy-foundation.md. Global rule: integration tests hit a REAL DB via testcontainers, never mocks; tests load .env.test only, NEVER the real .env/Railway secrets; 80% aggregate coverage, 95% on the security-critical module set.",
+  "project": "BudStacks SaaS",
+  "branchName": "ralph/prd-205-tenant-resolution-consolidation",
+  "description": "PRD-205 — Tenant Resolution Consolidation. Collapse the 7 divergent tenant-resolution helpers (lib/tenant.ts x5, lib/resolve-tenant-id.ts, the drgreen webhook route-local resolveTenant) plus the duplicate host derivation in middleware.ts into ONE canonical resolveTenant(input) in lib/tenant-resolver.ts. The canonical resolver RETURNS {tenantId, tenant} | null (never binds the ALS — PRD-202 owns binding), enforces isActive on every kind, returns a typed AmbiguousTenantResolution for multi-tenant email instead of a silent first-row pick, and shares one parseHostToTenantHint with middleware. Every other helper becomes a thin delegator. STACKED on the ralph/prd-202 branch (strict dependency: resolver must return-not-bind).",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Vitest unit harness scaffold (config, setup, .env.test, scripts)",
-      "description": "As a developer, when I run `pnpm test` a Vitest runner executes against the node environment with `@/` aliases resolving, so unit tests can be written for lib/** server code.",
+      "title": "Shared host parser lib/parse-host.ts parseHostToTenantHint(host) (AC-2a)",
+      "description": "As a developer, I want one host-parsing utility that maps a request host to a tenant hint (subdomain | customDomain | null) so middleware.ts and the canonical resolver cannot drift.",
       "acceptanceCriteria": [
-        "Add devDependencies `vitest` and `@vitest/coverage-v8` via pnpm (cd nextjs_space)",
-        "Create nextjs_space/vitest.config.ts: node test environment, `@/` alias mapped to ./ to match tsconfig paths, v8 coverage provider, include lib/** and tests/**",
-        "Create nextjs_space/vitest.setup.ts that loads nextjs_space/.env.test (never the real .env) and registers global hooks",
-        "Create nextjs_space/.env.test with a pinned deterministic test ENCRYPTION_KEY (a throwaway test value matching the key format lib/encryption.ts expects — NOT any real/Railway secret) and NODE_ENV=test",
-        "Add package.json scripts: `test`: `vitest run`, `test:watch`: `vitest`, `test:cov`: `vitest run --coverage`; leave existing test:e2e* scripts unchanged",
-        "Add tests/unit/harness-smoke.test.ts that imports something via the `@/` alias and asserts the test ENCRYPTION_KEY is loaded from .env.test",
-        "`pnpm test` runs and the smoke test passes",
+        "New lib/parse-host.ts exports parseHostToTenantHint(host: string): { kind: 'subdomain'; subdomain: string } | { kind: 'customDomain'; host: string } | null",
+        "Lifts the existing apex / multi-part-TLD handling (OQ-3, commit 6d6a381 / current middleware.ts + getTenantFromRequest logic) — strips port, treats www as no-subdomain, ignores localhost/127.0.0.1, uses NEXT_PUBLIC_BASE_DOMAIN (default budstacks.io) to split slug.<base> subdomains from apex custom domains",
+        "Pure function — no DB, no headers(), no ALS; deterministic for a given host + base domain",
+        "Unit tests (tests/unit/parse-host.test.ts): slug.budstacks.io -> subdomain; apex custom domain -> customDomain; www.budstacks.io -> null; localhost/127.0.0.1 -> null; host:port stripped; base domain itself -> null",
         "Tests pass",
         "Typecheck passes"
       ],
@@ -24,14 +21,15 @@
     },
     {
       "id": "US-002",
-      "title": "Encryption round-trip + tamper unit tests (AC-9)",
-      "description": "As an auditor, I want executing tests proving lib/encryption.ts round-trips and fails closed, guarding the PRD-211 fallback contract.",
+      "title": "Canonical lib/tenant-resolver.ts resolveTenant(input) (AC-1/AC-1a/AC-1b)",
+      "description": "As a developer, I call resolveTenant(input) with a discriminated union of the legitimate sources and get a {tenantId, tenant} | null (or typed ambiguous) back — one rule-set, no ALS side-effect.",
       "acceptanceCriteria": [
-        "Create tests/unit/encryption.test.ts covering encrypt()/decrypt() (lib/encryption.ts:77,98)",
-        "Case: encrypt(x) then decrypt() returns x exactly",
-        "Case: a v2-prefixed ciphertext (4-part v2:iv:authTag:ciphertext) decrypts correctly",
-        "Case: a tampered authTag causes decrypt() to throw, not return garbage",
-        "Case: a plain unencrypted value is NOT silently passed through by decrypt() (fails closed)",
+        "lib/tenant-resolver.ts exports resolveTenant(input) where input is { kind: 'headers' } | { kind: 'host'; host: string; pathname: string } | { kind: 'slug'; slug: string } | { kind: 'clerk'; clerkOrgId: string; email: string }",
+        "Returns Promise<{ tenantId: string; tenant: Tenant } | null>; an email matching >1 active tenant returns a typed AmbiguousTenantResolution (exported) instead of a silent first-row pick (AC-1b)",
+        "isActive: true is enforced on EVERY kind, including the clerk/email fallback (closes the #6 inactive-tenant gap) (AC-1b)",
+        "headers kind reads x-tenant-slug then x-tenant-subdomain then x-tenant-custom-domain (preserving getCurrentTenant precedence); host kind uses parseHostToTenantHint + the /store/{slug} path match; clerk kind prefers the clerkOrgId->settings match over the email fallback",
+        "RETURN-not-bind: the resolver makes ZERO setTenantContext/enterWith calls (AC-1a)",
+        "Unit tests (tests/unit/tenant-resolver.test.ts) with prisma + headers module-mocked: each kind resolves the right tenant; inactive tenant -> null on every kind; ambiguous email -> AmbiguousTenantResolution; a spy proves no setTenantContext call",
         "Tests pass",
         "Typecheck passes"
       ],
@@ -41,13 +39,14 @@
     },
     {
       "id": "US-003",
-      "title": "Dr Green webhook signature + timestamp unit tests (AC-10)",
-      "description": "As an auditor, I want executing tests proving webhook signatures and timestamps are validated, the suite PRD-211 will extend to true HMAC.",
+      "title": "Collapse lib/tenant.ts resolvers to delegators (AC-2)",
+      "description": "As a developer, getCurrentTenant/getCurrentTenantId/requireTenant/getTenantBySlug/getTenantFromRequest keep their signatures but delegate the lookup to the canonical resolver — the bespoke host parsing and any remaining divergence is gone.",
       "acceptanceCriteria": [
-        "Create tests/unit/drgreen-webhook-verify.test.ts covering verifyDrGreenWebhookSignature() and validateWebhookTimestamp() (lib/drgreen-webhook-verify.ts:36,71)",
-        "Case: a valid signature is accepted",
-        "Case: a tampered payload is rejected",
-        "Case: validateWebhookTimestamp rejects a stale (>5 min) timestamp and accepts a fresh one",
+        "getCurrentTenant = cache(async () => (await resolveTenant({ kind: 'headers' }))?.tenant ?? null) — cache() kept (OQ-1); getCurrentTenantId + requireTenant keep delegating to it with identical throw-on-null ergonomics",
+        "getTenantBySlug(slug) delegates to resolveTenant({ kind: 'slug', slug }) (lower-case retry now lives in the canonical resolver)",
+        "getTenantFromRequest(req) delegates to resolveTenant({ kind: 'host', host, pathname }) — its bespoke host/subdomain/customDomain parsing is deleted in favour of the shared util",
+        "All five keep their existing return shapes/signatures; behaviour identical except the closed isActive gap; no setTenantContext import remains in lib/tenant.ts",
+        "Unit tests (tests/unit/tenant-delegators.test.ts) with resolveTenant module-mocked: each delegator forwards the right input kind and unwraps the result correctly (requireTenant throws on null)",
         "Tests pass",
         "Typecheck passes"
       ],
@@ -57,14 +56,14 @@
     },
     {
       "id": "US-004",
-      "title": "API auth wrapper unit tests (AC-11)",
-      "description": "As an auditor, I want executing tests proving the auth wrappers reject unauthenticated and wrong-role callers and pass the resolved tenantId.",
+      "title": "resolveTenantIdFromClerkOrg delegates to canonical; close inactive email fallback (AC-1b/AC-2)",
+      "description": "As an operator, a deactivated tenant must resolve to null even through the Clerk-org / email path. resolveTenantIdFromClerkOrg becomes a thin delegator to resolveTenant({kind:'clerk'}).",
       "acceptanceCriteria": [
-        "Create tests/unit/api-auth.test.ts covering withTenantAuth/withSuperAdmin/withAuth (lib/api-auth.ts:45,118,162)",
-        "Clerk auth is mocked at the module boundary (vi.mock of @clerk/nextjs/server) — this is an auth mock, NOT a database mock",
-        "Case: unauthenticated caller is rejected (401)",
-        "Case: wrong-role caller is rejected (403) — e.g. non-super-admin hitting withSuperAdmin",
-        "Case: authorized caller passes through with the resolved tenantId/user in context",
+        "lib/resolve-tenant-id.ts resolveTenantIdFromClerkOrg(orgId, email) delegates to resolveTenant({ kind: 'clerk', clerkOrgId: orgId, email }) and returns the tenantId (or null)",
+        "The previously-unscoped users.findFirst({where:{email}}) fallback now goes through the canonical resolver's isActive-enforced, ambiguity-aware path (AC-1b) — an inactive tenant no longer resolves via the user relation",
+        "An ambiguous (>1 tenant) email surfaces the typed ambiguous result to the caller rather than a silent first-row id (consumed by PRD-203 as 403)",
+        "Existing return type/signature preserved for current callers",
+        "Unit tests (tests/unit/resolve-tenant-id.test.ts) with resolveTenant mocked: org match returns id; inactive tenant -> null; ambiguous email -> ambiguous (not a silent id)",
         "Tests pass",
         "Typecheck passes"
       ],
@@ -74,15 +73,13 @@
     },
     {
       "id": "US-005",
-      "title": "sanitizeCss unit tests — closes PRD-200 AC-3a",
-      "description": "As a security reviewer, I want executing tests proving lib/css-utils.ts sanitizeCss strips dangerous CSS, closing the last code-side PRD-200 item.",
+      "title": "middleware.ts consumes the shared parseHostToTenantHint (AC-2a)",
+      "description": "As a developer, the host->subdomain->customDomain derivation in middleware.ts must be the SAME code the resolver uses, so they cannot drift.",
       "acceptanceCriteria": [
-        "Create tests/unit/css-utils.test.ts covering sanitizeCss() and extractGoogleFontsImports() (lib/css-utils.ts:7,37)",
-        "Case: sanitizeCss strips <script>, expression(), javascript: urls, and behavior/-moz-binding",
-        "Case: sanitizeCss preserves safe declarations (colors, fonts, spacing) unchanged",
-        "Case: extractGoogleFontsImports returns the @import font URLs from a stylesheet",
-        "Update docs/PRDS/REMEDIATION/PRD-200-critical-security-hardening.md: mark AC-3a [DONE] (sanitizeCss unit tests landed on the PRD-207 harness) and add a changelog row",
-        "Tests pass",
+        "middleware.ts host-derivation block (~:50-100) is replaced by a call to parseHostToTenantHint(host) from lib/parse-host.ts; the x-tenant-subdomain / x-tenant-custom-domain / x-tenant-slug headers it sets are unchanged in name + value",
+        "No second host-parsing implementation remains in middleware.ts",
+        "Behaviour preserved: the same hosts that resolved a subdomain/customDomain before still set the same headers (verified by reasoning + the parse-host unit fixtures)",
+        "Edge runtime compatible — parseHostToTenantHint stays pure (no node-only APIs) so it is importable from middleware",
         "Typecheck passes"
       ],
       "priority": 5,
@@ -91,14 +88,13 @@
     },
     {
       "id": "US-006",
-      "title": "Coverage thresholds (report-only) for the security-critical set (AC-12)",
-      "description": "As a CI gate (future PRD-216), I want coverage thresholds defined so coverage is reported now and can be hard-enforced later.",
+      "title": "Webhook route-local resolveTenant delegates to canonical (AC-2)",
+      "description": "As a developer, the drgreen status webhook's route-local resolveTenant must call the one canonical resolver instead of re-implementing a lookup. Helper swap only — the verify-before-lookup ordering fix is PRD-211, not here.",
       "acceptanceCriteria": [
-        "vitest.config.ts coverage block sets 80% lines/branches aggregate",
-        "vitest.config.ts sets a 95% per-file threshold for the security-critical set: lib/encryption.ts, lib/drgreen-webhook-verify.ts, lib/api-auth.ts, lib/tenant-context.ts, lib/css-utils.ts",
-        "Thresholds are REPORT-ONLY for now (do not fail the build) — documented with a comment referencing PRD-216 for hard enforcement",
-        "`pnpm test:cov` emits a coverage report including the security-critical modules",
-        "Tests pass",
+        "app/api/webhooks/drgreen/status/route.ts route-local resolveTenant(...) is replaced by a call to the canonical resolveTenant (appropriate kind for the webhook payload's tenant hint)",
+        "Lookup ORDER relative to signature verification is left exactly as-is (explicitly noted as PRD-211's job) — this story changes only WHICH resolver is called, not WHEN",
+        "Webhook behaviour for a valid payload is unchanged; isActive is now enforced consistently",
+        "A short comment references PRD-211 for the verify-before-lookup reordering",
         "Typecheck passes"
       ],
       "priority": 6,
@@ -107,130 +103,77 @@
     },
     {
       "id": "US-007",
-      "title": "Testcontainers Postgres harness + withPostgres helper (AC-2)",
-      "description": "As a developer, I want a reusable helper that boots a throwaway Postgres 17 container, applies migrations, and returns a Prisma client for integration tests.",
+      "title": "Document users.email single-tenant assumption + specify PRD-208 migration (AC-3/AC-3a)",
+      "description": "As an auditor, the load-bearing 'resolve by email is safe because email is globally unique' assumption must be written down, and the migration to per-tenant uniqueness specified (not executed).",
       "acceptanceCriteria": [
-        "REQUIRES Docker: run `docker info`; if it fails, do NOT implement — commit a BLOCKED marker and emit RALPH_BLOCKED with reason BLOCKED-DOCKER",
-        "Add devDependency `@testcontainers/postgresql` via pnpm",
-        "Create nextjs_space/vitest.integration.config.ts (node env, longer timeout) and a `test:int` script: `vitest run -c vitest.integration.config.ts`",
-        "Create tests/helpers/with-postgres.ts exposing `withPostgres(async (prisma) => {…})` that boots a postgres:17 container, runs `prisma migrate deploy` against it, returns a PrismaClient, and tears the container down on close",
+        "lib/tenant-resolver.ts carries a clear doc block: the email fallback is only safe while users.email is globally @unique with nullable tenantId (one human cannot exist in two tenants); the ambiguous-result path is what makes the future multi-tenant case safe",
+        "prisma/schema.prisma gets a comment on users.email noting the single-tenant-per-user coupling and pointing to the PRD-208 migration",
+        "The PRD-208 migration is specified in-repo (the resolver doc block or a short scripts/ralph note): drop global @unique, add @@unique([email, tenantId]), backfill existing single rows trivially, Clerk-org-mapping implication — NOT executed in this PRD (no schema change / no migration file)",
+        "No prisma migration is generated and no schema field is altered (comment-only)",
         "Typecheck passes"
       ],
       "priority": 7,
       "passes": false,
-      "notes": "Postgres major MUST be 17 to match production (MEMORY.md). First Docker-dependent story; the budstack dev box currently has NO Docker daemon, so expect BLOCKED-DOCKER until the human starts Docker."
+      "notes": ""
     },
     {
       "id": "US-008",
-      "title": "withPostgres smoke integration test (AC-2)",
-      "description": "As a developer, I want proof the integration harness boots a real DB, applies migrations, and reads a row back.",
+      "title": "Local grep gates + success-metric check (AC-1a/AC-2b)",
+      "description": "As the build agent, I want local checks proving the consolidation actually held: no ALS mutation in the resolver, and no tenant lookups outside the canonical file.",
       "acceptanceCriteria": [
-        "REQUIRES Docker: if `docker info` fails, mark BLOCKED-DOCKER and emit RALPH_BLOCKED",
-        "Create tests/integration/with-postgres.smoke.test.ts: boots the container via withPostgres, asserts a migration table exists, inserts and reads back one row",
-        "`pnpm test:int` runs the smoke test green against the real container",
-        "Tests pass",
+        "A small script scripts/ralph/check-prd-205.sh (or documented grep commands) asserts: zero setTenantContext/.enterWith( calls inside lib/tenant-resolver.ts (AC-1a)",
+        "Asserts zero standalone findFirst({ where: { subdomain ... }}) / customDomain tenant lookups OUTSIDE lib/tenant-resolver.ts in app/ + lib/ (AC-2b) — middleware uses the header hint, not a DB lookup, so it is clean",
+        "Documents the count: distinct tenant-resolution implementations = 1 canonical + thin delegators (success metric)",
+        "The check is the local stand-in for the enforced CI gate, which lives in PRD-216",
+        "Running the check passes (exit 0)",
         "Typecheck passes"
       ],
       "priority": 8,
       "passes": false,
-      "notes": "Depends on US-007. Real DB only — never a mock (global rule). BLOCKED-DOCKER if no daemon."
+      "notes": ""
     },
     {
       "id": "US-009",
-      "title": "Typed seed factories (AC-2b)",
-      "description": "As a test author, I want typed factories with deterministic IDs so integration tests have no inline literal seed rows.",
+      "title": "Integration: tenant-resolver active/inactive + ambiguous (testcontainers) — Docker-gated (AC-1b)",
+      "description": "As an auditor, I want the canonical resolver proven against real Postgres: active resolves, inactive resolves to null on every kind, and a multi-tenant email collision returns the typed ambiguous result.",
       "acceptanceCriteria": [
-        "Create tests/helpers/seed.ts exporting makeTenant(), makeUser(), makeOrder(), makeConsultation() with fixed UUIDs/dates for determinism",
-        "Factories' types match the Prisma schema models",
-        "The US-008 smoke test (or a new one) uses a factory rather than an inline literal row",
+        "tests/integration/tenant-resolver.integration.test.ts seeds an active tenant, an inactive tenant, and a pre-migration multi-tenant email collision; asserts active-only resolution per kind and ambiguous handling against real Postgres (AC-1b)",
+        "Uses the testcontainers Postgres harness (PRD-207 pattern)",
+        "GATE: run 'docker info' first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
+        "Tests pass (when Docker is available)",
         "Typecheck passes"
       ],
       "priority": 9,
       "passes": false,
-      "notes": "Read nextjs_space/prisma/schema.prisma for the exact model fields. Deterministic fixed UUIDs/dates — no Date.now()/random. Factory builders can be authored without Docker, but if validation requires running test:int and Docker is down, mark BLOCKED-DOCKER for the runtime assertion."
+      "notes": ""
     },
     {
       "id": "US-010",
-      "title": "Tenant-isolation concurrency proof (AC-8 / PRD-202 AC-7)",
-      "description": "As Gerard, I want a concurrency test that interleaves requests across tenants and proves zero cross-tenant rows under the tenant-context implementation.",
+      "title": "Integration: resolver-delegators consistent with canonical (testcontainers) — Docker-gated (AC-2)",
+      "description": "As a developer, I want the delegators (getCurrentTenant/getTenantBySlug/getTenantFromRequest/resolveTenantIdFromClerkOrg) proven to return values consistent with the canonical resolver against real Postgres.",
       "acceptanceCriteria": [
-        "REQUIRES Docker: if `docker info` fails, mark BLOCKED-DOCKER and emit RALPH_BLOCKED",
-        "Create tests/integration/tenant-isolation.concurrency.test.ts: interleave N concurrent operations across >=2 tenants and assert zero cross-tenant row bleed",
-        "Test passes under the current runWithTenantContext implementation (lib/tenant-context.ts)",
-        "Tests pass",
+        "tests/integration/resolver-delegators.integration.test.ts asserts each delegator returns the same tenant the canonical resolver returns for the equivalent input (AC-2)",
+        "Uses the testcontainers Postgres harness (PRD-207 pattern)",
+        "GATE: run 'docker info' first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
+        "Tests pass (when Docker is available)",
         "Typecheck passes"
       ],
       "priority": 10,
       "passes": false,
-      "notes": "Landing pad for the PRD-202 red->green proof. lib/tenant-context.ts already exports runWithTenantContext; if PRD-202's fix is not yet merged the test documents current behaviour. BLOCKED-DOCKER if no daemon."
+      "notes": ""
     },
     {
       "id": "US-011",
-      "title": "Playwright rehab — programmatic auth so suite stops skipping (AC-3/AC-3a)",
-      "description": "As a CI gate, I want the Playwright suite to execute (not auto-skip) via a programmatic authenticated storageState and a webServer.",
+      "title": "E2E: inactive-tenant-404 (Playwright) — auth-gated",
+      "description": "As an auditor, I want a deactivated tenant's subdomain AND custom domain to both fail to resolve (no storefront served) from every entry path, in a real browser.",
       "acceptanceCriteria": [
-        "BLOCKED pending OQ-1: the Clerk test-auth approach is Gerard-owned and unresolved — mark BLOCKED-NEEDS-AUTH-DECISION and emit RALPH_BLOCKED rather than guessing",
-        "(When unblocked) Add a Playwright global-setup that establishes an authenticated storageState programmatically (seeded test Clerk user or documented test-auth shim)",
-        "(When unblocked) playwright.config.ts runs against a webServer with a seeded test database",
-        "(When unblocked) tests/admin-design-system.spec.ts executes in CI without a hand-set PLAYWRIGHT_AUTH_STATE",
+        "tests/e2e/inactive-tenant-404.spec.ts drives a deactivated tenant's subdomain and custom domain and asserts no storefront is served from any entry path",
+        "GATE: Clerk test-auth approach is undecided (PRD-207 OQ-1, owner Gerard). Do NOT invent an auth shim -> mark BLOCKED-NEEDS-AUTH-DECISION, emit RALPH_BLOCKED, leave unchecked",
         "Typecheck passes"
       ],
       "priority": 11,
       "passes": false,
-      "notes": "PRD-207 OQ-1 is explicitly Owner: Gerard and unresolved. Do NOT invent a Clerk auth shim autonomously — mark BLOCKED-NEEDS-AUTH-DECISION and stop. All of US-012..015 depend on this."
-    },
-    {
-      "id": "US-012",
-      "title": "E2E: onboarding critical path (AC-4)",
-      "description": "As a tester, I want an E2E proving tenant onboarding provisions a Clerk user, tenant row, S3 template copy, and a resolving storefront.",
-      "acceptanceCriteria": [
-        "BLOCKED-NEEDS-AUTH-DECISION until US-011 lands the programmatic auth",
-        "(When unblocked) tests/e2e/onboarding.spec.ts: create tenant -> Clerk user provisioned -> tenant row + S3 template copy exist -> storefront resolves",
-        "(When unblocked) Asserts the data-driven path: no hardcoded template values (PRD-210 rule)",
-        "Typecheck passes"
-      ],
-      "priority": 12,
-      "passes": false,
-      "notes": "Depends on US-011. Asserts MEMORY.md data-driven-template rule (S3 is source of truth)."
-    },
-    {
-      "id": "US-013",
-      "title": "E2E: storefront order critical path (AC-5)",
-      "description": "As a tester, I want an E2E proving a storefront cart->checkout creates an order scoped to the right tenant.",
-      "acceptanceCriteria": [
-        "BLOCKED-NEEDS-AUTH-DECISION until US-011 lands the programmatic auth",
-        "(When unblocked) tests/e2e/storefront-order.spec.ts: open tenant subdomain storefront -> add to cart -> checkout -> order row created and tenant-scoped",
-        "Typecheck passes"
-      ],
-      "priority": 13,
-      "passes": false,
-      "notes": "Depends on US-011. Subdomain routing per MEMORY.md store URL pattern."
-    },
-    {
-      "id": "US-014",
-      "title": "E2E: consultation / KYC submit, no PHI echo (AC-6)",
-      "description": "As a tester, I want an E2E proving consultation/KYC submit succeeds and no PHI is echoed in the response body.",
-      "acceptanceCriteria": [
-        "BLOCKED-NEEDS-AUTH-DECISION until US-011 lands the programmatic auth",
-        "(When unblocked) tests/e2e/consultation-kyc.spec.ts: complete questionnaire -> submit KYC -> assert success and NO PHI in the response body (cross-ref PRD-215 redaction)",
-        "Typecheck passes"
-      ],
-      "priority": 14,
-      "passes": false,
-      "notes": "Depends on US-011. The no-PHI-echo assertion ties to PRD-215 redaction."
-    },
-    {
-      "id": "US-015",
-      "title": "E2E: super-admin renders real audit data (AC-7)",
-      "description": "As a tester, I want an E2E proving the super-admin audit view renders real data, not mock events.",
-      "acceptanceCriteria": [
-        "BLOCKED-NEEDS-AUTH-DECISION until US-011 lands the programmatic auth",
-        "(When unblocked) tests/e2e/super-admin.spec.ts: log in as SUPER_ADMIN -> list tenants -> open audit logs -> assert real audit data (not generateMockEvents)",
-        "Typecheck passes"
-      ],
-      "priority": 15,
-      "passes": false,
-      "notes": "Depends on US-011. This E2E is what proves PRD-209's mock-data removal."
+      "notes": ""
     }
   ]
 }

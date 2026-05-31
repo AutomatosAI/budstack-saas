@@ -3,6 +3,7 @@ import { Footer } from "@/components/footer";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
 import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/lib/tenant";
+import { runWithTenantContextAsync } from "@/lib/tenant-context";
 import { getFileUrl } from "@/lib/s3";
 import { notFound } from "next/navigation";
 import { readFile } from "fs/promises";
@@ -81,13 +82,29 @@ export default async function TenantStoreLayout({
   children: React.ReactNode;
   params: { slug: string };
 }) {
+  // PRD-202 AC-5 pilot: resolve the tenant first (a NON-tenant-scoped lookup),
+  // then run the entire data-loading + render inside one explicit
+  // runWithTenantContextAsync scope. Every tenant-scoped Prisma read below
+  // therefore executes under the correct, confined context — never relying on a
+  // resolver's enterWith side-effect (removed in US-008/009) and never able to
+  // leak into a concurrent request's continuation (the bug this PRD fixes).
   const tenant = await getCurrentTenant();
 
   if (!tenant) {
     notFound();
   }
 
-  const tenantWithTemplate = await getTenantWithTemplate(tenant.id);
+  return runWithTenantContextAsync(tenant.id, () =>
+    renderTenantStore(tenant.id, params, children),
+  );
+}
+
+async function renderTenantStore(
+  tenantId: string,
+  params: { slug: string },
+  children: React.ReactNode,
+) {
+  const tenantWithTemplate = await getTenantWithTemplate(tenantId);
 
   if (!tenantWithTemplate) {
     notFound();

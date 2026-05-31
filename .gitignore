@@ -9,8 +9,7 @@ env.*
 !.env.example
 !.env.production.example
 !env.example
-# .env.test holds ONLY throwaway deterministic test values (PRD-207 harness) — safe to commit.
-!.env.test
+# Throwaway deterministic test env (no real secrets) — committed for the vitest harness.
 !**/.env.test
 
 # Dependencies

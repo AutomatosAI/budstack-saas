@@ -486,13 +486,44 @@ model marketplace_submissions {
   @@index([status])
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PRD-205 / PRD-208 — users.email SINGLE-TENANT ASSUMPTION (load-bearing).
+//
+// `email @unique` is GLOBAL and `tenantId` is nullable, so a given human can exist
+// in AT MOST ONE tenant. lib/tenant-resolver.ts's Clerk/email fallback is only
+// UNAMBIGUOUS because of this constraint — resolving a tenant by email alone is safe
+// only while one email => one tenant. (The resolver still returns a typed
+// AmbiguousTenantResolution for >1 active match so it stays correct after the change
+// below; today that path is simply unreachable.)
+//
+// PRD-208 MIGRATION SPEC (specified here, NOT executed in PRD-205 — no schema change
+// in this PRD):
+//   GOAL: per-tenant user uniqueness — replace the global `email @unique` with a
+//         composite `@@unique([email, tenantId])` so the same email can onboard into
+//         multiple tenants (one users row per tenant).
+//   SCHEMA: drop `@unique` on `email`; add `@@unique([email, tenantId])` to this model.
+//   DATA BACKFILL (do BEFORE adding the composite constraint):
+//     - Postgres treats NULLs as DISTINCT in a unique index, so `@@unique([email,
+//       tenantId])` would NOT prevent duplicate emails among rows with tenantId = NULL.
+//       Decide null policy: either backfill every users.tenantId to a non-null tenant,
+//       or keep platform/super-admin users null AND add a partial unique index
+//       `CREATE UNIQUE INDEX ... ON users(email) WHERE tenantId IS NULL` to keep
+//       platform-level emails globally unique.
+//     - Detect & resolve existing (email) collisions before the cutover (there are none
+//       today because of the global unique, but the migration must assert it).
+//   CLERK MAPPING: post-migration one Clerk identity (one email) may legitimately map to
+//     >1 tenant; lib/tenant-resolver.ts's email fallback then returns
+//     AmbiguousTenantResolution, which PRD-203's getCurrentUser surfaces as a 403. The
+//     active Clerk org (settings.clerkOrgId) becomes the disambiguator, so the clerk-org
+//     branch MUST be preferred over the email branch (already the case in the resolver).
+// ─────────────────────────────────────────────────────────────────────────────
 model users {
   id                  String                    @id
-  email               String                    @unique
+  email               String                    @unique // PRD-208: -> @@unique([email, tenantId]); see note above
   password            String
   name                String?
   role                Role                      @default(PATIENT)
-  tenantId            String?
+  tenantId            String?                   // PRD-208 backfill target; nullable today => global-unique email is load-bearing
   drGreenClientId     String?
   createdAt           DateTime                  @default(now())
   updatedAt           DateTime
