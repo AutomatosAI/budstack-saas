@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import {
@@ -7,10 +8,26 @@ import {
   EMAIL_HTML_MAX_LENGTH,
   EMAIL_SUBJECT_MAX_LENGTH,
 } from "@/lib/email-sanitize";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
 
 const TEMPLATE_NAME_MAX = 200;
 const TEMPLATE_DESCRIPTION_MAX = 1000;
 const TEMPLATE_CATEGORY_MAX = 100;
+
+// Strip-mode (not .strict()): the handler already slices/sanitizes every field
+// and tolerated unknown keys before this sweep; contentHtml/subject keep their
+// dedicated length checks (with precise messages), so Zod only bounds types and
+// caps metadata fields. maxBytes is raised so a max-size (200K-char) contentHtml
+// is not rejected by the 256KB default once JSON-escaped.
+const emailTemplateCreateSchema = z.object({
+  name: z.string().max(1000).optional(),
+  subject: z.string().optional(),
+  contentHtml: z.string().optional(),
+  description: z.string().max(5000).optional(),
+  category: z.string().max(1000).optional(),
+  sourceTemplateId: z.string().max(200).optional(),
+});
 
 export async function GET(req: NextRequest) {
   try {
@@ -68,7 +85,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
     }
 
-    const body = await req.json();
+    const body = await parseJsonBody(req, emailTemplateCreateSchema, {
+      maxBytes: 512 * 1024,
+    });
     const {
       name,
       subject,
@@ -150,10 +169,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(newTemplate);
   } catch (error) {
-    console.error("Error creating template:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "POST /api/tenant-admin/email-templates" });
   }
 }

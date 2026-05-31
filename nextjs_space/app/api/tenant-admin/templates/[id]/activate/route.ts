@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export async function PATCH(
   request: NextRequest,
@@ -25,8 +26,7 @@ export async function PATCH(
       return NextResponse.json({ error: "No tenant found" }, { status: 400 });
     }
 
-    const { id } = await params;
-    const templateId = id;
+    const templateId = parseUuid((await params).id);
 
     // 3. Verify template belongs to tenant
     const template = await prisma.tenant_templates.findFirst({

@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import crypto from "crypto";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const orderBulkSchema = z
+  .object({
+    action: z.enum(["mark-processing", "mark-completed"]),
+    orderIds: z.array(z.string().min(1).max(200)).min(1).max(1000),
+  })
+  .strict();
 
 /**
  * POST /api/tenant-admin/orders/bulk
@@ -53,26 +63,7 @@ export async function POST(request: NextRequest) {
 
     const tenantId = localUser.tenantId;
 
-    const body = await request.json();
-    const { action, orderIds } = body;
-
-    // Validate request - only allow mark-processing and mark-completed (no bulk cancel)
-    if (!action || !["mark-processing", "mark-completed"].includes(action)) {
-      return NextResponse.json(
-        {
-          error:
-            'Invalid action. Must be "mark-processing" or "mark-completed". Bulk cancellation is not allowed.',
-        },
-        { status: 400 },
-      );
-    }
-
-    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
-      return NextResponse.json(
-        { error: "No order IDs provided." },
-        { status: 400 },
-      );
-    }
+    const { action, orderIds } = await parseJsonBody(request, orderBulkSchema);
 
     // Get orders to update (ensure they belong to this tenant)
     const ordersToUpdate = await prisma.orders.findMany({
@@ -151,10 +142,6 @@ export async function POST(request: NextRequest) {
       action,
     });
   } catch (error) {
-    console.error("[POST /api/tenant-admin/orders/bulk] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "POST /api/tenant-admin/orders/bulk" });
   }
 }

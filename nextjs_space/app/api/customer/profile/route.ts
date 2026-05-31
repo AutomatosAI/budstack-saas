@@ -1,6 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/validation/body";
+import { apiError } from "@/lib/api-error";
+
+/**
+ * Validated, length-capped shape for the customer profile PATCH body
+ * (PRD-204 AC-3). All fields optional (partial update); unknown keys rejected.
+ */
+const profileUpdateSchema = z
+  .object({
+    firstName: z.string().max(100),
+    lastName: z.string().max(100),
+    phone: z.string().max(32).regex(/^[0-9+()\-.\s]*$/, "Invalid phone number"),
+    address: z
+      .object({
+        street: z.string().max(200),
+        city: z.string().max(120),
+        state: z.string().max(120),
+        zip: z.string().max(20),
+        country: z.string().max(120),
+      })
+      .partial()
+      .strict(),
+  })
+  .partial()
+  .strict();
 
 /**
  * GET /api/customer/profile
@@ -72,8 +98,10 @@ export async function PATCH(request: NextRequest) {
 
     const email = clerkUser.emailAddresses[0]?.emailAddress;
 
-    const body = await request.json();
-    const { firstName, lastName, phone, address } = body;
+    const { firstName, lastName, phone, address } = await parseJsonBody(
+      request,
+      profileUpdateSchema,
+    );
 
     // Find user by email first to get ID
     const existingUser = await prisma.users.findFirst({
@@ -113,10 +141,6 @@ export async function PATCH(request: NextRequest) {
       profile: updatedUser,
     });
   } catch (error) {
-    console.error("[PATCH /api/customer/profile] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PATCH /api/customer/profile" });
   }
 }

@@ -3,12 +3,18 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { ApiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
 import {
   sanitizeEmailHtml,
   sanitizeEmailSubject,
   EMAIL_HTML_MAX_LENGTH,
   EMAIL_SUBJECT_MAX_LENGTH,
 } from "@/lib/email-sanitize";
+
+// Email HTML can approach EMAIL_HTML_MAX_LENGTH (200k) chars; once JSON-escaped
+// the body exceeds the 256KB default, so lift the parse cap to 512KB.
+const EMAIL_BODY_MAX_BYTES = 512 * 1024;
 
 const updateTemplateSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
@@ -21,8 +27,9 @@ const updateTemplateSchema = z.object({
 });
 
 export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
+  const id = parseUuid(params.id);
   const template = await prisma.email_templates.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (!template) {
@@ -33,10 +40,7 @@ export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
 });
 
 export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
-  const parsed = updateTemplateSchema.safeParse(await req.json());
-  if (!parsed.success) {
-    throw new ApiError("Invalid email template payload", 400);
-  }
+  const id = parseUuid(params.id);
   const {
     name,
     subject,
@@ -45,10 +49,12 @@ export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
     category,
     isSystem,
     isActive,
-  } = parsed.data;
+  } = await parseJsonBody(req, updateTemplateSchema, {
+    maxBytes: EMAIL_BODY_MAX_BYTES,
+  });
 
   const updated = await prisma.email_templates.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       name,
       subject: subject !== undefined ? sanitizeEmailSubject(subject) : undefined,
@@ -66,8 +72,9 @@ export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
 });
 
 export const DELETE = withSuperAdminParams(async (_req, _ctx, params) => {
+  const id = parseUuid(params.id);
   await prisma.email_templates.delete({
-    where: { id: params.id },
+    where: { id },
   });
 
   return NextResponse.json({ success: true });

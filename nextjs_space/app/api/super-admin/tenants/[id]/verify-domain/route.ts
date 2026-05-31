@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { promises as dns } from "dns";
 import { isApexDomain } from "@/lib/domain-utils";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 type VerificationStatus = "verified" | "pending" | "misconfigured";
 
@@ -24,8 +26,10 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const id = parseUuid(params.id);
+
     const tenant = await prisma.tenants.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         customDomain: true,
@@ -129,7 +133,7 @@ export async function GET(
     const existingSettings =
       (tenant.settings as Record<string, unknown>) || {};
     await prisma.tenants.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         settings: {
           ...existingSettings,
@@ -145,10 +149,6 @@ export async function GET(
       ...verification,
     });
   } catch (error) {
-    console.error("Error verifying domain:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/super-admin/tenants/[id]/verify-domain" });
   }
 }

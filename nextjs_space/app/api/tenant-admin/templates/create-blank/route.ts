@@ -16,6 +16,14 @@ import {
   BLANK_STYLES_CSS,
 } from "@/lib/blank-template-defaults";
 import crypto from "crypto";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const createBlankSchema = z
+  .object({
+    templateName: z.string().min(1).max(200),
+  })
+  .strict();
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,10 +45,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Validate template name
-    const body = await request.json();
-    const { templateName } = body;
+    const { templateName } = await parseJsonBody(request, createBlankSchema);
 
-    if (!templateName || !templateName.trim()) {
+    if (!templateName.trim()) {
       return NextResponse.json(
         { error: "Template name is required" },
         { status: 400 },

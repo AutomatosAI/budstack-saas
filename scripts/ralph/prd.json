@@ -1,19 +1,19 @@
 {
-  "project": "BudStacks SaaS",
-  "branchName": "ralph/prd-205-tenant-resolution-consolidation",
-  "description": "PRD-205 — Tenant Resolution Consolidation. Collapse the 7 divergent tenant-resolution helpers (lib/tenant.ts x5, lib/resolve-tenant-id.ts, the drgreen webhook route-local resolveTenant) plus the duplicate host derivation in middleware.ts into ONE canonical resolveTenant(input) in lib/tenant-resolver.ts. The canonical resolver RETURNS {tenantId, tenant} | null (never binds the ALS — PRD-202 owns binding), enforces isActive on every kind, returns a typed AmbiguousTenantResolution for multi-tenant email instead of a silent first-row pick, and shares one parseHostToTenantHint with middleware. Every other helper becomes a thin delegator. STACKED on the ralph/prd-202 branch (strict dependency: resolver must return-not-bind).",
+  "project": "BudStack SaaS",
+  "branchName": "ralph/prd-204-input-validation-sweep",
+  "description": "PRD-204 Input Validation Sweep — guard raw path-param ids into Prisma (parseUuid/parseSlug across ~41 dynamic routes), fix deepMerge prototype pollution, add a body-size-cap JSON helper, validate the customer/profile PATCH and super-admin tenant settings blob with Zod, and roll Zod onto remaining body routes.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Shared host parser lib/parse-host.ts parseHostToTenantHint(host) (AC-2a)",
-      "description": "As a developer, I want one host-parsing utility that maps a request host to a tenant hint (subdomain | customDomain | null) so middleware.ts and the canonical resolver cannot drift.",
+      "title": "parseUuid + parseSlug validation helpers",
+      "description": "As a developer, I need shared helpers that reject malformed path params at the boundary so raw ids never reach Prisma.",
       "acceptanceCriteria": [
-        "New lib/parse-host.ts exports parseHostToTenantHint(host: string): { kind: 'subdomain'; subdomain: string } | { kind: 'customDomain'; host: string } | null",
-        "Lifts the existing apex / multi-part-TLD handling (OQ-3, commit 6d6a381 / current middleware.ts + getTenantFromRequest logic) — strips port, treats www as no-subdomain, ignores localhost/127.0.0.1, uses NEXT_PUBLIC_BASE_DOMAIN (default budstacks.io) to split slug.<base> subdomains from apex custom domains",
-        "Pure function — no DB, no headers(), no ALS; deterministic for a given host + base domain",
-        "Unit tests (tests/unit/parse-host.test.ts): slug.budstacks.io -> subdomain; apex custom domain -> customDomain; www.budstacks.io -> null; localhost/127.0.0.1 -> null; host:port stripped; base domain itself -> null",
-        "Tests pass",
-        "Typecheck passes"
+        "Create lib/validation/parse-uuid.ts exporting parseUuid(value: string): string and parseSlug(value: string): string",
+        "parseUuid: trim, test against lenient UUID regex /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; on mismatch throw new ApiError('Invalid request', 400)",
+        "parseSlug: trim, lowercase-validate against /^[a-z0-9][a-z0-9-]{0,62}$/; on mismatch throw new ApiError('Invalid request', 400); return the trimmed value",
+        "Both reject empty/whitespace input with ApiError 400",
+        "tsc --noEmit passes",
+        "pnpm build passes"
       ],
       "priority": 1,
       "passes": false,
@@ -21,17 +21,14 @@
     },
     {
       "id": "US-002",
-      "title": "Canonical lib/tenant-resolver.ts resolveTenant(input) (AC-1/AC-1a/AC-1b)",
-      "description": "As a developer, I call resolveTenant(input) with a discriminated union of the legitimate sources and get a {tenantId, tenant} | null (or typed ambiguous) back — one rule-set, no ALS side-effect.",
+      "title": "Fix deepMerge prototype pollution",
+      "description": "As a developer, I need deepMerge to ignore __proto__/constructor/prototype keys so a JSON.parse'd payload cannot pollute Object.prototype.",
       "acceptanceCriteria": [
-        "lib/tenant-resolver.ts exports resolveTenant(input) where input is { kind: 'headers' } | { kind: 'host'; host: string; pathname: string } | { kind: 'slug'; slug: string } | { kind: 'clerk'; clerkOrgId: string; email: string }",
-        "Returns Promise<{ tenantId: string; tenant: Tenant } | null>; an email matching >1 active tenant returns a typed AmbiguousTenantResolution (exported) instead of a silent first-row pick (AC-1b)",
-        "isActive: true is enforced on EVERY kind, including the clerk/email fallback (closes the #6 inactive-tenant gap) (AC-1b)",
-        "headers kind reads x-tenant-slug then x-tenant-subdomain then x-tenant-custom-domain (preserving getCurrentTenant precedence); host kind uses parseHostToTenantHint + the /store/{slug} path match; clerk kind prefers the clerkOrgId->settings match over the email fallback",
-        "RETURN-not-bind: the resolver makes ZERO setTenantContext/enterWith calls (AC-1a)",
-        "Unit tests (tests/unit/tenant-resolver.test.ts) with prisma + headers module-mocked: each kind resolves the right tenant; inactive tenant -> null on every kind; ambiguous email -> AmbiguousTenantResolution; a spy proves no setTenantContext call",
-        "Tests pass",
-        "Typecheck passes"
+        "Add const DANGEROUS_KEYS = new Set(['__proto__','constructor','prototype']) in lib/utils.ts",
+        "Skip dangerous keys (continue) as the first check inside the Object.keys loop, at every recursion level",
+        "Preserve existing semantics: override wins unless undefined/null/empty-string; arrays replace wholesale; plain objects deep-merge",
+        "tsc --noEmit passes",
+        "pnpm build passes"
       ],
       "priority": 2,
       "passes": false,
@@ -39,16 +36,15 @@
     },
     {
       "id": "US-003",
-      "title": "Collapse lib/tenant.ts resolvers to delegators (AC-2)",
-      "description": "As a developer, getCurrentTenant/getCurrentTenantId/requireTenant/getTenantBySlug/getTenantFromRequest keep their signatures but delegate the lookup to the canonical resolver — the bespoke host parsing and any remaining divergence is gone.",
+      "title": "parseJsonBody body-size-cap helper",
+      "description": "As a developer, I need a JSON body parser that enforces a size cap and optional Zod schema so large or malformed payloads are rejected uniformly.",
       "acceptanceCriteria": [
-        "getCurrentTenant = cache(async () => (await resolveTenant({ kind: 'headers' }))?.tenant ?? null) — cache() kept (OQ-1); getCurrentTenantId + requireTenant keep delegating to it with identical throw-on-null ergonomics",
-        "getTenantBySlug(slug) delegates to resolveTenant({ kind: 'slug', slug }) (lower-case retry now lives in the canonical resolver)",
-        "getTenantFromRequest(req) delegates to resolveTenant({ kind: 'host', host, pathname }) — its bespoke host/subdomain/customDomain parsing is deleted in favour of the shared util",
-        "All five keep their existing return shapes/signatures; behaviour identical except the closed isActive gap; no setTenantContext import remains in lib/tenant.ts",
-        "Unit tests (tests/unit/tenant-delegators.test.ts) with resolveTenant module-mocked: each delegator forwards the right input kind and unwraps the result correctly (requireTenant throws on null)",
-        "Tests pass",
-        "Typecheck passes"
+        "Create lib/validation/body.ts exporting async parseJsonBody<T>(req: Request, schema?: ZodSchema<T>, opts?: { maxBytes?: number })",
+        "Default maxBytes 256*1024; read raw text, if byte length exceeds cap throw new ApiError('Request body too large', 413)",
+        "Invalid JSON throws new ApiError('Invalid request', 400)",
+        "If schema provided, run schema.parse and translate ZodError to new ApiError('Invalid request', 400)",
+        "tsc --noEmit passes",
+        "pnpm build passes"
       ],
       "priority": 3,
       "passes": false,
@@ -56,16 +52,15 @@
     },
     {
       "id": "US-004",
-      "title": "resolveTenantIdFromClerkOrg delegates to canonical; close inactive email fallback (AC-1b/AC-2)",
-      "description": "As an operator, a deactivated tenant must resolve to null even through the Clerk-org / email path. resolveTenantIdFromClerkOrg becomes a thin delegator to resolveTenant({kind:'clerk'}).",
+      "title": "Strict tenant-settings schema + wire super-admin tenants/[id]",
+      "description": "As a security engineer, I need the super-admin tenant settings blob validated against a strict allow-list schema (exported for PRD-208) and the route id parsed as a UUID.",
       "acceptanceCriteria": [
-        "lib/resolve-tenant-id.ts resolveTenantIdFromClerkOrg(orgId, email) delegates to resolveTenant({ kind: 'clerk', clerkOrgId: orgId, email }) and returns the tenantId (or null)",
-        "The previously-unscoped users.findFirst({where:{email}}) fallback now goes through the canonical resolver's isActive-enforced, ambiguity-aware path (AC-1b) — an inactive tenant no longer resolves via the user relation",
-        "An ambiguous (>1 tenant) email surfaces the typed ambiguous result to the caller rather than a silent first-row id (consumed by PRD-203 as 403)",
-        "Existing return type/signature preserved for current callers",
-        "Unit tests (tests/unit/resolve-tenant-id.test.ts) with resolveTenant mocked: org match returns id; inactive tenant -> null; ambiguous email -> ambiguous (not a silent id)",
-        "Tests pass",
-        "Typecheck passes"
+        "Enumerate ALL legitimate tenant settings keys by grepping settings.* / settings?.[ access across app + lib (clerkOrgId, railwayDomainId, domain metadata, tenant-admin settings keys)",
+        "Create lib/validation/tenant-settings.ts exporting tenantSettingsSchema (z.object({...known optional}).strict()) and type TenantSettings",
+        "super-admin/tenants/[id] PATCH: parseUuid(params.id); validate caller-supplied settings with tenantSettingsSchema.partial() before the merge; unknown keys rejected with 400",
+        "No legitimate save key omitted from the schema (verify by enumeration, since no DB locally)",
+        "tsc --noEmit passes",
+        "pnpm build passes"
       ],
       "priority": 4,
       "passes": false,
@@ -73,14 +68,14 @@
     },
     {
       "id": "US-005",
-      "title": "middleware.ts consumes the shared parseHostToTenantHint (AC-2a)",
-      "description": "As a developer, the host->subdomain->customDomain derivation in middleware.ts must be the SAME code the resolver uses, so they cannot drift.",
+      "title": "Validate customer/profile PATCH with Zod + caps",
+      "description": "As a security engineer, I need the customer profile update body validated and length-capped so unvalidated free-form data never reaches Prisma.",
       "acceptanceCriteria": [
-        "middleware.ts host-derivation block (~:50-100) is replaced by a call to parseHostToTenantHint(host) from lib/parse-host.ts; the x-tenant-subdomain / x-tenant-custom-domain / x-tenant-slug headers it sets are unchanged in name + value",
-        "No second host-parsing implementation remains in middleware.ts",
-        "Behaviour preserved: the same hosts that resolved a subdomain/customDomain before still set the same headers (verified by reasoning + the parse-host unit fixtures)",
-        "Edge runtime compatible — parseHostToTenantHint stays pure (no node-only APIs) so it is importable from middleware",
-        "Typecheck passes"
+        "Zod schema: firstName/lastName optional string max 100; phone optional string max 32 matching a permissive phone pattern; address optional typed object (street/city/state/zip/country strings, each capped)",
+        "PATCH uses parseJsonBody(request, schema) and returns apiValidationError on invalid input (not a generic 500)",
+        "Only validated fields written to Prisma; existing name-backfill behaviour preserved",
+        "tsc --noEmit passes",
+        "pnpm build passes"
       ],
       "priority": 5,
       "passes": false,
@@ -88,14 +83,14 @@
     },
     {
       "id": "US-006",
-      "title": "Webhook route-local resolveTenant delegates to canonical (AC-2)",
-      "description": "As a developer, the drgreen status webhook's route-local resolveTenant must call the one canonical resolver instead of re-implementing a lookup. Helper swap only — the verify-before-lookup ordering fix is PRD-211, not here.",
+      "title": "parseSlug/parseUuid rollout: store/[slug]/* (9 files)",
+      "description": "As a security engineer, I need every store storefront route to validate its slug (and orderId) before DB lookups.",
       "acceptanceCriteria": [
-        "app/api/webhooks/drgreen/status/route.ts route-local resolveTenant(...) is replaced by a call to the canonical resolveTenant (appropriate kind for the webhook payload's tenant hint)",
-        "Lookup ORDER relative to signature verification is left exactly as-is (explicitly noted as PRD-211's job) — this story changes only WHICH resolver is called, not WHEN",
-        "Webhook behaviour for a valid payload is unchanged; isActive is now enforced consistently",
-        "A short comment references PRD-211 for the verify-before-lookup reordering",
-        "Typecheck passes"
+        "All 9 store/[slug] route files call parseSlug(params.slug) before any DB use: cart/{add,clear,remove,route}, orders/{route,submit}, orders/[orderId]/route, products/{route,featured}",
+        "store/[slug]/orders/[orderId]/route also calls parseUuid(params.orderId)",
+        "Bare catch blocks in touched files swapped to return apiError(error, { route }) so the 400 propagates instead of becoming 500",
+        "tsc --noEmit passes",
+        "pnpm build passes"
       ],
       "priority": 6,
       "passes": false,
@@ -103,14 +98,13 @@
     },
     {
       "id": "US-007",
-      "title": "Document users.email single-tenant assumption + specify PRD-208 migration (AC-3/AC-3a)",
-      "description": "As an auditor, the load-bearing 'resolve by email is safe because email is globally unique' assumption must be written down, and the migration to per-tenant uniqueness specified (not executed).",
+      "title": "parseSlug rollout: tenant/[slug] + tenant/conditions/[slug]",
+      "description": "As a security engineer, I need the tenant lookup routes to validate their slug param.",
       "acceptanceCriteria": [
-        "lib/tenant-resolver.ts carries a clear doc block: the email fallback is only safe while users.email is globally @unique with nullable tenantId (one human cannot exist in two tenants); the ambiguous-result path is what makes the future multi-tenant case safe",
-        "prisma/schema.prisma gets a comment on users.email noting the single-tenant-per-user coupling and pointing to the PRD-208 migration",
-        "The PRD-208 migration is specified in-repo (the resolver doc block or a short scripts/ralph note): drop global @unique, add @@unique([email, tenantId]), backfill existing single rows trivially, Clerk-org-mapping implication — NOT executed in this PRD (no schema change / no migration file)",
-        "No prisma migration is generated and no schema field is altered (comment-only)",
-        "Typecheck passes"
+        "tenant/[slug]/route and tenant/conditions/[slug]/route call parseSlug(params.slug) before DB use",
+        "Bare catch blocks swapped to apiError(error, { route })",
+        "tsc --noEmit passes",
+        "pnpm build passes"
       ],
       "priority": 7,
       "passes": false,
@@ -118,15 +112,14 @@
     },
     {
       "id": "US-008",
-      "title": "Local grep gates + success-metric check (AC-1a/AC-2b)",
-      "description": "As the build agent, I want local checks proving the consolidation actually held: no ALS mutation in the resolver, and no tenant lookups outside the canonical file.",
+      "title": "parseUuid rollout: super-admin [id] routes (13 files)",
+      "description": "As a security engineer, I need every super-admin dynamic route to validate its id param (excluding tenants/[id]/route.ts handled in US-004).",
       "acceptanceCriteria": [
-        "A small script scripts/ralph/check-prd-205.sh (or documented grep commands) asserts: zero setTenantContext/.enterWith( calls inside lib/tenant-resolver.ts (AC-1a)",
-        "Asserts zero standalone findFirst({ where: { subdomain ... }}) / customDomain tenant lookups OUTSIDE lib/tenant-resolver.ts in app/ + lib/ (AC-2b) — middleware uses the header hint, not a DB lookup, so it is clean",
-        "Documents the count: distinct tenant-resolution implementations = 1 canonical + thin delegators (success metric)",
-        "The check is the local stand-in for the enforced CI gate, which lives in PRD-216",
-        "Running the check passes (exit 0)",
-        "Typecheck passes"
+        "All super-admin [id] route files call parseUuid(params.id): email-templates/[id]; submissions/[id]/{approve,edit,reject,request-changes,route}; templates/[id]/{branding,detach,route,update-from-github}; tenants/[id]/{drgreen-keys,toggle-active,verify-domain}",
+        "Excludes tenants/[id]/route.ts (already done in US-004)",
+        "Bare catch blocks swapped to apiError(error, { route })",
+        "tsc --noEmit passes",
+        "pnpm build passes"
       ],
       "priority": 8,
       "passes": false,
@@ -134,14 +127,14 @@
     },
     {
       "id": "US-009",
-      "title": "Integration: tenant-resolver active/inactive + ambiguous (testcontainers) — Docker-gated (AC-1b)",
-      "description": "As an auditor, I want the canonical resolver proven against real Postgres: active resolves, inactive resolves to null on every kind, and a multi-tenant email collision returns the typed ambiguous result.",
+      "title": "parseUuid rollout: tenant-admin [id] routes (16 files)",
+      "description": "As a security engineer, I need every tenant-admin dynamic route to validate its id param before DB use or string interpolation.",
       "acceptanceCriteria": [
-        "tests/integration/tenant-resolver.integration.test.ts seeds an active tenant, an inactive tenant, and a pre-migration multi-tenant email collision; asserts active-only resolution per kind and ambiguous handling against real Postgres (AC-1b)",
-        "Uses the testcontainers Postgres harness (PRD-207 pattern)",
-        "GATE: run 'docker info' first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
-        "Tests pass (when Docker is available)",
-        "Typecheck passes"
+        "All tenant-admin [id] route files call parseUuid(params.id): customers/[id]; email-templates/[id]; my-templates/[id]; orders/[id]/{admin-notes,route}; posts/[id]; seo/posts/[id]; seo/products/[id]; templates/[id]/{activate,preview-image,resubmit,submit-to-marketplace,update-from-github,withdraw-submission}; webhooks/[id]/{deliveries,route}",
+        "customers/[id] interpolation into deleted-${id}@deleted.com is now guarded by parseUuid",
+        "Bare catch blocks swapped to apiError(error, { route })",
+        "tsc --noEmit passes",
+        "pnpm build passes"
       ],
       "priority": 9,
       "passes": false,
@@ -149,14 +142,13 @@
     },
     {
       "id": "US-010",
-      "title": "Integration: resolver-delegators consistent with canonical (testcontainers) — Docker-gated (AC-2)",
-      "description": "As a developer, I want the delegators (getCurrentTenant/getTenantBySlug/getTenantFromRequest/resolveTenantIdFromClerkOrg) proven to return values consistent with the canonical resolver against real Postgres.",
+      "title": "Zod + parseJsonBody on public store body routes",
+      "description": "As a security engineer, I need the highest-risk public storefront write routes to validate and size-cap their bodies.",
       "acceptanceCriteria": [
-        "tests/integration/resolver-delegators.integration.test.ts asserts each delegator returns the same tenant the canonical resolver returns for the equivalent input (AC-2)",
-        "Uses the testcontainers Postgres harness (PRD-207 pattern)",
-        "GATE: run 'docker info' first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
-        "Tests pass (when Docker is available)",
-        "Typecheck passes"
+        "store/[slug]/cart/add, cart/remove, orders/submit each define a Zod schema and parse the body via parseJsonBody(request, schema)",
+        "Numeric quantities bounded (min 1, sane max); ids in body validated; invalid input returns 400 via apiValidationError",
+        "tsc --noEmit passes",
+        "pnpm build passes"
       ],
       "priority": 10,
       "passes": false,
@@ -164,14 +156,30 @@
     },
     {
       "id": "US-011",
-      "title": "E2E: inactive-tenant-404 (Playwright) — auth-gated",
-      "description": "As an auditor, I want a deactivated tenant's subdomain AND custom domain to both fail to resolve (no storefront served) from every entry path, in a real browser.",
+      "title": "Zod + parseJsonBody on tenant-admin write routes",
+      "description": "As a security engineer, I need tenant-admin create/update routes to validate and size-cap their JSON bodies.",
       "acceptanceCriteria": [
-        "tests/e2e/inactive-tenant-404.spec.ts drives a deactivated tenant's subdomain and custom domain and asserts no storefront is served from any entry path",
-        "GATE: Clerk test-auth approach is undecided (PRD-207 OQ-1, owner Gerard). Do NOT invent an auth shim -> mark BLOCKED-NEEDS-AUTH-DECISION, emit RALPH_BLOCKED, leave unchecked",
-        "Typecheck passes"
+        "Tenant-admin write handlers (posts, seo, email-templates, webhooks, orders admin-notes, customers) parse bodies via parseJsonBody with a Zod schema",
+        "Each schema caps string lengths and rejects unknown top-level fields where practical",
+        "Invalid input returns 400 via apiValidationError; no bare 500 swallow on validation failure",
+        "tsc --noEmit passes",
+        "pnpm build passes"
       ],
       "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Zod + parseJsonBody on super-admin write routes + uploads guard (final)",
+      "description": "As a security engineer, I need the remaining super-admin write routes validated and confirmation that upload routes keep magic-byte + max-file-size checks. Final story.",
+      "acceptanceCriteria": [
+        "Remaining super-admin write handlers (submissions edit/approve/reject/request-changes, templates branding/update-from-github, tenants verify-domain/drgreen-keys, onboarding) parse bodies via parseJsonBody with a Zod schema",
+        "Verify upload routes still enforce magic-byte validation + max file size (AC-6a) — leave intact, do not regress",
+        "tsc --noEmit passes",
+        "pnpm build passes"
+      ],
+      "priority": 12,
       "passes": false,
       "notes": ""
     }

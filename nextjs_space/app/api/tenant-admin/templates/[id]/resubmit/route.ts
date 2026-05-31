@@ -5,6 +5,7 @@ import { updateFromGitHub } from "@/lib/tenant-template-upload-service";
 import { resubmitToMarketplace } from "@/lib/marketplace-submission-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export async function POST(
   request: NextRequest,
@@ -24,7 +25,7 @@ export async function POST(
       return NextResponse.json({ error: "No tenant found" }, { status: 400 });
     }
 
-    const { id } = await params;
+    const id = parseUuid((await params).id);
 
     // Verify template belongs to tenant and is custom
     const template = await prisma.tenant_templates.findFirst({

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
 
 /**
  * GET /api/tenant-admin/orders/[id]
@@ -20,6 +22,7 @@ export async function GET(
     }
 
     const email = user.emailAddresses[0]?.emailAddress;
+    const id = parseUuid(params.id);
 
     // Fetch user's tenant
     const localUser = await prisma.users.findFirst({
@@ -37,7 +40,7 @@ export async function GET(
     // Fetch order with items and user data
     const order = await prisma.orders.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId: localUser.tenantId,
       },
       select: {
@@ -101,10 +104,6 @@ export async function GET(
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Error fetching order:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch order" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/orders/[id]" });
   }
 }

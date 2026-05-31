@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { withSuperAdmin } from "@/lib/api-auth";
-import { apiValidationError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const emailMappingSchema = z
+  .object({
+    eventType: z.string().min(1).max(200),
+    templateId: z.string().min(1).max(200),
+    isActive: z.boolean().optional(),
+  })
+  .strict();
 
 export const GET = withSuperAdmin(async () => {
   const mappings = await prisma.email_event_mappings.findMany({
@@ -13,15 +22,10 @@ export const GET = withSuperAdmin(async () => {
 });
 
 export const POST = withSuperAdmin(async (req) => {
-  const body = await req.json();
-  const { eventType, templateId, isActive } = body;
-
-  if (!eventType || !templateId) {
-    return apiValidationError(
-      "Missing required fields",
-      "POST /api/super-admin/email-mappings",
-    );
-  }
+  const { eventType, templateId, isActive } = await parseJsonBody(
+    req,
+    emailMappingSchema,
+  );
 
   const existing = await prisma.email_event_mappings.findFirst({
     where: {

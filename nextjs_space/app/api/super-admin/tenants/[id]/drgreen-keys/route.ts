@@ -3,8 +3,19 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { encrypt, decrypt } from "@/lib/encryption";
 import { generateDrGreenSignature } from "@/lib/drgreen-api-client";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+
+const drgreenKeysSchema = z
+  .object({
+    apiKey: z.string().max(10000).optional(),
+    secretKey: z.string().max(10000).optional(),
+  })
+  .strict();
 
 /**
  * Super-admin diagnostic + rotation for a tenant's Dr Green keys.
@@ -67,13 +78,20 @@ function inspect(label: string, encrypted: string | null | undefined) {
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  let id: string;
+  try {
+    id = parseUuid(params.id);
+  } catch (error) {
+    return apiError(error, { route: "GET /api/super-admin/tenants/[id]/drgreen-keys" });
+  }
+
   const user = await getCurrentUser();
   if (!user || user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const tenant = await prisma.tenants.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: {
       id: true,
       subdomain: true,
@@ -101,17 +119,32 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  let id: string;
+  try {
+    id = parseUuid(params.id);
+  } catch (error) {
+    return apiError(error, { route: "POST /api/super-admin/tenants/[id]/drgreen-keys" });
+  }
+
   const user = await getCurrentUser();
   if (!user || user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const tenant = await prisma.tenants.findUnique({ where: { id: params.id } });
+  const tenant = await prisma.tenants.findUnique({ where: { id } });
   if (!tenant) {
     return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
   }
 
-  const { apiKey, secretKey } = await req.json();
+  let apiKey: string | undefined;
+  let secretKey: string | undefined;
+  try {
+    ({ apiKey, secretKey } = await parseJsonBody(req, drgreenKeysSchema));
+  } catch (error) {
+    return apiError(error, {
+      route: "POST /api/super-admin/tenants/[id]/drgreen-keys",
+    });
+  }
   const update: { drGreenApiKey?: string; drGreenSecretKey?: string } = {};
 
   if (secretKey && typeof secretKey === "string" && secretKey.trim() !== "") {
