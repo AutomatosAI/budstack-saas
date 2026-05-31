@@ -122,6 +122,12 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable} ${fraunces.variable} ${cormorantGaramond.variable} font-sans antialiased`}>
         <ClerkProvider
+          // PRD-218 AC-2a: `dynamic` makes Clerk resolve the per-request nonce
+          // from the x-nonce request header (set in middleware) and apply it to
+          // its injected scripts. Without it Clerk emits un-nonced scripts that
+          // 'strict-dynamic' blocks. An explicit `nonce` prop is NOT honoured at
+          // this Clerk version — it is overridden by Clerk's own header read.
+          dynamic
           appearance={{
             elements: {
               // Ensure consistent styling

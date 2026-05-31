@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     const rate = await checkRateLimit(`account-export:${clerkUser.id}`, {
       maxRequests: 3,
       windowMs: 60 * 60 * 1000,
+      failMode: "closed",
     });
     if (!rate.success) return rate.response;
 
