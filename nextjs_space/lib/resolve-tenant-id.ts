@@ -1,50 +1,42 @@
-import { prisma } from "@/lib/db";
+import {
+  resolveTenant,
+  isAmbiguousTenantResolution,
+} from "@/lib/tenant-resolver";
 
 /**
- * Resolves a database tenant ID from a Clerk organization ID.
- * 
- * The issue: Clerk organization IDs (e.g., "org_38evxeRP8KLqsmjZR8R5wvluths") 
- * are stored in user.publicMetadata.tenantId, but the database uses UUIDs 
- * for tenant IDs. This function bridges that gap.
- * 
+ * Resolves a database tenant ID from a Clerk organization ID (and an optional
+ * email fallback).
+ *
+ * The issue: Clerk organization IDs (e.g., "org_38evxeRP8KLqsmjZR8R5wvluths") are
+ * stored in user.publicMetadata.tenantId, but the database uses UUIDs for tenant
+ * IDs. This function bridges that gap.
+ *
+ * PRD-205 (AC-1b / AC-2): a thin delegator onto the canonical
+ * resolveTenant({ kind: 'clerk' }). This closes two gaps the old raw-SQL +
+ * unscoped-email implementation had:
+ *   - isActive is now enforced on BOTH the clerk-org and the email lookups (the
+ *     old email fallback resolved inactive tenants).
+ *   - an email matching >1 ACTIVE tenant returns null (deny) instead of silently
+ *     picking the first row. The resolver has already emitted the structured
+ *     tenant.resolution_ambiguous audit event; here we simply refuse to guess.
+ *
  * @param clerkOrgId - The Clerk organization ID from user metadata
  * @param userEmail - Optional user email for fallback lookup
- * @returns The database tenant ID (UUID) or null if not found
+ * @returns The database tenant ID (UUID) or null if not found / ambiguous
  */
 export async function resolveTenantIdFromClerkOrg(
   clerkOrgId: string | null | undefined,
-  userEmail?: string | null
+  userEmail?: string | null,
 ): Promise<string | null> {
-  let tenantId: string | null = null;
+  const resolved = await resolveTenant({
+    kind: "clerk",
+    clerkOrgId,
+    email: userEmail,
+  });
 
-  // First, try to find tenant by Clerk Org ID in settings using raw query
-  if (clerkOrgId) {
-    try {
-      const tenantWithClerkOrg = await prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM tenants 
-        WHERE settings->>'clerkOrgId' = ${clerkOrgId}
-        LIMIT 1
-      `;
-
-      if (tenantWithClerkOrg && tenantWithClerkOrg.length > 0) {
-        tenantId = tenantWithClerkOrg[0].id;
-      }
-    } catch (error) {
-      console.warn("Error querying tenant by Clerk Org ID:", error);
-    }
+  if (resolved == null || isAmbiguousTenantResolution(resolved)) {
+    return null;
   }
 
-  // Fallback: Find tenant via user's email and their tenant relationship
-  if (!tenantId && userEmail) {
-    const dbUser = await prisma.users.findFirst({
-      where: { email: userEmail },
-      include: { tenants: true },
-    });
-
-    if (dbUser?.tenants) {
-      tenantId = dbUser.tenants.id;
-    }
-  }
-
-  return tenantId;
+  return resolved.tenantId;
 }

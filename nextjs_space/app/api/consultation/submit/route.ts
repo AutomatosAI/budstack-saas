@@ -14,6 +14,7 @@ import { z } from "zod";
 import { toAlpha3 as convertToAlpha3CountryCode } from '@/lib/country-codes';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getTenantFromRequest } from '@/lib/tenant';
+import { resolveTenant } from '@/lib/tenant-resolver';
 
 // SECURITY (C1, C13): Strict whitelist schema — no `.passthrough()`. Every
 // field that lands in the database or is forwarded to Dr. Green must be
@@ -109,9 +110,11 @@ export async function POST(request: NextRequest) {
     // localhost where middleware cannot derive tenant from the API URL.
     let tenant = await getTenantFromRequest(request);
     if (!tenant && body.tenantSlug) {
-      tenant = await prisma.tenants.findFirst({
-        where: { subdomain: body.tenantSlug.toLowerCase(), isActive: true },
-      });
+      // PRD-205 (AC-2b): tenant-by-slug resolution goes through the canonical
+      // resolver (uniform isActive + lower-case retry) rather than an ad-hoc
+      // findFirst, so this dev/localhost fallback can't drift from every other path.
+      const resolved = await resolveTenant({ kind: 'slug', slug: body.tenantSlug });
+      tenant = resolved?.tenant ?? null;
     }
     if (
       tenant &&

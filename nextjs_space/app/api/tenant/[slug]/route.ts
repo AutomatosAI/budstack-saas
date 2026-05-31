@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string } },
 ) {
   try {
-    const { slug } = params;
-
-    if (!slug) {
-      return NextResponse.json({ error: "Slug is required" }, { status: 400 });
-    }
+    const slug = parseSlug(params.slug);
 
     // Require authentication — this route exposes settings and branding
     const user = await getCurrentUser();
@@ -49,10 +47,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error fetching tenant:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant/[slug]" });
   }
 }

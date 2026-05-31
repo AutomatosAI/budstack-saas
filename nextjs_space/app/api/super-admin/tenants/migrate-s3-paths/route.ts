@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const migrateS3Schema = z
+  .object({
+    tenantId: z.string().max(200).optional().nullable(),
+    dryRun: z.boolean().optional(),
+    backfill: z.boolean().optional(),
+  })
+  .strict();
 
 /**
  * Migration endpoint with two modes:
@@ -22,7 +33,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json().catch(() => ({}));
+    const body = (await parseJsonBody(req, migrateS3Schema.optional())) ?? {};
     const targetTenantId = body.tenantId || null;
     const dryRun = body.dryRun === true;
     const backfill = body.backfill === true;
@@ -239,10 +250,9 @@ export async function POST(req: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error("[migrate] Error:", error);
-    return NextResponse.json(
-      { error: "Migration failed" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/super-admin/tenants/migrate-s3-paths",
+      safeMessage: "Migration failed",
+    });
   }
 }

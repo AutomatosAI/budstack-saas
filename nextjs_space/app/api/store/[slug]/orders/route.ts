@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
+import { apiError } from "@/lib/api-error";
+import { parseSlug } from "@/lib/validation/parse-uuid";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { slug: string } },
 ) {
   try {
+    parseSlug(params.slug);
+
     const user = await currentUser();
 
     if (!user) {
@@ -49,10 +53,9 @@ export async function GET(
 
     return NextResponse.json({ orders });
   } catch (error) {
-    console.error("Tenant orders fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch orders" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/store/[slug]/orders",
+      safeMessage: "Failed to fetch orders",
+    });
   }
 }

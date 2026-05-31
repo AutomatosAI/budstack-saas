@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
 
 const TENANT_SELECT = {
   id: true,
@@ -64,6 +67,17 @@ const UPDATABLE_FIELDS = [
   "businessCountry",
 ] as const;
 
+const tenantUpdateSchema = z.object({
+  businessName: z.string().max(200).optional(),
+  countryCode: z.string().max(10).optional(),
+  businessAddress1: z.string().max(200).optional(),
+  businessAddress2: z.string().max(200).optional(),
+  businessCity: z.string().max(120).optional(),
+  businessState: z.string().max(120).optional(),
+  businessPostalCode: z.string().max(20).optional(),
+  businessCountry: z.string().max(120).optional(),
+});
+
 /**
  * PATCH /api/tenant-admin/tenant
  *
@@ -77,7 +91,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await parseJsonBody(req, tenantUpdateSchema);
 
     // Validate countryCode if provided
     if (body.countryCode !== undefined) {
@@ -92,8 +106,9 @@ export async function PATCH(req: NextRequest) {
     // Pick only allowed fields
     const data: Record<string, string> = {};
     for (const field of UPDATABLE_FIELDS) {
-      if (body[field] !== undefined) {
-        data[field] = body[field];
+      const value = body[field];
+      if (value !== undefined) {
+        data[field] = value;
       }
     }
 
@@ -112,10 +127,9 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json(tenant);
   } catch (error) {
-    console.error("Error updating tenant:", error);
-    return NextResponse.json(
-      { error: "Failed to update tenant" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "PATCH /api/tenant-admin/tenant",
+      safeMessage: "Failed to update tenant",
+    });
   }
 }

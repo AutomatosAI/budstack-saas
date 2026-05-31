@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
+import { parseUuid } from "@/lib/validation/parse-uuid";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const adminNotesSchema = z
+  .object({
+    adminNotes: z.string().max(5000),
+  })
+  .strict();
 
 /**
  * PATCH: Update admin notes for an order
@@ -25,16 +35,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const orderId = params.id;
-    const body = await req.json();
-    const { adminNotes } = body;
-
-    if (typeof adminNotes !== "string") {
-      return NextResponse.json(
-        { error: "Admin notes must be a string" },
-        { status: 400 },
-      );
-    }
+    const orderId = parseUuid(params.id);
+    const { adminNotes } = await parseJsonBody(req, adminNotesSchema);
 
     // Get user's tenant
     const localUser = await prisma.users.findFirst({
@@ -81,10 +83,6 @@ export async function PATCH(
       updatedAt: updatedOrder.updatedAt,
     });
   } catch (error) {
-    console.error("Error updating admin notes:", error);
-    return NextResponse.json(
-      { error: "Failed to update admin notes" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PATCH /api/tenant-admin/orders/[id]/admin-notes" });
   }
 }

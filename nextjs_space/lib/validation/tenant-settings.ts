@@ -1,0 +1,134 @@
+import { z } from "zod";
+
+/**
+ * Tenant `settings` JSON-blob validation (PRD-204 AC-4; consumed by PRD-208).
+ *
+ * The settings blob is a large, open-ended theming + configuration object
+ * written from many routes (branding, cookie-settings, select-template,
+ * onboarding, smtp, automatos, domain provisioning, ...). Two schemas are
+ * exported because the live clients and the target end-state differ:
+ *
+ * - `tenantSettingsSchema` (.strict()) — the canonical contract. Unknown
+ *   top-level keys are rejected. PRD-208 should migrate clients to send only
+ *   known keys (partials) and then flip routes onto this schema under test.
+ *
+ * - `tenantSettingsLenientSchema` (.passthrough()) — for incremental rollout
+ *   TODAY. It validates/bounds the known (security-sensitive + free-text)
+ *   keys but tolerates unknown keys, because the super-admin tenant edit form
+ *   round-trips the ENTIRE existing settings blob on every save
+ *   (app/super-admin/tenants/[id]/tenant-edit-form.tsx). A strict schema would
+ *   400 every legitimate save until that client is migrated.
+ *
+ * Scalars accept null and are generously capped to avoid false-rejecting
+ * already-stored values on round-trip; structural sub-objects are left as
+ * `unknown` (PRD-208 can tighten them with proper test coverage + a DB).
+ */
+
+const shortString = z.string().max(200).nullable();
+const colorString = z.string().max(64).nullable();
+const urlString = z.string().max(2048).nullable();
+const styleToken = z.string().max(100).nullable();
+const numericish = z.union([z.string().max(32), z.number()]).nullable();
+const flag = z.boolean().nullable();
+/** Structural sub-config; shape varies, bounded only by the outer body cap. */
+const structural = z.unknown();
+
+const tenantSettingsShape = {
+  // Business / contact (free text the super-admin form actively edits)
+  businessName: z.string().max(200).nullable().optional(),
+  tagline: z.string().max(300).nullable().optional(),
+  contactEmail: z.string().max(320).nullable().optional(),
+  contactPhone: z.string().max(50).nullable().optional(),
+  address: z.union([z.string().max(1000), z.record(z.unknown())]).nullable().optional(),
+  socialMedia: structural.optional(),
+
+  // Brand colors
+  primaryColor: colorString.optional(),
+  secondaryColor: colorString.optional(),
+  accentColor: colorString.optional(),
+  textColor: colorString.optional(),
+  backgroundColor: colorString.optional(),
+  headingColor: colorString.optional(),
+
+  // Assets / URLs
+  logoPath: urlString.optional(),
+  logoUrl: urlString.optional(),
+  faviconPath: urlString.optional(),
+  faviconUrl: urlString.optional(),
+  heroImagePath: urlString.optional(),
+  googleFontsUrl: urlString.optional(),
+  cookiePolicyUrl: urlString.optional(),
+
+  // Typography
+  fontFamily: shortString.optional(),
+  headingFontFamily: shortString.optional(),
+  fontSize: numericish.optional(),
+  headingFontSize: numericish.optional(),
+  sectionFontSize: numericish.optional(),
+  heroFontSize: numericish.optional(),
+  fontWeight: numericish.optional(),
+  headingFontWeight: numericish.optional(),
+  letterSpacingPreset: styleToken.optional(),
+
+  // Layout / style tokens
+  spacing: styleToken.optional(),
+  shadowStyle: styleToken.optional(),
+  glassEffect: styleToken.optional(),
+  dividerStyle: styleToken.optional(),
+  buttonStyle: styleToken.optional(),
+  buttonSize: styleToken.optional(),
+  borderRadius: styleToken.optional(),
+  animationType: styleToken.optional(),
+  navigationStyle: styleToken.optional(),
+  footerStyle: styleToken.optional(),
+  buttonHoverEffect: styleToken.optional(),
+  wrapperClass: styleToken.optional(),
+  useTemplatePadding: flag.optional(),
+
+  // Free-form CSS — XSS vector, so explicitly size-capped (200 KB)
+  customCSS: z.string().max(200_000).nullable().optional(),
+
+  // Structural config blobs (shape varies — left permissive)
+  sectionConfigs: structural.optional(),
+  sectionColorOverrides: structural.optional(),
+  navColorOverrides: structural.optional(),
+  footerColorOverrides: structural.optional(),
+  layoutSections: structural.optional(),
+  navigationConfig: structural.optional(),
+  footerConfig: structural.optional(),
+  pageContent: structural.optional(),
+  template: structural.optional(),
+
+  // Cookie / analytics consent
+  cookieConsentEnabled: flag.optional(),
+  marketingCookiesEnabled: flag.optional(),
+  analyticsEnabled: flag.optional(),
+  cookieBannerMessage: z.string().max(2000).nullable().optional(),
+
+  // Third-party integration credentials / ids (bounded)
+  automatosApiKey: z.string().max(500).nullable().optional(),
+  automatosAgentId: shortString.optional(),
+  automatosHelperAgentId: shortString.optional(),
+  smtp: structural.optional(),
+
+  // Server-managed keys — included so the full-blob round-trip is accepted.
+  // (The route re-applies these AFTER caller settings, so they can't be
+  // spoofed by the client regardless.)
+  clerkOrgId: shortString.optional(),
+  railwayDomainId: shortString.optional(),
+  railwayDnsRecords: structural.optional(),
+  domainVerification: structural.optional(),
+  customDomain: z.string().max(255).nullable().optional(),
+  domain: z.string().max(255).nullable().optional(),
+  dnsVerified: flag.optional(),
+} as const;
+
+/** Canonical strict contract — rejects unknown top-level keys (for PRD-208). */
+export const tenantSettingsSchema = z.object(tenantSettingsShape).strict();
+
+/** Rollout-safe variant — validates known keys, tolerates unknown ones. */
+export const tenantSettingsLenientSchema = z
+  .object(tenantSettingsShape)
+  .passthrough();
+
+export type TenantSettings = z.infer<typeof tenantSettingsSchema>;

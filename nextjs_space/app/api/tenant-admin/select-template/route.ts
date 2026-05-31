@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { apiError } from "@/lib/api-error";
+import { parseJsonBody } from "@/lib/validation/body";
+
+const selectTemplateSchema = z
+  .object({
+    templateId: z.string().min(1).max(200),
+  })
+  .strict();
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,15 +28,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const { templateId } = body;
-
-    if (!templateId) {
-      return NextResponse.json(
-        { error: "Template ID is required" },
-        { status: 400 },
-      );
-    }
+    const { templateId } = await parseJsonBody(request, selectTemplateSchema);
 
     // Verify template exists and is active
     const template = await prisma.templates.findUnique({
@@ -121,10 +122,9 @@ export async function POST(request: NextRequest) {
       appliedDefaults: templateDefaults,
     });
   } catch (error) {
-    console.error("Error selecting template:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/tenant-admin/select-template",
+      safeMessage: "Internal server error",
+    });
   }
 }
