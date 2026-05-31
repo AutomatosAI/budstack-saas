@@ -143,6 +143,11 @@ jobs:
           DATABASE_URL: "postgresql://stub:stub@localhost:5432/stub"
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_stub"
           CLERK_SECRET_KEY: "sk_test_stub"
-          NEXT_PUBLIC_BASE_DOMAIN: "localhost"
+          # Must match the parser default in lib/parse-host.ts (budstacks.io): the
+          # tenant-resolver suite asserts subdomain/apex parsing against this base
+          # domain. "localhost" makes slug.<base> hosts fall through to customDomain
+          # lookups and breaks those cases. dotenv (.env.test) cannot override a
+          # value already set in the job env, so it must be correct HERE.
+          NEXT_PUBLIC_BASE_DOMAIN: "budstacks.io"
           NEXTAUTH_SECRET: "stub"
           ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
