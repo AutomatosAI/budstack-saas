@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { uploadFile } from "@/lib/s3";
 import { validateUploadBuffer } from "@/lib/upload-validation";
+import { requireSameOrigin } from "@/lib/security/require-same-origin";
 
 function generateSlug(title: string): string {
   return title
@@ -306,6 +307,9 @@ export async function DELETE(req: NextRequest) {
   if (!user || user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const originError = requireSameOrigin(req);
+  if (originError) return originError;
 
   const { id } = await req.json();
   if (!id) {
