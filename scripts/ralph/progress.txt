@@ -1,103 +1,76 @@
-# PRD-201 Destructive Super-Admin Endpoint Removal & CSRF Defence-in-Depth — Ralph Build Journal
-
-Branch: ralph/prd-201-destructive-endpoint-csrf-hardening (worktree off main af77b24)
-Source PRD: docs/PRDS/REMEDIATION/PRD-201-destructive-endpoint-csrf-hardening.md
+PRD-207 — Test Strategy Foundation — Ralph Progress Journal
+Branch: ralph/prd-207-test-harness
+App: nextjs_space/ (pnpm, Next 14.2.35, Prisma 6.7, Postgres 17, Clerk)
+Source PRD: docs/PRDS/REMEDIATION/PRD-207-test-strategy-foundation.md
 Started: 2026-05-29
 
-Append one short block per finished story: `US-XXX <title> — DONE <date>` + 1-2 lines on
-what landed and any follow-up. BLOCKED stories: note the reason and leave the plan box unchecked.
+Convention: one short block per finished story —
+  US-XXX <title> — DONE <YYYY-MM-DD>
+    - what landed (files)
+    - any follow-up / caveat
+BLOCKED stories get a BLOCKED-<REASON> block and do NOT advance the plan checkbox.
 
----
+==================================================================
 
-US-001 Delete the one-time reset-templates wipe route — DONE 2026-05-29
-- git rm app/api/super-admin/tenants/reset-templates/route.ts. It was a "DELETE AFTER USE"
-  one-time route: destructive S3+DB wipe on GET ?subdomain&confirm=yes (POST just called GET),
-  and it leaked a steps[] operation trace (bucket prefixes, tenant ids). AC-1 + AC-5a + AC-2 primary.
-- OQ-1 taken as YES (retire entirely — PRD "best outcome"): no POST reimplementation. The supported
-  reset path, if ever needed, is a new audited POST-only handler per AC-3 — deferred to Gerard.
-- Inventory for AC-2: this was the ONLY destructive GET. Other destructive handlers already use
-  POST/DELETE (tenants/[id] DELETE, templates/[id] DELETE, learning DELETE, cleanup-s3 DELETE,
-  detach POST). Verified nothing imports the deleted route.
-- Validated: tsc --noEmit exit 0; pnpm build exit 0 (route tree no longer lists reset-templates),
-  using ci.yml's 6 stub env vars. No DB needed.
+US-001 Vitest unit harness scaffold — DONE 2026-05-29
+  - Added vitest@^2.1.9 + @vitest/coverage-v8@^2.1.9 (pinned 2.x for Node 18.17).
+  - nextjs_space/vitest.config.ts (node env, @/ alias, excludes *.spec.ts),
+    vitest.setup.ts (loads .env.test only, override:true, ENCRYPTION_KEY fallback),
+    .env.test (throwaway test key — un-ignored in root .gitignore).
+  - package.json scripts: test / test:watch / test:cov (e2e scripts untouched).
+  - playwright.config.ts testMatch '**/*.spec.ts' so Vitest & Playwright coexist.
+  - tests/unit/harness-smoke.test.ts green (2/2). tsc --noEmit clean.
 
-US-002 Security guard module (requireSameOrigin + requireConfirmation) — DONE 2026-05-29
-- lib/security/require-same-origin.ts: requireSameOrigin(req) returns NextResponse|null. Allows
-  Sec-Fetch-Site: same-origin; blocks cross-site/same-site; else compares Origin host vs
-  x-forwarded-host/host; absent same-origin signal → 403 { error, code: "CROSS_ORIGIN_BLOCKED" }.
-  Defence-in-depth on top of Clerk SameSite=Lax (AC-4).
-- lib/security/require-confirmation.ts: requireConfirmation(body, expected) Zod-validates a typed
-  { confirm } body equals the target token; mismatch → 400 { error, code: "CONFIRMATION_MISMATCH" }.
-  Takes a pre-parsed body (caller does req.json().catch(()=>null)) so it's pure + unit-testable (AC-3).
-- New codes returned as a `code` field alongside `error` (lib/api-error.ts envelope has no code field).
-  No callers yet — applied to handlers in US-005/006/007. Pure functions, no DB/network.
-- Validated: tsc --noEmit exit 0; pnpm build exit 0.
+US-002 Encryption round-trip + tamper tests (AC-9) — DONE 2026-05-29
+  - tests/unit/encryption.test.ts (5): round-trip; v2 4-part format ("v2" prefix);
+    tampered authTag throws DecryptionError; plain value fails closed (throws,
+    never passes through); empty string handled.
+  - Tests written against actual lib/encryption.ts behaviour (v2:iv:authTag:ct).
 
-US-003 Extract + harden RESERVED_SUBDOMAINS into lib/reserved-subdomains.ts + add _cd — DONE 2026-05-29
-- New lib/reserved-subdomains.ts: exports RESERVED_SUBDOMAINS (ReadonlySet), isReservedSubdomain()
-  (case-insensitive + trimmed), isValidSubdomain() (2-30 char, lowercase alnum+hyphen, no lead/trail
-  or double hyphen). Added "_cd" — the custom-domain rewrite placeholder from middleware.ts
-  (example.com -> /store/_cd/...); a tenant claiming it would collide with routing internals (AC-6).
-- app/api/onboarding/route.ts now imports both helpers from the shared module and dropped its inline
-  RESERVED_SUBDOMAINS Set + local isValidSubdomain copy. Behaviour preserved (same regex, same set
-  plus _cd); the existing isValidSubdomain/isReservedSubdomain call sites resolve to the import.
-- Shared module is the single source for US-004 (super-admin rename) to reuse — no duplicate lists.
-- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.
+US-003 Dr Green webhook signature + timestamp tests (AC-10) — DONE 2026-05-29
+  - tests/unit/drgreen-webhook-verify.test.ts (8): SHA-256(payload+secret) hex
+    accepted; base64 accepted; tampered payload rejected; empty sig/secret reject;
+    fresh ts valid; >5min stale rejected (/expired/i); +10min future rejected
+    (/future/i); missing/unparseable rejected. Throwaway test secret only.
 
-US-004 Enforce reserved + format on super-admin tenant rename — DONE 2026-05-29
-- app/api/super-admin/tenants/[id]/route.ts PATCH: when subdomain changes it previously checked
-  ONLY uniqueness. Now, before the uniqueness lookup, it runs isValidSubdomain(String(subdomain))
-  then isReservedSubdomain(String(subdomain)) (imported from @/lib/reserved-subdomains, the US-003
-  module). Invalid format → 400 format error; reserved → 400 { error, code: "RESERVED_SUBDOMAIN" }.
-  Order mirrors onboarding (format first, then reserved). String() guards a non-string JSON body.
-- Closes AC-7: a super-admin can no longer rename a tenant onto a reserved/invalid slug (e.g. api,
-  www, _cd). Persistence/Clerk-slug sync untouched (out of scope) — same raw value still written.
-- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.
+US-004 API auth wrapper tests (AC-11) — DONE 2026-05-29
+  - tests/unit/api-auth.test.ts (7): withTenantAuth null->401, no-tenant->403,
+    authorized admin->200 w/ ctx.tenantId; withSuperAdmin wrong-role->401,
+    SUPER_ADMIN->200; withAuth null->401, any user->200.
+  - Mocks ONLY the auth seam (@/lib/auth-helper getCurrentUser) — auth-boundary
+    mock, not a DB mock. Corrected prd.json guesses (seam name; 401 not 403).
 
-US-005 Apply requireSameOrigin to destructive super-admin handlers — DONE 2026-05-29
-- Added `const originError = requireSameOrigin(req); if (originError) return originError;` right
-  after the SUPER_ADMIN role check (before any DB/S3 mutation) in:
-    * templates/[id]/route.ts DELETE (base-template + S3 wipe; PUT/PATCH left alone — non-destructive)
-    * templates/[id]/detach/route.ts POST (deleteMany tenant_templates) — ALSO trimmed the `report`
-      (tenant business names/subdomains/actions) out of the HTTP response; full report still
-      console.log'd server-side (AC-5 trace-leak fix).
-    * learning/route.ts DELETE (deletes one learning_resources row).
-- Destructive-handler inventory for the AC-4 "100%" metric (each touched by exactly ONE story):
-    * GUARDED here (US-005): templates DELETE, detach POST, learning DELETE.
-    * GUARDED in US-006: tenants/[id] DELETE (also gets typed confirmation there).
-    * GUARDED in US-007: templates/cleanup-s3 DELETE (also gets prefix guard + confirmation there).
-    * Already removed (US-001): tenants/reset-templates (the only destructive GET).
-    * EXCLUDED — non-destructive: migrate-s3-paths (copy/additive), recover-deleted (restore),
-      tenants/bulk + toggle-active (isActive flag flips, reversible). No destructive action remains
-      reachable via GET (AC-2 holds).
-- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.
+US-005 sanitizeCss tests — closes PRD-200 AC-3a — DONE 2026-05-29
+  - tests/unit/css-utils.test.ts (8): </style><script> breakout -> no '<';
+    expression()/javascript:/behavior/-moz-binding stripped; @import/@charset
+    stripped; safe decls preserved; empty/null -> ''; extractGoogleFontsImports
+    returns google url, ignores non-google, [] for empty.
+  - PRD-200 AC-3a flipped [x][DONE]; changelog row 0.4 added. PRD-200 now has
+    only AC-2a (Railway rotation, Gerard) outstanding.
+  - Suite total after US-005: 30 tests / 5 files green. tsc --noEmit clean.
 
-US-006 Tenant DELETE: typed { confirm } body + stop cleanupErrors leak — DONE 2026-05-29
-- app/api/super-admin/tenants/[id]/route.ts DELETE: added requireSameOrigin guard after the role
-  check (before any DB/Clerk/Railway call), then — after fetching the tenant — requireConfirmation
-  (await req.json().catch(()=>null), expected = tenant.subdomain). Missing/mismatched confirm →
-  400 { error, code: "CONFIRMATION_MISMATCH" } before any deletion (AC-3, AC-4).
-- Response no longer echoes cleanupErrors[] (Clerk org IDs + raw error strings). Now returns
-  { success: true, summary: { deleted: 1 } }. The cleanup failures are still console.error'd per
-  failure AND retained in the TENANT_DELETED audit_logs metadata (server-side only) (AC-5).
-- audit_logs TENANT_DELETED row preserved unchanged — still written with full metadata (AC-8).
-- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.
+US-006 Coverage thresholds (report-only) for security-critical set (AC-12) — DONE 2026-05-29
+  - vitest.config.ts: thresholds gated behind COVERAGE_ENFORCE env (OQ-4 —
+    defined here, report-only by default; PRD-216 sets COVERAGE_ENFORCE=1 to
+    make it a hard CI gate). 80% lines/branches/functions/statements aggregate;
+    95% per-file on lib/encryption.ts, lib/drgreen-webhook-verify.ts,
+    lib/api-auth.ts, lib/tenant-context.ts (with-tenant-context.ts joins once
+    PRD-202 creates it).
+  - Verified both paths: `pnpm test:cov` -> EXIT 0 (report-only, prints table);
+    `COVERAGE_ENFORCE=1 pnpm test:cov` -> EXIT 1 with all 80% global + four 95%
+    per-file globs firing (proves the gate is wired, not dead config).
+  - Current security-critical coverage is intentionally below 95% this early
+    (encryption ~69%, drgreen ~65%, api-auth ~48%, css-utils ~81%, tenant-context
+    0%) — the seed suites prove the security CONTRACTS, not exhaustive lines.
+    Raising to 95% + flipping enforcement is PRD-216's job once more suites land.
+  - tsc --noEmit clean (glob-key thresholds type-check under Vitest 2.x).
 
-US-007 Scope + harden cleanup-s3 (prefix guard + same-origin + confirmation + audit) — DONE 2026-05-30
-- app/api/super-admin/templates/cleanup-s3/route.ts DELETE previously accepted any
-  ?prefix=templates/... incl. bare `templates/` (wipe ALL templates). Now the prefix must match
-  /^templates\/([a-zA-Z0-9._-]+)\/?$/ — a SINGLE non-empty slug segment, safe chars only, and the
-  extracted slug is rejected if it contains ".." (no traversal). Bare templates/ no longer matches
-  (empty slug group) (AC-1a). normalizedPrefix is rebuilt as `templates/${slug}/` (not raw input).
-- Added requireSameOrigin guard after the role check, then requireConfirmation(body, slug) — caller
-  must resend { confirm: "<slug>" } matching the targeted slug (await req.json().catch(()=>null));
-  mismatch → 400 CONFIRMATION_MISMATCH before any S3 delete (AC-3, AC-4).
-- Added a structured destructive-action audit line via console.error("[S3 Cleanup][AUDIT]", {...}):
-  action, actor (email||id), targetPrefix, filesDeleted, ISO timestamp (AC-8). Replaced the old
-  plain console.log. JSDoc updated to document the new contract.
-- Validated: tsc --noEmit exit 0; pnpm build exit 0 (stub env per ci.yml). No DB needed.
+==================================================================
+PHASE 1 COMPLETE — US-001..006 done. Vitest unit harness + 4 security suites
++ report-only coverage gate. 30 tests / 5 files green.
 
-=== ALL 7 STORIES DONE (US-001..US-007) — RALPH_COMPLETE ===
-PRD-201 destructive-endpoint removal + CSRF defence-in-depth landed in 7 commits on
-ralph/prd-201-destructive-endpoint-csrf-hardening. Deferred (need PRD-207 harness): the Vitest unit
-tests for require-same-origin/require-confirmation and the integration/E2E tests from PRD §12.
+NEXT (gated, not started):
+  Phase 2 US-007..010 — testcontainers Postgres 17. REQUIRES Docker daemon
+  (down on this box). Loop emits RALPH_BLOCKED at US-007 gate (docker info).
+  Phase 3 US-011..015 — Playwright E2E. BLOCKED on PRD-207 OQ-1 (Clerk
+  test-auth approach, owner Gerard). Loop emits RALPH_BLOCKED, no shim invented.

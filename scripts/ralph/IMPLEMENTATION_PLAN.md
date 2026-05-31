@@ -1,42 +1,41 @@
-# PRD-201 Destructive Super-Admin Endpoint Removal & CSRF Defence-in-Depth — Implementation Plan
+# PRD-207 — Test Strategy Foundation — Implementation Plan
 
-Single source of truth for Ralph progress. Flip `- [ ]` → `- [x]` ONLY on real success
-(never for a BLOCKED marker). Stories execute in priority order.
+Single source of truth for ralph progress. The agent flips `- [ ]` → `- [x]` only on real success (never for a BLOCKED marker). Stories execute top-to-bottom in priority order.
 
-Branch: `ralph/prd-201-destructive-endpoint-csrf-hardening` (worktree at
-`/Users/gkavanagh/Development/HealingBuds/budstack-saas-prd-201`, off main `af77b24`).
-App in `nextjs_space/` (pnpm). Source PRD:
-`docs/PRDS/REMEDIATION/PRD-201-destructive-endpoint-csrf-hardening.md`.
+Branch: `ralph/prd-207-test-harness` · App: `nextjs_space/` · Source PRD: `docs/PRDS/REMEDIATION/PRD-207-test-strategy-foundation.md`
 
-## Grounded reality (verified on this branch off main)
-- `app/api/super-admin/tenants/reset-templates/route.ts` = the only destructive GET-wipe
-  (GET ?subdomain&confirm=yes → S3+DB wipe; POST just calls GET; leaks `steps[]`). Nothing imports it.
-- `RESERVED_SUBDOMAINS` lives INLINE in `app/api/onboarding/route.ts:28` (a `Set`), with
-  `isValidSubdomain()` at :37. `_cd` is NOT in the set. No shared `lib/reserved-subdomains.ts` exists.
-- Super-admin tenant **rename** (`tenants/[id]` PATCH) checks uniqueness only — NO format/reserved check.
-- Tenant **DELETE** (`tenants/[id]`) already DELETE-method + writes `audit_logs`, but returns
-  `cleanupErrors[]` (Clerk org IDs + error strings) to the client.
-- `cleanup-s3` (DELETE) accepts any `?prefix=templates/...` incl. bare `templates/` → over-broad wipe.
-- `lib/api-error.ts` exists (`ApiError`, `apiError`, `apiValidationError`) — returns `{ error }`, no `code` field.
-- Inventory: the only destructive GET was reset-templates; tenant/template DELETE + learning DELETE +
-  cleanup-s3 DELETE + recover-deleted/migrate-s3-paths/detach POST are already non-GET.
-- PRD-207 (vitest/playwright) NOT merged → tests can't run; gate on `tsc --noEmit` + `pnpm build`.
-  Unit/integration/E2E test files from the PRD §12 plan are deferred to when PRD-207 lands.
+---
 
-## Stories
+## Phase 1 — Vitest unit harness + security suites (AUTONOMOUS, node-only, no Docker/Clerk)
 
-- [x] US-001 — Delete the one-time `reset-templates` wipe route (AC-1, AC-2 primary, AC-5a)
-- [x] US-002 — Security guard module: `requireSameOrigin` + `requireConfirmation` (AC-4, AC-3; new codes)
-- [x] US-003 — Extract + harden `RESERVED_SUBDOMAINS` into `lib/reserved-subdomains.ts` + add `_cd` (AC-6)
-- [x] US-004 — Enforce reserved + format on super-admin tenant rename (AC-7)
-- [x] US-005 — Apply `requireSameOrigin` to all destructive super-admin handlers (AC-4 100%, AC-2)
-- [x] US-006 — Tenant DELETE: typed `{ confirm }` body + stop `cleanupErrors` leak (AC-3, AC-5)
-- [x] US-007 — Scope + harden `cleanup-s3`: prefix guard + confirmation + audit line (AC-1a, AC-3, AC-8) → RALPH_COMPLETE
+- [x] US-001 — Vitest unit harness scaffold (config, setup, .env.test, scripts)
+- [x] US-002 — Encryption round-trip + tamper unit tests (AC-9)
+- [x] US-003 — Dr Green webhook signature + timestamp unit tests (AC-10)
+- [x] US-004 — API auth wrapper unit tests (AC-11)
+- [x] US-005 — sanitizeCss unit tests — closes PRD-200 AC-3a
+- [x] US-006 — Coverage thresholds (report-only) for the security-critical set (AC-12)
 
-## Notes
-- US-004 depends on US-003. US-005/006/007 depend on US-002. US-007 is the final story.
-- New error codes returned as `{ error, code }`: `CROSS_ORIGIN_BLOCKED` (403), `RESERVED_SUBDOMAIN` (400),
-  `CONFIRMATION_MISMATCH` (400). `lib/api-error.ts` envelope has no `code` field → add it inline in the guards.
-- OQ-1 (retire reset capability entirely) taken as YES per PRD "best outcome" — route deleted, no POST reimpl.
-- Do NOT refactor route auth (`getCurrentUser` vs Clerk `currentUser()`) — that is PRD-203 scope.
-- No DB reachable locally; all validation is `tsc --noEmit` + `pnpm build` (stub env per ci.yml).
+## Phase 2 — Testcontainers Postgres 17 integration (REQUIRES Docker daemon)
+
+> Gate: run `docker info` first. If no daemon → BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked.
+
+- [ ] US-007 — Testcontainers Postgres harness + withPostgres helper (AC-2)  _(BLOCKED-DOCKER if no daemon)_
+- [ ] US-008 — withPostgres smoke integration test (AC-2)  _(BLOCKED-DOCKER if no daemon)_
+- [ ] US-009 — Typed seed factories (AC-2b)  _(BLOCKED-DOCKER for runtime check)_
+- [ ] US-010 — Tenant-isolation concurrency proof (AC-8 / PRD-202 AC-7)  _(BLOCKED-DOCKER if no daemon)_
+
+## Phase 3 — Playwright E2E (BLOCKED on PRD-207 OQ-1, owner Gerard)
+
+> Gate: Clerk test-auth approach is undecided. Do NOT invent a shim → BLOCKED-NEEDS-AUTH-DECISION, emit RALPH_BLOCKED, leave unchecked.
+
+- [ ] US-011 — Playwright rehab: programmatic auth so suite stops skipping (AC-3/AC-3a)  _(BLOCKED-NEEDS-AUTH-DECISION)_
+- [ ] US-012 — E2E: onboarding critical path (AC-4)  _(depends on US-011)_
+- [ ] US-013 — E2E: storefront order critical path (AC-5)  _(depends on US-011)_
+- [ ] US-014 — E2E: consultation / KYC submit, no PHI echo (AC-6)  _(depends on US-011)_
+- [ ] US-015 — E2E: super-admin renders real audit data (AC-7)  _(depends on US-011)_
+
+---
+
+## Expected autonomous outcome on this dev box
+
+No Docker daemon + OQ-1 unresolved → ralph completes **US-001..006**, then halts cleanly as **RALPH_BLOCKED** at US-007 (BLOCKED-DOCKER). Phase 2 unblocks when Docker is started; Phase 3 unblocks when Gerard resolves OQ-1 (Clerk test-auth).
