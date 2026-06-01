@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
 import { z } from "zod";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
@@ -13,23 +13,8 @@ const cookieSettingsSchema = z.object({
   marketingCookiesEnabled: z.boolean().optional(),
 });
 
-export async function GET() {
+export const GET = withTenantAuth(async (_request, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      (user.role !== "TENANT_ADMIN" &&
-        user.role !== "SUPER_ADMIN")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
-    }
-
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
       select: { settings: true },
@@ -55,26 +40,10 @@ export async function GET() {
       { status: 500 },
     );
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withTenantAuth(async (request, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      (user.role !== "TENANT_ADMIN" &&
-        user.role !== "SUPER_ADMIN")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
-    }
-
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
       select: { settings: true },
@@ -120,4 +89,4 @@ export async function POST(request: Request) {
       safeMessage: "Internal server error",
     });
   }
-}
+});

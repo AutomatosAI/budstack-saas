@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
-import { currentUser } from "@clerk/nextjs/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
@@ -12,30 +12,8 @@ const emailCloneSchema = z
   })
   .strict();
 
-export async function POST(req: NextRequest) {
+export const POST = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const clerkUser = await currentUser();
-
-    if (
-      !clerkUser ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(
-        (clerkUser.publicMetadata.role as string) || "",
-      )
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = clerkUser.emailAddresses[0]?.emailAddress;
-
-    const user = await prisma.users.findFirst({
-      where: { email: email },
-      include: { tenants: true },
-    });
-
-    if (!user?.tenants) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
-    }
-
     const { originalTemplateId, eventType } = await parseJsonBody(
       req,
       emailCloneSchema,
@@ -61,7 +39,7 @@ export async function POST(req: NextRequest) {
         contentHtml: original.contentHtml,
         category: original.category,
         isSystem: false,
-        tenantId: user.tenants.id,
+        tenantId: tenantId,
         description: `Customized version of ${original.name}`,
       },
     });
@@ -71,7 +49,7 @@ export async function POST(req: NextRequest) {
       where: {
         eventType_tenantId: {
           eventType: eventType,
-          tenantId: user.tenants.id,
+          tenantId: tenantId,
         },
       },
       update: {
@@ -80,7 +58,7 @@ export async function POST(req: NextRequest) {
       },
       create: {
         eventType: eventType,
-        tenantId: user.tenants.id,
+        tenantId: tenantId,
         templateId: newTemplate.id,
         isActive: true,
       },
@@ -92,4 +70,4 @@ export async function POST(req: NextRequest) {
       route: "POST /api/tenant-admin/email-templates/clone",
     });
   }
-}
+});

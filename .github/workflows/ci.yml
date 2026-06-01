@@ -48,6 +48,29 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # PRD-216 AC-7: PRD-200 string-aware grep gates (CSS sanitize +
+      # error-message-leak). These already pass on this tree, so they gate
+      # the build (blocking).
+      - name: Security grep gates (PRD-200)
+        run: pnpm check:security
+
+      # PRD-216 AC-7: regression guards for PRD-202 (enterWith/setTenantContext)
+      # and PRD-215 (PII in logs). Those source cleanups are NOT merged yet, so
+      # the gates still flag pre-existing debt — run REPORT-ONLY here.
+      # FLIP TO BLOCKING (move into check:security / drop continue-on-error)
+      # once PRD-202 and PRD-215 merge and these gates go green.
+      - name: Regression grep gates (PRD-202/215 — report-only)
+        run: pnpm check:grep-gates:report
+        continue-on-error: true
+
+      # PRD-216 AC-7b: advisory docs-lint (PRD-214) — warns if retired
+      # auth/domain patterns (next-auth, /api/auth/session, abacus) or
+      # unsubstantiated marketing claims (HIPAA Ready / Lighthouse 90+ /
+      # 5-minute launch) reappear in docs. ALWAYS non-blocking by design.
+      - name: Docs lint (PRD-214 — advisory)
+        run: pnpm check:docs-lint
+        continue-on-error: true
+
       - name: Build
         run: pnpm build
         env:
@@ -55,5 +78,76 @@ jobs:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_stub"
           CLERK_SECRET_KEY: "sk_test_stub"
           NEXT_PUBLIC_BASE_DOMAIN: "localhost"
+          NEXTAUTH_SECRET: "stub"
+          ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+
+  # PRD-216 AC-1 / OQ-5: test gate. Runs PRD-207's Vitest unit+integration
+  # suites with coverage (`pnpm test:cov`) using the SAME stub env as the Build
+  # step (AC-1b). PRD-207 has NOT merged yet — there is no `test:cov` script and
+  # no vitest config — so this job is NON-BLOCKING: the run step guards on the
+  # script's presence (skips cleanly when absent) AND the job carries
+  # continue-on-error, so a missing/failing suite cannot red the pipeline.
+  #
+  # FLIP TO BLOCKING when PRD-207 lands: remove `continue-on-error: true` below,
+  # replace the guarded run with a direct `pnpm test:cov`, and make "test" a
+  # required check in branch protection. Coverage thresholds — 80% baseline /
+  # 95% on security-critical paths (AC-1a) — live in PRD-207's vitest.config.ts
+  # (OQ-5), NOT here.
+  #
+  # OQ-1 (Playwright, owned by PRD-207): the e2e suite runs a tagged
+  # critical-path subset on pull_request and the full suite on push→main. That
+  # Playwright wiring ships with PRD-207; this job only reserves/structures the gate.
+  test:
+    name: Test (PRD-207 — non-blocking until suites land)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: nextjs_space
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('nextjs_space/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      # Guard: only run the suite if PRD-207 has added a `test:cov` script.
+      # Until then, print a skip notice and succeed. When PRD-207 merges,
+      # delete this guard and call `pnpm test:cov` directly (see flip note above).
+      - name: Run tests with coverage (skips cleanly until PRD-207 lands)
+        run: |
+          if pnpm run 2>/dev/null | grep -qE '(^|[[:space:]])test:cov([[:space:]]|$)'; then
+            pnpm test:cov
+          else
+            echo "PRD-207 Vitest suites not present yet (no test:cov script) — skipping."
+          fi
+        env:
+          DATABASE_URL: "postgresql://stub:stub@localhost:5432/stub"
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_stub"
+          CLERK_SECRET_KEY: "sk_test_stub"
+          # Must match the parser default in lib/parse-host.ts (budstacks.io): the
+          # tenant-resolver suite asserts subdomain/apex parsing against this base
+          # domain. "localhost" makes slug.<base> hosts fall through to customDomain
+          # lookups and breaks those cases. dotenv (.env.test) cannot override a
+          # value already set in the job env, so it must be correct HERE.
+          NEXT_PUBLIC_BASE_DOMAIN: "budstacks.io"
           NEXTAUTH_SECRET: "stub"
           ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"

@@ -1,0 +1,49 @@
+name: SBOM
+
+# PRD-216 US-008 (AC-5): generate a CycloneDX JSON Software Bill of Materials for
+# the nextjs_space app on every push to main and on demand (workflow_dispatch),
+# then publish it as a downloadable CI artifact for procurement / compliance.
+#
+# Generator: anchore/sbom-action (syft). syft reads pnpm-lock.yaml natively, so
+# the full pnpm dependency tree is captured from the lockfile alone — no install
+# step is required, which keeps the SBOM deterministic. Output is CycloneDX JSON
+# (sbom.cdx.json). Procurement downloads it from the workflow run's Artifacts
+# (see docs/runbooks/DEPLOYMENT.md "Software Bill of Materials (SBOM)").
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sbom-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sbom:
+    name: Generate CycloneDX SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate CycloneDX SBOM (nextjs_space)
+        uses: anchore/sbom-action@v0
+        with:
+          # nextjs_space/ holds package.json + pnpm-lock.yaml; syft reads the
+          # pnpm lockfile to enumerate the full declared dependency tree.
+          path: nextjs_space
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+          # Upload explicitly in the next step (AC-5) so there is exactly one artifact.
+          upload-artifact: false
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx-json
+          path: sbom.cdx.json
+          if-no-files-found: error

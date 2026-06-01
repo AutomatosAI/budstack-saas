@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
@@ -9,13 +8,7 @@ import { redirect } from "next/navigation";
  * Creates a blank marketplace template with scaffold files in S3
  * and redirects to the editor.
  */
-export async function GET(req: NextRequest) {
-  const user = await currentUser();
-
-  if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withSuperAdmin(async (_req) => {
   const timestamp = Date.now();
   const slug = `new-template-${timestamp}`;
   const name = "New Template";
@@ -97,4 +90,4 @@ export async function GET(req: NextRequest) {
 
   // Redirect to the editor
   redirect(`/super-admin/templates/${template.id}/edit`);
-}
+});

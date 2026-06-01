@@ -25,24 +25,8 @@ function toHslChannels(value: unknown): string | undefined {
   return trimmed;
 }
 
-export async function PUT(req: NextRequest) {
+export const PUT = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      (user.role !== "TENANT_ADMIN" &&
-        user.role !== "SUPER_ADMIN")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "No tenant associated with user" }, { status: 403 });
-    }
-
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
     });
@@ -487,10 +471,10 @@ export async function PUT(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
 // Keep POST for backwards compatibility
-export async function POST(req: NextRequest) {
+export const POST = withTenantAuth(async (req) => {
   return PUT(req);
-}
+});
 

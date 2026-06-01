@@ -533,6 +533,7 @@ model marketplace_submissions {
 model users {
   id                  String                    @id
   email               String                    @unique // PRD-208: -> @@unique([email, tenantId]); see note above
+  clerkUserId         String?                   @unique // PRD-213: reliable Clerk->local mapping for user.deleted erasure
   password            String
   name                String?
   role                Role                      @default(PATIENT)

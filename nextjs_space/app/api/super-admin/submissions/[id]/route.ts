@@ -1,20 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { getSubmissionDetail } from "@/lib/marketplace-review-service";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const id = parseUuid((await params).id);
+    const id = parseUuid(params.id);
     const detail = await getSubmissionDetail(id);
 
     return NextResponse.json(detail);
@@ -26,4 +18,4 @@ export async function GET(
       safeMessage: "Failed to get submission detail",
     });
   }
-}
+});

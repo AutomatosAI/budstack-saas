@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
 import { apiError } from "@/lib/api-error";
@@ -26,13 +26,8 @@ const migrateS3Schema = z
  * POST /api/super-admin/tenants/migrate-s3-paths
  * Body: { tenantId?: string, dryRun?: boolean, backfill?: boolean }
  */
-export async function POST(req: NextRequest) {
+export const POST = withSuperAdmin(async (req) => {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = (await parseJsonBody(req, migrateS3Schema.optional())) ?? {};
     const targetTenantId = body.tenantId || null;
     const dryRun = body.dryRun === true;
@@ -255,4 +250,4 @@ export async function POST(req: NextRequest) {
       safeMessage: "Migration failed",
     });
   }
-}
+});

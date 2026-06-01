@@ -1,30 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { subDays, startOfDay, format, eachDayOfInterval } from "date-fns";
 import { checkRateLimit } from "@/lib/rate-limit";
 
-export async function GET(req: NextRequest) {
+export const GET = withTenantAuth(async (req, { user, tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "TENANT_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Rate limiting
     const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
-    }
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "No tenant associated with user" },
-        { status: 403 },
-      );
     }
 
     // Get time range from query params
@@ -219,4 +204,4 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
