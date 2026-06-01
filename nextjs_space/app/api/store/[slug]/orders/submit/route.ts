@@ -7,7 +7,7 @@ import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { submitOrder } from "@/lib/drgreen/drgreen-orders";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
 import { checkUserKycStatus } from "@/app/actions/kyc-check";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -51,13 +51,21 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
     const email = user.email;
     if (!email) {
       log('FAIL: No email on Clerk user');
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+      return apiError(new Error("Email not found"), {
+        route: "POST /api/store/[slug]/orders/submit",
+        status: 401,
+        safeMessage: "Email not found",
+      });
     }
 
     const dbUser = await prisma.users.findFirst({ where: { email } });
     if (!dbUser) {
       log('FAIL: No DB user', { email });
-      return NextResponse.json({ error: "User not found in database" }, { status: 404 });
+      return apiError(new Error("User not found in database"), {
+        route: "POST /api/store/[slug]/orders/submit",
+        status: 404,
+        safeMessage: "User not found in database",
+      });
     }
 
     log('USER', {
@@ -79,7 +87,11 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
     const tenant = await getCurrentTenant();
     if (!tenant) {
       log('FAIL: Tenant not found');
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      return apiError(new Error("Store not found"), {
+        route: "POST /api/store/[slug]/orders/submit",
+        status: 404,
+        safeMessage: "Store not found",
+      });
     }
     log('TENANT', { tenantId: tenant.id });
 
@@ -104,7 +116,11 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
           ? "Could not verify account status. Please try again."
           : "Medical verification required. Please complete your profile verification.";
       const httpStatus = kyc.status === 'API_ERROR' ? 500 : 403;
-      return NextResponse.json({ error: message }, { status: httpStatus });
+      return apiError(new Error(message), {
+        route: "POST /api/store/[slug]/orders/submit",
+        status: httpStatus,
+        safeMessage: message,
+      });
     }
 
     // Submit order
@@ -156,15 +172,15 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
     // where the user can self-correct (no consultation, empty cart).
     if (error instanceof Error) {
       if (error.message.includes("consultation")) {
-        return NextResponse.json(
-          { error: "Please complete your medical consultation before placing orders" },
-          { status: 400 },
+        return apiValidationError(
+          "Please complete your medical consultation before placing orders",
+          "POST /api/store/[slug]/orders/submit",
         );
       }
       if (error.message.includes("empty")) {
-        return NextResponse.json(
-          { error: "Your cart is empty. Add items before placing an order." },
-          { status: 400 },
+        return apiValidationError(
+          "Your cart is empty. Add items before placing an order.",
+          "POST /api/store/[slug]/orders/submit",
         );
       }
     }

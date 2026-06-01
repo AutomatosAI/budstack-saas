@@ -14,7 +14,11 @@ export const GET = withAuth(async (_request, { user }, params) => {
     const tenant = await getCurrentTenant();
 
     if (!tenant) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      return apiError(new Error("Store not found"), {
+        route: "GET /api/store/[slug]/cart",
+        status: 404,
+        safeMessage: "Store not found",
+      });
     }
 
     // Get Dr. Green credentials

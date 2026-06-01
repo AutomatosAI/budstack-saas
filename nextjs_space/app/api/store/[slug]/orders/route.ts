@@ -11,7 +11,11 @@ export const GET = withAuth(async (_req, { user }, params) => {
 
     const email = user.email;
     if (!email) {
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+      return apiError(new Error("Email not found"), {
+        route: "GET /api/store/[slug]/orders",
+        status: 401,
+        safeMessage: "Email not found",
+      });
     }
 
     const dbUser = await prisma.users.findFirst({
@@ -19,13 +23,21 @@ export const GET = withAuth(async (_req, { user }, params) => {
     });
 
     if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError(new Error("User not found"), {
+        route: "GET /api/store/[slug]/orders",
+        status: 404,
+        safeMessage: "User not found",
+      });
     }
 
     const tenant = await getCurrentTenant();
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/store/[slug]/orders",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     // Get orders for the current user AND specific tenant
