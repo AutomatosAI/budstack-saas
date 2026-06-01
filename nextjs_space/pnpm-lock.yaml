@@ -54,8 +54,8 @@ importers:
         specifier: ^0.0.76
         version: 0.0.76(@types/react@18.2.22)(react@18.2.0)
       '@prisma/client':
-        specifier: 6.7.0
-        version: 6.7.0(prisma@6.7.0(typescript@5.2.2))(typescript@5.2.2)
+        specifier: 6.19.3
+        version: 6.19.3(prisma@6.7.0(typescript@5.2.2))(typescript@5.2.2)
       '@radix-ui/react-accordion':
         specifier: 1.2.12
         version: 1.2.12(@types/react-dom@18.2.7)(@types/react@18.2.22)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -387,10 +387,6 @@ importers:
       vitest:
         specifier: ^2.1.9
         version: 2.1.9(@types/node@20.6.2)(lightningcss@1.32.0)(terser@5.48.0)
-    optionalDependencies:
-      '@automatos/widget-sdk':
-        specifier: link:../../automatos-widget-sdk/packages/react
-        version: link:../../automatos-widget-sdk/packages/react
 
 packages:
 
@@ -1584,6 +1580,9 @@ packages:
   '@paper-design/shaders@0.0.76':
     resolution: {integrity: sha512-AcNDY4J66YQHUfQYFInkCP7M9VOje0od7wLpOR7LtCmc532opJy6ll+h1W9zBovz8tt9U7OADUmJ/qKEXyOX/A==}
 
+  '@pinojs/redact@0.4.0':
+    resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
+
   '@pkgr/core@0.3.6':
     resolution: {integrity: sha512-SEeaJLb3qBNF/OaXnaR1NmmBbFYk1zC0ZH/52fATcRPLFg/p791YrcyFFy44Bo9sLaGuSuLp5Q6axbb/O+v/RA==}
     engines: {node: ^14.18.0 || >=16.0.0}
@@ -1612,8 +1611,8 @@ packages:
   '@plotly/regl@2.1.2':
     resolution: {integrity: sha512-Mdk+vUACbQvjd0m/1JJjOOafmkp/EpmHjISsopEz5Av44CBq7rPC05HHNbYGKVyNUF2zmEoBS/TT0pd0SPFFyw==}
 
-  '@prisma/client@6.7.0':
-    resolution: {integrity: sha512-+k61zZn1XHjbZul8q6TdQLpuI/cvyfil87zqK2zpreNIXyXtpUv3+H/oM69hcsFcZXaokHJIzPAt5Z8C8eK2QA==}
+  '@prisma/client@6.19.3':
+    resolution: {integrity: sha512-mKq3jQFhjvko5LTJFHGilsuQs+W+T3Gm451NzuTDGQxwCzwXHYnIu2zGkRoW+Exq3Rob7yp2MfzSrdIiZVhrBg==}
     engines: {node: '>=18.18'}
     peerDependencies:
       prisma: '*'
@@ -3346,6 +3345,10 @@ packages:
 
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
+
+  atomic-sleep@1.0.0:
+    resolution: {integrity: sha512-kNOjDqAh7px0XWNI+4QbzoiR/nTkHAWNud2uvnJquD1/x5a7EQZMJT0AczqK0Qn67oY/TTQ1LbUKajZpp3I9tQ==}
+    engines: {node: '>=8.0.0'}
 
   autoprefixer@10.5.0:
     resolution: {integrity: sha512-FMhOoZV4+qR6aTUALKX2rEqGG+oyATvwBt9IIzVR5rMa2HRWPkxf+P+PAJLD1I/H5/II+HuZcBJYEFBpq39ong==}
@@ -7977,6 +7980,8 @@ snapshots:
 
   '@paper-design/shaders@0.0.76': {}
 
+  '@pinojs/redact@0.4.0': {}
+
   '@pkgr/core@0.3.6': {}
 
   '@playwright/test@1.60.0':
@@ -8040,7 +8045,7 @@ snapshots:
 
   '@plotly/regl@2.1.2': {}
 
-  '@prisma/client@6.7.0(prisma@6.7.0(typescript@5.2.2))(typescript@5.2.2)':
+  '@prisma/client@6.19.3(prisma@6.7.0(typescript@5.2.2))(typescript@5.2.2)':
     optionalDependencies:
       prisma: 6.7.0(typescript@5.2.2)
       typescript: 5.2.2
@@ -9828,6 +9833,8 @@ snapshots:
   async-function@1.0.0: {}
 
   asynckit@0.4.0: {}
+
+  atomic-sleep@1.0.0: {}
 
   autoprefixer@10.5.0(postcss@8.5.15):
     dependencies:
