@@ -61,3 +61,15 @@ Other required vars: Clerk keys, AWS S3 creds (`budstack-uploads` bucket, `devel
 1. Link first: `link-service` with `serviceName=budstack-saas`, `workspacePath=/Users/gkavanagh/Development/HealingBuds/budstack-saas`.
 2. `list-deployments` (`json=true`) to check status.
 3. `get-logs` with `logType: "deploy"` (runtime) or `"build"`; `filter` searches log text (e.g. `filter: "error"`).
+
+---
+
+## 6. Software Bill of Materials (SBOM)
+
+CI generates a **CycloneDX JSON** SBOM for the `nextjs_space/` dependency tree on every push to `main` and on demand (`workflow_dispatch`). The workflow is `.github/workflows/sbom.yml` (generator: syft via `anchore/sbom-action`, which reads `pnpm-lock.yaml`).
+
+To obtain the SBOM for procurement / vendor security review:
+
+1. Open the repo's **Actions** tab → the **SBOM** workflow.
+2. Pick the run for the commit/release you need (or trigger one via **Run workflow** → `workflow_dispatch`).
+3. Download the **`sbom-cyclonedx-json`** artifact from that run's **Artifacts** section; it contains `sbom.cdx.json`.

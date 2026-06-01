@@ -1,0 +1,50 @@
+# Dependabot configuration — PRD-216 US-005 (AC-2)
+#
+# Opens grouped weekly dependency-update PRs and surfaces new CVEs for the
+# pnpm app (nextjs_space) and the GitHub Actions workflows.
+#
+# Grouping + limit rationale: minor+patch updates are batched into a SINGLE PR
+# per ecosystem so routine bumps do not flood review; MAJOR updates are left
+# ungrouped so each potential breaking change is reviewed on its own. The
+# open-pull-requests-limit caps concurrent version-update PRs at 5 per ecosystem
+# as a backpressure valve. Dependabot SECURITY updates are on by default and are
+# intentionally NOT disabled here (the limit applies to version updates, not
+# security alerts).
+version: 2
+updates:
+  # Application dependencies. pnpm-lock.yaml + package.json live in /nextjs_space,
+  # read via the npm ecosystem (Dependabot parses pnpm lockfiles under "npm").
+  - package-ecosystem: "npm"
+    directory: "/nextjs_space"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+    groups:
+      npm-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions used by the workflows in /.github/workflows.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      actions-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
