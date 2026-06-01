@@ -11,16 +11,11 @@ import {
   CheckCircle2,
   XCircle,
   Download,
-  AlertTriangle,
   FileCheck,
   Eye,
-  Loader2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const sectionTitleStyle = {
-  fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
-};
 import {
   Table,
   TableBody,
@@ -29,14 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   SearchInput,
   StatusFilter,
@@ -52,47 +39,16 @@ import { useTableState } from "@/lib/admin/url-state";
 import { getTenantUrl } from "@/lib/tenant/tenant-utils";
 import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
-import { exportToCSV } from "@/lib/admin/csv-export";
-
-/** Filter type for tenant status */
-type TenantStatusFilter = "all" | "active" | "inactive";
-
-/** Typed filters for tenant table - uses Record index signature for URL state compatibility */
-type TenantFilters = {
-  status: TenantStatusFilter;
-} & Record<string, string>;
-
-/**
- * Tenant data shape from Prisma query
- */
-interface Tenant {
-  id: string;
-  businessName: string;
-  subdomain: string;
-  customDomain: string | null;
-  nftTokenId: string | null;
-  isActive: boolean;
-  createdAt: Date;
-  _count: {
-    users: number;
-    products: number;
-    orders: number;
-  };
-}
-
-interface TenantsTableProps {
-  /** Array of tenant data from server (paginated and filtered) */
-  tenants: Tenant[];
-  /** Total count of filtered tenants (for pagination) */
-  totalCount: number;
-  /** Count of active tenants (with search applied) */
-  activeCount: number;
-  /** Count of inactive tenants (with search applied) */
-  inactiveCount: number;
-}
-
-/** Type for confirmation dialog action */
-type BulkActionType = "activate" | "deactivate" | null;
+import {
+  sectionTitleStyle,
+  type Tenant,
+  type TenantStatusFilter,
+  type TenantFilters,
+  type TenantsTableProps,
+  type BulkActionType,
+} from "./tenants-table-helpers";
+import { exportTenantsToCSV } from "./tenants-csv-export";
+import { TenantBulkConfirmDialog } from "./tenant-bulk-confirm-dialog";
 
 /**
  * TenantsTable - Client component for displaying tenants with search, filter, pagination, and bulk actions.
@@ -228,50 +184,8 @@ export function TenantsTable({
 
   // Export ALL filtered tenants (the main export button)
   const handleExportAll = useCallback(async () => {
-    if (tenants.length === 0) return;
-
-    const headers = [
-      { key: "businessName" as keyof Tenant, label: "Business Name" },
-      { key: "nftTokenId" as keyof Tenant, label: "NFT Token ID" },
-      { key: "subdomain" as keyof Tenant, label: "Subdomain" },
-      { key: "customDomain" as keyof Tenant, label: "Custom Domain" },
-      { key: "isActive" as keyof Tenant, label: "Status" },
-      { key: "_count" as keyof Tenant, label: "Users" },
-      { key: "_count" as keyof Tenant, label: "Products" },
-      { key: "_count" as keyof Tenant, label: "Orders" },
-      { key: "createdAt" as keyof Tenant, label: "Created" },
-    ];
-
-    // Transform data for CSV export
-    const exportData = tenants.map((t) => ({
-      businessName: t.businessName,
-      nftTokenId: t.nftTokenId || "",
-      subdomain: t.subdomain,
-      customDomain: t.customDomain || "",
-      isActive: t.isActive ? "Active" : "Inactive",
-      users: t._count.users,
-      products: t._count.products,
-      orders: t._count.orders,
-      createdAt: format(new Date(t.createdAt), "yyyy-MM-dd"),
-    }));
-
-    const csvHeaders = [
-      { key: "businessName" as const, label: "Business Name" },
-      { key: "nftTokenId" as const, label: "NFT Token ID" },
-      { key: "subdomain" as const, label: "Subdomain" },
-      { key: "customDomain" as const, label: "Custom Domain" },
-      { key: "isActive" as const, label: "Status" },
-      { key: "users" as const, label: "Users" },
-      { key: "products" as const, label: "Products" },
-      { key: "orders" as const, label: "Orders" },
-      { key: "createdAt" as const, label: "Created" },
-    ];
-
-    await exportToCSV(
-      exportData,
-      csvHeaders,
-      "tenants",
-      undefined,
+    await exportTenantsToCSV(
+      tenants,
       (recordCount, fileSize) => {
         toast.success(`Exported ${recordCount} tenants to CSV (${fileSize})`);
       },
@@ -284,37 +198,8 @@ export function TenantsTable({
   // Export SELECTED tenants (for bulk action bar)
   const handleExportCSV = useCallback(async () => {
     const selectedTenants = tenants.filter((t) => selectedIds.has(t.id));
-    if (selectedTenants.length === 0) return;
-
-    const exportData = selectedTenants.map((t) => ({
-      businessName: t.businessName,
-      nftTokenId: t.nftTokenId || "",
-      subdomain: t.subdomain,
-      customDomain: t.customDomain || "",
-      isActive: t.isActive ? "Active" : "Inactive",
-      users: t._count.users,
-      products: t._count.products,
-      orders: t._count.orders,
-      createdAt: format(new Date(t.createdAt), "yyyy-MM-dd"),
-    }));
-
-    const csvHeaders = [
-      { key: "businessName" as const, label: "Business Name" },
-      { key: "nftTokenId" as const, label: "NFT Token ID" },
-      { key: "subdomain" as const, label: "Subdomain" },
-      { key: "customDomain" as const, label: "Custom Domain" },
-      { key: "isActive" as const, label: "Status" },
-      { key: "users" as const, label: "Users" },
-      { key: "products" as const, label: "Products" },
-      { key: "orders" as const, label: "Orders" },
-      { key: "createdAt" as const, label: "Created" },
-    ];
-
-    await exportToCSV(
-      exportData,
-      csvHeaders,
-      "tenants",
-      undefined,
+    await exportTenantsToCSV(
+      selectedTenants,
       (recordCount, fileSize) => {
         toast.success(
           `Exported ${recordCount} selected tenants to CSV (${fileSize})`,
@@ -693,111 +578,14 @@ export function TenantsTable({
       />
 
       {/* Confirmation Dialog */}
-      <Dialog
-        open={confirmAction !== null}
-        onOpenChange={(open) => !open && setConfirmAction(null)}
-      >
-        <DialogContent className="bs-dialog-content sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle
-              className="flex items-center gap-2 text-[22px] leading-tight"
-              style={sectionTitleStyle}
-            >
-              {confirmAction === "activate" ? (
-                <>
-                  <CheckCircle2
-                    className="h-5 w-5 text-bs-green"
-                    aria-hidden="true"
-                  />
-                  <span>Activate Tenants</span>
-                </>
-              ) : (
-                <>
-                  <AlertTriangle
-                    className="h-5 w-5 text-bs-warn"
-                    aria-hidden="true"
-                  />
-                  <span>Deactivate Tenants</span>
-                </>
-              )}
-            </DialogTitle>
-            <DialogDescription className="pt-2 text-bs-fg-muted">
-              {confirmAction === "activate" ? (
-                <span>
-                  Are you sure you want to activate{" "}
-                  <strong className="text-bs-fg">{selectedIds.size}</strong>{" "}
-                  tenant{selectedIds.size === 1 ? "" : "s"}? They will be able
-                  to access their stores.
-                </span>
-              ) : (
-                <span>
-                  Are you sure you want to deactivate{" "}
-                  <strong className="text-bs-fg">{selectedIds.size}</strong>{" "}
-                  tenant{selectedIds.size === 1 ? "" : "s"}? Their stores will
-                  become inaccessible.
-                </span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Show tenant names */}
-          {selectedTenantNames.length > 0 && (
-            <div className="py-2">
-              <p className="text-xs text-bs-fg-muted mb-2">
-                Affected tenants:
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {selectedTenantNames.map((name) => (
-                  <RowPill key={name} tone="slate">
-                    {name}
-                  </RowPill>
-                ))}
-                {selectedIds.size > 5 && (
-                  <RowPill tone="slate">
-                    +{selectedIds.size - 5} more
-                  </RowPill>
-                )}
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <button
-              type="button"
-              onClick={() => setConfirmAction(null)}
-              disabled={isProcessing}
-              className="bs-btn bs-btn-ghost"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmAction}
-              disabled={isProcessing}
-              className={cn(
-                "bs-btn",
-                confirmAction === "activate"
-                  ? "bs-btn-green"
-                  : "bs-btn-danger",
-              )}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2
-                    className="mr-2 h-4 w-4 animate-spin"
-                    aria-hidden="true"
-                  />
-                  Processing...
-                </>
-              ) : confirmAction === "activate" ? (
-                "Activate"
-              ) : (
-                "Deactivate"
-              )}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <TenantBulkConfirmDialog
+        confirmAction={confirmAction}
+        onClose={() => setConfirmAction(null)}
+        selectedCount={selectedIds.size}
+        selectedTenantNames={selectedTenantNames}
+        isProcessing={isProcessing}
+        onConfirm={handleConfirmAction}
+      />
     </>
   );
 }
