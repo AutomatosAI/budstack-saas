@@ -1,16 +1,17 @@
-import { NextResponse } from "next/server";
-import { clerkClient } from "@clerk/nextjs/server";
-import { withAuth } from "@/lib/api-auth";
-import { prisma } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { currentUser, clerkClient } from "@clerk/nextjs/server";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import { getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { eraseUser, resolveLocalUser } from "@/lib/gdpr/erasure";
 
 /**
  * GDPR Article 17 — Right to erasure (self-service).
  *
- * Anonymizes the authenticated user's account: PII fields nulled, email
- * replaced with a deletion marker, isActive set to false. Order/consultation
+ * Anonymizes the authenticated user's account via the canonical
+ * `eraseUser` path (lib/gdpr/erasure.ts) shared with the admin and Clerk
+ * entry points: PII fields nulled, email replaced with a deletion marker,
+ * isActive set to false, and the Dr Green linkage SEVERED. Order/consultation
  * history is RETAINED (anonymized via the user FK) because tenants may have
  * legal/financial obligations to keep transaction records — full hard delete
  * is admin-initiated only.
@@ -48,9 +49,11 @@ export const DELETE = withAuth(async (request, { user }) => {
       );
     }
 
-    const dbUser = await prisma.users.findFirst({
-      where: { email },
-      select: { id: true, email: true, name: true, tenantId: true, role: true },
+    // Resolve via the shared resolver (Clerk id first, then email) so we can
+    // enforce the admin-block before anonymising.
+    const dbUser = await resolveLocalUser({
+      clerkUserId: clerkUser.id,
+      email,
     });
 
     if (!dbUser) {
@@ -69,24 +72,7 @@ export const DELETE = withAuth(async (request, { user }) => {
       );
     }
 
-    // Anonymize local record (preserves order/consultation FK integrity)
-    await prisma.users.update({
-      where: { id: dbUser.id },
-      data: {
-        email: `deleted-${dbUser.id}@deleted.local`,
-        name: "Deleted User",
-        firstName: null,
-        lastName: null,
-        phone: null,
-        address: undefined,
-        password: "DELETED",
-        isActive: false,
-        resetToken: null,
-        resetTokenExpiry: null,
-      },
-    });
-
-    // Best-effort Clerk teardown — never block local anonymization on this
+    // Best-effort Clerk teardown — never block local anonymization on this.
     let clerkDeleted = false;
     try {
       const clerk = await clerkClient();
@@ -99,20 +85,14 @@ export const DELETE = withAuth(async (request, { user }) => {
       );
     }
 
-    await createAuditLog({
-      action: AUDIT_ACTIONS.ACCOUNT_DELETED_GDPR_SELF,
-      entityType: "User",
-      entityId: dbUser.id,
-      userId: user.id,
-      userEmail: email,
-      tenantId: dbUser.tenantId || undefined,
-      metadata: {
-        targetUserEmail: dbUser.email,
-        targetUserName: dbUser.name,
-        clerkDeleted,
-        deletionType: "self_service_anonymization",
-      },
-      ...getClientInfo(request.headers),
+    // Canonical erasure: anonymise PII, sever Dr Green linkage, write audit row.
+    await eraseUser({
+      userId: dbUser.id,
+      clerkUserId: clerkUser.id,
+      email,
+      reason: "self_service",
+      clerkDeleted,
+      clientInfo: getClientInfo(request.headers),
     });
 
     return NextResponse.json({

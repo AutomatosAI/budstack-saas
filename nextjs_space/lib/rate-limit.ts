@@ -6,6 +6,19 @@
 import { NextResponse } from 'next/server';
 import Redis from 'ioredis';
 import { apiError } from '@/lib/api-error';
+import { sendAlert } from '@/lib/alert';
+import { logger } from '@/lib/logger';
+import crypto from 'crypto';
+
+/**
+ * Hash an identifier before it goes anywhere off-box (alert transport). The
+ * fail-open event must be observable without leaking the raw identifier (which
+ * can be an IP or user id). SHA-256, truncated — collision-resistant enough to
+ * correlate an incident, opaque enough not to be PII in an alert channel.
+ */
+function hashIdentifier(identifier: string): string {
+  return crypto.createHash('sha256').update(identifier).digest('hex').slice(0, 16);
+}
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 let redisClient: Redis | null = null;
@@ -106,12 +119,25 @@ export async function checkRateLimit(
     }
   } catch (error) {
     // Redis is unreachable. Emit a structured ops event so the outage is
-    // observable now — PRD-215 will formalise the transport; for today a
-    // single keyed console.error line is the contract.
+    // observable now. The keyed console.error line is the long-standing
+    // contract that the in-suite assertions bind to; we keep it AND page
+    // on-call through the alert channel (PRD-215 AC-7) so a silent loss of
+    // rate-limiting becomes a tracked incident instead of just a log line.
+    const reason = error instanceof Error ? error.message : String(error);
     console.error('ops.rate_limit_failopen', {
       identifier,
       failMode,
-      error: error instanceof Error ? error.message : String(error),
+      error: reason,
+    });
+
+    // Fire-and-forget: the alert channel swallows its own failures and must
+    // never block or break the request. Identifier is hashed before it leaves
+    // the box so the alert carries no raw IP/user id (AC-7 event payload).
+    void sendAlert({
+      event: 'ops.rate_limit_fail_open',
+      severity: failMode === 'closed' ? 'critical' : 'warning',
+      message: `Rate limiter failed ${failMode} — Redis unavailable`,
+      context: { identifier: hashIdentifier(identifier), failMode, reason: 'redis_unavailable' },
     });
 
     if (failMode === 'closed') {
@@ -172,7 +198,9 @@ export async function getRateLimitStatus(
       reset: new Date(now + (ttlMs > 0 ? ttlMs : windowMs)),
     };
   } catch (error) {
-    console.warn('[RateLimit] Redis error, returning default window:', error);
+    logger.warn('[RateLimit] Redis error, returning default window', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {
       remaining: maxRequests,
       limit: maxRequests,

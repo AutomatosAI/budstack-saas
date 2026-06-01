@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { requestLogger } from "@/lib/logger";
 
 /**
  * Centralized API error response helper.
@@ -85,14 +86,16 @@ export function apiError(
   const errStack = error instanceof Error ? error.stack : undefined;
   const route = opts.route ?? "api";
 
-  // Server log keeps full context — not surfaced to client.
-  console.error(
-    `[${route}] error correlationId=${correlationId} status=${status} message="${errMsg}"`,
-    {
-      ...opts.logContext,
-      stack: errStack,
-    },
-  );
+  // Server log keeps full context — not surfaced to client. Routed through the
+  // redacting structured logger (AC-1b) with the same correlationId returned to
+  // the client, so support can pair the response with the server log. The
+  // logger sanitises logContext, so a caller can't accidentally log PII here.
+  requestLogger(correlationId).error(`[${route}] error`, {
+    status,
+    message: errMsg,
+    ...opts.logContext,
+    stack: errStack,
+  });
 
   const isClientError = status >= 400 && status < 500;
 

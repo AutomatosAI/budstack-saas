@@ -12,8 +12,8 @@
     "test:cov": "vitest run --coverage",
     "check:css-sanitized": "node scripts/ci/check-css-sanitized.mjs",
     "check:no-error-leaks": "node scripts/ci/check-no-error-message-leaks.mjs",
-    "check:no-tenant-escapes": "node scripts/ci/check-no-tenant-context-escapes.mjs",
-    "check:no-pii-logs": "node scripts/ci/check-no-pii-in-logs.mjs",
+    "check:custom-domain-cache": "node scripts/ci/check-custom-domain-cache-isolation.mjs",
+    "check:security": "node scripts/ci/check-css-sanitized.mjs && node scripts/ci/check-no-error-message-leaks.mjs",
     "check:tenant-resolver": "node scripts/ci/check-tenant-resolver-gates.mjs",
     "check:grep-gates:report": "node scripts/ci/check-no-tenant-context-escapes.mjs || true; node scripts/ci/check-no-pii-in-logs.mjs || true",
     "check:docs-lint": "node scripts/ci/check-docs-lint.mjs",
@@ -68,9 +68,6 @@
       "socket.io-parser@<4.2.6": ">=4.2.6",
       "postcss@<8.4.31": ">=8.4.31"
     }
-  },
-  "optionalDependencies": {
-    "@automatos/widget-sdk": "link:../../automatos-widget-sdk/packages/react"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1057.0",
@@ -146,6 +143,7 @@
     "next-themes": "0.4.6",
     "node-fetch": "2.6.7",
     "nodemailer": "^7.0.13",
+    "pino": "^10.3.1",
     "plotly.js": "2.35.3",
     "qrcode.react": "^4.2.0",
     "react": "18.2.0",

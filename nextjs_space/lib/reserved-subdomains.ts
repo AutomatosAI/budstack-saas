@@ -2,9 +2,12 @@
  * Reserved subdomains that cannot be registered (onboarding) or renamed onto
  * (super-admin tenant rename) — PRD-201 AC-6/AC-7.
  *
- * Includes routing-structural placeholders from middleware.ts — notably `_cd`,
- * the custom-domain rewrite placeholder (example.com -> /store/_cd/...). A
- * tenant claiming `_cd` would collide with the custom-domain routing internals.
+ * Includes routing-structural placeholders from middleware.ts. `_cd` was the
+ * historic custom-domain rewrite placeholder (example.com -> /store/_cd/...);
+ * PRD-212 replaced it with host-scoped /store/cd-<hash> segments, but `_cd`
+ * stays reserved as defense-in-depth so no tenant can claim the legacy literal
+ * (it also can never be registered: it fails isValidSubdomain's no-underscore
+ * charset, but reserving it keeps the intent explicit).
  */
 export const RESERVED_SUBDOMAINS: ReadonlySet<string> = new Set([
   // Routing-structural placeholders (middleware.ts rewrites)

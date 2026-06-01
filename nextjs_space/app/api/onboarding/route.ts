@@ -7,23 +7,31 @@ import crypto from "crypto";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isReservedSubdomain, isValidSubdomain } from "@/lib/reserved-subdomains";
+import { createAuditLog } from "@/lib/audit-log";
+import {
+  DPA_ACCEPTED_AUDIT_ACTION,
+  dpaAcceptanceSchema,
+} from "@/lib/gdpr/dpa";
 
-const onboardingSchema = z.object({
-  businessName: z.string().min(1).max(100),
-  email: z.string().email().max(254),
-  password: z.string().min(8).max(128),
-  subdomain: z.string().min(2).max(30).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, "Invalid subdomain format"),
-  nftTokenId: z.string().min(1).max(200),
-  contactInfo: z.union([
-    z.string().max(1000),
-    z.object({
-      phone: z.string().max(20).optional(),
-      address: z.string().max(500).optional(),
-    }),
-  ]).optional(),
-  countryCode: z.string().length(2).regex(/^[A-Z]{2}$/),
-  templateId: z.string().max(100).optional(),
-});
+const onboardingSchema = z
+  .object({
+    businessName: z.string().min(1).max(100),
+    email: z.string().email().max(254),
+    password: z.string().min(8).max(128),
+    subdomain: z.string().min(2).max(30).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, "Invalid subdomain format"),
+    nftTokenId: z.string().min(1).max(200),
+    contactInfo: z.union([
+      z.string().max(1000),
+      z.object({
+        phone: z.string().max(20).optional(),
+        address: z.string().max(500).optional(),
+      }),
+    ]).optional(),
+    countryCode: z.string().length(2).regex(/^[A-Z]{2}$/),
+    templateId: z.string().max(100).optional(),
+  })
+  // PRD-213 AC-2a: a current DPA acceptance is mandatory at onboarding.
+  .merge(dpaAcceptanceSchema);
 
 const TEMPLATE_PRESETS = {
   modern: {
@@ -83,6 +91,8 @@ export async function POST(req: NextRequest) {
       contactInfo,
       countryCode,
       templateId,
+      dpaVersion,
+      dpaAcceptedAt,
     } = parseResult.data;
 
     // Subdomain format validation
@@ -236,6 +246,10 @@ export async function POST(req: NextRequest) {
           isActive: true,
           templateId: dbTemplate.id,
           updatedAt: new Date(),
+          // PRD-213 AC-2a: persist the accepted DPA version + timestamp on the tenant.
+          dpaAcceptedVersion: dpaVersion,
+          dpaAcceptedAt: new Date(dpaAcceptedAt),
+          dpaAcceptedByUserId: clerkUser.id,
           settings: {
             contactInfo,
             templatePreset: templateId || "modern",
@@ -307,6 +321,23 @@ export async function POST(req: NextRequest) {
       await prisma.tenants.update({
         where: { id: tenant.id },
         data: { activeTenantTemplateId: tenantTemplateId },
+      });
+
+      // PRD-213 AC-2b: record DPA acceptance in the audit trail (Art. 28 proof).
+      await createAuditLog({
+        action: DPA_ACCEPTED_AUDIT_ACTION,
+        entityType: "Tenant",
+        entityId: tenant.id,
+        userId: clerkUser.id,
+        userEmail: email,
+        tenantId: tenant.id,
+        metadata: {
+          dpaVersion,
+          dpaAcceptedAt,
+          businessName,
+        },
+        ipAddress: ip,
+        userAgent: req.headers.get("user-agent") || "unknown",
       });
 
       // 6. Create Local User (mirroring Clerk User)

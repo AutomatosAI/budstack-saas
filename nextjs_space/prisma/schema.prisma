@@ -252,6 +252,7 @@ model orders {
 
   @@index([drGreenOrderId])
   @@index([nonce])
+  @@index([tenantId, createdAt]) // PRD-208 AC-4: admin orders list / analytics hot path
 }
 
 model platform_config {
@@ -328,9 +329,11 @@ model products {
   updatedAt    DateTime
   displayOrder Int         @default(0)
   seo          Json?
+  deletedAt    DateTime? // PRD-208 soft-delete (recoverable; NULL = live)
   tenants      tenants     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([slug, tenantId])
+  @@index([tenantId, deletedAt]) // PRD-208 soft-delete: tenant-scoped not-deleted filter
 }
 
 model templates {
@@ -363,10 +366,13 @@ model templates {
   version                String                    @default("1.0.0")
   authorTenantId         String?
   authorName             String?
+  deletedAt              DateTime? // PRD-208 soft-delete (recoverable; NULL = live)
   tenant_templates       tenant_templates[]
   tenants                tenants[]
   authorTenant           tenants?                  @relation("AuthoredTemplates", fields: [authorTenantId], references: [id])
   approvedForSubmissions marketplace_submissions[]
+
+  @@index([deletedAt]) // PRD-208 soft-delete: keep "not-deleted" filters fast
 }
 
 model tenant_branding {
@@ -406,6 +412,7 @@ model tenant_templates {
   githubUrl              String?
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime
+  deletedAt              DateTime? // PRD-208 soft-delete (recoverable; NULL = live)
   templates              templates                 @relation(fields: [baseTemplateId], references: [id])
   tenant                 tenants                   @relation("tenant_templates_tenantIdTotenants", fields: [tenantId], references: [id], onDelete: Cascade)
   activeForTenant        tenants?                  @relation("tenants_activeTenantTemplateIdTotenant_templates")
@@ -413,6 +420,7 @@ model tenant_templates {
 
   @@unique([tenantId, templateName])
   @@index([tenantId, isActive])
+  @@index([tenantId, deletedAt]) // PRD-208 soft-delete: tenant-scoped not-deleted filter
 }
 
 model tenants {
@@ -440,6 +448,7 @@ model tenants {
   automatosApiKey        String?
   automatosAgentId       Int?
   pageSeo                Json?
+  deletedAt              DateTime? // PRD-208 soft-delete (recoverable; NULL = live)
   conditions             conditions[]
   consultations          consultations[]
   drgreen_carts          drgreen_carts[]
@@ -458,6 +467,8 @@ model tenants {
   authoredTemplates      templates[]               @relation("AuthoredTemplates")
   marketplaceSubmissions marketplace_submissions[]
   users                  users[]
+
+  @@index([deletedAt]) // PRD-208 soft-delete: keep "not-deleted" filters fast
 }
 
 model marketplace_submissions {
@@ -477,6 +488,7 @@ model marketplace_submissions {
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
   reviewedAt         DateTime?
+  deletedAt          DateTime? // PRD-208 soft-delete (recoverable; NULL = live)
   tenant             tenants          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantTemplate     tenant_templates @relation(fields: [tenantTemplateId], references: [id], onDelete: Cascade)
   reviewer           users?           @relation(fields: [reviewerId], references: [id])
@@ -484,6 +496,7 @@ model marketplace_submissions {
 
   @@index([tenantId])
   @@index([status])
+  @@index([tenantId, deletedAt]) // PRD-208 soft-delete: tenant-scoped not-deleted filter
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -520,10 +533,11 @@ model marketplace_submissions {
 model users {
   id                  String                    @id
   email               String                    @unique // PRD-208: -> @@unique([email, tenantId]); see note above
+  clerkUserId         String?                   @unique // PRD-213: reliable Clerk->local mapping for user.deleted erasure
   password            String
   name                String?
   role                Role                      @default(PATIENT)
-  tenantId            String?                   // PRD-208 backfill target; nullable today => global-unique email is load-bearing
+  tenantId            String? // PRD-208 backfill target; nullable today => global-unique email is load-bearing
   drGreenClientId     String?
   createdAt           DateTime                  @default(now())
   updatedAt           DateTime
@@ -540,6 +554,8 @@ model users {
   posts               posts[]
   reviewedSubmissions marketplace_submissions[]
   tenants             tenants?                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId]) // PRD-208 AC-4: tenant-scoped user lookups ($use auto-scopes by tenantId)
 }
 
 model webhook_deliveries {
@@ -614,12 +630,12 @@ model learning_resources {
   title       String
   slug        String   @unique
   description String?
-  content     String?  // Markdown body
-  category    String   // e.g. "getting-started", "templates", "orders", "integrations"
+  content     String? // Markdown body
+  category    String // e.g. "getting-started", "templates", "orders", "integrations"
   type        String   @default("article") // "article", "video", "guide"
-  videoUrl    String?  // YouTube/Vimeo embed URL
-  docUrl      String?  // S3 key or external link for downloadable docs
-  coverImage  String?  // S3 key for cover image
+  videoUrl    String? // YouTube/Vimeo embed URL
+  docUrl      String? // S3 key or external link for downloadable docs
+  coverImage  String? // S3 key for cover image
   tags        String[] @default([])
   isPublished Boolean  @default(false)
   sortOrder   Int      @default(0)

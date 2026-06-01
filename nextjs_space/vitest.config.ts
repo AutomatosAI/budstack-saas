@@ -5,7 +5,11 @@ export default defineConfig({
   test: {
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],
-    include: ["tests/unit/**/*.test.ts", "lib/**/*.test.ts"],
+    include: [
+      "tests/unit/**/*.test.ts",
+      "tests/integration/**/*.test.ts",
+      "lib/**/*.test.ts",
+    ],
     coverage: {
       provider: "v8",
       include: ["lib/**"],
