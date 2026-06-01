@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { getSectionComponent } from '@/lib/section-registry';
 import type { SectionProps } from '@/lib/types/section-props';
 import type { TemplateLayout } from '@/lib/types/template-layout';
-import { motion } from 'framer-motion';
+import { motion, type Transition } from 'framer-motion';
 import { sanitizeCss, extractGoogleFontsImports } from '@/lib/css-utils';
 import { hexToHsl } from '@/lib/color-utils';
 
@@ -181,7 +181,7 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
           let initial = {};
           let whileInView = {};
           let viewport = { once: true, margin: "-100px" };
-          let transition = { duration: 0.6, ease: "easeOut" };
+          let transition: Transition = { duration: 0.6, ease: "easeOut" };
 
           if (animationType === "fade-up") {
             initial = { opacity: 0, y: 40 };
