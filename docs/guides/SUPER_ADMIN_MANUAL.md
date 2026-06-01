@@ -1,6 +1,10 @@
 
 # BudStack Super Admin Manual
 
+> **Status:** Code-verified 2026-05-29.
+> **Describes:** Super-admin operations — Railway hosting, Clerk auth, Namecheap subdomains, Railway custom domains.
+> **Last verified against:** `main` as of 2026-05-29.
+
 **Platform Management & Operations Guide**
 
 ---

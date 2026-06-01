@@ -1,6 +1,8 @@
 # BudStacks — System Architecture
 
 > **Status:** Authoritative. Code-verified against `nextjs_space/` on 2026-05-29.
+> **Describes:** Auth = Clerk, Hosting = Railway, ORM = Prisma/PostgreSQL, Queue = BullMQ/Redis, Storage = AWS S3.
+> **Last verified:** 2026-05-29 against `main` (commit `d1a392d`).
 > Every claim below was checked against source. When code and this doc disagree, **the code wins** — fix this doc.
 
 BudStacks is a **multi-tenant SaaS platform** that lets operators launch branded medical-cannabis storefronts. Each tenant gets a data-driven storefront (served on a subdomain or custom domain), a tenant-admin console, and an integration with the **Dr Green** prescription/fulfilment API. A super-admin tier manages tenants, templates, and platform settings.
