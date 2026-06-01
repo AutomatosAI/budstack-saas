@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { deleteS3Directory } from "@/lib/s3";
 import { apiError } from "@/lib/api-error";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
@@ -15,13 +15,8 @@ export const dynamic = "force-dynamic";
  * requires an exact single-segment templates/{slug}/ prefix (no bare prefix / no traversal)
  * and a typed confirmation matching the slug. Writes a structured audit line.
  */
-export async function DELETE(req: NextRequest) {
+export const DELETE = withSuperAdmin(async (req, { user }) => {
   try {
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const originError = requireSameOrigin(req);
     if (originError) return originError;
 
@@ -49,7 +44,7 @@ export async function DELETE(req: NextRequest) {
       "[S3 Cleanup][AUDIT]",
       JSON.stringify({
         action: "S3_TEMPLATE_CLEANUP",
-        actor: user.emailAddresses[0]?.emailAddress ?? user.id,
+        actor: user.email ?? user.id,
         targetPrefix: normalizedPrefix,
         filesDeleted: deleted,
         timestamp: new Date().toISOString(),
@@ -69,4 +64,4 @@ export async function DELETE(req: NextRequest) {
       safeMessage: "Cleanup failed",
     });
   }
-}
+});

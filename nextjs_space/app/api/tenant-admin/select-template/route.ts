@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { readFile } from "fs/promises";
@@ -13,21 +13,8 @@ const selectTemplateSchema = z
   })
   .strict();
 
-export async function POST(request: NextRequest) {
+export const POST = withTenantAuth(async (request, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      !user.tenantId ||
-      (user.role !== "TENANT_ADMIN" && user.role !== "SUPER_ADMIN")
-    ) {
-      return NextResponse.json(
-        { error: "Forbidden - Tenant admin access required" },
-        { status: 403 },
-      );
-    }
-
     const { templateId } = await parseJsonBody(request, selectTemplateSchema);
 
     // Verify template exists and is active
@@ -71,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     // Preserve tenant-specific uploaded content (logo, hero image)
     const tenant = await prisma.tenants.findUnique({
-      where: { id: user.tenantId },
+      where: { id: tenantId },
       select: { settings: true }
     });
 
@@ -101,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     // Update tenant's template selection AND settings
     const updatedTenant = await prisma.tenants.update({
-      where: { id: user.tenantId },
+      where: { id: tenantId },
       data: {
         templateId,
         settings: newSettings,
@@ -127,4 +114,4 @@ export async function POST(request: NextRequest) {
       safeMessage: "Internal server error",
     });
   }
-}
+});

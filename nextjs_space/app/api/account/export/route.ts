@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
@@ -14,16 +14,9 @@ import { apiError } from "@/lib/api-error";
  * a user's full record on demand). Self-service only — admins use the
  * tenant-admin customer routes for assisted exports.
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, { user }) => {
   try {
-    const clerkUser = await currentUser();
-    if (!clerkUser?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = clerkUser.emailAddresses.find(
-      (e) => e.id === clerkUser.primaryEmailAddressId,
-    )?.emailAddress || clerkUser.emailAddresses[0]?.emailAddress;
+    const email = user.email;
 
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
@@ -31,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     // 3 exports per hour per user — generous for legitimate use, restrictive
     // enough that it's not a useful scraping primitive.
-    const rate = await checkRateLimit(`account-export:${clerkUser.id}`, {
+    const rate = await checkRateLimit(`account-export:${user.id}`, {
       maxRequests: 3,
       windowMs: 60 * 60 * 1000,
       failMode: "closed",
@@ -100,7 +93,7 @@ export async function GET(request: NextRequest) {
       action: AUDIT_ACTIONS.ACCOUNT_DATA_EXPORTED,
       entityType: "User",
       entityId: dbUser.id,
-      userId: clerkUser.id,
+      userId: user.id,
       userEmail: email,
       tenantId: dbUser.tenantId || undefined,
       metadata: {
@@ -131,4 +124,4 @@ export async function GET(request: NextRequest) {
       safeMessage: "Failed to export account data",
     });
   }
-}
+});

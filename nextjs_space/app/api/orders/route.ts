@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { sendEmail, emailTemplates } from "@/lib/email";
@@ -9,17 +9,10 @@ import {
 } from "@/lib/doctor-green-api";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, { user }) => {
   try {
-    const user = await currentUser();
-
-    if (!user?.id || !user.emailAddresses?.[0]?.emailAddress) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Get user from DB linked by email
-    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
-    const email = primaryEmail || user.emailAddresses[0]?.emailAddress;
+    const email = user.email;
 
     if (!email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -152,7 +145,7 @@ export async function POST(req: NextRequest) {
 
     // Send order confirmation email
     const html = await emailTemplates.orderConfirmation(
-      user.firstName ? `${user.firstName} ${user.lastName || ''}` : "Customer",
+      dbUser.firstName ? `${dbUser.firstName} ${dbUser.lastName || ''}` : "Customer",
       order.orderNumber,
       calculatedTotal.toFixed(2),
       items.map((item: any) => ({
@@ -192,18 +185,17 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req, { user }) => {
   try {
     // Auth Check
-    const user = await currentUser();
-    if (!user?.id || !user.emailAddresses?.[0]?.emailAddress) {
+    const email = user.email;
+    if (!email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // DB User Link
-    const email = user.emailAddresses[0].emailAddress;
     const dbUser = await prisma.users.findFirst({ where: { email } });
     if (!dbUser) {
       return NextResponse.json({ orders: [] });
@@ -237,4 +229,4 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

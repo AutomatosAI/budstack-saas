@@ -1,38 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const DELETE = withTenantAuthParams(async (req, { user, tenantId }, params) => {
   try {
-    const user = await currentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
     const tenantTemplateId = parseUuid(params.id);
 
-    // Get user's tenant
-    const userRecord = await prisma.users.findUnique({
-      where: { email },
-      select: { tenantId: true, role: true },
-    });
-
-    if (!userRecord?.tenantId) {
-      return NextResponse.json(
-        { error: "No tenant associated with this user" },
-        { status: 403 },
-      );
-    }
-
-    if (userRecord.role !== "TENANT_ADMIN") {
+    if (user.role !== "TENANT_ADMIN") {
       return NextResponse.json(
         { error: "Only tenant admins can delete templates" },
         { status: 403 },
@@ -57,7 +34,7 @@ export async function DELETE(
     }
 
     // Verify the template belongs to this tenant
-    if (tenantTemplate.tenantId !== userRecord.tenantId) {
+    if (tenantTemplate.tenantId !== tenantId) {
       return NextResponse.json(
         { error: "You can only delete your own templates" },
         { status: 403 },
@@ -75,7 +52,7 @@ export async function DELETE(
     }
 
     console.log(
-      `[Tenant Template Delete] Deleting template: ${tenantTemplate.templateName} for tenant: ${userRecord.tenantId}`,
+      `[Tenant Template Delete] Deleting template: ${tenantTemplate.templateName} for tenant: ${tenantId}`,
     );
 
     // Delete the tenant template
@@ -92,8 +69,8 @@ export async function DELETE(
       entityType: "tenant_template",
       entityId: tenantTemplateId,
       userId: user.id,
-      userEmail: email!,
-      tenantId: userRecord.tenantId,
+      userEmail: user.email!,
+      tenantId: tenantId,
       metadata: {
         templateName: tenantTemplate.templateName,
         baseTemplateId: tenantTemplate.baseTemplateId,
@@ -113,4 +90,4 @@ export async function DELETE(
       safeMessage: "Failed to delete template",
     });
   }
-}
+});

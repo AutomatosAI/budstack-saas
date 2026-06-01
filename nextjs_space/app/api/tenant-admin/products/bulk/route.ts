@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import crypto from "crypto";
@@ -25,32 +25,12 @@ const productBulkSchema = z
  *   productIds: string[]
  * }
  */
-export async function POST(request: NextRequest) {
+export const POST = withTenantAuth(async (request, { user, tenantId }) => {
   try {
-    // Check authentication and authorization
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Rate limiting
     const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
-    }
-
-    // Get user's tenant ID from metadata
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "No tenant associated with user" },
-        { status: 403 },
-      );
     }
 
     const { action, productIds } = await parseJsonBody(
@@ -149,4 +129,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return apiError(error, { route: "POST /api/tenant-admin/products/bulk" });
   }
-}
+});

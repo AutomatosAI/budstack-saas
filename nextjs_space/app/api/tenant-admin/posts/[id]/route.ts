@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { apiError } from "@/lib/api-error";
@@ -24,24 +24,16 @@ const postSchema = z.object({
   published: z.boolean().default(false),
 });
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const GET = withAuth(async (_req, { user }, { id: rawId }) => {
   try {
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
+    const email = user.email;
+    const role = user.role;
 
     if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const id = parseUuid(params.id);
+    const id = parseUuid(rawId);
 
     const post = await prisma.posts.findUnique({
       where: { id },
@@ -66,26 +58,18 @@ export async function GET(
   } catch (error) {
     return apiError(error, { route: "GET /api/tenant-admin/posts/[id]" });
   }
-}
+});
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const PATCH = withAuth(async (req, { user }, { id: rawId }) => {
   try {
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
+    const email = user.email;
+    const role = user.role;
 
     if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const id = parseUuid(params.id);
+    const id = parseUuid(rawId);
     const body = await parseJsonBody(req, undefined, { maxBytes: 512 * 1024 });
     const validatedData = postSchema.partial().parse(body);
 
@@ -140,26 +124,18 @@ export async function PATCH(
     }
     return apiError(error, { route: "PATCH /api/tenant-admin/posts/[id]" });
   }
-}
+});
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const DELETE = withAuth(async (_req, { user }, { id: rawId }) => {
   try {
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
+    const email = user.email;
+    const role = user.role;
 
     if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const id = parseUuid(params.id);
+    const id = parseUuid(rawId);
     const localUser = await prisma.users.findFirst({
       where: { email: email },
       include: { tenants: true },
@@ -183,4 +159,4 @@ export async function DELETE(
   } catch (error) {
     return apiError(error, { route: "DELETE /api/tenant-admin/posts/[id]" });
   }
-}
+});

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { apiError } from "@/lib/api-error";
+import { getTenantFromRequest } from "@/lib/tenant";
+import { runWithTenantContextAsync } from "@/lib/tenant-context";
 
 /**
  * Authenticated user shape returned by getCurrentUser()
@@ -62,7 +64,9 @@ export function withTenantAuth(handler: RouteHandler<TenantAuthContext>) {
         );
       }
 
-      return await handler(req, { user, tenantId });
+      return await runWithTenantContextAsync(tenantId, () =>
+        handler(req, { user, tenantId }),
+      );
     } catch (error) {
       return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
     }
@@ -98,7 +102,9 @@ export function withTenantAuthParams(
         );
       }
 
-      return await handler(req, { user, tenantId }, params);
+      return await runWithTenantContextAsync(tenantId, () =>
+        handler(req, { user, tenantId }, params),
+      );
     } catch (error) {
       return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
     }
@@ -124,7 +130,7 @@ export function withSuperAdmin(handler: RouteHandler<SuperAdminAuthContext>) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
-      return await handler(req, { user });
+      return await runWithTenantContextAsync(null, () => handler(req, { user }));
     } catch (error) {
       return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
     }
@@ -149,7 +155,9 @@ export function withSuperAdminParams(
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
-      return await handler(req, { user }, params);
+      return await runWithTenantContextAsync(null, () =>
+        handler(req, { user }, params),
+      );
     } catch (error) {
       return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
     }
@@ -157,10 +165,23 @@ export function withSuperAdminParams(
 }
 
 /**
- * Wraps a route handler with basic authentication (any logged-in user).
+ * Wraps a route handler with basic authentication (any logged-in user) and binds
+ * the HOST tenant around the handler.
+ *
+ * Unlike withTenantAuth (which binds the user's own tenant for admin routes),
+ * withAuth binds the tenant resolved from the request host — the storefront the
+ * caller is on. That is what scopes routes like customer/profile to the right
+ * tenant. A null host resolution is bound explicitly, so the Prisma middleware
+ * sees a deliberate non-tenant query, not the implicit-unbound leak.
+ *
+ * Forwards the Next.js route context's `params` as the handler's 3rd arg, so
+ * param'd any-auth routes (e.g. store/[slug]/**) keep working after migration.
  */
-export function withAuth(handler: RouteHandler<AuthContext>) {
-  return async (req: NextRequest) => {
+export function withAuth(handler: RouteHandlerWithParams<AuthContext>) {
+  return async (
+    req: NextRequest,
+    routeCtx?: { params: Record<string, string> },
+  ) => {
     try {
       const user = await getCurrentUser();
 
@@ -168,7 +189,11 @@ export function withAuth(handler: RouteHandler<AuthContext>) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
-      return await handler(req, { user });
+      const tenant = await getTenantFromRequest(req);
+      const params = routeCtx?.params ?? {};
+      return await runWithTenantContextAsync(tenant?.id ?? null, () =>
+        handler(req, { user }, params),
+      );
     } catch (error) {
       return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
     }
