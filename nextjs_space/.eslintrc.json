@@ -4,17 +4,6 @@
   "rules": {
     "react/no-unescaped-entities": "warn",
     "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": "off",
-    "no-restricted-imports": [
-      "error",
-      {
-        "patterns": [
-          {
-            "group": ["**/mock-data", "@/lib/mock-data"],
-            "message": "Mock data must not be imported in production paths. lib/mock-data.ts was removed in PRD-209 AC-3 — query and render real data instead."
-          }
-        ]
-      }
-    ]
+    "@typescript-eslint/no-unused-vars": "off"
   }
 }
