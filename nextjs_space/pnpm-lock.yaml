@@ -54,8 +54,8 @@ importers:
         specifier: ^0.0.76
         version: 0.0.76(@types/react@18.2.22)(react@18.2.0)
       '@prisma/client':
-        specifier: 6.7.0
-        version: 6.7.0(prisma@6.7.0(typescript@5.2.2))(typescript@5.2.2)
+        specifier: 6.19.3
+        version: 6.19.3(prisma@6.7.0(typescript@5.2.2))(typescript@5.2.2)
       '@radix-ui/react-accordion':
         specifier: 1.2.12
         version: 1.2.12(@types/react-dom@18.2.7)(@types/react@18.2.22)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -1611,8 +1611,8 @@ packages:
   '@plotly/regl@2.1.2':
     resolution: {integrity: sha512-Mdk+vUACbQvjd0m/1JJjOOafmkp/EpmHjISsopEz5Av44CBq7rPC05HHNbYGKVyNUF2zmEoBS/TT0pd0SPFFyw==}
 
-  '@prisma/client@6.7.0':
-    resolution: {integrity: sha512-+k61zZn1XHjbZul8q6TdQLpuI/cvyfil87zqK2zpreNIXyXtpUv3+H/oM69hcsFcZXaokHJIzPAt5Z8C8eK2QA==}
+  '@prisma/client@6.19.3':
+    resolution: {integrity: sha512-mKq3jQFhjvko5LTJFHGilsuQs+W+T3Gm451NzuTDGQxwCzwXHYnIu2zGkRoW+Exq3Rob7yp2MfzSrdIiZVhrBg==}
     engines: {node: '>=18.18'}
     peerDependencies:
       prisma: '*'
@@ -8085,7 +8085,7 @@ snapshots:
 
   '@plotly/regl@2.1.2': {}
 
-  '@prisma/client@6.7.0(prisma@6.7.0(typescript@5.2.2))(typescript@5.2.2)':
+  '@prisma/client@6.19.3(prisma@6.7.0(typescript@5.2.2))(typescript@5.2.2)':
     optionalDependencies:
       prisma: 6.7.0(typescript@5.2.2)
       typescript: 5.2.2
