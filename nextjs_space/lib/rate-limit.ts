@@ -8,6 +8,10 @@ import Redis from 'ioredis';
 import { apiError } from '@/lib/api-error';
 import { sendAlert } from '@/lib/alert';
 import { logger } from '@/lib/logger';
+import {
+  RATE_LIMIT_DEFAULT_MAX_REQUESTS,
+  RATE_LIMIT_DEFAULT_WINDOW_MS,
+} from '@/lib/constants';
 import crypto from 'crypto';
 
 /**
@@ -79,7 +83,11 @@ export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig = {}
 ): Promise<{ success: true } | { success: false; response: NextResponse }> {
-  const { maxRequests = 20, windowMs = 60000, failMode = 'open' } = config;
+  const {
+    maxRequests = RATE_LIMIT_DEFAULT_MAX_REQUESTS,
+    windowMs = RATE_LIMIT_DEFAULT_WINDOW_MS,
+    failMode = 'open',
+  } = config;
   const now = Date.now();
   const window = Math.floor(now / windowMs);
   const key = `rate-limit:${identifier}:${window}`;
@@ -178,7 +186,10 @@ export async function getRateLimitStatus(
   limit: number;
   reset: Date;
 }> {
-  const { maxRequests = 20, windowMs = 60000 } = config;
+  const {
+    maxRequests = RATE_LIMIT_DEFAULT_MAX_REQUESTS,
+    windowMs = RATE_LIMIT_DEFAULT_WINDOW_MS,
+  } = config;
   const now = Date.now();
   const window = Math.floor(now / windowMs);
   const key = `rate-limit:${identifier}:${window}`;

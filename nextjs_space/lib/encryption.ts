@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { ENCRYPTION_KEY_BYTES, ENCRYPTION_SCRYPT_PARAMS } from "@/lib/constants";
 
 const ALGORITHM = "aes-256-gcm";
 const KEY = process.env.ENCRYPTION_KEY;
@@ -21,7 +22,9 @@ function getKey(): Buffer {
   // Use a fixed application-level salt — the per-message IV provides randomness.
   // This replaces the old SHA-256 hash with a proper KDF that's resistant to brute-force.
   const APP_SALT = Buffer.from("budstack-encryption-v2", "utf8");
-  const derived = crypto.scryptSync(KEY, APP_SALT, 32, { N: 16384, r: 8, p: 1 });
+  const derived = crypto.scryptSync(KEY, APP_SALT, ENCRYPTION_KEY_BYTES, {
+    ...ENCRYPTION_SCRYPT_PARAMS,
+  });
   SCRYPT_KEY_CACHE.set(KEY, derived);
   return derived;
 }
