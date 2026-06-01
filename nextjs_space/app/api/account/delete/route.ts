@@ -4,6 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { eraseUser, resolveLocalUser } from "@/lib/gdpr/erasure";
+import { withAuth } from "@/lib/api-auth";
 
 /**
  * GDPR Article 17 — Right to erasure (self-service).
@@ -29,6 +30,11 @@ export const DELETE = withAuth(async (request, { user }) => {
 
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
+
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const rate = await checkRateLimit(`account-delete:${user.id}`, {
@@ -76,7 +82,7 @@ export const DELETE = withAuth(async (request, { user }) => {
     let clerkDeleted = false;
     try {
       const clerk = await clerkClient();
-      await clerk.users.deleteUser(user.id);
+      await clerk.users.deleteUser(clerkUser.id);
       clerkDeleted = true;
     } catch (clerkErr) {
       console.error(

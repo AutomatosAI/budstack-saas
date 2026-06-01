@@ -4,6 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { exportUser } from "@/lib/gdpr/erasure";
+import { withAuth } from "@/lib/api-auth";
 
 /**
  * GDPR Article 15 / 20 — Right to access and data portability.
@@ -21,6 +22,11 @@ export const GET = withAuth(async (request, { user }) => {
 
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
+    }
+
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 3 exports per hour per user — generous for legitimate use, restrictive
