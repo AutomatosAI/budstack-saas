@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
@@ -25,25 +25,8 @@ const createBlankSchema = z
   })
   .strict();
 
-export async function POST(request: NextRequest) {
+export const POST = withTenantAuth(async (request, { user, tenantId }) => {
   try {
-    // 1. Auth check
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "No tenant found. Please ensure you are associated with a tenant." },
-        { status: 400 },
-      );
-    }
-
     // 2. Validate template name
     const { templateName } = await parseJsonBody(request, createBlankSchema);
 
@@ -162,4 +145,4 @@ export async function POST(request: NextRequest) {
       safeMessage: "Internal server error",
     });
   }
-}
+});

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { uploadFromGitHub } from "@/lib/tenant-template-upload-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
@@ -13,24 +13,8 @@ const uploadSchema = z
   })
   .strict();
 
-export async function POST(request: NextRequest) {
+export const POST = withTenantAuth(async (request, { user, tenantId }) => {
   try {
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "No tenant found. Please ensure you are associated with a tenant." },
-        { status: 400 },
-      );
-    }
-
     const { templateName, githubUrl } = await parseJsonBody(request, uploadSchema);
 
     if (!templateName.trim()) {
@@ -91,4 +75,4 @@ export async function POST(request: NextRequest) {
       safeMessage: "Failed to upload template",
     });
   }
-}
+});

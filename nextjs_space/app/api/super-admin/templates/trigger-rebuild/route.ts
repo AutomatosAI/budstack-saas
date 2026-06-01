@@ -1,18 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 
 /**
  * Trigger a Railway deployment rebuild
  * This is useful after uploading a new template to make it immediately available
  */
-export async function POST(req: NextRequest) {
+export const POST = withSuperAdmin(async (_req) => {
   try {
-    const user = await currentUser();
-
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Check if Railway webhook URL is configured
     const railwayWebhookUrl = process.env.RAILWAY_DEPLOY_WEBHOOK_URL;
 
@@ -63,4 +57,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

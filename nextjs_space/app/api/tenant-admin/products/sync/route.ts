@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { fetchProducts } from "@/lib/doctor-green-api";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
@@ -10,32 +10,8 @@ import { getTenantDrGreenConfig } from "@/lib/tenant-config";
  * Pulls all strains from the Dr Green API and upserts them into the
  * tenant's `products` table. Auth: TENANT_ADMIN or SUPER_ADMIN.
  */
-export async function POST() {
+export const POST = withTenantAuth(async (_request, { tenantId }) => {
   try {
-    const user = await currentUser();
-    if (
-      !user ||
-      (user.publicMetadata.role !== "TENANT_ADMIN" &&
-        user.publicMetadata.role !== "SUPER_ADMIN")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const localUser = await prisma.users.findFirst({
-      where: { email },
-      select: { tenantId: true },
-    });
-
-    if (!localUser?.tenantId) {
-      return NextResponse.json(
-        { error: "No tenant linked to this account" },
-        { status: 400 },
-      );
-    }
-
-    const tenantId = localUser.tenantId;
-
     // Get tenant country for currency mapping
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
@@ -122,4 +98,4 @@ export async function POST() {
     console.error("[sync-products]", error);
     return NextResponse.json({ error: "Failed to sync products" }, { status: 500 });
   }
-}
+});

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import fs from "fs/promises";
 import path from "path";
@@ -13,17 +13,9 @@ import {
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const POST = withSuperAdminParams(async (req, { user }, params) => {
   try {
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const id = parseUuid((await params).id);
+    const id = parseUuid(params.id);
 
     const template = await prisma.templates.findUnique({
       where: { id },
@@ -106,7 +98,7 @@ export async function POST(
         entityType: "template",
         entityId: id,
         userId: user.id,
-        userEmail: user.emailAddresses[0]?.emailAddress!,
+        userEmail: user.email!,
         metadata: {
           action: "update-from-github",
           templateName: template.name,
@@ -133,4 +125,4 @@ export async function POST(
       safeMessage: "Failed to update template",
     });
   }
-}
+});

@@ -1,29 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { uploadFile, getFileUrl } from "@/lib/s3";
 import { validateUploadBuffer } from "@/lib/upload-validation";
 
-export async function POST(req: NextRequest) {
+export const POST = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // SECURITY (H_u): Tenant context required so uploads land in
-    // tenants/{id}/uploads/ and cross-tenant overwrites are impossible.
-    const tenantId = user.tenantId;
-    if (!tenantId && user.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "No tenant context" },
-        { status: 403 },
-      );
-    }
-
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
@@ -78,4 +59,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

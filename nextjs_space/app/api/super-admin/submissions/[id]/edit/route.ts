@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { editSubmission } from "@/lib/marketplace-review-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
@@ -18,17 +18,9 @@ const editSubmissionSchema = z
   })
   .strict();
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const PUT = withSuperAdminParams(async (request, { user }, params) => {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const id = parseUuid((await params).id);
+    const id = parseUuid(params.id);
     const { layoutJson, defaultsJson, configJson, stylesCss } =
       await parseJsonBody(request, editSubmissionSchema, {
         maxBytes: 1024 * 1024,
@@ -69,4 +61,4 @@ export async function PUT(
       safeMessage: "Failed to edit submission",
     });
   }
-}
+});

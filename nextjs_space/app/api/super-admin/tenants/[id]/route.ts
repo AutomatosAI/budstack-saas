@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getNamecheapClient } from "@/lib/namecheap-api";
 import { addCustomDomain, removeCustomDomain } from "@/lib/railway-api";
@@ -12,17 +12,8 @@ import { parseUuid } from "@/lib/validation/parse-uuid";
 import { tenantSettingsLenientSchema } from "@/lib/validation/tenant-settings";
 import { apiError, apiValidationError } from "@/lib/api-error";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const id = parseUuid(params.id);
 
     const tenant = await prisma.tenants.findUnique({
@@ -66,19 +57,10 @@ export async function GET(
   } catch (error) {
     return apiError(error, { route: "GET /api/super-admin/tenants/[id]" });
   }
-}
+});
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const id = parseUuid(params.id);
 
     const body = await req.json();
@@ -328,19 +310,10 @@ export async function PATCH(
   } catch (error) {
     return apiError(error, { route: "PATCH /api/super-admin/tenants/[id]" });
   }
-}
+});
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const originError = requireSameOrigin(req);
     if (originError) return originError;
 
@@ -376,9 +349,9 @@ export async function DELETE(
         await client.organizations.deleteOrganization(clerkOrgId);
         console.log(`🗑️ Deleted Clerk org: ${clerkOrgId}`);
       } catch (error: any) {
-        const msg = `Failed to delete Clerk org ${clerkOrgId}: ${error.message}`;
-        console.error(msg);
-        cleanupErrors.push(msg);
+        // AC-5: log full detail server-side; the body must never carry error.message.
+        console.error(`Failed to delete Clerk org ${clerkOrgId}:`, error);
+        cleanupErrors.push(`Failed to delete Clerk org ${clerkOrgId}`);
       }
     }
 
@@ -395,9 +368,8 @@ export async function DELETE(
           console.log(`🗑️ Deleted Clerk user: ${cu.id} (${tenantUser.email})`);
         }
       } catch (error: any) {
-        const msg = `Failed to delete Clerk user ${tenantUser.email}: ${error.message}`;
-        console.error(msg);
-        cleanupErrors.push(msg);
+        console.error(`Failed to delete Clerk user ${tenantUser.email}:`, error);
+        cleanupErrors.push(`Failed to delete Clerk user ${tenantUser.email}`);
       }
     }
 
@@ -408,9 +380,8 @@ export async function DELETE(
         await removeCustomDomain(railwayDomainId);
         console.log(`🗑️ Removed Railway domain for tenant: ${tenant.customDomain}`);
       } catch (error: any) {
-        const msg = `Failed to remove Railway domain ${railwayDomainId}: ${error.message}`;
-        console.error(msg);
-        cleanupErrors.push(msg);
+        console.error(`Failed to remove Railway domain ${railwayDomainId}:`, error);
+        cleanupErrors.push(`Failed to remove Railway domain ${railwayDomainId}`);
       }
     }
 
@@ -453,4 +424,4 @@ export async function DELETE(
   } catch (error) {
     return apiError(error, { route: "DELETE /api/super-admin/tenants/[id]" });
   }
-}
+});

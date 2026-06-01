@@ -1,16 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { subDays, startOfDay, format, eachDayOfInterval } from "date-fns";
 
-export async function GET(req: NextRequest) {
+export const GET = withSuperAdmin(async (req) => {
   try {
-    const user = await currentUser();
-
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Get time range from query params
     const searchParams = req.nextUrl.searchParams;
     const timeRangeParam = searchParams.get("timeRange") || "30d";
@@ -194,4 +188,4 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

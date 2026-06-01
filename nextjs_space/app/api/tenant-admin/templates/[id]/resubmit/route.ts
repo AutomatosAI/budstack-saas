@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { updateFromGitHub } from "@/lib/tenant-template-upload-service";
 import { resubmitToMarketplace } from "@/lib/marketplace-submission-service";
@@ -7,25 +7,10 @@ import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const POST = withTenantAuthParams(
+  async (_request, { user, tenantId }, params) => {
   try {
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-    if (!tenantId) {
-      return NextResponse.json({ error: "No tenant found" }, { status: 400 });
-    }
-
-    const id = parseUuid((await params).id);
+    const id = parseUuid(params.id);
 
     // Verify template belongs to tenant and is custom
     const template = await prisma.tenant_templates.findFirst({
@@ -88,4 +73,4 @@ export async function POST(
       safeMessage: "Failed to re-submit template",
     });
   }
-}
+});
