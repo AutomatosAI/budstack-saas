@@ -132,7 +132,7 @@
     "dotenv": "16.5.0",
     "embla-carousel-react": "8.6.0",
     "file-type": "^22.0.1",
-    "framer-motion": "10.18.0",
+    "framer-motion": "12.40.0",
     "handlebars": "^4.7.9",
     "input-otp": "1.4.2",
     "ioredis": "^5.11.0",
