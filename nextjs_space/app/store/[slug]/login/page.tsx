@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { prisma } from "@/lib/db";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { TenantLoginForm } from "./login-form";
 
 export default async function TenantLoginPage({

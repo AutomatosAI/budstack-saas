@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser, clerkClient } from "@clerk/nextjs/server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { eraseUser, resolveLocalUser } from "@/lib/gdpr/erasure";

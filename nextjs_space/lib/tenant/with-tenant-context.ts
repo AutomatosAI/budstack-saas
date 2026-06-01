@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { getTenantFromRequest } from "@/lib/tenant";
-import { runWithTenantContextAsync } from "@/lib/tenant-context";
+import { getTenantFromRequest } from "@/lib/tenant/tenant";
+import { runWithTenantContextAsync } from "@/lib/tenant/tenant-context";
 
 /**
  * PRD-202 AC-3 — bind tenant context at the request boundary.

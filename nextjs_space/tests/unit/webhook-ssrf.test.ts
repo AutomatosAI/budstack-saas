@@ -3,7 +3,7 @@ import {
   assertSafeWebhookUrl,
   WebhookUrlError,
   type DnsResolver,
-} from "@/lib/webhook-ssrf";
+} from "@/lib/integrations/webhook-ssrf";
 
 const publicResolver: DnsResolver = async () => [
   { address: "93.184.216.34", family: 4 },

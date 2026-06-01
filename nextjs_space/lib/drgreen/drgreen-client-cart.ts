@@ -9,7 +9,7 @@
  */
 
 import Redis from "ioredis";
-import { fetchClient } from "@/lib/doctor-green-api";
+import { fetchClient } from "@/lib/drgreen/doctor-green-api";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 const CACHE_TTL_SECONDS = 300; // 5 minutes

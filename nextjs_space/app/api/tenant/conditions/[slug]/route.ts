@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getTenantFromRequest, getTenantBySlug } from "@/lib/tenant";
+import { getTenantFromRequest, getTenantBySlug } from "@/lib/tenant/tenant";
 import { apiError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 

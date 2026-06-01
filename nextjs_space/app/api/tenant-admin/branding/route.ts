@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { uploadFile, getJsonFromS3 } from "@/lib/s3";
-import { validateUploadBuffer } from "@/lib/upload-validation";
+import { uploadFile, getJsonFromS3 } from "@/lib/storage/s3";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 import { TenantSettings } from "@/lib/types";
-import { parseTenantSettings } from "@/lib/tenant-settings";
+import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { deepMerge } from "@/lib/utils";
 import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
 import { hexToHsl } from "@/lib/color-utils";
@@ -390,7 +390,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
 
           // Copy ALL files from base template so tenant is fully self-contained
           if (baseSlug !== 'default') {
-            const { copyS3Directory } = await import("@/lib/s3");
+            const { copyS3Directory } = await import("@/lib/storage/s3");
             const sourcePrefix = `templates/${baseSlug}/`;
             const destPrefix = `${s3Path}/`;
             const filesCopied = await copyS3Directory(sourcePrefix, destPrefix);
@@ -399,7 +399,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         }
 
         try {
-          const { createS3Client, getBucketConfig } = await import("@/lib/aws-config");
+          const { createS3Client, getBucketConfig } = await import("@/lib/storage/aws-config");
           const { PutObjectCommand } = await import("@aws-sdk/client-s3");
           const s3Client = await createS3Client();
           const { bucketName } = await getBucketConfig();

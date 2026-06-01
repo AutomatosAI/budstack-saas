@@ -1,9 +1,9 @@
 
-import { prisma } from './db';
+import { prisma } from '@/lib/db';
 import { cache } from 'react';
-import { getJsonFromS3, getTextFromS3 } from './s3';
-import type { TemplateLayout } from './types/template-layout';
-import { resolveTenant } from './tenant-resolver';
+import { getJsonFromS3, getTextFromS3 } from '@/lib/storage/s3';
+import type { TemplateLayout } from '@/lib/types/template-layout';
+import { resolveTenant } from '@/lib/tenant/tenant-resolver';
 
 // Extract Tenant type from Prisma query result
 type Tenant = Awaited<ReturnType<typeof prisma.tenants.findFirst>>;

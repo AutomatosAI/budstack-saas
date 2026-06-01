@@ -7,9 +7,9 @@
 
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
-import { assertSafeWebhookUrl, WebhookUrlError } from "@/lib/webhook-ssrf";
+import { assertSafeWebhookUrl, WebhookUrlError } from "@/lib/integrations/webhook-ssrf";
 
-export { assertSafeWebhookUrl, WebhookUrlError } from "@/lib/webhook-ssrf";
+export { assertSafeWebhookUrl, WebhookUrlError } from "@/lib/integrations/webhook-ssrf";
 
 // Redirects are followed manually so each hop's target can be SSRF-revalidated.
 const MAX_WEBHOOK_REDIRECTS = 2;
@@ -275,4 +275,4 @@ export function verifyWebhookSignature(
 export {
   WEBHOOK_EVENTS,
   WEBHOOK_EVENT_CATEGORIES,
-} from "@/lib/webhook-events";
+} from "@/lib/integrations/webhook-events";

@@ -14,7 +14,7 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 
 export default function DashboardPage() {
   const { user, isLoaded, isSignedIn } = useUser();

@@ -6,13 +6,13 @@
  */
 
 import { randomUUID } from "crypto";
-import { prisma } from "./db";
-import { copyS3Directory, getJsonFromS3, getTextFromS3 } from "./s3";
-import { deleteS3Directory } from "./s3";
-import { getBucketConfig } from "./aws-config";
-import { generateSlug } from "./template-utils";
+import { prisma } from "@/lib/db";
+import { copyS3Directory, getJsonFromS3, getTextFromS3 } from "@/lib/storage/s3";
+import { deleteS3Directory } from "@/lib/storage/s3";
+import { getBucketConfig } from "@/lib/storage/aws-config";
+import { generateSlug } from "@/lib/templates/template-utils";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { createS3Client } from "./aws-config";
+import { createS3Client } from "@/lib/storage/aws-config";
 
 /**
  * List marketplace submissions with optional status filter.

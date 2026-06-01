@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
-import { uploadFile, getFileUrl } from "@/lib/s3";
-import { validateUploadBuffer } from "@/lib/upload-validation";
+import { uploadFile, getFileUrl } from "@/lib/storage/s3";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 
 export const POST = withTenantAuth(async (req, { tenantId }) => {
   try {

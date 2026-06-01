@@ -1,16 +1,16 @@
 import { notFound } from "next/navigation";
 import fs from "fs";
 import path from "path";
-import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
+import { TEMPLATE_COMPONENTS } from "@/lib/templates/template-registry";
 import { TemplateRenderer } from "@/components/template-renderer";
-import { getJsonFromS3, getTextFromS3, getFileUrl } from "@/lib/s3";
-import { isKeyInTenantScope } from "@/lib/s3-tenant-guard";
-import { getBucketConfig } from "@/lib/aws-config";
+import { getJsonFromS3, getTextFromS3, getFileUrl } from "@/lib/storage/s3";
+import { isKeyInTenantScope } from "@/lib/storage/s3-tenant-guard";
+import { getBucketConfig } from "@/lib/storage/aws-config";
 import { SECTION_ASSET_KEYS, type TemplateLayout } from "@/lib/types/template-layout";
 import { Tenant } from "@/types/client";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import { prisma } from "@/lib/db";
-import { getTemplateAssets } from "@/lib/tenant";
+import { getTemplateAssets } from "@/lib/tenant/tenant";
 import PreviewToolbar from "./preview-toolbar";
 
 export const dynamic = 'force-dynamic';

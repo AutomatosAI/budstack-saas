@@ -1,6 +1,6 @@
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { createS3Client, getBucketConfig } from "@/lib/aws-config";
+import { createS3Client, getBucketConfig } from "@/lib/storage/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { redirect } from "next/navigation";
 

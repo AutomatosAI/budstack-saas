@@ -1,11 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
-import { getSectionComponent } from '@/lib/section-registry';
+import { getSectionComponent } from '@/lib/templates/section-registry';
 import type { SectionProps } from '@/lib/types/section-props';
 import type { TemplateLayout } from '@/lib/types/template-layout';
 import { motion, type Transition } from 'framer-motion';
-import { sanitizeCss, extractGoogleFontsImports } from '@/lib/css-utils';
+import { sanitizeCss, extractGoogleFontsImports } from '@/lib/security/css-utils';
 import { hexToHsl } from '@/lib/color-utils';
 
 interface Props {

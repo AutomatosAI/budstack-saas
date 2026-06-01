@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { withTenantAuth } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
-import { encrypt } from '@/lib/encryption';
+import { encrypt } from '@/lib/security/encryption';
 import { AUDIT_ACTIONS, createAuditLog, getClientInfo } from '@/lib/audit-log';
-import { generateDrGreenSignature } from '@/lib/drgreen-api-client';
+import { generateDrGreenSignature } from '@/lib/drgreen/drgreen-api-client';
 import { z } from 'zod';
 import { apiError } from '@/lib/api-error';
 import { parseJsonBody } from '@/lib/validation/body';

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
-import { uploadFile } from "@/lib/s3";
-import { getBucketConfig } from "@/lib/aws-config";
-import { validateUploadBuffer } from "@/lib/upload-validation";
-import { getCurrentTenantId } from "@/lib/tenant";
+import { uploadFile } from "@/lib/storage/s3";
+import { getBucketConfig } from "@/lib/storage/aws-config";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
+import { getCurrentTenantId } from "@/lib/tenant/tenant";
 
 export const POST = withAuth(async (req, { user }) => {
   try {

@@ -1,7 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getFileUrl } from "@/lib/s3";
+import { getFileUrl } from "@/lib/storage/s3";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Eye,

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getNamecheapClient } from "@/lib/namecheap-api";
-import { addCustomDomain, removeCustomDomain } from "@/lib/railway-api";
+import { getNamecheapClient } from "@/lib/integrations/namecheap-api";
+import { addCustomDomain, removeCustomDomain } from "@/lib/integrations/railway-api";
 import { clerkClient } from "@clerk/nextjs/server";
 import { isReservedSubdomain, isValidSubdomain } from "@/lib/reserved-subdomains";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
@@ -10,7 +10,7 @@ import { requireConfirmation } from "@/lib/security/require-confirmation";
 import crypto from "crypto";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { tenantSettingsLenientSchema } from "@/lib/validation/tenant-settings";
-import { parseTenantSettings } from "@/lib/tenant-settings";
+import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { apiError, apiValidationError } from "@/lib/api-error";
 
 export const GET = withSuperAdminParams(async (_req, _ctx, params) => {

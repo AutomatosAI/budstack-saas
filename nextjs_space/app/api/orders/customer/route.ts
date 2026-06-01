@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getTenantContext } from "@/lib/tenant-context";
+import { getTenantContext } from "@/lib/tenant/tenant-context";
 
 // withAuth binds the request's host tenant at the boundary (PRD-202
 // runWithTenantContextAsync) and admits any logged-in user. Customer order

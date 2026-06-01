@@ -12,8 +12,8 @@ const { resolveTenant } = vi.hoisted(() => ({ resolveTenant: vi.fn() }));
 
 vi.mock("@clerk/nextjs/server", () => ({ currentUser }));
 vi.mock("@/lib/db", () => ({ prisma: { users: { findUnique } } }));
-vi.mock("@/lib/tenant-resolver", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/tenant-resolver")>()),
+vi.mock("@/lib/tenant/tenant-resolver", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/tenant/tenant-resolver")>()),
   resolveTenant,
 }));
 

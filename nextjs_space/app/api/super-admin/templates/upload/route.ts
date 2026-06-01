@@ -7,7 +7,7 @@ import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { convertLovableTemplate } from "@/lib/lovable-converter";
 import { randomUUID } from "crypto";
-import { uploadDirectoryToS3 } from "@/lib/s3";
+import { uploadDirectoryToS3 } from "@/lib/storage/s3";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 import {
@@ -15,7 +15,7 @@ import {
   generateSlug,
   cleanupTempDir,
   type TemplateConfig,
-} from "@/lib/template-utils";
+} from "@/lib/templates/template-utils";
 
 const uploadTemplateSchema = z
   .object({

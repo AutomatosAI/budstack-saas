@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import OnboardingForm from "./onboarding-form";
 
-import { getFileUrl } from "@/lib/s3";
+import { getFileUrl } from "@/lib/storage/s3";
 
 // Force dynamic rendering to ensure fresh template data
 export const dynamic = "force-dynamic";

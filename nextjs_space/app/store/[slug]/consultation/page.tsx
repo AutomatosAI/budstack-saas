@@ -1,7 +1,7 @@
 import { ConsultationForm } from "@/components/consultation/consultation-form";
 import { notFound } from "next/navigation";
-import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant/tenant";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import ConsultationContent from "./consultation-content";
 
 export default async function ConsultationPage({

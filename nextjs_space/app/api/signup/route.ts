@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { sendEmail, emailTemplates } from "@/lib/email";
-import { getTenantFromRequest } from "@/lib/tenant";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { sendEmail, emailTemplates } from "@/lib/email/email";
+import { getTenantFromRequest } from "@/lib/tenant/tenant";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { z } from "zod";
 import crypto from "crypto";
 

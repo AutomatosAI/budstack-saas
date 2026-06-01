@@ -6,8 +6,8 @@
  */
 
 import { prisma } from "@/lib/db";
-import { callDrGreenAPI } from "@/lib/drgreen-api-client";
-import { getClientCartId } from "@/lib/drgreen-client-cart";
+import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
+import { getClientCartId } from "@/lib/drgreen/drgreen-client-cart";
 
 export interface CartItem {
   strainId: string;

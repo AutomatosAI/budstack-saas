@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { SectionProps } from '@/lib/types/section-props';
-import { textAlignClass } from '@/lib/section-align';
+import { textAlignClass } from '@/lib/templates/section-align';
 
 export function CTAWithImage(props: SectionProps) {
   const { tenant, consultationUrl, heroImageUrl, sectionConfig } = props;

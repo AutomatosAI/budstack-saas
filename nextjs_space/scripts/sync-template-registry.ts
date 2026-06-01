@@ -14,7 +14,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 const TEMPLATES_DIR = path.join(process.cwd(), 'templates');
-const REGISTRY_FILE = path.join(process.cwd(), 'lib', 'template-registry.ts');
+const REGISTRY_FILE = path.join(process.cwd(), 'lib', 'templates', 'template-registry.ts');
 
 interface TemplateInfo {
   slug: string;

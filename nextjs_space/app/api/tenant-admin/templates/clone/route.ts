@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
+import { copyS3Directory, getJsonFromS3 } from "@/lib/storage/s3";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { z } from "zod";

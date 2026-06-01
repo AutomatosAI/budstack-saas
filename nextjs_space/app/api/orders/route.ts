@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getTenantFromRequest } from "@/lib/tenant";
-import { sendEmail, emailTemplates } from "@/lib/email";
+import { getTenantFromRequest } from "@/lib/tenant/tenant";
+import { sendEmail, emailTemplates } from "@/lib/email/email";
 import {
   createOrder as createDrGreenOrder,
   getCurrencyByCountry,
-} from "@/lib/doctor-green-api";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
+} from "@/lib/drgreen/doctor-green-api";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 
 export const POST = withAuth(async (req, { user }) => {
   try {

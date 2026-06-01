@@ -5,9 +5,9 @@
  * withdrawing submissions, and listing submissions for a tenant.
  */
 
-import { prisma } from "./db";
-import { copyS3Directory, deleteS3Directory } from "./s3";
-import { getBucketConfig } from "./aws-config";
+import { prisma } from "@/lib/db";
+import { copyS3Directory, deleteS3Directory } from "@/lib/storage/s3";
+import { getBucketConfig } from "@/lib/storage/aws-config";
 
 /**
  * Submit a custom tenant template to the marketplace for review.

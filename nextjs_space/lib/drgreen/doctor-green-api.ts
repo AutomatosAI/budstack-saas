@@ -3,7 +3,7 @@
  * Two-layer security: API key + ECDSA cryptographic signature
  */
 
-import { callDrGreenAPI } from '@/lib/drgreen-api-client';
+import { callDrGreenAPI } from '@/lib/drgreen/drgreen-api-client';
 import { convertFromEUR } from '@/lib/exchange-rates';
 
 const API_URL = process.env.DOCTOR_GREEN_API_URL || 'https://api.drgreennft.com/api/v1';
@@ -209,7 +209,7 @@ export interface DoctorGreenOrder {
 // Professional product image fallbacks (AI-generated medical-grade images)
 // Doctor Green staging API returns image paths but files are not hosted (404 errors)
 // Country code conversion — consolidated in lib/country-codes.ts
-import { toAlpha3 } from './country-codes';
+import { toAlpha3 } from '@/lib/country-codes';
 
 /**
  * Fetch all products from Doctor Green

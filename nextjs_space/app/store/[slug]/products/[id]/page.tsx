@@ -21,7 +21,7 @@ import Link from "next/link";
 import { toast } from "@/components/ui/sonner";
 import { useCartStore } from "@/lib/cart-store";
 import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 
 interface Product {
   id: string;

@@ -38,7 +38,7 @@ vi.mock("@/lib/alert", () => ({
   sendAlert: (...args: unknown[]) => sendAlertMock(...args),
 }));
 
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 let errorSpy: ReturnType<typeof vi.spyOn>;
 

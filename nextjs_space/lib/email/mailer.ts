@@ -1,5 +1,5 @@
-import { getEmailQueue } from "./queue";
-import { prisma as db } from "./db";
+import { getEmailQueue } from "@/lib/queue";
+import { prisma as db } from "@/lib/db";
 
 interface SendEmailOptions {
   tenantId: string;

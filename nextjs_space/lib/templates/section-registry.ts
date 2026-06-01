@@ -1,5 +1,5 @@
 import { ComponentType } from 'react';
-import type { SectionProps } from './types/section-props';
+import type { SectionProps } from '@/lib/types/section-props';
 
 // Heroes
 import { HeroFullScreen } from '@/components/sections/heroes/HeroFullScreen';

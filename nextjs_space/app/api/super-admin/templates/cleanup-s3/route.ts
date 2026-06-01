@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withSuperAdmin } from "@/lib/api-auth";
-import { deleteS3Directory } from "@/lib/s3";
+import { deleteS3Directory } from "@/lib/storage/s3";
 import { apiError } from "@/lib/api-error";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
 import { requireConfirmation } from "@/lib/security/require-confirmation";

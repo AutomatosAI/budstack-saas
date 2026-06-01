@@ -1,5 +1,5 @@
 import { S3Client } from "@aws-sdk/client-s3";
-import { getPlatformConfig } from "./platform-config";
+import { getPlatformConfig } from "@/lib/platform-config";
 
 export async function getBucketConfig() {
   const config = await getPlatformConfig();

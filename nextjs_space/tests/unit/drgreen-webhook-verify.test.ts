@@ -3,7 +3,7 @@ import crypto from "crypto";
 import {
   verifyDrGreenWebhookSignature,
   validateWebhookTimestamp,
-} from "@/lib/drgreen-webhook-verify";
+} from "@/lib/drgreen/drgreen-webhook-verify";
 
 // Known-answer vectors computed independently (see scripts/ralph/progress.txt US-004).
 const PAYLOAD = '{"event":"order.updated","timestamp":"2026-05-29T00:00:00Z"}';

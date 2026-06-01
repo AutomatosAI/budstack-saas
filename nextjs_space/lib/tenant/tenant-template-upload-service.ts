@@ -5,15 +5,15 @@
  * Also handles re-downloading from GitHub to update an existing custom template.
  */
 
-import { prisma } from "./db";
-import { uploadDirectoryToS3 } from "./s3";
+import { prisma } from "@/lib/db";
+import { uploadDirectoryToS3 } from "@/lib/storage/s3";
 import {
   downloadGitHubRepo,
   validateTemplateFiles,
   generateSlug,
   cleanupTempDir,
-} from "./template-utils";
-import { getOrCreateCustomBase } from "./blank-template-defaults";
+} from "@/lib/templates/template-utils";
+import { getOrCreateCustomBase } from "@/lib/templates/blank-template-defaults";
 import { randomUUID } from "crypto";
 import fs from "fs/promises";
 import path from "path";

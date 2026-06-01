@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchProducts } from "@/lib/doctor-green-api";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
+import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 
 /**
  * GET /api/doctor-green/products?country=PT
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const country = searchParams.get("country") || "PT";
 
     // Get tenant from request to resolve credentials
-    const { getTenantFromRequest } = await import("@/lib/tenant");
+    const { getTenantFromRequest } = await import("@/lib/tenant/tenant");
     const tenant = await getTenantFromRequest(request);
 
     if (!tenant) {

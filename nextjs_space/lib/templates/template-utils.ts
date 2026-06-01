@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import fetch from "node-fetch";
 import AdmZip from "adm-zip";
-import { SECTION_REGISTRY } from "@/lib/section-registry";
+import { SECTION_REGISTRY } from "@/lib/templates/section-registry";
 
 // SECURITY (C5): Caps for ZIP extraction. Without these a malicious GitHub
 // archive could ship a zip-bomb (high compression ratio) or a 100k-file

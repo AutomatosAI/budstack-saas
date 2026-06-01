@@ -4,7 +4,7 @@ import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 import crypto from "crypto";

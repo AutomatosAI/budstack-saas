@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 
 /**
  * Registration Redirect

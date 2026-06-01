@@ -38,4 +38,4 @@ export interface AuthUser {
 // Read `tenants.settings` ONLY via `parseTenantSettings` (parse-on-read), never
 // `as any` — see `lib/tenant-settings.ts`.
 
-export type { TenantSettings } from "@/lib/tenant-settings";
+export type { TenantSettings } from "@/lib/tenant/tenant-settings";

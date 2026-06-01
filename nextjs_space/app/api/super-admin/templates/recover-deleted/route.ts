@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { createS3Client, getBucketConfig } from "@/lib/aws-config";
+import { createS3Client, getBucketConfig } from "@/lib/storage/aws-config";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 

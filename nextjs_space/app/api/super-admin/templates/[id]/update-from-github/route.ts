@@ -4,12 +4,12 @@ import { prisma } from "@/lib/db";
 import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { uploadDirectoryToS3 } from "@/lib/s3";
+import { uploadDirectoryToS3 } from "@/lib/storage/s3";
 import {
   downloadGitHubRepo,
   cleanupTempDir,
   type TemplateConfig,
-} from "@/lib/template-utils";
+} from "@/lib/templates/template-utils";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 

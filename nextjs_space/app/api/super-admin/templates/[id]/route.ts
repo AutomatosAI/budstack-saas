@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { uploadFile, getFileUrl, deleteS3Directory } from "@/lib/s3";
-import { validateUploadBuffer } from "@/lib/upload-validation";
+import { uploadFile, getFileUrl, deleteS3Directory } from "@/lib/storage/s3";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";

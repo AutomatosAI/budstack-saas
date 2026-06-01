@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { apiError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 

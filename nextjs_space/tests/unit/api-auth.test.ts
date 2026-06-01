@@ -11,11 +11,11 @@ import { NextRequest, NextResponse } from "next/server";
 // scope: withTenantAuth -> user.tenantId, withSuperAdmin -> explicit null,
 // withAuth -> host tenant (and forwards Next's { params }).
 vi.mock("@/lib/auth-helper", () => ({ getCurrentUser: vi.fn() }));
-vi.mock("@/lib/tenant", () => ({ getTenantFromRequest: vi.fn() }));
+vi.mock("@/lib/tenant/tenant", () => ({ getTenantFromRequest: vi.fn() }));
 
 import { getCurrentUser } from "@/lib/auth-helper";
-import { getTenantFromRequest } from "@/lib/tenant";
-import { getTenantContext, hasTenantContext } from "@/lib/tenant-context";
+import { getTenantFromRequest } from "@/lib/tenant/tenant";
+import { getTenantContext, hasTenantContext } from "@/lib/tenant/tenant-context";
 import {
   withTenantAuth,
   withTenantAuthParams,

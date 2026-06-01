@@ -8,11 +8,11 @@ import {
   CopyObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { createS3Client, getBucketConfig } from "./aws-config";
-import { assertKeyInTenantScope } from "./s3-tenant-guard";
+import { createS3Client, getBucketConfig } from "@/lib/storage/aws-config";
+import { assertKeyInTenantScope } from "@/lib/storage/s3-tenant-guard";
 import { promises as fs } from "fs";
 import path from "path";
-import { sanitizeSvg } from "./svg-sanitize";
+import { sanitizeSvg } from "@/lib/security/svg-sanitize";
 
 // Map MIME types to file extensions for files uploaded without an extension
 const mimeToExt: Record<string, string> = {

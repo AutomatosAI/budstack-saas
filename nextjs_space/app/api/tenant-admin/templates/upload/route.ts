@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
-import { uploadFromGitHub } from "@/lib/tenant-template-upload-service";
+import { uploadFromGitHub } from "@/lib/tenant/tenant-template-upload-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { z } from "zod";

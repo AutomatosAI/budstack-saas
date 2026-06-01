@@ -15,7 +15,7 @@
  */
 
 import { prisma } from "@/lib/db";
-import { sanitizeForLogging } from "@/lib/redact";
+import { sanitizeForLogging } from "@/lib/security/redact";
 import crypto from "crypto";
 
 export interface AuditLogParams {

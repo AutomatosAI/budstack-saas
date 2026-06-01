@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCartStore, WEIGHT_OPTIONS } from "@/lib/cart-store";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 
 export default function CartPage() {
   const params = useParams();

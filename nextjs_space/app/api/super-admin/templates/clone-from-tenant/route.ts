@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { copyS3Directory } from "@/lib/s3";
+import { copyS3Directory } from "@/lib/storage/s3";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
-import { decrypt } from "@/lib/encryption";
-import { sendEmail, emailTemplates } from "@/lib/email";
+import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
+import { decrypt } from "@/lib/security/encryption";
+import { sendEmail, emailTemplates } from "@/lib/email/email";
 import {
   verifyDrGreenWebhookSignature,
   validateWebhookTimestamp,
@@ -10,7 +10,7 @@ import {
   sanitizeForLogging,
   isValidStateTransition,
   type DrGreenWebhookPayload,
-} from "@/lib/drgreen-webhook-verify";
+} from "@/lib/drgreen/drgreen-webhook-verify";
 
 // SECURITY (C14, M9): Cap payload size to prevent DoS from oversized POSTs.
 const MAX_WEBHOOK_BODY_BYTES = 100_000;

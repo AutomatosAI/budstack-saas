@@ -8,7 +8,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-import { deliverWebhook } from "@/lib/webhook";
+import { deliverWebhook } from "@/lib/integrations/webhook";
 import { prisma } from "@/lib/db";
 
 const mockedPrisma = prisma as unknown as {

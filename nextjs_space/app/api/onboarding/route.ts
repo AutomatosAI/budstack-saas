@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { clerkClient } from "@clerk/nextjs/server";
-import { sendEmail, emailTemplates } from "@/lib/email";
-import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
+import { sendEmail, emailTemplates } from "@/lib/email/email";
+import { copyS3Directory, getJsonFromS3 } from "@/lib/storage/s3";
 import crypto from "crypto";
 import { z } from "zod";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { isReservedSubdomain, isValidSubdomain } from "@/lib/reserved-subdomains";
 import { createAuditLog } from "@/lib/audit-log";
 import {

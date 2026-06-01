@@ -6,7 +6,7 @@
  * create-blank flows to satisfy the tenant_templates.baseTemplateId FK.
  */
 
-import { prisma } from "./db";
+import { prisma } from "@/lib/db";
 import { randomUUID } from "crypto";
 
 // ---------------------------------------------------------------------------

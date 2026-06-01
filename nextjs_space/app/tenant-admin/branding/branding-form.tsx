@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { TenantSettings } from "@/lib/types";
 import { tenant_templates } from "@prisma/client";
 import { hslToHex, hexToHsl } from "@/lib/color-utils";
-import { getTenantUrl } from "@/lib/tenant-utils";
+import { getTenantUrl } from "@/lib/tenant/tenant-utils";
 import { TemplateRenderer } from "@/components/template-renderer";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import { StoreEditorHelperBot } from "@/components/admin/StoreEditorHelperBot";
@@ -35,7 +35,7 @@ import { TypeTab } from "./tabs/type-tab";
 // EducationTab and AdvancedTab imports removed while those tabs are hidden —
 // restore them together with the TabsTrigger/TabsContent blocks when re-enabling.
 import type { EditorFormData } from "./tabs/types";
-import { DEFAULT_NAV_LINKS, DEFAULT_FOOTER_SECTIONS } from "@/lib/section-schemas";
+import { DEFAULT_NAV_LINKS, DEFAULT_FOOTER_SECTIONS } from "@/lib/templates/section-schemas";
 
 // --- Constants ---
 

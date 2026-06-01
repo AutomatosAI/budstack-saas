@@ -2,7 +2,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import BrandingForm from "@/app/tenant-admin/branding/branding-form";
-import { getJsonFromS3, getTextFromS3, getFileUrl } from "@/lib/s3";
+import { getJsonFromS3, getTextFromS3, getFileUrl } from "@/lib/storage/s3";
 import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";

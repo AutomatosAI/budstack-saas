@@ -20,7 +20,7 @@ import {
 import { Tenant } from "@/types/client";
 import { TenantSettings } from "@/lib/types";
 import { useLanguage } from "@/lib/i18n";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 
 interface FooterProps {
   tenant?: Tenant | null;

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { uploadFile } from "@/lib/s3";
-import { validateUploadBuffer } from "@/lib/upload-validation";
+import { uploadFile } from "@/lib/storage/s3";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 
 export const POST = withSuperAdmin(async (req) => {
   try {

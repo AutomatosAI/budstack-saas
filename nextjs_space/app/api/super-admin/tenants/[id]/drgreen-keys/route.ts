@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { encrypt, decrypt } from "@/lib/encryption";
-import { generateDrGreenSignature } from "@/lib/drgreen-api-client";
+import { encrypt, decrypt } from "@/lib/security/encryption";
+import { generateDrGreenSignature } from "@/lib/drgreen/drgreen-api-client";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";

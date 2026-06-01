@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getCurrentTenant } from "@/lib/tenant";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
-import { getOrder } from "@/lib/drgreen-orders";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
+import { getOrder } from "@/lib/drgreen/drgreen-orders";
 import { apiError } from "@/lib/api-error";
 import { parseSlug, parseUuid } from "@/lib/validation/parse-uuid";
 

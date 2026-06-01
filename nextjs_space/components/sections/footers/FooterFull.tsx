@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
-import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
+import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant/tenant-utils';
 import { SocialIcons } from './social-icons';
 
 interface FooterSection {

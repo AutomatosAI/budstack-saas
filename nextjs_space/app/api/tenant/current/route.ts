@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
 
 /**
  * Public endpoint — returns minimal tenant info for store pages.

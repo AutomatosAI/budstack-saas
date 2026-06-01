@@ -2,8 +2,8 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { fetchProducts } from "@/lib/doctor-green-api";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
+import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 
 /**
  * POST /api/tenant-admin/products/sync

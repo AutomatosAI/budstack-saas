@@ -1,7 +1,7 @@
 import {
   resolveTenant,
   isAmbiguousTenantResolution,
-} from "@/lib/tenant-resolver";
+} from "@/lib/tenant/tenant-resolver";
 
 /**
  * Resolves a database tenant ID from a Clerk organization ID (and an optional

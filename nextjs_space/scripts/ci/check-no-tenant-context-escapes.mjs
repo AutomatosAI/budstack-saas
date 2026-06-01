@@ -74,7 +74,7 @@ if (violations.length > 0) {
     );
   }
   console.error(
-    `\n  Fix: replace enterWith()/setTenantContext() with the callback-scoped runWithTenantContext() from "@/lib/tenant-context".`,
+    `\n  Fix: replace enterWith()/setTenantContext() with the callback-scoped runWithTenantContext() from "@/lib/tenant/tenant-context".`,
   );
   console.error(
     `  Rule: docs/PRDS/REMEDIATION/PRD-202-*.md (AC-7); enforced by PRD-216 AC-7.\n`,

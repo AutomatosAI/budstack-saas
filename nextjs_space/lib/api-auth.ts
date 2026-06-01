@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { apiError } from "@/lib/api-error";
-import { getTenantFromRequest } from "@/lib/tenant";
-import { runWithTenantContextAsync } from "@/lib/tenant-context";
+import { getTenantFromRequest } from "@/lib/tenant/tenant";
+import { runWithTenantContextAsync } from "@/lib/tenant/tenant-context";
 
 /**
  * Authenticated user shape returned by getCurrentUser()

@@ -4,7 +4,7 @@ import {
   isSensitiveField,
   pinoRedactPaths,
   SENSITIVE_FIELDS,
-} from "@/lib/redact";
+} from "@/lib/security/redact";
 
 /**
  * PRD-215 AC-1a — the redaction primitive is the single source of truth for

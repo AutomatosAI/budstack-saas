@@ -23,7 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCartStore, WEIGHT_OPTIONS } from "@/lib/cart-store";
 import { toast } from "@/components/ui/sonner";
 import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 
 // --------------- helpers ---------------
 

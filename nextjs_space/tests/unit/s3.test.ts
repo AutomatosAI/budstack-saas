@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // the presigner so no network/AWS/credentials are needed. The tenant-scope
 // guard (lib/s3-tenant-guard) and ApiError run REAL — these tests prove the
 // real guard fires on the real signing path.
-vi.mock("@/lib/aws-config", () => ({
+vi.mock("@/lib/storage/aws-config", () => ({
   getBucketConfig: vi.fn(),
   createS3Client: vi.fn(),
 }));
@@ -14,9 +14,9 @@ vi.mock("@aws-sdk/s3-request-presigner", () => ({
   getSignedUrl: vi.fn(),
 }));
 
-import { getBucketConfig, createS3Client } from "@/lib/aws-config";
+import { getBucketConfig, createS3Client } from "@/lib/storage/aws-config";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { getFileUrl, uploadFile } from "@/lib/s3";
+import { getFileUrl, uploadFile } from "@/lib/storage/s3";
 import { ApiError } from "@/lib/api-error";
 
 const mockedGetBucketConfig = vi.mocked(getBucketConfig);

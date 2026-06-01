@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
-import { listTenantSubmissions } from "@/lib/marketplace-submission-service";
+import { listTenantSubmissions } from "@/lib/marketplace/marketplace-submission-service";
 import { apiError } from "@/lib/api-error";
 
 export const GET = withTenantAuth(async (_request, { tenantId }) => {

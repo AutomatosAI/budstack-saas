@@ -20,7 +20,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import Link from "next/link";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { getUserShippingAddress, type ShippingAddress } from "@/app/actions/get-user-shipping";
 
 interface OrderResult {

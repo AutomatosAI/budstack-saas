@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
-import { decrypt } from "@/lib/encryption";
-import { DoctorGreenConfig } from "@/lib/doctor-green-api";
+import { decrypt } from "@/lib/security/encryption";
+import { DoctorGreenConfig } from "@/lib/drgreen/doctor-green-api";
 
 /**
  * Retrieves Dr Green credentials for a specific tenant.

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { updateFromGitHub } from "@/lib/tenant-template-upload-service";
+import { updateFromGitHub } from "@/lib/tenant/tenant-template-upload-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";

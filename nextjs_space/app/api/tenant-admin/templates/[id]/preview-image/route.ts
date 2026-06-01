@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { uploadFile, getFileUrl } from "@/lib/s3";
-import { validateUploadBuffer } from "@/lib/upload-validation";
+import { uploadFile, getFileUrl } from "@/lib/storage/s3";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 

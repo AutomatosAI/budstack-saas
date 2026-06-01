@@ -5,12 +5,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // REAL isAmbiguousTenantResolution guard, so the "ambiguous -> null (deny, never a
 // silent pick)" path is genuinely exercised, not stubbed.
 const { resolveTenant } = vi.hoisted(() => ({ resolveTenant: vi.fn() }));
-vi.mock("@/lib/tenant-resolver", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/tenant-resolver")>()),
+vi.mock("@/lib/tenant/tenant-resolver", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/tenant/tenant-resolver")>()),
   resolveTenant,
 }));
 
-import { resolveTenantIdFromClerkOrg } from "@/lib/resolve-tenant-id";
+import { resolveTenantIdFromClerkOrg } from "@/lib/tenant/resolve-tenant-id";
 
 beforeEach(() => {
   vi.clearAllMocks();

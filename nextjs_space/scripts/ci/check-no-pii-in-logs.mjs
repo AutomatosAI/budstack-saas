@@ -95,7 +95,7 @@ if (violations.length > 0) {
     );
   }
   console.error(
-    `\n  Fix: pass PII through redact() from "@/lib/redact" before logging, or log a non-PII id instead.`,
+    `\n  Fix: pass PII through redact() from "@/lib/security/redact" before logging, or log a non-PII id instead.`,
   );
   console.error(
     `  Rule: docs/PRDS/REMEDIATION/PRD-215-*.md / PRD-213; enforced by PRD-216 AC-7.\n`,

@@ -10,8 +10,8 @@
  */
 
 import { prisma } from "@/lib/db";
-import { callDrGreenAPI } from "@/lib/drgreen-api-client";
-import { getClientCartId } from "@/lib/drgreen-client-cart";
+import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
+import { getClientCartId } from "@/lib/drgreen/drgreen-client-cart";
 
 export interface OrderSubmissionData {
     shippingInfo: {
@@ -197,7 +197,7 @@ export async function submitOrder(params: {
     });
 
     // Invalidate cached clientCartId — Dr Green may assign a new cart after order
-    const { invalidateClientCartId } = await import("@/lib/drgreen-client-cart");
+    const { invalidateClientCartId } = await import("@/lib/drgreen/drgreen-client-cart");
     await invalidateClientCartId(clientId).catch(() => {});
 
     // Clean up Dr Green server-side cart (non-blocking)

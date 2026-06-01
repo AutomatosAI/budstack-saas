@@ -7,7 +7,7 @@ import {
   sanitizeEmailSubject,
   EMAIL_HTML_MAX_LENGTH,
   EMAIL_SUBJECT_MAX_LENGTH,
-} from "@/lib/email-sanitize";
+} from "@/lib/security/email-sanitize";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";

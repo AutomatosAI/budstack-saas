@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getTenantFromRequest } from "@/lib/tenant";
+import { getTenantFromRequest } from "@/lib/tenant/tenant";
 
 export const GET = withAuth(async (req, { user }) => {
   try {

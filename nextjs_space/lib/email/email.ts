@@ -1,5 +1,5 @@
 import { render } from "@react-email/components";
-import { MailerService } from "./mailer";
+import { MailerService } from "@/lib/email/mailer";
 import WelcomeEmail from "@/emails/welcome";
 import PasswordResetEmail from "@/emails/password-reset";
 import OrderConfirmationEmail from "@/emails/order-confirmation";

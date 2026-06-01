@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { ChevronDown } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
-import { textAlignClass } from '@/lib/section-align';
+import { textAlignClass } from '@/lib/templates/section-align';
 
 interface FAQItem {
   question: string;

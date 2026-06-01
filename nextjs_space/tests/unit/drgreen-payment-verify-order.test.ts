@@ -9,11 +9,11 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("@/lib/encryption", () => ({
+vi.mock("@/lib/security/encryption", () => ({
   decrypt: vi.fn(() => "tenant-secret"),
 }));
 
-vi.mock("@/lib/webhook", () => ({
+vi.mock("@/lib/integrations/webhook", () => ({
   triggerWebhook: vi.fn(),
   WEBHOOK_EVENTS: new Proxy({}, { get: () => "evt" }),
 }));

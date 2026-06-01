@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
+import { copyS3Directory, getJsonFromS3 } from "@/lib/storage/s3";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -87,7 +87,7 @@ export const POST = withSuperAdmin(async (req) => {
 
           // 3. Restore tenant's layout.json (their customizations win)
           if (tenantLayout) {
-            const { createS3Client, getBucketConfig } = await import("@/lib/aws-config");
+            const { createS3Client, getBucketConfig } = await import("@/lib/storage/aws-config");
             const { PutObjectCommand } = await import("@aws-sdk/client-s3");
             const s3 = await createS3Client();
             const { bucketName } = await getBucketConfig();

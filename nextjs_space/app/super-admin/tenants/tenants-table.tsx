@@ -49,7 +49,7 @@ import {
 } from "@/components/admin/shared";
 import type { StatusFilterOption, BulkAction } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
-import { getTenantUrl } from "@/lib/tenant-utils";
+import { getTenantUrl } from "@/lib/tenant/tenant-utils";
 import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { exportToCSV } from "@/lib/admin/csv-export";

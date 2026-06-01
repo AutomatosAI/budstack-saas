@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
-import { createS3Client, getBucketConfig } from "@/lib/aws-config";
+import { createS3Client, getBucketConfig } from "@/lib/storage/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { generateSlug } from "@/lib/template-utils";
+import { generateSlug } from "@/lib/templates/template-utils";
 import { apiError } from "@/lib/api-error";
 import {
   getOrCreateCustomBase,
@@ -14,7 +14,7 @@ import {
   BLANK_NAVIGATION,
   BLANK_FOOTER,
   BLANK_STYLES_CSS,
-} from "@/lib/blank-template-defaults";
+} from "@/lib/templates/blank-template-defaults";
 import crypto from "crypto";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/validation/body";

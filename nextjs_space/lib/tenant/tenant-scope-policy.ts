@@ -1,4 +1,4 @@
-import { runWithTenantContext } from "@/lib/tenant-context";
+import { runWithTenantContext } from "@/lib/tenant/tenant-context";
 
 /**
  * PRD-202 AC-6 / AC-6a — fail-loud policy for the Prisma tenant-scope middleware.

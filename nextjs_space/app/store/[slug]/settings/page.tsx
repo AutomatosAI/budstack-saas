@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { toast } from "@/components/ui/sonner";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
 
 export default function SettingsPage() {

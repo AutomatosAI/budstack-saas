@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { SectionProps } from '@/lib/types/section-props';
-import { headerAlignClasses } from '@/lib/section-align';
+import { headerAlignClasses } from '@/lib/templates/section-align';
 
 interface GalleryItem {
   src?: string;

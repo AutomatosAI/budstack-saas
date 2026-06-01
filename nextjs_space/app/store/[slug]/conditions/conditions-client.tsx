@@ -6,7 +6,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, FlaskConical, BookOpen, Award, Users } from "lucide-react";
 import { Tenant } from "@/types/client";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 
 interface Condition {
   id: string;

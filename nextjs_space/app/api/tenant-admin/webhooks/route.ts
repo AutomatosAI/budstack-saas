@@ -6,7 +6,7 @@ import crypto from "crypto";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
-import { assertSafeWebhookUrl } from "@/lib/webhook-ssrf";
+import { assertSafeWebhookUrl } from "@/lib/integrations/webhook-ssrf";
 
 const webhookCreateSchema = z
   .object({

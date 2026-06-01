@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getJsonFromS3, uploadFile } from "@/lib/s3";
-import { createS3Client, getBucketConfig } from "@/lib/aws-config";
+import { getJsonFromS3, uploadFile } from "@/lib/storage/s3";
+import { createS3Client, getBucketConfig } from "@/lib/storage/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
 import { apiError, ApiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
-import { validateUploadBuffer } from "@/lib/upload-validation";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 
 /**
  * Super Admin Marketplace Template Branding API

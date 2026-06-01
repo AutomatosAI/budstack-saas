@@ -2,19 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { clerkClient } from "@clerk/nextjs/server";
 
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
-import { callDrGreenAPI } from "@/lib/drgreen-api-client";
+import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
+import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 
 import { prisma } from "@/lib/db";
-import { mapMedicalConditionsForDrGreen } from '@/lib/dr-green-mapping';
+import { mapMedicalConditionsForDrGreen } from '@/lib/drgreen/dr-green-mapping';
 import crypto from "crypto";
 import { z } from "zod";
 
 import { toAlpha3 as convertToAlpha3CountryCode } from '@/lib/country-codes';
-import { checkRateLimit } from '@/lib/rate-limit';
-import { getTenantFromRequest } from '@/lib/tenant';
-import { resolveTenant } from '@/lib/tenant-resolver';
+import { checkRateLimit } from '@/lib/security/rate-limit';
+import { getTenantFromRequest } from '@/lib/tenant/tenant';
+import { resolveTenant } from '@/lib/tenant/tenant-resolver';
 import { logger } from '@/lib/logger';
 
 // SECURITY (C1, C13): Strict whitelist schema — no `.passthrough()`. Every

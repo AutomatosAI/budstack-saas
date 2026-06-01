@@ -21,7 +21,7 @@ import {
 import { CartDropdown } from "./cart-dropdown";
 // import { LanguageSwitcher } from './language-switcher';
 import { useLanguage } from "@/lib/i18n";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,

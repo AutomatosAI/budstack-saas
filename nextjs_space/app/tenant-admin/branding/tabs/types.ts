@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import type { SocialLink } from "@/lib/section-schemas";
+import type { SocialLink } from "@/lib/templates/section-schemas";
 
 export interface LogoPlacement {
   // Navigation

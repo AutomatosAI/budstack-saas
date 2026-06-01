@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { subDays, startOfDay, format, eachDayOfInterval } from "date-fns";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export const GET = withTenantAuth(async (req, { user, tenantId }) => {
   try {

@@ -177,4 +177,4 @@ export function isValidStateTransition(
  * Redact sensitive fields from payload for safe logging.
  * Re-exported from lib/redact.ts so existing webhook callers keep working.
  */
-export { sanitizeForLogging } from "@/lib/redact";
+export { sanitizeForLogging } from "@/lib/security/redact";

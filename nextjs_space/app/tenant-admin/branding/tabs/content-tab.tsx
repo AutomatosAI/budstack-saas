@@ -27,8 +27,8 @@ import {
   FOOTER_STYLES,
   SOCIAL_PLATFORMS,
   DEFAULT_NAV_LINKS,
-} from "@/lib/section-schemas";
-import type { FieldSchema, ArrayItemField, SocialPlatform } from "@/lib/section-schemas";
+} from "@/lib/templates/section-schemas";
+import type { FieldSchema, ArrayItemField, SocialPlatform } from "@/lib/templates/section-schemas";
 import { SectionImageUploader, SectionVideoUploader } from "./shared";
 import { ICON_GROUPS, getIcon } from "@/lib/icon-registry";
 import { SectionColourPanel } from "./section-colour-panel";

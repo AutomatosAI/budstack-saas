@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from "@/lib/api-auth";
-import { createClient } from '@/lib/doctor-green-api';
+import { createClient } from '@/lib/drgreen/doctor-green-api';
 import { prisma } from '@/lib/db';
-import { getCurrentTenant } from '@/lib/tenant';
-import { getTenantDrGreenConfig } from '@/lib/tenant-config';
+import { getCurrentTenant } from '@/lib/tenant/tenant';
+import { getTenantDrGreenConfig } from '@/lib/tenant/tenant-config';
 import { apiError } from '@/lib/api-error';
 
 export const POST = withAuth(async (req, { user }) => {

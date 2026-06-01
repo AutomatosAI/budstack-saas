@@ -1,11 +1,11 @@
 import { PrismaClient } from '@prisma/client'
-import { getTenantContext, hasTenantContext } from '@/lib/tenant-context';
+import { getTenantContext, hasTenantContext } from '@/lib/tenant/tenant-context';
 import {
   TenantContextMissingError,
   decideMissingContext,
   emitTenantContextMissing,
   isStrictTenantContext,
-} from '@/lib/tenant-scope-policy';
+} from '@/lib/tenant/tenant-scope-policy';
 import {
   applySoftDelete,
   getSoftDeleteFlags,
