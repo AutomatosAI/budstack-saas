@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { parseHostToTenantHint } from "@/lib/parse-host";
+import { customDomainRewritePath } from "@/lib/custom-domain-rewrite";
 import { applyCsp, buildCsp, generateNonce, variantForServedPath } from "@/lib/security/csp";
 
 // Define public routes
@@ -99,9 +100,13 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // PRIORITY 2: Custom domain routing (REWRITE)
-  // Rewrite example.com/products -> /store/_cd/products so Next.js file routing
-  // matches app/store/[slug]/. The _cd placeholder slug is never used for DB
-  // lookups — getCurrentTenant() resolves via the x-tenant-custom-domain header.
+  // Rewrite example.com/products -> /store/cd-<hash(host)>/products so Next.js
+  // file routing matches app/store/[slug]/. PRD-212: the segment is HOST-SCOPED
+  // (was the constant /store/_cd) so the ISR full-route cache — keyed on the
+  // resolved pathname, not on headers — gets a DISTINCT key per custom domain
+  // and can never serve one tenant's cached HTML on another tenant's domain.
+  // The segment is a cache-key dimension only; it is never used for DB lookups —
+  // getCurrentTenant() still resolves via the x-tenant-custom-domain header.
   if (
     hint?.kind === 'customDomain' &&
     !(process.env.NODE_ENV === 'development' && hint.host.includes('.abacusai.app'))
@@ -119,7 +124,7 @@ export default clerkMiddleware(async (auth, req) => {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, "base");
     }
 
-    // Clerk proxy: /__clerk/* must reach next.config.js rewrite, not get rewritten to /store/_cd/
+    // Clerk proxy: /__clerk/* must reach next.config.js rewrite, not get rewritten to /store/cd-…/
     if (pathname.startsWith('/__clerk')) {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, "base");
     }
@@ -129,8 +134,10 @@ export default clerkMiddleware(async (auth, req) => {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, variantForServedPath(pathname));
     }
 
-    // Page routes: rewrite to internal store route with placeholder slug
-    url.pathname = `/store/_cd${pathname}`;
+    // Page routes: rewrite to internal store route with a HOST-SCOPED segment
+    // (PRD-212). hint.host is the real custom domain; the derived cd-<hash>
+    // segment isolates this domain's ISR cache from every other custom domain.
+    url.pathname = customDomainRewritePath(hint.host, pathname);
     return applyCsp(NextResponse.rewrite(url, { request: { headers: requestHeaders } }), nonce, "store");
   }
 
