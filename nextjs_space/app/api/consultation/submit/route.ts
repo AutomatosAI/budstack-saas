@@ -15,6 +15,7 @@ import { toAlpha3 as convertToAlpha3CountryCode } from '@/lib/country-codes';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getTenantFromRequest } from '@/lib/tenant';
 import { resolveTenant } from '@/lib/tenant-resolver';
+import { logger } from '@/lib/logger';
 
 // SECURITY (C1, C13): Strict whitelist schema — no `.passthrough()`. Every
 // field that lands in the database or is forwarded to Dr. Green must be
@@ -153,14 +154,18 @@ export async function POST(request: NextRequest) {
       } catch (clerkError: any) {
         // Ignore if user already exists in Clerk, proceed to DB/DrGreen
         if (clerkError.errors?.[0]?.code === "form_identifier_exists") {
-          console.log(`User ${body.email} already exists in Clerk.`);
+          logger.info("[Consultation] user already exists in Clerk", { tenantId });
           // Optionally fetch the user to get their ID if needed, but for now we proceed
         } else {
           throw clerkError; // Re-throw other errors (e.g., weak password)
         }
       }
     } catch (error: any) {
-      console.error("Clerk User Creation Error:", error);
+      logger.error("[Consultation] Clerk user creation error", {
+        tenantId,
+        code: error?.errors?.[0]?.code,
+        message: error?.errors?.[0]?.message ?? (error instanceof Error ? error.message : String(error)),
+      });
       // Surface Clerk's structured, user-actionable validation message only
       // (e.g. "email taken", "weak password"); never the raw error.message.
       return NextResponse.json(
@@ -190,9 +195,10 @@ export async function POST(request: NextRequest) {
           },
         });
       }
-      console.log(
-        `⚠️  User ${body.email} already exists, using existing account`,
-      );
+      logger.info("[Consultation] user already exists, using existing account", {
+        userId,
+        tenantId,
+      });
     } else {
       // Create user account (Local Mirror)
       const newId = clerkUser ? clerkUser.id : crypto.randomUUID();
@@ -210,7 +216,7 @@ export async function POST(request: NextRequest) {
           },
         });
         userId = newUser.id;
-        console.log(`✅ Created local user mirror for ${body.email}`);
+        logger.info("[Consultation] created local user mirror", { userId, tenantId });
       } catch (prismaError: any) {
         // Race condition: Clerk webhook may have created the user between our check and create
         if (prismaError.code === "P2002") {
@@ -225,7 +231,10 @@ export async function POST(request: NextRequest) {
                 data: { tenantId, role: "PATIENT", updatedAt: new Date() },
               });
             }
-            console.log(`⚠️  User ${body.email} created by webhook race, using existing account`);
+            logger.info("[Consultation] user created by webhook race, using existing account", {
+              userId,
+              tenantId,
+            });
           } else {
             throw prismaError;
           }
@@ -293,9 +302,7 @@ export async function POST(request: NextRequest) {
     try {
       // Fetch tenant credentials + API URL (respects tenant override > env var > platform config)
       const { apiKey, secretKey, apiUrl } = await getTenantDrGreenConfig(tenantId);
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[Consultation] Credentials loaded for tenant ${tenantId}`);
-      }
+      logger.debug("[Consultation] Dr Green credentials loaded", { tenantId });
 
       // Format date for Dr. Green API (YYYY-MM-DD)
       const dobFormatted = body.dateOfBirth
@@ -403,12 +410,15 @@ export async function POST(request: NextRequest) {
         body: drGreenPayload,
       });
 
-      // Diagnostic: log the raw Dr Green response so we can see which extractor
-      // path is hit and confirm the returned id matches what /dapp/clients list returns.
-      // Remove once the registration-ID mismatch bug is resolved.
-      console.log(
-        `[Consultation] RAW_DRGREEN_RESPONSE email=${body.email} top_keys=${Object.keys(drGreenResponse || {}).join(',')} body=${JSON.stringify(drGreenResponse).slice(0, 2000)}`,
-      );
+      // AC-2a: log a REDACTED summary of the Dr Green response — the top-level
+      // keys and presence flags only — never the email and never the raw body
+      // (which carries the client's special-category medical/KYC data).
+      logger.debug("[Consultation] Dr Green response shape", {
+        tenantId,
+        topKeys: Object.keys(drGreenResponse || {}),
+        hasData: Boolean(drGreenResponse?.data),
+        hasClient: Boolean(drGreenResponse?.data?.client || drGreenResponse?.client),
+      });
 
       // Extract KYC link and client ID from response
       // Dr Green API nests client under data.client (confirmed from live response)
@@ -428,12 +438,21 @@ export async function POST(request: NextRequest) {
         drGreenResponse.client?.kycLink ||
         drGreenResponse.kycLink || null;
 
-      console.log(
-        `[Consultation] Result: email=${body.email} clientId=${clientId || 'MISSING'} extractedFrom=${clientIdPath} kycLink=${kycLink ? 'OK' : 'NONE'}`,
-      );
+      // AC-2a: no email; client id is a non-PII Dr Green identifier, kycLink
+      // presence is a boolean flag (the link itself is a redaction-set field).
+      logger.info("[Consultation] submission result", {
+        tenantId,
+        clientId: clientId || 'MISSING',
+        extractedFrom: clientIdPath,
+        hasKycLink: Boolean(kycLink),
+      });
 
       if (!clientId) {
-        console.error("Dr. Green API response missing client ID:", JSON.stringify(drGreenResponse));
+        // Summary only — never dump the raw response (special-category data).
+        logger.error("[Consultation] Dr Green response missing client ID", {
+          tenantId,
+          topKeys: Object.keys(drGreenResponse || {}),
+        });
       }
 
       // Update questionnaire with Dr. Green client ID and KYC link
@@ -459,7 +478,10 @@ export async function POST(request: NextRequest) {
             updatedAt: new Date(),
           },
         });
-        console.log(`✅ Updated User ${userId} with Dr. Green Client ID: ${clientId}`);
+        logger.info("[Consultation] updated user with Dr Green client id", {
+          userId,
+          clientId,
+        });
       }
 
       // Audit log for successful consultation submission
@@ -501,7 +523,12 @@ export async function POST(request: NextRequest) {
         adminApproval: "PENDING",
       });
     } catch (drGreenError: any) {
-      console.error("Dr. Green API Error:", drGreenError);
+      // Message only — the Dr Green error object/body can echo back the
+      // submitted PHI; never log the whole thing.
+      logger.error("[Consultation] Dr Green API error", {
+        tenantId,
+        message: drGreenError instanceof Error ? drGreenError.message : String(drGreenError),
+      });
 
       // Update questionnaire with error
       await prisma.consultation_questionnaires.update({
@@ -541,7 +568,9 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.error("Consultation submission error:", error);
+    logger.error("[Consultation] submission error", {
+      message: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

@@ -8,7 +8,14 @@
  * Recursive — descends into nested objects (but not arrays of primitives).
  */
 
-const SENSITIVE_FIELDS = new Set([
+/**
+ * Single source of truth for the sensitive-field set.
+ *
+ * Exported (read-only) so `lib/logger.ts` can derive pino `redact` paths from
+ * the SAME set rather than forking a second list — see `pinoRedactPaths()`.
+ * Extend HERE; never maintain a parallel list elsewhere (AC-1a).
+ */
+export const SENSITIVE_FIELDS: ReadonlySet<string> = new Set([
   // emails (variants seen across the codebase)
   "email",
   "userEmail",
@@ -19,10 +26,12 @@ const SENSITIVE_FIELDS = new Set([
   "recipientEmail",
   "fromEmail",
   "toEmail",
+  "clerkEmail",
 
   // phones
   "phone",
   "phoneNumber",
+  "contactNumber",
   "oldPhone",
   "newPhone",
 
@@ -30,6 +39,7 @@ const SENSITIVE_FIELDS = new Set([
   "firstName",
   "lastName",
   "fullName",
+  "name",
   "targetUserName",
   "customerName",
   "recipientName",
@@ -40,13 +50,24 @@ const SENSITIVE_FIELDS = new Set([
   "shippingAddress",
   "addressLine1",
   "addressLine2",
+  "postalCode",
 
-  // identifiers
+  // identifiers / health (special-category — GDPR Art. 9)
   "kycLink",
   "dateOfBirth",
   "dob",
   "ssn",
   "nationalId",
+  "medicalConditions",
+  "otherCondition",
+  "prescribedMedications",
+  "prescribedSupplements",
+  "medicalRecord",
+  "medicalHistory",
+  // Dr Green client/consultation payloads — never dump these whole
+  "drGreenResponse",
+  "drGreenPayload",
+  "client",
 
   // credentials / secrets
   "password",
@@ -59,6 +80,7 @@ const SENSITIVE_FIELDS = new Set([
   "refreshToken",
   "authToken",
   "smtpPassword",
+  "automatosApiKey",
 ]);
 
 function redactValue(value: unknown): unknown {
@@ -102,4 +124,23 @@ export function sanitizeForLogging<T = unknown>(data: T): T {
  */
 export function isSensitiveField(name: string): boolean {
   return SENSITIVE_FIELDS.has(name);
+}
+
+/**
+ * Derive pino `redact.paths` from the SINGLE `SENSITIVE_FIELDS` set so the
+ * logger's structured-field redaction and `sanitizeForLogging` can never drift
+ * apart (AC-1a). For each field we emit:
+ *   - `<field>`                 top-level key
+ *   - `*.<field>`               one level of nesting (covers `body.email` etc.)
+ *   - `*.*.<field>`             two levels (covers `data.client.email` etc.)
+ *
+ * pino's redactor matches literal paths/wildcards; this trio covers the nesting
+ * depths the codebase actually logs without an unbounded scan.
+ */
+export function pinoRedactPaths(): string[] {
+  const paths: string[] = [];
+  for (const field of SENSITIVE_FIELDS) {
+    paths.push(field, `*.${field}`, `*.*.${field}`);
+  }
+  return paths;
 }
