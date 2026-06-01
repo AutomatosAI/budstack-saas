@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 // Force rebuild: 1
 import { z } from "zod";
-import { currentUser } from "@clerk/nextjs/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -26,13 +26,8 @@ const createTenantSchema = z
  * List all tenants with pagination and filtering
  * Authorization: SUPER_ADMIN only
  */
-export async function GET(request: NextRequest) {
+export const GET = withSuperAdmin(async (request, { user }) => {
   try {
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
@@ -113,20 +108,15 @@ export async function GET(request: NextRequest) {
       safeMessage: "Internal server error",
     });
   }
-}
+});
 
 /**
  * POST /api/super-admin/tenants
  * Create a new tenant with admin user
  * Authorization: SUPER_ADMIN only
  */
-export async function POST(request: NextRequest) {
+export const POST = withSuperAdmin(async (request, { user }) => {
   try {
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
@@ -216,7 +206,7 @@ export async function POST(request: NextRequest) {
         entityType: "Tenant",
         entityId: tenant.id,
         userId: user.id,
-        userEmail: user.emailAddresses[0]?.emailAddress,
+        userEmail: user.email,
         metadata: {
           businessName,
           subdomain,
@@ -238,4 +228,4 @@ export async function POST(request: NextRequest) {
       safeMessage: "Internal server error",
     });
   }
-}
+});

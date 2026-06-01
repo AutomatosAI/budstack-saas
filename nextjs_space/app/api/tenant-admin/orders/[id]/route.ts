@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
@@ -10,38 +10,15 @@ import { parseUuid } from "@/lib/validation/parse-uuid";
  * Fetch a single order by ID for the authenticated tenant admin.
  * Used for packing slip generation and order detail views.
  */
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } },
-) {
+export const GET = withTenantAuthParams(async (_request, { tenantId }, params) => {
   try {
-    const user = await currentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
     const id = parseUuid(params.id);
-
-    // Fetch user's tenant
-    const localUser = await prisma.users.findFirst({
-      where: { email: email },
-      select: { tenantId: true },
-    });
-
-    if (!localUser?.tenantId) {
-      return NextResponse.json(
-        { error: "No tenant associated with user" },
-        { status: 403 },
-      );
-    }
 
     // Fetch order with items and user data
     const order = await prisma.orders.findFirst({
       where: {
         id,
-        tenantId: localUser.tenantId,
+        tenantId: tenantId,
       },
       select: {
         id: true,
@@ -106,4 +83,4 @@ export async function GET(
   } catch (error) {
     return apiError(error, { route: "GET /api/tenant-admin/orders/[id]" });
   }
-}
+});

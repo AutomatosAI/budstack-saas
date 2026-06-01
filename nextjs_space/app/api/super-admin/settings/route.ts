@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
 import { apiError } from "@/lib/api-error";
@@ -18,14 +18,8 @@ const platformConfigSchema = z.object({
   redisUrl: z.string().max(2000).optional().nullable(),
 });
 
-export async function GET(req: NextRequest) {
+export const GET = withSuperAdmin(async (_req) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const config = await prisma.platform_config.findUnique({
       where: { id: "config" },
     });
@@ -50,16 +44,10 @@ export async function GET(req: NextRequest) {
       safeMessage: "Failed to fetch config",
     });
   }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withSuperAdmin(async (req) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const {
       drGreenApiUrl,
       awsBucketName,
@@ -141,4 +129,4 @@ export async function POST(req: NextRequest) {
       safeMessage: "Failed to update settings",
     });
   }
-}
+});

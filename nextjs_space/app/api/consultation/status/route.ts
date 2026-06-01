@@ -1,17 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getTenantFromRequest } from "@/lib/tenant";
 
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req, { user }) => {
   try {
-    const user = await currentUser();
-
-    if (!user?.emailAddresses?.[0]?.emailAddress) {
+    const email = user.email;
+    if (!email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const email = user.emailAddresses[0].emailAddress;
 
     const tenant = await getTenantFromRequest(req);
     if (!tenant) {
@@ -56,4 +53,4 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

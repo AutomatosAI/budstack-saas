@@ -1,22 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getTenantContext } from "@/lib/tenant-context";
-import { withTenantContext } from "@/lib/with-tenant-context";
 
-async function getCustomerOrders(_req: NextRequest): Promise<NextResponse> {
+// withAuth binds the request's host tenant at the boundary (PRD-202
+// runWithTenantContextAsync) and admits any logged-in user. Customer order
+// history is therefore read under the confined tenant context — every
+// tenant-scoped Prisma query runs under the correct tenant and can never
+// observe a concurrent request's tenant.
+export const GET = withAuth(async (_req, { user }) => {
   try {
-    const user = await currentUser();
-
-    if (!user?.emailAddresses?.[0]?.emailAddress) {
+    const email = user.email;
+    if (!email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const email = user.emailAddresses[0]?.emailAddress;
-
-    // PRD-202 AC-4: withTenantContext (see export below) resolves and binds the
-    // request's tenant at the boundary, so read it from the confined context
-    // instead of re-resolving here. A null id means no tenant resolved → 404.
+    // Read the bound tenant from the confined context instead of re-resolving
+    // here. A null id means no tenant resolved → 404.
     const tenantId = getTenantContext();
     if (!tenantId) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
@@ -57,11 +57,4 @@ async function getCustomerOrders(_req: NextRequest): Promise<NextResponse> {
       { status: 500 },
     );
   }
-}
-
-// PRD-202 AC-4 pilot — bind tenant context at the request boundary. The whole
-// handler runs inside runWithTenantContextAsync(resolvedTenantId, ...), so every
-// tenant-scoped Prisma query executes under the correct, confined context and can
-// never observe a concurrent request's tenant. PRD-203's withTenantAuth composes
-// this same wrapper to migrate the rest of the routes.
-export const GET = withTenantContext(getCustomerOrders);
+});

@@ -23,22 +23,15 @@ import { eraseUser, resolveLocalUser } from "@/lib/gdpr/erasure";
  * Requires `confirm: "DELETE"` in the request body to prevent accidental
  * one-click deletion. Rate-limited (1 attempt per hour).
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request, { user }) => {
   try {
-    const clerkUser = await currentUser();
-    if (!clerkUser?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = clerkUser.emailAddresses.find(
-      (e) => e.id === clerkUser.primaryEmailAddressId,
-    )?.emailAddress || clerkUser.emailAddresses[0]?.emailAddress;
+    const email = user.email;
 
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
     }
 
-    const rate = await checkRateLimit(`account-delete:${clerkUser.id}`, {
+    const rate = await checkRateLimit(`account-delete:${user.id}`, {
       maxRequests: 1,
       windowMs: 60 * 60 * 1000,
       failMode: "closed",
@@ -83,7 +76,7 @@ export async function DELETE(request: NextRequest) {
     let clerkDeleted = false;
     try {
       const clerk = await clerkClient();
-      await clerk.users.deleteUser(clerkUser.id);
+      await clerk.users.deleteUser(user.id);
       clerkDeleted = true;
     } catch (clerkErr) {
       console.error(
@@ -114,4 +107,4 @@ export async function DELETE(request: NextRequest) {
       safeMessage: "Failed to delete account",
     });
   }
-}
+});

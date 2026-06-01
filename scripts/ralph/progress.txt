@@ -1,332 +1,128 @@
-================================================================================
-RALPH PROGRESS JOURNAL — PRD-202 Tenant Context Concurrency Fix
-================================================================================
-Worktree : /Users/gkavanagh/Development/HealingBuds/budstack-saas-prd-202
-Branch   : ralph/prd-202-tenant-context-concurrency  (base: main @ af77b24)
-App      : nextjs_space/
-PRD      : docs/PRDS/REMEDIATION/PRD-202-tenant-context-concurrency-fix.md
-Plan     : scripts/ralph/IMPLEMENTATION_PLAN.md  (source of truth for checkboxes)
+# PRD-216 CI/CD Security Gates — Ralph Build Journal
 
-One block per story, appended in execution order. A story is only marked
-[x] in IMPLEMENTATION_PLAN.md after its acceptance criteria are really met
-(typecheck green; tests green where the story has tests). BLOCKED stories are
-left unchecked with a RALPH_BLOCKED marker and the reason.
+Branch: ralph/prd-216-ci-cd-security-gates (worktree off main)
+Source PRD: docs/PRDS/REMEDIATION/PRD-216-ci-cd-security-gates.md
+Started: 2026-05-29
 
-Constraints in force: never --dangerously-skip-permissions; never push / never
-switch this worktree's branch / never touch main or sibling worktrees; stage
-files by name; commits carry no attribution footer; tests load .env.test only.
-================================================================================
+Append one short block per finished story: `US-XXX <title> — DONE <date>` + 1-2 lines on
+what landed and any follow-up. BLOCKED stories: note the reason and leave the plan box unchecked.
 
---------------------------------------------------------------------------------
-US-001 — Vitest unit harness scaffold (idempotent)            [DONE]  commit pending
---------------------------------------------------------------------------------
-Mirrored the proven PRD-206 harness onto this worktree (base main @ af77b24,
-which has no vitest):
-  - vitest pinned ^2.1.9 + @vitest/coverage-v8 ^2.1.9 (Node here is 18.17.0;
-    vitest 4.x needs Node 20.12+ for node:util styleText — 2.x is the ceiling).
-  - nextjs_space/vitest.config.ts: environment node, setupFiles vitest.setup.ts,
-    include tests/unit/**/*.test.ts + lib/**/*.test.ts, exclude integration/e2e/
-    *.spec.ts, coverage v8 over lib/**, @ alias → repo root (mirrors tsconfig).
-  - nextjs_space/vitest.setup.ts: dotenv loads .env.test ONLY (never real env).
-  - nextjs_space/.env.test: NODE_ENV=test. Root .gitignore gains `!**/.env.test`
-    so the throwaway test env is committable.
-  - package.json scripts: test / test:watch / test:unit (vitest run).
-  - tests/unit/harness-smoke.test.ts: 2 sanity tests.
-Validation: `pnpm test:unit` → 2/2 passed. `npx tsc --noEmit` → exit 0 (also
-confirms main is a clean typecheck baseline for this branch).
-Files: .gitignore, nextjs_space/{vitest.config.ts,vitest.setup.ts,.env.test,
-package.json,pnpm-lock.yaml,tests/unit/harness-smoke.test.ts}.
+---
 
---------------------------------------------------------------------------------
-US-002 — Additive tenant-context API + unit suite (AC-1, OQ-4)         [DONE]
---------------------------------------------------------------------------------
-lib/tenant-context.ts (additive only — setTenantContext still present, removed
-in US-009 once its callers are gone):
-  - runWithTenantContextAsync<T>(tenantId, fn: () => Promise<T>): Promise<T> —
-    binds the ALS for the whole async chain; context propagates across awaits
-    inside fn and is restored for the caller once the promise settles.
-  - hasTenantContext(): boolean = getStore() !== undefined. This is the key
-    primitive for US-005: it distinguishes an EXPLICIT null (a bound
-    runWithTenantContext(null,...) system query — allowed) from an IMPLICIT
-    unbound context (the leak bug — fail loud). getTenantContext()===null alone
-    cannot tell these apart.
-  - getTenantContext() unchanged (AC-1).
-Unit suite tests/unit/tenant-context.test.ts (8 tests): sync bind+teardown,
-returns callback value, nested-scope restores outer, null+no-context outside,
-explicit-null is bound (hasTenantContext true / id null), bound non-null
-reports true, async context survives an `await new Promise(setTimeout(0))`
-boundary, async resolves to callback value.
-Validation: pnpm test:unit → 10/10 passed (2 smoke + 8 new). tsc --noEmit → 0.
-Files: nextjs_space/lib/tenant-context.ts, nextjs_space/tests/unit/tenant-context.test.ts.
+US-001 PRD-202 grep gate script — DONE 2026-05-29
+- Added nextjs_space/scripts/ci/check-no-tenant-context-escapes.mjs: scans app/lib/components
+  + middleware.ts for `enterWith(` / `setTenantContext(` (token-boundary regex over
+  blankNonCode()'d source, reusing strip-strings.mjs). Reports path:line:col + PRD-202 owner.
+- Wired package.json script `check:no-tenant-escapes`. Gate is REPORT-ONLY for now: it
+  currently finds 13 real call-sites (lib/tenant-context.ts:14,17 + lib/tenant.ts x11) because
+  PRD-202 is NOT merged. That detection is the gate WORKING, not a failure — do NOT edit
+  lib/tenant.ts (PRD-202 scope). Flip to BLOCKING in ci.yml once PRD-202 removes those calls.
+- Validated: `node --check` ok; gate exits 1 with the 13 findings; `tsc --noEmit` exit 0.
 
---------------------------------------------------------------------------------
-US-003 — Concurrency unit proof (node-only AC-7)                       [DONE]
---------------------------------------------------------------------------------
-tests/unit/tenant-context.concurrency.test.ts (4 tests, pure ALS — no DB):
-  POSITIVE PROOF (the AC-7 property): 300 interleaved requests round-robin
-  across 3 tenants, each yielding the microtask queue 5x and re-asserting its
-  bound context after every yield (1500 interleaved observations) → ZERO
-  cross-tenant observation; every request ends on its own tenant; context fully
-  torn down after.
-  ROOT-CAUSE CONTRAST (deterministic, not timing-dependent):
-    (a) enterWith() with no enclosing scope persists into the shared context —
-        after request1 finishes, a later read still sees 'req1' (never popped) —
-        the exact bleed vector on Railway's persistent process.
-    (b) enterWith() overrides an active run() scope in place (honours no
-        boundary) — the enclosing 'outer' becomes 'intruder'.
-    (c) runWithTenantContext() confines its binding — caller is null before and
-        after; one request's binding cannot escape into another's continuation.
-NOTE: I first tried a literal interleaved-enterWith bleed assertion; it did NOT
-reproduce reliably on Node 18.17 because each `await` snapshots the context
-frame. Rather than ship a flaky/contrived assertion, the contrast now proves the
-underlying no-boundary mechanism deterministically. The authoritative full-stack
-red→green interleave proof remains the Docker-gated Postgres test US-010.
-Validation: full pnpm test:unit → 14/14 passed (3 files). tsc --noEmit → 0.
-Files: nextjs_space/tests/unit/tenant-context.concurrency.test.ts.
+US-002 PRD-215 PII-in-logs grep gate — DONE 2026-05-29
+- Added nextjs_space/scripts/ci/check-no-pii-in-logs.mjs: mirrors the error-leaks gate
+  (blankNonCode + matchParen arg-span scan) to find banned PII identifiers (email, firstName,
+  phone, address, drGreenResponse) inside console.*/logger.* call arguments. Token-boundaried +
+  case-sensitive to keep false-positives low (per US-002 notes). Reports path:line:col + PRD-215/213.
+- Wired package.json script `check:no-pii-logs`. REPORT-ONLY for now: finds 24 real call-site hits
+  (incl. the AC-named app/tenant-admin/layout.tsx + app/actions/kyc-check.ts) because PRD-215
+  redaction is NOT merged. PRD §5 quotes ~42 — that's a crude per-line grep (counts PII in string
+  literals + substrings like emailAddress); the precise code-only gate correctly reports fewer.
+  Do NOT edit those log call sites (PRD-215/213 scope). Flip to BLOCKING once PRD-215 merges.
+- Validated: `node --check` ok; gate exits 1 with 24 findings; `tsc --noEmit` exit 0.
 
---------------------------------------------------------------------------------
-US-004 — withTenantContext request wrapper (AC-3)                      [DONE]
---------------------------------------------------------------------------------
-lib/with-tenant-context.ts — withTenantContext(handler): resolves the tenant via
-getTenantFromRequest's RETURN value (never a side-effect, so it is correct both
-before and after the US-008 return-not-set refactor), then runs the WHOLE handler
-inside runWithTenantContextAsync(tenant?.id ?? null, () => handler(req, ...args)).
-Variadic Args (extends unknown[]) so it wraps both bare (req) and ({ params })
-route signatures with no `any`. A null resolution is bound EXPLICITLY (anonymous
-storefront request) so the middleware sees a deliberate context, not the
-implicit-unbound failure. Doc note: PRD-203's withTenantAuth composes this; the
-bulk route migration rides on PRD-203 — this PRD wires one pilot (US-007).
-Unit suite tests/unit/with-tenant-context.test.ts (5 tests, resolver mocked at
-the module boundary, real context primitive): binds resolved id around handler +
-tears down; explicit-null binding when no tenant resolves (hasTenantContext
-true); context survives awaits in the handler; extra { params } arg passes
-through; CONCURRENT BLEED TEST — 50 interleaved A/B requests through the wrapper,
-5 post-yield checks each, zero cross-tenant observation.
-Validation: full pnpm test:unit → 19/19 passed (4 files). tsc --noEmit → 0.
-Files: nextjs_space/lib/with-tenant-context.ts, nextjs_space/tests/unit/with-tenant-context.test.ts.
+US-003 Unified grep-gate runner + ci.yml wiring — DONE 2026-05-29
+- Added scripts/ci/grep-gates.sh (repo root): cwd-independent runner for the BLOCKING PRD-200
+  set (`pnpm --dir <root>/nextjs_space check:security`); exits non-zero on failure.
+- Added package.json `check:grep-gates:report`: runs both report-only gates
+  (check:no-tenant-escapes + check:no-pii-logs) with `|| true` each — always exits 0, still prints.
+- ci.yml: inserted two steps after Lint, before Build (working-directory nextjs_space, unchanged):
+  (1) BLOCKING `Security grep gates (PRD-200)` → `pnpm check:security`;
+  (2) NON-BLOCKING `Regression grep gates (PRD-202/215 — report-only)` → `pnpm check:grep-gates:report`
+  with `continue-on-error: true` + inline comment to flip-to-blocking when PRD-202/215 merge.
+- Validated: `bash -n` ok; runner exits 0 (PRD-200 pass); report script exits 0 printing 37 findings;
+  ci.yml parses as valid YAML; existing typecheck/lint/build steps untouched; `tsc --noEmit` exit 0.
 
---------------------------------------------------------------------------------
-US-005 — Harden Prisma middleware: fail loud on implicit-unbound (AC-6/AC-6a) [DONE]
---------------------------------------------------------------------------------
-lib/tenant-scope-policy.ts (new, pure policy — imports only tenant-context, no cycle):
-  - class TenantContextMissingError extends Error: carries readonly model/action,
-    name = "TenantContextMissingError", actionable message (wrap the boundary /
-    use bypassTenantScope).
-  - contextFreeAllowList = new Set<string>([]) — OQ-2 default-DENY (empty). A model
-    earns a slot here only with a reviewed justification, never to silence a
-    not-yet-wrapped route (those keep working via warn-not-throw).
-  - isStrictTenantContext(env = process.env): env.TENANT_CONTEXT_STRICT === "true".
-    Injectable env map so it is testable without mutating process.env; exact-string
-    match (so "1"/"TRUE"/"false" are all OFF). Default OFF in prod (OQ-3 migration
-    window) — flipped ON once PRD-203's withTenantAuth has wrapped the routes.
-  - decideMissingContext({model,bound,strict,allowList?}) -> "allow"|"warn"|"throw":
-    PURE. bound -> "allow" (explicit-null system query, the AC-6a distinction);
-    else allowList.has(model) -> "allow"; else strict ? "throw" : "warn".
-  - emitTenantContextMissing(model,action): console.warn("security.tenant_context_
-    missing", JSON{event,model,action}) — sanctioned audit channel (warn, not log).
-  - bypassTenantScope<T>(fn): runWithTenantContext(null, fn) — explicit-null binding
-    for deliberate system queries; works sync & async (ALS .run propagates).
-lib/db.ts middleware rewired (the hardening): the old early-return
-  `if (!tenantId || !model || !scoped) return next()` CONFLATED three cases and let
-  a tenant-scoped query on an UNBOUND context silently run unscoped (the leak). Now:
-  (1) not-scoped model -> next(params) unchanged; (2) scoped + tenantId null ->
-  decideMissingContext(bound = hasTenantContext(), strict = isStrictTenantContext());
-  emit on warn|throw; THROW TenantContextMissingError when "throw"; else next()
-  unscoped (explicit-null system query, allow-listed, or migration-window warn);
-  (3) tenantId present -> existing scoping logic byte-for-byte unchanged.
-  Guarded by `if ('$use' in prisma)` so the build-time mock client is untouched.
-tests/unit/tenant-scope-policy.test.ts (11 tests, pure — no DB): full allow/warn/
-  throw matrix incl. bound-beats-strict and injected allow-list; isStrictTenantContext
-  exact-string flag reading; error is an Error subclass carrying model/action+name;
-  emit calls console.warn once with the parsed JSON payload (spy); bypassTenantScope
-  binds explicit null (hasTenantContext true / id null inside, torn down after) for
-  both sync and async fn (context survives an await).
-NOTE: strict-mode is default OFF, so not-yet-wrapped routes WARN (don't break) during
-  the PRD-203 migration; the authoritative real-DB proof that the middleware actually
-  throws under Postgres is the Docker-gated US-011.
-Validation: pnpm test:unit -> 30/30 passed (5 files; +11 new). tsc --noEmit -> 0.
-Files: nextjs_space/lib/tenant-scope-policy.ts, nextjs_space/lib/db.ts,
-  nextjs_space/tests/unit/tenant-scope-policy.test.ts.
+US-004 Advisory docs-lint (PRD-214) — DONE 2026-05-29
+- Added nextjs_space/scripts/ci/check-docs-lint.mjs + `check:docs-lint` script + a NON-BLOCKING
+  ci.yml step `Docs lint (PRD-214 — advisory)` (continue-on-error: true, after the grep-gate steps).
+- PRD-214 IS present on this branch — used its exact patterns (§"docs-lint", line 144 + AC-8/8a):
+  next-auth, /api/auth/session, abacus, and the HIPAA-Ready / Lighthouse-90+ / 5-minute-launch claims.
+- Line-based prose scan (markdown, so NOT strip-strings.mjs). Designed for LOW false-positives:
+  hyphenated `next-auth` only (not camelCase prose nor NEXTAUTH_SECRET env var); claim phrases not
+  bare HIPAA/"5 min"; + a citation/legacy-marker exemption (stale|legacy|no longer|vestigial|URL|
+  file:line|PRD-NNN|verified…) implementing PRD-214's "adjacent citation marker" rule. Excludes
+  docs/PRDS/ + archive/ (they quote the banned terms to define the policy).
+- Result: flags exactly the 5 real unsubstantiated launch-time claims in docs/BUDSTACK_SALES_PITCH.md
+  (PRD-214 AC-8 still open); correctly exempts all reconciled docs (README/ARCHITECTURE/DEPLOYMENT/
+  DOMAINS). Validated: node --check ok; gate exits 1 (advisory); ci.yml valid YAML; tsc exit 0.
 
---------------------------------------------------------------------------------
-US-006 — Pilot-wrap storefront Server Component layout (AC-5)           [DONE]
---------------------------------------------------------------------------------
-app/store/[slug]/layout.tsx — the storefront pilot. getCurrentTenant() resolves
-the tenant via a NON-tenant-scoped `tenants` lookup (not in tenantScopedModels),
-so it correctly runs BEFORE any binding. Everything after — getTenantWithTemplate,
-getTemplateAssets, all the tenant-scoped Prisma reads, and the JSX render — now
-runs inside ONE runWithTenantContextAsync(tenant.id, ...) scope.
-Mechanic (zero-reindent split): the post-resolution body was lifted verbatim into
-a new same-nesting `async function renderTenantStore(tenantId, params, children)`
-(body indentation unchanged — both functions nest one level), and the component
-entry became: resolve tenant -> notFound guard -> `return runWithTenantContextAsync
-(tenant.id, () => renderTenantStore(tenant.id, params, children))`. The single
-`tenant.id` use inside the old body became the `tenantId` param; verified via
-`grep -E '\btenant\b'` that no orphan raw-`tenant` reference remains in the body
-(all other hits are `tenantWithTemplate` / `--tenant-color-*` / the `tenant=` JSX
-prop). This is the explicit boundary binding AC-5 wants — the SC no longer depends
-on the resolver's enterWith side-effect (removed in US-008/009) and cannot leak
-into a concurrent request.
-NO unit test (heavy Server Component: S3 + fs + Prisma + next/navigation; mocking
-that surface proves nothing for a pilot, and the prd.json story lists browser
-verification, not "Tests pass"). LIVE BROWSER VERIFICATION DEFERRED (prd.json
-allows "or document why not"): rendering the storefront needs the full runtime
-stack — Postgres + Clerk + S3 + a seeded tenant — which is exactly the Docker-/
-auth-gated territory of US-010/011/012 + manual QA, not available in this
-autonomous node-only phase. Structural correctness is locked by typecheck and the
-behavior-preserving (same data, now bound) nature of the split.
-Validation: npx tsc --noEmit -> 0. pnpm test:unit -> 30/30 (no regression).
-Files: nextjs_space/app/store/[slug]/layout.tsx.
+US-005 Dependabot config — DONE 2026-05-29
+- Added .github/dependabot.yml (v2): two update entries — npm @ /nextjs_space (where package.json +
+  pnpm-lock.yaml live; pnpm read via npm ecosystem) and github-actions @ /. Both weekly (Monday),
+  open-pull-requests-limit 5, labels, and a grouped minor+patch group (majors stay individual).
+  Security updates left default-on (not disabled). Rationale documented in a header comment.
+- Pure config, no app code. Validated: YAML parses; asserted version=2, ecosystems/dirs/schedule/
+  limit/groups keys present; tsc exit 0. Live PR behaviour verified on GitHub post-merge.
 
---------------------------------------------------------------------------------
-US-007 — Pilot-wrap one tenant-scoped API route via withTenantContext (AC-4) [DONE]
---------------------------------------------------------------------------------
-app/api/orders/customer/route.ts — the API-route pilot. Picked deliberately: a
-single GET, tenant resolved SOLELY from the request (no ?slug override like
-app/api/tenant/conditions, which would fight the wrapper's request-based binding),
-two tenant-scoped reads (users.findFirst + orders.findMany), every query already
-filtered by tenantId, and zero `any`/`console.log` to muddy the diff. (orders/
-route.ts was rejected as the pilot: Dr-Green API + emails + pre-existing console.log
-+ a cross-tenant users.findFirst-by-email — too behavior-sensitive to wrap blind
-without a DB.)
-The wrap: handler renamed to `getCustomerOrders(_req)` and exported as
-`export const GET = withTenantContext(getCustomerOrders)`. Inside, the redundant
-`getTenantFromRequest` self-resolution was REPLACED by `getTenantContext()` (read
-the id the wrapper bound at the boundary); a null id still returns the same 404.
-The explicit `tenantId` filters stay (defense in depth alongside the middleware).
-Type fit: handler is (NextRequest)=>Promise<NextResponse>; NextResponse extends
-Response and Args infers to [] so it satisfies withTenantContext's RouteHandler<[]>
-with no `any`. `_req` is intentionally unused (the wrapper owns resolution);
-tsconfig has no noUnusedParameters so this is clean.
-Behavior-preserving: resolved-tenant path identical; no-tenant path still 404 (the
-wrapper binds explicit null -> getTenantContext() null -> 404). Only change is the
-wrapper resolves the tenant before the 401 auth check now (an extra resolution for
-unauthenticated calls) — benign, no leak (confined in .run(), fresh 401 response).
-Correct both before AND after US-008: the wrapper uses getTenantFromRequest's RETURN
-value, and the handler reads the bound context — neither depends on the (soon-removed)
-enterWith side-effect.
-NOTE: faithful AC-4 demo of the binding doing real work; the full-stack proof that a
-wrapped route stays isolated under concurrent load is the Docker-gated US-010.
-Validation: npx tsc --noEmit -> 0. pnpm test:unit -> 30/30 (no regression).
-Files: nextjs_space/app/api/orders/customer/route.ts.
+US-006 CodeQL workflow — DONE 2026-05-29
+- Added .github/workflows/codeql.yml: triggers on PR→main, push→main, weekly cron (Mon 04:23 UTC).
+  init@v3 + analyze@v3, language javascript-typescript, queries security-and-quality, build-mode none
+  (JS/TS interpreted). permissions: security-events:write, actions:read, contents:read. checkout@v4.
+- OQ-4 (warn-baseline-then-block on new High/Critical) documented in a header comment as a GitHub
+  branch-protection decision for Gerard — NOT encoded in YAML (no autofail key exists there).
+- Validated: YAML parses; asserted triggers/perms/language/action-versions; tsc exit 0. Live scan
+  verified on GitHub post-merge.
 
---------------------------------------------------------------------------------
-US-008 — lib/tenant.ts resolvers return-not-set; 11 side-effects removed (AC-2) [DONE]
---------------------------------------------------------------------------------
-Removed all 11 setTenantContext(...) calls (was lines 23,54,58,179,182,200,203,
-222,225,229,233) AND the `import { setTenantContext } from './tenant-context'`.
-getCurrentTenant and getTenantFromRequest are now PURE resolvers: they RETURN the
-tenant (return values byte-for-byte unchanged) and bind nothing. Docstrings updated
-to state the pure contract and point at the boundary binders (runWithTenantContextAsync
-for SCs, withTenantContext for routes). Confirmed via grep that lib/tenant.ts was the
-ONLY production caller of setTenantContext (only other hit is a comment in the
-concurrency test) -> US-009's deletion is now safe / zero-caller.
+US-007 Secret-scan (gitleaks) + .gitleaks.toml — DONE 2026-05-29
+- Added .github/workflows/secret-scan.yml: gitleaks/gitleaks-action@v2 on PR + push→main + weekly
+  full-history cron (Mon 05:17 UTC, fetch-depth:0). BLOCKING — a detected secret fails the run.
+- Added .gitleaks.toml (repo root): extend useDefault=true + an allowlist for ONLY the throwaway
+  ci.yml stub VALUES — regexes for 0×64 ENCRYPTION_KEY / pk_test_stub / sk_test_stub /
+  postgresql://stub:stub@localhost:5432/stub (regexTarget=line) + stopword "stub" (NEXTAUTH_SECRET)
+  + path allowlist for .env.example/.sample/.test. Allowlisted by VALUE not by whole-file, so a real
+  secret later committed to ci.yml is still caught. No real secret value written.
+- gitleaks CLI NOT installed locally → validated TOML + YAML syntax only; live scan verified on GitHub
+  post-merge (per PROMPT, a missing local CLI is not a block). tsc exit 0.
+- REPO-SETTING FOLLOW-UP (not code): org-owned repos need a free GITLEAKS_LICENSE secret (gitleaks.io);
+  wired by NAME as secrets.GITLEAKS_LICENSE. Gerard to add it in repo settings if AutomatosAI is an org.
 
->>> RISK FLAG FOR HUMAN REVIEW (migration-window behavior, by design but worth eyes):
-Before this story, every getCurrentTenant/getTenantFromRequest call bound context as
-an enterWith side-effect. The ~96 routes + tenant-scoped Server Components that are
-NOT yet wrapped (everything except the two pilots US-006/007) therefore lose their
-implicit binding here. With TENANT_CONTEXT_STRICT OFF (the prod default, OQ-3), the
-US-005 middleware now WARNs (security.tenant_context_missing) and runs such a query
-UNSCOPED rather than throwing. For queries that already pass an explicit
-`where: { tenantId }` (the prevalent pattern in every route I read — orders,
-orders/customer, consultation/status, conditions) this is harmless: the explicit
-filter still scopes them and the middleware is belt-and-suspenders. For any
-tenant-scoped query that relied SOLELY on the middleware (no explicit tenantId) this
-is a transient cross-tenant exposure until PRD-203 wraps the route. Mitigations, in
-order of safety: (a) set TENANT_CONTEXT_STRICT=true to fail CLOSED (throw, no leak)
-once enough routes are wrapped; (b) monitor the warn events; (c) PRD-203 withTenantAuth
-wraps the remaining routes. This is the exact trade-off the PRD designed the flag for,
-but a full audit of middleware-only-scoped queries is PRD-203's job, not this PRD's.
-Recommend Gerard confirm the strict-flag rollout plan before/with the PRD-203 merge.
+US-008 SBOM generation workflow (CycloneDX JSON) — DONE 2026-05-29
+- Added .github/workflows/sbom.yml: anchore/sbom-action@v0 (syft) generates a CycloneDX JSON SBOM
+  for nextjs_space (path: nextjs_space → syft reads pnpm-lock.yaml natively, no install needed →
+  deterministic), output-file sbom.cdx.json, upload-artifact:false; then an explicit
+  actions/upload-artifact@v4 publishes it as `sbom-cyclonedx-json` (if-no-files-found: error).
+- Chose syft over @cyclonedx/cdxgen for the FIRST-run reliability: sbom-action's @v0 major tag is
+  stable, vs. pinning a cdxgen npm major I'd have to guess. Both are pnpm-aware + CycloneDX-native;
+  AC-5 endorses either. Triggers: push→main + workflow_dispatch. permissions: contents:read only.
+- No untrusted event input in any run: step (only github.ref in the concurrency group) — no
+  workflow-injection surface (per the Actions-injection guidance).
+- Added docs/runbooks/DEPLOYMENT.md §6 "Software Bill of Materials (SBOM)": procurement downloads
+  the `sbom-cyclonedx-json` artifact (sbom.cdx.json) from the SBOM workflow run's Artifacts.
+- Validated: YAML parses; asserted triggers/perms/generator/format/path/output + artifact name;
+  tsc --noEmit exit 0. SBOM artifact content verified on a real GitHub run post-merge.
 
-Validation: grep setTenantContext lib/tenant.ts -> none. npx tsc --noEmit -> 0.
-pnpm test:unit -> 30/30 (no regression).
-Files: nextjs_space/lib/tenant.ts.
+US-009 Flip eslint.ignoreDuringBuilds:false — DONE 2026-05-29
+- next.config.js:12 ignoreDuringBuilds true→false (defence-in-depth: `next build` now enforces
+  lint, matching the standalone `pnpm lint` CI step). Left typescript.ignoreBuildErrors:false (:15) untouched.
+- NO lint backlog → the conditional BLOCK path (OQ-2 / RALPH_BLOCKED) did NOT trigger. Verified by
+  actually running the build with ci.yml's exact 6 stub env vars (DATABASE_URL/CLERK keys/BASE_DOMAIN/
+  NEXTAUTH_SECRET/ENCRYPTION_KEY) after `npx prisma generate`: pnpm build exit 0. `next lint` is
+  warnings-only (0 Error lines) so the build's ESLint phase passes (next build fails on errors, not warnings).
+- Re-confirmed post-flip: pnpm lint exit 0 (0 ESLint Error lines), npx tsc --noEmit exit 0.
 
---------------------------------------------------------------------------------
-US-009 — Delete setTenantContext/enterWith from lib/tenant-context.ts (AC-1)  [DONE]
---------------------------------------------------------------------------------
-Deleted the deprecated setTenantContext function (its body was the unsafe
-`tenantContextStorage.enterWith({ tenantId })`) and its @deprecated docblock from
-lib/tenant-context.ts. The file now exports only the safe surface: getTenantContext
-(unchanged, AC-1), hasTenantContext, runWithTenantContext, runWithTenantContextAsync.
-Safe to delete because US-008 already removed the sole production caller.
-Also refreshed one stale comment in tenant-context.concurrency.test.ts that named the
-now-deleted function (it now describes the raw-enterWith anti-pattern generically).
-Local AC-1 grep (the AC-1a CI gate itself is PRD-216, not here):
-  - `setTenantContext` -> ZERO references repo-wide.
-  - `enterWith` CALLS in production code -> ZERO. Remaining `enterWith` hits are all
-    non-calls: Node's own async_hooks.d.ts type defs; explanatory doc comments in
-    lib/tenant-context.ts + lib/tenant-scope-policy.ts + app/store/[slug]/layout.tsx
-    (they describe the removed pattern, they don't invoke it); and the deliberate
-    `unsafe.enterWith(...)` in tenant-context.concurrency.test.ts (US-003) which calls
-    the RAW Node API on a throwaway ALS to prove WHY we removed it.
-  NOTE for PRD-216: a naive repo-wide `grep enterWith` can never be clean while the
-  US-003 contrast test exists, so that gate must match actual `.enterWith(` CALLS in
-  production source (lib/app/components) and/or exclude the contrast test — not the
-  bare substring in comments. Recommend the gate be call-scoped, not substring-scoped.
-Validation: npx tsc --noEmit -> 0. pnpm test:unit -> 30/30.
-Files: nextjs_space/lib/tenant-context.ts,
-  nextjs_space/tests/unit/tenant-context.concurrency.test.ts.
+US-010 Non-blocking test-gate job in ci.yml — DONE 2026-05-29
+- ci.yml: added a SECOND job `test` (parallel to `ci`, no needs:) that mirrors the ci setup
+  (checkout/setup-node@20/pnpm@9/cache/install/prisma generate) then runs the suite with coverage
+  under the SAME 6 build stub env vars (AC-1b).
+- DOUBLE non-blocking (AC-2 allows AND/OR): (1) job-level continue-on-error:true, (2) a run-step
+  guard `pnpm run | grep -qE '(^|\s)test:cov(\s|$)'` that prints a skip notice + exits 0 when the
+  script is absent. PRD-207 has NOT merged (no test:cov, no vitest config) — verified the guard
+  SKIPS cleanly on this tree (dry-run exits 0). Did NOT author any vitest config/test script (PRD-207 scope).
+- Inline comments document the flip-to-blocking recipe (drop continue-on-error + call pnpm test:cov
+  directly + make "test" a required check), AC-1a thresholds (80% baseline / 95% security-critical
+  live in PRD-207 vitest.config.ts, OQ-5), and OQ-1 (Playwright critical-path subset on PR / full on main).
+- Validated: ci.yml parses; jobs=={ci,test}; existing ci steps unchanged (PRD-200 blocking; 202/215 +
+  docs-lint still continue-on-error); test job non-blocking + guarded + full stub env; tsc --noEmit exit 0.
 
-================================================================================
-PHASE 1 COMPLETE (US-001..009). The safe context primitive
-(runWithTenantContext/Async), the node-only concurrency proof, the request wrapper,
-the fail-loud hardened middleware, the two pilot wraps (storefront SC + customer-
-orders API route), the return-not-set resolver refactor, and the deletion of the
-unsafe enterWith/setTenantContext API have all landed, each typecheck-green and with
-30/30 unit tests passing. Next is Phase 2 (Docker-gated) — gate-checked below.
-================================================================================
-
---------------------------------------------------------------------------------
-US-010 — Integration: tenant-isolation concurrency proof (testcontainers) [BLOCKED]
-US-011 — Integration: prisma-middleware-throws (testcontainers)           [BLOCKED]
---------------------------------------------------------------------------------
-RALPH_BLOCKED: BLOCKED-DOCKER
-Phase 2 gate `docker info` ran and the daemon is DOWN on this box: the Docker CLI is
-present (Client: Docker Engine 27.5.1, context desktop-linux) but the server is
-unreachable — "ERROR: Cannot connect to the Docker daemon at
-unix:///Users/gkavanagh/.docker/run/docker.sock. Is the docker daemon running?"
-(docker info exit 1). testcontainers cannot start a Postgres, so the real-DB proofs
-cannot run.
-NOT DONE, deliberately: per the plan's hard constraints, replacing the integration
-Postgres with a mock to dodge the Docker requirement is an ANTI-PATTERN — these
-stories exist precisely to prove behavior against a real database/$use pipeline, so
-a mocked version would prove nothing. No test files were written for the same reason:
-their acceptance criteria require GREEN tests against real Postgres, which can't be
-validated here, and shipping un-runnable/unvalidated integration harness code (plus
-adding a testcontainers dep) would be half-finished work. Left unchecked in
-IMPLEMENTATION_PLAN.md.
-TO UNBLOCK: start Docker Desktop (or run the ralph loop on a Docker-enabled box),
-then implement US-010 (300-way interleaved cross-tenant proof, the full-stack twin of
-the US-003 node-only proof) and US-011 (assert the hardened middleware throws
-TenantContextMissingError on an implicit-unbound tenant-scoped query with
-TENANT_CONTEXT_STRICT=true) against a real Postgres via testcontainers.
-
---------------------------------------------------------------------------------
-US-012 — E2E: cross-tenant-no-leak (Playwright)                           [BLOCKED]
---------------------------------------------------------------------------------
-RALPH_BLOCKED: BLOCKED-NEEDS-AUTH-DECISION
-The Clerk test-auth approach is undecided (PRD-207 OQ-1, owner Gerard). Per the plan,
-do NOT invent an auth shim. A cross-tenant E2E needs two authenticated tenant
-sessions, and how to mint Clerk test sessions in CI is the open human decision.
-Left unchecked pending that call.
-
-================================================================================
-RALPH RUN HALTED — CLEAN STOPPING POINT (as predicted in the plan).
-Done autonomously: US-001..009 (all of Phase 1), 6 commits on
-ralph/prd-202-tenant-context-concurrency (US-001..004 from the prior run +
-US-005..009 this run: 18e82c7, f44a2a4, cc9402b, 59bebdd, edbee66). Every story
-typecheck-green; 30/30 unit tests passing.
-Blocked (environment, not logic): US-010/011 (BLOCKED-DOCKER — daemon down),
-US-012 (BLOCKED-NEEDS-AUTH-DECISION — Clerk test-auth, owner Gerard).
-FOR HUMAN BEFORE MERGE: (1) eyeball the concurrency assertions (US-003/004) and the
-US-008 migration-window risk flag re: unwrapped routes relying on middleware-only
-scoping; (2) decide the TENANT_CONTEXT_STRICT rollout (default OFF now) alongside the
-PRD-203 route migration; (3) run Phase 2 on a Docker box for the real-DB proofs.
-Constraints honoured throughout: no branch switch / no push / main + siblings
-untouched; files staged by name; commits carry no attribution footer; tests load
-.env.test only; no --dangerously-skip-permissions; no @ts-ignore / as any.
-================================================================================
-
+=== ALL 10 STORIES DONE (US-001..US-010) — RALPH_COMPLETE ===

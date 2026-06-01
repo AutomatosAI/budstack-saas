@@ -21,12 +21,12 @@ You've invested €10,000+ in your **Dr. Green NFT license**. Now what?
 
 ## ✅ The BudStack Solution
 
-**Your store is live in 5 minutes. Not 5 months.**
+**Your store is live in hours, not months.**
 
 BudStack is the **Shopify for Dr. Green NFT holders**. We've already built the platform — you just plug in your branding and start selling.
 
 ```
-Buy NFT License → Sign up with BudStack → 5 minutes later: Your store is live! 🚀
+Buy NFT License → Sign up with BudStack → Guided onboarding → Your store is live!
 ```
 
 ---
@@ -131,6 +131,9 @@ Sleep well knowing your customer data is protected:
 - 🔑 **Role-Based Access** — Super Admin, Tenant Admin, User roles
 - 🪝 **Webhooks** — Real-time event notifications to your systems
 
+<!-- LEGAL SIGN-OFF REQUIRED (PRD-214 AC-8 / OQ-3): replace with DPO-approved wording. Candidate: "GDPR-aligned; PHI encrypted at rest; HIPAA controls in progress." -->
+[compliance statement pending legal review]
+
 ---
 
 ### 🔗 **Deep Dr. Green Integration**
@@ -200,7 +203,7 @@ Sell in Europe and beyond:
 
 | Aspect | Build It Yourself | BudStack |
 |--------|-------------------|----------|
-| **Time to Launch** | 3-6 months | **5 minutes** |
+| **Time to Launch** | 3-6 months | **Same day (guided onboarding)** |
 | **Development Cost** | €15,000-€40,000+ | **Included in subscription** |
 | **Ongoing Maintenance** | You/hire devs | **We handle it** |
 | **Dr. Green Integration** | DIY API work | **Pre-integrated** |
@@ -271,7 +274,7 @@ Sell in Europe and beyond:
 **Step 3:** Customize your branding  
 **Step 4:** Launch your store  
 
-**⏱️ Total time: 5 minutes**
+**⏱️ Total time: same-day onboarding (guided setup)**
 
 ---
 
@@ -287,4 +290,4 @@ Sell in Europe and beyond:
 
 ---
 
-**BudStack** — *The Shopify for Medical Cannabis. Launch Your Dr. Green Store in 5 Minutes.*
+**BudStack** — *The Shopify for Medical Cannabis. Launch Your Dr. Green Store Today.*

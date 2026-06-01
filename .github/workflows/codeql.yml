@@ -1,0 +1,54 @@
+name: CodeQL
+
+# PRD-216 US-006 (AC-3): CodeQL static analysis on every PR to main, every push
+# to main, and a weekly schedule, using the security-and-quality query suite.
+#
+# OQ-4 rollout (enforced via GitHub branch protection by Gerard, NOT in this YAML):
+# the FIRST runs establish a baseline / warn-only while existing findings are
+# triaged; once the baseline is clean, branch protection requires the "CodeQL"
+# check to pass so a PR that INTRODUCES a High/Critical alert is blocked from
+# merging. No autofail config belongs in the workflow — this is a repo setting.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, Monday 04:23 UTC (off the top of the hour to avoid the scheduler stampede).
+    - cron: "23 4 * * 1"
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # JS + TS share one CodeQL language; covers the nextjs_space/ app.
+        language: ["javascript-typescript"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+          # build-mode: none — JS/TS is interpreted; no compile step to drive.
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

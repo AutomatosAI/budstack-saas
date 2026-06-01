@@ -15,16 +15,9 @@ import { exportUser } from "@/lib/gdpr/erasure";
  * be able to scrape a user's full record on demand). Self-service only — admins
  * use the tenant-admin customer routes for assisted exports.
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, { user }) => {
   try {
-    const clerkUser = await currentUser();
-    if (!clerkUser?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = clerkUser.emailAddresses.find(
-      (e) => e.id === clerkUser.primaryEmailAddressId,
-    )?.emailAddress || clerkUser.emailAddresses[0]?.emailAddress;
+    const email = user.email;
 
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
@@ -32,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // 3 exports per hour per user — generous for legitimate use, restrictive
     // enough that it's not a useful scraping primitive.
-    const rate = await checkRateLimit(`account-export:${clerkUser.id}`, {
+    const rate = await checkRateLimit(`account-export:${user.id}`, {
       maxRequests: 3,
       windowMs: 60 * 60 * 1000,
       failMode: "closed",
@@ -58,4 +51,4 @@ export async function GET(request: NextRequest) {
       safeMessage: "Failed to export account data",
     });
   }
-}
+});

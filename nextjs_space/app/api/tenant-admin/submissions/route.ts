@@ -1,26 +1,10 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { withTenantAuth } from "@/lib/api-auth";
 import { listTenantSubmissions } from "@/lib/marketplace-submission-service";
 import { apiError } from "@/lib/api-error";
 
-export async function GET() {
+export const GET = withTenantAuth(async (_request, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "No tenant found" },
-        { status: 400 },
-      );
-    }
-
     const submissions = await listTenantSubmissions(tenantId);
 
     return NextResponse.json({ submissions });
@@ -32,4 +16,4 @@ export async function GET() {
       safeMessage: "Failed to list submissions",
     });
   }
-}
+});

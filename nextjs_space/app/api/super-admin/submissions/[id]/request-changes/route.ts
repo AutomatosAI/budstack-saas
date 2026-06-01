@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { requestChanges } from "@/lib/marketplace-review-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
@@ -13,17 +13,9 @@ const feedbackSchema = z
   })
   .strict();
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export const POST = withSuperAdminParams(async (request, { user }, params) => {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const id = parseUuid((await params).id);
+    const id = parseUuid(params.id);
     const { feedback } = await parseJsonBody(request, feedbackSchema);
 
     if (!feedback.trim()) {
@@ -53,4 +45,4 @@ export async function POST(
       safeMessage: "Failed to request changes",
     });
   }
-}
+});

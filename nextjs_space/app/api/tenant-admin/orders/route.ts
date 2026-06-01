@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
 import { z } from "zod";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { apiError } from "@/lib/api-error";
@@ -27,27 +27,8 @@ const VALID_SORT_COLUMNS = [
 type SortColumn = (typeof VALID_SORT_COLUMNS)[number];
 
 // GET: Fetch orders for tenant with optional pagination, search, and filters
-export async function GET(req: NextRequest) {
+export const GET = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (
-      user.role !== "TENANT_ADMIN" &&
-      user.role !== "SUPER_ADMIN"
-    ) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "No tenant found for user" }, { status: 404 });
-    }
-
     // Parse query params
     const { searchParams } = new URL(req.url);
     const pageParam = parseInt(searchParams.get("page") || "1", 10);
@@ -230,31 +211,12 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
 // PATCH: Update order status
-export async function PATCH(req: NextRequest) {
+export const PATCH = withTenantAuth(async (req, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (
-      user.role !== "TENANT_ADMIN" &&
-      user.role !== "SUPER_ADMIN"
-    ) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { orderId, status } = await parseJsonBody(req, orderUpdateSchema);
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "No tenant found" }, { status: 404 });
-    }
 
     // Verify the order belongs to this tenant
     const order = await prisma.orders.findFirst({
@@ -293,4 +255,4 @@ export async function PATCH(req: NextRequest) {
       safeMessage: "Failed to update order status",
     });
   }
-}
+});

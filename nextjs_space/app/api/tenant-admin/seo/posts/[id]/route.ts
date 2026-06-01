@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuthParams } from "@/lib/api-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
@@ -14,32 +14,13 @@ const seoUpdateSchema = z
   })
   .strict();
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
-
 // GET - Fetch post SEO
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  const user = await getCurrentUser();
-
-  if (
-    !user ||
-    (user.role !== "TENANT_ADMIN" &&
-      user.role !== "SUPER_ADMIN")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withTenantAuthParams(async (_request, { tenantId }, params) => {
   let id: string;
   try {
-    id = parseUuid((await params).id);
+    id = parseUuid(params.id);
   } catch (error) {
     return apiError(error, { route: "/api/tenant-admin/seo/posts/[id]" });
-  }
-  const tenantId = user.tenantId;
-
-  if (!tenantId) {
-    return NextResponse.json({ error: "No tenant" }, { status: 400 });
   }
 
   const post = await prisma.posts.findFirst({
@@ -52,30 +33,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   return NextResponse.json(post);
-}
+});
 
 // PUT - Update post SEO
-export async function PUT(request: NextRequest, { params }: RouteParams) {
-  const user = await getCurrentUser();
-
-  if (
-    !user ||
-    (user.role !== "TENANT_ADMIN" &&
-      user.role !== "SUPER_ADMIN")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const PUT = withTenantAuthParams(async (request, { tenantId }, params) => {
   let id: string;
   try {
-    id = parseUuid((await params).id);
+    id = parseUuid(params.id);
   } catch (error) {
     return apiError(error, { route: "/api/tenant-admin/seo/posts/[id]" });
-  }
-  const tenantId = user.tenantId;
-
-  if (!tenantId) {
-    return NextResponse.json({ error: "No tenant" }, { status: 400 });
   }
 
   // Verify post belongs to tenant
@@ -111,4 +77,4 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   });
 
   return NextResponse.json(updated);
-}
+});

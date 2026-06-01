@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { uploadFile } from "@/lib/s3";
 import { validateUploadBuffer } from "@/lib/upload-validation";
@@ -40,26 +40,16 @@ const learnDeleteSchema = z
   .strict();
 
 /** GET — list all learning resources (for super-admin) */
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withSuperAdmin(async (_req) => {
   const resources = await prisma.learning_resources.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
 
   return NextResponse.json({ resources });
-}
+});
 
 /** POST — create a new learning resource */
-export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withSuperAdmin(async (req) => {
   const formData = await req.formData();
   const title = clip(formData.get("title") as string | null, LEARN_TITLE_MAX);
   const description = clip(
@@ -180,15 +170,10 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json({ resource }, { status: 201 });
-}
+});
 
 /** PUT — update an existing learning resource */
-export async function PUT(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const PUT = withSuperAdmin(async (req) => {
   const formData = await req.formData();
   const id = formData.get("id") as string;
 
@@ -308,15 +293,10 @@ export async function PUT(req: NextRequest) {
   });
 
   return NextResponse.json({ resource });
-}
+});
 
 /** DELETE — remove a learning resource */
-export async function DELETE(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const DELETE = withSuperAdmin(async (req) => {
   const originError = requireSameOrigin(req);
   if (originError) return originError;
 
@@ -330,4 +310,4 @@ export async function DELETE(req: NextRequest) {
   await prisma.learning_resources.delete({ where: { id } });
 
   return NextResponse.json({ success: true });
-}
+});

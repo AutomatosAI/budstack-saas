@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getJsonFromS3, uploadFile } from "@/lib/s3";
 import { createS3Client, getBucketConfig } from "@/lib/aws-config";
@@ -16,16 +16,9 @@ import { validateUploadBuffer } from "@/lib/upload-validation";
  * (templates/{slug}/layout.json + defaults.json), making them
  * the marketplace default for all new tenants who clone this template.
  */
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export const POST = withSuperAdminParams(async (req, _ctx, params) => {
   try {
-    const user = await currentUser();
-
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const id = parseUuid(params.id);
-
     const template = await prisma.templates.findUnique({
       where: { id },
     });
@@ -304,4 +297,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       safeMessage: "Failed to update template",
     });
   }
-}
+});

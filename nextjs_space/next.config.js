@@ -9,7 +9,7 @@ const nextConfig = {
     serverComponentsExternalPackages: ['@prisma/client', '@prisma/engines', 'isomorphic-dompurify', 'jsdom'],
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
     ignoreBuildErrors: false,

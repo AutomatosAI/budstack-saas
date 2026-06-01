@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
@@ -21,22 +21,8 @@ const webhookCreateSchema = z
  *
  * List all webhooks for the tenant
  */
-export async function GET(req: NextRequest) {
+export const GET = withTenantAuth(async (_request, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "TENANT_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "No tenant associated with user" },
-        { status: 400 },
-      );
-    }
-
     const webhooks = await prisma.webhooks.findMany({
       where: { tenantId },
       include: {
@@ -55,29 +41,15 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
 /**
  * POST /api/tenant-admin/webhooks
  *
  * Create a new webhook for the tenant
  */
-export async function POST(req: NextRequest) {
+export const POST = withTenantAuth(async (req, { user, tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (!user || user.role !== "TENANT_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "No tenant associated with user" },
-        { status: 400 },
-      );
-    }
-
     const { url, events, description } = await parseJsonBody(
       req,
       webhookCreateSchema,
@@ -128,4 +100,4 @@ export async function POST(req: NextRequest) {
       safeMessage: "Failed to create webhook",
     });
   }
-}
+});
