@@ -440,6 +440,9 @@ model tenants {
   automatosApiKey        String?
   automatosAgentId       Int?
   pageSeo                Json?
+  dpaAcceptedVersion     String? // PRD-213: GDPR Art.28 DPA click-through acceptance
+  dpaAcceptedAt          DateTime? // PRD-213
+  dpaAcceptedByUserId    String? // PRD-213
   conditions             conditions[]
   consultations          consultations[]
   drgreen_carts          drgreen_carts[]
@@ -520,6 +523,7 @@ model marketplace_submissions {
 model users {
   id                  String                    @id
   email               String                    @unique // PRD-208: -> @@unique([email, tenantId]); see note above
+  clerkUserId         String?                   @unique // PRD-213: reliable Clerk->local mapping for user.deleted erasure
   password            String
   name                String?
   role                Role                      @default(PATIENT)

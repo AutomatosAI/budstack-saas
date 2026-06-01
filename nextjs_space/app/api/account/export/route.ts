@@ -1,18 +1,19 @@
-import { NextResponse } from "next/server";
-import { withAuth } from "@/lib/api-auth";
-import { prisma } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import { getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
+import { exportUser } from "@/lib/gdpr/erasure";
 
 /**
  * GDPR Article 15 / 20 — Right to access and data portability.
  *
  * Returns a JSON dump of the authenticated user's personal data, plus the
- * orders / consultations / questionnaires they own. Rate-limited to prevent
- * abuse (an attacker with stolen credentials shouldn't be able to scrape
- * a user's full record on demand). Self-service only — admins use the
- * tenant-admin customer routes for assisted exports.
+ * orders / consultations / questionnaires they own, via the canonical
+ * `exportUser` path (lib/gdpr/erasure.ts) shared with the admin entry point.
+ * Rate-limited to prevent abuse (an attacker with stolen credentials shouldn't
+ * be able to scrape a user's full record on demand). Self-service only — admins
+ * use the tenant-admin customer routes for assisted exports.
  */
 export const GET = withAuth(async (request, { user }) => {
   try {
@@ -31,92 +32,18 @@ export const GET = withAuth(async (request, { user }) => {
     });
     if (!rate.success) return rate.response;
 
-    const dbUser = await prisma.users.findFirst({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        address: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        tenantId: true,
-        drGreenClientId: true,
-      },
+    const exported = await exportUser({
+      clerkUserId: clerkUser.id,
+      email,
+      requestedByClerkId: clerkUser.id,
+      clientInfo: getClientInfo(request.headers),
     });
 
-    if (!dbUser) {
+    if (!exported) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const [orders, consultations, questionnaires] = await Promise.all([
-      prisma.orders.findMany({
-        where: { userId: dbUser.id },
-        select: {
-          id: true,
-          orderNumber: true,
-          status: true,
-          total: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.consultations.findMany({
-        where: { userId: dbUser.id },
-        select: {
-          id: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.consultation_questionnaires.findMany({
-        where: { email: { equals: dbUser.email, mode: "insensitive" } },
-        select: {
-          id: true,
-          isKycVerified: true,
-          adminApproval: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
-
-    await createAuditLog({
-      action: AUDIT_ACTIONS.ACCOUNT_DATA_EXPORTED,
-      entityType: "User",
-      entityId: dbUser.id,
-      userId: user.id,
-      userEmail: email,
-      tenantId: dbUser.tenantId || undefined,
-      metadata: {
-        recordCounts: {
-          orders: orders.length,
-          consultations: consultations.length,
-          questionnaires: questionnaires.length,
-        },
-      },
-      ...getClientInfo(request.headers),
-    });
-
-    return NextResponse.json({
-      exportedAt: new Date().toISOString(),
-      profile: dbUser,
-      orders,
-      consultations,
-      questionnaires,
-      notes: [
-        "This export contains the personal data we hold about you in the BudStack platform.",
-        "It does not include data held by integrated providers (e.g. Dr Green, Clerk) — request those from the providers directly.",
-      ],
-    });
+    return NextResponse.json(exported);
   } catch (error) {
     return apiError(error, {
       route: "account.export",
