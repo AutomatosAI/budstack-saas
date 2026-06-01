@@ -4,9 +4,6 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Leaf,
-  Droplet,
-  Package,
   Loader2,
   AlertCircle,
   ShoppingCart,
@@ -22,45 +19,9 @@ import { toast } from "@/components/ui/sonner";
 import { useCartStore } from "@/lib/cart-store";
 import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  imageUrl?: string;
-  thc: number;
-  cbd: number;
-  cbg?: number;
-  type: string;
-  flavour?: string;
-  feelings?: string;
-  helpsWith?: string;
-  retailPrice: number;
-  stockQuantity: number;
-  popularity?: number;
-  isAvailable: boolean;
-  strain_type?: "INDICA" | "SATIVA" | "HYBRID";
-  thc_content?: number;
-  cbd_content?: number;
-  price?: number;
-  currency?: string;
-  in_stock?: boolean;
-  stock_quantity?: number;
-  image_url?: string;
-  expiryDate?: string;
-  discount?: number;
-  strainImages?: Array<{
-    strainImageUrl?: string;
-    altText?: string;
-  }>;
-}
-
-interface ApiResponse {
-  success: boolean;
-  data: Product;
-  similarProducts?: Product[];
-  error?: string;
-}
+import { getStrainIcon, getStrainColor } from "./product-detail-helpers";
+import { ProductSimilarSection } from "./product-similar-section";
+import type { Product, ApiResponse } from "./product-detail-types";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -112,43 +73,6 @@ export default function ProductDetailPage() {
       setError(err instanceof Error ? err.message : "Failed to load product");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getStrainIcon = (type?: string) => {
-    if (!type) return <Package className="w-6 h-6" />;
-    switch (type.toLowerCase()) {
-      case "indica":
-        return <Leaf className="w-6 h-6" />;
-      case "sativa":
-        return <Droplet className="w-6 h-6" />;
-      default:
-        return <Package className="w-6 h-6" />;
-    }
-  };
-
-  const getStrainColor = (type?: string) => {
-    if (!type)
-      return {
-        bg: "from-amber-500/20 to-orange-500/20",
-        badge: "bg-amber-100 text-amber-900",
-      };
-    switch (type.toLowerCase()) {
-      case "indica":
-        return {
-          bg: "from-purple-500/20 to-indigo-500/20",
-          badge: "bg-purple-100 text-purple-900",
-        };
-      case "sativa":
-        return {
-          bg: "from-green-500/20 to-teal-500/20",
-          badge: "bg-green-100 text-green-900",
-        };
-      default:
-        return {
-          bg: "from-amber-500/20 to-orange-500/20",
-          badge: "bg-amber-100 text-amber-900",
-        };
     }
   };
 
@@ -686,118 +610,12 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Similar Products Section */}
-        {similarProducts.length > 0 && (
-          <div
-            className="border-t pt-16"
-            style={{ borderColor: "hsl(var(--tenant-color-border))" }}
-          >
-            <h2
-              className="text-3xl font-bold mb-8"
-              style={{
-                color: "hsl(var(--tenant-color-heading))",
-                fontFamily: "var(--tenant-font-heading, inherit)",
-              }}
-            >
-              Similar {product.type} Products
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {similarProducts.map((similarProduct) => {
-                const simImageUrl =
-                  similarProduct.image_url || similarProduct.imageUrl;
-                const simColors = getStrainColor(similarProduct.type);
-
-                return (
-                  <Link
-                    key={similarProduct.id}
-                    href={`${basePath}/products/${similarProduct.id}`}
-                    className="group"
-                  >
-                    <div
-                      className="rounded-xl overflow-hidden transition-all duration-300 hover:scale-105"
-                      style={{
-                        boxShadow:
-                          "var(--tenant-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1))",
-                        backgroundColor: "hsl(var(--tenant-color-surface))",
-                      }}
-                    >
-                      <div
-                        className={`relative bg-gradient-to-br ${simColors.bg}`}
-                        style={{ paddingBottom: "100%" }}
-                      >
-                        {simImageUrl ? (
-                          <div className="absolute inset-0">
-                            <Image
-                              src={simImageUrl}
-                              alt={similarProduct.name}
-                              fill
-                              className="object-cover"
-                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                            />
-                          </div>
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            {getStrainIcon(similarProduct.type)}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="p-4">
-                        <Badge className={`${simColors.badge} mb-2 text-xs`}>
-                          {similarProduct.type}
-                        </Badge>
-                        <h3
-                          className="font-semibold mb-2 line-clamp-2 group-hover:underline"
-                          style={{
-                            color: "hsl(var(--tenant-color-heading))",
-                          }}
-                        >
-                          {similarProduct.name}
-                        </h3>
-                        <div className="flex items-center gap-2 text-sm mb-2">
-                          <span
-                            style={{
-                              color: "hsl(var(--tenant-color-primary))",
-                            }}
-                          >
-                            THC: {(similarProduct.thc || 0).toFixed(1)}%
-                          </span>
-                          <span
-                            style={{
-                              color: "hsl(var(--tenant-color-text-muted))",
-                            }}
-                          >
-                            •
-                          </span>
-                          <span
-                            style={{
-                              color: "hsl(var(--tenant-color-secondary))",
-                            }}
-                          >
-                            CBD: {(similarProduct.cbd || 0).toFixed(1)}%
-                          </span>
-                        </div>
-                        <p
-                          className="text-lg font-bold"
-                          style={{
-                            color: "hsl(var(--tenant-color-heading))",
-                          }}
-                        >
-                          {similarProduct.currency || displayCurrency}{" "}
-                          {(
-                            similarProduct.price ||
-                            similarProduct.retailPrice ||
-                            0
-                          ).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <ProductSimilarSection
+          similarProducts={similarProducts}
+          basePath={basePath}
+          productType={product.type}
+          displayCurrency={displayCurrency}
+        />
       </div>
     </div>
   );
