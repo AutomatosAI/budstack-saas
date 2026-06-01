@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { apiError } from "@/lib/api-error";
@@ -24,23 +24,8 @@ const postSchema = z.object({
   published: z.boolean().default(false),
 });
 
-export async function POST(req: NextRequest) {
+export const POST = withTenantAuth(async (req, { user, tenantId }) => {
   try {
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      (user.role !== "TENANT_ADMIN" &&
-        user.role !== "SUPER_ADMIN")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant not found for user" }, { status: 404 });
-    }
-
     const body = await parseJsonBody(req, undefined, { maxBytes: 512 * 1024 });
     const validatedData = postSchema.parse(body);
 
@@ -81,25 +66,10 @@ export async function POST(req: NextRequest) {
     }
     return apiError(error, { route: "POST /api/tenant-admin/posts" });
   }
-}
+});
 
-export async function GET(req: NextRequest) {
+export const GET = withTenantAuth(async (_request, { tenantId }) => {
   try {
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      (user.role !== "TENANT_ADMIN" &&
-        user.role !== "SUPER_ADMIN")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
-    }
-
     const posts = await prisma.posts.findMany({
       where: { tenantId: tenantId },
       orderBy: { createdAt: "desc" },
@@ -114,4 +84,4 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

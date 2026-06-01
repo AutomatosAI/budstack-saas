@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
@@ -14,32 +14,9 @@ const cloneSchema = z
   })
   .strict();
 
-export async function POST(request: NextRequest) {
+export const POST = withTenantAuth(async (request, { user, tenantId }) => {
   try {
-    // 1. Verify Authentication
-    const user = await getCurrentUser();
-    if (
-      !user ||
-      !["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { baseTemplateId } = await parseJsonBody(request, cloneSchema);
-
-    // 2. Get Tenant ID
-    // getCurrentUser() now automatically resolves Clerk Org ID to database tenant UUID
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json(
-        {
-          error: "No tenant found. Please ensure you are associated with a tenant.",
-          details: "The Clerk organization ID could not be matched to a database tenant."
-        },
-        { status: 400 }
-      );
-    }
 
     // 3. Fetch Base Template
     const baseTemplate = await prisma.templates.findUnique({
@@ -133,4 +110,4 @@ export async function POST(request: NextRequest) {
       safeMessage: "Internal server error",
     });
   }
-}
+});

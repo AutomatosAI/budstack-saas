@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { withTenantAuth } from "@/lib/api-auth";
 import { z } from "zod";
-import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiError } from "@/lib/api-error";
@@ -24,28 +24,12 @@ const productReorderSchema = z
  * POST /api/tenant-admin/products/reorder
  * Update product display order
  */
-export async function POST(request: NextRequest) {
+export const POST = withTenantAuth(async (request, { user, tenantId }) => {
   try {
-    const user = await getCurrentUser();
-
-    if (
-      !user ||
-      (user.role !== "TENANT_ADMIN" &&
-        user.role !== "SUPER_ADMIN")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Rate limiting
     const rateLimitResult = await checkRateLimit(user.id);
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
-    }
-
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
     const { products } = await parseJsonBody(request, productReorderSchema);
@@ -81,4 +65,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return apiError(error, { route: "POST /api/tenant-admin/products/reorder" });
   }
-}
+});

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
@@ -15,16 +15,8 @@ import { parseUuid } from "@/lib/validation/parse-uuid";
  *
  * TEMPORARY — remove after cannabizz cleanup.
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const POST = withSuperAdminParams(async (req, _ctx, params) => {
   try {
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const originError = requireSameOrigin(req);
     if (originError) return originError;
 
@@ -110,4 +102,4 @@ export async function POST(
       safeMessage: "Failed to detach template",
     });
   }
-}
+});

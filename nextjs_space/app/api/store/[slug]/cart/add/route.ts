@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { z } from "zod";
-import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
@@ -17,20 +17,11 @@ const cartAddSchema = z
   })
   .strict();
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { slug: string } },
-) {
+export const POST = withAuth(async (request, { user }, { slug }) => {
   try {
-    parseSlug(params.slug);
+    parseSlug(slug);
 
-    const user = await currentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
+    const email = user.email;
     if (!email) {
       return NextResponse.json({ error: "Email not found" }, { status: 401 });
     }
@@ -89,7 +80,7 @@ export async function POST(
       route: "store.cart.add",
       status: 500,
       safeMessage: "Failed to add item to cart",
-      logContext: { slug: params.slug },
+      logContext: { slug },
     });
   }
-}
+});

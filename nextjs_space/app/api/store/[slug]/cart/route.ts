@@ -1,23 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helper";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api-auth";
 import { getCurrentTenant } from "@/lib/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant-config";
 import { getCart } from "@/lib/drgreen-cart";
 import { apiError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { slug: string } },
-) {
+export const GET = withAuth(async (_request, { user }, params) => {
   try {
     parseSlug(params.slug);
-
-    const user = await getCurrentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     // Resolve tenant from middleware headers (works for subdomain, path, and custom domain routing)
     const tenant = await getCurrentTenant();
@@ -45,4 +36,4 @@ export async function GET(
       safeMessage: "Failed to get cart",
     });
   }
-}
+});

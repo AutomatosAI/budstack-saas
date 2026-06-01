@@ -1,18 +1,17 @@
 {
   "project": "BudStacks SaaS",
-  "branchName": "ralph/prd-202-tenant-context-concurrency",
-  "description": "PRD-202 — Tenant Context Concurrency Fix. Replace the deprecated AsyncLocalStorage enterWith() tenant-context binding (cross-tenant leak vector on Railway's persistent Node process) with the safe runWithTenantContext() scope. Separate tenant resolution from context binding, deliver the withTenantContext request wrapper, harden the Prisma middleware to fail loud on missing context, and prove isolation under concurrency.",
+  "branchName": "ralph/prd-203-auth-wrapper-migration",
+  "description": "PRD-203 — Auth Wrapper Migration. Roll the two well-built-but-barely-used auth wrappers (lib/api-auth.ts: withTenantAuth/withTenantAuthParams/withSuperAdmin/withSuperAdminParams/withAuth) out to all 107 app/api/**/route.ts files (only 12 use one today; ~95 hand-roll `getCurrentUser() + if(!user) return 401`). FIRST harden the wrappers to compose PRD-202's runWithTenantContextAsync (they only do the role check today — they do NOT bind tenant context): withTenantAuth binds user.tenantId, withSuperAdmin binds explicit null (cross-tenant system query), withAuth binds the host-resolved tenant. The lib/db.ts $use middleware warns (not throws) on an unbound context while TENANT_CONTEXT_STRICT is OFF, so the rollout is incremental and safe; the deploy flips strict ON once 107/107 are wrapped-or-allow-listed. Then delete the hand-rolled blocks; handlers read user/tenantId from the wrapper context arg. Fix two correctness bugs underneath: (1) getCurrentUser tenant resolution is host-blind and its email fallback was unscoped/ambiguity-blind — wire it to 205's ambiguity-aware canonical resolveTenant (already a delegator) and consume the typed ambiguous result as 403; add a typed UserNotProvisionedError (->409) for the Clerk user.created race; (2) customer/profile does a no-tenant findFirst({where:{email}}) on GET+PATCH = cross-tenant leak — wrap it in withAuth so the now-bound host tenant auto-scopes the users lookup. Add a ts-morph CI gate (scripts/check-auth-wrappers.ts + pnpm check:auth-wrappers) that fails the build on any unwrapped, non-allow-listed handler. STACKED on ralph/prd-205 @ 06674ce (chain 202->205->203): strict deps PRD-202 (runWithTenantContextAsync + the warn/throw policy) + PRD-205 (canonical resolver). Soft overlap with PRD-204 (validation runs inside the wrapped handler; both touch the same route files — reconcile at merge).",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Vitest unit harness scaffold (idempotent)",
-      "description": "As the build agent, I need a node-only Vitest harness so tenant-context unit tests can run without Docker or Clerk.",
+      "title": "Route inventory + AUTH_PUBLIC_ROUTES allow-list (AC-4a/OQ-1)",
+      "description": "As a developer, I want every app/api route enumerated and categorized, and a small reviewed allow-list of the genuinely public/signature-verified routes, so the gate and the migration batches have one source of truth.",
       "acceptanceCriteria": [
-        "vitest pinned to 2.1.9 (active Node is 18.17.0; vitest 4.x requires Node 20.12+ for node:util styleText)",
-        "vitest.config.ts with test.include 'tests/unit/**/*.test.ts' and @ path alias to repo root",
-        "package.json gains a 'test:unit' script that runs vitest run",
-        "Re-running the scaffold is idempotent (no duplicate config / deps)",
-        "tests/unit/ exists and an empty/sanity test executes green",
+        "All 107 app/api/**/route.ts files enumerated and categorized: super-admin (withSuperAdmin) | tenant-admin (withTenantAuth) | any-authenticated (withAuth) | public-allow-list. Inventory captured in scripts/ralph/route-inventory.md with the chosen wrapper per route + the current auth posture observed",
+        "AUTH_PUBLIC_ROUTES exported from a new lib/auth-public-routes.ts as a small commented constant of route path patterns; every entry has a one-line justification (health = liveness; webhooks/** = own signature verification per PRD-211; store/[slug]/products|conditions = public storefront reads; signup/auth callbacks = pre-auth)",
+        "Default-deny intent documented in the file: anything not on the allow-list MUST be wrapped; store cart/orders/submit are AUTHENTICATED (withAuth), not public — only public reads are allow-listed",
+        "No route handler bodies changed in this story (inventory + constant only); lib/auth-public-routes.ts is not yet consumed (US-002 wires it into the gate)",
         "Typecheck passes"
       ],
       "priority": 1,
@@ -21,14 +20,12 @@
     },
     {
       "id": "US-002",
-      "title": "Additive tenant-context API: runWithTenantContextAsync + hasTenantContext",
-      "description": "As a developer, I need an async-typed run variant and a way to distinguish an unbound context from an explicit null, without removing the deprecated setTenantContext yet (back-compat).",
+      "title": "check-auth-wrappers AST gate + pnpm script + unit test (AC-4/AC-4b/OQ-4)",
+      "description": "As a developer, CI must fail when a route exports an HTTP handler that is not an approved wrapper and is not allow-listed. Build the gate now (report-only — repo still has ~95 unwrapped); it flips to blocking in US-010.",
       "acceptanceCriteria": [
-        "Add runWithTenantContextAsync<T>(tenantId, fn: () => Promise<T>): Promise<T> binding the ALS for the whole async chain (AC-1, OQ-4)",
-        "Add hasTenantContext(): boolean returning tenantContextStorage.getStore() !== undefined (distinguishes implicit-unbound from explicit-null)",
-        "getTenantContext() signature and behaviour unchanged (AC-1)",
-        "setTenantContext stays for now so lib/tenant.ts still compiles (removed later in US-009)",
-        "Unit tests (tests/unit/tenant-context.test.ts): run binds then tears down; nested scope restores the outer value; getTenantContext() outside any scope is null; hasTenantContext() false outside / true inside run(null)",
+        "scripts/check-auth-wrappers.ts parses every app/api/**/route.ts via ts-morph (AST, not regex — catches re-exports/aliases per OQ-4), finds each exported GET/POST/PUT/PATCH/DELETE, and classifies its initializer as wrapped (withTenantAuth|withTenantAuthParams|withSuperAdmin|withSuperAdminParams|withAuth) | allow-listed (AUTH_PUBLIC_ROUTES) | VIOLATION",
+        "Exposed as `pnpm check:auth-wrappers`; prints the offending file -> handler list and a wrapped/allow-listed/violation summary; exit code is currently advisory (US-010 makes it exit non-zero)",
+        "Unit test (tests/unit/check-auth-wrappers.test.ts): a fixture route with a bare exported GET is flagged VIOLATION; a wrapped route passes; an allow-listed route passes",
         "Tests pass",
         "Typecheck passes"
       ],
@@ -38,13 +35,14 @@
     },
     {
       "id": "US-003",
-      "title": "Concurrency unit proof: runWithTenantContext isolates, enterWith leaks (node-only AC-7 proof)",
-      "description": "As an auditor, I want a node-only test that interleaves tenant contexts and proves runWithTenantContext keeps them isolated while the old enterWith pattern bleeds — the red/green proof the fix matters, without needing Docker/Postgres.",
+      "title": "Harden auth wrappers to compose tenant-context binding (AC-1b)",
+      "description": "As the platform, every wrapped handler must run inside one bound tenant scope so its Prisma calls auto-scope (and the strict-mode flip is safe). The wrappers currently only do the role check — make them compose PRD-202's runWithTenantContextAsync. No route bodies change yet.",
       "acceptanceCriteria": [
-        "tests/unit/tenant-context.concurrency.test.ts interleaves >=2 simulated tenant 'requests' with awaits/setTimeout(0) yields to force microtask interleave",
-        "Asserts each runWithTenantContext scope only ever observes its own tenantId across many iterations (zero cross-tenant observation)",
-        "Includes a contrasting case driving a raw enterWith() store the same way and asserting it DOES bleed (documents the baseline the fix removes)",
-        "No Prisma/DB/network — pure ALS semantics",
+        "withTenantAuth / withTenantAuthParams run the handler inside runWithTenantContextAsync(user.tenantId, () => handler(...)) — the authenticated admin's own tenant is bound for the whole handler (asserted non-null before binding)",
+        "withSuperAdmin / withSuperAdminParams run the handler inside runWithTenantContextAsync(null, () => handler(...)) — an EXPLICIT null (deliberate cross-tenant system query); hasTenantContext() is true so the lib/db.ts middleware allows unscoped reads rather than treating it as the implicit-unbound leak",
+        "withAuth resolves the request/host tenant (getTenantFromRequest, the same pure lookup withTenantContext uses) and runs the handler inside runWithTenantContextAsync(hostTenant?.id ?? null, ...) — so storefront customer routes (customer/profile, orders, cart) auto-scope to the storefront tenant; a customer has no Clerk org so user.tenantId is not used here",
+        "No setTenantContext/enterWith reintroduced; binding is via runWithTenantContextAsync only; error path still funnels through apiError()",
+        "Unit tests (tests/unit/api-auth.test.ts) with getCurrentUser + getTenantFromRequest + runWithTenantContextAsync mocked/spied: each wrapper binds the expected tenantId (user.tenantId | null | host id) before invoking the handler; no-user->401; wrong-role->401; withTenantAuth missing tenantId->403",
         "Tests pass",
         "Typecheck passes"
       ],
@@ -54,12 +52,14 @@
     },
     {
       "id": "US-004",
-      "title": "withTenantContext request wrapper (lib/with-tenant-context.ts) (AC-3)",
-      "description": "As a developer, I want a higher-order wrapper that resolves the tenant then runs the whole handler inside one bound runWithTenantContext scope, so every Prisma call the handler makes is correctly scoped.",
+      "title": "Harden getCurrentUser + resolve-tenant-id (AC-2/AC-2a)",
+      "description": "As a newly-signed-up or multi-tenant user, my auth must resolve correctly: ambiguous email -> 403 (not a silent first-row pick), and a valid Clerk session with no DB row yet -> retryable 409 (not a silent unauthorized null).",
       "acceptanceCriteria": [
-        "New lib/with-tenant-context.ts exporting withTenantContext(handler) that resolves the tenant (via getTenantFromRequest's RETURN value) then returns runWithTenantContextAsync(tenantId ?? null, () => handler(req, ctx)) (AC-3)",
-        "Wrapper uses the resolver's return value only — does not depend on any ALS side-effect (works before and after US-008)",
-        "Unit tests (tests/unit/with-tenant-context.test.ts) with the resolver module-mocked: handler observes getTenantContext()===resolved id; two concurrent wrapped handlers for different tenants never observe each other's id (bleed test)",
+        "getCurrentUser (lib/auth-helper.ts) tenant resolution goes through 205's canonical path (resolveTenantIdFromClerkOrg already delegates to resolveTenant({kind:'clerk'}), isActive-enforced + ambiguity-aware); an ambiguous email surfaces a typed result the wrappers render as 403 (not a guessed first row)",
+        "A valid Clerk session whose DB user row does not exist yet yields a typed UserNotProvisionedError (the wrappers map it to 409 retryable) rather than a null that looks like 401; the Clerk user.created provisioning ordering is documented in a comment",
+        "The wrappers (US-003) translate the typed ambiguous / not-provisioned signals to 403 / 409 via apiError(); happy path returns {user, tenantId} unchanged",
+        "Unit tests (tests/unit/auth-helper.test.ts): ambiguous email -> 403-typed path; valid session + no DB row -> UserNotProvisionedError; happy path -> {user, tenantId}",
+        "No console.log in prod code (structured console.warn for auth.tenant_resolution_ambiguous / auth.user_not_provisioned audit lines is acceptable)",
         "Tests pass",
         "Typecheck passes"
       ],
@@ -69,14 +69,14 @@
     },
     {
       "id": "US-005",
-      "title": "Harden Prisma middleware: fail loud on missing context (AC-6/AC-6a)",
-      "description": "As a developer, I want a tenant-scoped query that runs with no bound context to fail loudly (throw in strict mode, warn+emit otherwise) instead of silently running unscoped, with an explicit escape hatch for legitimate system queries.",
+      "title": "Wrap + tenant-scope customer/profile GET+PATCH (AC-3)",
+      "description": "As tenant A's customer, /api/customer/profile must return only my tenant-A row even if a tenant-B user shares my email. Wrap it in withAuth (now binds the host tenant) so the users lookup auto-scopes.",
       "acceptanceCriteria": [
-        "Add TenantContextMissingError (carries route/model/action) and a context-free allow-list (default-deny; system models enumerated per OQ-2) in lib/db.ts or a small lib/tenant-scope-policy.ts",
-        "Middleware distinguishes implicit-unbound (hasTenantContext()===false) from explicit null (runWithTenantContext(null,...)): implicit null on a tenant-scoped, non-allow-listed model emits security.tenant_context_missing (structured console.warn {route?,model,action}) and throws TenantContextMissingError when strict mode is on; explicit null proceeds unscoped (AC-6/AC-6a)",
-        "Strict mode gated by env flag (e.g. TENANT_CONTEXT_STRICT) defaulting OFF in prod so the ~96 not-yet-wrapped routes (PRD-203 surface) keep working; ON in test (OQ-3 warn-then-throw)",
-        "bypassTenantScope(fn) documented escape hatch = runWithTenantContext(null, fn) with a clear name (AC-6a)",
-        "Pure decision helper (e.g. shouldThrowOnMissingContext(model, hasContext, strict, allowList)) is extracted and unit-tested node-only (tests/unit/tenant-scope-policy.test.ts) — full middleware throw is the Docker integration test US-011",
+        "app/api/customer/profile/route.ts GET + PATCH are wrapped in withAuth; the hand-rolled currentUser()/getCurrentUser block is deleted; the handler reads user from context",
+        "The findFirst({where:{email}}) at :25 and the PATCH lookup at :79 run inside the bound host-tenant context (US-003) so the lib/db.ts $use middleware auto-scopes them to the caller's tenant — a tenant-A session can never read or mutate a tenant-B row sharing the email. An explicit tenantId filter via getTenantContext() is added as belt-and-suspenders",
+        "Success payload shape is unchanged for the legitimate same-tenant caller",
+        "Unit test (tests/unit/customer-profile.test.ts) with prisma + tenant context mocked: the GET/PATCH lookups carry a tenant filter (or run under a bound non-null context); no unscoped email-only query remains",
+        "Cross-tenant proof against real Postgres is deferred to US-011 (Docker-gated) and US-012 (E2E)",
         "Tests pass",
         "Typecheck passes"
       ],
@@ -86,15 +86,14 @@
     },
     {
       "id": "US-006",
-      "title": "Pilot-wrap storefront Server Component data path (AC-5)",
-      "description": "As tenant A's customer, the storefront layout must load its tenant-scoped data inside a bound context so concurrent storefront renders cannot bleed. Pilot the Server-Component binding pattern on app/store/[slug]/layout.tsx (the mass SC migration is tracked separately / PRD-203).",
+      "title": "Migrate super-admin routes to withSuperAdmin/Params (AC-1/AC-1a)",
+      "description": "As an auditor, every super-admin route must enforce SUPER_ADMIN via the wrapper, not a copy-pasted role check. Migrate the ~25 remaining super-admin routes (33 total, 8 already wrapped).",
       "acceptanceCriteria": [
-        "app/store/[slug]/layout.tsx loads its tenant-scoped Prisma data inside runWithTenantContextAsync(tenantId, async () => {...}) (or a thin loadWithTenant helper) per OQ-1 resolution (AC-5)",
-        "tenantId is taken from the resolver's RETURN value, not a side-effect",
-        "No behavioural change for a single tenant; data still renders",
-        "This is an explicitly-scoped pilot of one Server Component path; remaining tenant-scoped Server Components are out of scope here (deferred to PRD-203 mass-wrap)",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill (or document explicitly if the storefront cannot be rendered locally without real tenant data)"
+        "Every app/api/super-admin/**/route.ts handler uses withSuperAdmin (no [param]) or withSuperAdminParams ([id]/[slug] routes); the hand-rolled `getCurrentUser() + if(!user||role!==SUPER_ADMIN) return 401` blocks are deleted",
+        "Handlers read user from the wrapper context arg — they do NOT re-call getCurrentUser() inside the body (AC-1a); super-admin queries now run under the bound explicit-null system context (US-003), so any pre-existing bypassTenantScope/explicit cross-tenant reads still work",
+        "Success payloads unchanged; only the auth + error edge is unified; any error.message in a response body is removed in favour of the wrapper's apiError() path",
+        "`pnpm check:auth-wrappers` shows the super-admin group fully wrapped (wrapped count rises by the migrated number)",
+        "Typecheck passes"
       ],
       "priority": 6,
       "passes": false,
@@ -102,13 +101,14 @@
     },
     {
       "id": "US-007",
-      "title": "Pilot-wrap one tenant-scoped API route via withTenantContext (AC-4)",
-      "description": "As a developer, I want one representative tenant-scoped API route wrapped with withTenantContext end-to-end to prove the request-boundary binding pattern. The full 96-route migration is delivered transitively through PRD-203's withTenantAuth.",
+      "title": "Migrate tenant-admin routes batch 1 to withTenantAuth/Params (AC-1/AC-1a)",
+      "description": "Migrate roughly the first half of the 43 tenant-admin routes (3 already wrapped) to the tenant-admin wrappers.",
       "acceptanceCriteria": [
-        "One representative tenant-scoped API route exports its handler wrapped in withTenantContext (AC-4 pilot)",
-        "Route behaviour is unchanged for the owning tenant; the handler's Prisma calls now execute inside the bound scope",
-        "A short comment notes the remaining routes are migrated via PRD-203's withTenantAuth (which composes withTenantContext) — not in this PRD's scope",
-        "Typecheck passes"
+        "~Half of app/api/tenant-admin/**/route.ts handlers use withTenantAuth / withTenantAuthParams; hand-rolled auth blocks deleted; user/tenantId read from context (AC-1a)",
+        "Each migrated handler runs under the bound user.tenantId context (US-003); explicit `where: { tenantId }` filters that were hand-written are kept (belt-and-suspenders with the auto-scope) but no longer re-derive tenantId from a second getCurrentUser call",
+        "Success payloads unchanged; error.message leaks removed from migrated routes",
+        "Typecheck passes after the batch",
+        "`pnpm check:auth-wrappers` violation count drops by the migrated number"
       ],
       "priority": 7,
       "passes": false,
@@ -116,13 +116,14 @@
     },
     {
       "id": "US-008",
-      "title": "Refactor lib/tenant.ts resolvers to return-not-set (AC-2)",
-      "description": "As a developer, tenant resolution must be a pure lookup that RETURNS the tenantId — binding happens only at the request boundary (the wrappers from US-004/006/007). Remove the 11 setTenantContext side-effects.",
+      "title": "Migrate tenant-admin routes batch 2 to withTenantAuth/Params (AC-1/AC-1a)",
+      "description": "Migrate the remaining tenant-admin routes to the tenant-admin wrappers.",
       "acceptanceCriteria": [
-        "All 11 setTenantContext(...) calls removed from getCurrentTenant and getTenantFromRequest in lib/tenant.ts; the setTenantContext import is removed (AC-2)",
-        "Both functions still RETURN the resolved tenant (or null) exactly as before — resolution semantics unchanged, only the ALS side-effect is gone",
-        "No remaining caller relies on the side-effect for correctness on the wrapped paths (storefront layout US-006 + the wrapper US-004/007 now bind context explicitly)",
-        "Typecheck passes"
+        "All remaining app/api/tenant-admin/**/route.ts handlers use withTenantAuth / withTenantAuthParams; hand-rolled auth blocks deleted; user/tenantId read from context (AC-1a)",
+        "Routes with multiple exported methods wrap each exported method",
+        "Success payloads unchanged; error.message leaks removed from migrated routes",
+        "Typecheck passes after the batch",
+        "`pnpm check:auth-wrappers` shows the entire tenant-admin group wrapped"
       ],
       "priority": 8,
       "passes": false,
@@ -130,12 +131,13 @@
     },
     {
       "id": "US-009",
-      "title": "Remove setTenantContext/enterWith from lib/tenant-context.ts (AC-1)",
-      "description": "As a developer, I want the unsafe enterWith()-based setTenantContext deleted so it can never be called again; the only binding APIs are runWithTenantContext / runWithTenantContextAsync.",
+      "title": "Migrate remaining authenticated routes + confirm public allow-list (AC-1/AC-4a)",
+      "description": "Migrate the remaining authenticated routes (account, consultation, orders, shop, user, tenant/*, onboarding, etc.) to the right wrapper, and confirm the genuinely public/signature-verified routes (store reads, webhooks/**, health, signup, auth callbacks) are on AUTH_PUBLIC_ROUTES rather than wrapped.",
       "acceptanceCriteria": [
-        "setTenantContext and its enterWith() body are deleted from lib/tenant-context.ts (AC-1) — safe because US-008 removed the only callers",
-        "Exports remaining: getTenantContext (unchanged), runWithTenantContext, runWithTenantContextAsync, hasTenantContext",
-        "Local grep confirms zero enterWith( and zero setTenantContext( references in the app source (the enforced CI grep gate AC-1a lives in PRD-216, not this PRD)",
+        "Each remaining authenticated route uses withAuth (any logged-in user: account/*, orders, store/[slug]/cart|orders|orders/submit, user/profile, shop/register, consultation/status) or withTenantAuth (tenant-admin-scoped: onboarding, tenant/[slug] if admin) as appropriate to its CURRENT role check; hand-rolled blocks deleted; user/tenantId from context",
+        "store/[slug]/products|featured, store cart/orders are split correctly: public READS allow-listed, authenticated customer actions wrapped in withAuth; webhooks/**, health, signup, auth/reset-password, tenant/conditions*, tenant/current, doctor-green/products confirmed in AUTH_PUBLIC_ROUTES with per-entry justification (NOT wrapped)",
+        "Any route whose intended posture is genuinely unclear is flagged in scripts/ralph/route-inventory.md for human review rather than guessed (default-deny: if unsure, wrap it)",
+        "Success payloads unchanged; error.message leaks removed from migrated routes",
         "Typecheck passes"
       ],
       "priority": 9,
@@ -144,13 +146,14 @@
     },
     {
       "id": "US-010",
-      "title": "Integration: tenant-isolation concurrency proof (testcontainers) — Docker-gated (AC-7)",
-      "description": "As an auditor, I want the full-stack red/green proof: interleaved N requests across >=2 real tenants against a real Postgres, asserting zero cross-tenant rows are ever observed. Must be red on the enterWith baseline, green after the fix.",
+      "title": "Flip gate to blocking + error.message grep gate + non-blocking CI step (AC-4/AC-4b/AC-5)",
+      "description": "As the build agent, close the loop: the gate now fails on any unwrapped non-allow-listed handler, a grep gate proves no error.message leaks in app/api responses, and a (non-blocking) CI step is added — the blocking CI wiring formally lives in PRD-216.",
       "acceptanceCriteria": [
-        "tests/integration/tenant-isolation.concurrency.integration.test.ts seeds tenants A and B with distinct rows, fires Promise.all of interleaved handlers with await/setTimeout(0) yields, asserts each handler only reads/writes its own tenant across thousands of iterations (AC-7)",
-        "Uses the testcontainers Postgres harness (PRD-207 pattern)",
-        "GATE: run 'docker info' first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
-        "Tests pass (when Docker is available)",
+        "scripts/check-auth-wrappers.ts now exits non-zero on any VIOLATION; `pnpm check:auth-wrappers` -> 0 unwrapped, non-allow-listed handlers (wrapped + allow-listed == 107)",
+        "A grep gate (a scripts/ci/*.mjs sibling added to pnpm check:security) asserts zero `error.message` / `String(error)` inside NextResponse.json(...) across app/api/** (AC-5, shared intent with PRD-200)",
+        "A non-blocking `pnpm check:auth-wrappers` step is added to .github/workflows/ci.yml (commented that PRD-216 promotes it to blocking alongside the test gate) — mirrors how PRD-205 left local gates for PRD-216 to enforce",
+        "A deliberately-unwrapped fixture route proves the gate exits non-zero (then removed) — non-vacuousness check",
+        "Running `pnpm check:auth-wrappers` passes (exit 0) with the real tree fully migrated",
         "Typecheck passes"
       ],
       "priority": 10,
@@ -159,12 +162,13 @@
     },
     {
       "id": "US-011",
-      "title": "Integration: prisma-middleware-throws (testcontainers) — Docker-gated (AC-6)",
-      "description": "As a developer, I want a real-DB test that a tenant-scoped query with no bound context throws TenantContextMissingError, while an explicit runWithTenantContext(null, ...) on an allow-listed system query succeeds.",
+      "title": "Integration: customer-profile cross-tenant + wrapper rollout (testcontainers) — Docker-gated (AC-3a)",
+      "description": "As an auditor, prove against real Postgres that customer/profile is tenant-scoped (two tenants, same email -> each sees only its own row on GET+PATCH) and that a migrated route enforces 401 anon / 403 wrong-tenant / 200 correct.",
       "acceptanceCriteria": [
-        "tests/integration/prisma-middleware-throws.integration.test.ts asserts throw-on-missing-context (strict mode) and success for an explicit-null allow-listed query (AC-6/AC-6a)",
-        "Uses the testcontainers Postgres harness (PRD-207 pattern)",
-        "GATE: run 'docker info' first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
+        "tests/integration/customer-profile.tenant-scope.integration.test.ts seeds two tenants with the SAME customer email; asserts GET and PATCH each see only the caller's tenant row (AC-3a)",
+        "tests/integration/auth-wrapper.rollout.integration.test.ts spot-checks a migrated tenant route (401 anon, 403 wrong tenant, 200 correct) and a migrated super-admin route",
+        "Uses the testcontainers Postgres harness (PRD-207 pattern); substituting a DB mock to dodge Docker is FORBIDDEN",
+        "GATE: run `docker info` first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
         "Tests pass (when Docker is available)",
         "Typecheck passes"
       ],
@@ -174,11 +178,11 @@
     },
     {
       "id": "US-012",
-      "title": "E2E: cross-tenant-no-leak (Playwright) — auth-gated",
-      "description": "As an auditor, I want two browser contexts on two tenant subdomains hammering endpoints simultaneously, asserting no tenant ever sees the other's data.",
+      "title": "E2E: customer-profile cross-tenant isolation (Playwright) — auth-gated",
+      "description": "As an auditor, prove end-to-end in a real browser that two tenant subdomains sharing a customer email never leak each other's profile.",
       "acceptanceCriteria": [
-        "tests/e2e/cross-tenant-no-leak.spec.ts drives two tenant subdomains concurrently and asserts no cross-tenant data is ever returned",
-        "GATE: Clerk test-auth approach is undecided (PRD-207 OQ-1, owner Gerard). Do NOT invent an auth shim → mark BLOCKED-NEEDS-AUTH-DECISION, emit RALPH_BLOCKED, leave unchecked",
+        "tests/e2e/customer-profile-isolation.spec.ts drives two tenant subdomains with the same customer email and asserts no cross-tenant profile bleed on view + edit",
+        "GATE: Clerk test-auth approach is undecided (PRD-207 OQ-1, owner Gerard). Do NOT invent an auth shim -> mark BLOCKED-NEEDS-AUTH-DECISION, emit RALPH_BLOCKED, leave unchecked",
         "Typecheck passes"
       ],
       "priority": 12,

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { uploadFile, getFileUrl, deleteS3Directory } from "@/lib/s3";
 import { validateUploadBuffer } from "@/lib/upload-validation";
@@ -18,18 +18,9 @@ const templatePatchSchema = z
   })
   .strict();
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
   try {
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const id = parseUuid(params.id);
-
     const template = await prisma.templates.findUnique({
       where: { id },
     });
@@ -113,20 +104,11 @@ export async function PUT(
       safeMessage: "Failed to update template",
     });
   }
-}
+});
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
   try {
-    const user = await currentUser();
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const id = parseUuid(params.id);
-
     const template = await prisma.templates.findUnique({
       where: { id },
     });
@@ -142,7 +124,7 @@ export async function PATCH(
         data: { isActive: body.isActive, updatedAt: new Date() },
       });
 
-      const email = user.emailAddresses[0]?.emailAddress;
+      const email = user.email;
       await createAuditLog({
         action: body.isActive ? AUDIT_ACTIONS.TEMPLATE.UPDATED : AUDIT_ACTIONS.TEMPLATE.UPDATED,
         entityType: "template",
@@ -171,23 +153,14 @@ export async function PATCH(
       safeMessage: "Failed to update template",
     });
   }
-}
+});
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
   try {
-    const user = await currentUser();
-
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const originError = requireSameOrigin(req);
     if (originError) return originError;
 
-    const email = user.emailAddresses[0]?.emailAddress;
+    const email = user.email;
 
     const templateId = parseUuid(params.id);
 
@@ -388,4 +361,4 @@ export async function DELETE(
       safeMessage: "Failed to delete template",
     });
   }
-}
+});

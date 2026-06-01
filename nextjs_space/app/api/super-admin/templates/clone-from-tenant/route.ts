@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
-import { currentUser } from "@clerk/nextjs/server";
+import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { copyS3Directory } from "@/lib/s3";
 import { apiError } from "@/lib/api-error";
@@ -22,14 +22,8 @@ const cloneFromTenantSchema = z
  * If targetTemplateId is provided, overwrites that template's S3 files.
  * Otherwise creates a new marketplace template.
  */
-export async function POST(req: NextRequest) {
+export const POST = withSuperAdmin(async (req) => {
   try {
-    const user = await currentUser();
-
-    if (!user || user.publicMetadata.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { subdomain, targetTemplateId } = await parseJsonBody(
       req,
       cloneFromTenantSchema,
@@ -122,4 +116,4 @@ export async function POST(req: NextRequest) {
       safeMessage: "Failed to clone",
     });
   }
-}
+});

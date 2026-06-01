@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
@@ -9,37 +9,8 @@ import { parseUuid } from "@/lib/validation/parse-uuid";
  *
  * Get delivery logs for a specific webhook
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export const GET = withTenantAuthParams(async (req, { tenantId }, params) => {
   try {
-    const user = await currentUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const role = (user.publicMetadata.role as string) || "";
-
-    if (role !== "TENANT_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const localUser = await prisma.users.findFirst({
-      where: { email: email },
-      select: { tenantId: true },
-    });
-
-    const tenantId = localUser?.tenantId;
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "No tenant associated with user" },
-        { status: 400 },
-      );
-    }
-
     const id = parseUuid(params.id);
 
     // Verify webhook belongs to tenant
@@ -78,4 +49,4 @@ export async function GET(
   } catch (error) {
     return apiError(error, { route: "GET /api/tenant-admin/webhooks/[id]/deliveries" });
   }
-}
+});

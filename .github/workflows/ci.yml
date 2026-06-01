@@ -57,3 +57,10 @@ jobs:
           NEXT_PUBLIC_BASE_DOMAIN: "localhost"
           NEXTAUTH_SECRET: "stub"
           ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+
+      # Advisory only — PRD-216 promotes these to a required, blocking gate.
+      # Bundles the PRD-205 grep gates (css/error-leak/tenant-resolver) and the
+      # PRD-203 --strict auth-wrapper gate. continue-on-error keeps it non-voting.
+      - name: Security gates (advisory)
+        run: pnpm check:security
+        continue-on-error: true
