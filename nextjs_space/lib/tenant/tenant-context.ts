@@ -31,13 +31,20 @@ export function runWithTenantContext<T>(tenantId: string | null, fn: () => T): T
 }
 
 /**
- * Async variant: binds `tenantId` for the whole async chain of `fn`. ALS `.run`
- * returns the callback's value, so the bound context propagates across every
- * `await` inside `fn` and is restored for the caller once the promise settles.
+ * Async variant: binds `tenantId` for the whole async chain of `fn`. We `await`
+ * `fn()` *inside* the bound store rather than returning it directly. Prisma query
+ * promises are lazy — the query does not run until the promise is awaited — so a
+ * callback such as `() => prisma.users.findFirst(...)` would otherwise have its
+ * query execute only once the caller awaits the result, by which point `.run` has
+ * already torn the store down and the tenant scope is silently lost. Awaiting here
+ * forces any such deferred work to run while the context is still bound.
  */
 export function runWithTenantContextAsync<T>(
   tenantId: string | null,
   fn: () => Promise<T>,
 ): Promise<T> {
-  return tenantContextStorage.run({ tenantId }, fn);
+  return tenantContextStorage.run({ tenantId }, async () => {
+    const result = await fn();
+    return result;
+  });
 }
