@@ -7,7 +7,7 @@ import {
   parseTenantSettings,
   parseTenantSettingsResult,
   tenantSettingsReadSchema,
-} from "@/lib/tenant-settings";
+} from "@/lib/tenant/tenant-settings";
 
 afterEach(() => {
   vi.restoreAllMocks();

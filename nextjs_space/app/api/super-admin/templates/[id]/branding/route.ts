@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getJsonFromS3, uploadFile } from "@/lib/s3";
-import { createS3Client, getBucketConfig } from "@/lib/aws-config";
+import { getJsonFromS3, uploadFile } from "@/lib/storage/s3";
+import { createS3Client, getBucketConfig } from "@/lib/storage/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
-import { apiError, ApiError } from "@/lib/api-error";
+import { apiError, apiValidationError, ApiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
-import { validateUploadBuffer } from "@/lib/upload-validation";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 
 /**
  * Super Admin Marketplace Template Branding API
@@ -24,7 +24,11 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
     });
 
     if (!template || !template.slug) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+      return apiError(new Error("Template not found"), {
+        route: "POST /api/super-admin/templates/[id]/branding",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     const s3Prefix = `templates/${template.slug}`;
@@ -33,7 +37,10 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
     const businessName = formData.get("businessName") as string;
 
     if (!settingsJSON) {
-      return NextResponse.json({ error: "Settings data required" }, { status: 400 });
+      return apiValidationError(
+        "Settings data required",
+        "POST /api/super-admin/templates/[id]/branding",
+      );
     }
 
     const settings: any = JSON.parse(settingsJSON);

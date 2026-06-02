@@ -9,7 +9,7 @@ import {
   hasTenantContext,
   runWithTenantContext,
   runWithTenantContextAsync,
-} from "@/lib/tenant-context";
+} from "@/lib/tenant/tenant-context";
 
 describe("runWithTenantContext (sync) — bind + teardown", () => {
   it("binds the id inside the scope and tears down after", () => {

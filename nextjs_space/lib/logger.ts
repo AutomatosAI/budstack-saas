@@ -19,7 +19,7 @@
  */
 
 import pino, { type Logger, type LoggerOptions } from "pino";
-import { sanitizeForLogging, pinoRedactPaths } from "@/lib/redact";
+import { sanitizeForLogging, pinoRedactPaths } from "@/lib/security/redact";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 

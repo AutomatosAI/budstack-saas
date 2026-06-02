@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { decrypt } from "@/lib/encryption";
+import { decrypt } from "@/lib/security/encryption";
 import nodemailer from "nodemailer";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { apiValidationError } from "@/lib/api-error";

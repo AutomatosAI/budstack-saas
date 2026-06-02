@@ -10,10 +10,7 @@ export const DELETE = withTenantAuthParams(async (req, { user, tenantId }, param
     const tenantTemplateId = parseUuid(params.id);
 
     if (user.role !== "TENANT_ADMIN") {
-      return NextResponse.json(
-        { error: "Only tenant admins can delete templates" },
-        { status: 403 },
-      );
+      return apiError(new Error("Only tenant admins can delete templates"), { route: "DELETE /api/tenant-admin/my-templates/[id]", status: 403, safeMessage: "Only tenant admins can delete templates" });
     }
 
     // Find the tenant template
@@ -27,28 +24,17 @@ export const DELETE = withTenantAuthParams(async (req, { user, tenantId }, param
     });
 
     if (!tenantTemplate) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), { route: "DELETE /api/tenant-admin/my-templates/[id]", status: 404, safeMessage: "Template not found" });
     }
 
     // Verify the template belongs to this tenant
     if (tenantTemplate.tenantId !== tenantId) {
-      return NextResponse.json(
-        { error: "You can only delete your own templates" },
-        { status: 403 },
-      );
+      return apiError(new Error("You can only delete your own templates"), { route: "DELETE /api/tenant-admin/my-templates/[id]", status: 403, safeMessage: "You can only delete your own templates" });
     }
 
     // Check if template is currently active
     if (tenantTemplate.activeForTenant) {
-      return NextResponse.json(
-        {
-          error: `Cannot delete this template: It is currently active for ${tenantTemplate.activeForTenant.businessName}. Please activate a different template first.`,
-        },
-        { status: 409 },
-      );
+      return apiError(new Error("Template is currently active"), { route: "DELETE /api/tenant-admin/my-templates/[id]", status: 409, safeMessage: `Cannot delete this template: It is currently active for ${tenantTemplate.activeForTenant.businessName}. Please activate a different template first.` });
     }
 
     console.log(

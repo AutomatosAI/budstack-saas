@@ -6,15 +6,11 @@ import { format } from "date-fns";
 import {
   Package,
   Search,
-  Leaf,
   PackageCheck,
   PackageMinus,
   Download,
   Trash2,
-  AlertTriangle,
   RefreshCw,
-  GripVertical,
-  Loader2,
 } from "lucide-react";
 import {
   DndContext,
@@ -29,19 +25,9 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   SearchInput,
   StatusFilter,
@@ -58,166 +44,16 @@ import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { exportToCSV } from "@/lib/admin/csv-export";
 
-type CategoryFilter =
-  | "all"
-  | "flower"
-  | "edibles"
-  | "concentrates"
-  | "pre-rolls"
-  | "topicals"
-  | "accessories";
-type StockFilter = "all" | "in-stock" | "out-of-stock";
-
-type BulkActionType = "set-in-stock" | "set-out-of-stock" | "delete" | null;
-
-type ProductFilters = {
-  category: CategoryFilter;
-  stock: StockFilter;
-} & Record<string, string>;
-
-interface Product {
-  id: string;
-  name: string;
-  category: string;
-  slug: string | null;
-  thcContent: number | null;
-  cbdContent: number | null;
-  price: number;
-  stock: number;
-  displayOrder: number;
-  createdAt: Date;
-}
-
-interface ProductsTableProps {
-  products: Product[];
-  totalCount: number;
-  inStockCount: number;
-  outOfStockCount: number;
-  categoryCounts: Record<string, number>;
-  currencySymbol?: string;
-}
-
-interface SortableProductRowProps {
-  product: Product;
-  isSelected: boolean;
-  onSelectOne: (id: string, checked: boolean) => void;
-  getStrainLabel: (name: string) => string;
-  currencySymbol: string;
-}
-
-function SortableProductRow({
-  product,
-  isSelected,
-  onSelectOne,
-  getStrainLabel,
-  currencySymbol,
-}: SortableProductRowProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: product.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <tr
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "transition-colors hover:bg-bs-card-2",
-        isSelected && "bg-bs-card-2/60",
-        isDragging && "relative z-50 shadow-bs-card-hover",
-      )}
-    >
-      <td
-        className="w-12 cursor-grab active:cursor-grabbing hidden md:table-cell"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical
-          className="h-5 w-5 text-bs-fg-muted hover:text-bs-fg transition-colors"
-          aria-hidden="true"
-        />
-      </td>
-
-      <td className="w-12 hidden sm:table-cell">
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={(checked) =>
-            onSelectOne(product.id, checked === true)
-          }
-          aria-label={`Select ${product.name}`}
-          className="border-bs-border data-[state=checked]:bg-bs-green-soft data-[state=checked]:border-bs-green-soft"
-        />
-      </td>
-
-      <td className="font-medium text-bs-fg">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-bs-md border border-bs-border-100 bg-bs-card-2 flex items-center justify-center flex-shrink-0">
-            <Leaf className="h-4 w-4 text-bs-green-soft" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <span className="block truncate max-w-[150px] sm:max-w-[200px]">
-              {product.name}
-            </span>
-            <span className="block text-xs font-mono text-bs-fg-muted md:hidden">
-              {product.category || "Uncategorized"} • {currencySymbol}
-              {typeof product.price === "number"
-                ? product.price.toFixed(2)
-                : product.price}
-            </span>
-          </div>
-        </div>
-      </td>
-
-      <td className="text-bs-fg-muted capitalize hidden md:table-cell">
-        {product.category || <span className="text-bs-fg-muted">—</span>}
-      </td>
-
-      <td className="hidden lg:table-cell">
-        <RowPill tone="gold">{getStrainLabel(product.name)}</RowPill>
-      </td>
-
-      <td className="text-center font-mono text-sm text-bs-fg-muted hidden lg:table-cell">
-        {product.thcContent != null ? `${product.thcContent}%` : "—"}
-      </td>
-
-      <td className="text-center font-mono text-sm text-bs-fg-muted hidden lg:table-cell">
-        {product.cbdContent != null ? `${product.cbdContent}%` : "—"}
-      </td>
-
-      <td className="text-right font-mono tabular-nums font-medium text-bs-fg hidden sm:table-cell">
-        {currencySymbol}
-        {typeof product.price === "number"
-          ? product.price.toFixed(2)
-          : product.price}
-      </td>
-
-      <td className="text-center hidden sm:table-cell">
-        <RowPill tone={product.stock > 0 ? "emerald" : "red"}>
-          {product.stock}
-        </RowPill>
-      </td>
-
-      <td>
-        <RowPill
-          tone={product.stock > 0 ? "emerald" : "red"}
-          aria-label={`Status: ${product.stock > 0 ? "In Stock" : "Out of Stock"}`}
-        >
-          {product.stock > 0 ? "In Stock" : "Out of Stock"}
-        </RowPill>
-      </td>
-    </tr>
-  );
-}
+import { SortableProductRow } from "./products-table-row";
+import { ProductsBulkConfirmDialog } from "./products-table-confirm-dialog";
+import type {
+  CategoryFilter,
+  StockFilter,
+  BulkActionType,
+  ProductFilters,
+  Product,
+  ProductsTableProps,
+} from "./products-table-types";
 
 export function ProductsTable({
   products,
@@ -827,104 +663,14 @@ export function ProductsTable({
         onClearSelection={clearSelection}
       />
 
-      <Dialog
-        open={confirmAction !== null}
-        onOpenChange={(open) => !open && setConfirmAction(null)}
-      >
-        <DialogContent className="bs-dialog-content sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle
-              className="flex items-center gap-2 text-[22px] text-bs-fg"
-              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
-            >
-              {confirmAction === "delete" ? (
-                <>
-                  <Trash2 className="h-5 w-5 text-bs-danger" aria-hidden="true" />
-                  <span>Delete Products</span>
-                </>
-              ) : confirmAction === "set-in-stock" ? (
-                <>
-                  <PackageCheck className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
-                  <span>Set In Stock</span>
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="h-5 w-5 text-bs-warn" aria-hidden="true" />
-                  <span>Set Out of Stock</span>
-                </>
-              )}
-            </DialogTitle>
-            <DialogDescription className="pt-2 text-bs-fg-muted">
-              {confirmAction === "delete" ? (
-                <span className="text-bs-danger">
-                  Are you sure you want to delete{" "}
-                  <strong>{selectedIds.size}</strong> product
-                  {selectedIds.size === 1 ? "" : "s"}? This cannot be undone.
-                </span>
-              ) : confirmAction === "set-in-stock" ? (
-                <span>
-                  Set <strong className="text-bs-fg">{selectedIds.size}</strong> product
-                  {selectedIds.size === 1 ? "" : "s"} to In Stock?
-                </span>
-              ) : (
-                <span>
-                  Set <strong className="text-bs-fg">{selectedIds.size}</strong> product
-                  {selectedIds.size === 1 ? "" : "s"} to Out of Stock?
-                </span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedProductNames.length > 0 && (
-            <div className="py-2">
-              <p className="bs-eyebrow mb-2">Affected products</p>
-              <div className="flex flex-wrap gap-1.5">
-                {selectedProductNames.map((name) => (
-                  <RowPill key={name} tone="slate">
-                    {name}
-                  </RowPill>
-                ))}
-                {selectedIds.size > 5 && (
-                  <RowPill tone="slate">+{selectedIds.size - 5} more</RowPill>
-                )}
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <button
-              type="button"
-              onClick={() => setConfirmAction(null)}
-              disabled={isProcessing}
-              className="bs-btn bs-btn-ghost disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmAction}
-              disabled={isProcessing}
-              className={cn(
-                "bs-btn disabled:opacity-50",
-                confirmAction === "delete" ? "bs-btn-danger" : "bs-btn-green",
-              )}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
-                  Processing...
-                </>
-              ) : confirmAction === "delete" ? (
-                "Delete"
-              ) : confirmAction === "set-in-stock" ? (
-                "Set In Stock"
-              ) : (
-                "Set Out of Stock"
-              )}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProductsBulkConfirmDialog
+        confirmAction={confirmAction}
+        selectedCount={selectedIds.size}
+        selectedProductNames={selectedProductNames}
+        isProcessing={isProcessing}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleConfirmAction}
+      />
     </>
   );
 }

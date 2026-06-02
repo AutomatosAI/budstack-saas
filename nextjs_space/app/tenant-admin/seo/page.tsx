@@ -1,7 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getTenantBaseUrl } from "@/lib/tenant-utils";
+import { getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
 import { Search } from "lucide-react";
 import { SeoPageClient } from "./seo-page-client";
 

@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ConsultationFormData } from "../consultation-form";
+import type { ConsultationFormData } from "../consultation-form-types";
 import { BUSINESS_TYPES, COUNTRY_CODES } from "@/lib/consultation-constants";
 
 interface BusinessInfoStepProps {

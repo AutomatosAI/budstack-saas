@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeCss, extractGoogleFontsImports } from "@/lib/css-utils";
+import { sanitizeCss, extractGoogleFontsImports } from "@/lib/security/css-utils";
 
 // Closes PRD-200 AC-3a: prove sanitizeCss strips dangerous CSS injected from
 // S3/external sources while preserving safe declarations.

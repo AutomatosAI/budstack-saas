@@ -6,7 +6,7 @@ import { useInView } from 'react-intersection-observer';
 import { TrendingUp } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
 import { getIcon } from '@/lib/icon-registry';
-import { textAlignClass } from '@/lib/section-align';
+import { textAlignClass } from '@/lib/templates/section-align';
 
 interface StatItem {
   value: number;

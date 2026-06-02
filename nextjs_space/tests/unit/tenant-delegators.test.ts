@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // react's cache() is stubbed to identity so a cache-wrapped delegator is deterministic
 // per call outside a React request scope.
 const { resolveTenant } = vi.hoisted(() => ({ resolveTenant: vi.fn() }));
-vi.mock("@/lib/tenant-resolver", () => ({ resolveTenant }));
+vi.mock("@/lib/tenant/tenant-resolver", () => ({ resolveTenant }));
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
   cache: <T>(fn: T) => fn,
@@ -20,7 +20,7 @@ import {
   requireTenant,
   getTenantBySlug,
   getTenantFromRequest,
-} from "@/lib/tenant";
+} from "@/lib/tenant/tenant";
 
 const tenant = { id: "t-1", subdomain: "acme", isActive: true };
 

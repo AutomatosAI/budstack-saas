@@ -16,10 +16,10 @@ const { getTenantFromRequest } = vi.hoisted(() => ({ getTenantFromRequest: vi.fn
 const { findFirst, update } = vi.hoisted(() => ({ findFirst: vi.fn(), update: vi.fn() }));
 
 vi.mock("@/lib/auth-helper", () => ({ getCurrentUser }));
-vi.mock("@/lib/tenant", () => ({ getTenantFromRequest }));
+vi.mock("@/lib/tenant/tenant", () => ({ getTenantFromRequest }));
 vi.mock("@/lib/db", () => ({ prisma: { users: { findFirst, update } } }));
 
-import { getTenantContext } from "@/lib/tenant-context";
+import { getTenantContext } from "@/lib/tenant/tenant-context";
 import { GET, PATCH } from "@/app/api/customer/profile/route";
 
 function makeUser(over: Record<string, unknown> = {}) {

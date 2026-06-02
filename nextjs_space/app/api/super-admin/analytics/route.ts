@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { subDays, startOfDay, format, eachDayOfInterval } from "date-fns";
+import { apiError } from "@/lib/api-error";
 
 export const GET = withSuperAdmin(async (req) => {
   try {
@@ -183,9 +184,9 @@ export const GET = withSuperAdmin(async (req) => {
     });
   } catch (error) {
     console.error("Error fetching analytics:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch analytics" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/super-admin/analytics",
+      safeMessage: "Failed to fetch analytics",
+    });
   }
 });

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getCurrentTenant } from '@/lib/tenant';
-import { getTenantBaseUrl } from '@/lib/tenant-utils';
+import { getCurrentTenant } from '@/lib/tenant/tenant';
+import { getTenantBaseUrl } from '@/lib/tenant/tenant-utils';
 
 export async function GET() {
     const tenant = await getCurrentTenant();

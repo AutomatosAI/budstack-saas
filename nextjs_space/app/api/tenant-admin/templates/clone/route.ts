@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
+import { copyS3Directory, getJsonFromS3 } from "@/lib/storage/s3";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { z } from "zod";
@@ -24,10 +24,11 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     });
 
     if (!baseTemplate) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), {
+        route: "POST /api/tenant-admin/templates/clone",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     // 4. Define S3 paths — tenant owns tenants/{id}/templates/{slug}/

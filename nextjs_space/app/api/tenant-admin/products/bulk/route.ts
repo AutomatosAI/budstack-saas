@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import crypto from "crypto";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
@@ -48,10 +48,11 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     });
 
     if (productsToUpdate.length === 0) {
-      return NextResponse.json(
-        { error: "No valid products found." },
-        { status: 404 },
-      );
+      return apiError(new Error("No valid products found."), {
+        route: "POST /api/tenant-admin/products/bulk",
+        status: 404,
+        safeMessage: "No valid products found.",
+      });
     }
 
     let result: { count: number };

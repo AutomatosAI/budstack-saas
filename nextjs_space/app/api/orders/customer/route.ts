@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getTenantContext } from "@/lib/tenant-context";
+import { getTenantContext } from "@/lib/tenant/tenant-context";
+import { apiError } from "@/lib/api-error";
 
 // withAuth binds the request's host tenant at the boundary (PRD-202
 // runWithTenantContextAsync) and admits any logged-in user. Customer order
@@ -12,14 +13,22 @@ export const GET = withAuth(async (_req, { user }) => {
   try {
     const email = user.email;
     if (!email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), {
+        route: "GET /api/orders/customer",
+        status: 401,
+        safeMessage: "Unauthorized",
+      });
     }
 
     // Read the bound tenant from the confined context instead of re-resolving
     // here. A null id means no tenant resolved → 404.
     const tenantId = getTenantContext();
     if (!tenantId) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/orders/customer",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     const dbUser = await prisma.users.findFirst({
@@ -52,9 +61,9 @@ export const GET = withAuth(async (_req, { user }) => {
     return NextResponse.json({ orders });
   } catch (error) {
     console.error("Error fetching customer orders:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch orders" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/orders/customer",
+      safeMessage: "Failed to fetch orders",
+    });
   }
 });

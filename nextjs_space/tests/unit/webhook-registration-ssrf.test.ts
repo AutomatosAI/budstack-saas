@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertSafeWebhookUrl, type DnsResolver } from "@/lib/webhook-ssrf";
+import { assertSafeWebhookUrl, type DnsResolver } from "@/lib/integrations/webhook-ssrf";
 
 // The tenant-admin webhook routes are Clerk-auth protected, so the full HTTP
 // E2E (PRD-211 §12) is deferred. These function-level cases lock the exact

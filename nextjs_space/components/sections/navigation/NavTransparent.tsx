@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
-import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
+import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant/tenant-utils';
 import { NavAuthButton } from './NavAuthButton';
 
 export function NavTransparent(props: SectionProps) {

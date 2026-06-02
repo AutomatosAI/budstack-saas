@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withSuperAdmin } from "@/lib/api-auth";
+import { apiError } from "@/lib/api-error";
 
 /**
  * Trigger a Railway deployment rebuild
@@ -52,9 +53,9 @@ export const POST = withSuperAdmin(async (_req) => {
     });
   } catch (error: any) {
     console.error("[Rebuild Trigger] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to trigger deployment" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/super-admin/templates/trigger-rebuild",
+      safeMessage: "Failed to trigger deployment",
+    });
   }
 });

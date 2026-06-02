@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser, clerkClient } from "@clerk/nextjs/server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getClientInfo } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { eraseUser, resolveLocalUser } from "@/lib/gdpr/erasure";
 import { withAuth } from "@/lib/api-auth";
 
@@ -29,12 +29,20 @@ export const DELETE = withAuth(async (request, { user }) => {
     const email = user.email;
 
     if (!email) {
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+      return apiError(new Error("Email not found"), {
+        route: "DELETE /api/account/delete",
+        status: 401,
+        safeMessage: "Email not found",
+      });
     }
 
     const clerkUser = await currentUser();
     if (!clerkUser) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), {
+        route: "DELETE /api/account/delete",
+        status: 401,
+        safeMessage: "Unauthorized",
+      });
     }
 
     const rate = await checkRateLimit(`account-delete:${user.id}`, {
@@ -46,12 +54,9 @@ export const DELETE = withAuth(async (request, { user }) => {
 
     const body = await request.json().catch(() => ({}));
     if (body?.confirm !== "DELETE") {
-      return NextResponse.json(
-        {
-          error:
-            'Confirmation required. POST { "confirm": "DELETE" } to permanently delete your account.',
-        },
-        { status: 400 },
+      return apiValidationError(
+        'Confirmation required. POST { "confirm": "DELETE" } to permanently delete your account.',
+        "DELETE /api/account/delete",
       );
     }
 
@@ -63,18 +68,26 @@ export const DELETE = withAuth(async (request, { user }) => {
     });
 
     if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError(new Error("User not found"), {
+        route: "DELETE /api/account/delete",
+        status: 404,
+        safeMessage: "User not found",
+      });
     }
 
     // Block admin self-deletion via this route — admins must be removed by
     // another admin so we don't leave a tenant with zero owners.
     if (dbUser.role === "TENANT_ADMIN" || dbUser.role === "SUPER_ADMIN") {
-      return NextResponse.json(
+      return apiError(
+        new Error(
+          "Admin accounts cannot be deleted via the self-service endpoint. Contact support to transfer ownership first.",
+        ),
         {
-          error:
+          route: "DELETE /api/account/delete",
+          status: 403,
+          safeMessage:
             "Admin accounts cannot be deleted via the self-service endpoint. Contact support to transfer ownership first.",
         },
-        { status: 403 },
       );
     }
 

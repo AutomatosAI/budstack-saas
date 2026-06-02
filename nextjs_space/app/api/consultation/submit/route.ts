@@ -2,20 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { clerkClient } from "@clerk/nextjs/server";
 
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
-import { callDrGreenAPI } from "@/lib/drgreen-api-client";
+import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
+import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 
 import { prisma } from "@/lib/db";
-import { mapMedicalConditionsForDrGreen } from '@/lib/dr-green-mapping';
+import { mapMedicalConditionsForDrGreen } from '@/lib/drgreen/dr-green-mapping';
 import crypto from "crypto";
 import { z } from "zod";
 
 import { toAlpha3 as convertToAlpha3CountryCode } from '@/lib/country-codes';
-import { checkRateLimit } from '@/lib/rate-limit';
-import { getTenantFromRequest } from '@/lib/tenant';
-import { resolveTenant } from '@/lib/tenant-resolver';
+import { checkRateLimit } from '@/lib/security/rate-limit';
+import { getTenantFromRequest } from '@/lib/tenant/tenant';
+import { resolveTenant } from '@/lib/tenant/tenant-resolver';
 import { logger } from '@/lib/logger';
+import { apiError, apiValidationError } from '@/lib/api-error';
 
 // SECURITY (C1, C13): Strict whitelist schema — no `.passthrough()`. Every
 // field that lands in the database or is forwarded to Dr. Green must be
@@ -93,9 +94,9 @@ export async function POST(request: NextRequest) {
     const parseResult = consultationSchema.safeParse(rawBody);
     if (!parseResult.success) {
       const firstError = parseResult.error.errors[0];
-      return NextResponse.json(
-        { error: `Validation error: ${firstError.path.join('.')} — ${firstError.message}` },
-        { status: 400 },
+      return apiValidationError(
+        `Validation error: ${firstError.path.join('.')} — ${firstError.message}`,
+        "POST /api/consultation/submit",
       );
     }
 
@@ -122,16 +123,17 @@ export async function POST(request: NextRequest) {
       body.tenantSlug &&
       tenant.subdomain.toLowerCase() !== body.tenantSlug.toLowerCase()
     ) {
-      return NextResponse.json(
-        { error: "Tenant mismatch between request host and submitted slug" },
-        { status: 400 },
+      return apiValidationError(
+        "Tenant mismatch between request host and submitted slug",
+        "POST /api/consultation/submit",
       );
     }
     if (!tenant) {
-      return NextResponse.json(
-        { error: "Tenant not found for this request" },
-        { status: 404 },
-      );
+      return apiError(new Error("Tenant not found for this request"), {
+        route: "POST /api/consultation/submit",
+        status: 404,
+        safeMessage: "Tenant not found for this request",
+      });
     }
     const tenantId = tenant.id;
 
@@ -168,9 +170,9 @@ export async function POST(request: NextRequest) {
       });
       // Surface Clerk's structured, user-actionable validation message only
       // (e.g. "email taken", "weak password"); never the raw error.message.
-      return NextResponse.json(
-        { error: error?.errors?.[0]?.message || "Unable to create your account. Please check your details and try again." },
-        { status: 400 }
+      return apiValidationError(
+        error?.errors?.[0]?.message || "Unable to create your account. Please check your details and try again.",
+        "POST /api/consultation/submit",
       );
     }
 

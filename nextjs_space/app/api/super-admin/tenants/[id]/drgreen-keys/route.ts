@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { encrypt, decrypt } from "@/lib/encryption";
-import { generateDrGreenSignature } from "@/lib/drgreen-api-client";
-import { apiError } from "@/lib/api-error";
+import { encrypt, decrypt } from "@/lib/security/encryption";
+import { generateDrGreenSignature } from "@/lib/drgreen/drgreen-api-client";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 import { z } from "zod";
@@ -98,7 +98,11 @@ export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
   });
 
   if (!tenant) {
-    return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    return apiError(new Error("Tenant not found"), {
+      route: "GET /api/super-admin/tenants/[id]/drgreen-keys",
+      status: 404,
+      safeMessage: "Tenant not found",
+    });
   }
 
   return NextResponse.json({
@@ -123,7 +127,11 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
 
   const tenant = await prisma.tenants.findUnique({ where: { id } });
   if (!tenant) {
-    return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    return apiError(new Error("Tenant not found"), {
+      route: "POST /api/super-admin/tenants/[id]/drgreen-keys",
+      status: 404,
+      safeMessage: "Tenant not found",
+    });
   }
 
   let apiKey: string | undefined;
@@ -142,9 +150,9 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
     try {
       generateDrGreenSignature("validation_test", normalized);
     } catch {
-      return NextResponse.json(
-        { error: "Secret key format invalid — could not produce a signature with the provided value." },
-        { status: 400 },
+      return apiValidationError(
+        "Secret key format invalid — could not produce a signature with the provided value.",
+        "POST /api/super-admin/tenants/[id]/drgreen-keys",
       );
     }
     update.drGreenSecretKey = encrypt(normalized);
@@ -155,7 +163,10 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
   }
 
   if (Object.keys(update).length === 0) {
-    return NextResponse.json({ error: "No keys provided" }, { status: 400 });
+    return apiValidationError(
+      "No keys provided",
+      "POST /api/super-admin/tenants/[id]/drgreen-keys",
+    );
   }
 
   await prisma.tenants.update({

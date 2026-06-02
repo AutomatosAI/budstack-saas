@@ -3,7 +3,7 @@ import {
   DPA_VERSION,
   dpaAcceptanceSchema,
 } from "@/lib/gdpr/dpa";
-import { sanitizeForLogging } from "@/lib/redact";
+import { sanitizeForLogging } from "@/lib/security/redact";
 
 describe("dpaAcceptanceSchema (PRD-213 AC-2a)", () => {
   it("accepts the current DPA version with an ISO timestamp", () => {

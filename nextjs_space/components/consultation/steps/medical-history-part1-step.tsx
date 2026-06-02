@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ConsultationFormData } from "../consultation-form";
+import type { ConsultationFormData } from "../consultation-form-types";
 
 interface MedicalHistoryPart1StepProps {
   data: ConsultationFormData;

@@ -8,13 +8,13 @@ import { NextRequest } from "next/server";
 // getTenantContext) runs REAL — these tests prove the wrapper actually binds the
 // resolved tenant around the whole handler, and that two concurrent wrapped
 // handlers never observe each other's tenant.
-vi.mock("@/lib/tenant", () => ({
+vi.mock("@/lib/tenant/tenant", () => ({
   getTenantFromRequest: vi.fn(),
 }));
 
-import { getTenantFromRequest } from "@/lib/tenant";
-import { getTenantContext, hasTenantContext } from "@/lib/tenant-context";
-import { withTenantContext } from "@/lib/with-tenant-context";
+import { getTenantFromRequest } from "@/lib/tenant/tenant";
+import { getTenantContext, hasTenantContext } from "@/lib/tenant/tenant-context";
+import { withTenantContext } from "@/lib/tenant/with-tenant-context";
 
 const mockedResolve = vi.mocked(getTenantFromRequest);
 const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));

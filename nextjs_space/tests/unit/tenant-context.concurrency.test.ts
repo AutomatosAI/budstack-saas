@@ -13,7 +13,7 @@ import {
   getTenantContext,
   runWithTenantContext,
   runWithTenantContextAsync,
-} from "@/lib/tenant-context";
+} from "@/lib/tenant/tenant-context";
 
 const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 

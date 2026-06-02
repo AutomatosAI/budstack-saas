@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-error";
 
 export const PATCH = withAuth(async (request, { user }) => {
   try {
@@ -44,9 +45,13 @@ export const PATCH = withAuth(async (request, { user }) => {
 
     if (!dbUser) {
       if (!user.email) {
-        return NextResponse.json(
-          { error: "User record not found and no email available" },
-          { status: 404 },
+        return apiError(
+          new Error("User record not found and no email available"),
+          {
+            route: "PATCH /api/user/profile",
+            status: 404,
+            safeMessage: "User record not found and no email available",
+          },
         );
       }
       // Create a minimal record so settings page works for Clerk-only users
@@ -89,9 +94,9 @@ export const PATCH = withAuth(async (request, { user }) => {
     });
   } catch (error) {
     console.error("Profile update error:", error);
-    return NextResponse.json(
-      { error: "Failed to update profile" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "PATCH /api/user/profile",
+      safeMessage: "Failed to update profile",
+    });
   }
 });

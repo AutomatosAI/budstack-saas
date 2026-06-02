@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { encrypt } from "@/lib/encryption";
+import { encrypt } from "@/lib/security/encryption";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -25,7 +25,11 @@ export const GET = withSuperAdmin(async (_req) => {
     });
 
     if (!config) {
-      return NextResponse.json({ error: "Config not found" }, { status: 404 });
+      return apiError(new Error("Config not found"), {
+        route: "GET /api/super-admin/settings",
+        status: 404,
+        safeMessage: "Config not found",
+      });
     }
 
     // Mask sensitive fields

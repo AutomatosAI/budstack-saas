@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
-import { approveSubmission } from "@/lib/marketplace-review-service";
+import { approveSubmission } from "@/lib/marketplace/marketplace-review-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";

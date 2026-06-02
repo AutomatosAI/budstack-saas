@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { prisma } from "@/lib/db";
-import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
+import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
 import {
   verifyDrGreenWebhookSignature,
   validateWebhookTimestamp,
   sanitizeForLogging,
-} from "@/lib/drgreen-webhook-verify";
-import { decrypt } from "@/lib/encryption";
+} from "@/lib/drgreen/drgreen-webhook-verify";
+import { decrypt } from "@/lib/security/encryption";
 
 // SECURITY (C14, M9): Cap payload size to prevent DoS from oversized POSTs
 // pre-routing. CoinRemitter webhooks are typically <2KB; 100KB is a generous
@@ -51,10 +52,11 @@ export async function POST(request: NextRequest) {
     // SECURITY (C14, M9): Reject oversized payloads before parse.
     if (rawBody.length > MAX_WEBHOOK_BODY_BYTES) {
       console.error("[Crypto Webhook] Payload too large:", rawBody.length);
-      return NextResponse.json(
-        { error: "Payload too large" },
-        { status: 413 },
-      );
+      return apiError(new Error("Payload too large"), {
+        route: "POST /api/webhooks/drgreen/crypto",
+        status: 413,
+        safeMessage: "Payload too large",
+      });
     }
 
     const body = JSON.parse(rawBody);
@@ -76,18 +78,18 @@ export async function POST(request: NextRequest) {
         console.error(
           `[Crypto Webhook] Replay protection rejected: ${tsCheck.reason}`,
         );
-        return NextResponse.json(
-          { error: `Webhook replay rejected: ${tsCheck.reason}` },
-          { status: 400 },
+        return apiValidationError(
+          `Webhook replay rejected: ${tsCheck.reason}`,
+          "POST /api/webhooks/drgreen/crypto",
         );
       }
     } else if (process.env.NODE_ENV === "production") {
       // No timestamp in prod — strict rejection. Captured-and-replayed
       // webhooks have no timestamp forgery defense without this.
       console.error("[Crypto Webhook] Missing timestamp in production payload");
-      return NextResponse.json(
-        { error: "Missing timestamp" },
-        { status: 400 },
+      return apiValidationError(
+        "Missing timestamp",
+        "POST /api/webhooks/drgreen/crypto",
       );
     }
 
@@ -107,9 +109,9 @@ export async function POST(request: NextRequest) {
       console.error(
         "[Crypto Webhook] Missing Dr. Green Order ID (custom_data2)",
       );
-      return NextResponse.json(
-        { error: "Missing order ID" },
-        { status: 400 },
+      return apiValidationError(
+        "Missing order ID",
+        "POST /api/webhooks/drgreen/crypto",
       );
     }
 
@@ -126,7 +128,11 @@ export async function POST(request: NextRequest) {
         console.error(
           "[Crypto Webhook] Platform-secret signature verification failed (pre-resolve)",
         );
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+        return apiError(new Error("Invalid signature"), {
+          route: "POST /api/webhooks/drgreen/crypto",
+          status: 401,
+          safeMessage: "Invalid signature",
+        });
       }
       verifiedByPlatformSecret = true;
     }
@@ -159,7 +165,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      return apiError(new Error("Order not found"), {
+        route: "POST /api/webhooks/drgreen/crypto",
+        status: 404,
+        safeMessage: "Order not found",
+      });
     }
 
     // Verify signature using tenant's secret
@@ -171,11 +181,19 @@ export async function POST(request: NextRequest) {
       });
       if (!verifyDrGreenWebhookSignature(rawBody, signature, secret)) {
         console.error("[Crypto Webhook] Signature verification failed");
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+        return apiError(new Error("Invalid signature"), {
+          route: "POST /api/webhooks/drgreen/crypto",
+          status: 401,
+          safeMessage: "Invalid signature",
+        });
       }
     } else if (process.env.NODE_ENV === 'production') {
       console.error("[Crypto Webhook] No drGreenSecretKey configured, rejecting");
-      return NextResponse.json({ error: "Webhook secret not configured" }, { status: 401 });
+      return apiError(new Error("Webhook secret not configured"), {
+        route: "POST /api/webhooks/drgreen/crypto",
+        status: 401,
+        safeMessage: "Webhook secret not configured",
+      });
     }
 
     // Map CoinRemitter status codes to payment status
@@ -301,9 +319,9 @@ export async function POST(request: NextRequest) {
       console.error("[Crypto Webhook] Failed to log error:", logError);
     }
 
-    return NextResponse.json(
-      { error: "Webhook processing failed" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/webhooks/drgreen/crypto",
+      safeMessage: "Webhook processing failed",
+    });
   }
 }

@@ -6,8 +6,8 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
-import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
-import { headerAlignClasses } from '@/lib/section-align';
+import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant/tenant-utils';
+import { headerAlignClasses } from '@/lib/templates/section-align';
 
 interface Category {
   title: string;

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Tenant } from "@/types/client";
 import { TenantSettings } from "@/lib/types";
-import { sanitizeCss } from "@/lib/css-utils";
+import { sanitizeCss } from "@/lib/security/css-utils";
 
 interface TenantThemeProviderProps {
   tenant?: Tenant;

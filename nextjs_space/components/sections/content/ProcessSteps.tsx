@@ -6,7 +6,7 @@ import { useInView } from 'react-intersection-observer';
 import { CheckCircle } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
 import { getIcon } from '@/lib/icon-registry';
-import { headerAlignClasses } from '@/lib/section-align';
+import { headerAlignClasses } from '@/lib/templates/section-align';
 
 interface Step {
   title: string;

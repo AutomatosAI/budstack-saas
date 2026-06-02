@@ -4,13 +4,13 @@ import { prisma } from "@/lib/db";
 import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { uploadDirectoryToS3 } from "@/lib/s3";
+import { uploadDirectoryToS3 } from "@/lib/storage/s3";
 import {
   downloadGitHubRepo,
   cleanupTempDir,
   type TemplateConfig,
-} from "@/lib/template-utils";
-import { apiError } from "@/lib/api-error";
+} from "@/lib/templates/template-utils";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export const POST = withSuperAdminParams(async (req, { user }, params) => {
@@ -22,19 +22,20 @@ export const POST = withSuperAdminParams(async (req, { user }, params) => {
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), {
+        route: "POST /api/super-admin/templates/[id]/update-from-github",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     const metadata = template.metadata as Record<string, any> | null;
     const githubUrl = metadata?.githubUrl;
 
     if (!githubUrl) {
-      return NextResponse.json(
-        { error: "No GitHub URL stored for this template. Re-upload to set one." },
-        { status: 400 },
+      return apiValidationError(
+        "No GitHub URL stored for this template. Re-upload to set one.",
+        "POST /api/super-admin/templates/[id]/update-from-github",
       );
     }
 

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { uploadFile, getFileUrl } from "@/lib/s3";
-import { validateUploadBuffer } from "@/lib/upload-validation";
-import { apiError } from "@/lib/api-error";
+import { uploadFile, getFileUrl } from "@/lib/storage/s3";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export const POST = withTenantAuthParams(
@@ -17,19 +17,20 @@ export const POST = withTenantAuthParams(
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), {
+        route: "POST /api/tenant-admin/templates/[id]/preview-image",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     const formData = await request.formData();
     const file = formData.get("previewImage") as File;
 
     if (!file || file.size === 0) {
-      return NextResponse.json(
-        { error: "No image file provided" },
-        { status: 400 },
+      return apiValidationError(
+        "No image file provided",
+        "POST /api/tenant-admin/templates/[id]/preview-image",
       );
     }
 
@@ -49,7 +50,10 @@ export const POST = withTenantAuthParams(
       { maxSize: 5 * 1024 * 1024 },
     );
     if (!validation.valid) {
-      return NextResponse.json({ error: validation.error }, { status: 400 });
+      return apiValidationError(
+        validation.error,
+        "POST /api/tenant-admin/templates/[id]/preview-image",
+      );
     }
 
     const fileName = `tenant-template-preview-${id}-${Date.now()}-${sanitizedName}`;

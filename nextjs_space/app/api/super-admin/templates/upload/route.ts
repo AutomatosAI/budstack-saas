@@ -7,15 +7,15 @@ import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { convertLovableTemplate } from "@/lib/lovable-converter";
 import { randomUUID } from "crypto";
-import { uploadDirectoryToS3 } from "@/lib/s3";
-import { apiError } from "@/lib/api-error";
+import { uploadDirectoryToS3 } from "@/lib/storage/s3";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 import {
   downloadGitHubRepo,
   generateSlug,
   cleanupTempDir,
   type TemplateConfig,
-} from "@/lib/template-utils";
+} from "@/lib/templates/template-utils";
 
 const uploadTemplateSchema = z
   .object({
@@ -38,9 +38,9 @@ export const POST = withSuperAdmin(async (req, { user }) => {
     try {
       extractPath = await downloadGitHubRepo(githubUrl, branch);
     } catch (dlError: any) {
-      return NextResponse.json(
-        { error: dlError.message },
-        { status: 400 },
+      return apiValidationError(
+        dlError.message,
+        "POST /api/super-admin/templates/upload",
       );
     }
 

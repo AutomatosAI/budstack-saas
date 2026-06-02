@@ -2,8 +2,8 @@
 
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
-import { fetchClient, fetchClientByEmail } from "@/lib/doctor-green-api";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
+import { fetchClient, fetchClientByEmail } from "@/lib/drgreen/doctor-green-api";
 import { logger } from "@/lib/logger";
 
 export type KycStatus = {

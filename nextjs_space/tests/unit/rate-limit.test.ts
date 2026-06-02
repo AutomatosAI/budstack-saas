@@ -39,7 +39,7 @@ vi.mock("ioredis", () => {
   return { default: MockRedis };
 });
 
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 let errorSpy: ReturnType<typeof vi.spyOn>;
 

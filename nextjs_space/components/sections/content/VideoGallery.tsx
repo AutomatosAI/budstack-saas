@@ -6,7 +6,7 @@ import { useInView } from 'react-intersection-observer';
 import { Play, X } from 'lucide-react';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
-import { headerAlignClasses } from '@/lib/section-align';
+import { headerAlignClasses } from '@/lib/templates/section-align';
 
 interface GalleryItem {
   type: 'video' | 'image';

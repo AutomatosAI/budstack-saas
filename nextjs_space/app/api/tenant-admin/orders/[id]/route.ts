@@ -52,7 +52,11 @@ export const GET = withTenantAuthParams(async (_request, { tenantId }, params) =
     });
 
     if (!order) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      return apiError(new Error("Order not found"), {
+        route: "GET /api/tenant-admin/orders/[id]",
+        status: 404,
+        safeMessage: "Order not found",
+      });
     }
 
     // Transform data to match expected format

@@ -11,27 +11,12 @@ import {
   Truck,
   CheckCircle2,
   XCircle,
-  Calendar,
   AlertCircle,
   Loader2,
   Download,
   ShoppingCart,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   SearchInput,
   StatusFilter,
@@ -49,53 +34,15 @@ import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { exportToCSV } from "@/lib/admin/csv-export";
 
-type OrderStatus = "all" | "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED";
-
-type DateRangePreset = "all" | "7days" | "30days" | "90days" | "custom";
-
-type OrderFilters = {
-  status: OrderStatus;
-  dateRange: DateRangePreset;
-  dateFrom: string;
-  dateTo: string;
-} & Record<string, string>;
-
-type BulkActionType = "mark-processing" | "mark-completed" | null;
-
-interface OrderItem {
-  id: string;
-  productName: string;
-  quantity: number;
-  price: number;
-}
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  status: string;
-  total: number;
-  subtotal: number;
-  shippingCost: number;
-  createdAt: string;
-  adminNotes?: string | null;
-  items: OrderItem[];
-  user: {
-    name: string | null;
-    email: string;
-  };
-}
-
-interface OrdersTableProps {
-  orders: Order[];
-  totalCount: number;
-  statusCounts: {
-    PENDING: number;
-    PROCESSING: number;
-    COMPLETED: number;
-    CANCELLED: number;
-  };
-  onViewOrder: (order: Order) => void;
-}
+import { OrdersDateRangeFilter } from "./orders-table-date-filter";
+import { OrdersBulkConfirmDialog } from "./orders-table-confirm-dialog";
+import type {
+  OrderStatus,
+  DateRangePreset,
+  OrderFilters,
+  BulkActionType,
+  OrdersTableProps,
+} from "./orders-table-types";
 
 export function OrdersTable({
   orders,
@@ -499,123 +446,18 @@ export function OrdersTable({
                   className="w-full xl:w-[160px]"
                 />
 
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className={cn(
-                        "bs-btn bs-btn-ghost",
-                        "w-full xl:w-[180px] justify-start text-left font-normal",
-                        dateRangeFilter !== "all" && "border-bs-green-soft/50",
-                      )}
-                    >
-                      <Calendar className="mr-2 h-4 w-4 text-bs-fg-muted" aria-hidden="true" />
-                      <span
-                        className={cn(
-                          dateRangeFilter === "all"
-                            ? "text-bs-fg-muted"
-                            : "text-bs-fg",
-                        )}
-                      >
-                        {getDateRangeLabel()}
-                      </span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-auto p-0 bs-card border border-bs-border rounded-bs-md shadow-bs-card-hover"
-                    align="start"
-                  >
-                    <div className="p-3 space-y-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleDateRangePreset("all")}
-                          className={cn(
-                            "bs-btn bs-btn-sm justify-start",
-                            dateRangeFilter === "all"
-                              ? "bs-btn-green"
-                              : "bs-btn-ghost",
-                          )}
-                        >
-                          All time
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDateRangePreset("7days")}
-                          className={cn(
-                            "bs-btn bs-btn-sm justify-start",
-                            dateRangeFilter === "7days"
-                              ? "bs-btn-green"
-                              : "bs-btn-ghost",
-                          )}
-                        >
-                          Last 7 days
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDateRangePreset("30days")}
-                          className={cn(
-                            "bs-btn bs-btn-sm justify-start",
-                            dateRangeFilter === "30days"
-                              ? "bs-btn-green"
-                              : "bs-btn-ghost",
-                          )}
-                        >
-                          Last 30 days
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDateRangePreset("90days")}
-                          className={cn(
-                            "bs-btn bs-btn-sm justify-start",
-                            dateRangeFilter === "90days"
-                              ? "bs-btn-green"
-                              : "bs-btn-ghost",
-                          )}
-                        >
-                          Last 90 days
-                        </button>
-                      </div>
-
-                      <div className="border-t border-bs-border-100 pt-3">
-                        <p className="bs-eyebrow mb-2">Custom Range</p>
-                        <div className="flex gap-2">
-                          <div className="flex-1">
-                            <CalendarComponent
-                              mode="single"
-                              selected={customDateFrom}
-                              onSelect={setCustomDateFrom}
-                              disabled={(date) =>
-                                date > new Date() ||
-                                (customDateTo ? date > customDateTo : false)
-                              }
-                              initialFocus
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <CalendarComponent
-                              mode="single"
-                              selected={customDateTo}
-                              onSelect={setCustomDateTo}
-                              disabled={(date) =>
-                                date > new Date() ||
-                                (customDateFrom ? date < customDateFrom : false)
-                              }
-                            />
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          className="bs-btn bs-btn-green bs-btn-sm w-full mt-2 disabled:opacity-50"
-                          onClick={handleCustomDateSelect}
-                          disabled={!customDateFrom || !customDateTo}
-                        >
-                          Apply Custom Range
-                        </button>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <OrdersDateRangeFilter
+                  open={calendarOpen}
+                  onOpenChange={setCalendarOpen}
+                  dateRangeFilter={dateRangeFilter}
+                  dateRangeLabel={getDateRangeLabel()}
+                  onPresetSelect={handleDateRangePreset}
+                  customDateFrom={customDateFrom}
+                  onCustomDateFromChange={setCustomDateFrom}
+                  customDateTo={customDateTo}
+                  onCustomDateToChange={setCustomDateTo}
+                  onApplyCustom={handleCustomDateSelect}
+                />
 
                 <ExportButton
                   onExport={handleExportAll}
@@ -845,90 +687,14 @@ export function OrdersTable({
         onClearSelection={clearSelection}
       />
 
-      <Dialog
-        open={confirmAction !== null}
-        onOpenChange={(open) => !open && setConfirmAction(null)}
-      >
-        <DialogContent className="bs-dialog-content sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle
-              className="flex items-center gap-2 text-[22px] text-bs-fg"
-              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
-            >
-              {confirmAction === "mark-processing" ? (
-                <>
-                  <Truck className="h-5 w-5 text-bs-fg-muted" aria-hidden="true" />
-                  <span>Mark as Processing</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-5 w-5 text-bs-fg-muted" aria-hidden="true" />
-                  <span>Mark as Completed</span>
-                </>
-              )}
-            </DialogTitle>
-            <DialogDescription className="pt-2 text-bs-fg-muted">
-              {confirmAction === "mark-processing" ? (
-                <span>
-                  Update <strong className="text-bs-fg">{selectedIds.size}</strong> order
-                  {selectedIds.size === 1 ? "" : "s"} to Processing?
-                </span>
-              ) : (
-                <span>
-                  Update <strong className="text-bs-fg">{selectedIds.size}</strong> order
-                  {selectedIds.size === 1 ? "" : "s"} to Completed?
-                </span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedOrderNumbers.length > 0 && (
-            <div className="py-2">
-              <p className="bs-eyebrow mb-2">Affected orders</p>
-              <div className="flex flex-wrap gap-1.5">
-                {selectedOrderNumbers.map((orderNum) => (
-                  <RowPill key={orderNum} tone="slate">
-                    {orderNum}
-                  </RowPill>
-                ))}
-                {selectedIds.size > 5 && (
-                  <RowPill tone="slate">
-                    +{selectedIds.size - 5} more
-                  </RowPill>
-                )}
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <button
-              type="button"
-              onClick={() => setConfirmAction(null)}
-              disabled={isProcessing}
-              className="bs-btn bs-btn-ghost disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmAction}
-              disabled={isProcessing}
-              className="bs-btn bs-btn-green disabled:opacity-50"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
-                  Processing...
-                </>
-              ) : confirmAction === "mark-processing" ? (
-                "Mark Processing"
-              ) : (
-                "Mark Completed"
-              )}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <OrdersBulkConfirmDialog
+        confirmAction={confirmAction}
+        selectedCount={selectedIds.size}
+        selectedOrderNumbers={selectedOrderNumbers}
+        isProcessing={isProcessing}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleConfirmAction}
+      />
     </>
   );
 }

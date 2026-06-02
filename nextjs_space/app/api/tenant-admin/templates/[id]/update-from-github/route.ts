@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { updateFromGitHub } from "@/lib/tenant-template-upload-service";
+import { updateFromGitHub } from "@/lib/tenant/tenant-template-upload-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 
 export const POST = withTenantAuthParams(
@@ -17,17 +17,11 @@ export const POST = withTenantAuthParams(
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), { route: "POST /api/tenant-admin/templates/[id]/update-from-github", status: 404, safeMessage: "Template not found" });
     }
 
     if (template.source !== "custom") {
-      return NextResponse.json(
-        { error: "Only custom templates can be updated from GitHub" },
-        { status: 400 },
-      );
+      return apiValidationError("Only custom templates can be updated from GitHub", "POST /api/tenant-admin/templates/[id]/update-from-github");
     }
 
     const updated = await updateFromGitHub(id);

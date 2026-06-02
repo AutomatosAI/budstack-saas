@@ -5,6 +5,8 @@
     "react/no-unescaped-entities": "warn",
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-unused-vars": "off",
+    "max-lines": ["error", 800],
+    "import/no-cycle": "error",
     "no-restricted-imports": [
       "error",
       {
@@ -15,6 +17,7 @@
           }
         ]
       }
-    ]
+    ],
+    "no-console": ["warn", { "allow": ["warn", "error"] }]
   }
 }

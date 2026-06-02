@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { withdrawSubmission } from "@/lib/marketplace-submission-service";
+import { withdrawSubmission } from "@/lib/marketplace/marketplace-submission-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
@@ -21,10 +21,7 @@ export const POST = withTenantAuthParams(
     });
 
     if (!submission) {
-      return NextResponse.json(
-        { error: "No active submission found for this template" },
-        { status: 404 },
-      );
+      return apiError(new Error("No active submission found for this template"), { route: "POST /api/tenant-admin/templates/[id]/withdraw-submission", status: 404, safeMessage: "No active submission found for this template" });
     }
 
     await withdrawSubmission(submission.id, tenantId);

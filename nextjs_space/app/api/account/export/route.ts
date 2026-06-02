@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { exportUser } from "@/lib/gdpr/erasure";
@@ -21,12 +21,20 @@ export const GET = withAuth(async (request, { user }) => {
     const email = user.email;
 
     if (!email) {
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+      return apiError(new Error("Email not found"), {
+        route: "GET /api/account/export",
+        status: 401,
+        safeMessage: "Email not found",
+      });
     }
 
     const clerkUser = await currentUser();
     if (!clerkUser) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), {
+        route: "GET /api/account/export",
+        status: 401,
+        safeMessage: "Unauthorized",
+      });
     }
 
     // 3 exports per hour per user — generous for legitimate use, restrictive
@@ -46,7 +54,11 @@ export const GET = withAuth(async (request, { user }) => {
     });
 
     if (!exported) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError(new Error("User not found"), {
+        route: "GET /api/account/export",
+        status: 404,
+        safeMessage: "User not found",
+      });
     }
 
     return NextResponse.json(exported);

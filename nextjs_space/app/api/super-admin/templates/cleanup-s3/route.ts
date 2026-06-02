@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withSuperAdmin } from "@/lib/api-auth";
-import { deleteS3Directory } from "@/lib/s3";
-import { apiError } from "@/lib/api-error";
+import { deleteS3Directory } from "@/lib/storage/s3";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
 import { requireConfirmation } from "@/lib/security/require-confirmation";
 
@@ -25,9 +25,9 @@ export const DELETE = withSuperAdmin(async (req, { user }) => {
     const prefix = req.nextUrl.searchParams.get("prefix");
     const slug = prefix?.match(/^templates\/([a-zA-Z0-9._-]+)\/?$/)?.[1];
     if (!slug || slug.includes("..")) {
-      return NextResponse.json(
-        { error: "Required: ?prefix=templates/{slug}/ with a single non-empty slug segment" },
-        { status: 400 },
+      return apiValidationError(
+        "Required: ?prefix=templates/{slug}/ with a single non-empty slug segment",
+        "DELETE /api/super-admin/templates/cleanup-s3",
       );
     }
 

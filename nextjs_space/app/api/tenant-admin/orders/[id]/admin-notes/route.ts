@@ -31,10 +31,11 @@ export const PATCH = withTenantAuthParams(async (req, { tenantId }, params) => {
     });
 
     if (!order) {
-      return NextResponse.json(
-        { error: "Order not found or access denied" },
-        { status: 404 },
-      );
+      return apiError(new Error("Order not found or access denied"), {
+        route: "PATCH /api/tenant-admin/orders/[id]/admin-notes",
+        status: 404,
+        safeMessage: "Order not found or access denied",
+      });
     }
 
     // Update admin notes

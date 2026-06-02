@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getCurrentTenant } from "@/lib/tenant";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
-import { addToCart } from "@/lib/drgreen-cart";
-import { apiError } from "@/lib/api-error";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
+import { addToCart } from "@/lib/drgreen/drgreen-cart";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -23,7 +23,11 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
 
     const email = user.email;
     if (!email) {
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+      return apiError(new Error("Email not found"), {
+        route: "POST /api/store/[slug]/cart/add",
+        status: 401,
+        safeMessage: "Email not found",
+      });
     }
 
     const dbUser = await prisma.users.findUnique({
@@ -31,7 +35,11 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
     });
 
     if (!dbUser) {
-      return NextResponse.json({ error: "User not found in database" }, { status: 404 });
+      return apiError(new Error("User not found in database"), {
+        route: "POST /api/store/[slug]/cart/add",
+        status: 404,
+        safeMessage: "User not found in database",
+      });
     }
 
     const { strainId, quantity, size } = await parseJsonBody(
@@ -43,7 +51,11 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
     const tenant = await getCurrentTenant();
 
     if (!tenant) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      return apiError(new Error("Store not found"), {
+        route: "POST /api/store/[slug]/cart/add",
+        status: 404,
+        safeMessage: "Store not found",
+      });
     }
 
     // Get Dr. Green credentials
@@ -65,12 +77,9 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
   } catch (error) {
     // Pass through known-safe user-facing message.
     if (error instanceof Error && error.message.includes("consultation")) {
-      return NextResponse.json(
-        {
-          error:
-            "Please complete your medical consultation before adding items to cart",
-        },
-        { status: 400 },
+      return apiValidationError(
+        "Please complete your medical consultation before adding items to cart",
+        "POST /api/store/[slug]/cart/add",
       );
     }
 

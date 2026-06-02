@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
-import { createS3Client, getBucketConfig } from "@/lib/aws-config";
+import { createS3Client, getBucketConfig } from "@/lib/storage/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { generateSlug } from "@/lib/template-utils";
-import { apiError } from "@/lib/api-error";
+import { generateSlug } from "@/lib/templates/template-utils";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import {
   getOrCreateCustomBase,
   BLANK_LAYOUT,
@@ -14,7 +14,7 @@ import {
   BLANK_NAVIGATION,
   BLANK_FOOTER,
   BLANK_STYLES_CSS,
-} from "@/lib/blank-template-defaults";
+} from "@/lib/templates/blank-template-defaults";
 import crypto from "crypto";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/validation/body";
@@ -31,9 +31,9 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     const { templateName } = await parseJsonBody(request, createBlankSchema);
 
     if (!templateName.trim()) {
-      return NextResponse.json(
-        { error: "Template name is required" },
-        { status: 400 },
+      return apiValidationError(
+        "Template name is required",
+        "POST /api/tenant-admin/templates/create-blank",
       );
     }
 
@@ -48,9 +48,15 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     });
 
     if (existing) {
-      return NextResponse.json(
-        { error: `You already have a template named "${trimmedName}". Please use a different name.` },
-        { status: 409 },
+      return apiError(
+        new Error(
+          `You already have a template named "${trimmedName}". Please use a different name.`,
+        ),
+        {
+          route: "POST /api/tenant-admin/templates/create-blank",
+          status: 409,
+          safeMessage: `You already have a template named "${trimmedName}". Please use a different name.`,
+        },
       );
     }
 
