@@ -440,6 +440,9 @@ model tenants {
   businessState          String?
   businessPostalCode     String?
   businessCountry        String?
+  dpaAcceptedVersion     String? // PRD-213: GDPR Art.28 DPA click-through acceptance
+  dpaAcceptedAt          DateTime? // PRD-213
+  dpaAcceptedByUserId    String? // PRD-213
   templateId             String?
   activeTenantTemplateId String?                   @unique
   drGreenApiUrl          String?
