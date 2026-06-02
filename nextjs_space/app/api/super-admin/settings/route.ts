@@ -25,7 +25,11 @@ export const GET = withSuperAdmin(async (_req) => {
     });
 
     if (!config) {
-      return NextResponse.json({ error: "Config not found" }, { status: 404 });
+      return apiError(new Error("Config not found"), {
+        route: "GET /api/super-admin/settings",
+        status: 404,
+        safeMessage: "Config not found",
+      });
     }
 
     // Mask sensitive fields

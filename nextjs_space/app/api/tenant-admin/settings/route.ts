@@ -5,7 +5,7 @@ import { encrypt } from '@/lib/security/encryption';
 import { AUDIT_ACTIONS, createAuditLog, getClientInfo } from '@/lib/audit-log';
 import { generateDrGreenSignature } from '@/lib/drgreen/drgreen-api-client';
 import { z } from 'zod';
-import { apiError } from '@/lib/api-error';
+import { apiError, apiValidationError } from '@/lib/api-error';
 import { parseJsonBody } from '@/lib/validation/body';
 
 const settingsUpdateSchema = z.object({
@@ -44,7 +44,11 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "POST /api/tenant-admin/settings",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     const body = await parseJsonBody(req, settingsUpdateSchema);
@@ -104,11 +108,9 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       try {
         generateDrGreenSignature("validation_test", normalizedSecret);
       } catch {
-        return NextResponse.json(
-          {
-            error: "Secret key format invalid — could not produce a signature. Please re-paste the Dr Green secret key, ensuring nothing is truncated and no extra characters snuck in.",
-          },
-          { status: 400 },
+        return apiValidationError(
+          "Secret key format invalid — could not produce a signature. Please re-paste the Dr Green secret key, ensuring nothing is truncated and no extra characters snuck in.",
+          "POST /api/tenant-admin/settings",
         );
       }
       console.log("Encrypting new secret key...");

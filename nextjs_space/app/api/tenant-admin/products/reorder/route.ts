@@ -45,10 +45,11 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     });
 
     if (existingProducts.length !== productIds.length) {
-      return NextResponse.json(
-        { error: "Some products not found or unauthorized" },
-        { status: 403 },
-      );
+      return apiError(new Error("Some products not found or unauthorized"), {
+        route: "POST /api/tenant-admin/products/reorder",
+        status: 403,
+        safeMessage: "Some products not found or unauthorized",
+      });
     }
 
     // Update display order in a single transaction (atomic, reduces round trips)

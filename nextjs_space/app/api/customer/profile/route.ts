@@ -3,7 +3,7 @@ import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/validation/body";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 
 /**
  * Validated, length-capped shape for the customer profile PATCH body
@@ -40,7 +40,7 @@ const profileUpdateSchema = z
 export const GET = withAuth(async (_req, { user }) => {
   const email = user.email;
   if (!email) {
-    return NextResponse.json({ error: "Email required" }, { status: 400 });
+    return apiValidationError("Email required", "GET /api/customer/profile");
   }
 
   const profile = await prisma.users.findFirst({
@@ -65,7 +65,11 @@ export const GET = withAuth(async (_req, { user }) => {
   });
 
   if (!profile) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+    return apiError(new Error("User not found"), {
+      route: "GET /api/customer/profile",
+      status: 404,
+      safeMessage: "User not found",
+    });
   }
 
   return NextResponse.json({ profile });
@@ -90,7 +94,11 @@ export const PATCH = withAuth(async (req, { user }) => {
     });
 
     if (!existingUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError(new Error("User not found"), {
+        route: "PATCH /api/customer/profile",
+        status: 404,
+        safeMessage: "User not found",
+      });
     }
 
     const updatedUser = await prisma.users.update({

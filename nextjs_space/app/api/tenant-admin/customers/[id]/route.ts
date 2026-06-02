@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { fetchClientByEmail, updateClient } from "@/lib/drgreen/doctor-green-api";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -47,11 +47,19 @@ export const GET = withAuth(async (_request, { user }, params) => {
     const role = user.role;
 
     if (!email) {
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+      return apiError(new Error("Email not found"), {
+        route: "GET /api/tenant-admin/customers/[id]",
+        status: 401,
+        safeMessage: "Email not found",
+      });
     }
 
     if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), {
+        route: "GET /api/tenant-admin/customers/[id]",
+        status: 401,
+        safeMessage: "Unauthorized",
+      });
     }
 
     const id = parseUuid(params.id);
@@ -62,7 +70,11 @@ export const GET = withAuth(async (_request, { user }, params) => {
     });
 
     if (!localUser && role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError(new Error("User not found"), {
+        route: "GET /api/tenant-admin/customers/[id]",
+        status: 404,
+        safeMessage: "User not found",
+      });
     }
 
     // Get customer
@@ -103,10 +115,11 @@ export const GET = withAuth(async (_request, { user }, params) => {
     });
 
     if (!customer) {
-      return NextResponse.json(
-        { error: "Customer not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Customer not found"), {
+        route: "GET /api/tenant-admin/customers/[id]",
+        status: 404,
+        safeMessage: "Customer not found",
+      });
     }
 
     // Verify tenant access for tenant admins
@@ -114,7 +127,11 @@ export const GET = withAuth(async (_request, { user }, params) => {
       role === "TENANT_ADMIN" &&
       customer.tenantId !== localUser?.tenantId
     ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return apiError(new Error("Unauthorized"), {
+        route: "GET /api/tenant-admin/customers/[id]",
+        status: 403,
+        safeMessage: "Unauthorized",
+      });
     }
 
     // Get medical history (consultation questionnaires)
@@ -157,11 +174,19 @@ export const PATCH = withAuth(async (request, { user }, params) => {
     const role = user.role;
 
     if (!email) {
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+      return apiError(new Error("Email not found"), {
+        route: "PATCH /api/tenant-admin/customers/[id]",
+        status: 401,
+        safeMessage: "Email not found",
+      });
     }
 
     if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), {
+        route: "PATCH /api/tenant-admin/customers/[id]",
+        status: 401,
+        safeMessage: "Unauthorized",
+      });
     }
 
     const id = parseUuid(params.id);
@@ -173,7 +198,11 @@ export const PATCH = withAuth(async (request, { user }, params) => {
     });
 
     if (!localUser && role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError(new Error("User not found"), {
+        route: "PATCH /api/tenant-admin/customers/[id]",
+        status: 404,
+        safeMessage: "User not found",
+      });
     }
 
     const body = await parseJsonBody(request, customerUpdateSchema);
@@ -186,10 +215,11 @@ export const PATCH = withAuth(async (request, { user }, params) => {
     });
 
     if (!existingCustomer) {
-      return NextResponse.json(
-        { error: "Customer not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Customer not found"), {
+        route: "PATCH /api/tenant-admin/customers/[id]",
+        status: 404,
+        safeMessage: "Customer not found",
+      });
     }
 
     // Verify tenant access for tenant admins
@@ -197,7 +227,11 @@ export const PATCH = withAuth(async (request, { user }, params) => {
       role === "TENANT_ADMIN" &&
       existingCustomer.tenantId !== localUser?.tenantId
     ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return apiError(new Error("Unauthorized"), {
+        route: "PATCH /api/tenant-admin/customers/[id]",
+        status: 403,
+        safeMessage: "Unauthorized",
+      });
     }
 
     // Handle email change
@@ -211,7 +245,10 @@ export const PATCH = withAuth(async (request, { user }, params) => {
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(normalizedNewEmail)) {
-        return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+        return apiValidationError(
+          "Invalid email format",
+          "PATCH /api/tenant-admin/customers/[id]",
+        );
       }
 
       // Check email not already in use in local DB
@@ -219,10 +256,11 @@ export const PATCH = withAuth(async (request, { user }, params) => {
         where: { email: { equals: normalizedNewEmail, mode: 'insensitive' } },
       });
       if (existingWithEmail) {
-        return NextResponse.json(
-          { error: "Email already in use by another account" },
-          { status: 409 },
-        );
+        return apiError(new Error("Email already in use by another account"), {
+          route: "PATCH /api/tenant-admin/customers/[id]",
+          status: 409,
+          safeMessage: "Email already in use by another account",
+        });
       }
 
       // Sync email change to Clerk
@@ -421,11 +459,19 @@ export const DELETE = withAuth(async (request, { user }, params) => {
     const role = user.role;
 
     if (!email) {
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+      return apiError(new Error("Email not found"), {
+        route: "DELETE /api/tenant-admin/customers/[id]",
+        status: 401,
+        safeMessage: "Email not found",
+      });
     }
 
     if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(role)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), {
+        route: "DELETE /api/tenant-admin/customers/[id]",
+        status: 401,
+        safeMessage: "Unauthorized",
+      });
     }
 
     const id = parseUuid(params.id);
@@ -436,7 +482,11 @@ export const DELETE = withAuth(async (request, { user }, params) => {
     });
 
     if (!localUser && role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError(new Error("User not found"), {
+        route: "DELETE /api/tenant-admin/customers/[id]",
+        status: 404,
+        safeMessage: "User not found",
+      });
     }
 
     // Get existing customer
@@ -446,10 +496,11 @@ export const DELETE = withAuth(async (request, { user }, params) => {
     });
 
     if (!existingCustomer) {
-      return NextResponse.json(
-        { error: "Customer not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Customer not found"), {
+        route: "DELETE /api/tenant-admin/customers/[id]",
+        status: 404,
+        safeMessage: "Customer not found",
+      });
     }
 
     // Verify tenant access for tenant admins
@@ -457,7 +508,11 @@ export const DELETE = withAuth(async (request, { user }, params) => {
       role === "TENANT_ADMIN" &&
       existingCustomer.tenantId !== localUser?.tenantId
     ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return apiError(new Error("Unauthorized"), {
+        route: "DELETE /api/tenant-admin/customers/[id]",
+        status: 403,
+        safeMessage: "Unauthorized",
+      });
     }
 
     // GDPR Deletion: Anonymize PII (keeping record for order history integrity)

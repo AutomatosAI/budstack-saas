@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { uploadFile } from "@/lib/storage/s3";
 import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 import { z } from "zod";
 
@@ -76,9 +76,9 @@ export const POST = withSuperAdmin(async (req) => {
   const sortOrder = parseInt(formData.get("sortOrder") as string) || 0;
 
   if (!title || !category) {
-    return NextResponse.json(
-      { error: "Title and category are required" },
-      { status: 400 },
+    return apiValidationError(
+      "Title and category are required",
+      "POST /api/super-admin/learning",
     );
   }
 
@@ -101,9 +101,9 @@ export const POST = withSuperAdmin(async (req) => {
       cleanName,
     );
     if (!validation.valid) {
-      return NextResponse.json(
-        { error: `Cover image: ${validation.error}` },
-        { status: 400 },
+      return apiValidationError(
+        `Cover image: ${validation.error}`,
+        "POST /api/super-admin/learning",
       );
     }
     coverImageKey = await uploadFile(
@@ -126,9 +126,9 @@ export const POST = withSuperAdmin(async (req) => {
       { allowDocuments: true },
     );
     if (!validation.valid) {
-      return NextResponse.json(
-        { error: `Document: ${validation.error}` },
-        { status: 400 },
+      return apiValidationError(
+        `Document: ${validation.error}`,
+        "POST /api/super-admin/learning",
       );
     }
     docKey = await uploadFile(
@@ -178,14 +178,18 @@ export const PUT = withSuperAdmin(async (req) => {
   const id = formData.get("id") as string;
 
   if (!id) {
-    return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    return apiValidationError("ID is required", "PUT /api/super-admin/learning");
   }
 
   const existing = await prisma.learning_resources.findUnique({
     where: { id },
   });
   if (!existing) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return apiError(new Error("Not found"), {
+      route: "PUT /api/super-admin/learning",
+      status: 404,
+      safeMessage: "Not found",
+    });
   }
 
   const title = clip(formData.get("title") as string | null, LEARN_TITLE_MAX);
@@ -230,9 +234,9 @@ export const PUT = withSuperAdmin(async (req) => {
       cleanName,
     );
     if (!validation.valid) {
-      return NextResponse.json(
-        { error: `Cover image: ${validation.error}` },
-        { status: 400 },
+      return apiValidationError(
+        `Cover image: ${validation.error}`,
+        "PUT /api/super-admin/learning",
       );
     }
     coverImageKey = await uploadFile(
@@ -255,9 +259,9 @@ export const PUT = withSuperAdmin(async (req) => {
       { allowDocuments: true },
     );
     if (!validation.valid) {
-      return NextResponse.json(
-        { error: `Document: ${validation.error}` },
-        { status: 400 },
+      return apiValidationError(
+        `Document: ${validation.error}`,
+        "PUT /api/super-admin/learning",
       );
     }
     docKey = await uploadFile(

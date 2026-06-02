@@ -4,19 +4,27 @@ import { createClient } from '@/lib/drgreen/doctor-green-api';
 import { prisma } from '@/lib/db';
 import { getCurrentTenant } from '@/lib/tenant/tenant';
 import { getTenantDrGreenConfig } from '@/lib/tenant/tenant-config';
-import { apiError } from '@/lib/api-error';
+import { apiError, apiValidationError } from '@/lib/api-error';
 
 export const POST = withAuth(async (req, { user }) => {
   try {
     const email = user.email;
     if (!email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), {
+        route: "POST /api/shop/register",
+        status: 401,
+        safeMessage: "Unauthorized",
+      });
     }
 
     // Find linked DB user
     const dbUser = await prisma.users.findFirst({ where: { email } });
     if (!dbUser) {
-      return NextResponse.json({ error: "User record not found" }, { status: 404 });
+      return apiError(new Error("User record not found"), {
+        route: "POST /api/shop/register",
+        status: 404,
+        safeMessage: "User record not found",
+      });
     }
 
     const body = await req.json();
@@ -24,10 +32,7 @@ export const POST = withAuth(async (req, { user }) => {
 
     // Validate required fields
     if (!personal || !address || !medicalRecord) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 },
-      );
+      return apiValidationError("Missing required fields", "POST /api/shop/register");
     }
 
     // Get current tenant for Dr. Green API keys
@@ -72,10 +77,7 @@ export const POST = withAuth(async (req, { user }) => {
     let contactNumber = "";
 
     if (!rawPhone.trim()) {
-      return NextResponse.json(
-        { error: "Phone number is required" },
-        { status: 400 }
-      );
+      return apiValidationError("Phone number is required", "POST /api/shop/register");
     }
 
     // Strip all non-digit characters except leading +
@@ -85,9 +87,9 @@ export const POST = withAuth(async (req, { user }) => {
       // E.164 format validation and parsing
       const e164Match = cleanPhone.match(/^\+(\d{1,4})(\d{4,})$/);
       if (!e164Match) {
-        return NextResponse.json(
-          { error: "Invalid international phone number format. Expected format: +[country code][number]" },
-          { status: 400 }
+        return apiValidationError(
+          "Invalid international phone number format. Expected format: +[country code][number]",
+          "POST /api/shop/register",
         );
       }
       phoneCode = `+${e164Match[1]}`;
@@ -96,9 +98,9 @@ export const POST = withAuth(async (req, { user }) => {
       // No + prefix - use tenant's country code
       const tenantDialCode = countryToDialCode[tenant?.countryCode || ''];
       if (!tenantDialCode) {
-        return NextResponse.json(
-          { error: `Cannot determine dial code for tenant country: ${tenant?.countryCode}. Please provide phone number with country code (e.g., +27...)` },
-          { status: 400 }
+        return apiValidationError(
+          `Cannot determine dial code for tenant country: ${tenant?.countryCode}. Please provide phone number with country code (e.g., +27...)`,
+          "POST /api/shop/register",
         );
       }
       phoneCode = tenantDialCode;
@@ -106,10 +108,7 @@ export const POST = withAuth(async (req, { user }) => {
       contactNumber = cleanPhone.replace(/^0+/, '');
 
       if (contactNumber.length < 4) {
-        return NextResponse.json(
-          { error: "Phone number is too short" },
-          { status: 400 }
-        );
+        return apiValidationError("Phone number is too short", "POST /api/shop/register");
       }
     }
 

@@ -9,6 +9,7 @@ import {
   type DrGreenWebhookPayload,
 } from "@/lib/drgreen/drgreen-webhook-verify";
 import { dispatchEvent } from "@/lib/drgreen/status-event-handlers";
+import { apiError, apiValidationError } from "@/lib/api-error";
 
 // SECURITY (C14, M9): Cap payload size to prevent DoS from oversized POSTs.
 const MAX_WEBHOOK_BODY_BYTES = 100_000;
@@ -25,7 +26,11 @@ export async function POST(request: NextRequest) {
   // SECURITY (C14, M9): Reject oversized payloads before parse.
   if (rawBody.length > MAX_WEBHOOK_BODY_BYTES) {
     console.error("[DrGreen Status] Payload too large:", rawBody.length);
-    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+    return apiError(new Error("Payload too large"), {
+      route: "POST /api/webhooks/drgreen/status",
+      status: 413,
+      safeMessage: "Payload too large",
+    });
   }
 
   let payload: DrGreenWebhookPayload;
@@ -33,23 +38,23 @@ export async function POST(request: NextRequest) {
   try {
     payload = JSON.parse(rawBody);
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return apiValidationError("Invalid JSON", "POST /api/webhooks/drgreen/status");
   }
 
   // Validate payload structure
   if (!validateWebhookPayload(payload)) {
-    return NextResponse.json(
-      { error: "Invalid payload structure" },
-      { status: 400 },
+    return apiValidationError(
+      "Invalid payload structure",
+      "POST /api/webhooks/drgreen/status",
     );
   }
 
   // Validate timestamp (anti-replay)
   const tsResult = validateWebhookTimestamp(payload.timestamp);
   if (!tsResult.valid) {
-    return NextResponse.json(
-      { error: tsResult.reason },
-      { status: 400 },
+    return apiValidationError(
+      tsResult.reason ?? "Invalid timestamp",
+      "POST /api/webhooks/drgreen/status",
     );
   }
 
@@ -73,7 +78,11 @@ export async function POST(request: NextRequest) {
       console.error(
         "[DrGreen Status] Platform-secret signature verification failed (pre-resolve)",
       );
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      return apiError(new Error("Invalid signature"), {
+        route: "POST /api/webhooks/drgreen/status",
+        status: 401,
+        safeMessage: "Invalid signature",
+      });
     }
     verifiedByPlatformSecret = true;
   }
@@ -90,7 +99,11 @@ export async function POST(request: NextRequest) {
     if (!resolved) {
       console.error("[DrGreen Status] Could not resolve tenant for event:", event);
       await logWebhook("unknown", event, payload, false, "Tenant not found");
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "POST /api/webhooks/drgreen/status",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     // --- Signature Verification (per-tenant secret) ---
@@ -105,14 +118,22 @@ export async function POST(request: NextRequest) {
       if (!verifyDrGreenWebhookSignature(rawBody, signature, secret)) {
         console.error("[DrGreen Status] Signature verification failed");
         await logWebhook(resolved.tenantId, event, payload, false, "Invalid signature");
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+        return apiError(new Error("Invalid signature"), {
+          route: "POST /api/webhooks/drgreen/status",
+          status: 401,
+          safeMessage: "Invalid signature",
+        });
       }
     } else {
       // No secret configured — reject in production, allow in dev
       if (process.env.NODE_ENV === 'production') {
         console.error("[DrGreen Status] No drGreenSecretKey configured for tenant, rejecting webhook");
         await logWebhook(resolved.tenantId, event, payload, false, "No webhook secret configured");
-        return NextResponse.json({ error: "Webhook secret not configured" }, { status: 401 });
+        return apiError(new Error("Webhook secret not configured"), {
+          route: "POST /api/webhooks/drgreen/status",
+          status: 401,
+          safeMessage: "Webhook secret not configured",
+        });
       }
       console.warn("[DrGreen Status] No drGreenSecretKey configured for tenant, skipping signature check (dev mode)");
     }
@@ -143,10 +164,10 @@ export async function POST(request: NextRequest) {
       console.error("[DrGreen Status] Failed to log error:", logErr);
     }
 
-    return NextResponse.json(
-      { error: "Webhook processing failed" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/webhooks/drgreen/status",
+      safeMessage: "Webhook processing failed",
+    });
   }
 }
 

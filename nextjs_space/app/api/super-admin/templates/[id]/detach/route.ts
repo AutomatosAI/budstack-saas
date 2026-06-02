@@ -43,7 +43,11 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
     });
 
     if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+      return apiError(new Error("Template not found"), {
+        route: "POST /api/super-admin/templates/[id]/detach",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     const report: any = {

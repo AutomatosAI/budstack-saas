@@ -3,6 +3,7 @@ import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { subDays, startOfDay, format, eachDayOfInterval } from "date-fns";
 import { checkRateLimit } from "@/lib/security/rate-limit";
+import { apiError } from "@/lib/api-error";
 
 export const GET = withTenantAuth(async (req, { user, tenantId }) => {
   try {
@@ -199,9 +200,9 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
     });
   } catch (error) {
     console.error("Error fetching analytics:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch analytics" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/tenant-admin/analytics",
+      safeMessage: "Failed to fetch analytics",
+    });
   }
 });

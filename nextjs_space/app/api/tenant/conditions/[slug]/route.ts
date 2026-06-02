@@ -21,7 +21,11 @@ export async function GET(
     }
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/tenant/conditions/[slug]",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     // First, try to find condition for the current tenant
@@ -55,10 +59,11 @@ export async function GET(
     }
 
     if (!condition) {
-      return NextResponse.json(
-        { error: "Condition not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Condition not found"), {
+        route: "GET /api/tenant/conditions/[slug]",
+        status: 404,
+        safeMessage: "Condition not found",
+      });
     }
 
     return NextResponse.json(condition);

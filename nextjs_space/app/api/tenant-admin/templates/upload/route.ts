@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { uploadFromGitHub } from "@/lib/tenant/tenant-template-upload-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -18,18 +18,12 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     const { templateName, githubUrl } = await parseJsonBody(request, uploadSchema);
 
     if (!templateName.trim()) {
-      return NextResponse.json(
-        { error: "Template name is required" },
-        { status: 400 },
-      );
+      return apiValidationError("Template name is required", "POST /api/tenant-admin/templates/upload");
     }
 
     const githubPattern = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(\.git)?$/;
     if (!githubPattern.test(githubUrl.replace(/\.git$/, ""))) {
-      return NextResponse.json(
-        { error: "Invalid GitHub URL format. Expected: https://github.com/username/repo" },
-        { status: 400 },
-      );
+      return apiValidationError("Invalid GitHub URL format. Expected: https://github.com/username/repo", "POST /api/tenant-admin/templates/upload");
     }
 
     const tenantTemplate = await uploadFromGitHub(tenantId, templateName, githubUrl);

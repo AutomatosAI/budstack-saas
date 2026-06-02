@@ -25,10 +25,7 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
     });
 
     if (!original) {
-      return NextResponse.json(
-        { error: "Original template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Original template not found"), { route: "POST /api/tenant-admin/email-templates/clone", status: 404, safeMessage: "Original template not found" });
     }
 
     // 2. Create Clone (Tenant Specific)

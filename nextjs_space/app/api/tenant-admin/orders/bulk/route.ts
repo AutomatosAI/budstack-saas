@@ -47,10 +47,11 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     });
 
     if (ordersToUpdate.length === 0) {
-      return NextResponse.json(
-        { error: "No valid orders found." },
-        { status: 404 },
-      );
+      return apiError(new Error("No valid orders found."), {
+        route: "POST /api/tenant-admin/orders/bulk",
+        status: 404,
+        safeMessage: "No valid orders found.",
+      });
     }
 
     // Determine new status

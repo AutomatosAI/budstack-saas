@@ -3,7 +3,7 @@ import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { promises as dns } from "dns";
 import { isApexDomain } from "@/lib/domain-utils";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 
 type VerificationStatus = "verified" | "pending" | "misconfigured";
@@ -29,13 +29,17 @@ export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/super-admin/tenants/[id]/verify-domain",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     if (!tenant.customDomain) {
-      return NextResponse.json(
-        { error: "No custom domain configured for this tenant" },
-        { status: 400 },
+      return apiValidationError(
+        "No custom domain configured for this tenant",
+        "GET /api/super-admin/tenants/[id]/verify-domain",
       );
     }
 

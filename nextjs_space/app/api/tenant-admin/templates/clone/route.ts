@@ -24,10 +24,11 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     });
 
     if (!baseTemplate) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), {
+        route: "POST /api/tenant-admin/templates/clone",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     // 4. Define S3 paths — tenant owns tenants/{id}/templates/{slug}/

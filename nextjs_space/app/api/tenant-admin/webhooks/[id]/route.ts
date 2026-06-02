@@ -36,7 +36,11 @@ export const PATCH = withTenantAuthParams(async (req, { user, tenantId }, params
     });
 
     if (!existingWebhook) {
-      return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
+      return apiError(new Error("Webhook not found"), {
+        route: "PATCH /api/tenant-admin/webhooks/[id]",
+        status: 404,
+        safeMessage: "Webhook not found",
+      });
     }
 
     // SSRF egress guard — same check as creation (generic message, no leak).
@@ -96,7 +100,11 @@ export const DELETE = withTenantAuthParams(async (req, { user, tenantId }, param
     });
 
     if (!existingWebhook) {
-      return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
+      return apiError(new Error("Webhook not found"), {
+        route: "DELETE /api/tenant-admin/webhooks/[id]",
+        status: 404,
+        safeMessage: "Webhook not found",
+      });
     }
 
     await prisma.webhooks.delete({

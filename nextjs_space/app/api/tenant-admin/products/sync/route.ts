@@ -4,6 +4,7 @@ import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/tenant-admin/products/sync
@@ -96,6 +97,9 @@ export const POST = withTenantAuth(async (_request, { tenantId }) => {
     });
   } catch (error) {
     console.error("[sync-products]", error);
-    return NextResponse.json({ error: "Failed to sync products" }, { status: 500 });
+    return apiError(error, {
+      route: "POST /api/tenant-admin/products/sync",
+      safeMessage: "Failed to sync products",
+    });
   }
 });

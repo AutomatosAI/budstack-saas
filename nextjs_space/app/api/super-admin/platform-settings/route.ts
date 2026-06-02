@@ -3,6 +3,7 @@ import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { uploadFile } from "@/lib/storage/s3";
 import { validateUploadBuffer } from "@/lib/storage/upload-validation";
+import { apiError, apiValidationError } from "@/lib/api-error";
 
 export const POST = withSuperAdmin(async (req) => {
   try {
@@ -53,9 +54,9 @@ export const POST = withSuperAdmin(async (req) => {
         cleanName,
       );
       if (!validation.valid) {
-        return NextResponse.json(
-          { error: `Logo: ${validation.error}` },
-          { status: 400 },
+        return apiValidationError(
+          `Logo: ${validation.error}`,
+          "POST /api/super-admin/platform-settings",
         );
       }
       const logoKey = `platform/logo-${Date.now()}-${cleanName}`;
@@ -72,9 +73,9 @@ export const POST = withSuperAdmin(async (req) => {
         cleanName,
       );
       if (!validation.valid) {
-        return NextResponse.json(
-          { error: `Favicon: ${validation.error}` },
-          { status: 400 },
+        return apiValidationError(
+          `Favicon: ${validation.error}`,
+          "POST /api/super-admin/platform-settings",
         );
       }
       const faviconKey = `platform/favicon-${Date.now()}-${cleanName}`;
@@ -126,10 +127,10 @@ export const POST = withSuperAdmin(async (req) => {
     });
   } catch (error) {
     console.error("Platform settings update error:", error);
-    return NextResponse.json(
-      { error: "Failed to update platform settings" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/super-admin/platform-settings",
+      safeMessage: "Failed to update platform settings",
+    });
   }
 });
 
@@ -150,9 +151,9 @@ export const GET = withSuperAdmin(async (_req) => {
     return NextResponse.json({ settings });
   } catch (error) {
     console.error("Platform settings fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch platform settings" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/super-admin/platform-settings",
+      safeMessage: "Failed to fetch platform settings",
+    });
   }
 });

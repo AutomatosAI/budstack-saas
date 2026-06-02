@@ -8,7 +8,7 @@ import {
   EMAIL_HTML_MAX_LENGTH,
   EMAIL_SUBJECT_MAX_LENGTH,
 } from "@/lib/security/email-sanitize";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -38,10 +38,7 @@ export const GET = withTenantAuthParams(async (_request, { tenantId }, params) =
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found or access denied" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found or access denied"), { route: "GET /api/tenant-admin/email-templates/[id]", status: 404, safeMessage: "Template not found or access denied" });
     }
 
     return NextResponse.json(template);
@@ -62,16 +59,10 @@ export const PUT = withTenantAuthParams(async (req, { tenantId }, params) => {
     // SECURITY (C7): Length caps + HTML allowlist + subject tag-strip.
     // See lib/email-sanitize.ts for the full email-safe policy.
     if (typeof contentHtml === "string" && contentHtml.length > EMAIL_HTML_MAX_LENGTH) {
-      return NextResponse.json(
-        { error: `Template HTML exceeds maximum size of ${EMAIL_HTML_MAX_LENGTH} characters` },
-        { status: 400 },
-      );
+      return apiValidationError(`Template HTML exceeds maximum size of ${EMAIL_HTML_MAX_LENGTH} characters`, "PUT /api/tenant-admin/email-templates/[id]");
     }
     if (typeof subject === "string" && subject.length > EMAIL_SUBJECT_MAX_LENGTH) {
-      return NextResponse.json(
-        { error: `Subject exceeds maximum length of ${EMAIL_SUBJECT_MAX_LENGTH} characters` },
-        { status: 400 },
-      );
+      return apiValidationError(`Subject exceeds maximum length of ${EMAIL_SUBJECT_MAX_LENGTH} characters`, "PUT /api/tenant-admin/email-templates/[id]");
     }
 
     // Verify ownership before update
@@ -80,10 +71,7 @@ export const PUT = withTenantAuthParams(async (req, { tenantId }, params) => {
     });
 
     if (count === 0) {
-      return NextResponse.json(
-        { error: "Template not found or access denied" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found or access denied"), { route: "PUT /api/tenant-admin/email-templates/[id]", status: 404, safeMessage: "Template not found or access denied" });
     }
 
     const updated = await prisma.email_templates.update({
@@ -118,10 +106,7 @@ export const DELETE = withTenantAuthParams(async (_request, { tenantId }, params
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), { route: "DELETE /api/tenant-admin/email-templates/[id]", status: 404, safeMessage: "Template not found" });
     }
 
     // Check if mapped

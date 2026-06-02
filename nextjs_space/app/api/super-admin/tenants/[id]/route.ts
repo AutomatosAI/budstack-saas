@@ -51,7 +51,11 @@ export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/super-admin/tenants/[id]",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     return NextResponse.json({ tenant });
@@ -81,16 +85,20 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
     });
 
     if (!existingTenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "PATCH /api/super-admin/tenants/[id]",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     // Check if subdomain is being changed: enforce format + reserved list, then uniqueness
     if (subdomain && subdomain !== existingTenant.subdomain) {
       const candidate = String(subdomain);
       if (!isValidSubdomain(candidate)) {
-        return NextResponse.json(
-          { error: "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only" },
-          { status: 400 },
+        return apiValidationError(
+          "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only",
+          "PATCH /api/super-admin/tenants/[id]",
         );
       }
       if (isReservedSubdomain(candidate)) {
@@ -105,9 +113,9 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       });
 
       if (subdomainExists) {
-        return NextResponse.json(
-          { error: "Subdomain already exists" },
-          { status: 400 },
+        return apiValidationError(
+          "Subdomain already exists",
+          "PATCH /api/super-admin/tenants/[id]",
         );
       }
     }
@@ -125,9 +133,9 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       });
 
       if (domainExists) {
-        return NextResponse.json(
-          { error: "Custom domain already exists" },
-          { status: 400 },
+        return apiValidationError(
+          "Custom domain already exists",
+          "PATCH /api/super-admin/tenants/[id]",
         );
       }
     }
@@ -158,13 +166,11 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
         );
       } catch (error) {
         console.error("Namecheap API error:", error);
-        return NextResponse.json(
-          {
-            error:
-              "Failed to create subdomain. Please check Namecheap API credentials and whitelisted IP.",
-          },
-          { status: 500 },
-        );
+        return apiError(error, {
+          route: "PATCH /api/super-admin/tenants/[id]",
+          safeMessage:
+            "Failed to create subdomain. Please check Namecheap API credentials and whitelisted IP.",
+        });
       }
     }
 
@@ -224,12 +230,11 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
           console.log(`✅ Added Railway domain: ${customDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
         } catch (error) {
           console.error("Railway domain creation error:", error);
-          return NextResponse.json(
-            {
-              error: "Failed to provision custom domain on Railway. The domain was not saved.",
-            },
-            { status: 500 },
-          );
+          return apiError(error, {
+            route: "PATCH /api/super-admin/tenants/[id]",
+            safeMessage:
+              "Failed to provision custom domain on Railway. The domain was not saved.",
+          });
         }
       }
     } else if (needsRecoveryProvisioning) {
@@ -241,12 +246,11 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
         console.log(`✅ Provisioned Railway domain (recovery): ${resolvedDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
       } catch (error) {
         console.error("Railway domain recovery provisioning error:", error);
-        return NextResponse.json(
-          {
-            error: "Failed to provision custom domain on Railway. If the domain already exists in Railway, remove it from the Railway dashboard and try again.",
-          },
-          { status: 500 },
-        );
+        return apiError(error, {
+          route: "PATCH /api/super-admin/tenants/[id]",
+          safeMessage:
+            "Failed to provision custom domain on Railway. If the domain already exists in Railway, remove it from the Railway dashboard and try again.",
+        });
       }
     }
 
@@ -331,7 +335,11 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "DELETE /api/super-admin/tenants/[id]",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     // Require a typed { confirm: <subdomain> } body so a destructive delete cannot fire

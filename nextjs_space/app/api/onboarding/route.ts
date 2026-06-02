@@ -12,6 +12,7 @@ import {
   DPA_ACCEPTED_AUDIT_ACTION,
   dpaAcceptanceSchema,
 } from "@/lib/gdpr/dpa";
+import { apiError, apiValidationError } from "@/lib/api-error";
 
 const onboardingSchema = z
   .object({
@@ -76,9 +77,9 @@ export async function POST(req: NextRequest) {
     const parseResult = onboardingSchema.safeParse(rawBody);
     if (!parseResult.success) {
       const firstError = parseResult.error.errors[0];
-      return NextResponse.json(
-        { error: `Validation error: ${firstError.path.join('.')} — ${firstError.message}` },
-        { status: 400 },
+      return apiValidationError(
+        `Validation error: ${firstError.path.join('.')} — ${firstError.message}`,
+        "POST /api/onboarding",
       );
     }
 
@@ -98,15 +99,15 @@ export async function POST(req: NextRequest) {
     // Subdomain format validation
     const normalizedSubdomain = subdomain.toLowerCase().trim();
     if (!isValidSubdomain(normalizedSubdomain)) {
-      return NextResponse.json(
-        { error: "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only" },
-        { status: 400 },
+      return apiValidationError(
+        "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only",
+        "POST /api/onboarding",
       );
     }
     if (isReservedSubdomain(normalizedSubdomain)) {
-      return NextResponse.json(
-        { error: "This subdomain is reserved. Please choose another." },
-        { status: 400 },
+      return apiValidationError(
+        "This subdomain is reserved. Please choose another.",
+        "POST /api/onboarding",
       );
     }
 
@@ -116,10 +117,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingTenant) {
-      return NextResponse.json(
-        { error: "Subdomain already taken" },
-        { status: 400 },
-      );
+      return apiValidationError("Subdomain already taken", "POST /api/onboarding");
     }
 
     const existingUser = await prisma.users.findFirst({
@@ -127,10 +125,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "Email already registered" },
-        { status: 400 },
-      );
+      return apiValidationError("Email already registered", "POST /api/onboarding");
     }
 
     // 2. Create Clerk User
@@ -149,14 +144,14 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
       console.error("Clerk User Creation Error:", error);
       if (error.errors?.[0]?.code === "form_identifier_exists") {
-        return NextResponse.json(
-          { error: "Email is already registered in our system. Please login instead." },
-          { status: 400 }
+        return apiValidationError(
+          "Email is already registered in our system. Please login instead.",
+          "POST /api/onboarding",
         );
       }
-      return NextResponse.json(
-        { error: `Authentication Error: ${error.errors?.[0]?.message || "Failed to create user"}` },
-        { status: 400 }
+      return apiValidationError(
+        `Authentication Error: ${error.errors?.[0]?.message || "Failed to create user"}`,
+        "POST /api/onboarding",
       );
     }
 
@@ -180,14 +175,14 @@ export async function POST(req: NextRequest) {
       await client.users.deleteUser(clerkUser.id);
 
       if (error.errors?.[0]?.code === "form_identifier_exists") { // Only applies to user, but slug collision is distinct
-        return NextResponse.json(
-          { error: "Organization URL/Slug is already taken." },
-          { status: 400 }
+        return apiValidationError(
+          "Organization URL/Slug is already taken.",
+          "POST /api/onboarding",
         );
       }
-      return NextResponse.json(
-        { error: `Organization Error: ${error.errors?.[0]?.message || "Failed to create organization"}` },
-        { status: 400 }
+      return apiValidationError(
+        `Organization Error: ${error.errors?.[0]?.message || "Failed to create organization"}`,
+        "POST /api/onboarding",
       );
     }
 
@@ -224,10 +219,11 @@ export async function POST(req: NextRequest) {
       }
 
       if (!dbTemplate) {
-        return NextResponse.json(
-          { error: "No templates available. Please contact platform admin." },
-          { status: 500 },
-        );
+        return apiError(new Error("No templates available. Please contact platform admin."), {
+          route: "POST /api/onboarding",
+          status: 500,
+          safeMessage: "No templates available. Please contact platform admin.",
+        });
       }
 
       const template =
@@ -399,9 +395,9 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("Onboarding error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/onboarding",
+      safeMessage: "Internal server error",
+    });
   }
 }

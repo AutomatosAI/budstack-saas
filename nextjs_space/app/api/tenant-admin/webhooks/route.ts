@@ -36,10 +36,10 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
     return NextResponse.json({ webhooks });
   } catch (error) {
     console.error("[API] Error fetching webhooks:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch webhooks" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/tenant-admin/webhooks",
+      safeMessage: "Failed to fetch webhooks",
+    });
   }
 });
 

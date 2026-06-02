@@ -5,6 +5,7 @@ import { getTenantFromRequest } from "@/lib/tenant/tenant";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { z } from "zod";
 import crypto from "crypto";
+import { apiError, apiValidationError } from "@/lib/api-error";
 
 // SECURITY (C12): Strict whitelist + length caps on every field. Refusing
 // to accept anything outside this schema closes the field-spray and
@@ -44,21 +45,20 @@ export async function POST(request: NextRequest) {
     const parseResult = signupSchema.safeParse(rawBody);
     if (!parseResult.success) {
       const firstError = parseResult.error.errors[0];
-      return NextResponse.json(
-        {
-          error: `Validation error: ${firstError.path.join(".")} — ${firstError.message}`,
-        },
-        { status: 400 },
+      return apiValidationError(
+        `Validation error: ${firstError.path.join(".")} — ${firstError.message}`,
+        "POST /api/signup",
       );
     }
     const body = parseResult.data;
 
     const tenant = await getTenantFromRequest(request);
     if (!tenant) {
-      return NextResponse.json(
-        { error: "No active tenant found" },
-        { status: 404 },
-      );
+      return apiError(new Error("No active tenant found"), {
+        route: "POST /api/signup",
+        status: 404,
+        safeMessage: "No active tenant found",
+      });
     }
 
     const normalizedEmail = body.email.toLowerCase();
@@ -68,10 +68,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "Email already registered" },
-        { status: 400 },
-      );
+      return apiValidationError("Email already registered", "POST /api/signup");
     }
 
     const placeholderPassword = `clerk_managed_${crypto.randomUUID()}`;
@@ -111,9 +108,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Signup error:", error);
-    return NextResponse.json(
-      { error: "Failed to create account" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/signup",
+      safeMessage: "Failed to create account",
+    });
   }
 }

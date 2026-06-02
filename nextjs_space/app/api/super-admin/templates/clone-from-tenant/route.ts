@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { copyS3Directory } from "@/lib/storage/s3";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 
 const cloneFromTenantSchema = z
@@ -39,7 +39,11 @@ export const POST = withSuperAdmin(async (req) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: `Tenant with subdomain "${subdomain}" not found` }, { status: 404 });
+      return apiError(new Error(`Tenant with subdomain "${subdomain}" not found`), {
+        route: "POST /api/super-admin/templates/clone-from-tenant",
+        status: 404,
+        safeMessage: `Tenant with subdomain "${subdomain}" not found`,
+      });
     }
 
     // Get active tenant template
@@ -51,12 +55,19 @@ export const POST = withSuperAdmin(async (req) => {
       : null;
 
     if (!tenantTemplate) {
-      return NextResponse.json({ error: "Tenant has no active template" }, { status: 404 });
+      return apiError(new Error("Tenant has no active template"), {
+        route: "POST /api/super-admin/templates/clone-from-tenant",
+        status: 404,
+        safeMessage: "Tenant has no active template",
+      });
     }
 
     const sourceS3Path = tenantTemplate.s3Path;
     if (!sourceS3Path) {
-      return NextResponse.json({ error: "Tenant template has no S3 path" }, { status: 400 });
+      return apiValidationError(
+        "Tenant template has no S3 path",
+        "POST /api/super-admin/templates/clone-from-tenant",
+      );
     }
 
     let targetTemplate: any;
@@ -65,7 +76,11 @@ export const POST = withSuperAdmin(async (req) => {
       // Overwrite existing marketplace template
       targetTemplate = await prisma.templates.findUnique({ where: { id: targetTemplateId } });
       if (!targetTemplate) {
-        return NextResponse.json({ error: "Target template not found" }, { status: 404 });
+        return apiError(new Error("Target template not found"), {
+          route: "POST /api/super-admin/templates/clone-from-tenant",
+          status: 404,
+          safeMessage: "Target template not found",
+        });
       }
     } else {
       // Create new marketplace template

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { rejectSubmission } from "@/lib/marketplace/marketplace-review-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -19,9 +19,9 @@ export const POST = withSuperAdminParams(async (request, { user }, params) => {
     const { feedback } = await parseJsonBody(request, feedbackSchema);
 
     if (!feedback.trim()) {
-      return NextResponse.json(
-        { error: "Feedback is required when rejecting a submission" },
-        { status: 400 },
+      return apiValidationError(
+        "Feedback is required when rejecting a submission",
+        "POST /api/super-admin/submissions/[id]/reject",
       );
     }
 

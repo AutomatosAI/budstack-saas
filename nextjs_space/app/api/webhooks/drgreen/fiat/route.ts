@@ -7,6 +7,7 @@ import {
   sanitizeForLogging,
 } from "@/lib/drgreen/drgreen-webhook-verify";
 import { decrypt } from "@/lib/security/encryption";
+import { apiError, apiValidationError } from "@/lib/api-error";
 
 // SECURITY (C14, M9): Cap payload size to prevent DoS from oversized POSTs.
 const MAX_WEBHOOK_BODY_BYTES = 100_000;
@@ -45,10 +46,11 @@ export async function POST(request: NextRequest) {
     // SECURITY (C14, M9): Reject oversized payloads before parse.
     if (rawBody.length > MAX_WEBHOOK_BODY_BYTES) {
       console.error("[Fiat Webhook] Payload too large:", rawBody.length);
-      return NextResponse.json(
-        { error: "Payload too large" },
-        { status: 413 },
-      );
+      return apiError(new Error("Payload too large"), {
+        route: "POST /api/webhooks/drgreen/fiat",
+        status: 413,
+        safeMessage: "Payload too large",
+      });
     }
 
     const body = JSON.parse(rawBody);
@@ -68,17 +70,14 @@ export async function POST(request: NextRequest) {
         console.error(
           `[Fiat Webhook] Replay protection rejected: ${tsCheck.reason}`,
         );
-        return NextResponse.json(
-          { error: `Webhook replay rejected: ${tsCheck.reason}` },
-          { status: 400 },
+        return apiValidationError(
+          `Webhook replay rejected: ${tsCheck.reason}`,
+          "POST /api/webhooks/drgreen/fiat",
         );
       }
     } else if (process.env.NODE_ENV === "production") {
       console.error("[Fiat Webhook] Missing timestamp in production payload");
-      return NextResponse.json(
-        { error: "Missing timestamp" },
-        { status: 400 },
-      );
+      return apiValidationError("Missing timestamp", "POST /api/webhooks/drgreen/fiat");
     }
 
     // Extract key fields from webhook payload
@@ -93,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     if (!custom) {
       console.error("[Fiat Webhook] Missing nonce (custom field)");
-      return NextResponse.json({ error: "Missing nonce" }, { status: 400 });
+      return apiValidationError("Missing nonce", "POST /api/webhooks/drgreen/fiat");
     }
 
     // SECURITY (US-012, AC-6): verify-before-resolve. When a platform-level
@@ -109,7 +108,11 @@ export async function POST(request: NextRequest) {
         console.error(
           "[Fiat Webhook] Platform-secret signature verification failed (pre-resolve)",
         );
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+        return apiError(new Error("Invalid signature"), {
+          route: "POST /api/webhooks/drgreen/fiat",
+          status: 401,
+          safeMessage: "Invalid signature",
+        });
       }
       verifiedByPlatformSecret = true;
     }
@@ -140,7 +143,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      return apiError(new Error("Order not found"), {
+        route: "POST /api/webhooks/drgreen/fiat",
+        status: 404,
+        safeMessage: "Order not found",
+      });
     }
 
     // Verify signature using tenant's secret
@@ -152,11 +159,19 @@ export async function POST(request: NextRequest) {
       });
       if (!verifyDrGreenWebhookSignature(rawBody, signature, secret)) {
         console.error("[Fiat Webhook] Signature verification failed");
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+        return apiError(new Error("Invalid signature"), {
+          route: "POST /api/webhooks/drgreen/fiat",
+          status: 401,
+          safeMessage: "Invalid signature",
+        });
       }
     } else if (process.env.NODE_ENV === 'production') {
       console.error("[Fiat Webhook] No drGreenSecretKey configured, rejecting");
-      return NextResponse.json({ error: "Webhook secret not configured" }, { status: 401 });
+      return apiError(new Error("Webhook secret not configured"), {
+        route: "POST /api/webhooks/drgreen/fiat",
+        status: 401,
+        safeMessage: "Webhook secret not configured",
+      });
     }
 
     // Map Pay-Inn status to payment status
@@ -278,9 +293,9 @@ export async function POST(request: NextRequest) {
       console.error("[Fiat Webhook] Failed to log error:", logError);
     }
 
-    return NextResponse.json(
-      { error: "Webhook processing failed" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/webhooks/drgreen/fiat",
+      safeMessage: "Webhook processing failed",
+    });
   }
 }

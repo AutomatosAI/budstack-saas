@@ -206,10 +206,10 @@ export const GET = withTenantAuth(async (req, { tenantId }) => {
     });
   } catch (error) {
     console.error("Error fetching tenant orders:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch orders" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/tenant-admin/orders",
+      safeMessage: "Failed to fetch orders",
+    });
   }
 });
 
@@ -227,10 +227,11 @@ export const PATCH = withTenantAuth(async (req, { tenantId }) => {
     });
 
     if (!order) {
-      return NextResponse.json(
-        { error: "Order not found or access denied" },
-        { status: 404 },
-      );
+      return apiError(new Error("Order not found or access denied"), {
+        route: "PATCH /api/tenant-admin/orders",
+        status: 404,
+        safeMessage: "Order not found or access denied",
+      });
     }
 
     // Update order status

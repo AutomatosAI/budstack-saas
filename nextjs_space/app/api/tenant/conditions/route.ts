@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getTenantFromRequest, getTenantBySlug } from "@/lib/tenant/tenant";
+import { apiError } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +16,11 @@ export async function GET(request: Request) {
     }
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/tenant/conditions",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     const conditions = await prisma.conditions.findMany({
@@ -40,9 +45,9 @@ export async function GET(request: Request) {
     return NextResponse.json(conditions);
   } catch (error) {
     console.error("Error fetching conditions:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/tenant/conditions",
+      safeMessage: "Internal Server Error",
+    });
   }
 }

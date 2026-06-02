@@ -19,7 +19,11 @@ export const GET = withTenantAuthParams(async (req, { tenantId }, params) => {
     });
 
     if (!webhook) {
-      return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
+      return apiError(new Error("Webhook not found"), {
+        route: "GET /api/tenant-admin/webhooks/[id]/deliveries",
+        status: 404,
+        safeMessage: "Webhook not found",
+      });
     }
 
     const { searchParams } = new URL(req.url);

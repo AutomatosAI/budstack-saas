@@ -18,10 +18,11 @@ export const POST = withTenantAuthParams(
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Custom template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Custom template not found"), {
+        route: "POST /api/tenant-admin/templates/[id]/resubmit",
+        status: 404,
+        safeMessage: "Custom template not found",
+      });
     }
 
     // Find the changes_requested submission
@@ -34,10 +35,11 @@ export const POST = withTenantAuthParams(
     });
 
     if (!submission) {
-      return NextResponse.json(
-        { error: "No submission with changes requested found" },
-        { status: 404 },
-      );
+      return apiError(new Error("No submission with changes requested found"), {
+        route: "POST /api/tenant-admin/templates/[id]/resubmit",
+        status: 404,
+        safeMessage: "No submission with changes requested found",
+      });
     }
 
     // Step 1: Update from GitHub (if githubUrl exists)

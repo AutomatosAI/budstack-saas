@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 
 const emailMappingSchema = z
@@ -66,10 +66,7 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
     return NextResponse.json(results);
   } catch (error) {
     console.error("Error fetching tenant email mappings:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/email-mappings", safeMessage: "Internal Server Error" });
   }
 });
 
@@ -86,10 +83,7 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found or access denied" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found or access denied"), { route: "POST /api/tenant-admin/email-mappings", status: 404, safeMessage: "Template not found or access denied" });
     }
 
     // Upsert Mapping
@@ -121,7 +115,7 @@ export const DELETE = withTenantAuth(async (req, { tenantId }) => {
     const eventType = searchParams.get("eventType");
 
     if (!eventType)
-      return NextResponse.json({ error: "Missing eventType" }, { status: 400 });
+      return apiValidationError("Missing eventType", "DELETE /api/tenant-admin/email-mappings");
 
     // Find Mapping
     const mapping = await prisma.email_event_mappings.findFirst({
@@ -147,9 +141,6 @@ export const DELETE = withTenantAuth(async (req, { tenantId }) => {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error resetting mapping:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "DELETE /api/tenant-admin/email-mappings", safeMessage: "Internal Server Error" });
   }
 });

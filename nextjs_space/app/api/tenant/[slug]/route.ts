@@ -19,12 +19,20 @@ export const GET = withAuth(async (_request, { user }, params) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/tenant/[slug]",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     // Only allow access to own tenant (or super admin)
     if (user.role !== "SUPER_ADMIN" && user.tenantId !== tenant.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return apiError(new Error("Forbidden"), {
+        route: "GET /api/tenant/[slug]",
+        status: 403,
+        safeMessage: "Forbidden",
+      });
     }
 
     return NextResponse.json({

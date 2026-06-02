@@ -8,7 +8,7 @@ import {
   EMAIL_HTML_MAX_LENGTH,
   EMAIL_SUBJECT_MAX_LENGTH,
 } from "@/lib/security/email-sanitize";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 
 const TEMPLATE_NAME_MAX = 200;
@@ -46,10 +46,7 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
     return NextResponse.json(templates);
   } catch (error) {
     console.error("Error fetching tenant templates:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/email-templates", safeMessage: "Internal Server Error" });
   }
 });
 
@@ -70,16 +67,10 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
     // SECURITY (C7): Reject oversize bodies before any work — a 10MB HTML
     // string can exhaust the sanitizer and is never a legitimate template.
     if (typeof contentHtml === "string" && contentHtml.length > EMAIL_HTML_MAX_LENGTH) {
-      return NextResponse.json(
-        { error: `Template HTML exceeds maximum size of ${EMAIL_HTML_MAX_LENGTH} characters` },
-        { status: 400 },
-      );
+      return apiValidationError(`Template HTML exceeds maximum size of ${EMAIL_HTML_MAX_LENGTH} characters`, "POST /api/tenant-admin/email-templates");
     }
     if (typeof subject === "string" && subject.length > EMAIL_SUBJECT_MAX_LENGTH) {
-      return NextResponse.json(
-        { error: `Subject exceeds maximum length of ${EMAIL_SUBJECT_MAX_LENGTH} characters` },
-        { status: 400 },
-      );
+      return apiValidationError(`Subject exceeds maximum length of ${EMAIL_SUBJECT_MAX_LENGTH} characters`, "POST /api/tenant-admin/email-templates");
     }
 
     const safeName =

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { editSubmission } from "@/lib/marketplace/marketplace-review-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -27,9 +27,9 @@ export const PUT = withSuperAdminParams(async (request, { user }, params) => {
       });
 
     if (!layoutJson && !defaultsJson && !configJson && !stylesCss) {
-      return NextResponse.json(
-        { error: "At least one file must be provided" },
-        { status: 400 },
+      return apiValidationError(
+        "At least one file must be provided",
+        "PUT /api/super-admin/submissions/[id]/edit",
       );
     }
 

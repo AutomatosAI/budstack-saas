@@ -48,10 +48,11 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     });
 
     if (productsToUpdate.length === 0) {
-      return NextResponse.json(
-        { error: "No valid products found." },
-        { status: 404 },
-      );
+      return apiError(new Error("No valid products found."), {
+        route: "POST /api/tenant-admin/products/bulk",
+        status: 404,
+        safeMessage: "No valid products found.",
+      });
     }
 
     let result: { count: number };

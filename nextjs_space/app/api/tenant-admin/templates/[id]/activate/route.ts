@@ -19,10 +19,11 @@ export const PATCH = withTenantAuthParams(
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), {
+        route: "PATCH /api/tenant-admin/templates/[id]/activate",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     // 4. Deactivate all other templates for this tenant

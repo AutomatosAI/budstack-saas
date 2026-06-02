@@ -6,7 +6,7 @@ import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
@@ -25,7 +25,11 @@ export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
       where: { id },
     });
     if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+      return apiError(new Error("Template not found"), {
+        route: "PUT /api/super-admin/templates/[id]",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     const formData = await req.formData();
@@ -47,9 +51,9 @@ export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
         { maxSize: 5 * 1024 * 1024 },
       );
       if (!validation.valid) {
-        return NextResponse.json(
-          { error: `Preview image: ${validation.error}` },
-          { status: 400 },
+        return apiValidationError(
+          `Preview image: ${validation.error}`,
+          "PUT /api/super-admin/templates/[id]",
         );
       }
       const fileName = `template-preview-${template.slug}-${Date.now()}-${sanitizedName}`;
@@ -69,7 +73,10 @@ export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
     if (description) updateData.description = description.slice(0, 5000);
 
     if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+      return apiValidationError(
+        "No fields to update",
+        "PUT /api/super-admin/templates/[id]",
+      );
     }
 
     updateData.updatedAt = new Date();
@@ -113,7 +120,11 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       where: { id },
     });
     if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+      return apiError(new Error("Template not found"), {
+        route: "PATCH /api/super-admin/templates/[id]",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     const body = await parseJsonBody(req, templatePatchSchema);
@@ -144,7 +155,10 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       });
     }
 
-    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    return apiValidationError(
+      "No valid fields to update",
+      "PATCH /api/super-admin/templates/[id]",
+    );
   } catch (error: any) {
     console.error("[Template PATCH] Error:", error);
     return apiError(error, {
@@ -190,10 +204,11 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), {
+        route: "DELETE /api/super-admin/templates/[id]",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     // Check if template is in active use
