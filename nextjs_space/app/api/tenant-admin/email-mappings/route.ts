@@ -130,11 +130,17 @@ export const DELETE = withTenantAuth(async (req, { tenantId }) => {
       // Delete Mapping
       await prisma.email_event_mappings.delete({ where: { id: mapping.id } });
 
-      // Delete Template ONLY IF it belongs to tenant (Safety check)
+      // Delete the template only if it belongs to this tenant AND no other
+      // mapping still references it — a custom template can back several events.
       if (mapping.template && mapping.template.tenantId === tenantId) {
-        await prisma.email_templates.delete({
-          where: { id: mapping.template.id },
+        const remaining = await prisma.email_event_mappings.count({
+          where: { templateId: mapping.template.id },
         });
+        if (remaining === 0) {
+          await prisma.email_templates.delete({
+            where: { id: mapping.template.id },
+          });
+        }
       }
     }
 

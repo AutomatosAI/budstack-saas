@@ -6,6 +6,16 @@ import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 
 export const POST = withTenantAuth(async (req, { tenantId }) => {
   try {
+    // Fail-closed: without a tenant scope a falsy tenantId would write to the
+    // bucket root and sign an unscoped URL. Reject rather than fall back.
+    if (!tenantId) {
+      return apiError(new Error("Tenant context required"), {
+        route: "POST /api/tenant-admin/branding/upload",
+        status: 403,
+        safeMessage: "Tenant context required",
+      });
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
@@ -37,7 +47,7 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
       return apiValidationError(validation.error, "POST /api/tenant-admin/branding/upload");
     }
 
-    const tenantUploadPrefix = tenantId ? `tenants/${tenantId}/` : "";
+    const tenantUploadPrefix = `tenants/${tenantId}/`;
     const fileName = `${Date.now()}-${sanitizedName}`;
     const cloudStoragePath = await uploadFile(
       buffer,
@@ -46,11 +56,8 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
       tenantUploadPrefix,
     );
 
-    // Tenant uploads are scope-asserted at sign time; super-admin system
-    // uploads (no tenant context) sign without a tenant scope.
-    const signedUrl = tenantId
-      ? await getFileUrl(cloudStoragePath, { tenantId })
-      : await getFileUrl(cloudStoragePath);
+    // Tenant uploads are scope-asserted at sign time.
+    const signedUrl = await getFileUrl(cloudStoragePath, { tenantId });
 
     return NextResponse.json({ url: signedUrl, key: cloudStoragePath });
   } catch (error) {

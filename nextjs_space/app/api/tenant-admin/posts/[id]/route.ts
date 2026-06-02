@@ -98,7 +98,10 @@ export const PATCH = withAuth(async (req, { user }, { id: rawId }) => {
         await prisma.posts.findFirst({
           where: {
             slug: uniqueSlug,
-            tenantId: localUser!.tenantId,
+            // Scope to the post's own tenant: a SUPER_ADMIN editing another
+            // tenant's post must not key off their own tenantId. existingPost
+            // is guaranteed non-null by the ownership check above.
+            tenantId: existingPost.tenantId,
             NOT: { id },
           },
         })

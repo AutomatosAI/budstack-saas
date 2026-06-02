@@ -101,8 +101,10 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
     };
 
     if (sourceTemplateId) {
-      const source = await prisma.email_templates.findUnique({
-        where: { id: sourceTemplateId },
+      // Tenant-scoped: findUnique bypasses the tenant middleware, so restrict
+      // the source to system templates or this tenant's own.
+      const source = await prisma.email_templates.findFirst({
+        where: { id: sourceTemplateId, OR: [{ isSystem: true }, { tenantId }] },
       });
       if (source) {
         // Copy from source — re-sanitize in case the source pre-dates this

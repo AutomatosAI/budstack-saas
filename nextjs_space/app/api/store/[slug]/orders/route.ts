@@ -18,18 +18,6 @@ export const GET = withAuth(async (_req, { user }, params) => {
       });
     }
 
-    const dbUser = await prisma.users.findFirst({
-      where: { email },
-    });
-
-    if (!dbUser) {
-      return apiError(new Error("User not found"), {
-        route: "GET /api/store/[slug]/orders",
-        status: 404,
-        safeMessage: "User not found",
-      });
-    }
-
     const tenant = await getCurrentTenant();
 
     if (!tenant) {
@@ -37,6 +25,20 @@ export const GET = withAuth(async (_req, { user }, params) => {
         route: "GET /api/store/[slug]/orders",
         status: 404,
         safeMessage: "Tenant not found",
+      });
+    }
+
+    // Scope the user lookup to this tenant so a shared email resolves to the
+    // correct store's user row.
+    const dbUser = await prisma.users.findFirst({
+      where: { email, tenantId: tenant.id },
+    });
+
+    if (!dbUser) {
+      return apiError(new Error("User not found"), {
+        route: "GET /api/store/[slug]/orders",
+        status: 404,
+        safeMessage: "User not found",
       });
     }
 

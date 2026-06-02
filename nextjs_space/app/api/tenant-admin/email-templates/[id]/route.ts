@@ -109,15 +109,10 @@ export const DELETE = withTenantAuthParams(async (_request, { tenantId }, params
       return apiError(new Error("Template not found"), { route: "DELETE /api/tenant-admin/email-templates/[id]", status: 404, safeMessage: "Template not found" });
     }
 
-    // Check if mapped
-    const mapping = await prisma.email_event_mappings.findFirst({
-      where: { templateId: id },
-    });
-
-    // Strategy: If mapped, delete the mapping first (Revert to default)
-    if (mapping) {
-      await prisma.email_event_mappings.delete({ where: { id: mapping.id } });
-    }
+    // Remove every event mapping that references this template before deleting
+    // it — a template can be mapped to multiple events, and findFirst+delete
+    // would orphan the rest.
+    await prisma.email_event_mappings.deleteMany({ where: { templateId: id } });
 
     await prisma.email_templates.delete({ where: { id } });
 
