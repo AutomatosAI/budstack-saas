@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { CalendarIcon, Eye, EyeOff } from "lucide-react";
 import { format } from "date-fns";
-import { ConsultationFormData } from "../consultation-form";
+import type { ConsultationFormData } from "../consultation-form-types";
 import { COUNTRY_CODES } from "@/lib/consultation-constants";
 import { cn } from "@/lib/utils";
 

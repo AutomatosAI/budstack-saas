@@ -13,7 +13,6 @@ import {
   Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { generateMockEvents } from "@/lib/mock-data";
 
 export type EventType =
   | "TENANT_CREATED"
@@ -238,5 +237,3 @@ export function ActivityTimeline({
     </div>
   );
 }
-
-export { generateMockEvents }

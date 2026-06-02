@@ -4,6 +4,20 @@
   "rules": {
     "react/no-unescaped-entities": "warn",
     "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": "off"
+    "@typescript-eslint/no-unused-vars": "off",
+    "max-lines": ["error", 800],
+    "import/no-cycle": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["**/lib/mock-data", "@/lib/mock-data"],
+            "message": "lib/mock-data was removed (PRD-209 AC-3). Wire real data via Prisma instead of mock generators."
+          }
+        ]
+      }
+    ],
+    "no-console": ["warn", { "allow": ["warn", "error"] }]
   }
 }

@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ConsultationFormData } from "../consultation-form";
+import type { ConsultationFormData } from "../consultation-form-types";
 import { CANNABIS_FREQUENCY_OPTIONS } from "@/lib/consultation-constants";
 import { Loader2 } from "lucide-react";
 

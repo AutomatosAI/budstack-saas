@@ -1,13 +1,35 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Activity, Clock, ShieldCheck } from "lucide-react";
-import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
-import { generateMockEvents } from "@/lib/mock-data";
+import {
+  ActivityTimeline,
+  type EventType,
+  type TimelineEvent,
+} from "@/components/admin/ActivityTimeline";
+import { prisma } from "@/lib/db";
+import type { audit_logs } from "@prisma/client";
 import { StatCard } from "@/components/admin/shared";
 
 const sectionTitleStyle = {
   fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
 };
+
+// Audit-log action strings (e.g. "tenant.created") map onto the timeline's
+// constrained EventType union; anything unrecognised renders as SYSTEM_ALERT.
+function mapActionToEventType(action: string): EventType {
+  if (action.startsWith("tenant.created")) return "TENANT_CREATED";
+  if (action.startsWith("tenant.activated")) return "TENANT_ACTIVATED";
+  if (action.startsWith("user.")) return "USER_REGISTERED";
+  if (action.startsWith("order.")) return "ORDER_PLACED";
+  if (
+    action.startsWith("tenant.") ||
+    action.startsWith("settings.") ||
+    action.startsWith("branding.")
+  ) {
+    return "TENANT_SETTINGS_UPDATED";
+  }
+  return "SYSTEM_ALERT";
+}
 
 export default async function AuditLogsPage() {
   const user = await currentUser();
@@ -16,7 +38,20 @@ export default async function AuditLogsPage() {
     redirect("/auth/login");
   }
 
-  const allEvents = generateMockEvents(50);
+  const logs: audit_logs[] = await prisma.audit_logs.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
+  const allEvents: TimelineEvent[] = logs.map((log) => ({
+    id: log.id,
+    type: mapActionToEventType(log.action),
+    description: log.entityType
+      ? `${log.action} · ${log.entityType}`
+      : log.action,
+    timestamp: log.createdAt,
+    actor: log.userEmail ?? undefined,
+  }));
 
   const last24h = allEvents.filter((e) => {
     const hoursDiff =

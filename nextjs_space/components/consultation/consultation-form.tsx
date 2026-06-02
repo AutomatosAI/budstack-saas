@@ -11,60 +11,7 @@ import { MedicalHistoryPart1Step } from "./steps/medical-history-part1-step";
 import { MedicalHistoryPart2Step } from "./steps/medical-history-part2-step";
 import { toast } from "@/components/ui/sonner";
 import { useRouter } from "next/navigation";
-
-export interface ConsultationFormData {
-  // Contact Details
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneCode: string;
-  phoneNumber: string;
-  dateOfBirth: Date | null;
-  gender: string;
-  password: string;
-  confirmPassword: string;
-
-  // Shipping Address
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  countryCode: string;
-
-  // Business Info (Optional)
-  businessType: string;
-  businessName: string;
-  businessAddress1: string;
-  businessAddress2: string;
-  businessCity: string;
-  businessState: string;
-  businessPostalCode: string;
-  businessCountry: string;
-  businessCountryCode: string;
-
-  // Medical Conditions
-  medicalConditions: string[];
-  otherCondition: string;
-  prescribedMedications: string[];
-  prescribedSupplements: string;
-
-  // Medical History Part 1
-  hasHeartProblems: boolean;
-  hasCancerTreatment: boolean;
-  hasImmunosuppressants: boolean;
-  hasLiverDisease: boolean;
-  hasPsychiatricHistory: boolean;
-
-  // Medical History Part 2
-  hasAlcoholAbuse: boolean;
-  hasDrugServices: boolean;
-  alcoholUnitsPerWeek: string;
-  cannabisReducesMeds: boolean;
-  cannabisFrequency: string;
-  cannabisAmountPerDay: string;
-}
+import type { ConsultationFormData } from "./consultation-form-types";
 
 const TOTAL_STEPS = 5;
 const STEP_NAMES = [
