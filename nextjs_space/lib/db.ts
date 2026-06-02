@@ -42,18 +42,9 @@ const shouldUseMockPrisma = () => {
   return dbUrl.includes("dummy") || dbUrl === "";
 };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  (shouldUseMockPrisma()
-    ? createMockPrismaClient()
-    : new PrismaClient({
-      log:
-        process.env.NODE_ENV === "development"
-          ? ["query", "error", "warn"]
-          : ["error"],
-    }));
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+// `prisma` is constructed at the bottom of this module — see createPrismaClient()
+// — because the $extends query extension closes over the tenant-scope tables and
+// applyTenantScope() declared below.
 
 const tenantScopedModels = new Set([
   'audit_logs',
@@ -118,94 +109,141 @@ const applyTenantScope = (where: Record<string, any>, tenantId: string, allowNul
   };
 };
 
-if ('$use' in prisma) {
-  (prisma as any).$use(async (params: any, next: (params: any) => Promise<any>) => {
-    const tenantId = getTenantContext();
-
-    // Not a tenant-scoped model → never touch it.
-    if (!params.model || !tenantScopedModels.has(params.model)) {
-      return next(params);
-    }
-
-    // Tenant-scoped model with no resolved tenant id. Distinguish an EXPLICIT
-    // null (a deliberately bound system/super-admin/webhook/cron query — allowed)
-    // from an IMPLICIT unbound context (the cross-tenant-leak bug — fail loud).
-    if (!tenantId) {
-      const decision = decideMissingContext({
-        model: params.model,
-        bound: hasTenantContext(),
-        strict: isStrictTenantContext(),
-      });
-      if (decision !== 'allow') {
-        emitTenantContextMissing(params.model, params.action);
-      }
-      if (decision === 'throw') {
-        throw new TenantContextMissingError(params.model, params.action);
-      }
-      // 'allow' (explicit null / allow-listed) or 'warn' (migration window):
-      // run unscoped — the warn has already been emitted above.
-      return next(params);
-    }
-
-    const allowNull = tenantScopedModelsWithNullAccess.has(params.model);
-
-    if (params.action === 'findUnique') {
-      params.action = 'findFirst';
-    }
-
-    if (tenantScopedCreateActions.has(params.action)) {
-      if (params.args?.data) {
-        if (Array.isArray(params.args.data)) {
-          params.args.data = params.args.data.map((item: Record<string, any>) => ({
+// Immutably inject the resolved tenantId into create / createMany / upsert
+// payloads so every bound write is stamped with its tenant. Mirrors the create
+// branch of the former tenant-scope $use, but returns NEW objects (never mutates
+// the caller's args).
+const injectTenantIdIntoCreate = (
+  args: any,
+  action: string,
+  tenantId: string,
+): any => {
+  if (!args) return args;
+  let next = args;
+  if (args.data) {
+    next = Array.isArray(args.data)
+      ? {
+          ...next,
+          data: args.data.map((item: Record<string, any>) => ({
             ...item,
             tenantId: item.tenantId ?? tenantId,
-          }));
-        } else {
-          params.args.data.tenantId = params.args.data.tenantId ?? tenantId;
+          })),
         }
-      }
-      if (params.action === 'upsert') {
-        if (params.args?.create) {
-          params.args.create.tenantId = params.args.create.tenantId ?? tenantId;
-        }
-      }
-      return next(params);
-    }
-
-    if (
-      tenantScopedReadActions.has(params.action)
-      || tenantScopedWriteManyActions.has(params.action)
-      || params.action === 'update'
-      || params.action === 'delete'
-    ) {
-      if (params.args?.where) {
-        params.args.where = applyTenantScope(params.args.where, tenantId, allowNull);
-      } else {
-        params.args = {
-          ...params.args,
-          where: applyTenantScope({}, tenantId, allowNull),
+      : {
+          ...next,
+          data: { ...args.data, tenantId: args.data.tenantId ?? tenantId },
         };
-      }
-    }
+  }
+  if (action === 'upsert' && args.create) {
+    next = {
+      ...next,
+      create: { ...args.create, tenantId: args.create.tenantId ?? tenantId },
+    };
+  }
+  return next;
+};
 
-    return next(params);
+// Prisma 6 REMOVED `$use`, so the tenant-scope + soft-delete middlewares that
+// used to register as two `$use` hooks silently never ran — tenant isolation
+// fell back to per-route `where` clauses only (sev-1). They are ported here to a
+// single `$extends` query extension: both transforms run in the SAME order
+// (tenant-scope first, soft-delete second) inside one `$allOperations` handler,
+// then the operation is dispatched ONCE. When an action is rewritten
+// (findUnique→findFirst, delete→update, deleteMany→updateMany) it is re-dispatched
+// through the BASE (un-extended) client — that bypasses this extension, so the
+// rewrite neither recurses nor double-scopes; both transforms are already applied.
+const createPrismaClient = (): any => {
+  if (shouldUseMockPrisma()) {
+    return createMockPrismaClient();
+  }
+
+  const base = new PrismaClient({
+    log:
+      process.env.NODE_ENV === 'development'
+        ? ['query', 'error', 'warn']
+        : ['error'],
   });
 
-  // PRD-208 — Soft-delete middleware. Registered AFTER the tenant-scope
-  // middleware so it composes as the inner layer: tenant-scope rewrites the
-  // `where` (and findUnique→findFirst / adds tenantId) FIRST, then this layer
-  // injects `deletedAt: null` into reads and rewrites delete/deleteMany into a
-  // `deletedAt = now()` update — preserving any tenant scope already applied.
-  //
-  // It runs for ALL soft-deletable models, including ones the tenant-scope
-  // middleware short-circuits (`tenants`, `templates`, `marketplace_submissions`
-  // are not tenant-scoped), because this is a separate `$use` downstream of the
-  // tenant-scope `next()`. Escape hatches: withDeleted() / hardDelete().
-  (prisma as any).$use(async (params: any, next: (params: any) => Promise<any>) => {
-    if (!isSoftDeletable(params.model)) {
-      return next(params);
-    }
-    const rewritten = applySoftDelete(params, getSoftDeleteFlags());
-    return next(rewritten);
+  return base.$extends({
+    query: {
+      $allModels: {
+        async $allOperations({ model, operation, args, query }: any) {
+          const modelName: string =
+            typeof model === 'string' ? model.toLowerCase() : model;
+          let action: string = operation;
+          let nextArgs: any = args;
+
+          // ── Layer 1: tenant scope ──
+          if (modelName && tenantScopedModels.has(modelName)) {
+            const tenantId = getTenantContext();
+
+            if (!tenantId) {
+              // Distinguish an EXPLICIT bound null (system / super-admin / webhook
+              // — allowed) from an IMPLICIT unbound context (the leak bug — loud).
+              const decision = decideMissingContext({
+                model: modelName,
+                bound: hasTenantContext(),
+                strict: isStrictTenantContext(),
+              });
+              if (decision !== 'allow') {
+                emitTenantContextMissing(modelName, action);
+              }
+              if (decision === 'throw') {
+                throw new TenantContextMissingError(modelName, action);
+              }
+              // allow / warn → fall through unscoped.
+            } else {
+              const allowNull = tenantScopedModelsWithNullAccess.has(modelName);
+
+              // findUnique can't carry the AND/OR tenant predicate at the top
+              // level of its where, so it becomes findFirst (re-dispatched below).
+              if (action === 'findUnique') {
+                action = 'findFirst';
+              }
+
+              if (tenantScopedCreateActions.has(action)) {
+                nextArgs = injectTenantIdIntoCreate(nextArgs, action, tenantId);
+              } else if (
+                tenantScopedReadActions.has(action) ||
+                tenantScopedWriteManyActions.has(action) ||
+                action === 'update' ||
+                action === 'delete'
+              ) {
+                nextArgs = {
+                  ...nextArgs,
+                  where: applyTenantScope(
+                    nextArgs?.where ?? {},
+                    tenantId,
+                    allowNull,
+                  ),
+                };
+              }
+            }
+          }
+
+          // ── Layer 2: soft-delete ──
+          if (isSoftDeletable(modelName)) {
+            const rewritten = applySoftDelete(
+              { model: modelName, action, args: nextArgs },
+              getSoftDeleteFlags(),
+            );
+            action = rewritten.action;
+            nextArgs = rewritten.args;
+          }
+
+          // ── Dispatch once ──
+          if (action === operation) {
+            return query(nextArgs);
+          }
+          // Operation was rewritten — run it on the BASE client so it does NOT
+          // recurse into this extension (both transforms already applied above).
+          return (base as any)[modelName][action](nextArgs);
+        },
+      },
+    },
   });
-}
+};
+
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
