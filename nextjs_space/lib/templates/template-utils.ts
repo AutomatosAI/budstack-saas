@@ -3,14 +3,16 @@ import path from "path";
 import fetch from "node-fetch";
 import AdmZip from "adm-zip";
 import { SECTION_REGISTRY } from "@/lib/templates/section-registry";
-
-// SECURITY (C5): Caps for ZIP extraction. Without these a malicious GitHub
-// archive could ship a zip-bomb (high compression ratio) or a 100k-file
-// archive that exhausts disk and inodes before validation runs.
-const ZIP_MAX_TOTAL_UNCOMPRESSED = 500 * 1024 * 1024; // 500 MB
-const ZIP_MAX_FILE_UNCOMPRESSED = 50 * 1024 * 1024; // 50 MB per file
-const ZIP_MAX_ENTRIES = 5_000;
-const ZIP_DOWNLOAD_MAX_BYTES = 100 * 1024 * 1024; // 100 MB downloaded archive
+// SECURITY (C5): Caps for ZIP extraction guard against a malicious GitHub
+// archive shipping a zip-bomb (high compression ratio) or a 100k-file archive
+// that exhausts disk and inodes before validation runs. Centralised in
+// lib/constants.ts (PRD-209 AC-5).
+import {
+  ZIP_MAX_TOTAL_UNCOMPRESSED,
+  ZIP_MAX_FILE_UNCOMPRESSED,
+  ZIP_MAX_ENTRIES,
+  ZIP_DOWNLOAD_MAX_BYTES,
+} from "@/lib/constants";
 
 /**
  * SECURITY (C5): Extract a ZIP into `destRoot` while enforcing path

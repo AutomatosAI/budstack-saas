@@ -1,6 +1,11 @@
 {
   "name": "app",
   "private": true,
+  "packageManager": "pnpm@10.30.2",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -17,7 +22,7 @@
     "check:tenant-resolver": "node scripts/ci/check-tenant-resolver-gates.mjs",
     "check:grep-gates:report": "node scripts/ci/check-no-tenant-context-escapes.mjs || true; node scripts/ci/check-no-pii-in-logs.mjs || true",
     "check:docs-lint": "node scripts/ci/check-docs-lint.mjs",
-    "check:security": "node scripts/ci/check-css-sanitized.mjs && node scripts/ci/check-no-error-message-leaks.mjs",
+    "check:lockfile": "node scripts/ci/check-single-lockfile.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",

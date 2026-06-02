@@ -2,6 +2,11 @@
  * Upload validation — file type allowlist, size limits, and magic-byte verification
  */
 
+import {
+  UPLOAD_MAX_FILE_SIZE as MAX_FILE_SIZE,
+  UPLOAD_MAX_VIDEO_SIZE as MAX_VIDEO_SIZE,
+} from "@/lib/constants";
+
 const ALLOWED_IMAGE_TYPES = new Set([
   'image/jpeg',
   'image/png',
@@ -22,9 +27,6 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
   // CSS and JSON removed — CSS enables stored XSS via expression()/url()/@import,
   // JSON could be served as JSONP. Use S3 template uploads for these instead.
 ]);
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 MB
 
 /**
  * Client-side validation (no magic-byte check — use validateUploadBuffer for server-side)

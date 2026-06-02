@@ -13,23 +13,15 @@ import {
   Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { TimelineEvent } from "@/lib/audit-log";
 
-export type EventType =
+type EventType =
   | "TENANT_CREATED"
   | "TENANT_ACTIVATED"
   | "USER_REGISTERED"
   | "ORDER_PLACED"
   | "TENANT_SETTINGS_UPDATED"
   | "SYSTEM_ALERT";
-
-export interface TimelineEvent {
-  id: string;
-  type: EventType;
-  description: string;
-  timestamp: Date;
-  actor?: string;
-  metadata?: Record<string, any>;
-}
 
 export interface ActivityTimelineProps {
   events: TimelineEvent[];
@@ -77,6 +69,14 @@ const eventConfig: Record<
     label: "System Alert",
   },
 };
+
+// Audit `action` values are open-ended; categories without an explicit config
+// (e.g. "ACTIVITY") render with this neutral fallback rather than crashing.
+const DEFAULT_EVENT_CONFIG = {
+  icon: Activity,
+  chip: "bs-chip bs-chip-muted",
+  label: "Activity",
+} as const;
 
 function formatTimestamp(date: Date): {
   time: string;
@@ -165,7 +165,7 @@ export function ActivityTimeline({
           </div>
         ) : (
           displayEvents.map((event) => {
-            const config = eventConfig[event.type];
+            const config = eventConfig[event.type as EventType] ?? DEFAULT_EVENT_CONFIG;
             const Icon = config.icon;
             const timestamp = formatTimestamp(event.timestamp);
 

@@ -12,8 +12,8 @@
       {
         "patterns": [
           {
-            "group": ["**/lib/mock-data", "@/lib/mock-data"],
-            "message": "lib/mock-data was removed (PRD-209 AC-3). Wire real data via Prisma instead of mock generators."
+            "group": ["**/mock-data", "@/lib/mock-data"],
+            "message": "Mock data must not be imported in production paths. lib/mock-data.ts was removed in PRD-209 AC-3 — query and render real data instead."
           }
         ]
       }
