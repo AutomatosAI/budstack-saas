@@ -10,6 +10,7 @@ import {
 } from "@/lib/drgreen/drgreen-webhook-verify";
 import { dispatchEvent } from "@/lib/drgreen/status-event-handlers";
 import { apiError, apiValidationError } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
 
 // SECURITY (C14, M9): Cap payload size to prevent DoS from oversized POSTs.
 const MAX_WEBHOOK_BODY_BYTES = 100_000;
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
     verifiedByPlatformSecret = true;
   }
 
-  console.log(
+  logger.info(
     `[DrGreen Status] Event: ${event}`,
     sanitizeForLogging({ clientId, orderId, strainId }),
   );

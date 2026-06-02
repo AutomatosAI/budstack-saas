@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { copyS3Directory } from "@/lib/storage/s3";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
+import { logger } from "@/lib/logger";
 
 const cloneFromTenantSchema = z
   .object({
@@ -109,7 +110,7 @@ export const POST = withSuperAdmin(async (req) => {
     // Copy S3 files from tenant to marketplace
     const filesCopied = await copyS3Directory(sourceS3Path, destS3Path);
 
-    console.log(`[super-admin] Cloned tenant "${subdomain}" (${sourceS3Path}) → marketplace "${targetTemplate.slug}" (${destS3Path}), ${filesCopied} files`);
+    logger.info(`[super-admin] Cloned tenant "${subdomain}" (${sourceS3Path}) → marketplace "${targetTemplate.slug}" (${destS3Path}), ${filesCopied} files`);
 
     // Update the template's updatedAt
     await prisma.templates.update({

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
 import { parseUuid } from "@/lib/validation/parse-uuid";
+import { logger } from "@/lib/logger";
 
 /**
  * POST /api/super-admin/templates/[id]/detach
@@ -90,7 +91,7 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
       report.actions.push("No references found — template is already detached");
     }
 
-    console.log("[Template Detach]", JSON.stringify(report, null, 2));
+    logger.info("[Template Detach]", { report });
 
     // Full report (tenant names/subdomains/actions) is logged server-side only — not returned
     // to the client to avoid leaking an internal operation trace (PRD-201 AC-5).

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { eraseUser } from "@/lib/gdpr/erasure";
 import { getClientInfo } from "@/lib/audit-log";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
     // You can find this in the Clerk Dashboard -> Webhooks -> choose the webhook
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     const { id } = evt.data;
     const eventType = evt.type;
 
-    console.log(`Clerk webhook received: id=${id} type=${eventType}`);
+    logger.info(`Clerk webhook received: id=${id} type=${eventType}`);
 
     if (eventType === "user.created" || eventType === "user.updated") {
         const { id, email_addresses, first_name, last_name, primary_email_address_id } = evt.data;
@@ -114,7 +115,7 @@ export async function POST(req: Request) {
             } catch (createError: any) {
                 // P2002 = unique constraint violation - user was created by another flow
                 if (createError.code === "P2002") {
-                    console.log(`User ${email} already exists (created by another flow), updating instead.`);
+                    logger.info("User already exists (created by another flow), updating instead", { email });
                     await prisma.users.update({
                         where: { email },
                         data: {

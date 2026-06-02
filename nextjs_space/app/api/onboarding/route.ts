@@ -13,6 +13,7 @@ import {
   dpaAcceptanceSchema,
 } from "@/lib/gdpr/dpa";
 import { apiError, apiValidationError } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
 
 const onboardingSchema = z
   .object({
@@ -276,7 +277,7 @@ export async function POST(req: NextRequest) {
       let seedData: Record<string, any> = {};
       try {
         filesCopied = await copyS3Directory(sourceS3Prefix, destS3Dir);
-        console.log(`[onboarding] Copied ${filesCopied} files from ${sourceS3Prefix} to ${destS3Dir}`);
+        logger.info(`[onboarding] Copied ${filesCopied} files from ${sourceS3Prefix} to ${destS3Dir}`);
 
         // Read defaults.json to seed DB fields
         const defaults = await getJsonFromS3<any>(`${destS3Dir}defaults.json`);
@@ -386,7 +387,7 @@ export async function POST(req: NextRequest) {
         const rollbackClient = await clerkClient();
         await rollbackClient.organizations.deleteOrganization(clerkOrg.id);
         await rollbackClient.users.deleteUser(clerkUser.id);
-        console.log("Clerk rollback successful");
+        logger.info("Clerk rollback successful");
       } catch (rollbackError) {
         console.error("Clerk rollback failed (orphaned records):", rollbackError);
       }

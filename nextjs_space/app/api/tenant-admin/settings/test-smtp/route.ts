@@ -5,6 +5,7 @@ import { decrypt } from "@/lib/security/encryption";
 import { z } from "zod";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
+import { logger } from "@/lib/logger";
 import nodemailer from "nodemailer";
 
 const testSmtpSchema = z
@@ -82,7 +83,7 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
       },
     });
 
-    console.log(`[TenantSMTP] Verifying connection for ${tenantId}...`);
+    logger.info(`[TenantSMTP] Verifying connection for ${tenantId}...`);
     await transporter.verify();
 
     const fromAddress = smtp.fromEmail

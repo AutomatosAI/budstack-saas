@@ -6,9 +6,11 @@ import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { fetchClientByEmail, updateClient } from "@/lib/drgreen/doctor-green-api";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
+import { eraseUser } from "@/lib/gdpr/erasure";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
+import { logger } from "@/lib/logger";
 
 const customerUpdateSchema = z
   .object({
@@ -296,7 +298,7 @@ export const PATCH = withAuth(async (request, { user }, params) => {
           }
 
           clerkSyncResult = { success: true };
-          console.log(`[Email Change] Clerk user ${clerkUser.id} email updated to ${normalizedNewEmail}`);
+          logger.info("[Email Change] Clerk user email updated", { clerkUserId: clerkUser.id, newEmail: normalizedNewEmail });
         } else {
           clerkSyncResult = { success: false, error: "User not found in Clerk" };
           console.warn(`[Email Change] No Clerk user found for ${existingCustomer.email}`);
@@ -319,14 +321,14 @@ export const PATCH = withAuth(async (request, { user }, params) => {
             const drGreenClient = await fetchClientByEmail(existingCustomer.email, drGreenConfig);
             if (drGreenClient) {
               drGreenClientUUID = drGreenClient.id;
-              console.log(`[Email Change] Found Dr Green client by email: ${drGreenClient.id}`);
+              logger.info("[Email Change] Found Dr Green client by email", { drGreenClientId: drGreenClient.id });
             }
           }
 
           if (drGreenClientUUID) {
             await updateClient(drGreenClientUUID, { email: normalizedNewEmail }, drGreenConfig);
             drGreenSyncResult = { success: true };
-            console.log(`[Email Change] Dr Green client ${drGreenClientUUID} email updated`);
+            logger.info("[Email Change] Dr Green client email updated", { drGreenClientId: drGreenClientUUID });
           } else {
             drGreenSyncResult = { success: false, error: "Client not found in Dr Green" };
             console.warn(`[Email Change] No Dr Green client found for ${existingCustomer.email}`);
@@ -377,7 +379,7 @@ export const PATCH = withAuth(async (request, { user }, params) => {
           updatedAt: new Date(),
         },
       });
-      console.log(`[Email Change] Updated consultation questionnaires: ${existingCustomer.email} -> ${normalizedNewEmail}`);
+      logger.info("[Email Change] Updated consultation questionnaires", { oldEmail: existingCustomer.email, newEmail: normalizedNewEmail });
     }
 
     // If admin is verifying KYC, update the questionnaire too
@@ -394,7 +396,7 @@ export const PATCH = withAuth(async (request, { user }, params) => {
           updatedAt: new Date(),
         },
       });
-      console.log(`Admin verified KYC for ${kycEmail}`);
+      logger.info("Admin verified KYC", { email: kycEmail });
     }
 
     // Create audit log — createAuditLog redacts PII in metadata automatically
@@ -489,10 +491,10 @@ export const DELETE = withAuth(async (request, { user }, params) => {
       });
     }
 
-    // Get existing customer
+    // Get existing customer (existence check + tenant-access authorization).
     const existingCustomer = await prisma.users.findUnique({
       where: { id },
-      select: { id: true, tenantId: true, email: true, name: true },
+      select: { id: true, tenantId: true },
     });
 
     if (!existingCustomer) {
@@ -515,39 +517,14 @@ export const DELETE = withAuth(async (request, { user }, params) => {
       });
     }
 
-    // GDPR Deletion: Anonymize PII (keeping record for order history integrity)
-    // Alternative: Hard delete with CASCADE on orders/consultations
-    const anonymizedCustomer = await prisma.users.update({
-      where: { id },
-      data: {
-        email: `deleted-${id}@deleted.com`,
-        name: "Deleted User",
-        firstName: null,
-        lastName: null,
-        phone: null,
-        address: null,
-        password: "DELETED",
-        isActive: false,
-        resetToken: null,
-        resetTokenExpiry: null,
-      },
-    });
-
-    // Create audit log — createAuditLog redacts PII in metadata automatically
-    await createAuditLog({
-      action: AUDIT_ACTIONS.CUSTOMER_DELETED_GDPR,
-      entityType: "User",
-      entityId: id,
-      userId: user.id,
-      userEmail: email!,
-      tenantId: existingCustomer.tenantId || undefined,
-      metadata: {
-        targetUserEmail: existingCustomer.email,
-        targetUserName: existingCustomer.name,
-        deletionType: "anonymization",
-        initiatedBy: role === "SUPER_ADMIN" ? "super_admin" : "tenant_admin",
-      },
-      ...getClientInfo(request.headers),
+    // GDPR erasure via the canonical shared path (lib/gdpr/erasure.ts): nulls
+    // PII, severs the Dr Green linkage, and writes a redacted `admin_assisted`
+    // audit row. Idempotent; order/consultation history is retained via the FK.
+    await eraseUser({
+      userId: id,
+      reason: "admin_assisted",
+      actingAdminId: user.id,
+      clientInfo: getClientInfo(request.headers),
     });
 
     return NextResponse.json({

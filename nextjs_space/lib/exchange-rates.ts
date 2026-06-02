@@ -9,6 +9,8 @@
  * (supabase/functions/exchange-rates + src/lib/currency.ts).
  */
 
+import { logger } from "@/lib/logger";
+
 // In-memory cache
 let cachedRates: Record<string, number> | null = null;
 let cacheTimestamp = 0;
@@ -78,7 +80,7 @@ async function getRates(): Promise<Record<string, number>> {
   const rates = await fetchLiveRates();
   cachedRates = rates;
   cacheTimestamp = now;
-  console.log('[Exchange Rates] Refreshed. EUR→ZAR:', rates.ZAR || 'N/A');
+  logger.info('[Exchange Rates] Refreshed', { eurToZar: rates.ZAR || 'N/A' });
   return rates;
 }
 

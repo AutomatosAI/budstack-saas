@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { decrypt } from "@/lib/security/encryption";
 import { DoctorGreenConfig } from "@/lib/drgreen/doctor-green-api";
+import { logger } from "@/lib/logger";
 
 /**
  * Retrieves Dr Green credentials for a specific tenant.
@@ -65,7 +66,7 @@ export async function getTenantDrGreenConfig(
     });
     const apiUrl = process.env.DRGREEN_API_URL || tenant.drGreenApiUrl || platformConfig?.drGreenApiUrl || undefined;
 
-    console.log(`[DrGreen Config] Using tenant DB credentials for ${tenantId}`);
+    logger.info(`[DrGreen Config] Using tenant DB credentials for ${tenantId}`);
     return {
       apiKey: finalApiKey,
       secretKey: finalSecretKey,
@@ -79,7 +80,7 @@ export async function getTenantDrGreenConfig(
 
   if (envApiKey && envSecretKey) {
     const apiUrl = process.env.DRGREEN_API_URL || undefined;
-    console.log(`[DrGreen Config] Using env var credentials (fallback for tenant ${tenantId})`);
+    logger.info(`[DrGreen Config] Using env var credentials (fallback for tenant ${tenantId})`);
     return { apiKey: envApiKey, secretKey: envSecretKey, apiUrl };
   }
 

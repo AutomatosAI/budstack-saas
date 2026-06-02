@@ -10,6 +10,7 @@ import { checkUserKycStatus } from "@/app/actions/kyc-check";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
+import { logger } from "@/lib/logger";
 
 const orderSubmitSchema = z
   .object({
@@ -41,7 +42,7 @@ const orderSubmitSchema = z
 export const POST = withAuth(async (request, { user }, { slug }) => {
   const traceId = `order-${Date.now()}`;
   const log = (step: string, data?: any) => {
-    console.log(`[${traceId}] ${step}`, data !== undefined ? JSON.stringify(data) : '');
+    logger.info(`[${traceId}] ${step}`, data !== undefined ? { data } : undefined);
   };
 
   try {

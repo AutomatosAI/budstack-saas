@@ -12,6 +12,7 @@
 import { prisma } from "@/lib/db";
 import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 import { getClientCartId } from "@/lib/drgreen/drgreen-client-cart";
+import { logger } from "@/lib/logger";
 
 export interface OrderSubmissionData {
     shippingInfo: {
@@ -49,7 +50,7 @@ export async function submitOrder(params: {
     const { userId, tenantId, shippingInfo, apiKey, secretKey, apiUrl, clientCartItems } = params;
     const requestId = `ord_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const log = (step: string, data?: any) => {
-        console.log(`[${requestId}] ${step}`, data !== undefined ? JSON.stringify(data) : '');
+        logger.info(`[${requestId}] ${step}`, data !== undefined ? { data } : undefined);
     };
     const apiOpts = { apiKey, secretKey, baseUrl: apiUrl };
 

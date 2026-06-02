@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
+import { logger } from "@/lib/logger";
 
 export const PATCH = withTenantAuthParams(
   async (_request, { user, tenantId }, params) => {
@@ -61,7 +62,7 @@ export const PATCH = withTenantAuthParams(
       },
     });
 
-    console.log(
+    logger.info(
       `✅ Activated template ${templateId} for tenant ${tenantId}`,
     );
 

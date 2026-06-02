@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
+import { logger } from "@/lib/logger";
 
 export const DELETE = withTenantAuthParams(async (req, { user, tenantId }, params) => {
   try {
@@ -37,7 +38,7 @@ export const DELETE = withTenantAuthParams(async (req, { user, tenantId }, param
       return apiError(new Error("Template is currently active"), { route: "DELETE /api/tenant-admin/my-templates/[id]", status: 409, safeMessage: `Cannot delete this template: It is currently active for ${tenantTemplate.activeForTenant.businessName}. Please activate a different template first.` });
     }
 
-    console.log(
+    logger.info(
       `[Tenant Template Delete] Deleting template: ${tenantTemplate.templateName} for tenant: ${tenantId}`,
     );
 
@@ -46,7 +47,7 @@ export const DELETE = withTenantAuthParams(async (req, { user, tenantId }, param
       where: { id: tenantTemplateId },
     });
 
-    console.log("[Tenant Template Delete] Database record deleted");
+    logger.info("[Tenant Template Delete] Database record deleted");
 
     // Create audit log
     const clientInfo = getClientInfo(req.headers);

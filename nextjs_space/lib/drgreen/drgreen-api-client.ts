@@ -7,6 +7,7 @@
 import * as secp256k1 from '@noble/secp256k1';
 import { sha256 } from '@noble/hashes/sha256';
 import { hmac } from '@noble/hashes/hmac';
+import { logger } from '@/lib/logger';
 
 // Required for noble secp256k1 signing — copied from template line 10-14
 secp256k1.etc.hmacSha256Sync = (key: Uint8Array, ...messages: Uint8Array[]) => {
@@ -250,7 +251,7 @@ export async function callDrGreenAPI<T>(
     ? `${baseUrl}${endpoint}?${queryString}`
     : `${baseUrl}${endpoint}`;
 
-  console.log(`[DrGreen API] >>> ${method} ${fullUrl}`);
+  logger.info(`[DrGreen API] >>> ${method} ${fullUrl}`);
 
   if (!apiKey || !secretKey) {
     throw new Error('MISSING_CREDENTIALS');
@@ -292,7 +293,7 @@ export async function callDrGreenAPI<T>(
   });
   const elapsed = Date.now() - startTime;
 
-  console.log(`[DrGreen API] <<< ${response.status} ${response.statusText} (${elapsed}ms)`);
+  logger.info(`[DrGreen API] <<< ${response.status} ${response.statusText} (${elapsed}ms)`);
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');

@@ -8,6 +8,7 @@ import {
 } from "@/lib/drgreen/drgreen-webhook-verify";
 import { decrypt } from "@/lib/security/encryption";
 import { apiError, apiValidationError } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
 
 // SECURITY (C14, M9): Cap payload size to prevent DoS from oversized POSTs.
 const MAX_WEBHOOK_BODY_BYTES = 100_000;
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     // SECURITY (H_a7): Sanitize payload before logging.
     if (process.env.NODE_ENV === 'development') {
-      console.log("[Fiat Webhook] Received:", sanitizeForLogging(body));
+      logger.info("[Fiat Webhook] Received", { payload: sanitizeForLogging(body) });
     }
 
     // SECURITY (C14): Replay protection — reject stale or future-dated
@@ -195,10 +196,9 @@ export async function POST(request: NextRequest) {
       order.drGreenInvoiceNum === payment_id &&
       order.paymentStatus === paymentStatus
     ) {
-      console.log(
-        "[Fiat Webhook] Duplicate webhook ignored (already at status):",
-        order.id,
-        paymentStatus,
+      logger.info(
+        "[Fiat Webhook] Duplicate webhook ignored (already at status)",
+        { orderId: order.id, paymentStatus },
       );
       return NextResponse.json({
         message: "Already processed",
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log("[Fiat Webhook] Order paid successfully:", order.id);
+      logger.info("[Fiat Webhook] Order paid successfully", { orderId: order.id });
     } else if (paymentStatus === "FAILED") {
       await triggerWebhook({
         event: WEBHOOK_EVENTS.ORDER_CANCELLED,
@@ -263,7 +263,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log("[Fiat Webhook] Payment failed for order:", order.id);
+      logger.info("[Fiat Webhook] Payment failed for order", { orderId: order.id });
     }
 
     return NextResponse.json({

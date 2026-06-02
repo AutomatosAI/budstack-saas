@@ -8,6 +8,7 @@ import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
 import { apiError, apiValidationError, ApiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { validateUploadBuffer } from "@/lib/storage/upload-validation";
+import { logger } from "@/lib/logger";
 
 /**
  * Super Admin Marketplace Template Branding API
@@ -255,7 +256,7 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
     }
 
     // Debug: log what we're about to save
-    console.log(`[super-admin] Saving layout.json:`, JSON.stringify({
+    logger.info(`[super-admin] Saving layout.json`, {
       navigation: updatedLayout.navigation,
       footer: updatedLayout.footer,
       hasNavigationConfig: !!updatedLayout.navigationConfig,
@@ -265,7 +266,7 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
       sectionVideoUrls: (updatedLayout.sections || [])
         .filter((s: any) => s.config?.videoUrl)
         .map((s: any) => ({ id: s.id, videoUrl: s.config.videoUrl?.substring(0, 60) })),
-    }));
+    });
 
     // ── Write to S3 ─────────────────────────────────────────────
     const writeJson = async (key: string, data: any) => {
@@ -282,7 +283,7 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
     await writeJson(`${s3Prefix}/layout.json`, updatedLayout);
     await writeJson(`${s3Prefix}/defaults.json`, updatedDefaults);
 
-    console.log(`[super-admin] Saved marketplace template "${template.name}" (${template.slug}) to S3`);
+    logger.info(`[super-admin] Saved marketplace template "${template.name}" (${template.slug}) to S3`);
 
     // Update template name if changed
     if (businessName && businessName !== template.name) {

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { copyS3Directory, getJsonFromS3 } from "@/lib/storage/s3";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
+import { logger } from "@/lib/logger";
 
 const migrateS3Schema = z
   .object({
@@ -121,7 +122,7 @@ export const POST = withSuperAdmin(async (req) => {
           } catch { /* optional */ }
 
           results.push({ tenantName, s3Path: tenantPath, baseTemplate: baseSlug, status: "BACKFILLED", filesCopied });
-          console.log(`[backfill] ${tenantName}: copied ${filesCopied} files from templates/${baseSlug}/ to ${tenantPath}/`);
+          logger.info(`[backfill] ${tenantName}: copied ${filesCopied} files from templates/${baseSlug}/ to ${tenantPath}/`);
         } catch (err) {
           results.push({ tenantName, s3Path: tenantPath, baseTemplate: baseSlug, status: `ERROR: ${err instanceof Error ? err.message : "Unknown"}` });
           console.error(`[backfill] Failed for ${tenantName}:`, err);
@@ -216,7 +217,7 @@ export const POST = withSuperAdmin(async (req) => {
           filesCopied,
         });
 
-        console.log(`[migrate] ${(tt.tenant as any)?.businessName}: ${oldPath} → ${newPath} (${filesCopied} files)`);
+        logger.info(`[migrate] ${(tt.tenant as any)?.businessName}: ${oldPath} → ${newPath} (${filesCopied} files)`);
       } catch (err) {
         results.push({
           tenantTemplateId: tt.id,
