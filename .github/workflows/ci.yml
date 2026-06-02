@@ -48,6 +48,12 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # PRD-209 AC-7: single-lockfile guard — fail the build if a foreign
+      # lockfile (yarn.lock / package-lock.json) is committed alongside
+      # pnpm-lock.yaml. Passes on this tree (pnpm-lock.yaml only), so it gates.
+      - name: Lockfile guard (PRD-209)
+        run: pnpm check:lockfile
+
       # PRD-216 AC-7: PRD-200 string-aware grep gates (CSS sanitize +
       # error-message-leak). These already pass on this tree, so they gate
       # the build (blocking).
