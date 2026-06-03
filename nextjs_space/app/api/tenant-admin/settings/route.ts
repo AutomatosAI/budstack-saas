@@ -7,6 +7,7 @@ import { generateDrGreenSignature } from '@/lib/drgreen/drgreen-api-client';
 import { z } from 'zod';
 import { apiError, apiValidationError } from '@/lib/api-error';
 import { parseJsonBody } from '@/lib/validation/body';
+import { logger } from '@/lib/logger';
 
 const settingsUpdateSchema = z.object({
   customDomain: z.string().max(255).optional().nullable(),
@@ -113,7 +114,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
           "POST /api/tenant-admin/settings",
         );
       }
-      console.log("Encrypting new secret key...");
+      logger.info("Encrypting new secret key...");
       try {
         dataToUpdate.drGreenSecretKey = encrypt(normalizedSecret);
       } catch (e) {
@@ -132,7 +133,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       }
     }
 
-    console.log('Updating tenant with data:', {
+    logger.info('Updating tenant with data', {
       ...dataToUpdate,
       drGreenSecretKey: dataToUpdate.drGreenSecretKey ? '***' : undefined,
       drGreenApiKey: dataToUpdate.drGreenApiKey ? '***' : undefined,
@@ -160,7 +161,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       userAgent,
     });
 
-    console.log('Settings updated successfully');
+    logger.info('Settings updated successfully');
     return NextResponse.json({ success: true, message: 'Settings updated successfully' });
   } catch (error) {
     return apiError(error, {

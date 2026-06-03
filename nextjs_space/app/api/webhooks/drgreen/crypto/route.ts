@@ -8,6 +8,7 @@ import {
   sanitizeForLogging,
 } from "@/lib/drgreen/drgreen-webhook-verify";
 import { decrypt } from "@/lib/security/encryption";
+import { logger } from "@/lib/logger";
 
 // SECURITY (C14, M9): Cap payload size to prevent DoS from oversized POSTs
 // pre-routing. CoinRemitter webhooks are typically <2KB; 100KB is a generous
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     // SECURITY (H_a7): Sanitize payload before logging — custom_data1 is
     // customer email and other fields may contain PII.
     if (process.env.NODE_ENV === 'development') {
-      console.log("[Crypto Webhook] Received:", sanitizeForLogging(body));
+      logger.info("[Crypto Webhook] Received", { payload: sanitizeForLogging(body) });
     }
 
     // SECURITY (C14): Replay protection — reject webhooks with stale or
@@ -236,10 +237,9 @@ export async function POST(request: NextRequest) {
       order.drGreenInvoiceNum === invoice_id &&
       order.paymentStatus === paymentStatus
     ) {
-      console.log(
-        "[Crypto Webhook] Duplicate webhook ignored (already at status):",
-        order.id,
-        paymentStatus,
+      logger.info(
+        "[Crypto Webhook] Duplicate webhook ignored (already at status)",
+        { orderId: order.id, paymentStatus },
       );
       return NextResponse.json({
         message: "Already processed",
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log("[Crypto Webhook] Order paid successfully:", order.id);
+      logger.info("[Crypto Webhook] Order paid successfully", { orderId: order.id });
     }
 
     return NextResponse.json({

@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { logger } from "@/lib/logger";
 
 interface ConversionResult {
   success: boolean;
@@ -28,8 +29,8 @@ export async function convertLovableTemplate(
   sourcePath: string,
 ): Promise<ConversionResult> {
   try {
-    console.log("[Lovable Converter] Starting conversion...");
-    console.log("[Lovable Converter] Source path:", sourcePath);
+    logger.info("[Lovable Converter] Starting conversion...");
+    logger.info("[Lovable Converter] Source path", { sourcePath });
 
     // Step 1: Detect Lovable structure
     const isLovable = await detectLovableStructure(sourcePath);
@@ -41,25 +42,25 @@ export async function convertLovableTemplate(
       };
     }
 
-    console.log("[Lovable Converter] Lovable structure detected");
+    logger.info("[Lovable Converter] Lovable structure detected");
 
     // Step 2: Extract homepage components from src/pages/Index.tsx
     const components = await extractHomepageComponents(sourcePath);
-    console.log(
+    logger.info(
       `[Lovable Converter] Found ${components.length} homepage components`,
     );
 
     // Step 3: Transform file structure
     await transformFileStructure(sourcePath, components);
-    console.log("[Lovable Converter] File structure transformed");
+    logger.info("[Lovable Converter] File structure transformed");
 
     // Step 4: Generate BudStacks template files
     await generateTemplateFiles(sourcePath, components);
-    console.log("[Lovable Converter] Template files generated");
+    logger.info("[Lovable Converter] Template files generated");
 
     // Step 5: Refactor component code (remove React Router, add 'use client', etc.)
     await refactorComponents(sourcePath);
-    console.log("[Lovable Converter] Components refactored");
+    logger.info("[Lovable Converter] Components refactored");
 
     return {
       success: true,
@@ -151,7 +152,7 @@ async function transformFileStructure(
     try {
       await fs.access(srcFile);
       await fs.copyFile(srcFile, targetFile);
-      console.log(`[Lovable Converter] Copied component: ${component}`);
+      logger.info(`[Lovable Converter] Copied component: ${component}`);
     } catch (error) {
       console.warn(
         `[Lovable Converter] Could not copy component ${component}:`,
@@ -167,9 +168,9 @@ async function transformFileStructure(
   try {
     await fs.access(publicSrc);
     await fs.cp(publicSrc, publicDest, { recursive: true });
-    console.log("[Lovable Converter] Copied public assets");
+    logger.info("[Lovable Converter] Copied public assets");
   } catch {
-    console.log("[Lovable Converter] No public assets found");
+    logger.info("[Lovable Converter] No public assets found");
   }
 
   // Copy styles from src/index.css to styles.css
@@ -177,7 +178,7 @@ async function transformFileStructure(
     const srcStyles = path.join(sourcePath, "src", "index.css");
     const targetStyles = path.join(sourcePath, "styles.css");
     await fs.copyFile(srcStyles, targetStyles);
-    console.log("[Lovable Converter] Copied styles");
+    logger.info("[Lovable Converter] Copied styles");
   } catch (error) {
     console.warn("[Lovable Converter] Could not copy styles:", error);
   }
@@ -193,7 +194,7 @@ async function generateTemplateFiles(
   // Generate index.tsx
   const indexContent = generateIndexFile(components);
   await fs.writeFile(path.join(sourcePath, "index.tsx"), indexContent, "utf-8");
-  console.log("[Lovable Converter] Generated index.tsx");
+  logger.info("[Lovable Converter] Generated index.tsx");
 
   // Generate defaults.json
   const defaultsContent = await generateDefaultsFile(sourcePath);
@@ -202,7 +203,7 @@ async function generateTemplateFiles(
     JSON.stringify(defaultsContent, null, 2),
     "utf-8",
   );
-  console.log("[Lovable Converter] Generated defaults.json");
+  logger.info("[Lovable Converter] Generated defaults.json");
 
   // Generate template.config.json
   const configContent = generateTemplateConfig(components);
@@ -211,7 +212,7 @@ async function generateTemplateFiles(
     JSON.stringify(configContent, null, 2),
     "utf-8",
   );
-  console.log("[Lovable Converter] Generated template.config.json");
+  logger.info("[Lovable Converter] Generated template.config.json");
 }
 
 /**
@@ -457,7 +458,7 @@ async function refactorComponentFile(filePath: string): Promise<void> {
 
   // Save the refactored content
   await fs.writeFile(filePath, content, "utf-8");
-  console.log(`[Lovable Converter] Refactored: ${path.basename(filePath)}`);
+  logger.info(`[Lovable Converter] Refactored: ${path.basename(filePath)}`);
 }
 
 /**
@@ -538,7 +539,7 @@ async function refactorHeaderComponent(filePath: string): Promise<void> {
     console.warn("[Lovable Converter] Could not remove old Header.tsx:", error);
   }
 
-  console.log("[Lovable Converter] Converted Header → Navigation");
+  logger.info("[Lovable Converter] Converted Header → Navigation");
 }
 
 /**
@@ -578,5 +579,5 @@ async function refactorFooterComponent(filePath: string): Promise<void> {
 
   // Save the refactored content
   await fs.writeFile(filePath, content, "utf-8");
-  console.log("[Lovable Converter] Refactored Footer");
+  logger.info("[Lovable Converter] Refactored Footer");
 }

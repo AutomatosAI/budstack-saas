@@ -10,6 +10,7 @@
 
 import Redis from "ioredis";
 import { fetchClient } from "@/lib/drgreen/doctor-green-api";
+import { logger } from "@/lib/logger";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 const CACHE_TTL_SECONDS = 300; // 5 minutes
@@ -47,7 +48,7 @@ export async function getClientCartId(
         if (r) {
             const cached = await r.get(cacheKey);
             if (cached) {
-                console.log(`[ClientCart] Cache HIT for ${clientId}: ${cached}`);
+                logger.info("[ClientCart] Cache HIT", { clientId, clientCartId: cached });
                 return cached;
             }
         }
@@ -64,7 +65,7 @@ export async function getClientCartId(
             const r = getRedis();
             if (r) {
                 await r.setex(cacheKey, CACHE_TTL_SECONDS, clientCartId);
-                console.log(`[ClientCart] Cached ${clientId} → ${clientCartId} (${CACHE_TTL_SECONDS}s)`);
+                logger.info("[ClientCart] Cached clientCartId", { clientId, clientCartId, ttlSeconds: CACHE_TTL_SECONDS });
             }
         } catch {
             // Non-blocking — caching failure shouldn't break orders
@@ -82,7 +83,7 @@ export async function invalidateClientCartId(clientId: string): Promise<void> {
         const r = getRedis();
         if (r) {
             await r.del(`${CACHE_PREFIX}${clientId}`);
-            console.log(`[ClientCart] Invalidated cache for ${clientId}`);
+            logger.info("[ClientCart] Invalidated cache", { clientId });
         }
     } catch {
         // Non-blocking

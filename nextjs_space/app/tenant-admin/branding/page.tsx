@@ -5,6 +5,7 @@ import BrandingForm from './branding-form';
 
 import { getJsonFromS3, getTextFromS3 } from '@/lib/storage/s3';
 import { SECTION_ASSET_KEYS } from '@/lib/types/template-layout';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,8 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
 
   const templateIdToEdit = searchParams.templateId || localUser.tenants.activeTenantTemplateId;
 
-  console.log(`[branding-page] Tenant: ${localUser.tenants.businessName} (${localUser.tenants.id})`, {
+  logger.info(`[branding-page] Tenant ${localUser.tenants.id}`, {
+    businessName: localUser.tenants.businessName,
     activeTenantTemplateId: localUser.tenants.activeTenantTemplateId,
     templateIdToEdit,
     searchParamTemplateId: searchParams.templateId || null,
@@ -57,7 +59,7 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
     // Prefer tenant's own s3Path (includes previous edits), fall back to base template
     const s3Prefix = activeTemplate.s3Path || `templates/${activeTemplate.templates?.slug}`;
 
-    console.log(`[branding-page] Loading template:`, {
+    logger.info(`[branding-page] Loading template`, {
       templateId: activeTemplate.id,
       s3Path: activeTemplate.s3Path,
       resolvedS3Prefix: s3Prefix,

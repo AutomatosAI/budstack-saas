@@ -10,6 +10,7 @@ import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { deepMerge } from "@/lib/utils";
 import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
 import { hexToHsl } from "@/lib/color-utils";
+import { logger } from "@/lib/logger";
 
 /** Normalize a brand color input to raw HSL channels (`H S% L%`).
  *  Accepts hex (#rgb / #rrggbb), `hsl(...)` wrappers, or raw channels.
@@ -164,7 +165,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
 
     const activeTemplateId = saveTargetId;
 
-    console.log(`[branding] Save target:`, {
+    logger.info(`[branding] Save target`, {
       tenantId: tenant.id,
       tenantName: (tenant as any).businessName,
       activeTenantTemplateId: tenant.activeTenantTemplateId,
@@ -266,7 +267,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
       const hasNavFooterConfig = !!incomingSettings.navigationStyle || !!incomingSettings.navigationConfig
         || !!incomingSettings.footerStyle || !!incomingSettings.footerConfig;
 
-      console.log("[branding] Layout debug:", {
+      logger.info("[branding] Layout debug", {
         hasLayoutSections,
         layoutSectionsCount: Array.isArray(incomingSettings.layoutSections) ? incomingSettings.layoutSections.length : "not-array",
         hasSectionConfigs,
@@ -381,7 +382,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
             where: { id: activeTemplateId },
             data: { s3Path },
           });
-          console.log(`[branding] Auto-created s3Path: ${s3Path}`);
+          logger.info(`[branding] Auto-created s3Path: ${s3Path}`);
 
           // Copy ALL files from base template so tenant is fully self-contained
           if (baseSlug !== 'default') {
@@ -389,7 +390,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
             const sourcePrefix = `templates/${baseSlug}/`;
             const destPrefix = `${s3Path}/`;
             const filesCopied = await copyS3Directory(sourcePrefix, destPrefix);
-            console.log(`[branding] Copied ${filesCopied} files from ${sourcePrefix} to ${destPrefix}`);
+            logger.info(`[branding] Copied ${filesCopied} files from ${sourcePrefix} to ${destPrefix}`);
           }
         }
 
@@ -399,7 +400,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
           const s3Client = await createS3Client();
           const { bucketName } = await getBucketConfig();
 
-          console.log("[branding] Writing layout.json with", updatedSections.length, "sections to S3");
+          logger.info("[branding] Writing layout.json to S3", { sectionCount: updatedSections.length });
           const layoutKey = `${s3Path}/layout.json`;
           await s3Client.send(
             new PutObjectCommand({
@@ -409,7 +410,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
               ContentType: "application/json",
             })
           );
-          console.log(`[branding] Successfully rewrote layout.json to ${layoutKey}`);
+          logger.info(`[branding] Successfully rewrote layout.json to ${layoutKey}`);
         } catch (s3Error) {
           console.error("[branding] Failed to rewrite layout.json to S3:", s3Error);
         }
@@ -427,8 +428,8 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         updateData.pageContent = deepMerge(currentPageContent, settings.pageContent);
       }
 
-      console.log("[branding] Saving designSystem keys:", Object.keys(newDesignSystem), "color keys:", Object.keys(newDesignSystem.colors || {}));
-      console.log("[branding] Saving pageContent keys:", Object.keys(updateData.pageContent || {}));
+      logger.info("[branding] Saving designSystem", { designSystemKeys: Object.keys(newDesignSystem), colorKeys: Object.keys(newDesignSystem.colors || {}) });
+      logger.info("[branding] Saving pageContent", { pageContentKeys: Object.keys(updateData.pageContent || {}) });
 
       // Update TenantTemplate
       await prisma.tenant_templates.update({

@@ -13,6 +13,7 @@ import {
   ZIP_MAX_ENTRIES,
   ZIP_DOWNLOAD_MAX_BYTES,
 } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 
 /**
  * SECURITY (C5): Extract a ZIP into `destRoot` while enforcing path
@@ -190,7 +191,7 @@ export async function downloadGitHubRepo(
 
     for (const branchName of branchesToTry) {
       const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${branchName}.zip`;
-      console.log(`[Template Utils] Trying branch '${branchName}': ${zipUrl}`);
+      logger.info(`[Template Utils] Trying branch '${branchName}': ${zipUrl}`);
 
       const response = await fetch(zipUrl);
       if (response.ok) {
@@ -225,7 +226,7 @@ export async function downloadGitHubRepo(
       );
     }
 
-    console.log(`[Template Utils] ZIP downloaded from branch '${usedBranch}'`);
+    logger.info(`[Template Utils] ZIP downloaded from branch '${usedBranch}'`);
 
     // SECURITY (C5): Extract ZIP with per-entry path validation, size
     // caps, and symlink rejection. Replaces unsafe extractAllTo().
@@ -241,7 +242,7 @@ export async function downloadGitHubRepo(
     }
 
     const extractPath = path.join(tempDir, repoDir);
-    console.log(`[Template Utils] Extracted to: ${extractPath}`);
+    logger.info(`[Template Utils] Extracted to: ${extractPath}`);
 
     return extractPath;
   } catch (error) {

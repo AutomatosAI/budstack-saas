@@ -12,6 +12,7 @@ import { parseUuid } from "@/lib/validation/parse-uuid";
 import { tenantSettingsLenientSchema } from "@/lib/validation/tenant-settings";
 import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { apiError, apiValidationError } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
 
 export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
   try {
@@ -161,7 +162,7 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
           );
         }
 
-        console.log(
+        logger.info(
           `✅ Created subdomain: ${existingTenant.subdomain}.${baseDomain}`,
         );
       } catch (error) {
@@ -184,7 +185,7 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       try {
         const namecheap = getNamecheapClient(namecheapUsername);
         await namecheap.deleteTenantSubdomain(existingTenant.subdomain);
-        console.log(
+        logger.info(
           `🗑️ Deleted subdomain: ${existingTenant.subdomain}.${baseDomain}`,
         );
       } catch (error) {
@@ -211,7 +212,7 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       if (existingTenant.customDomain && railwayDomainId) {
         try {
           await removeCustomDomain(railwayDomainId);
-          console.log(`🗑️ Removed Railway domain: ${existingTenant.customDomain}`);
+          logger.info(`🗑️ Removed Railway domain: ${existingTenant.customDomain}`);
         } catch (error) {
           console.error("Railway domain removal error:", error);
         }
@@ -227,7 +228,7 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
           railwayDomainId = railwayDomain.id;
           railwayDnsRecords = railwayDomain.dnsRecords;
           domainVerification = { status: "pending", checkedAt: new Date().toISOString(), expected: null, found: null };
-          console.log(`✅ Added Railway domain: ${customDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
+          logger.info(`✅ Added Railway domain: ${customDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
         } catch (error) {
           console.error("Railway domain creation error:", error);
           return apiError(error, {
@@ -243,7 +244,7 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
         railwayDomainId = railwayDomain.id;
         railwayDnsRecords = railwayDomain.dnsRecords;
         domainVerification = { status: "pending", checkedAt: new Date().toISOString(), expected: null, found: null };
-        console.log(`✅ Provisioned Railway domain (recovery): ${resolvedDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
+        logger.info(`✅ Provisioned Railway domain (recovery): ${resolvedDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
       } catch (error) {
         console.error("Railway domain recovery provisioning error:", error);
         return apiError(error, {
@@ -360,7 +361,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
       try {
         const client = await clerkClient();
         await client.organizations.deleteOrganization(clerkOrgId);
-        console.log(`🗑️ Deleted Clerk org: ${clerkOrgId}`);
+        logger.info(`🗑️ Deleted Clerk org: ${clerkOrgId}`);
       } catch (error: any) {
         // AC-5: log full detail server-side; the body must never carry error.message.
         console.error(`Failed to delete Clerk org ${clerkOrgId}:`, error);
@@ -378,7 +379,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
         });
         for (const cu of clerkUsers.data) {
           await client.users.deleteUser(cu.id);
-          console.log(`🗑️ Deleted Clerk user: ${cu.id} (${tenantUser.email})`);
+          logger.info("🗑️ Deleted Clerk user", { clerkUserId: cu.id, email: tenantUser.email });
         }
       } catch (error: any) {
         console.error(`Failed to delete Clerk user ${tenantUser.email}:`, error);
@@ -391,7 +392,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
     if (railwayDomainId) {
       try {
         await removeCustomDomain(railwayDomainId);
-        console.log(`🗑️ Removed Railway domain for tenant: ${tenant.customDomain}`);
+        logger.info(`🗑️ Removed Railway domain for tenant: ${tenant.customDomain}`);
       } catch (error: any) {
         console.error(`Failed to remove Railway domain ${railwayDomainId}:`, error);
         cleanupErrors.push(`Failed to remove Railway domain ${railwayDomainId}`);

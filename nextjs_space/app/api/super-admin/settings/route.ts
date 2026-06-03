@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/security/encryption";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
+import { logger } from "@/lib/logger";
 
 const platformConfigSchema = z.object({
   drGreenApiUrl: z.string().max(2000).optional().nullable(),
@@ -74,7 +75,7 @@ export const POST = withSuperAdmin(async (req) => {
 
     // Only update encrypted fields if new values are provided
     if (awsAccessKeyId && awsAccessKeyId.trim() !== "") {
-      console.log("Encrypting new AWS access key...");
+      logger.info("Encrypting new AWS access key...");
       try {
         dataToUpdate.awsAccessKeyId = encrypt(awsAccessKeyId);
       } catch (e) {
@@ -84,7 +85,7 @@ export const POST = withSuperAdmin(async (req) => {
     }
 
     if (awsSecretAccessKey && awsSecretAccessKey.trim() !== "") {
-      console.log("Encrypting new AWS secret key...");
+      logger.info("Encrypting new AWS secret key...");
       try {
         dataToUpdate.awsSecretAccessKey = encrypt(awsSecretAccessKey);
       } catch (e) {
@@ -94,7 +95,7 @@ export const POST = withSuperAdmin(async (req) => {
     }
 
     if (emailServer && emailServer.trim() !== "") {
-      console.log("Encrypting new email server...");
+      logger.info("Encrypting new email server...");
       try {
         dataToUpdate.emailServer = encrypt(emailServer);
       } catch (e) {
@@ -104,7 +105,7 @@ export const POST = withSuperAdmin(async (req) => {
     }
 
     if (redisUrl && redisUrl.trim() !== "") {
-      console.log("Encrypting new Redis URL...");
+      logger.info("Encrypting new Redis URL...");
       try {
         dataToUpdate.redisUrl = encrypt(redisUrl);
       } catch (e) {
@@ -113,7 +114,7 @@ export const POST = withSuperAdmin(async (req) => {
       }
     }
 
-    console.log("Updating platform config...");
+    logger.info("Updating platform config...");
 
     // Upsert the config
     await prisma.platform_config.upsert({
@@ -122,7 +123,7 @@ export const POST = withSuperAdmin(async (req) => {
       update: { ...dataToUpdate, updatedAt: new Date() },
     });
 
-    console.log("Platform config updated successfully");
+    logger.info("Platform config updated successfully");
     return NextResponse.json({
       success: true,
       message: "Settings updated successfully",

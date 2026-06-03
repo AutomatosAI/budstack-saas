@@ -9,6 +9,7 @@ import {
 } from "@/lib/drgreen/doctor-green-api";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { apiError, apiValidationError } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
 
 export const POST = withAuth(async (req, { user }) => {
   try {
@@ -134,7 +135,7 @@ export const POST = withAuth(async (req, { user }) => {
         },
       });
 
-      console.log(
+      logger.info(
         `✅ Order submitted to Dr. Green API. Order ID: ${drGreenOrderId}`,
       );
     } catch (drGreenError: any) {

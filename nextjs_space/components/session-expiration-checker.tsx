@@ -28,7 +28,6 @@ export function SessionExpirationChecker() {
 
     // If session has already expired, sign out immediately
     if (timeUntilExpiration <= 0) {
-      console.log("Session expired, signing out...");
       signOut({ redirectUrl: "/auth/login" });
       return;
     }
@@ -36,7 +35,6 @@ export function SessionExpirationChecker() {
     // Set a timeout to sign out when the session expires
     // Add a small buffer (5 seconds) to ensure we catch the expiration
     const timeoutId: NodeJS.Timeout = setTimeout(() => {
-      console.log("Session expired, signing out...");
       signOut({ redirectUrl: "/auth/login" });
     }, timeUntilExpiration + 5000);
 

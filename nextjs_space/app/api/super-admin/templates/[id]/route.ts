@@ -11,6 +11,7 @@ import { requireSameOrigin } from "@/lib/security/require-same-origin";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const templatePatchSchema = z
   .object({
@@ -253,7 +254,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
       );
     }
 
-    console.log(
+    logger.info(
       `[Template Delete] Deleting template: ${template.name} (${template.slug})${force ? ' (FORCE)' : ''}${cascadeTenantTemplates ? ' (CASCADE-TENANT-TEMPLATES)' : ''}`,
     );
 
@@ -264,7 +265,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
         where: { activeTenantTemplateId: { in: tenantTemplateIds } },
         data: { activeTenantTemplateId: null },
       });
-      console.log(`[Template Delete] Cleared activeTenantTemplateId on tenants`);
+      logger.info(`[Template Delete] Cleared activeTenantTemplateId on tenants`);
     }
 
     // Clear direct templateId references on tenants
@@ -273,7 +274,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
         where: { templateId: templateId },
         data: { templateId: null },
       });
-      console.log(`[Template Delete] Cleared templateId on ${template._count.tenants} tenant(s)`);
+      logger.info(`[Template Delete] Cleared templateId on ${template._count.tenants} tenant(s)`);
     }
 
     // Tenant clones are owned by the tenant once cloned. Deleting the base template
@@ -304,7 +305,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
     }
 
     if (template._count.tenant_templates > 0 && cascadeTenantTemplates) {
-      console.log(
+      logger.info(
         `[Template Delete] CASCADE: deleting ${template._count.tenant_templates} tenant_templates that reference this base template (caller passed cascadeTenantTemplates=true)`,
       );
       await prisma.tenant_templates.deleteMany({
@@ -325,7 +326,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
         .catch(() => false);
       if (dirExists) {
         await fs.rm(templateDir, { recursive: true, force: true });
-        console.log(`[Template Delete] Directory removed: ${templateDir}`);
+        logger.info(`[Template Delete] Directory removed: ${templateDir}`);
       }
     } catch (fsError: any) {
       console.error("[Template Delete] Error removing directory:", fsError);
@@ -336,7 +337,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
     if (template.slug) {
       try {
         const s3Deleted = await deleteS3Directory(`templates/${template.slug}/`);
-        console.log(`[Template Delete] S3 cleanup: ${s3Deleted} file(s) deleted from templates/${template.slug}/`);
+        logger.info(`[Template Delete] S3 cleanup: ${s3Deleted} file(s) deleted from templates/${template.slug}/`);
       } catch (s3Error: any) {
         console.error("[Template Delete] S3 cleanup failed (continuing):", s3Error.message);
       }
@@ -347,7 +348,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
       where: { id: templateId },
     });
 
-    console.log("[Template Delete] Database record deleted");
+    logger.info("[Template Delete] Database record deleted");
 
     // Create audit log
     const clientInfo = getClientInfo(req.headers);

@@ -1,5 +1,6 @@
 import { getEmailQueue } from "@/lib/queue";
 import { prisma as db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 interface SendEmailOptions {
   tenantId: string;
@@ -43,9 +44,9 @@ export class MailerService {
       from,
     });
 
-    console.log(
-      `[MailerService] Enqueued email for tenant ${tenantId} to ${to}`,
-    );
+    logger.info(`[MailerService] Enqueued email for tenant ${tenantId}`, {
+      to,
+    });
 
     // Create initial log entry
     try {

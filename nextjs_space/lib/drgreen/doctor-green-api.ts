@@ -210,6 +210,7 @@ export interface DoctorGreenOrder {
 // Doctor Green staging API returns image paths but files are not hosted (404 errors)
 // Country code conversion — consolidated in lib/country-codes.ts
 import { toAlpha3 } from '@/lib/country-codes';
+import { logger } from '@/lib/logger';
 
 /**
  * Fetch all products from Doctor Green
@@ -305,7 +306,7 @@ export async function fetchProducts(
   // Currently returns EUR prices — normalizeProduct converts via exchange rates.
   // When Dr Green deploys localRetailPrice, it will be used automatically.
   const alpha3 = toAlpha3(country);
-  console.log(`[fetchProducts] country=${country} alpha3=${alpha3}`);
+  logger.info(`[fetchProducts] country=${country} alpha3=${alpha3}`);
 
   const response = await doctorGreenRequest<any>('/strains', {
     config,
@@ -320,15 +321,15 @@ export async function fetchProducts(
   // Debug: log response shape and first product pricing
   const responseKeys = Object.keys(response || {});
   const dataKeys = response?.data ? Object.keys(response.data) : [];
-  console.log(`[fetchProducts] Response keys: [${responseKeys}], data keys: [${dataKeys}]`);
+  logger.info(`[fetchProducts] Response keys: [${responseKeys}], data keys: [${dataKeys}]`);
 
   const products = response?.data?.strains || response?.strains || [];
 
   if (products.length > 0) {
     const p = products[0];
-    console.log(`[fetchProducts] First product: "${p.name}" retailPrice=${p.retailPrice} localRetailPrice=${p.localRetailPrice ?? 'N/A'} localCurrency=${p.localCurrency ?? 'N/A'}`);
+    logger.info(`[fetchProducts] First product: "${p.name}" retailPrice=${p.retailPrice} localRetailPrice=${p.localRetailPrice ?? 'N/A'} localCurrency=${p.localCurrency ?? 'N/A'}`);
   } else {
-    console.log(`[fetchProducts] No products returned`);
+    logger.info(`[fetchProducts] No products returned`);
   }
 
   return Promise.all(products.map((product: DoctorGreenProduct) => normalizeProduct(product, country)));
@@ -403,7 +404,7 @@ async function scanClientList(
     for (const orderBy of DIRECTIONS) {
       if (exhausted[orderBy]) continue;
 
-      console.log(`[${label}] Scanning ${orderBy} page ${page}/${MAX_PAGES}`);
+      logger.info(`[scanClientList] Scanning ${orderBy} page ${page}/${MAX_PAGES}`, { label });
 
       const response = await doctorGreenRequest<any>('/dapp/clients', {
         config,
@@ -418,7 +419,7 @@ async function scanClientList(
 
       const match = clients.find(predicate);
       if (match) {
-        console.log(`[${label}] Matched on ${orderBy} page ${page} (${clients.length} on page)`);
+        logger.info(`[scanClientList] Matched on ${orderBy} page ${page} (${clients.length} on page)`, { label });
         return match;
       }
 
@@ -462,7 +463,7 @@ export async function fetchClient(
       response?.data ??
       response;
     if (client?.id) {
-      console.log(`[fetchClient] direct GET /dapp/clients/${clientId} succeeded`);
+      logger.info("[fetchClient] direct GET /dapp/clients/{id} succeeded", { clientId });
       return client as DoctorGreenClient;
     }
     console.warn(
@@ -516,7 +517,7 @@ export async function fetchClientByEmail(
     `fetchClientByEmail:${normalizedEmail}`,
   );
   if (!match) {
-    console.log(`[fetchClientByEmail] Client not found for email ${normalizedEmail}`);
+    logger.info("[fetchClientByEmail] Client not found for email", { email: normalizedEmail });
     return null;
   }
   return match;
@@ -558,7 +559,7 @@ export async function updateClient(
   if (updates.contactNumber !== undefined) payload.contactNumber = updates.contactNumber;
   if (updates.shipping !== undefined) payload.shipping = updates.shipping;
 
-  console.log(`[updateClient] PATCH /dapp/clients/${clientId}`, Object.keys(payload));
+  logger.info("[updateClient] PATCH /dapp/clients/{id}", { clientId, fields: Object.keys(payload) });
 
   const response = await doctorGreenRequest<any>(`/dapp/clients/${clientId}`, {
     method: 'PATCH',

@@ -622,7 +622,6 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
           const iframeSrc = previewMode === "marketplace"
             ? `/store/preview/${baseSlug}?embed=true&t=${Date.now()}`
             : `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}&embed=true&t=${Date.now()}`;
-          console.log('[branding-form] iframe src:', iframeSrc);
           return (
             <div
               className="flex justify-center bg-slate-100 dark:bg-slate-900 pt-10"
