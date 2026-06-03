@@ -21,7 +21,10 @@ const onboardingSchema = z
     email: z.string().email().max(254),
     password: z.string().min(8).max(128),
     subdomain: z.string().min(2).max(30).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, "Invalid subdomain format"),
-    nftTokenId: z.string().min(1).max(200),
+    // NFT verification is temporarily disabled — the box is hidden in the
+    // onboarding UI and no token is required. Kept optional so the field can
+    // be re-enabled later without a schema/data migration.
+    nftTokenId: z.string().max(200).optional(),
     contactInfo: z.union([
       z.string().max(1000),
       z.object({
