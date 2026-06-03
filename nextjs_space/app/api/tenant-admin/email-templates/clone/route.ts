@@ -19,9 +19,12 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
       emailCloneSchema,
     );
 
-    // 1. Fetch Original Template
-    const original = await prisma.email_templates.findUnique({
-      where: { id: originalTemplateId },
+    // 1. Fetch Original Template — tenant-scoped. findUnique bypasses the
+    // Prisma tenant middleware (unique-field where only), so a tenant admin
+    // could otherwise clone another tenant's private template by ID. Allow
+    // only system templates or this tenant's own.
+    const original = await prisma.email_templates.findFirst({
+      where: { id: originalTemplateId, OR: [{ isSystem: true }, { tenantId }] },
     });
 
     if (!original) {

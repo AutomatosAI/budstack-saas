@@ -27,8 +27,15 @@ export const GET = withTenantAuthParams(async (req, { tenantId }, params) => {
     }
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    // Validate pagination: reject NaN/negative pages and cap the page size so a
+    // crafted ?limit=1000000 can't force an unbounded scan.
+    const pageParam = parseInt(searchParams.get("page") || "1", 10);
+    const limitParam = parseInt(searchParams.get("limit") || "50", 10);
+    const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+    const limit =
+      Number.isInteger(limitParam) && limitParam > 0
+        ? Math.min(limitParam, 100)
+        : 50;
     const skip = (page - 1) * limit;
 
     const [deliveries, total] = await Promise.all([

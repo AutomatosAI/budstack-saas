@@ -213,12 +213,6 @@ export const GET = withAuth(async (req, { user }) => {
       });
     }
 
-    // DB User Link
-    const dbUser = await prisma.users.findFirst({ where: { email } });
-    if (!dbUser) {
-      return NextResponse.json({ orders: [] });
-    }
-
     const tenant = await getTenantFromRequest(req);
 
     if (!tenant) {
@@ -227,6 +221,15 @@ export const GET = withAuth(async (req, { user }) => {
         status: 404,
         safeMessage: "Tenant not found",
       });
+    }
+
+    // DB User Link — scoped to this tenant so a shared email across stores
+    // resolves to the correct tenant's user row.
+    const dbUser = await prisma.users.findFirst({
+      where: { email, tenantId: tenant.id },
+    });
+    if (!dbUser) {
+      return NextResponse.json({ orders: [] });
     }
 
     // Get orders for the current user
