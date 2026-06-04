@@ -89,8 +89,23 @@ export default clerkMiddleware(async (auth, req) => {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, "base");
     }
 
-    // Platform routes: don't rewrite — these live outside /store/
-    if (pathname.startsWith('/auth/') || pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin') || pathname.startsWith('/onboarding')) {
+    // Admin surfaces are apex-only. On a tenant host, redirect to the canonical
+    // apex (preserving path + query) instead of serving the host-agnostic admin
+    // app — it renders on every subdomain (confusing) and needlessly widens the
+    // surface. Tenant isolation is enforced by the session's tenantId, never the
+    // host (see withTenantAuth / tenant-admin layout), so this is hardening + UX.
+    if (pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin')) {
+      const apex = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io';
+      const dest = new URL(url);
+      dest.host = apex;
+      dest.protocol = 'https:';
+      dest.port = '';
+      return applyCsp(NextResponse.redirect(dest, 307), nonce, 'base');
+    }
+
+    // Other platform routes (/auth, /onboarding) stay on the tenant host:
+    // shopper login + public signup happen on the storefront, not the apex.
+    if (pathname.startsWith('/auth/') || pathname.startsWith('/onboarding')) {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, variantForServedPath(pathname));
     }
 
@@ -129,8 +144,20 @@ export default clerkMiddleware(async (auth, req) => {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, "base");
     }
 
-    // Platform routes: don't rewrite
-    if (pathname.startsWith('/auth/') || pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin') || pathname.startsWith('/onboarding')) {
+    // Admin surfaces are apex-only — redirect off the custom domain to the
+    // canonical apex (preserving path + query). Isolation is session-scoped, not
+    // host-scoped, so this is hardening + UX, not a data-leak fix.
+    if (pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin')) {
+      const apex = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io';
+      const dest = new URL(url);
+      dest.host = apex;
+      dest.protocol = 'https:';
+      dest.port = '';
+      return applyCsp(NextResponse.redirect(dest, 307), nonce, 'base');
+    }
+
+    // Other platform routes (/auth, /onboarding) stay on the custom domain.
+    if (pathname.startsWith('/auth/') || pathname.startsWith('/onboarding')) {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, variantForServedPath(pathname));
     }
 
