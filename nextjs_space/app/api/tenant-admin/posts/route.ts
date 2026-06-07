@@ -79,9 +79,6 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
     return NextResponse.json(posts);
   } catch (error) {
     console.error("Error fetching posts:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "GET /api/tenant-admin/posts", safeMessage: "Internal server error" });
   }
 });

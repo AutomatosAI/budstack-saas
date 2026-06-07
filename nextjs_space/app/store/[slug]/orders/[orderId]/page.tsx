@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Clock, Package, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { getTenantBasePath } from "@/lib/tenant-utils";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
 
 // Extended types for orders with currency field (not in Prisma schema)
 interface OrderWithCurrency {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 
 const TENANT_SELECT = {
@@ -32,19 +32,20 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
     });
 
     if (!tenant) {
-      return NextResponse.json(
-        { error: "Tenant not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/tenant-admin/tenant",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     return NextResponse.json(tenant);
   } catch (error) {
     console.error("Error fetching tenant:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch tenant" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/tenant-admin/tenant",
+      safeMessage: "Failed to fetch tenant",
+    });
   }
 });
 
@@ -84,9 +85,9 @@ export const PATCH = withTenantAuth(async (req, { tenantId }) => {
     // Validate countryCode if provided
     if (body.countryCode !== undefined) {
       if (typeof body.countryCode !== "string" || !ISO_COUNTRY_RE.test(body.countryCode)) {
-        return NextResponse.json(
-          { error: "countryCode must be a 2-letter uppercase ISO code (e.g. ZA, PT, GB)" },
-          { status: 400 },
+        return apiValidationError(
+          "countryCode must be a 2-letter uppercase ISO code (e.g. ZA, PT, GB)",
+          "PATCH /api/tenant-admin/tenant",
         );
       }
     }
@@ -101,9 +102,9 @@ export const PATCH = withTenantAuth(async (req, { tenantId }) => {
     }
 
     if (Object.keys(data).length === 0) {
-      return NextResponse.json(
-        { error: "No valid fields to update" },
-        { status: 400 },
+      return apiValidationError(
+        "No valid fields to update",
+        "PATCH /api/tenant-admin/tenant",
       );
     }
 

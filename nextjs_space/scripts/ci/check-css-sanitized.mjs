@@ -122,7 +122,7 @@ if (violations.length > 0) {
     console.error(`      unsanitised css var(s): ${v.unsafe.join(", ")}`);
   }
   console.error(
-    `\n  Fix: wrap the value in sanitizeCss(...) from "@/lib/css-utils".\n`,
+    `\n  Fix: wrap the value in sanitizeCss(...) from "@/lib/security/css-utils".\n`,
   );
   process.exit(1);
 }

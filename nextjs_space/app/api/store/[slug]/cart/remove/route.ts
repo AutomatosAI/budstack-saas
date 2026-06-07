@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getCurrentTenant } from "@/lib/tenant";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
-import { removeFromCart } from "@/lib/drgreen-cart";
-import { apiError } from "@/lib/api-error";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
+import { removeFromCart } from "@/lib/drgreen/drgreen-cart";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 
 export const DELETE = withAuth(async (request, { user }, params) => {
@@ -13,22 +13,30 @@ export const DELETE = withAuth(async (request, { user }, params) => {
 
     const email = user.email;
     if (!email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), {
+        route: "DELETE /api/store/[slug]/cart/remove",
+        status: 401,
+        safeMessage: "Unauthorized",
+      });
     }
 
     // Find linked DB user
     const dbUser = await prisma.users.findFirst({ where: { email } });
     if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError(new Error("User not found"), {
+        route: "DELETE /api/store/[slug]/cart/remove",
+        status: 404,
+        safeMessage: "User not found",
+      });
     }
 
     const { searchParams } = new URL(request.url);
     const strainId = searchParams.get("strainId");
 
     if (!strainId) {
-      return NextResponse.json(
-        { error: "Missing required parameter: strainId" },
-        { status: 400 },
+      return apiValidationError(
+        "Missing required parameter: strainId",
+        "DELETE /api/store/[slug]/cart/remove",
       );
     }
 
@@ -36,7 +44,11 @@ export const DELETE = withAuth(async (request, { user }, params) => {
     const tenant = await getCurrentTenant();
 
     if (!tenant) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      return apiError(new Error("Store not found"), {
+        route: "DELETE /api/store/[slug]/cart/remove",
+        status: 404,
+        safeMessage: "Store not found",
+      });
     }
 
     // Get Dr. Green credentials

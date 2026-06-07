@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getTenantFromRequest } from "@/lib/tenant";
-import { sendEmail, emailTemplates } from "@/lib/email";
+import { getTenantFromRequest } from "@/lib/tenant/tenant";
+import { sendEmail, emailTemplates } from "@/lib/email/email";
 import {
   createOrder as createDrGreenOrder,
   getCurrencyByCountry,
-} from "@/lib/doctor-green-api";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
+} from "@/lib/drgreen/doctor-green-api";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
+import { apiError, apiValidationError } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
 
 export const POST = withAuth(async (req, { user }) => {
   try {
@@ -15,13 +17,21 @@ export const POST = withAuth(async (req, { user }) => {
     const email = user.email;
 
     if (!email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), {
+        route: "POST /api/orders",
+        status: 401,
+        safeMessage: "Unauthorized",
+      });
     }
 
     const tenant = await getTenantFromRequest(req);
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "POST /api/orders",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     const dbUser = await prisma.users.findFirst({
@@ -32,14 +42,18 @@ export const POST = withAuth(async (req, { user }) => {
     });
 
     if (!dbUser) {
-      return NextResponse.json({ error: "User not found in this store" }, { status: 404 });
+      return apiError(new Error("User not found in this store"), {
+        route: "POST /api/orders",
+        status: 404,
+        safeMessage: "User not found in this store",
+      });
     }
 
     const body = await req.json();
     const { items, shippingInfo } = body;
 
     if (!items || items.length === 0) {
-      return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+      return apiValidationError("Cart is empty", "POST /api/orders");
     }
 
     // Calculate subtotal and shipping
@@ -121,7 +135,7 @@ export const POST = withAuth(async (req, { user }) => {
         },
       });
 
-      console.log(
+      logger.info(
         `✅ Order submitted to Dr. Green API. Order ID: ${drGreenOrderId}`,
       );
     } catch (drGreenError: any) {
@@ -180,10 +194,10 @@ export const POST = withAuth(async (req, { user }) => {
     });
   } catch (error) {
     console.error("Order creation error:", error);
-    return NextResponse.json(
-      { error: "Failed to create order" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/orders",
+      safeMessage: "Failed to create order",
+    });
   }
 });
 
@@ -192,19 +206,30 @@ export const GET = withAuth(async (req, { user }) => {
     // Auth Check
     const email = user.email;
     if (!email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // DB User Link
-    const dbUser = await prisma.users.findFirst({ where: { email } });
-    if (!dbUser) {
-      return NextResponse.json({ orders: [] });
+      return apiError(new Error("Unauthorized"), {
+        route: "GET /api/orders",
+        status: 401,
+        safeMessage: "Unauthorized",
+      });
     }
 
     const tenant = await getTenantFromRequest(req);
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/orders",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
+    }
+
+    // DB User Link — scoped to this tenant so a shared email across stores
+    // resolves to the correct tenant's user row.
+    const dbUser = await prisma.users.findFirst({
+      where: { email, tenantId: tenant.id },
+    });
+    if (!dbUser) {
+      return NextResponse.json({ orders: [] });
     }
 
     // Get orders for the current user
@@ -224,9 +249,9 @@ export const GET = withAuth(async (req, { user }) => {
     return NextResponse.json({ orders });
   } catch (error) {
     console.error("Orders fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch orders" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/orders",
+      safeMessage: "Failed to fetch orders",
+    });
   }
 });

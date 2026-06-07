@@ -11,8 +11,8 @@ import {
   decideMissingContext,
   emitTenantContextMissing,
   isStrictTenantContext,
-} from "@/lib/tenant-scope-policy";
-import { getTenantContext, hasTenantContext } from "@/lib/tenant-context";
+} from "@/lib/tenant/tenant-scope-policy";
+import { getTenantContext, hasTenantContext } from "@/lib/tenant/tenant-context";
 
 const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 

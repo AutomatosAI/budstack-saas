@@ -22,8 +22,8 @@ vi.mock("next/headers", () => ({ headers: headersMock }));
 import {
   resolveTenant,
   isAmbiguousTenantResolution,
-} from "@/lib/tenant-resolver";
-import { getTenantContext, hasTenantContext } from "@/lib/tenant-context";
+} from "@/lib/tenant/tenant-resolver";
+import { getTenantContext, hasTenantContext } from "@/lib/tenant/tenant-context";
 
 // A plain row shaped like prisma.tenants — the mocked findFirst is untyped so no cast.
 function tenantRow(overrides: Record<string, unknown> = {}) {

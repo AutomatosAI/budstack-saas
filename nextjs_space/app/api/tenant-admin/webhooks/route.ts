@@ -6,7 +6,7 @@ import crypto from "crypto";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
-import { assertSafeWebhookUrl } from "@/lib/webhook-ssrf";
+import { assertSafeWebhookUrl } from "@/lib/integrations/webhook-ssrf";
 
 const webhookCreateSchema = z
   .object({
@@ -36,10 +36,10 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
     return NextResponse.json({ webhooks });
   } catch (error) {
     console.error("[API] Error fetching webhooks:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch webhooks" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/tenant-admin/webhooks",
+      safeMessage: "Failed to fetch webhooks",
+    });
   }
 });
 

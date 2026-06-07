@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant/tenant";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import SupportContent from "./support-content";
 
 export default async function SupportPage({

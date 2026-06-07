@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { sendEmail, emailTemplates } from '@/lib/email';
-import { getCurrentTenant } from '@/lib/tenant';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { sendEmail, emailTemplates } from '@/lib/email/email';
+import { getCurrentTenant } from '@/lib/tenant/tenant';
+import { checkRateLimit } from '@/lib/security/rate-limit';
+import { apiError, apiValidationError } from '@/lib/api-error';
 import { z } from 'zod';
 import crypto from 'crypto';
 
@@ -49,10 +50,7 @@ export async function POST(request: NextRequest) {
     const parseResult = resetPasswordSchema.safeParse(rawBody);
     if (!parseResult.success) {
       await delayUntil(deadline);
-      return NextResponse.json(
-        { error: 'Invalid email' },
-        { status: 400 },
-      );
+      return apiValidationError('Invalid email', 'POST /api/auth/reset-password');
     }
     const email = parseResult.data.email.toLowerCase();
 
@@ -111,9 +109,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Password reset error:', error);
     await delayUntil(deadline);
-    return NextResponse.json(
-      { error: 'Failed to process password reset request' },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: 'POST /api/auth/reset-password',
+      safeMessage: 'Failed to process password reset request',
+    });
   }
 }

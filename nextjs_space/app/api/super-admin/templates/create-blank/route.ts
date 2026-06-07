@@ -1,14 +1,17 @@
+import { NextResponse } from "next/server";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { createS3Client, getBucketConfig } from "@/lib/aws-config";
+import { createS3Client, getBucketConfig } from "@/lib/storage/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { redirect } from "next/navigation";
 
 /**
- * Creates a blank marketplace template with scaffold files in S3
- * and redirects to the editor.
+ * Creates a blank marketplace template with scaffold files in S3, then returns
+ * the editor URL for the client to navigate to.
+ *
+ * POST (not GET): this creates a DB row and writes S3 objects, so it must not
+ * be a safe/idempotent GET that a browser prefetch or crawler could trigger.
  */
-export const GET = withSuperAdmin(async (_req) => {
+export const POST = withSuperAdmin(async (_req) => {
   const timestamp = Date.now();
   const slug = `new-template-${timestamp}`;
   const name = "New Template";
@@ -88,6 +91,7 @@ export const GET = withSuperAdmin(async (_req) => {
   await writeJson(`${s3Prefix}/layout.json`, scaffoldLayout);
   await writeJson(`${s3Prefix}/defaults.json`, scaffoldDefaults);
 
-  // Redirect to the editor
-  redirect(`/super-admin/templates/${template.id}/edit`);
+  return NextResponse.json({
+    url: `/super-admin/templates/${template.id}/edit`,
+  });
 });

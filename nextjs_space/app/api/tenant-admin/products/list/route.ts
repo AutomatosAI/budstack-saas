@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
-import { fetchProducts } from "@/lib/doctor-green-api";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
+import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { prisma } from "@/lib/db";
 
 /**

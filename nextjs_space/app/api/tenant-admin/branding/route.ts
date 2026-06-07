@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { uploadFile, getJsonFromS3 } from "@/lib/s3";
-import { validateUploadBuffer } from "@/lib/upload-validation";
+import { uploadFile, getJsonFromS3 } from "@/lib/storage/s3";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 import { TenantSettings } from "@/lib/types";
+import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { deepMerge } from "@/lib/utils";
 import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
 import { hexToHsl } from "@/lib/color-utils";
+import { logger } from "@/lib/logger";
 
 /** Normalize a brand color input to raw HSL channels (`H S% L%`).
  *  Accepts hex (#rgb / #rrggbb), `hsl(...)` wrappers, or raw channels.
@@ -30,7 +34,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), { route: "PUT /api/tenant-admin/branding", status: 404, safeMessage: "Tenant not found" });
     }
 
     const formData = await req.formData();
@@ -40,10 +44,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
     const settingsJSON = formData.get("settings") as string;
 
     if (!settingsJSON) {
-      return NextResponse.json(
-        { error: "Settings data is required" },
-        { status: 400 },
-      );
+      return apiValidationError("Settings data is required", "PUT /api/tenant-admin/branding");
     }
 
     // SECURITY (C4): Strip server-managed keys from incoming settings to
@@ -55,7 +56,11 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
     for (const key of SERVER_MANAGED_SETTINGS_KEYS) {
       delete incomingSettings[key];
     }
-    const currentSettings = (tenant.settings as Record<string, unknown>) || {};
+    // PRD-208: parse-on-read instead of casting the stored blob. Returns a typed
+    // object (or {} on a malformed blob) without throwing into this handler.
+    const currentSettings = parseTenantSettings(tenant.settings, {
+      tenantId,
+    });
     const preservedServerKeys = Object.fromEntries(
       SERVER_MANAGED_SETTINGS_KEYS.filter(
         (k) => currentSettings[k] !== undefined,
@@ -90,7 +95,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         cleanName,
       );
       if (!validation.valid) {
-        return NextResponse.json({ error: `Logo: ${validation.error}` }, { status: 400 });
+        return apiValidationError(`Logo: ${validation.error}`, "PUT /api/tenant-admin/branding");
       }
       const fileName = `logo-${Date.now()}-${cleanName}`;
       settings.logoPath = await uploadFile(
@@ -111,7 +116,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         cleanName,
       );
       if (!validation.valid) {
-        return NextResponse.json({ error: `Hero image: ${validation.error}` }, { status: 400 });
+        return apiValidationError(`Hero image: ${validation.error}`, "PUT /api/tenant-admin/branding");
       }
       const fileName = `hero-${Date.now()}-${cleanName}`;
       settings.heroImagePath = await uploadFile(
@@ -132,7 +137,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         cleanName,
       );
       if (!validation.valid) {
-        return NextResponse.json({ error: `Favicon: ${validation.error}` }, { status: 400 });
+        return apiValidationError(`Favicon: ${validation.error}`, "PUT /api/tenant-admin/branding");
       }
       const fileName = `favicon-${Date.now()}-${cleanName}`;
       settings.faviconPath = await uploadFile(
@@ -153,17 +158,14 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         where: { id: explicitTemplateId, tenantId: tenant.id },
       });
       if (!targetTemplate) {
-        return NextResponse.json(
-          { error: "Template not found or does not belong to this tenant" },
-          { status: 403 },
-        );
+        return apiError(new Error("Template not found or does not belong to this tenant"), { route: "PUT /api/tenant-admin/branding", status: 403, safeMessage: "Template not found or does not belong to this tenant" });
       }
       saveTargetId = explicitTemplateId;
     }
 
     const activeTemplateId = saveTargetId;
 
-    console.log(`[branding] Save target:`, {
+    logger.info(`[branding] Save target`, {
       tenantId: tenant.id,
       tenantName: (tenant as any).businessName,
       activeTenantTemplateId: tenant.activeTenantTemplateId,
@@ -232,7 +234,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         ...(settings.glassEffect ? { glassEffect: settings.glassEffect } : {}),
         ...(settings.animationType ? { animationType: settings.animationType } : {}),
         ...(settings.dividerStyle ? { dividerStyle: settings.dividerStyle } : {}),
-        ...((settings as any).buttonHoverEffect ? { buttonHoverEffect: (settings as any).buttonHoverEffect } : {}),
+        ...(settings.buttonHoverEffect ? { buttonHoverEffect: settings.buttonHoverEffect } : {}),
       });
 
       // Handle file uploads for template
@@ -246,15 +248,26 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
       }
 
       // Handle layout changes (sections array & config overrides)
-      // branding-form passes these implicitly within the "settings" blob
-      const incomingSettings = settings as any;
+      // branding-form passes these implicitly within the "settings" blob.
+      // PRD-208: these structural keys ARE in tenantSettingsSchema but typed as
+      // `unknown` (their shape varies). Narrow to a local layout-transform view
+      // instead of `as any`, so dynamic indexing below stays typed.
+      const incomingSettings = settings as TenantSettings & {
+        layoutSections?: unknown[];
+        sectionConfigs?: Record<string, Record<string, unknown>>;
+        sectionColorOverrides?: Record<string, Record<string, string>>;
+        navigationStyle?: unknown;
+        navigationConfig?: unknown;
+        footerStyle?: unknown;
+        footerConfig?: unknown;
+      };
       const hasLayoutSections = Array.isArray(incomingSettings.layoutSections) && incomingSettings.layoutSections.length > 0;
       const hasSectionConfigs = incomingSettings.sectionConfigs && Object.keys(incomingSettings.sectionConfigs).length > 0;
       const hasSectionColorOverrides = incomingSettings.sectionColorOverrides && Object.keys(incomingSettings.sectionColorOverrides).length > 0;
       const hasNavFooterConfig = !!incomingSettings.navigationStyle || !!incomingSettings.navigationConfig
         || !!incomingSettings.footerStyle || !!incomingSettings.footerConfig;
 
-      console.log("[branding] Layout debug:", {
+      logger.info("[branding] Layout debug", {
         hasLayoutSections,
         layoutSectionsCount: Array.isArray(incomingSettings.layoutSections) ? incomingSettings.layoutSections.length : "not-array",
         hasSectionConfigs,
@@ -282,12 +295,13 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
           : (baseLayout.sections || []);
 
         // Merge sections with config overrides + color overrides, stripping signed S3 URLs back to relative paths
-        const sectionColorOverrides = incomingSettings.sectionColorOverrides || {};
+        const sectionColorOverrides: Record<string, Record<string, string>> =
+          incomingSettings.sectionColorOverrides || {};
         const updatedSections = sourceSections.map((s: any) => {
           const mergedConfig = { ...s.config };
 
           // Apply sectionConfig overrides if present
-          if (hasSectionConfigs && incomingSettings.sectionConfigs[s.id]) {
+          if (hasSectionConfigs && incomingSettings.sectionConfigs?.[s.id]) {
             Object.assign(mergedConfig, incomingSettings.sectionConfigs[s.id]);
           }
 
@@ -368,25 +382,25 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
             where: { id: activeTemplateId },
             data: { s3Path },
           });
-          console.log(`[branding] Auto-created s3Path: ${s3Path}`);
+          logger.info(`[branding] Auto-created s3Path: ${s3Path}`);
 
           // Copy ALL files from base template so tenant is fully self-contained
           if (baseSlug !== 'default') {
-            const { copyS3Directory } = await import("@/lib/s3");
+            const { copyS3Directory } = await import("@/lib/storage/s3");
             const sourcePrefix = `templates/${baseSlug}/`;
             const destPrefix = `${s3Path}/`;
             const filesCopied = await copyS3Directory(sourcePrefix, destPrefix);
-            console.log(`[branding] Copied ${filesCopied} files from ${sourcePrefix} to ${destPrefix}`);
+            logger.info(`[branding] Copied ${filesCopied} files from ${sourcePrefix} to ${destPrefix}`);
           }
         }
 
         try {
-          const { createS3Client, getBucketConfig } = await import("@/lib/aws-config");
+          const { createS3Client, getBucketConfig } = await import("@/lib/storage/aws-config");
           const { PutObjectCommand } = await import("@aws-sdk/client-s3");
           const s3Client = await createS3Client();
           const { bucketName } = await getBucketConfig();
 
-          console.log("[branding] Writing layout.json with", updatedSections.length, "sections to S3");
+          logger.info("[branding] Writing layout.json to S3", { sectionCount: updatedSections.length });
           const layoutKey = `${s3Path}/layout.json`;
           await s3Client.send(
             new PutObjectCommand({
@@ -396,7 +410,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
               ContentType: "application/json",
             })
           );
-          console.log(`[branding] Successfully rewrote layout.json to ${layoutKey}`);
+          logger.info(`[branding] Successfully rewrote layout.json to ${layoutKey}`);
         } catch (s3Error) {
           console.error("[branding] Failed to rewrite layout.json to S3:", s3Error);
         }
@@ -414,8 +428,8 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         updateData.pageContent = deepMerge(currentPageContent, settings.pageContent);
       }
 
-      console.log("[branding] Saving designSystem keys:", Object.keys(newDesignSystem), "color keys:", Object.keys(newDesignSystem.colors || {}));
-      console.log("[branding] Saving pageContent keys:", Object.keys(updateData.pageContent || {}));
+      logger.info("[branding] Saving designSystem", { designSystemKeys: Object.keys(newDesignSystem), colorKeys: Object.keys(newDesignSystem.colors || {}) });
+      logger.info("[branding] Saving pageContent", { pageContentKeys: Object.keys(updateData.pageContent || {}) });
 
       // Update TenantTemplate
       await prisma.tenant_templates.update({
@@ -428,7 +442,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         where: { id: tenant.id },
         data: {
           businessName,
-          settings: settings as any,
+          settings: settings as Prisma.InputJsonValue,
         },
       });
     } else {
@@ -437,7 +451,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         where: { id: tenant.id },
         data: {
           businessName,
-          settings: settings as any,
+          settings: settings as Prisma.InputJsonValue,
         },
       });
     }
@@ -448,10 +462,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
     });
   } catch (error) {
     console.error("Error updating branding:", error);
-    return NextResponse.json(
-      { error: "Failed to update branding" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "PUT /api/tenant-admin/branding", safeMessage: "Failed to update branding" });
   }
 });
 

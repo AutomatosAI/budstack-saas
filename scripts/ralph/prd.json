@@ -1,193 +1,166 @@
 {
-  "project": "BudStacks SaaS",
-  "branchName": "ralph/prd-203-auth-wrapper-migration",
-  "description": "PRD-203 — Auth Wrapper Migration. Roll the two well-built-but-barely-used auth wrappers (lib/api-auth.ts: withTenantAuth/withTenantAuthParams/withSuperAdmin/withSuperAdminParams/withAuth) out to all 107 app/api/**/route.ts files (only 12 use one today; ~95 hand-roll `getCurrentUser() + if(!user) return 401`). FIRST harden the wrappers to compose PRD-202's runWithTenantContextAsync (they only do the role check today — they do NOT bind tenant context): withTenantAuth binds user.tenantId, withSuperAdmin binds explicit null (cross-tenant system query), withAuth binds the host-resolved tenant. The lib/db.ts $use middleware warns (not throws) on an unbound context while TENANT_CONTEXT_STRICT is OFF, so the rollout is incremental and safe; the deploy flips strict ON once 107/107 are wrapped-or-allow-listed. Then delete the hand-rolled blocks; handlers read user/tenantId from the wrapper context arg. Fix two correctness bugs underneath: (1) getCurrentUser tenant resolution is host-blind and its email fallback was unscoped/ambiguity-blind — wire it to 205's ambiguity-aware canonical resolveTenant (already a delegator) and consume the typed ambiguous result as 403; add a typed UserNotProvisionedError (->409) for the Clerk user.created race; (2) customer/profile does a no-tenant findFirst({where:{email}}) on GET+PATCH = cross-tenant leak — wrap it in withAuth so the now-bound host tenant auto-scopes the users lookup. Add a ts-morph CI gate (scripts/check-auth-wrappers.ts + pnpm check:auth-wrappers) that fails the build on any unwrapped, non-allow-listed handler. STACKED on ralph/prd-205 @ 06674ce (chain 202->205->203): strict deps PRD-202 (runWithTenantContextAsync + the warn/throw policy) + PRD-205 (canonical resolver). Soft overlap with PRD-204 (validation runs inside the wrapped handler; both touch the same route files — reconcile at merge).",
+  "project": "BudStack SaaS",
+  "branchName": "ralph/prd-216-ci-cd-security-gates",
+  "description": "PRD-216 — CI/CD Security Gates. The live `.github/workflows/ci.yml` already gates on typecheck + `pnpm lint` + `pnpm build` (lint IS enforced; the first review's 'lint disabled' claim was wrong). The REAL gaps: (1) no test step at all, (2) no Dependabot, (3) no CodeQL, (4) no secret scanning, (5) no SBOM, (6) `eslint.ignoreDuringBuilds:true` suppresses lint in `next build` only, (7) the cross-PRD security grep gates aren't run per-PR so fixed findings can silently regress. This PRD adds those gates on top of the existing typecheck+lint+build baseline. App lives in nextjs_space/ (pnpm 9, Node 20, Next 14.2.35). CI runs with working-directory: nextjs_space. GROUNDED REALITY verified on this branch (off main): PRD-200's grep gates already exist as robust string-aware node scripts at nextjs_space/scripts/ci/{check-css-sanitized,check-no-error-message-leaks,strip-strings}.mjs and PASS, but are NOT wired into ci.yml (only into package.json `check:security`). PRD-202's removal is NOT merged — lib/tenant.ts still has 12 setTenantContext( + 3 enterWith( calls. PRD-215 redaction is NOT merged — ~42 console/logger lines still reference PII field names. PRD-207's vitest harness is NOT merged — there is no `test`/`test:cov` script and no vitest config. CONSEQUENCE: gates whose source-PRD cleanup has not landed (test gate→PRD-207, PRD-202 gate, PRD-215 gate, docs-lint→PRD-214) are authored now but wired REPORT-ONLY / non-blocking (continue-on-error) so they do not red the build on pre-existing debt; each carries a documented condition to flip to blocking once its source PRD merges. PRD-200 gates wire as BLOCKING immediately (they pass). Source PRD: docs/PRDS/REMEDIATION/PRD-216-ci-cd-security-gates.md. Global rules: never commit/echo a real secret VALUE (only key NAMES); the ci.yml stub keys (ENCRYPTION_KEY=0000…0000, pk_test_stub, sk_test_stub) are throwaway and must be allow-listed in the secret scanner; never hardcode template-specific values; minimal in-scope diffs only.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Route inventory + AUTH_PUBLIC_ROUTES allow-list (AC-4a/OQ-1)",
-      "description": "As a developer, I want every app/api route enumerated and categorized, and a small reviewed allow-list of the genuinely public/signature-verified routes, so the gate and the migration batches have one source of truth.",
+      "title": "PRD-202 grep gate script — no enterWith()/setTenantContext()",
+      "description": "As a reviewer, I want a CI-runnable script that flags any `enterWith(` or `setTenantContext(` so PRD-202's tenant-context fix cannot silently regress once it lands.",
       "acceptanceCriteria": [
-        "All 107 app/api/**/route.ts files enumerated and categorized: super-admin (withSuperAdmin) | tenant-admin (withTenantAuth) | any-authenticated (withAuth) | public-allow-list. Inventory captured in scripts/ralph/route-inventory.md with the chosen wrapper per route + the current auth posture observed",
-        "AUTH_PUBLIC_ROUTES exported from a new lib/auth-public-routes.ts as a small commented constant of route path patterns; every entry has a one-line justification (health = liveness; webhooks/** = own signature verification per PRD-211; store/[slug]/products|conditions = public storefront reads; signup/auth callbacks = pre-auth)",
-        "Default-deny intent documented in the file: anything not on the allow-list MUST be wrapped; store cart/orders/submit are AUTHENTICATED (withAuth), not public — only public reads are allow-listed",
-        "No route handler bodies changed in this story (inventory + constant only); lib/auth-public-routes.ts is not yet consumed (US-002 wires it into the gate)",
+        "Create nextjs_space/scripts/ci/check-no-tenant-context-escapes.mjs following the existing string-aware pattern (reuse blankNonCode/offsetToLineCol from ./strip-strings.mjs so matches inside string literals/comments do not count)",
+        "It scans nextjs_space app/, lib/, components/, middleware.ts (recursively, .ts/.tsx/.js/.mjs), excluding node_modules, .next, dist, and the scripts/ci/ directory itself (so the gate's own regex literal cannot self-trip)",
+        "It exits non-zero and prints each hit as `path:line:col → enterWith(/setTenantContext( — PRD-202: set tenant context only via runWithTenantContext()/withTenantContext()` (failure message names file:line AND owning PRD per AC-7a)",
+        "Add package.json script `check:no-tenant-escapes`: `node scripts/ci/check-no-tenant-context-escapes.mjs`",
+        "Sanity: `node --check scripts/ci/check-no-tenant-context-escapes.mjs` passes; running the script on this tree reports the ~15 KNOWN pre-existing occurrences in lib/tenant.ts (proving detection works) — these are PRD-202's to remove, NOT this story's; do NOT edit lib/tenant.ts",
         "Typecheck passes"
       ],
       "priority": 1,
       "passes": false,
-      "notes": ""
+      "notes": "DO NOT modify lib/tenant.ts — removing those calls is PRD-202's scope, explicitly out-of-scope here (PRD-216 §5). This story only WRITES the detector. Because the real occurrences still exist, the gate will be wired REPORT-ONLY in US-003 until PRD-202 merges. Read nextjs_space/scripts/ci/strip-strings.mjs and check-no-error-message-leaks.mjs first and mirror their structure exactly. Watch the self-match trap: the regex source contains the literal token, so exclude scripts/ci/ from the scan AND/OR build the pattern so the checker file is skipped."
     },
     {
       "id": "US-002",
-      "title": "check-auth-wrappers AST gate + pnpm script + unit test (AC-4/AC-4b/OQ-4)",
-      "description": "As a developer, CI must fail when a route exports an HTTP handler that is not an approved wrapper and is not allow-listed. Build the gate now (report-only — repo still has ~95 unwrapped); it flips to blocking in US-010.",
+      "title": "PRD-215 grep gate script — no PII field names in raw logs",
+      "description": "As security, I want a CI-runnable script that flags PII field names (email, firstName, phone, address, drGreenResponse, etc.) interpolated into raw console.*/logger.* calls, so PRD-215's redaction cannot silently regress once it lands.",
       "acceptanceCriteria": [
-        "scripts/check-auth-wrappers.ts parses every app/api/**/route.ts via ts-morph (AST, not regex — catches re-exports/aliases per OQ-4), finds each exported GET/POST/PUT/PATCH/DELETE, and classifies its initializer as wrapped (withTenantAuth|withTenantAuthParams|withSuperAdmin|withSuperAdminParams|withAuth) | allow-listed (AUTH_PUBLIC_ROUTES) | VIOLATION",
-        "Exposed as `pnpm check:auth-wrappers`; prints the offending file -> handler list and a wrapped/allow-listed/violation summary; exit code is currently advisory (US-010 makes it exit non-zero)",
-        "Unit test (tests/unit/check-auth-wrappers.test.ts): a fixture route with a bare exported GET is flagged VIOLATION; a wrapped route passes; an allow-listed route passes",
-        "Tests pass",
+        "Create nextjs_space/scripts/ci/check-no-pii-in-logs.mjs (string-aware via strip-strings.mjs) that finds console.(log|error|warn|info|debug)(…) and logger.<level>(…) call sites whose argument span references a banned PII identifier (email, body.email, clerkUser.email, firstName, phone, address, drGreenResponse) — either as an interpolated ${…} expression or as a bare argument identifier",
+        "It exits non-zero and prints each hit as `path:line:col → <token> in console/logger call — PRD-215/213: redact PII before logging (use lib/redact.ts)` (file:line + owning PRD per AC-7a)",
+        "Add package.json script `check:no-pii-logs`: `node scripts/ci/check-no-pii-in-logs.mjs`",
+        "Sanity: `node --check` passes; running on this tree reports the ~42 KNOWN pre-existing hits (e.g. app/tenant-admin/layout.tsx, app/actions/kyc-check.ts) — these are PRD-215's to fix, NOT this story's; do NOT edit those call sites",
         "Typecheck passes"
       ],
       "priority": 2,
       "passes": false,
-      "notes": ""
+      "notes": "Heuristic gate — bias toward the exact PII identifiers named in PRD-216 AC-7 to keep false-positives low; it is wired REPORT-ONLY in US-003 until PRD-215 redaction merges, so over-matching is non-fatal but avoid it. DO NOT modify any logging call sites — that is PRD-215/213 scope, out-of-scope here. Mirror the existing .mjs gate structure. Pure detector only."
     },
     {
       "id": "US-003",
-      "title": "Harden auth wrappers to compose tenant-context binding (AC-1b)",
-      "description": "As the platform, every wrapped handler must run inside one bound tenant scope so its Prisma calls auto-scope (and the strict-mode flip is safe). The wrappers currently only do the role check — make them compose PRD-202's runWithTenantContextAsync. No route bodies change yet.",
+      "title": "Unified grep-gate runner + wire into ci.yml (PRD-200 blocking; 202/215 report-only)",
+      "description": "As a developer, when I open a PR the security grep gates run automatically: PRD-200 gates fail the build, PRD-202/215 gates report as non-blocking warnings until their source PRDs land.",
       "acceptanceCriteria": [
-        "withTenantAuth / withTenantAuthParams run the handler inside runWithTenantContextAsync(user.tenantId, () => handler(...)) — the authenticated admin's own tenant is bound for the whole handler (asserted non-null before binding)",
-        "withSuperAdmin / withSuperAdminParams run the handler inside runWithTenantContextAsync(null, () => handler(...)) — an EXPLICIT null (deliberate cross-tenant system query); hasTenantContext() is true so the lib/db.ts middleware allows unscoped reads rather than treating it as the implicit-unbound leak",
-        "withAuth resolves the request/host tenant (getTenantFromRequest, the same pure lookup withTenantContext uses) and runs the handler inside runWithTenantContextAsync(hostTenant?.id ?? null, ...) — so storefront customer routes (customer/profile, orders, cart) auto-scope to the storefront tenant; a customer has no Clerk org so user.tenantId is not used here",
-        "No setTenantContext/enterWith reintroduced; binding is via runWithTenantContextAsync only; error path still funnels through apiError()",
-        "Unit tests (tests/unit/api-auth.test.ts) with getCurrentUser + getTenantFromRequest + runWithTenantContextAsync mocked/spied: each wrapper binds the expected tenantId (user.tenantId | null | host id) before invoking the handler; no-user->401; wrong-role->401; withTenantAuth missing tenantId->403",
-        "Tests pass",
+        "Add a thin repo-root runner scripts/ci/grep-gates.sh that runs the BLOCKING set (PRD-200: `pnpm --dir nextjs_space check:security`) and exits non-zero on any failure; usable locally and in CI",
+        "Add package.json `check:grep-gates:report` that runs the report-only set (check:no-tenant-escapes + check:no-pii-logs) and always exits 0 (e.g. `|| true` per gate) while still printing findings",
+        "Edit .github/workflows/ci.yml: add a BLOCKING step `Security grep gates (PRD-200)` after Lint running `pnpm check:security` (working-directory nextjs_space, already the job default)",
+        "Add a NON-BLOCKING step `Regression grep gates (PRD-202/215 — report-only)` with `continue-on-error: true` running `pnpm check:grep-gates:report`, with an inline comment: flip to blocking once PRD-202 (enterWith/setTenantContext removal) and PRD-215 (log redaction) merge",
+        "ci.yml remains valid GitHub Actions YAML (parses cleanly) and the existing typecheck/lint/build steps are unchanged",
+        "`bash scripts/ci/grep-gates.sh` exits 0 on this tree (PRD-200 gates pass)",
         "Typecheck passes"
       ],
       "priority": 3,
       "passes": false,
-      "notes": ""
+      "notes": "Depends on US-001 + US-002. The existing PRD-200 gates pass, so wiring `check:security` blocking is safe NOW. The PRD-202/215 gates would fail on pre-existing debt (15 + 42 hits), so they MUST be non-blocking (continue-on-error) — this mirrors the PRD's own treatment of the test gate (AC-1) and docs-lint (AC-7b). The PRD names `scripts/ci/grep-gates.sh` (repo root); satisfy that path but reuse the robust nextjs_space/scripts/ci/*.mjs gates rather than re-implementing in bash. Read the current ci.yml (job 'Typecheck · Lint · Build', working-directory nextjs_space) before editing; keep the diff additive."
     },
     {
       "id": "US-004",
-      "title": "Harden getCurrentUser + resolve-tenant-id (AC-2/AC-2a)",
-      "description": "As a newly-signed-up or multi-tenant user, my auth must resolve correctly: ambiguous email -> 403 (not a silent first-row pick), and a valid Clerk session with no DB row yet -> retryable 409 (not a silent unauthorized null).",
+      "title": "Advisory docs-lint (PRD-214) — non-blocking ci.yml step",
+      "description": "As a maintainer, I want a non-blocking CI warning if banned docs patterns (next-auth, abacus, banned sales claims) are reintroduced, per PRD-214.",
       "acceptanceCriteria": [
-        "getCurrentUser (lib/auth-helper.ts) tenant resolution goes through 205's canonical path (resolveTenantIdFromClerkOrg already delegates to resolveTenant({kind:'clerk'}), isActive-enforced + ambiguity-aware); an ambiguous email surfaces a typed result the wrappers render as 403 (not a guessed first row)",
-        "A valid Clerk session whose DB user row does not exist yet yields a typed UserNotProvisionedError (the wrappers map it to 409 retryable) rather than a null that looks like 401; the Clerk user.created provisioning ordering is documented in a comment",
-        "The wrappers (US-003) translate the typed ambiguous / not-provisioned signals to 403 / 409 via apiError(); happy path returns {user, tenantId} unchanged",
-        "Unit tests (tests/unit/auth-helper.test.ts): ambiguous email -> 403-typed path; valid session + no DB row -> UserNotProvisionedError; happy path -> {user, tenantId}",
-        "No console.log in prod code (structured console.warn for auth.tenant_resolution_ambiguous / auth.user_not_provisioned audit lines is acceptable)",
-        "Tests pass",
+        "Create nextjs_space/scripts/ci/check-docs-lint.mjs (or scripts/ci/docs-lint.mjs at repo root) that scans docs/ and README files for the PRD-214 banned patterns: `next-auth`, `abacus` (case-insensitive), and the banned sales-claim phrases referenced by PRD-214",
+        "It prints findings as `path:line → <pattern> — PRD-214 advisory` but is ADVISORY: the script itself may exit non-zero, but the CI step that runs it uses continue-on-error: true so it never fails the build",
+        "Add package.json script `check:docs-lint` and a NON-BLOCKING ci.yml step `Docs lint (PRD-214 — advisory)` with continue-on-error: true",
+        "Read PRD-214 (docs/PRDS/REMEDIATION/PRD-214*.md) for the exact banned phrases; if PRD-214 is absent, use the patterns named in PRD-216 AC-7b (next-auth, abacus, banned sales claims) and note the assumption in progress.txt",
+        "ci.yml remains valid YAML; node --check passes on the new script",
         "Typecheck passes"
       ],
       "priority": 4,
       "passes": false,
-      "notes": ""
+      "notes": "Always non-blocking (AC-7b). Keep the pattern list small and exact. This is a warning surface, not a gate. If PRD-214's md is not present on this branch, fall back to the AC-7b patterns and record the fallback in the journal."
     },
     {
       "id": "US-005",
-      "title": "Wrap + tenant-scope customer/profile GET+PATCH (AC-3)",
-      "description": "As tenant A's customer, /api/customer/profile must return only my tenant-A row even if a tenant-B user shares my email. Wrap it in withAuth (now binds the host tenant) so the users lookup auto-scopes.",
+      "title": "Dependabot config (.github/dependabot.yml)",
+      "description": "As security, I want Dependabot opening grouped weekly dependency-update PRs and flagging new CVEs for the pnpm app and the GitHub Actions workflows.",
       "acceptanceCriteria": [
-        "app/api/customer/profile/route.ts GET + PATCH are wrapped in withAuth; the hand-rolled currentUser()/getCurrentUser block is deleted; the handler reads user from context",
-        "The findFirst({where:{email}}) at :25 and the PATCH lookup at :79 run inside the bound host-tenant context (US-003) so the lib/db.ts $use middleware auto-scopes them to the caller's tenant — a tenant-A session can never read or mutate a tenant-B row sharing the email. An explicit tenantId filter via getTenantContext() is added as belt-and-suspenders",
-        "Success payload shape is unchanged for the legitimate same-tenant caller",
-        "Unit test (tests/unit/customer-profile.test.ts) with prisma + tenant context mocked: the GET/PATCH lookups carry a tenant filter (or run under a bound non-null context); no unscoped email-only query remains",
-        "Cross-tenant proof against real Postgres is deferred to US-011 (Docker-gated) and US-012 (E2E)",
-        "Tests pass",
+        "Create .github/dependabot.yml (version: 2) with two update entries",
+        "Entry 1: package-ecosystem: npm, directory: /nextjs_space (pnpm is read via package-ecosystem npm), schedule weekly, grouped minor+patch updates, open-pull-requests-limit set (e.g. 5) so it does not flood, labels added",
+        "Entry 2: package-ecosystem: github-actions, directory: /, schedule weekly, grouped",
+        "Security updates are enabled (default-on for Dependabot; do not disable). Add a brief comment documenting the grouping + limit rationale",
+        "File is valid YAML and conforms to Dependabot v2 schema (keys: version, updates[].package-ecosystem/directory/schedule/groups/open-pull-requests-limit)",
         "Typecheck passes"
       ],
       "priority": 5,
       "passes": false,
-      "notes": ""
+      "notes": "directory must point at /nextjs_space because pnpm-lock.yaml + package.json live there, not repo root. Use package-ecosystem: npm (Dependabot reads pnpm-lock.yaml under the npm ecosystem). Pure config file; no app code. Verify against the Dependabot v2 schema."
     },
     {
       "id": "US-006",
-      "title": "Migrate super-admin routes to withSuperAdmin/Params (AC-1/AC-1a)",
-      "description": "As an auditor, every super-admin route must enforce SUPER_ADMIN via the wrapper, not a copy-pasted role check. Migrate the ~25 remaining super-admin routes (33 total, 8 already wrapped).",
+      "title": "CodeQL workflow (.github/workflows/codeql.yml)",
+      "description": "As security, I want CodeQL static analysis on every PR to main plus a weekly schedule, using the security-and-quality query suite.",
       "acceptanceCriteria": [
-        "Every app/api/super-admin/**/route.ts handler uses withSuperAdmin (no [param]) or withSuperAdminParams ([id]/[slug] routes); the hand-rolled `getCurrentUser() + if(!user||role!==SUPER_ADMIN) return 401` blocks are deleted",
-        "Handlers read user from the wrapper context arg — they do NOT re-call getCurrentUser() inside the body (AC-1a); super-admin queries now run under the bound explicit-null system context (US-003), so any pre-existing bypassTenantScope/explicit cross-tenant reads still work",
-        "Success payloads unchanged; only the auth + error edge is unified; any error.message in a response body is removed in favour of the wrapper's apiError() path",
-        "`pnpm check:auth-wrappers` shows the super-admin group fully wrapped (wrapped count rises by the migrated number)",
+        "Create .github/workflows/codeql.yml: triggers on pull_request to main, push to main, and a weekly schedule (cron)",
+        "Uses github/codeql-action init+analyze with languages: javascript-typescript and queries: security-and-quality",
+        "Has the required permissions block (security-events: write, actions: read, contents: read)",
+        "Per OQ-4: a comment documents the rollout — warn/baseline on first run, then HIGH/CRITICAL introduced by a PR should block (no autofail config needed in YAML; this is a repo branch-protection decision, documented in the workflow comment)",
+        "File is valid GitHub Actions YAML; uses currently-pinned action major versions (codeql-action v3, checkout v4)",
         "Typecheck passes"
       ],
       "priority": 6,
       "passes": false,
-      "notes": ""
+      "notes": "Standard CodeQL workflow. No build-mode customisation needed for JS/TS (none/auto). Do not add matrix languages we do not use. The hard-block-vs-triage decision (OQ-4) is enforced via GitHub branch protection by Gerard, not in YAML — just document it in a comment."
     },
     {
       "id": "US-007",
-      "title": "Migrate tenant-admin routes batch 1 to withTenantAuth/Params (AC-1/AC-1a)",
-      "description": "Migrate roughly the first half of the 43 tenant-admin routes (3 already wrapped) to the tenant-admin wrappers.",
+      "title": "Secret-scan workflow (gitleaks) + .gitleaks.toml allow-list",
+      "description": "As security, I want gitleaks scanning every PR diff (and full history on schedule) and failing the PR on a detected secret, with the known CI stub keys allow-listed.",
       "acceptanceCriteria": [
-        "~Half of app/api/tenant-admin/**/route.ts handlers use withTenantAuth / withTenantAuthParams; hand-rolled auth blocks deleted; user/tenantId read from context (AC-1a)",
-        "Each migrated handler runs under the bound user.tenantId context (US-003); explicit `where: { tenantId }` filters that were hand-written are kept (belt-and-suspenders with the auto-scope) but no longer re-derive tenantId from a second getCurrentUser call",
-        "Success payloads unchanged; error.message leaks removed from migrated routes",
-        "Typecheck passes after the batch",
-        "`pnpm check:auth-wrappers` violation count drops by the migrated number"
+        "Create .github/workflows/secret-scan.yml running gitleaks (gitleaks/gitleaks-action or the gitleaks CLI) on pull_request + push, and a scheduled full-history scan; a detected secret fails the PR",
+        "Create .gitleaks.toml at repo root extending the default config with an allowlist covering the ci.yml stub VALUES (the 64-hex ENCRYPTION_KEY `0000…0000`, `pk_test_stub`, `sk_test_stub`, `postgresql://stub:stub@localhost:5432/stub`, NEXTAUTH_SECRET `stub`) and paths like .env.example/.env.test",
+        "The allowlist is by regex/stopword for those exact stub values and/or by path for .github/workflows/ci.yml — so the stubs do NOT trip the scanner",
+        "Both files are valid (YAML + TOML parse). If the gitleaks CLI happens to be installed locally, `gitleaks detect --no-git -c .gitleaks.toml` over the repo does NOT flag the ci.yml stubs; if not installed, validate config syntax only and note it",
+        "NEVER add a real secret value anywhere in these files — only the already-public throwaway stubs",
+        "Typecheck passes"
       ],
       "priority": 7,
       "passes": false,
-      "notes": ""
+      "notes": "Per OQ-3 the chosen scanner is gitleaks. The allow-list MUST cover exactly the stub keys already committed in .github/workflows/ci.yml (read that file for the exact values) so CI does not self-flag. Do not weaken detection beyond those stubs. gitleaks is likely NOT installed on this box — if so, just validate TOML/YAML syntax and record that the live run is verified post-merge on GitHub."
     },
     {
       "id": "US-008",
-      "title": "Migrate tenant-admin routes batch 2 to withTenantAuth/Params (AC-1/AC-1a)",
-      "description": "Migrate the remaining tenant-admin routes to the tenant-admin wrappers.",
+      "title": "SBOM generation workflow (CycloneDX JSON) + artifact upload",
+      "description": "As procurement, I want a CycloneDX SBOM produced on build and downloadable as a CI artifact.",
       "acceptanceCriteria": [
-        "All remaining app/api/tenant-admin/**/route.ts handlers use withTenantAuth / withTenantAuthParams; hand-rolled auth blocks deleted; user/tenantId read from context (AC-1a)",
-        "Routes with multiple exported methods wrap each exported method",
-        "Success payloads unchanged; error.message leaks removed from migrated routes",
-        "Typecheck passes after the batch",
-        "`pnpm check:auth-wrappers` shows the entire tenant-admin group wrapped"
+        "Create .github/workflows/sbom.yml that generates a CycloneDX JSON SBOM for nextjs_space and uploads it via actions/upload-artifact",
+        "Use a generator that supports pnpm — prefer @cyclonedx/cdxgen or anchore/syft (sbom-action); if using @cyclonedx/cyclonedx-npm note its pnpm caveats. Output format: CycloneDX JSON (e.g. sbom.cdx.json)",
+        "Triggers on push to main + a manual workflow_dispatch (and optionally attaches to releases)",
+        "Add a short note to a docs file (e.g. docs/ or the PRD's references) documenting where procurement downloads the SBOM artifact",
+        "Workflow is valid YAML; the generator invocation targets nextjs_space (where package.json/pnpm-lock live)",
+        "Typecheck passes"
       ],
       "priority": 8,
       "passes": false,
-      "notes": ""
+      "notes": "pnpm matters: @cyclonedx/cyclonedx-npm targets npm lockfiles; cdxgen and syft handle pnpm cleanly — prefer one of those. Keep it CycloneDX JSON per AC-5. Don't try to fully run the generator locally unless it's quick + offline-capable; validating the workflow YAML + correct generator/flags is the bar here (the artifact is verified on a real GitHub run)."
     },
     {
       "id": "US-009",
-      "title": "Migrate remaining authenticated routes + confirm public allow-list (AC-1/AC-4a)",
-      "description": "Migrate the remaining authenticated routes (account, consultation, orders, shop, user, tenant/*, onboarding, etc.) to the right wrapper, and confirm the genuinely public/signature-verified routes (store reads, webhooks/**, health, signup, auth callbacks) are on AUTH_PUBLIC_ROUTES rather than wrapped.",
+      "title": "Flip eslint.ignoreDuringBuilds to false in next.config.js",
+      "description": "As a developer, I want `next build` to also enforce lint (defence-in-depth) since CI already runs pnpm lint separately.",
       "acceptanceCriteria": [
-        "Each remaining authenticated route uses withAuth (any logged-in user: account/*, orders, store/[slug]/cart|orders|orders/submit, user/profile, shop/register, consultation/status) or withTenantAuth (tenant-admin-scoped: onboarding, tenant/[slug] if admin) as appropriate to its CURRENT role check; hand-rolled blocks deleted; user/tenantId from context",
-        "store/[slug]/products|featured, store cart/orders are split correctly: public READS allow-listed, authenticated customer actions wrapped in withAuth; webhooks/**, health, signup, auth/reset-password, tenant/conditions*, tenant/current, doctor-green/products confirmed in AUTH_PUBLIC_ROUTES with per-entry justification (NOT wrapped)",
-        "Any route whose intended posture is genuinely unclear is flagged in scripts/ralph/route-inventory.md for human review rather than guessed (default-deny: if unsure, wrap it)",
-        "Success payloads unchanged; error.message leaks removed from migrated routes",
+        "Set nextjs_space/next.config.js eslint.ignoreDuringBuilds to false (currently true at :12). Leave typescript.ignoreBuildErrors as false (already correct at :15) — do not touch it",
+        "Run `cd nextjs_space && pnpm install --frozen-lockfile` (if needed) then `pnpm build` with the same stub env ci.yml uses (DATABASE_URL, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY, NEXT_PUBLIC_BASE_DOMAIN, NEXTAUTH_SECRET, ENCRYPTION_KEY)",
+        "If the build now surfaces lint errors: fix them if small/obvious; if it is a large backlog, REVERT the flag (keep ignoreDuringBuilds:true), record the finding under PRD-216 §13 OQ-2 in the PRD doc + progress.txt, and mark this story BLOCKED (emit RALPH_BLOCKED) rather than half-shipping",
+        "If the build passes with the flag false: keep it. `pnpm lint` still passes; `pnpm exec tsc --noEmit` still passes",
         "Typecheck passes"
       ],
       "priority": 9,
       "passes": false,
-      "notes": ""
+      "notes": "CI lint (pnpm lint) already passes on main, and next build uses the same ESLint config, so the delta SHOULD be near-zero — but verify by actually running the build, do not assume. This is the one story with a conditional BLOCK: if flipping surfaces a real lint backlog that blocks the build and it is not a quick fix, revert + document OQ-2 + RALPH_BLOCKED. Build needs the stub env vars; export them inline for the build command only (throwaway values, never real secrets)."
     },
     {
       "id": "US-010",
-      "title": "Flip gate to blocking + error.message grep gate + non-blocking CI step (AC-4/AC-4b/AC-5)",
-      "description": "As the build agent, close the loop: the gate now fails on any unwrapped non-allow-listed handler, a grep gate proves no error.message leaks in app/api responses, and a (non-blocking) CI step is added — the blocking CI wiring formally lives in PRD-216.",
+      "title": "Non-blocking test-gate job in ci.yml (wires PRD-207 when it lands)",
+      "description": "As a CI gate, I want a test job that runs PRD-207's suites with coverage and the build's stub env — non-blocking until the suites exist, then flipped to blocking.",
       "acceptanceCriteria": [
-        "scripts/check-auth-wrappers.ts now exits non-zero on any VIOLATION; `pnpm check:auth-wrappers` -> 0 unwrapped, non-allow-listed handlers (wrapped + allow-listed == 107)",
-        "A grep gate (a scripts/ci/*.mjs sibling added to pnpm check:security) asserts zero `error.message` / `String(error)` inside NextResponse.json(...) across app/api/** (AC-5, shared intent with PRD-200)",
-        "A non-blocking `pnpm check:auth-wrappers` step is added to .github/workflows/ci.yml (commented that PRD-216 promotes it to blocking alongside the test gate) — mirrors how PRD-205 left local gates for PRD-216 to enforce",
-        "A deliberately-unwrapped fixture route proves the gate exits non-zero (then removed) — non-vacuousness check",
-        "Running `pnpm check:auth-wrappers` passes (exit 0) with the real tree fully migrated",
+        "Add a `test` job (or step) to .github/workflows/ci.yml that runs `pnpm test:cov` (Vitest unit+integration coverage from PRD-207) with the SAME stub env vars the build step uses (AC-1b)",
+        "Because PRD-207 has not merged (no `test`/`test:cov` script, no vitest config yet), the step is NON-BLOCKING: guard it so a missing script does not fail the build — e.g. `continue-on-error: true` AND/OR a guard like `pnpm run | grep -q test:cov && pnpm test:cov || echo 'PRD-207 suites not present yet — skipping'`",
+        "An inline comment documents AC-1/AC-1a/AC-1b: coverage threshold is 80% baseline / 95% security-critical and lives in PRD-207's vitest.config.ts (OQ-5); flip continue-on-error off (make blocking) once PRD-207 merges",
+        "Per OQ-1: a comment notes Playwright runs a tagged critical-path subset on PR and the full suite on main (the actual Playwright wiring is PRD-207's; this job just reserves/structures the gate)",
+        "ci.yml is valid YAML; existing steps unchanged",
         "Typecheck passes"
       ],
       "priority": 10,
       "passes": false,
-      "notes": ""
-    },
-    {
-      "id": "US-011",
-      "title": "Integration: customer-profile cross-tenant + wrapper rollout (testcontainers) — Docker-gated (AC-3a)",
-      "description": "As an auditor, prove against real Postgres that customer/profile is tenant-scoped (two tenants, same email -> each sees only its own row on GET+PATCH) and that a migrated route enforces 401 anon / 403 wrong-tenant / 200 correct.",
-      "acceptanceCriteria": [
-        "tests/integration/customer-profile.tenant-scope.integration.test.ts seeds two tenants with the SAME customer email; asserts GET and PATCH each see only the caller's tenant row (AC-3a)",
-        "tests/integration/auth-wrapper.rollout.integration.test.ts spot-checks a migrated tenant route (401 anon, 403 wrong tenant, 200 correct) and a migrated super-admin route",
-        "Uses the testcontainers Postgres harness (PRD-207 pattern); substituting a DB mock to dodge Docker is FORBIDDEN",
-        "GATE: run `docker info` first; if no daemon, mark BLOCKED-DOCKER, emit RALPH_BLOCKED, leave unchecked",
-        "Tests pass (when Docker is available)",
-        "Typecheck passes"
-      ],
-      "priority": 11,
-      "passes": false,
-      "notes": ""
-    },
-    {
-      "id": "US-012",
-      "title": "E2E: customer-profile cross-tenant isolation (Playwright) — auth-gated",
-      "description": "As an auditor, prove end-to-end in a real browser that two tenant subdomains sharing a customer email never leak each other's profile.",
-      "acceptanceCriteria": [
-        "tests/e2e/customer-profile-isolation.spec.ts drives two tenant subdomains with the same customer email and asserts no cross-tenant profile bleed on view + edit",
-        "GATE: Clerk test-auth approach is undecided (PRD-207 OQ-1, owner Gerard). Do NOT invent an auth shim -> mark BLOCKED-NEEDS-AUTH-DECISION, emit RALPH_BLOCKED, leave unchecked",
-        "Typecheck passes"
-      ],
-      "priority": 12,
-      "passes": false,
-      "notes": ""
+      "notes": "Soft-depends on PRD-207, which is NOT merged — that's why this is non-blocking now (the PRD explicitly allows 'starts as a non-blocking job that becomes blocking when the suites land'). Do NOT invent a vitest config or test script here — that's PRD-207's scope. Only author the CI job + guard + the flip-to-blocking note. This is the LAST story: when it's done (and all others done/blocked), emit RALPH_COMPLETE."
     }
   ]
 }

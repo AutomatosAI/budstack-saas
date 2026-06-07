@@ -7,15 +7,16 @@ import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { convertLovableTemplate } from "@/lib/lovable-converter";
 import { randomUUID } from "crypto";
-import { uploadDirectoryToS3 } from "@/lib/s3";
-import { apiError } from "@/lib/api-error";
+import { uploadDirectoryToS3 } from "@/lib/storage/s3";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 import {
   downloadGitHubRepo,
   generateSlug,
   cleanupTempDir,
   type TemplateConfig,
-} from "@/lib/template-utils";
+} from "@/lib/templates/template-utils";
+import { logger } from "@/lib/logger";
 
 const uploadTemplateSchema = z
   .object({
@@ -31,16 +32,16 @@ export const POST = withSuperAdmin(async (req, { user }) => {
     const { templateName, githubUrl, structureType = "default", branch } =
       await parseJsonBody(req, uploadTemplateSchema);
 
-    console.log(`[Template Upload] Structure type: ${structureType}`);
+    logger.info(`[Template Upload] Structure type: ${structureType}`);
 
     // Download and extract repository using shared utility
     let extractPath: string;
     try {
       extractPath = await downloadGitHubRepo(githubUrl, branch);
     } catch (dlError: any) {
-      return NextResponse.json(
-        { error: dlError.message },
-        { status: 400 },
+      return apiValidationError(
+        dlError.message,
+        "POST /api/super-admin/templates/upload",
       );
     }
 
@@ -48,7 +49,7 @@ export const POST = withSuperAdmin(async (req, { user }) => {
 
       // Convert Lovable template if needed
       if (structureType === "lovable") {
-        console.log(
+        logger.info(
           "[Template Upload] Converting Lovable template to BudStacks format...",
         );
         const conversionResult = await convertLovableTemplate(extractPath);
@@ -59,7 +60,7 @@ export const POST = withSuperAdmin(async (req, { user }) => {
           );
         }
 
-        console.log(
+        logger.info(
           `[Template Upload] Conversion successful: ${conversionResult.message}`,
         );
       }
@@ -71,7 +72,7 @@ export const POST = withSuperAdmin(async (req, { user }) => {
         await fs.access(configPath);
         configExists = true;
       } catch {
-        console.log("[Template Upload] template.config.json not found");
+        logger.info("[Template Upload] template.config.json not found");
       }
 
       if (!configExists) {
@@ -110,7 +111,7 @@ export const POST = withSuperAdmin(async (req, { user }) => {
         );
       }
 
-      console.log(`[Template Upload] Template: ${config.name} (${config.id})`);
+      logger.info(`[Template Upload] Template: ${config.name} (${config.id})`);
 
       // Check if template already exists — update instead of failing
       const existingTemplate = await prisma.templates.findUnique({
@@ -135,21 +136,21 @@ export const POST = withSuperAdmin(async (req, { user }) => {
       }
 
       if (targetExists) {
-        console.log(
+        logger.info(
           `[Template Upload] Removing existing directory: ${targetDir}`,
         );
         await fs.rm(targetDir, { recursive: true, force: true });
       }
 
-      console.log(`[Template Upload] Copying files to: ${targetDir}`);
+      logger.info(`[Template Upload] Copying files to: ${targetDir}`);
       await fs.cp(extractPath, targetDir, { recursive: true });
 
       // Upload template files to S3 — required for all reads
-      console.log(`[Template Upload] Uploading template to S3...`);
+      logger.info(`[Template Upload] Uploading template to S3...`);
       const s3Prefix = `templates/${config.id}/`;
       try {
         const uploadCount = await uploadDirectoryToS3(targetDir, s3Prefix);
-        console.log(`[Template Upload] Uploaded ${uploadCount} files to S3: ${s3Prefix}`);
+        logger.info(`[Template Upload] Uploaded ${uploadCount} files to S3: ${s3Prefix}`);
       } catch (s3Error: any) {
         console.error(
           `[Template Upload] S3 upload failed: ${s3Error.message}`,
@@ -169,7 +170,7 @@ export const POST = withSuperAdmin(async (req, { user }) => {
       let template;
       if (existingTemplate) {
         // Update existing template — re-upload overwrites files + stores githubUrl
-        console.log(`[Template Upload] Template '${config.id}' exists, updating...`);
+        logger.info(`[Template Upload] Template '${config.id}' exists, updating...`);
         template = await prisma.templates.update({
           where: { id: existingTemplate.id },
           data: {
@@ -189,7 +190,7 @@ export const POST = withSuperAdmin(async (req, { user }) => {
             updatedAt: new Date(),
           },
         });
-        console.log(`[Template Upload] Template updated: ID ${template.id}`);
+        logger.info(`[Template Upload] Template updated: ID ${template.id}`);
       } else {
         // Create new template
         template = await prisma.templates.create({
@@ -215,7 +216,7 @@ export const POST = withSuperAdmin(async (req, { user }) => {
             metadata: metadataPayload,
           },
         });
-        console.log(`[Template Upload] Template created: ID ${template.id}`);
+        logger.info(`[Template Upload] Template created: ID ${template.id}`);
       }
 
       // Create audit log
@@ -238,11 +239,11 @@ export const POST = withSuperAdmin(async (req, { user }) => {
       });
 
       // Clean up temp directory
-      console.log("[Template Upload] Cleaning up temporary files...");
+      logger.info("[Template Upload] Cleaning up temporary files...");
       await cleanupTempDir(extractPath);
 
       // Auto-sync template registry
-      console.log("[Template Upload] Syncing template registry...");
+      logger.info("[Template Upload] Syncing template registry...");
       try {
         const { exec } = await import("child_process");
         const { promisify } = await import("util");
@@ -253,7 +254,7 @@ export const POST = withSuperAdmin(async (req, { user }) => {
         await execAsync("npx tsx scripts/sync-template-registry.ts", {
           cwd: scriptsBase,
         });
-        console.log("[Template Upload] Template registry synced successfully");
+        logger.info("[Template Upload] Template registry synced successfully");
       } catch (syncError: any) {
         console.error(
           "[Template Upload] Registry sync failed (non-fatal):",

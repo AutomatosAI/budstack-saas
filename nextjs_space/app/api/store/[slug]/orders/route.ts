@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { apiError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 
@@ -11,21 +11,35 @@ export const GET = withAuth(async (_req, { user }, params) => {
 
     const email = user.email;
     if (!email) {
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
-    }
-
-    const dbUser = await prisma.users.findFirst({
-      where: { email },
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError(new Error("Email not found"), {
+        route: "GET /api/store/[slug]/orders",
+        status: 401,
+        safeMessage: "Email not found",
+      });
     }
 
     const tenant = await getCurrentTenant();
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/store/[slug]/orders",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
+    }
+
+    // Scope the user lookup to this tenant so a shared email resolves to the
+    // correct store's user row.
+    const dbUser = await prisma.users.findFirst({
+      where: { email, tenantId: tenant.id },
+    });
+
+    if (!dbUser) {
+      return apiError(new Error("User not found"), {
+        route: "GET /api/store/[slug]/orders",
+        status: 404,
+        safeMessage: "User not found",
+      });
     }
 
     // Get orders for the current user AND specific tenant

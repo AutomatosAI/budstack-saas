@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
-import { textAlignClass } from '@/lib/section-align';
+import { textAlignClass } from '@/lib/templates/section-align';
 
 interface LogoItem {
   src: string;

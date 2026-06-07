@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getFileUrl } from "@/lib/s3";
+import { getFileUrl } from "@/lib/storage/s3";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";

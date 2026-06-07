@@ -15,7 +15,8 @@
  */
 
 import { prisma } from "@/lib/db";
-import { sanitizeForLogging } from "@/lib/redact";
+import { sanitizeForLogging } from "@/lib/security/redact";
+import type { audit_logs } from "@prisma/client";
 import crypto from "crypto";
 
 export interface AuditLogParams {
@@ -149,5 +150,97 @@ export function getClientInfo(headers: Headers) {
       headers.get("x-real-ip") ||
       "unknown",
     userAgent: headers.get("user-agent") || "unknown",
+  };
+}
+
+/**
+ * Shape consumed by the super-admin Activity Timeline UI. `type` is a coarse
+ * theming category (see categorizeAuditAction) and is intentionally a free
+ * string — audit `action` values are open-ended, so the UI must tolerate
+ * categories it does not explicitly style. The precise action is preserved in
+ * `description`.
+ */
+export interface TimelineEvent {
+  id: string;
+  type: string;
+  description: string;
+  timestamp: Date;
+  actor?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Map an open-ended audit `action` to one of the timeline's themed categories.
+ * Unknown actions fall through to "ACTIVITY" so the UI renders a neutral chip
+ * rather than crashing on an unmapped type.
+ */
+export function categorizeAuditAction(action: string): string {
+  const a = action.toLowerCase();
+  if (a.includes("tenant")) {
+    if (a.includes("creat")) return "TENANT_CREATED";
+    if (a.includes("activat") && !a.includes("deactivat")) return "TENANT_ACTIVATED";
+    if (a.includes("delet") || a.includes("deactivat")) return "SYSTEM_ALERT";
+    return "TENANT_SETTINGS_UPDATED";
+  }
+  if (a.includes("order")) return "ORDER_PLACED";
+  if (
+    a.includes("user") ||
+    a.includes("account") ||
+    a.includes("signup") ||
+    a.includes("register")
+  ) {
+    return "USER_REGISTERED";
+  }
+  if (
+    a.includes("delet") ||
+    a.includes("fail") ||
+    a.includes("error") ||
+    a.includes("alert") ||
+    a.includes("reject")
+  ) {
+    return "SYSTEM_ALERT";
+  }
+  return "ACTIVITY";
+}
+
+/** "tenant.created" / "TENANT_CREATED" / "product.stock_updated" → "Tenant created". */
+function humanizeAction(action: string): string {
+  const words = action.replace(/[._]+/g, " ").trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** Pure mapper from a persisted audit row to the timeline UI shape. */
+export function mapAuditLogToTimelineEvent(row: audit_logs): TimelineEvent {
+  const entitySuffix = row.entityType ? ` · ${row.entityType}` : "";
+  return {
+    id: row.id,
+    type: categorizeAuditAction(row.action),
+    description: `${humanizeAction(row.action)}${entitySuffix}`,
+    timestamp: row.createdAt,
+    actor: row.userEmail ?? row.userId ?? "System",
+    metadata: (row.metadata ?? undefined) as Record<string, any> | undefined,
+  };
+}
+
+/**
+ * Read the most recent audit rows for the super-admin activity overview, plus
+ * the total and last-24h counts the stat cards display. Replaces the former
+ * generateMockEvents() fabrication (PRD-209 AC-3).
+ */
+export async function getAuditActivityOverview(limit = 50): Promise<{
+  events: TimelineEvent[];
+  totalEvents: number;
+  last24hCount: number;
+}> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const [rows, totalEvents, last24hCount] = await Promise.all([
+    prisma.audit_logs.findMany({ orderBy: { createdAt: "desc" }, take: limit }),
+    prisma.audit_logs.count(),
+    prisma.audit_logs.count({ where: { createdAt: { gte: since } } }),
+  ]);
+  return {
+    events: rows.map(mapAuditLogToTimelineEvent),
+    totalEvents,
+    last24hCount,
   };
 }

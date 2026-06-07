@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -45,10 +45,11 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     });
 
     if (existingProducts.length !== productIds.length) {
-      return NextResponse.json(
-        { error: "Some products not found or unauthorized" },
-        { status: 403 },
-      );
+      return apiError(new Error("Some products not found or unauthorized"), {
+        route: "POST /api/tenant-admin/products/reorder",
+        status: 403,
+        safeMessage: "Some products not found or unauthorized",
+      });
     }
 
     // Update display order in a single transaction (atomic, reduces round trips)

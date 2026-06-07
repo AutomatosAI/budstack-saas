@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { encrypt, decrypt } from "@/lib/encryption";
+import { encrypt, decrypt } from "@/lib/security/encryption";
 
 describe("vitest harness smoke", () => {
   it("round-trips a string through encrypt()/decrypt()", () => {

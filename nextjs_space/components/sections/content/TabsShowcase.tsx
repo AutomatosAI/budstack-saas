@@ -7,7 +7,7 @@ import { Leaf } from 'lucide-react';
 import Image from 'next/image';
 import { SectionProps } from '@/lib/types/section-props';
 import { getIcon } from '@/lib/icon-registry';
-import { headerAlignClasses } from '@/lib/section-align';
+import { headerAlignClasses } from '@/lib/templates/section-align';
 
 interface TabItem {
   label: string;

@@ -21,7 +21,7 @@ import {
 import { CartDropdown } from "./cart-dropdown";
 // import { LanguageSwitcher } from './language-switcher';
 import { useLanguage } from "@/lib/i18n";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,6 +72,20 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
   } else if (storeMatch) {
     baseStorePath = getTenantBasePath(storeMatch[1]);
   }
+
+  // Admin surfaces (/tenant-admin, /super-admin) and the Clerk session live on
+  // the platform apex, never on a tenant storefront host. From a storefront
+  // (subdomain or custom domain) a relative push would load the admin on the
+  // wrong host with no session and bounce to login — so do a full navigation to
+  // the apex. In dev (path-based, same origin) a normal client push is correct.
+  const goToPlatform = (path: string) => {
+    if (process.env.NODE_ENV !== "production") {
+      router.push(path);
+      return;
+    }
+    const apex = process.env.NEXT_PUBLIC_BASE_DOMAIN || "budstacks.io";
+    window.location.href = `https://${apex}${path}`;
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -209,7 +223,7 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
                   <DropdownMenuSeparator />
                   {user?.publicMetadata?.role === "SUPER_ADMIN" && (
                       <DropdownMenuItem
-                        onClick={() => router.push("/super-admin")}
+                        onClick={() => goToPlatform("/super-admin")}
                         className="cursor-pointer"
                       >
                         <Shield className="w-4 h-4 mr-2" />
@@ -219,7 +233,7 @@ export function Navigation({ tenant, logoUrl }: NavigationProps = {}) {
                   {(user?.publicMetadata?.role === "TENANT_ADMIN" ||
                     user?.publicMetadata?.role === "SUPER_ADMIN") && (
                       <DropdownMenuItem
-                        onClick={() => router.push("/tenant-admin")}
+                        onClick={() => goToPlatform("/tenant-admin")}
                         className="cursor-pointer"
                       >
                         <Store className="w-4 h-4 mr-2" />

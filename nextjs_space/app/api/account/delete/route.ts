@@ -1,16 +1,18 @@
-import { NextResponse } from "next/server";
-import { clerkClient } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
+import { currentUser, clerkClient } from "@clerk/nextjs/server";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { getClientInfo } from "@/lib/audit-log";
+import { apiError, apiValidationError } from "@/lib/api-error";
+import { eraseUser, resolveLocalUser } from "@/lib/gdpr/erasure";
 import { withAuth } from "@/lib/api-auth";
-import { prisma } from "@/lib/db";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
 
 /**
  * GDPR Article 17 — Right to erasure (self-service).
  *
- * Anonymizes the authenticated user's account: PII fields nulled, email
- * replaced with a deletion marker, isActive set to false. Order/consultation
+ * Anonymizes the authenticated user's account via the canonical
+ * `eraseUser` path (lib/gdpr/erasure.ts) shared with the admin and Clerk
+ * entry points: PII fields nulled, email replaced with a deletion marker,
+ * isActive set to false, and the Dr Green linkage SEVERED. Order/consultation
  * history is RETAINED (anonymized via the user FK) because tenants may have
  * legal/financial obligations to keep transaction records — full hard delete
  * is admin-initiated only.
@@ -27,7 +29,20 @@ export const DELETE = withAuth(async (request, { user }) => {
     const email = user.email;
 
     if (!email) {
-      return NextResponse.json({ error: "Email not found" }, { status: 401 });
+      return apiError(new Error("Email not found"), {
+        route: "DELETE /api/account/delete",
+        status: 401,
+        safeMessage: "Email not found",
+      });
+    }
+
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return apiError(new Error("Unauthorized"), {
+        route: "DELETE /api/account/delete",
+        status: 401,
+        safeMessage: "Unauthorized",
+      });
     }
 
     const rate = await checkRateLimit(`account-delete:${user.id}`, {
@@ -39,58 +54,48 @@ export const DELETE = withAuth(async (request, { user }) => {
 
     const body = await request.json().catch(() => ({}));
     if (body?.confirm !== "DELETE") {
-      return NextResponse.json(
-        {
-          error:
-            'Confirmation required. POST { "confirm": "DELETE" } to permanently delete your account.',
-        },
-        { status: 400 },
+      return apiValidationError(
+        'Confirmation required. POST { "confirm": "DELETE" } to permanently delete your account.',
+        "DELETE /api/account/delete",
       );
     }
 
-    const dbUser = await prisma.users.findFirst({
-      where: { email },
-      select: { id: true, email: true, name: true, tenantId: true, role: true },
+    // Resolve via the shared resolver (Clerk id first, then email) so we can
+    // enforce the admin-block before anonymising.
+    const dbUser = await resolveLocalUser({
+      clerkUserId: clerkUser.id,
+      email,
     });
 
     if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError(new Error("User not found"), {
+        route: "DELETE /api/account/delete",
+        status: 404,
+        safeMessage: "User not found",
+      });
     }
 
     // Block admin self-deletion via this route — admins must be removed by
     // another admin so we don't leave a tenant with zero owners.
     if (dbUser.role === "TENANT_ADMIN" || dbUser.role === "SUPER_ADMIN") {
-      return NextResponse.json(
+      return apiError(
+        new Error(
+          "Admin accounts cannot be deleted via the self-service endpoint. Contact support to transfer ownership first.",
+        ),
         {
-          error:
+          route: "DELETE /api/account/delete",
+          status: 403,
+          safeMessage:
             "Admin accounts cannot be deleted via the self-service endpoint. Contact support to transfer ownership first.",
         },
-        { status: 403 },
       );
     }
 
-    // Anonymize local record (preserves order/consultation FK integrity)
-    await prisma.users.update({
-      where: { id: dbUser.id },
-      data: {
-        email: `deleted-${dbUser.id}@deleted.local`,
-        name: "Deleted User",
-        firstName: null,
-        lastName: null,
-        phone: null,
-        address: undefined,
-        password: "DELETED",
-        isActive: false,
-        resetToken: null,
-        resetTokenExpiry: null,
-      },
-    });
-
-    // Best-effort Clerk teardown — never block local anonymization on this
+    // Best-effort Clerk teardown — never block local anonymization on this.
     let clerkDeleted = false;
     try {
       const clerk = await clerkClient();
-      await clerk.users.deleteUser(user.id);
+      await clerk.users.deleteUser(clerkUser.id);
       clerkDeleted = true;
     } catch (clerkErr) {
       console.error(
@@ -99,20 +104,14 @@ export const DELETE = withAuth(async (request, { user }) => {
       );
     }
 
-    await createAuditLog({
-      action: AUDIT_ACTIONS.ACCOUNT_DELETED_GDPR_SELF,
-      entityType: "User",
-      entityId: dbUser.id,
-      userId: user.id,
-      userEmail: email,
-      tenantId: dbUser.tenantId || undefined,
-      metadata: {
-        targetUserEmail: dbUser.email,
-        targetUserName: dbUser.name,
-        clerkDeleted,
-        deletionType: "self_service_anonymization",
-      },
-      ...getClientInfo(request.headers),
+    // Canonical erasure: anonymise PII, sever Dr Green linkage, write audit row.
+    await eraseUser({
+      userId: dbUser.id,
+      clerkUserId: clerkUser.id,
+      email,
+      reason: "self_service",
+      clerkDeleted,
+      clientInfo: getClientInfo(request.headers),
     });
 
     return NextResponse.json({

@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { ArrowRight, Clock } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
-import { getTenantBasePath } from '@/lib/tenant-utils';
-import { headerAlignClasses } from '@/lib/section-align';
+import { getTenantBasePath } from '@/lib/tenant/tenant-utils';
+import { headerAlignClasses } from '@/lib/templates/section-align';
 
 interface BlogPost {
   title: string;

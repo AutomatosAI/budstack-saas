@@ -1,15 +1,15 @@
 import { notFound } from "next/navigation";
-import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/lib/tenant";
-import { getTenantUrl, getTenantBasePath, getTenantBaseUrl } from "@/lib/tenant-utils";
+import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/lib/tenant/tenant";
+import { getTenantUrl, getTenantBasePath, getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
 import { prisma } from "@/lib/db";
-import { getFileUrl } from "@/lib/s3";
+import { getFileUrl } from "@/lib/storage/s3";
 
 // Revalidate every 60 seconds — template/product data doesn't change frequently
 // This avoids hitting S3 + DB on every single request
 export const revalidate = 60;
 
 // Import template registry (legacy React templates)
-import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
+import { TEMPLATE_COMPONENTS } from "@/lib/templates/template-registry";
 
 // Import section-based renderer (data-driven templates)
 import { TemplateRenderer } from "@/components/template-renderer";
@@ -23,6 +23,7 @@ import { ProcessSteps } from "@/components/home/process-steps";
 import { EducationalContent } from "@/components/home/educational-content";
 import { TestimonialsSlider } from "@/components/home/testimonials-slider";
 import { CallToAction } from "@/components/home/call-to-action";
+import { logger } from "@/lib/logger";
 
 export default async function TenantStorePage({
   searchParams,
@@ -87,7 +88,8 @@ export default async function TenantStorePage({
     // Load template assets from tenant's own S3 path (cached — shared with layout.tsx)
     const tenantS3Path = tenantTemplate.s3Path?.replace(/\/+$/, '') || null;
 
-    console.log(`[store] Tenant ${tenant.id} (${(tenant as any).businessName}) loading template:`, {
+    logger.info(`[store] Tenant ${tenant.id} loading template`, {
+      businessName: (tenant as any).businessName,
       activeTenantTemplateId: (tenantWithTemplate as any).activeTenantTemplateId,
       tenantTemplateId: tenantTemplate.id,
       tenantS3Path,
@@ -98,7 +100,7 @@ export default async function TenantStorePage({
     const templateAssets = await getTemplateAssets(tenantS3Path);
     const { layout, customCss, defaults } = templateAssets;
 
-    console.log(`[store] Template assets loaded:`, {
+    logger.info(`[store] Template assets loaded`, {
       hasLayout: !!layout,
       sectionCount: layout?.sections?.length || 0,
       hasDefaults: !!defaults,

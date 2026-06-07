@@ -1,7 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getFileUrl } from "@/lib/s3";
+import { getFileUrl } from "@/lib/storage/s3";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Eye,
@@ -9,11 +9,11 @@ import {
   ClipboardList,
   ImageIcon,
   Paintbrush,
-  Plus,
 } from "lucide-react";
 import { RowPill } from "@/components/admin/shared";
 import { UploadTemplateDialog } from "./upload-dialog";
 import { TemplateActions } from "./template-actions";
+import { CreateBlankTemplateButton } from "./create-blank-button";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -68,14 +68,7 @@ export default async function TemplatesManagementPage() {
         </div>
         <div className="flex gap-3 justify-start sm:justify-end">
           <UploadTemplateDialog />
-          <Link
-            href="/api/super-admin/templates/create-blank"
-            prefetch={false}
-            className="bs-btn bs-btn-ghost gap-2"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Create New Theme
-          </Link>
+          <CreateBlankTemplateButton />
         </div>
       </div>
 

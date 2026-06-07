@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant";
+import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant/tenant";
 import { prisma } from "@/lib/db";
 import ConditionsClient from "./conditions-client";
 

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
+import { logger } from "@/lib/logger";
 
 export const PATCH = withTenantAuthParams(
   async (_request, { user, tenantId }, params) => {
@@ -19,10 +20,11 @@ export const PATCH = withTenantAuthParams(
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), {
+        route: "PATCH /api/tenant-admin/templates/[id]/activate",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     // 4. Deactivate all other templates for this tenant
@@ -60,7 +62,7 @@ export const PATCH = withTenantAuthParams(
       },
     });
 
-    console.log(
+    logger.info(
       `✅ Activated template ${templateId} for tenant ${tenantId}`,
     );
 

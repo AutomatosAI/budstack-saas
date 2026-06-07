@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getTenantFromRequest, getTenantBySlug } from "@/lib/tenant";
+import { getTenantFromRequest, getTenantBySlug } from "@/lib/tenant/tenant";
 import { apiError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 
@@ -21,7 +21,11 @@ export async function GET(
     }
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/tenant/conditions/[slug]",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     // First, try to find condition for the current tenant
@@ -55,10 +59,11 @@ export async function GET(
     }
 
     if (!condition) {
-      return NextResponse.json(
-        { error: "Condition not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Condition not found"), {
+        route: "GET /api/tenant/conditions/[slug]",
+        status: 404,
+        safeMessage: "Condition not found",
+      });
     }
 
     return NextResponse.json(condition);

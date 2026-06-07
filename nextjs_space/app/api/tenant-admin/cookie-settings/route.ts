@@ -21,7 +21,11 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/tenant-admin/cookie-settings",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     const settings = (tenant.settings as Record<string, any>) || {};
@@ -35,10 +39,10 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
     });
   } catch (error) {
     console.error("Error fetching cookie settings:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/tenant-admin/cookie-settings",
+      safeMessage: "Internal server error",
+    });
   }
 });
 
@@ -50,7 +54,11 @@ export const POST = withTenantAuth(async (request, { tenantId }) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "POST /api/tenant-admin/cookie-settings",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     const body = await parseJsonBody(request, cookieSettingsSchema);

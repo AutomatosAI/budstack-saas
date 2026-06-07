@@ -3,7 +3,7 @@ import { ApiError } from '@/lib/api-error';
 import {
   assertKeyInTenantScope,
   isKeyInTenantScope,
-} from '@/lib/s3-tenant-guard';
+} from '@/lib/storage/s3-tenant-guard';
 
 // Placeholder ids: ME = caller, VICTIM = a different tenant. No real/template
 // values — the guard keys off the tenantId + prefix convention only.

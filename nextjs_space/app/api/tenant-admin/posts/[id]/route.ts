@@ -30,7 +30,7 @@ export const GET = withAuth(async (_req, { user }, { id: rawId }) => {
     const role = user.role;
 
     if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), { route: "GET /api/tenant-admin/posts/[id]", status: 401, safeMessage: "Unauthorized" });
     }
 
     const id = parseUuid(rawId);
@@ -41,7 +41,7 @@ export const GET = withAuth(async (_req, { user }, { id: rawId }) => {
     });
 
     if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      return apiError(new Error("Post not found"), { route: "GET /api/tenant-admin/posts/[id]", status: 404, safeMessage: "Post not found" });
     }
 
     const localUser = await prisma.users.findFirst({
@@ -51,7 +51,7 @@ export const GET = withAuth(async (_req, { user }, { id: rawId }) => {
 
     // Super Admin can access all posts, Tenant Admin only their own
     if (role !== "SUPER_ADMIN" && post.tenantId !== localUser?.tenantId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return apiError(new Error("Unauthorized"), { route: "GET /api/tenant-admin/posts/[id]", status: 403, safeMessage: "Unauthorized" });
     }
 
     return NextResponse.json(post);
@@ -66,7 +66,7 @@ export const PATCH = withAuth(async (req, { user }, { id: rawId }) => {
     const role = user.role;
 
     if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), { route: "PATCH /api/tenant-admin/posts/[id]", status: 401, safeMessage: "Unauthorized" });
     }
 
     const id = parseUuid(rawId);
@@ -85,10 +85,7 @@ export const PATCH = withAuth(async (req, { user }, { id: rawId }) => {
       !existingPost ||
       (role !== "SUPER_ADMIN" && existingPost.tenantId !== localUser?.tenantId)
     ) {
-      return NextResponse.json(
-        { error: "Post not found or unauthorized" },
-        { status: 404 },
-      );
+      return apiError(new Error("Post not found or unauthorized"), { route: "PATCH /api/tenant-admin/posts/[id]", status: 404, safeMessage: "Post not found or unauthorized" });
     }
 
     const dataToUpdate: Record<string, unknown> = { ...validatedData };
@@ -101,7 +98,10 @@ export const PATCH = withAuth(async (req, { user }, { id: rawId }) => {
         await prisma.posts.findFirst({
           where: {
             slug: uniqueSlug,
-            tenantId: localUser!.tenantId,
+            // Scope to the post's own tenant: a SUPER_ADMIN editing another
+            // tenant's post must not key off their own tenantId. existingPost
+            // is guaranteed non-null by the ownership check above.
+            tenantId: existingPost.tenantId,
             NOT: { id },
           },
         })
@@ -132,7 +132,7 @@ export const DELETE = withAuth(async (_req, { user }, { id: rawId }) => {
     const role = user.role;
 
     if (role !== "TENANT_ADMIN" && role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(new Error("Unauthorized"), { route: "DELETE /api/tenant-admin/posts/[id]", status: 401, safeMessage: "Unauthorized" });
     }
 
     const id = parseUuid(rawId);
@@ -147,10 +147,7 @@ export const DELETE = withAuth(async (_req, { user }, { id: rawId }) => {
       !existingPost ||
       (role !== "SUPER_ADMIN" && existingPost.tenantId !== localUser?.tenantId)
     ) {
-      return NextResponse.json(
-        { error: "Post not found or unauthorized" },
-        { status: 404 },
-      );
+      return apiError(new Error("Post not found or unauthorized"), { route: "DELETE /api/tenant-admin/posts/[id]", status: 404, safeMessage: "Post not found or unauthorized" });
     }
 
     await prisma.posts.delete({ where: { id } });

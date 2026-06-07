@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { uploadFile, getFileUrl, deleteS3Directory } from "@/lib/s3";
-import { validateUploadBuffer } from "@/lib/upload-validation";
+import { uploadFile, getFileUrl, deleteS3Directory } from "@/lib/storage/s3";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 import fs from "fs/promises";
 import path from "path";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const templatePatchSchema = z
   .object({
@@ -25,7 +26,11 @@ export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
       where: { id },
     });
     if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+      return apiError(new Error("Template not found"), {
+        route: "PUT /api/super-admin/templates/[id]",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     const formData = await req.formData();
@@ -47,9 +52,9 @@ export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
         { maxSize: 5 * 1024 * 1024 },
       );
       if (!validation.valid) {
-        return NextResponse.json(
-          { error: `Preview image: ${validation.error}` },
-          { status: 400 },
+        return apiValidationError(
+          `Preview image: ${validation.error}`,
+          "PUT /api/super-admin/templates/[id]",
         );
       }
       const fileName = `template-preview-${template.slug}-${Date.now()}-${sanitizedName}`;
@@ -69,7 +74,10 @@ export const PUT = withSuperAdminParams(async (req, _ctx, params) => {
     if (description) updateData.description = description.slice(0, 5000);
 
     if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+      return apiValidationError(
+        "No fields to update",
+        "PUT /api/super-admin/templates/[id]",
+      );
     }
 
     updateData.updatedAt = new Date();
@@ -113,7 +121,11 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       where: { id },
     });
     if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+      return apiError(new Error("Template not found"), {
+        route: "PATCH /api/super-admin/templates/[id]",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     const body = await parseJsonBody(req, templatePatchSchema);
@@ -144,7 +156,10 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       });
     }
 
-    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    return apiValidationError(
+      "No valid fields to update",
+      "PATCH /api/super-admin/templates/[id]",
+    );
   } catch (error: any) {
     console.error("[Template PATCH] Error:", error);
     return apiError(error, {
@@ -190,10 +205,11 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), {
+        route: "DELETE /api/super-admin/templates/[id]",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     // Check if template is in active use
@@ -238,7 +254,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
       );
     }
 
-    console.log(
+    logger.info(
       `[Template Delete] Deleting template: ${template.name} (${template.slug})${force ? ' (FORCE)' : ''}${cascadeTenantTemplates ? ' (CASCADE-TENANT-TEMPLATES)' : ''}`,
     );
 
@@ -249,7 +265,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
         where: { activeTenantTemplateId: { in: tenantTemplateIds } },
         data: { activeTenantTemplateId: null },
       });
-      console.log(`[Template Delete] Cleared activeTenantTemplateId on tenants`);
+      logger.info(`[Template Delete] Cleared activeTenantTemplateId on tenants`);
     }
 
     // Clear direct templateId references on tenants
@@ -258,7 +274,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
         where: { templateId: templateId },
         data: { templateId: null },
       });
-      console.log(`[Template Delete] Cleared templateId on ${template._count.tenants} tenant(s)`);
+      logger.info(`[Template Delete] Cleared templateId on ${template._count.tenants} tenant(s)`);
     }
 
     // Tenant clones are owned by the tenant once cloned. Deleting the base template
@@ -289,7 +305,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
     }
 
     if (template._count.tenant_templates > 0 && cascadeTenantTemplates) {
-      console.log(
+      logger.info(
         `[Template Delete] CASCADE: deleting ${template._count.tenant_templates} tenant_templates that reference this base template (caller passed cascadeTenantTemplates=true)`,
       );
       await prisma.tenant_templates.deleteMany({
@@ -310,7 +326,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
         .catch(() => false);
       if (dirExists) {
         await fs.rm(templateDir, { recursive: true, force: true });
-        console.log(`[Template Delete] Directory removed: ${templateDir}`);
+        logger.info(`[Template Delete] Directory removed: ${templateDir}`);
       }
     } catch (fsError: any) {
       console.error("[Template Delete] Error removing directory:", fsError);
@@ -321,7 +337,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
     if (template.slug) {
       try {
         const s3Deleted = await deleteS3Directory(`templates/${template.slug}/`);
-        console.log(`[Template Delete] S3 cleanup: ${s3Deleted} file(s) deleted from templates/${template.slug}/`);
+        logger.info(`[Template Delete] S3 cleanup: ${s3Deleted} file(s) deleted from templates/${template.slug}/`);
       } catch (s3Error: any) {
         console.error("[Template Delete] S3 cleanup failed (continuing):", s3Error.message);
       }
@@ -332,7 +348,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
       where: { id: templateId },
     });
 
-    console.log("[Template Delete] Database record deleted");
+    logger.info("[Template Delete] Database record deleted");
 
     // Create audit log
     const clientInfo = getClientInfo(req.headers);

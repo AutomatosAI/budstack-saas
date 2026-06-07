@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getNamecheapClient } from "@/lib/namecheap-api";
-import { addCustomDomain, removeCustomDomain } from "@/lib/railway-api";
+import { getNamecheapClient } from "@/lib/integrations/namecheap-api";
+import { addCustomDomain, removeCustomDomain } from "@/lib/integrations/railway-api";
 import { clerkClient } from "@clerk/nextjs/server";
 import { isReservedSubdomain, isValidSubdomain } from "@/lib/reserved-subdomains";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
@@ -10,7 +10,9 @@ import { requireConfirmation } from "@/lib/security/require-confirmation";
 import crypto from "crypto";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { tenantSettingsLenientSchema } from "@/lib/validation/tenant-settings";
+import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { apiError, apiValidationError } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
 
 export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
   try {
@@ -50,7 +52,11 @@ export const GET = withSuperAdminParams(async (_req, _ctx, params) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/super-admin/tenants/[id]",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     return NextResponse.json({ tenant });
@@ -80,16 +86,20 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
     });
 
     if (!existingTenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "PATCH /api/super-admin/tenants/[id]",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     // Check if subdomain is being changed: enforce format + reserved list, then uniqueness
     if (subdomain && subdomain !== existingTenant.subdomain) {
       const candidate = String(subdomain);
       if (!isValidSubdomain(candidate)) {
-        return NextResponse.json(
-          { error: "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only" },
-          { status: 400 },
+        return apiValidationError(
+          "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only",
+          "PATCH /api/super-admin/tenants/[id]",
         );
       }
       if (isReservedSubdomain(candidate)) {
@@ -104,9 +114,9 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       });
 
       if (subdomainExists) {
-        return NextResponse.json(
-          { error: "Subdomain already exists" },
-          { status: 400 },
+        return apiValidationError(
+          "Subdomain already exists",
+          "PATCH /api/super-admin/tenants/[id]",
         );
       }
     }
@@ -124,9 +134,9 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       });
 
       if (domainExists) {
-        return NextResponse.json(
-          { error: "Custom domain already exists" },
-          { status: 400 },
+        return apiValidationError(
+          "Custom domain already exists",
+          "PATCH /api/super-admin/tenants/[id]",
         );
       }
     }
@@ -152,18 +162,16 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
           );
         }
 
-        console.log(
+        logger.info(
           `✅ Created subdomain: ${existingTenant.subdomain}.${baseDomain}`,
         );
       } catch (error) {
         console.error("Namecheap API error:", error);
-        return NextResponse.json(
-          {
-            error:
-              "Failed to create subdomain. Please check Namecheap API credentials and whitelisted IP.",
-          },
-          { status: 500 },
-        );
+        return apiError(error, {
+          route: "PATCH /api/super-admin/tenants/[id]",
+          safeMessage:
+            "Failed to create subdomain. Please check Namecheap API credentials and whitelisted IP.",
+        });
       }
     }
 
@@ -177,7 +185,7 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       try {
         const namecheap = getNamecheapClient(namecheapUsername);
         await namecheap.deleteTenantSubdomain(existingTenant.subdomain);
-        console.log(
+        logger.info(
           `🗑️ Deleted subdomain: ${existingTenant.subdomain}.${baseDomain}`,
         );
       } catch (error) {
@@ -204,7 +212,7 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
       if (existingTenant.customDomain && railwayDomainId) {
         try {
           await removeCustomDomain(railwayDomainId);
-          console.log(`🗑️ Removed Railway domain: ${existingTenant.customDomain}`);
+          logger.info(`🗑️ Removed Railway domain: ${existingTenant.customDomain}`);
         } catch (error) {
           console.error("Railway domain removal error:", error);
         }
@@ -220,15 +228,14 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
           railwayDomainId = railwayDomain.id;
           railwayDnsRecords = railwayDomain.dnsRecords;
           domainVerification = { status: "pending", checkedAt: new Date().toISOString(), expected: null, found: null };
-          console.log(`✅ Added Railway domain: ${customDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
+          logger.info(`✅ Added Railway domain: ${customDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
         } catch (error) {
           console.error("Railway domain creation error:", error);
-          return NextResponse.json(
-            {
-              error: "Failed to provision custom domain on Railway. The domain was not saved.",
-            },
-            { status: 500 },
-          );
+          return apiError(error, {
+            route: "PATCH /api/super-admin/tenants/[id]",
+            safeMessage:
+              "Failed to provision custom domain on Railway. The domain was not saved.",
+          });
         }
       }
     } else if (needsRecoveryProvisioning) {
@@ -237,15 +244,14 @@ export const PATCH = withSuperAdminParams(async (req, { user }, params) => {
         railwayDomainId = railwayDomain.id;
         railwayDnsRecords = railwayDomain.dnsRecords;
         domainVerification = { status: "pending", checkedAt: new Date().toISOString(), expected: null, found: null };
-        console.log(`✅ Provisioned Railway domain (recovery): ${resolvedDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
+        logger.info(`✅ Provisioned Railway domain (recovery): ${resolvedDomain} (id: ${railwayDomain.id})`, { dnsRecords: railwayDomain.dnsRecords });
       } catch (error) {
         console.error("Railway domain recovery provisioning error:", error);
-        return NextResponse.json(
-          {
-            error: "Failed to provision custom domain on Railway. If the domain already exists in Railway, remove it from the Railway dashboard and try again.",
-          },
-          { status: 500 },
-        );
+        return apiError(error, {
+          route: "PATCH /api/super-admin/tenants/[id]",
+          safeMessage:
+            "Failed to provision custom domain on Railway. If the domain already exists in Railway, remove it from the Railway dashboard and try again.",
+        });
       }
     }
 
@@ -330,7 +336,11 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "DELETE /api/super-admin/tenants/[id]",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     // Require a typed { confirm: <subdomain> } body so a destructive delete cannot fire
@@ -339,15 +349,19 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
     const confirmationError = requireConfirmation(body, tenant.subdomain);
     if (confirmationError) return confirmationError;
 
+    // PRD-208: parse-on-read instead of `settings as any`. Never throws — a
+    // malformed blob yields {} and the best-effort cleanup simply skips.
+    const tenantSettings = parseTenantSettings(tenant.settings, { tenantId: id });
+
     // Clean up Clerk Organization and Users (best-effort — don't block DB delete)
-    const clerkOrgId = (tenant.settings as any)?.clerkOrgId;
+    const clerkOrgId = tenantSettings.clerkOrgId;
     const cleanupErrors: string[] = [];
 
     if (clerkOrgId) {
       try {
         const client = await clerkClient();
         await client.organizations.deleteOrganization(clerkOrgId);
-        console.log(`🗑️ Deleted Clerk org: ${clerkOrgId}`);
+        logger.info(`🗑️ Deleted Clerk org: ${clerkOrgId}`);
       } catch (error: any) {
         // AC-5: log full detail server-side; the body must never carry error.message.
         console.error(`Failed to delete Clerk org ${clerkOrgId}:`, error);
@@ -365,7 +379,7 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
         });
         for (const cu of clerkUsers.data) {
           await client.users.deleteUser(cu.id);
-          console.log(`🗑️ Deleted Clerk user: ${cu.id} (${tenantUser.email})`);
+          logger.info("🗑️ Deleted Clerk user", { clerkUserId: cu.id, email: tenantUser.email });
         }
       } catch (error: any) {
         console.error(`Failed to delete Clerk user ${tenantUser.email}:`, error);
@@ -374,11 +388,11 @@ export const DELETE = withSuperAdminParams(async (req, { user }, params) => {
     }
 
     // Clean up Railway custom domain (best-effort)
-    const railwayDomainId = (tenant.settings as any)?.railwayDomainId;
+    const railwayDomainId = tenantSettings.railwayDomainId;
     if (railwayDomainId) {
       try {
         await removeCustomDomain(railwayDomainId);
-        console.log(`🗑️ Removed Railway domain for tenant: ${tenant.customDomain}`);
+        logger.info(`🗑️ Removed Railway domain for tenant: ${tenant.customDomain}`);
       } catch (error: any) {
         console.error(`Failed to remove Railway domain ${railwayDomainId}:`, error);
         cleanupErrors.push(`Failed to remove Railway domain ${railwayDomainId}`);

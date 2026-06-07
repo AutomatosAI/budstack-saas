@@ -2,8 +2,9 @@
 
 import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
-import { fetchClient, fetchClientByEmail } from "@/lib/doctor-green-api";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
+import { fetchClient, fetchClientByEmail } from "@/lib/drgreen/doctor-green-api";
+import { logger } from "@/lib/logger";
 
 export type KycStatus = {
     isLoggedIn: boolean;
@@ -95,7 +96,11 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             try {
                 client = await fetchClient(dbUser.drGreenClientId, config);
             } catch (idErr) {
-                console.warn(`[KYC] ID lookup failed for ${clerkUser.email} (${dbUser.drGreenClientId}), trying email fallback:`, idErr instanceof Error ? idErr.message : idErr);
+                logger.warn("[KYC] ID lookup failed, trying email fallback", {
+                    userId: dbUser.id,
+                    drGreenClientId: dbUser.drGreenClientId,
+                    error: idErr instanceof Error ? idErr.message : String(idErr),
+                });
                 const byEmail = clerkUser.email ? await fetchClientByEmail(clerkUser.email, config) : null;
                 if (!byEmail) throw idErr;
                 client = byEmail;
@@ -106,9 +111,16 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                             where: { id: dbUser.id },
                             data: { drGreenClientId: byEmail.id },
                         });
-                        console.log(`[KYC] Backfilled drGreenClientId for ${clerkUser.email}: ${dbUser.drGreenClientId} → ${byEmail.id}`);
+                        logger.info("[KYC] Backfilled drGreenClientId", {
+                            userId: dbUser.id,
+                            from: dbUser.drGreenClientId,
+                            to: byEmail.id,
+                        });
                     } catch (updateErr) {
-                        console.error(`[KYC] Failed to backfill drGreenClientId:`, updateErr);
+                        logger.error("[KYC] Failed to backfill drGreenClientId", {
+                            userId: dbUser.id,
+                            error: updateErr instanceof Error ? updateErr.message : String(updateErr),
+                        });
                     }
                 }
             }
@@ -119,7 +131,16 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             const isVerified =
                 client.isKYCVerified === true || client.adminApproval === 'VERIFIED';
 
-            console.log(`[KYC] ${clerkUser.email}: isActive=${client.isActive} isKYCVerified=${client.isKYCVerified} adminApproval=${client.adminApproval} → verified=${isVerified}`);
+            // AC-2: log a non-PII identifier (local user id + Dr Green client id)
+            // and the boolean states — never the email.
+            logger.info("[KYC] verification check", {
+                userId: dbUser.id,
+                drGreenClientId: dbUser.drGreenClientId,
+                isActive: client.isActive,
+                isKYCVerified: client.isKYCVerified,
+                adminApproval: client.adminApproval,
+                verified: isVerified,
+            });
 
             // Persist verified status locally so we never need to check again.
             //
@@ -161,16 +182,19 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                                 updatedAt: new Date(),
                             },
                         });
-                        console.log(
-                            `🔁 Migrated questionnaire for ${clerkUser.email} from tenant ${orphan.tenantId} → ${dbUser.tenantId}`
-                        );
+                        logger.info("[KYC] Migrated questionnaire to current tenant", {
+                            userId: dbUser.id,
+                            fromTenantId: orphan.tenantId,
+                            toTenantId: dbUser.tenantId,
+                        });
                     } else {
-                        console.log(
-                            `⚠️ KYC verified for ${clerkUser.email} but no questionnaire row exists in any tenant — cache will not persist`
-                        );
+                        logger.warn("[KYC] verified but no questionnaire row in any tenant — cache will not persist", {
+                            userId: dbUser.id,
+                            tenantId: dbUser.tenantId,
+                        });
                     }
                 } else {
-                    console.log(`✅ KYC verified for ${clerkUser.email}, cached locally`);
+                    logger.info("[KYC] verified, cached locally", { userId: dbUser.id });
                 }
             }
 
@@ -186,7 +210,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             };
         } catch (configOrApiError) {
             const errMsg = configOrApiError instanceof Error ? configOrApiError.message : String(configOrApiError);
-            console.error("KYC Check Failed:", errMsg);
+            logger.error("[KYC] check failed", { error: errMsg });
             return {
                 isLoggedIn: true,
                 kycVerified: false,
@@ -196,7 +220,9 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
         }
 
     } catch (error) {
-        console.error("KYC Check System Error", error);
+        logger.error("[KYC] system error", {
+            error: error instanceof Error ? error.message : String(error),
+        });
         return { isLoggedIn: false, kycVerified: false, status: "ERROR" };
     }
 }

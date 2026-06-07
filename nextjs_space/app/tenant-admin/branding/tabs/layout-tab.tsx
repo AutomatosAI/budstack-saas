@@ -31,7 +31,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   getSectionsByCategory,
   getSectionDefaults,
-} from "@/lib/section-schemas";
+} from "@/lib/templates/section-schemas";
 import { useState } from "react";
 import type { EditorFormData, SetFormData } from "./types";
 

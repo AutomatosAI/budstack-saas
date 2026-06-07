@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { parseHostToTenantHint } from "@/lib/parse-host";
+import { customDomainRewritePath } from "@/lib/custom-domain-rewrite";
 import { applyCsp, buildCsp, generateNonce, variantForServedPath } from "@/lib/security/csp";
 
 // Define public routes
@@ -88,8 +89,23 @@ export default clerkMiddleware(async (auth, req) => {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, "base");
     }
 
-    // Platform routes: don't rewrite — these live outside /store/
-    if (pathname.startsWith('/auth/') || pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin') || pathname.startsWith('/onboarding')) {
+    // Admin surfaces are apex-only. On a tenant host, redirect to the canonical
+    // apex (preserving path + query) instead of serving the host-agnostic admin
+    // app — it renders on every subdomain (confusing) and needlessly widens the
+    // surface. Tenant isolation is enforced by the session's tenantId, never the
+    // host (see withTenantAuth / tenant-admin layout), so this is hardening + UX.
+    if (pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin')) {
+      const apex = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io';
+      const dest = new URL(url);
+      dest.host = apex;
+      dest.protocol = 'https:';
+      dest.port = '';
+      return applyCsp(NextResponse.redirect(dest, 307), nonce, 'base');
+    }
+
+    // Other platform routes (/auth, /onboarding) stay on the tenant host:
+    // shopper login + public signup happen on the storefront, not the apex.
+    if (pathname.startsWith('/auth/') || pathname.startsWith('/onboarding')) {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, variantForServedPath(pathname));
     }
 
@@ -99,9 +115,13 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // PRIORITY 2: Custom domain routing (REWRITE)
-  // Rewrite example.com/products -> /store/_cd/products so Next.js file routing
-  // matches app/store/[slug]/. The _cd placeholder slug is never used for DB
-  // lookups — getCurrentTenant() resolves via the x-tenant-custom-domain header.
+  // Rewrite example.com/products -> /store/cd-<hash(host)>/products so Next.js
+  // file routing matches app/store/[slug]/. PRD-212: the segment is HOST-SCOPED
+  // (was the constant /store/_cd) so the ISR full-route cache — keyed on the
+  // resolved pathname, not on headers — gets a DISTINCT key per custom domain
+  // and can never serve one tenant's cached HTML on another tenant's domain.
+  // The segment is a cache-key dimension only; it is never used for DB lookups —
+  // getCurrentTenant() still resolves via the x-tenant-custom-domain header.
   if (
     hint?.kind === 'customDomain' &&
     !(process.env.NODE_ENV === 'development' && hint.host.includes('.abacusai.app'))
@@ -119,18 +139,32 @@ export default clerkMiddleware(async (auth, req) => {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, "base");
     }
 
-    // Clerk proxy: /__clerk/* must reach next.config.js rewrite, not get rewritten to /store/_cd/
+    // Clerk proxy: /__clerk/* must reach next.config.js rewrite, not get rewritten to /store/cd-…/
     if (pathname.startsWith('/__clerk')) {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, "base");
     }
 
-    // Platform routes: don't rewrite
-    if (pathname.startsWith('/auth/') || pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin') || pathname.startsWith('/onboarding')) {
+    // Admin surfaces are apex-only — redirect off the custom domain to the
+    // canonical apex (preserving path + query). Isolation is session-scoped, not
+    // host-scoped, so this is hardening + UX, not a data-leak fix.
+    if (pathname.startsWith('/tenant-admin') || pathname.startsWith('/super-admin')) {
+      const apex = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'budstacks.io';
+      const dest = new URL(url);
+      dest.host = apex;
+      dest.protocol = 'https:';
+      dest.port = '';
+      return applyCsp(NextResponse.redirect(dest, 307), nonce, 'base');
+    }
+
+    // Other platform routes (/auth, /onboarding) stay on the custom domain.
+    if (pathname.startsWith('/auth/') || pathname.startsWith('/onboarding')) {
       return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce, variantForServedPath(pathname));
     }
 
-    // Page routes: rewrite to internal store route with placeholder slug
-    url.pathname = `/store/_cd${pathname}`;
+    // Page routes: rewrite to internal store route with a HOST-SCOPED segment
+    // (PRD-212). hint.host is the real custom domain; the derived cd-<hash>
+    // segment isolates this domain's ISR cache from every other custom domain.
+    url.pathname = customDomainRewritePath(hint.host, pathname);
     return applyCsp(NextResponse.rewrite(url, { request: { headers: requestHeaders } }), nonce, "store");
   }
 

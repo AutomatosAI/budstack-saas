@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
+import { copyS3Directory, getJsonFromS3 } from "@/lib/storage/s3";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
+import { logger } from "@/lib/logger";
 
 const migrateS3Schema = z
   .object({
@@ -87,7 +88,7 @@ export const POST = withSuperAdmin(async (req) => {
 
           // 3. Restore tenant's layout.json (their customizations win)
           if (tenantLayout) {
-            const { createS3Client, getBucketConfig } = await import("@/lib/aws-config");
+            const { createS3Client, getBucketConfig } = await import("@/lib/storage/aws-config");
             const { PutObjectCommand } = await import("@aws-sdk/client-s3");
             const s3 = await createS3Client();
             const { bucketName } = await getBucketConfig();
@@ -121,7 +122,7 @@ export const POST = withSuperAdmin(async (req) => {
           } catch { /* optional */ }
 
           results.push({ tenantName, s3Path: tenantPath, baseTemplate: baseSlug, status: "BACKFILLED", filesCopied });
-          console.log(`[backfill] ${tenantName}: copied ${filesCopied} files from templates/${baseSlug}/ to ${tenantPath}/`);
+          logger.info(`[backfill] ${tenantName}: copied ${filesCopied} files from templates/${baseSlug}/ to ${tenantPath}/`);
         } catch (err) {
           results.push({ tenantName, s3Path: tenantPath, baseTemplate: baseSlug, status: `ERROR: ${err instanceof Error ? err.message : "Unknown"}` });
           console.error(`[backfill] Failed for ${tenantName}:`, err);
@@ -216,7 +217,7 @@ export const POST = withSuperAdmin(async (req) => {
           filesCopied,
         });
 
-        console.log(`[migrate] ${(tt.tenant as any)?.businessName}: ${oldPath} → ${newPath} (${filesCopied} files)`);
+        logger.info(`[migrate] ${(tt.tenant as any)?.businessName}: ${oldPath} → ${newPath} (${filesCopied} files)`);
       } catch (err) {
         results.push({
           tenantTemplateId: tt.id,

@@ -5,8 +5,8 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Newspaper } from "lucide-react";
 import { posts } from "@prisma/client";
-import { getTenantBasePath } from "@/lib/tenant-utils";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
 
 export const revalidate = 60;
 

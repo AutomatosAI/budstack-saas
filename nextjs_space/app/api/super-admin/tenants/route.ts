@@ -4,8 +4,8 @@ import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { apiError } from "@/lib/api-error";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 import crypto from "crypto";
 
@@ -137,9 +137,9 @@ export const POST = withSuperAdmin(async (request, { user }) => {
     });
 
     if (existingTenant) {
-      return NextResponse.json(
-        { error: "Subdomain already exists" },
-        { status: 400 },
+      return apiValidationError(
+        "Subdomain already exists",
+        "POST /api/super-admin/tenants",
       );
     }
 
@@ -148,9 +148,9 @@ export const POST = withSuperAdmin(async (request, { user }) => {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "Email already exists" },
-        { status: 400 },
+      return apiValidationError(
+        "Email already exists",
+        "POST /api/super-admin/tenants",
       );
     }
 

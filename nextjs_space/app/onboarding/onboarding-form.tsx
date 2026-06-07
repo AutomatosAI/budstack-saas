@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/sonner";
 import { Navbar, Footer } from "@/components/landing";
+import { DPA_VERSION } from "@/lib/gdpr/dpa";
 import {
   CheckCircle2,
   Store,
@@ -58,6 +60,8 @@ export default function OnboardingForm({
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  // PRD-213 AC-2: tenant must accept the current DPA version before submit.
+  const [dpaAccepted, setDpaAccepted] = useState(false);
   const [formData, setFormData] = useState({
     businessName: "",
     email: "",
@@ -75,13 +79,23 @@ export default function OnboardingForm({
   const totalSteps = 4;
 
   const handleSubmit = async () => {
+    // PRD-213 AC-2: block submission until the DPA is accepted.
+    if (!dpaAccepted) {
+      toast.error("Please accept the Data Processing Agreement to continue.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const res = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          dpaVersion: DPA_VERSION,
+          dpaAcceptedAt: new Date().toISOString(),
+        }),
       });
 
       if (!res.ok) {
@@ -97,7 +111,7 @@ export default function OnboardingForm({
 
       const result = await res.json();
       toast.success(
-        "Application submitted! We'll review your NFT and get back to you soon.",
+        "Application submitted! We'll review your application and get back to you soon.",
       );
       router.push("/");
     } catch (error: any) {
@@ -122,7 +136,7 @@ export default function OnboardingForm({
       case 2:
         return formData.email && formData.password.length >= 6;
       case 3:
-        return formData.nftTokenId && formData.countryCode;
+        return formData.countryCode;
       case 4:
         return formData.templateId;
       default:
@@ -341,42 +355,6 @@ export default function OnboardingForm({
         return (
           <div className="space-y-6">
             <div>
-              <Label htmlFor="nftTokenId" className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Hash className="h-4 w-4 text-accent" />
-                NFT Token ID *
-              </Label>
-              <Input
-                id="nftTokenId"
-                value={formData.nftTokenId}
-                onChange={(e) =>
-                  setFormData({ ...formData, nftTokenId: e.target.value })
-                }
-                placeholder="Enter your NFT token ID"
-                className="mt-2 h-12 rounded-xl border-border bg-muted/30"
-              />
-              <div className="mt-4 card-nested p-5 bg-accent/5">
-                <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <Rocket className="h-4 w-4 text-accent" />
-                  About NFT Verification
-                </h4>
-                <ul className="text-xs text-muted-foreground space-y-2">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-3.5 w-3.5 text-success" />
-                    We&apos;ll verify your NFT ownership to activate your store
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-3.5 w-3.5 text-success" />
-                    This ensures only licensed operators use the platform
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-3.5 w-3.5 text-success" />
-                    Your store will be ready once verification is complete
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <div>
               <Label htmlFor="countryCode" className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <Globe className="h-4 w-4 text-accent" />
                 Operating Country *
@@ -476,6 +454,32 @@ export default function OnboardingForm({
                 </p>
               </div>
             )}
+
+            {/* PRD-213 AC-2 / AC-6: required DPA acceptance (existing checkbox primitive) */}
+            <div className="card-nested p-5">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="dpaAccepted"
+                  checked={dpaAccepted}
+                  onCheckedChange={(checked) => setDpaAccepted(checked === true)}
+                  className="mt-1"
+                />
+                <Label
+                  htmlFor="dpaAccepted"
+                  className="text-sm font-normal text-foreground leading-relaxed cursor-pointer"
+                >
+                  I have read and accept the{" "}
+                  <Link
+                    href="/dpa"
+                    target="_blank"
+                    className="text-accent hover:underline font-medium"
+                  >
+                    Data Processing Agreement
+                  </Link>{" "}
+                  on behalf of my business. *
+                </Label>
+              </div>
+            </div>
           </div>
         );
       }
@@ -552,7 +556,7 @@ export default function OnboardingForm({
                   variant="hero"
                   size="lg"
                   onClick={handleSubmit}
-                  disabled={isLoading}
+                  disabled={isLoading || !dpaAccepted}
                   className="rounded-xl"
                 >
                   {isLoading ? (

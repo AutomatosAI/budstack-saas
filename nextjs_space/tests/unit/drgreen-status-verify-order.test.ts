@@ -16,16 +16,16 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("@/lib/encryption", () => ({
+vi.mock("@/lib/security/encryption", () => ({
   decrypt: vi.fn(() => "tenant-secret"),
 }));
 
-vi.mock("@/lib/email", () => ({
+vi.mock("@/lib/email/email", () => ({
   sendEmail: vi.fn(),
   emailTemplates: new Proxy({}, { get: () => vi.fn(async () => "<html></html>") }),
 }));
 
-vi.mock("@/lib/webhook", () => ({
+vi.mock("@/lib/integrations/webhook", () => ({
   triggerWebhook: vi.fn(),
   WEBHOOK_EVENTS: new Proxy({}, { get: () => "evt" }),
 }));

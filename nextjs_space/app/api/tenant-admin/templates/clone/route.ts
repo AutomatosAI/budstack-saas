@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
+import { copyS3Directory, getJsonFromS3 } from "@/lib/storage/s3";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
 import { apiError } from "@/lib/api-error";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/validation/body";
+import { logger } from "@/lib/logger";
 import crypto from "crypto";
 
 const cloneSchema = z
@@ -24,10 +25,11 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     });
 
     if (!baseTemplate) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), {
+        route: "POST /api/tenant-admin/templates/clone",
+        status: 404,
+        safeMessage: "Template not found",
+      });
     }
 
     // 4. Define S3 paths — tenant owns tenants/{id}/templates/{slug}/
@@ -36,11 +38,11 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     const destS3Prefix = `tenants/${tenantId}/templates/${templateSlug}`;
     const destS3Dir = `${destS3Prefix}/`; // trailing slash needed for S3 copy operations
 
-    console.log(`Cloning template from ${sourceS3Prefix} to ${destS3Dir}`);
+    logger.info(`Cloning template from ${sourceS3Prefix} to ${destS3Dir}`);
 
     // 5. Copy S3 Assets
     const filesCopied = await copyS3Directory(sourceS3Prefix, destS3Dir);
-    console.log(`Copied ${filesCopied} files`);
+    logger.info(`Copied ${filesCopied} files`);
 
     // 5b. Read defaults.json from base template to seed DB fields
     let seedData: Record<string, any> = {};
@@ -57,10 +59,10 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
         if (defaults.logoPath) {
           seedData.logoUrl = `${destS3Dir}${defaults.logoPath}`;
         }
-        console.log(`[Clone] Seeded from defaults.json: ${Object.keys(seedData).join(", ")}`);
+        logger.info(`[Clone] Seeded from defaults.json: ${Object.keys(seedData).join(", ")}`);
       }
     } catch (err) {
-      console.log("[Clone] No defaults.json found, skipping seed:", err);
+      logger.info("[Clone] No defaults.json found, skipping seed", { error: err instanceof Error ? err.message : String(err) });
     }
 
     // 6. Create TenantTemplate Record with correct schema fields
@@ -78,7 +80,7 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
       },
     });
 
-    console.log(`Created tenant template: ${tenantTemplate.id}`);
+    logger.info(`Created tenant template: ${tenantTemplate.id}`);
 
     // 7. Audit Log
     await createAuditLog({

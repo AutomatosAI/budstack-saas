@@ -1,29 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { clerkClient } from "@clerk/nextjs/server";
-import { sendEmail, emailTemplates } from "@/lib/email";
-import { copyS3Directory, getJsonFromS3 } from "@/lib/s3";
+import { sendEmail, emailTemplates } from "@/lib/email/email";
+import { copyS3Directory, getJsonFromS3 } from "@/lib/storage/s3";
 import crypto from "crypto";
 import { z } from "zod";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { isReservedSubdomain, isValidSubdomain } from "@/lib/reserved-subdomains";
+import { createAuditLog } from "@/lib/audit-log";
+import {
+  DPA_ACCEPTED_AUDIT_ACTION,
+  dpaAcceptanceSchema,
+} from "@/lib/gdpr/dpa";
+import { apiError, apiValidationError } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
 
-const onboardingSchema = z.object({
-  businessName: z.string().min(1).max(100),
-  email: z.string().email().max(254),
-  password: z.string().min(8).max(128),
-  subdomain: z.string().min(2).max(30).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, "Invalid subdomain format"),
-  nftTokenId: z.string().min(1).max(200),
-  contactInfo: z.union([
-    z.string().max(1000),
-    z.object({
-      phone: z.string().max(20).optional(),
-      address: z.string().max(500).optional(),
-    }),
-  ]).optional(),
-  countryCode: z.string().length(2).regex(/^[A-Z]{2}$/),
-  templateId: z.string().max(100).optional(),
-});
+const onboardingSchema = z
+  .object({
+    businessName: z.string().min(1).max(100),
+    email: z.string().email().max(254),
+    password: z.string().min(8).max(128),
+    subdomain: z.string().min(2).max(30).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, "Invalid subdomain format"),
+    // NFT verification is temporarily disabled — the box is hidden in the
+    // onboarding UI and no token is required. Kept optional so the field can
+    // be re-enabled later without a schema/data migration.
+    nftTokenId: z.string().max(200).optional(),
+    contactInfo: z.union([
+      z.string().max(1000),
+      z.object({
+        phone: z.string().max(20).optional(),
+        address: z.string().max(500).optional(),
+      }),
+    ]).optional(),
+    countryCode: z.string().length(2).regex(/^[A-Z]{2}$/),
+    templateId: z.string().max(100).optional(),
+  })
+  // PRD-213 AC-2a: a current DPA acceptance is mandatory at onboarding.
+  .merge(dpaAcceptanceSchema);
 
 const TEMPLATE_PRESETS = {
   modern: {
@@ -68,9 +81,9 @@ export async function POST(req: NextRequest) {
     const parseResult = onboardingSchema.safeParse(rawBody);
     if (!parseResult.success) {
       const firstError = parseResult.error.errors[0];
-      return NextResponse.json(
-        { error: `Validation error: ${firstError.path.join('.')} — ${firstError.message}` },
-        { status: 400 },
+      return apiValidationError(
+        `Validation error: ${firstError.path.join('.')} — ${firstError.message}`,
+        "POST /api/onboarding",
       );
     }
 
@@ -83,20 +96,22 @@ export async function POST(req: NextRequest) {
       contactInfo,
       countryCode,
       templateId,
+      dpaVersion,
+      dpaAcceptedAt,
     } = parseResult.data;
 
     // Subdomain format validation
     const normalizedSubdomain = subdomain.toLowerCase().trim();
     if (!isValidSubdomain(normalizedSubdomain)) {
-      return NextResponse.json(
-        { error: "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only" },
-        { status: 400 },
+      return apiValidationError(
+        "Subdomain must be 2-30 characters, lowercase alphanumeric and hyphens only",
+        "POST /api/onboarding",
       );
     }
     if (isReservedSubdomain(normalizedSubdomain)) {
-      return NextResponse.json(
-        { error: "This subdomain is reserved. Please choose another." },
-        { status: 400 },
+      return apiValidationError(
+        "This subdomain is reserved. Please choose another.",
+        "POST /api/onboarding",
       );
     }
 
@@ -106,10 +121,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingTenant) {
-      return NextResponse.json(
-        { error: "Subdomain already taken" },
-        { status: 400 },
-      );
+      return apiValidationError("Subdomain already taken", "POST /api/onboarding");
     }
 
     const existingUser = await prisma.users.findFirst({
@@ -117,10 +129,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "Email already registered" },
-        { status: 400 },
-      );
+      return apiValidationError("Email already registered", "POST /api/onboarding");
     }
 
     // 2. Create Clerk User
@@ -139,14 +148,14 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
       console.error("Clerk User Creation Error:", error);
       if (error.errors?.[0]?.code === "form_identifier_exists") {
-        return NextResponse.json(
-          { error: "Email is already registered in our system. Please login instead." },
-          { status: 400 }
+        return apiValidationError(
+          "Email is already registered in our system. Please login instead.",
+          "POST /api/onboarding",
         );
       }
-      return NextResponse.json(
-        { error: `Authentication Error: ${error.errors?.[0]?.message || "Failed to create user"}` },
-        { status: 400 }
+      return apiValidationError(
+        `Authentication Error: ${error.errors?.[0]?.message || "Failed to create user"}`,
+        "POST /api/onboarding",
       );
     }
 
@@ -170,14 +179,14 @@ export async function POST(req: NextRequest) {
       await client.users.deleteUser(clerkUser.id);
 
       if (error.errors?.[0]?.code === "form_identifier_exists") { // Only applies to user, but slug collision is distinct
-        return NextResponse.json(
-          { error: "Organization URL/Slug is already taken." },
-          { status: 400 }
+        return apiValidationError(
+          "Organization URL/Slug is already taken.",
+          "POST /api/onboarding",
         );
       }
-      return NextResponse.json(
-        { error: `Organization Error: ${error.errors?.[0]?.message || "Failed to create organization"}` },
-        { status: 400 }
+      return apiValidationError(
+        `Organization Error: ${error.errors?.[0]?.message || "Failed to create organization"}`,
+        "POST /api/onboarding",
       );
     }
 
@@ -214,10 +223,11 @@ export async function POST(req: NextRequest) {
       }
 
       if (!dbTemplate) {
-        return NextResponse.json(
-          { error: "No templates available. Please contact platform admin." },
-          { status: 500 },
-        );
+        return apiError(new Error("No templates available. Please contact platform admin."), {
+          route: "POST /api/onboarding",
+          status: 500,
+          safeMessage: "No templates available. Please contact platform admin.",
+        });
       }
 
       const template =
@@ -236,6 +246,10 @@ export async function POST(req: NextRequest) {
           isActive: true,
           templateId: dbTemplate.id,
           updatedAt: new Date(),
+          // PRD-213 AC-2a: persist the accepted DPA version + timestamp on the tenant.
+          dpaAcceptedVersion: dpaVersion,
+          dpaAcceptedAt: new Date(dpaAcceptedAt),
+          dpaAcceptedByUserId: clerkUser.id,
           settings: {
             contactInfo,
             templatePreset: templateId || "modern",
@@ -266,7 +280,7 @@ export async function POST(req: NextRequest) {
       let seedData: Record<string, any> = {};
       try {
         filesCopied = await copyS3Directory(sourceS3Prefix, destS3Dir);
-        console.log(`[onboarding] Copied ${filesCopied} files from ${sourceS3Prefix} to ${destS3Dir}`);
+        logger.info(`[onboarding] Copied ${filesCopied} files from ${sourceS3Prefix} to ${destS3Dir}`);
 
         // Read defaults.json to seed DB fields
         const defaults = await getJsonFromS3<any>(`${destS3Dir}defaults.json`);
@@ -307,6 +321,23 @@ export async function POST(req: NextRequest) {
       await prisma.tenants.update({
         where: { id: tenant.id },
         data: { activeTenantTemplateId: tenantTemplateId },
+      });
+
+      // PRD-213 AC-2b: record DPA acceptance in the audit trail (Art. 28 proof).
+      await createAuditLog({
+        action: DPA_ACCEPTED_AUDIT_ACTION,
+        entityType: "Tenant",
+        entityId: tenant.id,
+        userId: clerkUser.id,
+        userEmail: email,
+        tenantId: tenant.id,
+        metadata: {
+          dpaVersion,
+          dpaAcceptedAt,
+          businessName,
+        },
+        ipAddress: ip,
+        userAgent: req.headers.get("user-agent") || "unknown",
       });
 
       // 6. Create Local User (mirroring Clerk User)
@@ -359,7 +390,7 @@ export async function POST(req: NextRequest) {
         const rollbackClient = await clerkClient();
         await rollbackClient.organizations.deleteOrganization(clerkOrg.id);
         await rollbackClient.users.deleteUser(clerkUser.id);
-        console.log("Clerk rollback successful");
+        logger.info("Clerk rollback successful");
       } catch (rollbackError) {
         console.error("Clerk rollback failed (orphaned records):", rollbackError);
       }
@@ -368,9 +399,9 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("Onboarding error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/onboarding",
+      safeMessage: "Internal server error",
+    });
   }
 }

@@ -2,20 +2,20 @@ import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
-import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/lib/tenant";
-import { runWithTenantContextAsync } from "@/lib/tenant-context";
-import { getFileUrl } from "@/lib/s3";
+import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/lib/tenant/tenant";
+import { runWithTenantContextAsync } from "@/lib/tenant/tenant-context";
+import { getFileUrl } from "@/lib/storage/s3";
 import { notFound } from "next/navigation";
 import { readFile } from "fs/promises";
 import { join } from "path";
 // Import template registries (legacy + section-based)
-import { TEMPLATE_COMPONENTS, TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/template-registry";
-import { getSectionComponent } from "@/lib/section-registry";
+import { TEMPLATE_COMPONENTS, TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/templates/template-registry";
+import { getSectionComponent } from "@/lib/templates/section-registry";
 import type { TemplateLayout } from "@/lib/types/template-layout";
 import { CartProvider } from "./_contexts/CartContext";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrapper";
-import { sanitizeCss, extractGoogleFontsImports } from "@/lib/css-utils";
+import { sanitizeCss, extractGoogleFontsImports } from "@/lib/security/css-utils";
 import { hexToHsl } from "@/lib/color-utils";
 
 // Extract runtime-safe CSS from a template's styles.css on disk

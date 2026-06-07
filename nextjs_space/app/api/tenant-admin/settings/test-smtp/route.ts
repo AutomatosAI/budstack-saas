@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { decrypt } from "@/lib/encryption";
+import { decrypt } from "@/lib/security/encryption";
 import { z } from "zod";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
+import { logger } from "@/lib/logger";
 import nodemailer from "nodemailer";
 
 const testSmtpSchema = z
@@ -43,7 +44,11 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "POST /api/tenant-admin/settings/test-smtp",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     const { testEmail } = await parseJsonBody(req, testSmtpSchema);
@@ -52,12 +57,9 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
     const smtp = settings?.smtp;
 
     if (!smtp || !smtp.host || !smtp.user || !smtp.password) {
-      return NextResponse.json(
-        {
-          error:
-            "SMTP Settings not fully configured. Please save settings first.",
-        },
-        { status: 400 },
+      return apiValidationError(
+        "SMTP Settings not fully configured. Please save settings first.",
+        "POST /api/tenant-admin/settings/test-smtp",
       );
     }
 
@@ -65,11 +67,9 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
     try {
       password = decrypt(smtp.password);
     } catch (e) {
-      return NextResponse.json(
-        {
-          error: "Failed to decrypt SMTP password. Try saving settings again.",
-        },
-        { status: 400 },
+      return apiValidationError(
+        "Failed to decrypt SMTP password. Try saving settings again.",
+        "POST /api/tenant-admin/settings/test-smtp",
       );
     }
 
@@ -83,7 +83,7 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
       },
     });
 
-    console.log(`[TenantSMTP] Verifying connection for ${tenantId}...`);
+    logger.info(`[TenantSMTP] Verifying connection for ${tenantId}...`);
     await transporter.verify();
 
     const fromAddress = smtp.fromEmail

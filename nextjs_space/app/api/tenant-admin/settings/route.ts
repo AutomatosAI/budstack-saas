@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { withTenantAuth } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
-import { encrypt } from '@/lib/encryption';
+import { encrypt } from '@/lib/security/encryption';
 import { AUDIT_ACTIONS, createAuditLog, getClientInfo } from '@/lib/audit-log';
-import { generateDrGreenSignature } from '@/lib/drgreen-api-client';
+import { generateDrGreenSignature } from '@/lib/drgreen/drgreen-api-client';
 import { z } from 'zod';
-import { apiError } from '@/lib/api-error';
+import { apiError, apiValidationError } from '@/lib/api-error';
 import { parseJsonBody } from '@/lib/validation/body';
 import { SA_TENANT_COUNTRY_CODE } from '@/lib/verification-mode';
 
@@ -46,7 +46,11 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "POST /api/tenant-admin/settings",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     const body = await parseJsonBody(req, settingsUpdateSchema);
@@ -115,14 +119,12 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       try {
         generateDrGreenSignature("validation_test", normalizedSecret);
       } catch {
-        return NextResponse.json(
-          {
-            error: "Secret key format invalid — could not produce a signature. Please re-paste the Dr Green secret key, ensuring nothing is truncated and no extra characters snuck in.",
-          },
-          { status: 400 },
+        return apiValidationError(
+          "Secret key format invalid — could not produce a signature. Please re-paste the Dr Green secret key, ensuring nothing is truncated and no extra characters snuck in.",
+          "POST /api/tenant-admin/settings",
         );
       }
-      console.log("Encrypting new secret key...");
+      logger.info("Encrypting new secret key...");
       try {
         dataToUpdate.drGreenSecretKey = encrypt(normalizedSecret);
       } catch (e) {
@@ -141,7 +143,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       }
     }
 
-    console.log('Updating tenant with data:', {
+    logger.info('Updating tenant with data', {
       ...dataToUpdate,
       drGreenSecretKey: dataToUpdate.drGreenSecretKey ? '***' : undefined,
       drGreenApiKey: dataToUpdate.drGreenApiKey ? '***' : undefined,
@@ -169,7 +171,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       userAgent,
     });
 
-    console.log('Settings updated successfully');
+    logger.info('Settings updated successfully');
     return NextResponse.json({ success: true, message: 'Settings updated successfully' });
   } catch (error) {
     return apiError(error, {

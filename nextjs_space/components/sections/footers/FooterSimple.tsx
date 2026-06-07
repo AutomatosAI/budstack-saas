@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SectionProps } from '@/lib/types/section-props';
-import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
+import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant/tenant-utils';
 import { SocialIcons } from './social-icons';
 
 export function FooterSimple(props: SectionProps) {

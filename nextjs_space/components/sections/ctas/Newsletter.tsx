@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Mail, ArrowRight } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
-import { headerAlignClasses } from '@/lib/section-align';
+import { headerAlignClasses } from '@/lib/templates/section-align';
 
 export function Newsletter(props: SectionProps) {
   const { sectionConfig } = props;

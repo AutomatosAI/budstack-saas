@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchProducts } from "@/lib/doctor-green-api";
-import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
+import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
+import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant/tenant";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { ApiError, apiError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 

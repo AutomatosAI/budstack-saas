@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
-import { getCurrentTenant } from "@/lib/tenant";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
-import { getCart } from "@/lib/drgreen-cart";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
+import { getCart } from "@/lib/drgreen/drgreen-cart";
 import { apiError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 
@@ -14,7 +14,11 @@ export const GET = withAuth(async (_request, { user }, params) => {
     const tenant = await getCurrentTenant();
 
     if (!tenant) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      return apiError(new Error("Store not found"), {
+        route: "GET /api/store/[slug]/cart",
+        status: 404,
+        safeMessage: "Store not found",
+      });
     }
 
     // Get Dr. Green credentials

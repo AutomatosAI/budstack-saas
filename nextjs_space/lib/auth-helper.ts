@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import {
   resolveTenant,
   isAmbiguousTenantResolution,
-} from "@/lib/tenant-resolver";
+} from "@/lib/tenant/tenant-resolver";
 import { ApiError } from "@/lib/api-error";
 
 /**

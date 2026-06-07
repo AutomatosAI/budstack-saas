@@ -1,11 +1,16 @@
 import { PrismaClient } from '@prisma/client'
-import { getTenantContext, hasTenantContext } from '@/lib/tenant-context';
+import { getTenantContext, hasTenantContext } from '@/lib/tenant/tenant-context';
 import {
   TenantContextMissingError,
   decideMissingContext,
   emitTenantContextMissing,
   isStrictTenantContext,
-} from '@/lib/tenant-scope-policy';
+} from '@/lib/tenant/tenant-scope-policy';
+import {
+  applySoftDelete,
+  getSoftDeleteFlags,
+  isSoftDeletable,
+} from '@/lib/soft-delete';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -184,5 +189,23 @@ if ('$use' in prisma) {
     }
 
     return next(params);
+  });
+
+  // PRD-208 — Soft-delete middleware. Registered AFTER the tenant-scope
+  // middleware so it composes as the inner layer: tenant-scope rewrites the
+  // `where` (and findUnique→findFirst / adds tenantId) FIRST, then this layer
+  // injects `deletedAt: null` into reads and rewrites delete/deleteMany into a
+  // `deletedAt = now()` update — preserving any tenant scope already applied.
+  //
+  // It runs for ALL soft-deletable models, including ones the tenant-scope
+  // middleware short-circuits (`tenants`, `templates`, `marketplace_submissions`
+  // are not tenant-scoped), because this is a separate `$use` downstream of the
+  // tenant-scope `next()`. Escape hatches: withDeleted() / hardDelete().
+  (prisma as any).$use(async (params: any, next: (params: any) => Promise<any>) => {
+    if (!isSoftDeletable(params.model)) {
+      return next(params);
+    }
+    const rewritten = applySoftDelete(params, getSoftDeleteFlags());
+    return next(rewritten);
   });
 }

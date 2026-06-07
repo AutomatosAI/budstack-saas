@@ -29,7 +29,7 @@ export const GET = withTenantAuthParams(async (_request, { tenantId }, params) =
   });
 
   if (!post) {
-    return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    return apiError(new Error("Post not found"), { route: "GET /api/tenant-admin/seo/posts/[id]", status: 404, safeMessage: "Post not found" });
   }
 
   return NextResponse.json(post);
@@ -50,7 +50,7 @@ export const PUT = withTenantAuthParams(async (request, { tenantId }, params) =>
   });
 
   if (!existingPost) {
-    return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    return apiError(new Error("Post not found"), { route: "PUT /api/tenant-admin/seo/posts/[id]", status: 404, safeMessage: "Post not found" });
   }
 
   let parsed;

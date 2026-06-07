@@ -1,16 +1,17 @@
 import { notFound } from "next/navigation";
 import fs from "fs";
 import path from "path";
-import { TEMPLATE_COMPONENTS } from "@/lib/template-registry";
+import { TEMPLATE_COMPONENTS } from "@/lib/templates/template-registry";
 import { TemplateRenderer } from "@/components/template-renderer";
-import { getJsonFromS3, getTextFromS3, getFileUrl } from "@/lib/s3";
-import { isKeyInTenantScope } from "@/lib/s3-tenant-guard";
-import { getBucketConfig } from "@/lib/aws-config";
+import { getJsonFromS3, getTextFromS3, getFileUrl } from "@/lib/storage/s3";
+import { isKeyInTenantScope } from "@/lib/storage/s3-tenant-guard";
+import { getBucketConfig } from "@/lib/storage/aws-config";
 import { SECTION_ASSET_KEYS, type TemplateLayout } from "@/lib/types/template-layout";
 import { Tenant } from "@/types/client";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import { prisma } from "@/lib/db";
-import { getTemplateAssets } from "@/lib/tenant";
+import { getTemplateAssets } from "@/lib/tenant/tenant";
+import { logger } from "@/lib/logger";
 import PreviewToolbar from "./preview-toolbar";
 
 export const dynamic = 'force-dynamic';
@@ -204,14 +205,14 @@ export default async function TemplatePreviewPage({
 
     const tenantS3Path = tenantTemplate.s3Path?.replace(/\/+$/, '') || null;
 
-    console.log(`[preview] Tenant preview for tenantTemplateId=${tenantTemplateId}`, JSON.stringify({
+    logger.info(`[preview] Tenant preview for tenantTemplateId=${tenantTemplateId}`, {
       tenantS3Path,
       businessName: tenantTemplate.tenant?.businessName,
       dbLogoUrl: tenantTemplate.logoUrl?.substring(0, 80) || 'NULL',
       dbHeroImageUrl: tenantTemplate.heroImageUrl?.substring(0, 80) || 'NULL',
       hasDesignSystem: !!tenantTemplate.designSystem,
       hasPageContent: !!tenantTemplate.pageContent,
-    }));
+    });
 
     // Load layout, defaults, CSS from tenant's own S3 path
     const { layout, defaults, customCss } = await getTemplateAssets(tenantS3Path);
@@ -221,13 +222,13 @@ export default async function TemplatePreviewPage({
       notFound();
     }
 
-    console.log(`[preview] Loaded assets:`, JSON.stringify({
+    logger.info(`[preview] Loaded assets`, {
       layoutNav: layout.navigation,
       layoutNavConfigCta: (layout as any).navigationConfig?.cta || 'NONE',
       defaultsLogoPath: defaults?.logoPath?.substring(0, 80) || 'NULL',
       defaultsNavCta: defaults?.navigation?.cta || 'NONE',
       sectionCount: layout.sections?.length || 0,
-    }));
+    });
 
     // Tenant's DB designSystem only — no merging with base template defaults
     const mergedDesignSystem = tenantTemplate.designSystem || null;
@@ -258,11 +259,11 @@ export default async function TemplatePreviewPage({
       logoUrl = await signDefaultAsset(defaults?.logoPath, s3Prefix);
     }
 
-    console.log(`[preview] Resolved assets:`, JSON.stringify({
+    logger.info(`[preview] Resolved assets`, {
       logoUrl: logoUrl?.substring(0, 80) || 'NULL',
       logoSource: tenantTemplate.logoUrl ? 'DB' : (defaults?.logoPath ? 'defaults.json' : 'NONE'),
       heroImageUrl: heroImageUrl?.substring(0, 80) || 'NULL',
-    }));
+    });
 
     const tenantData = tenantTemplate.tenant;
     if (!tenantData) {

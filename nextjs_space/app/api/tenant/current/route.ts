@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
+import { apiError } from "@/lib/api-error";
 
 /**
  * Public endpoint — returns minimal tenant info for store pages.
@@ -11,7 +12,11 @@ export async function GET() {
     const tenant = await getCurrentTenant();
 
     if (!tenant) {
-      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+      return apiError(new Error("Tenant not found"), {
+        route: "GET /api/tenant/current",
+        status: 404,
+        safeMessage: "Tenant not found",
+      });
     }
 
     // Return only public-safe fields — no internal settings or config
@@ -24,9 +29,9 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Error fetching tenant:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch tenant" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "GET /api/tenant/current",
+      safeMessage: "Failed to fetch tenant",
+    });
   }
 }

@@ -9,7 +9,7 @@ import {
   Store,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { getTenantUrl } from "@/lib/tenant-utils";
+import { getTenantUrl } from "@/lib/tenant/tenant-utils";
 import { QuickActionsWidget } from "@/components/admin/QuickActionsWidget";
 import { StatCard } from "@/components/admin/shared/StatCard";
 

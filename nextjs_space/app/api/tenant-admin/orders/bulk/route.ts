@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import crypto from "crypto";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
@@ -47,10 +47,11 @@ export const POST = withTenantAuth(async (request, { user, tenantId }) => {
     });
 
     if (ordersToUpdate.length === 0) {
-      return NextResponse.json(
-        { error: "No valid orders found." },
-        { status: 404 },
-      );
+      return apiError(new Error("No valid orders found."), {
+        route: "POST /api/tenant-admin/orders/bulk",
+        status: 404,
+        safeMessage: "No valid orders found.",
+      });
     }
 
     // Determine new status

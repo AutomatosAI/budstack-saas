@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { submitToMarketplace } from "@/lib/marketplace-submission-service";
+import { submitToMarketplace } from "@/lib/marketplace/marketplace-submission-service";
 import { createAuditLog, AUDIT_ACTIONS } from "@/lib/audit-log";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/validation/body";
@@ -27,17 +27,11 @@ export const POST = withTenantAuthParams(
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), { route: "POST /api/tenant-admin/templates/[id]/submit-to-marketplace", status: 404, safeMessage: "Template not found" });
     }
 
     if (template.source !== "custom") {
-      return NextResponse.json(
-        { error: "Only custom templates can be submitted to the marketplace" },
-        { status: 400 },
-      );
+      return apiValidationError("Only custom templates can be submitted to the marketplace", "POST /api/tenant-admin/templates/[id]/submit-to-marketplace");
     }
 
     const { description, category, tags } = await parseJsonBody(

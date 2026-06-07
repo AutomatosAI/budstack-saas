@@ -25,7 +25,7 @@ import {
   Info,
   Loader2,
 } from "lucide-react";
-import { WEBHOOK_EVENT_CATEGORIES } from "@/lib/webhook-events";
+import { WEBHOOK_EVENT_CATEGORIES } from "@/lib/integrations/webhook-events";
 
 const sectionTitleStyle = {
   fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",

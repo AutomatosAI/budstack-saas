@@ -10,7 +10,7 @@ import {
   sanitizeEmailSubject,
   EMAIL_HTML_MAX_LENGTH,
   EMAIL_SUBJECT_MAX_LENGTH,
-} from "@/lib/email-sanitize";
+} from "@/lib/security/email-sanitize";
 
 // Email HTML can approach EMAIL_HTML_MAX_LENGTH (200k) chars; once JSON-escaped
 // the body exceeds the 256KB default, so lift the parse cap to 512KB.

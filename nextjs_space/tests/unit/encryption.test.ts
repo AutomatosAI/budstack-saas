@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { encrypt, decrypt, isEncryptedValue, DecryptionError } from "@/lib/encryption";
+import { encrypt, decrypt, isEncryptedValue, DecryptionError } from "@/lib/security/encryption";
 
 describe("isEncryptedValue", () => {
   it("returns true for v2 ciphertext produced by encrypt()", () => {

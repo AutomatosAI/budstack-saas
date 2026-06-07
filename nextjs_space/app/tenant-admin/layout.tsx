@@ -5,6 +5,7 @@ import { TenantAdminSidebar } from "@/components/admin/TenantAdminSidebar";
 import { AccessibleAdminLayout } from "@/components/admin/AccessibleAdminLayout";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
 import crypto from "crypto";
+import { logger } from "@/lib/logger";
 
 import { HeaderProfile } from "@/components/admin/HeaderProfile";
 
@@ -16,7 +17,7 @@ export default async function TenantAdminLayout({
   const user = await currentUser();
 
   if (!user) {
-    console.warn("[tenant-admin] REJECTED — no Clerk user found, redirecting to login");
+    logger.warn("[tenant-admin] REJECTED — no Clerk user found, redirecting to login");
     redirect("/auth/login");
   }
 
@@ -24,15 +25,23 @@ export default async function TenantAdminLayout({
     user.publicMetadata.role !== "TENANT_ADMIN" &&
     user.publicMetadata.role !== "SUPER_ADMIN"
   ) {
-    const rejectedEmail = user.emailAddresses[0]?.emailAddress;
-    console.warn(
-      `[tenant-admin] REJECTED — email: ${rejectedEmail}, clerkId: ${user.id}, role: "${user.publicMetadata.role}", metadata: ${JSON.stringify(user.publicMetadata)}`
-    );
+    // AC-2b: log the Clerk user id + role only — never the admin email or the
+    // raw publicMetadata (which can carry PII-adjacent fields).
+    logger.warn("[tenant-admin] REJECTED — insufficient role", {
+      clerkId: user.id,
+      role: String(user.publicMetadata.role),
+      tenantId: user.publicMetadata.tenantId,
+    });
     redirect("/auth/login");
   }
 
   const email = user.emailAddresses[0]?.emailAddress;
-  console.log("[tenant-admin] Clerk user:", user.id, "email:", email, "role:", user.publicMetadata.role, "tenantId:", user.publicMetadata.tenantId);
+  // AC-2b: Clerk user id + tenant id only — never the admin email.
+  logger.info("[tenant-admin] Clerk user resolved", {
+    clerkId: user.id,
+    role: String(user.publicMetadata.role),
+    tenantId: user.publicMetadata.tenantId,
+  });
 
   // Try email-based lookup first
   let localUser = await prisma.users.findFirst({
@@ -49,18 +58,22 @@ export default async function TenantAdminLayout({
     },
   });
 
-  console.log("[tenant-admin] DB user lookup by email:", email, "found:", !!localUser, "tenantId:", localUser?.tenantId, "tenant:", localUser?.tenants?.businessName);
+  logger.info("[tenant-admin] DB user lookup", {
+    clerkId: user.id,
+    found: !!localUser,
+    tenantId: localUser?.tenantId,
+  });
 
   // Fallback: if no DB user found by email, try resolving via Clerk org ID
   if (!localUser?.tenants && user.publicMetadata.tenantId) {
     const clerkOrgId = user.publicMetadata.tenantId as string;
-    console.log("[tenant-admin] Trying Clerk org ID fallback:", clerkOrgId);
+    logger.info("[tenant-admin] Trying Clerk org ID fallback", { clerkOrgId });
     try {
       const tenantByOrg = await prisma.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM tenants WHERE settings->>'clerkOrgId' = ${clerkOrgId} LIMIT 1
       `;
       if (tenantByOrg?.length > 0) {
-        console.log("[tenant-admin] Found tenant by org ID:", tenantByOrg[0].id);
+        logger.info("[tenant-admin] Found tenant by org ID", { tenantId: tenantByOrg[0].id });
         // Create or update the DB user to link them
         localUser = await prisma.users.upsert({
           where: { email: email! },
@@ -85,15 +98,21 @@ export default async function TenantAdminLayout({
             }
           },
         });
-        console.log("[tenant-admin] Self-healed DB user for:", email);
+        logger.info("[tenant-admin] Self-healed DB user", {
+          clerkId: user.id,
+          tenantId: tenantByOrg[0].id,
+        });
       }
     } catch (err) {
-      console.error("[tenant-admin] Org ID fallback failed:", err);
+      logger.error("[tenant-admin] Org ID fallback failed", {
+        clerkId: user.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
   if (!localUser?.tenants) {
-    console.error("[tenant-admin] No tenant found for user:", email, "Clerk ID:", user.id);
+    logger.error("[tenant-admin] No tenant found for user", { clerkId: user.id });
     return (
       <div data-surface="admin" data-tier="tenant" className="budstacks-theme min-h-screen canvas-bg flex items-center justify-center">
         <div className="card-floating p-10 text-center max-w-md">

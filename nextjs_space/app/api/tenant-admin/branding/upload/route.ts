@@ -1,15 +1,26 @@
 import { NextResponse } from "next/server";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { withTenantAuth } from "@/lib/api-auth";
-import { uploadFile, getFileUrl } from "@/lib/s3";
-import { validateUploadBuffer } from "@/lib/upload-validation";
+import { uploadFile, getFileUrl } from "@/lib/storage/s3";
+import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 
 export const POST = withTenantAuth(async (req, { tenantId }) => {
   try {
+    // Fail-closed: without a tenant scope a falsy tenantId would write to the
+    // bucket root and sign an unscoped URL. Reject rather than fall back.
+    if (!tenantId) {
+      return apiError(new Error("Tenant context required"), {
+        route: "POST /api/tenant-admin/branding/upload",
+        status: 403,
+        safeMessage: "Tenant context required",
+      });
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
     if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+      return apiValidationError("No file provided", "POST /api/tenant-admin/branding/upload");
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -33,10 +44,10 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
       { allowVideos },
     );
     if (!validation.valid) {
-      return NextResponse.json({ error: validation.error }, { status: 400 });
+      return apiValidationError(validation.error, "POST /api/tenant-admin/branding/upload");
     }
 
-    const tenantUploadPrefix = tenantId ? `tenants/${tenantId}/` : "";
+    const tenantUploadPrefix = `tenants/${tenantId}/`;
     const fileName = `${Date.now()}-${sanitizedName}`;
     const cloudStoragePath = await uploadFile(
       buffer,
@@ -45,18 +56,12 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
       tenantUploadPrefix,
     );
 
-    // Tenant uploads are scope-asserted at sign time; super-admin system
-    // uploads (no tenant context) sign without a tenant scope.
-    const signedUrl = tenantId
-      ? await getFileUrl(cloudStoragePath, { tenantId })
-      : await getFileUrl(cloudStoragePath);
+    // Tenant uploads are scope-asserted at sign time.
+    const signedUrl = await getFileUrl(cloudStoragePath, { tenantId });
 
     return NextResponse.json({ url: signedUrl, key: cloudStoragePath });
   } catch (error) {
     console.error("Upload error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error, { route: "POST /api/tenant-admin/branding/upload", safeMessage: "Internal server error" });
   }
 });

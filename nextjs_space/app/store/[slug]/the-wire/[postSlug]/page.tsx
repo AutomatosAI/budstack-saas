@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, User } from "lucide-react";
 import sanitizeHtml from "sanitize-html";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
 
 interface ArticlePageProps {
   params: {

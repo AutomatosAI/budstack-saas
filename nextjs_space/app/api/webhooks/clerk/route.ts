@@ -4,6 +4,9 @@ import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { eraseUser } from "@/lib/gdpr/erasure";
+import { getClientInfo } from "@/lib/audit-log";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
     // You can find this in the Clerk Dashboard -> Webhooks -> choose the webhook
@@ -55,7 +58,7 @@ export async function POST(req: Request) {
     const { id } = evt.data;
     const eventType = evt.type;
 
-    console.log(`Clerk webhook received: id=${id} type=${eventType}`);
+    logger.info(`Clerk webhook received: id=${id} type=${eventType}`);
 
     if (eventType === "user.created" || eventType === "user.updated") {
         const { id, email_addresses, first_name, last_name, primary_email_address_id } = evt.data;
@@ -83,6 +86,9 @@ export async function POST(req: Request) {
                     name: name || undefined,
                     firstName: first_name || undefined,
                     lastName: last_name || undefined,
+                    // PRD-213 AC-1a: persist the Clerk id so user.deleted erasure
+                    // can resolve the local record without relying on the payload email.
+                    clerkUserId: id || undefined,
                     updatedAt: new Date(),
                     // We do NOT update role or tenantId here typically, as that's business logic
                 }
@@ -101,19 +107,22 @@ export async function POST(req: Request) {
                         role: "CONSUMER",
                         isActive: true,
                         id: `user_${id}`,
+                        // PRD-213 AC-1a: dedicated Clerk-id column for reliable erasure mapping.
+                        clerkUserId: id || null,
                         updatedAt: new Date(),
                     }
                 });
             } catch (createError: any) {
                 // P2002 = unique constraint violation - user was created by another flow
                 if (createError.code === "P2002") {
-                    console.log(`User ${email} already exists (created by another flow), updating instead.`);
+                    logger.info("User already exists (created by another flow), updating instead", { email });
                     await prisma.users.update({
                         where: { email },
                         data: {
                             name: name || undefined,
                             firstName: first_name || null,
                             lastName: last_name || null,
+                            clerkUserId: id || undefined,
                             updatedAt: new Date(),
                         },
                     });
@@ -125,14 +134,26 @@ export async function POST(req: Request) {
     }
 
     if (eventType === "user.deleted") {
-        const { id } = evt.data;
-        // We might need to look up by ID if we stored Clerk ID. 
-        // Currently we rely on email. The deleted webhook might not contain email?
-        // user.deleted payload usually has id, deleted: boolean.
-        // If we don't store Clerk ID in our DB, we can't easily find them to delete.
-        // Strategy: We should probably start storing Clerk ID in `drGreenClientId` or a new field?
-        // For now, we'll skip delete since we match by email and delete event might not have it.
-        console.log("User deleted event received. Manual cleanup might be required as we don't map Clerk ID directly yet.");
+        // PRD-213 AC-1: honour GDPR Art.17 for Clerk-side deletions. Resolve the
+        // local user by the stored Clerk id (AC-1a) and run the canonical erasure
+        // — anonymise PII + sever the Dr Green linkage. AC-1b: if no local user is
+        // found, eraseUser writes an `erasure_noop_user_not_found` audit row so a
+        // missed mapping is visible rather than silent. Best-effort: never throw,
+        // so Clerk does not retry indefinitely on an internal hiccup.
+        const { id: deletedClerkId } = evt.data;
+        try {
+            await eraseUser({
+                clerkUserId: deletedClerkId,
+                reason: "clerk_user_deleted",
+                clerkDeleted: true,
+                clientInfo: getClientInfo(headerPayload),
+            });
+        } catch (erasureErr) {
+            console.error(
+                "[clerk.webhook] user.deleted erasure failed:",
+                erasureErr instanceof Error ? erasureErr.message : erasureErr,
+            );
+        }
     }
 
     return new NextResponse("", { status: 200 });

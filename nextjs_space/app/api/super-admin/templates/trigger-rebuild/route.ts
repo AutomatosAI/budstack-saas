@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { withSuperAdmin } from "@/lib/api-auth";
+import { apiError } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
 
 /**
  * Trigger a Railway deployment rebuild
@@ -22,7 +24,7 @@ export const POST = withSuperAdmin(async (_req) => {
       );
     }
 
-    console.log("[Rebuild Trigger] Triggering Railway deployment...");
+    logger.info("[Rebuild Trigger] Triggering Railway deployment...");
 
     // Trigger Railway webhook
     const response = await fetch(railwayWebhookUrl, {
@@ -42,7 +44,7 @@ export const POST = withSuperAdmin(async (_req) => {
       );
     }
 
-    console.log("[Rebuild Trigger] Railway deployment triggered successfully");
+    logger.info("[Rebuild Trigger] Railway deployment triggered successfully");
 
     return NextResponse.json({
       success: true,
@@ -52,9 +54,9 @@ export const POST = withSuperAdmin(async (_req) => {
     });
   } catch (error: any) {
     console.error("[Rebuild Trigger] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to trigger deployment" },
-      { status: 500 },
-    );
+    return apiError(error, {
+      route: "POST /api/super-admin/templates/trigger-rebuild",
+      safeMessage: "Failed to trigger deployment",
+    });
   }
 });

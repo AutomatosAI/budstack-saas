@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { SectionProps } from '@/lib/types/section-props';
-import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant-utils';
+import { getTenantBasePath, prefixTenantHref } from '@/lib/tenant/tenant-utils';
 import { useCartStore } from '@/lib/cart-store';
 import { checkUserKycStatus, type KycStatus } from '@/app/actions/kyc-check';
 import { NavAuthButton } from './NavAuthButton';

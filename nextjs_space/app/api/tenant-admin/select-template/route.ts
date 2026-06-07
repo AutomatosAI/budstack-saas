@@ -4,8 +4,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import { apiError } from "@/lib/api-error";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
+import { logger } from "@/lib/logger";
 
 const selectTemplateSchema = z
   .object({
@@ -23,17 +24,11 @@ export const POST = withTenantAuth(async (request, { tenantId }) => {
     });
 
     if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
+      return apiError(new Error("Template not found"), { route: "POST /api/tenant-admin/select-template", status: 404, safeMessage: "Template not found" });
     }
 
     if (!template.isActive) {
-      return NextResponse.json(
-        { error: "Template is not active" },
-        { status: 400 },
-      );
+      return apiValidationError("Template is not active", "POST /api/tenant-admin/select-template");
     }
 
     // Load template defaults
@@ -48,7 +43,7 @@ export const POST = withTenantAuth(async (request, { tenantId }) => {
         );
         const defaultsContent = await readFile(defaultsPath, "utf-8");
         templateDefaults = JSON.parse(defaultsContent);
-        console.log(`Loaded defaults for template ${template.slug}`);
+        logger.info(`Loaded defaults for template ${template.slug}`);
       } catch (error) {
         console.warn(
           `No defaults.json found for template ${template.slug}, using empty defaults`,

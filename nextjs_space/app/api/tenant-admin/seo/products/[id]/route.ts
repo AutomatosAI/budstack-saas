@@ -29,7 +29,7 @@ export const GET = withTenantAuthParams(async (_request, { tenantId }, params) =
   });
 
   if (!product) {
-    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    return apiError(new Error("Product not found"), { route: "GET /api/tenant-admin/seo/products/[id]", status: 404, safeMessage: "Product not found" });
   }
 
   return NextResponse.json(product);
@@ -50,7 +50,7 @@ export const PUT = withTenantAuthParams(async (request, { tenantId }, params) =>
   });
 
   if (!existingProduct) {
-    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    return apiError(new Error("Product not found"), { route: "PUT /api/tenant-admin/seo/products/[id]", status: 404, safeMessage: "Product not found" });
   }
 
   let parsed;

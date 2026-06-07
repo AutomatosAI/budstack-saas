@@ -2,7 +2,7 @@
 
 import { Textarea } from "@/components/ui/textarea";
 import { Image as ImageIcon } from "lucide-react";
-import { getTenantUrl } from "@/lib/tenant-utils";
+import { getTenantUrl } from "@/lib/tenant/tenant-utils";
 import type { EditorFormData, SetFormData } from "./types";
 
 interface AdvancedTabProps {

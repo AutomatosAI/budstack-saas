@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withSuperAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { createS3Client, getBucketConfig } from "@/lib/aws-config";
-import { apiError } from "@/lib/api-error";
+import { createS3Client, getBucketConfig } from "@/lib/storage/aws-config";
+import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 
 const recoverDeletedSchema = z
@@ -63,7 +63,10 @@ export const POST = withSuperAdmin(async (req) => {
     const execute = body.execute === true;
 
     if (!slug) {
-      return NextResponse.json({ error: "slug is required" }, { status: 400 });
+      return apiValidationError(
+        "slug is required",
+        "POST /api/super-admin/templates/recover-deleted",
+      );
     }
 
     const report: RecoveryReport = {
@@ -85,12 +88,12 @@ export const POST = withSuperAdmin(async (req) => {
     // meant to recover something else, or recovery already ran.
     const existingTemplate = await prisma.templates.findUnique({ where: { slug } });
     if (existingTemplate && execute) {
-      return NextResponse.json(
-        {
-          error: `templates row for slug "${slug}" already exists (id=${existingTemplate.id}). Refusing to overwrite. If you want to redo recovery, delete that row first via DB console.`,
-        },
-        { status: 409 },
-      );
+      const conflictMessage = `templates row for slug "${slug}" already exists (id=${existingTemplate.id}). Refusing to overwrite. If you want to redo recovery, delete that row first via DB console.`;
+      return apiError(new Error(conflictMessage), {
+        route: "POST /api/super-admin/templates/recover-deleted",
+        status: 409,
+        safeMessage: conflictMessage,
+      });
     }
 
     // Step 1+2 — list versions, find delete markers at the latest position, strip them
