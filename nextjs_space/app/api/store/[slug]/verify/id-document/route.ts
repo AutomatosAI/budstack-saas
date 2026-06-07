@@ -3,8 +3,8 @@ import { z } from "zod";
 
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
-import { getCurrentTenant } from "@/lib/tenant";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { apiError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 import {

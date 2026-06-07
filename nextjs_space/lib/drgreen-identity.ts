@@ -14,7 +14,7 @@
  * module MUST run on the Node.js runtime — a Uint8Array/Blob would serialise
  * differently and fail verification.
  */
-import { generateDrGreenSignature, callDrGreenAPI } from './drgreen-api-client';
+import { generateDrGreenSignature, callDrGreenAPI } from './drgreen/drgreen-api-client';
 import { DR_GREEN_SA_COUNTRY_CODE } from './verification-mode';
 
 export type IdentityDocumentType = 'ID' | 'PASSPORT' | 'DRIVING_LICENCE';

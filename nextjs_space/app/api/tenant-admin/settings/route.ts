@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { apiError, apiValidationError } from '@/lib/api-error';
 import { parseJsonBody } from '@/lib/validation/body';
 import { SA_TENANT_COUNTRY_CODE } from '@/lib/verification-mode';
+import { logger } from '@/lib/logger';
 
 const settingsUpdateSchema = z.object({
   customDomain: z.string().max(255).optional().nullable(),

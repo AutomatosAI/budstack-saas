@@ -1,11 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/drgreen-api-client", () => ({
+vi.mock("@/lib/drgreen/drgreen-api-client", () => ({
   callDrGreenAPI: vi.fn(),
   generateDrGreenSignature: vi.fn(() => "sig"),
 }));
 
-import { callDrGreenAPI } from "@/lib/drgreen-api-client";
+import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 import { createSaIdClient } from "@/lib/drgreen-identity";
 
 const baseParams = {

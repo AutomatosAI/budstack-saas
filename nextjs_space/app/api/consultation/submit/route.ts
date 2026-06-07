@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { clerkClient } from "@clerk/nextjs/server";
 
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
-import { getTenantDrGreenConfig } from "@/lib/tenant-config";
-import { callDrGreenAPI } from "@/lib/drgreen-api-client";
+import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
+import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
+import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 import { createSaIdClient } from "@/lib/drgreen-identity";
 import {
   getTenantVerificationMode,

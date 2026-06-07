@@ -19,7 +19,7 @@ import {
   StoreVerificationMode,
 } from "@/app/actions/verification-mode";
 import { IdDocumentUpload } from "@/components/shop/IdDocumentUpload";
-import { getTenantBasePath } from "@/lib/tenant-utils";
+import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 
 export default function DashboardPage() {
   const { user, isLoaded, isSignedIn } = useUser();
