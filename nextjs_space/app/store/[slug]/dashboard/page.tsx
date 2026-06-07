@@ -14,6 +14,11 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
+import {
+  getMyVerificationMode,
+  StoreVerificationMode,
+} from "@/app/actions/verification-mode";
+import { IdDocumentUpload } from "@/components/shop/IdDocumentUpload";
 import { getTenantBasePath } from "@/lib/tenant-utils";
 
 export default function DashboardPage() {
@@ -23,9 +28,11 @@ export default function DashboardPage() {
   const slug = params?.slug as string;
   const basePath = getTenantBasePath(slug);
   const [kycStatus, setKycStatus] = useState<KycStatus | null>(null);
+  const [verif, setVerif] = useState<StoreVerificationMode | null>(null);
 
   useEffect(() => {
     checkUserKycStatus().then(setKycStatus);
+    getMyVerificationMode().then(setVerif);
   }, []);
 
   useEffect(() => {
@@ -95,6 +102,15 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* SA ID-upload: let unverified ID-mode customers submit their ID */}
+        {!kycStatus?.kycVerified &&
+          verif?.idUploadEnabled &&
+          verif.mode === "ID_UPLOAD" && (
+            <div className="mb-8 max-w-2xl">
+              <IdDocumentUpload slug={slug} />
+            </div>
+          )}
 
         {/* Quick Stats */}
         <div className="mb-8 grid gap-6 md:grid-cols-4">
