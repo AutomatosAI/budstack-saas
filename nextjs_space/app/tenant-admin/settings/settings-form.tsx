@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/sonner";
-import { Globe, Key, Zap, Mail } from "lucide-react";
+import { Globe, Key, Zap, Mail, ShieldCheck } from "lucide-react";
+import {
+  getTenantVerificationMode,
+  isSaIdEligibleTenant,
+} from "@/lib/verification-mode";
 
 interface SettingsFormProps {
   tenant: {
@@ -17,6 +21,7 @@ interface SettingsFormProps {
     drGreenSecretKey?: string | null;
     automatosApiKey?: string | null;
     automatosAgentId?: number | null;
+    countryCode?: string | null;
     settings?: any;
   };
 }
@@ -25,8 +30,10 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const hasApiKey = Boolean(tenant.drGreenApiKey);
+  const saEligible = isSaIdEligibleTenant(tenant);
   const [formData, setFormData] = useState({
     customDomain: tenant.customDomain || "",
+    verificationMode: getTenantVerificationMode(tenant),
     drGreenApiUrl: tenant.drGreenApiUrl || "",
     drGreenApiKey: "",
     drGreenSecretKey: "",
@@ -248,6 +255,77 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
           </div>
         </div>
       </section>
+
+      {/* Customer Verification (South Africa only) */}
+      {saEligible && (
+        <section className="bs-card bs-card-pad">
+          <header className="mb-6 flex items-center gap-4">
+            <div className="rounded-xl border border-bs-border-100 bg-bs-card-2 p-2.5">
+              <ShieldCheck className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
+            </div>
+            <div className="space-y-1">
+              <h2
+                className="font-display text-[22px] text-bs-fg"
+                style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+              >
+                Customer Verification
+              </h2>
+              <p className="text-sm text-bs-fg-muted">
+                Choose how South African customers verify before they can order
+              </p>
+            </div>
+          </header>
+          <div className="space-y-3">
+            <label className="flex cursor-pointer gap-3 rounded-xl border border-bs-border-100 bg-bs-card-2 p-4">
+              <input
+                type="radio"
+                name="verificationMode"
+                value="KYC"
+                checked={formData.verificationMode === "KYC"}
+                onChange={() =>
+                  setFormData({ ...formData, verificationMode: "KYC" })
+                }
+                className="mt-1"
+              />
+              <span className="space-y-1">
+                <span className="block text-sm font-medium text-bs-fg">
+                  KYC / AML verification
+                </span>
+                <span className="block text-xs text-bs-fg-muted">
+                  Customers complete the full consultation and First-AML KYC.
+                  This is the default and is required outside South Africa.
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer gap-3 rounded-xl border border-bs-border-100 bg-bs-card-2 p-4">
+              <input
+                type="radio"
+                name="verificationMode"
+                value="ID_UPLOAD"
+                checked={formData.verificationMode === "ID_UPLOAD"}
+                onChange={() =>
+                  setFormData({ ...formData, verificationMode: "ID_UPLOAD" })
+                }
+                className="mt-1"
+              />
+              <span className="space-y-1">
+                <span className="block text-sm font-medium text-bs-fg">
+                  ID document upload
+                </span>
+                <span className="block text-xs text-bs-fg-muted">
+                  Customers skip the consultation and upload a valid government
+                  ID for review. Approval verifies them to order. South Africa
+                  only.
+                </span>
+              </span>
+            </label>
+            <p className="text-xs text-bs-fg-muted">
+              One method applies to all your customers — you can switch at any
+              time.
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* Automatos Integration */}
       <section className="bs-card bs-card-pad">

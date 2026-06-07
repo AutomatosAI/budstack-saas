@@ -7,7 +7,7 @@ import { generateDrGreenSignature } from '@/lib/drgreen/drgreen-api-client';
 import { z } from 'zod';
 import { apiError, apiValidationError } from '@/lib/api-error';
 import { parseJsonBody } from '@/lib/validation/body';
-import { logger } from '@/lib/logger';
+import { SA_TENANT_COUNTRY_CODE } from '@/lib/verification-mode';
 
 const settingsUpdateSchema = z.object({
   customDomain: z.string().max(255).optional().nullable(),
@@ -22,6 +22,7 @@ const settingsUpdateSchema = z.object({
   smtpPassword: z.string().max(1000).optional().nullable(),
   smtpFromEmail: z.string().max(320).optional().nullable(),
   smtpFromName: z.string().max(255).optional().nullable(),
+  verificationMode: z.enum(["KYC", "ID_UPLOAD"]).optional(),
 });
 
 /**
@@ -101,6 +102,15 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       ...currentSettings,
       smtp: smtpSettings,
     };
+
+    // Verification mode (SA ID-upload vs KYC) — only honoured for ZA tenants,
+    // so the ID-upload path can never be enabled outside South Africa.
+    if (
+      body.verificationMode &&
+      (tenant.countryCode || "").toUpperCase() === SA_TENANT_COUNTRY_CODE
+    ) {
+      dataToUpdate.settings.verificationMode = body.verificationMode;
+    }
 
     // Only update secret key if a new one is provided (non-empty)
     if (drGreenSecretKey && drGreenSecretKey.trim() !== "") {

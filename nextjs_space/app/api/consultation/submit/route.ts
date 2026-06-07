@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { clerkClient } from "@clerk/nextjs/server";
 
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
-import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
-import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
-import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
+import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/webhook";
+import { getTenantDrGreenConfig } from "@/lib/tenant-config";
+import { callDrGreenAPI } from "@/lib/drgreen-api-client";
+import { createSaIdClient } from "@/lib/drgreen-identity";
+import {
+  getTenantVerificationMode,
+  isSaIdUploadEnabled,
+} from "@/lib/verification-mode";
 
 import { prisma } from "@/lib/db";
 import { mapMedicalConditionsForDrGreen } from '@/lib/drgreen/dr-green-mapping';
@@ -306,6 +311,36 @@ export async function POST(request: NextRequest) {
       const { apiKey, secretKey, apiUrl } = await getTenantDrGreenConfig(tenantId);
       logger.debug("[Consultation] Dr Green credentials loaded", { tenantId });
 
+      // SA ID-upload path creates the client via verificationType "ID" (no
+      // medical questionnaire). Otherwise the standard KYC/First-AML payload.
+      const idMode =
+        isSaIdUploadEnabled() &&
+        getTenantVerificationMode(tenant) === "ID_UPLOAD";
+
+      let clientId: string | undefined;
+      let kycLink: string | null = null;
+
+      if (idMode) {
+        const created = await createSaIdClient({
+          firstName: body.firstName,
+          lastName: body.lastName,
+          email: body.email.toLowerCase(),
+          phoneCode: body.phoneCode.replace(/[^\+\d]/g, ""),
+          phoneCountryCode: body.countryCode,
+          contactNumber: body.phoneNumber.replace(/\D/g, ""),
+          shipping: {
+            address1: body.addressLine1,
+            address2: body.addressLine2 || "",
+            city: body.city,
+            state: body.state,
+            country: body.country,
+            postalCode: body.postalCode,
+          },
+          config: { apiKey, secretKey },
+          baseUrl: apiUrl,
+        });
+        clientId = created.clientId;
+      } else {
       // Format date for Dr. Green API (YYYY-MM-DD)
       const dobFormatted = body.dateOfBirth
         ? new Date(body.dateOfBirth).toISOString().split("T")[0]
@@ -429,12 +464,12 @@ export async function POST(request: NextRequest) {
         drGreenResponse.data?.id ? 'data.id' :
         drGreenResponse.client?.id ? 'client.id' :
         drGreenResponse.id ? 'id' : 'NONE';
-      const clientId =
+      clientId =
         drGreenResponse.data?.client?.id ||
         drGreenResponse.data?.id ||
         drGreenResponse.client?.id ||
         drGreenResponse.id;
-      const kycLink =
+      kycLink =
         drGreenResponse.data?.client?.kycLink ||
         drGreenResponse.data?.kycLink ||
         drGreenResponse.client?.kycLink ||
@@ -456,6 +491,7 @@ export async function POST(request: NextRequest) {
           topKeys: Object.keys(drGreenResponse || {}),
         });
       }
+      } // end KYC/First-AML branch
 
       // Update questionnaire with Dr. Green client ID and KYC link
       await prisma.consultation_questionnaires.update({
