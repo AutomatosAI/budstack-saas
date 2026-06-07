@@ -1,8 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createVerify, generateKeyPairSync } from "crypto";
 
+// Isolate from the pino-based logger that drgreen-api-client imports, so this
+// pure-crypto test stays independent of logging and Node-version pino internals.
+vi.mock("@/lib/logger", () => ({
+  logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+}));
+
 import { buildIdentityUploadSignaturePayload } from "@/lib/drgreen-identity";
-import { generateDrGreenSignature } from "@/lib/drgreen-api-client";
+import { generateDrGreenSignature } from "@/lib/drgreen/drgreen-api-client";
 
 // Mirror DualAuthGuard.verifyPayload (dr-green-backend
 // src/strategy/daap.jwt.strategy.ts:182-221): parse text fields in body order,

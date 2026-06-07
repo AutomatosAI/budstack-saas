@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // withAuth → identity wrapper so POST is the raw handler (req, {user}, {slug}).
 vi.mock("@/lib/api-auth", () => ({ withAuth: (h: any) => h }));
 vi.mock("@/lib/validation/parse-uuid", () => ({ parseSlug: vi.fn() }));
-vi.mock("@/lib/tenant", () => ({ getCurrentTenant: vi.fn() }));
-vi.mock("@/lib/tenant-config", () => ({
+vi.mock("@/lib/tenant/tenant", () => ({ getCurrentTenant: vi.fn() }));
+vi.mock("@/lib/tenant/tenant-config", () => ({
   getTenantDrGreenConfig: vi.fn(async () => ({
     apiKey: "k",
     secretKey: "s",
@@ -31,7 +31,7 @@ vi.mock("@/lib/api-error", () => ({
 }));
 
 import { POST } from "@/app/api/store/[slug]/verify/id-document/route";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { prisma } from "@/lib/db";
 import { uploadIdentityDocument } from "@/lib/drgreen-identity";
 
