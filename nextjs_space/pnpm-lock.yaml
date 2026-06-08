@@ -270,8 +270,8 @@ importers:
         specifier: 9.8.0
         version: 9.8.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react-is:
-        specifier: 18.3.1
-        version: 18.3.1
+        specifier: 19.2.7
+        version: 19.2.7
       react-plotly.js:
         specifier: 2.6.0
         version: 2.6.0(plotly.js@2.35.3(mapbox-gl@1.13.3)(webpack@5.99.5(esbuild@0.28.0)(lightningcss@1.32.0)(postcss@8.5.15)))(react@18.2.0)
@@ -4292,8 +4292,8 @@ packages:
     resolution: {integrity: sha512-2RZdgEbXmp5+dVbRm0P7HQUImZpICccJy7rN7Tv+SFa55pH+lxnuw6/K1ZxxBfHoYpSkHLAO92oa8O4SwFXA2A==}
     engines: {node: '>=10.2.0'}
 
-  enhanced-resolve@5.22.1:
-    resolution: {integrity: sha512-6QEuw3zoX1SJQc7b87aBXke/no+mG2bTBgw29gWMQonLmpEkWoCAVkl+M49e48AZlWzxiDzDZzYdp6kobcyLww==}
+  enhanced-resolve@5.23.0:
+    resolution: {integrity: sha512-yJN/BOOLxcOW2aQgeif9mSnaUB8KtvmMMp56oA1kx1CRfBKbhZm2pJ+NBY+3eOboHxix8lfjWpHE0Ei5U8RbSA==}
     engines: {node: '>=10.13.0'}
 
   entities@4.5.0:
@@ -6194,6 +6194,9 @@ packages:
 
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
+
+  react-is@19.2.7:
+    resolution: {integrity: sha512-kZFnouyVv7eP/Phmrlo9FK+zcAdriZJvzxXHF1Sl1P377WSGe2G/JxVolhTrB/jeV47lKImhNUsijjHAAbcl/A==}
 
   react-plotly.js@2.6.0:
     resolution: {integrity: sha512-g93xcyhAVCSt9kV1svqG1clAEdL6k3U+jjuSzfTV7owaSU9Go6Ph8bl25J+jKfKvIGAEYpe4qj++WHJuc9IaeA==}
@@ -11193,7 +11196,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  enhanced-resolve@5.22.1:
+  enhanced-resolve@5.23.0:
     dependencies:
       graceful-fs: 4.2.11
       tapable: 2.3.3
@@ -13478,6 +13481,8 @@ snapshots:
 
   react-is@18.3.1: {}
 
+  react-is@19.2.7: {}
+
   react-plotly.js@2.6.0(plotly.js@2.35.3(mapbox-gl@1.13.3)(webpack@5.99.5(esbuild@0.28.0)(lightningcss@1.32.0)(postcss@8.5.15)))(react@18.2.0):
     dependencies:
       plotly.js: 2.35.3(mapbox-gl@1.13.3)(webpack@5.99.5(esbuild@0.28.0)(lightningcss@1.32.0)(postcss@8.5.15))
@@ -14767,7 +14772,7 @@ snapshots:
       acorn: 8.16.0
       browserslist: 4.28.2
       chrome-trace-event: 1.0.4
-      enhanced-resolve: 5.22.1
+      enhanced-resolve: 5.23.0
       es-module-lexer: 1.7.0
       eslint-scope: 5.1.1
       events: 3.3.0
