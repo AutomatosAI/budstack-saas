@@ -42,7 +42,7 @@ jobs:
           upload-artifact: false
 
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-cyclonedx-json
           path: sbom.cdx.json
