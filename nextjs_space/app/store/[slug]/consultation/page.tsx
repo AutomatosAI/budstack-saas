@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant/tenant";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import ConsultationContent from "./consultation-content";
-import { IdUploadRegistration } from "@/components/shop/IdUploadRegistration";
+import { IdUploadForm } from "@/components/consultation/id-upload-form";
 import {
   getTenantVerificationMode,
   isSaIdUploadEnabled,
@@ -48,10 +48,7 @@ export default async function ConsultationPage({
                 >
                   Register &amp; verify with your ID
                 </h2>
-                <IdUploadRegistration
-                  tenantSlug={tenant.subdomain}
-                  basePath={basePath}
-                />
+                <IdUploadForm tenantSlug={tenant.subdomain} />
               </div>
             </div>
           </section>
