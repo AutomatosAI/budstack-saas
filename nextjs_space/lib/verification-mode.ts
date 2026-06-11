@@ -41,7 +41,10 @@ export function isSaIdEligibleTenant(tenant: TenantVerificationFields): boolean 
  * surface a path Dr Green would 403.
  */
 export function isSaIdUploadEnabled(): boolean {
-  return process.env.SA_ID_UPLOAD_ENABLED === "true";
+  // Tolerant of casing/whitespace ("TRUE", " true ", "1") so a config typo in
+  // the env var can't silently leave the whole ID-upload path disabled.
+  const raw = (process.env.SA_ID_UPLOAD_ENABLED ?? "").trim().toLowerCase();
+  return raw === "true" || raw === "1";
 }
 
 /**
