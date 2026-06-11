@@ -12,6 +12,7 @@ import { join } from "path";
 import { TEMPLATE_COMPONENTS, TEMPLATE_NAVIGATION, TEMPLATE_FOOTER } from "@/lib/templates/template-registry";
 import { getSectionComponent } from "@/lib/templates/section-registry";
 import type { TemplateLayout } from "@/lib/types/template-layout";
+import type { CSSProperties } from "react";
 import { CartProvider } from "./_contexts/CartContext";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrapper";
@@ -216,12 +217,12 @@ async function renderTenantStore(
       const NavComponent = getSectionComponent(layout.navigation);
       if (NavComponent) {
         const navOverrides = layout.navigationConfig?.colorOverrides;
-        const navStyle = navOverrides
-          ? Object.fromEntries(
+        const navStyle: CSSProperties | undefined = navOverrides
+          ? (Object.fromEntries(
               Object.entries(navOverrides)
                 .filter(([, v]) => v && typeof v === 'string' && v.trim())
                 .map(([k, v]) => [`--tenant-color-${k}`, (v as string).startsWith('#') ? hexToHsl(v as string) : v])
-            )
+            ) as CSSProperties)
           : undefined;
         return (
           <div style={navStyle}>
@@ -268,7 +269,7 @@ async function renderTenantStore(
                 .map(([k, v]) => [`--tenant-color-${k}`, (v as string).startsWith('#') ? hexToHsl(v as string) : v])
             )
           : {};
-        const footerStyle = { ...darkDefaults, ...overrideEntries };
+        const footerStyle = { ...darkDefaults, ...overrideEntries } as CSSProperties;
         return (
           <div style={Object.keys(footerStyle).length > 0 ? footerStyle : undefined}>
             <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig} />
