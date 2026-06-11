@@ -352,19 +352,35 @@ export async function POST(request: NextRequest) {
         });
         clientId = created.clientId;
 
-        // Inline ID upload: createSaIdClient just made the client, so push the
-        // document to Dr Green now — the whole "create account & verify" is a
-        // single action (no separate login + dashboard upload).
+        // Inline ID upload — BEST-EFFORT. The account + Dr Green client are
+        // already created above, so an upload failure must NOT fail the whole
+        // registration: the client lands as verification-pending and can
+        // re-upload the document from the dashboard. (The Dr Green identity
+        // upload signature contract is being finalised separately.)
         if (clientId && body.idDocument?.fileBase64) {
-          await uploadIdentityDocument({
-            clientId,
-            documentType: body.idDocument.documentType,
-            documentNumber: body.idDocument.documentNumber,
-            file: Buffer.from(body.idDocument.fileBase64, "base64"),
-            mimeType: body.idDocument.mimeType,
-            config: { apiKey, secretKey },
-            baseUrl: apiUrl,
-          });
+          try {
+            await uploadIdentityDocument({
+              clientId,
+              documentType: body.idDocument.documentType,
+              documentNumber: body.idDocument.documentNumber,
+              file: Buffer.from(body.idDocument.fileBase64, "base64"),
+              mimeType: body.idDocument.mimeType,
+              config: { apiKey, secretKey },
+              baseUrl: apiUrl,
+            });
+          } catch (uploadErr) {
+            logger.error(
+              "[Consultation] ID document upload failed; account + client created, document can be re-uploaded from the dashboard",
+              {
+                tenantId,
+                clientId,
+                error:
+                  uploadErr instanceof Error
+                    ? uploadErr.message
+                    : String(uploadErr),
+              },
+            );
+          }
         }
       } else {
       // Format date for Dr. Green API (YYYY-MM-DD)
