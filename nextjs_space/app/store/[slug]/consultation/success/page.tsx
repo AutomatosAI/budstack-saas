@@ -21,6 +21,9 @@ export default function ConsultationSuccessPage() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
+  // SA ID-upload journey vs the KYC/medical-consultation journey. The
+  // IdUploadForm redirects here with ?flow=id so the copy matches.
+  const idMode = searchParams.get("flow") === "id";
   const [loading, setLoading] = useState(true);
   const [consultationData, setConsultationData] = useState<{
     questionnaireId?: string;
@@ -103,7 +106,7 @@ export default function ConsultationSuccessPage() {
                   fontFamily: "var(--tenant-font-heading)",
                 }}
               >
-                Consultation Submitted!
+                {idMode ? "Account Created!" : "Consultation Submitted!"}
               </h1>
 
               <p
@@ -113,7 +116,9 @@ export default function ConsultationSuccessPage() {
                   fontFamily: "var(--tenant-font-base)",
                 }}
               >
-                Thank you for completing your medical consultation.
+                {idMode
+                  ? "Your account is set up — we'll review the ID you uploaded and verify you shortly."
+                  : "Thank you for completing your medical consultation."}
               </p>
 
               {consultationData.drGreenClientId && (
@@ -187,7 +192,9 @@ export default function ConsultationSuccessPage() {
                       fontFamily: "var(--tenant-font-heading)",
                     }}
                   >
-                    1. Complete KYC Verification
+                    {idMode
+                      ? "1. ID Verification"
+                      : "1. Complete KYC Verification"}
                   </h3>
                   <p
                     className="text-sm mb-2"
@@ -196,10 +203,19 @@ export default function ConsultationSuccessPage() {
                       fontFamily: "var(--tenant-font-base)",
                     }}
                   >
-                    Verify your identity to comply with medical cannabis
-                    regulations.
+                    {idMode
+                      ? "We've received the government ID you uploaded and are reviewing it."
+                      : "Verify your identity to comply with medical cannabis regulations."}
                   </p>
-                  {consultationData.kycLink ? (
+                  {idMode ? (
+                    <Alert>
+                      <Clock className="h-4 w-4" />
+                      <AlertDescription>
+                        We'll email you as soon as your ID is verified — no
+                        further action needed.
+                      </AlertDescription>
+                    </Alert>
+                  ) : consultationData.kycLink ? (
                     <Button
                       onClick={() =>
                         window.open(consultationData.kycLink, "_blank")
@@ -243,7 +259,7 @@ export default function ConsultationSuccessPage() {
                       fontFamily: "var(--tenant-font-heading)",
                     }}
                   >
-                    2. Medical Review
+                    {idMode ? "2. Get Approved" : "2. Medical Review"}
                   </h3>
                   <p
                     className="text-sm"
@@ -252,8 +268,9 @@ export default function ConsultationSuccessPage() {
                       fontFamily: "var(--tenant-font-base)",
                     }}
                   >
-                    Our medical team will review your consultation. You'll
-                    receive an email once approved.
+                    {idMode
+                      ? "Once your ID is verified, your account is approved to order — you'll get an email."
+                      : "Our medical team will review your consultation. You'll receive an email once approved."}
                   </p>
                   <div
                     className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm"

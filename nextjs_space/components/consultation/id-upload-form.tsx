@@ -152,6 +152,7 @@ export function IdUploadForm({ tenantSlug }: IdUploadFormProps) {
         id: result.questionnaireId || "",
         clientId: result.drGreenClientId || "",
         approval: result.adminApproval || "PENDING",
+        flow: "id", // success page renders the ID-upload copy, not KYC
       }).toString();
       router.push(`/consultation/success?${params}`);
     } catch (error: any) {
