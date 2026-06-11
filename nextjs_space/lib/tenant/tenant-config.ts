@@ -6,12 +6,16 @@ import { logger } from "@/lib/logger";
 /**
  * Retrieves Dr Green credentials for a specific tenant.
  *
- * Priority (multi-tenant):
- *   1. Tenant DB: drGreenApiKey + drGreenSecretKey (each tenant's own keys)
- *   2. Environment variables: DRGREEN_API_KEY + DRGREEN_SECRET_KEY (platform fallback)
+ * Credentials (key + secret): tenant DB keys first, else env DRGREEN_API_KEY /
+ * DRGREEN_SECRET_KEY. platform_config has no key/secret columns, so those only
+ * ever come from the tenant or env.
  *
- * Each tenant must configure their own Dr Green keys for correct
- * country-specific pricing and order routing.
+ * API URL precedence: per-tenant override > Platform Settings
+ * (platform_config.drGreenApiUrl) > env DRGREEN_API_URL. Platform Settings
+ * override env *by design* — see the super-admin Platform Settings screen
+ * ("these settings override environment variables"). The old code had this
+ * backwards (env first), so a leftover DRGREEN_API_URL env var silently
+ * shadowed the super-admin URL.
  */
 export async function getTenantDrGreenConfig(
   tenantId: string,
@@ -29,6 +33,16 @@ export async function getTenantDrGreenConfig(
   if (!tenant) {
     throw new Error(`Tenant not found: ${tenantId}`);
   }
+
+  // URL: per-tenant override > Platform Settings default > env fallback.
+  const platformConfig = await prisma.platform_config.findUnique({
+    where: { id: "config" },
+  });
+  const resolvedApiUrl =
+    tenant.drGreenApiUrl ||
+    platformConfig?.drGreenApiUrl ||
+    process.env.DRGREEN_API_URL ||
+    undefined;
 
   if (tenant.drGreenApiKey && tenant.drGreenSecretKey) {
     // Tenant has their own keys — use them
@@ -61,16 +75,11 @@ export async function getTenantDrGreenConfig(
       [finalApiKey, finalSecretKey] = [finalSecretKey, finalApiKey];
     }
 
-    const platformConfig = await prisma.platform_config.findUnique({
-      where: { id: "config" },
-    });
-    const apiUrl = process.env.DRGREEN_API_URL || tenant.drGreenApiUrl || platformConfig?.drGreenApiUrl || undefined;
-
     logger.info(`[DrGreen Config] Using tenant DB credentials for ${tenantId}`);
     return {
       apiKey: finalApiKey,
       secretKey: finalSecretKey,
-      apiUrl: apiUrl || undefined,
+      apiUrl: resolvedApiUrl,
     };
   }
 
@@ -79,9 +88,8 @@ export async function getTenantDrGreenConfig(
   const envSecretKey = process.env.DRGREEN_SECRET_KEY;
 
   if (envApiKey && envSecretKey) {
-    const apiUrl = process.env.DRGREEN_API_URL || undefined;
     logger.info(`[DrGreen Config] Using env var credentials (fallback for tenant ${tenantId})`);
-    return { apiKey: envApiKey, secretKey: envSecretKey, apiUrl };
+    return { apiKey: envApiKey, secretKey: envSecretKey, apiUrl: resolvedApiUrl };
   }
 
   // 3. No credentials anywhere
