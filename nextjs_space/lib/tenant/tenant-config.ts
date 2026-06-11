@@ -10,12 +10,11 @@ import { logger } from "@/lib/logger";
  * DRGREEN_SECRET_KEY. platform_config has no key/secret columns, so those only
  * ever come from the tenant or env.
  *
- * API URL precedence: per-tenant override > Platform Settings
- * (platform_config.drGreenApiUrl) > env DRGREEN_API_URL. Platform Settings
- * override env *by design* — see the super-admin Platform Settings screen
- * ("these settings override environment variables"). The old code had this
- * backwards (env first), so a leftover DRGREEN_API_URL env var silently
- * shadowed the super-admin URL.
+ * API URL is PLATFORM-scoped only: Platform Settings
+ * (platform_config.drGreenApiUrl) > env DRGREEN_API_URL. A tenant must NOT
+ * carry its own Dr Green URL — any drGreenApiUrl on a tenant row is ignored.
+ * (Platform Settings override env by design — see the super-admin Platform
+ * Settings screen, "these settings override environment variables".)
  */
 export async function getTenantDrGreenConfig(
   tenantId: string,
@@ -26,7 +25,6 @@ export async function getTenantDrGreenConfig(
     select: {
       drGreenApiKey: true,
       drGreenSecretKey: true,
-      drGreenApiUrl: true,
     },
   });
 
@@ -34,12 +32,13 @@ export async function getTenantDrGreenConfig(
     throw new Error(`Tenant not found: ${tenantId}`);
   }
 
-  // URL: per-tenant override > Platform Settings default > env fallback.
+  // URL is PLATFORM-scoped only: Platform Settings default, then env fallback.
+  // A tenant never carries its own Dr Green URL, so any value on the tenant
+  // row is ignored — only the key + secret are per-tenant.
   const platformConfig = await prisma.platform_config.findUnique({
     where: { id: "config" },
   });
   const resolvedApiUrl =
-    tenant.drGreenApiUrl ||
     platformConfig?.drGreenApiUrl ||
     process.env.DRGREEN_API_URL ||
     undefined;
