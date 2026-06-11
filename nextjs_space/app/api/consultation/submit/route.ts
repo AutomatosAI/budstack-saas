@@ -5,7 +5,7 @@ import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
-import { createSaIdClient } from "@/lib/drgreen-identity";
+import { createSaIdClient, uploadIdentityDocument } from "@/lib/drgreen-identity";
 import {
   getTenantVerificationMode,
   isSaIdUploadEnabled,
@@ -43,6 +43,17 @@ const consultationSchema = z.object({
   gender: z.string().max(50).optional().default(""),
   password: z.string().min(8).max(128),
   confirmPassword: z.string().max(128).optional(),
+
+  // SA ID-upload (idMode): document sent inline with registration so the
+  // account + Dr Green client + document are created in one action.
+  idDocument: z
+    .object({
+      fileBase64: z.string().min(1),
+      mimeType: z.string().max(100),
+      documentType: z.enum(["ID", "PASSPORT", "DRIVING_LICENCE"]),
+      documentNumber: z.string().trim().min(1).max(100),
+    })
+    .optional(),
 
   // Shipping address
   addressLine1: z.string().max(300).optional().default(""),
@@ -340,6 +351,21 @@ export async function POST(request: NextRequest) {
           baseUrl: apiUrl,
         });
         clientId = created.clientId;
+
+        // Inline ID upload: createSaIdClient just made the client, so push the
+        // document to Dr Green now — the whole "create account & verify" is a
+        // single action (no separate login + dashboard upload).
+        if (clientId && body.idDocument?.fileBase64) {
+          await uploadIdentityDocument({
+            clientId,
+            documentType: body.idDocument.documentType,
+            documentNumber: body.idDocument.documentNumber,
+            file: Buffer.from(body.idDocument.fileBase64, "base64"),
+            mimeType: body.idDocument.mimeType,
+            config: { apiKey, secretKey },
+            baseUrl: apiUrl,
+          });
+        }
       } else {
       // Format date for Dr. Green API (YYYY-MM-DD)
       const dobFormatted = body.dateOfBirth
