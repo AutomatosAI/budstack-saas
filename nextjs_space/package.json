@@ -136,7 +136,7 @@
     "cookie": "1.1.1",
     "csv": "6.5.1",
     "date-fns": "3.6.0",
-    "dotenv": "16.5.0",
+    "dotenv": "17.4.2",
     "embla-carousel-react": "8.6.0",
     "file-type": "^22.0.1",
     "framer-motion": "12.40.0",
