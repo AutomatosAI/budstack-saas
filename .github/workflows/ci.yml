@@ -19,7 +19,7 @@ jobs:
         working-directory: nextjs_space
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
@@ -112,7 +112,7 @@ jobs:
         working-directory: nextjs_space
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
