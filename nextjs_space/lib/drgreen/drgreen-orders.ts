@@ -119,7 +119,7 @@ export async function submitOrder(params: {
                 create: { id: crypto.randomUUID(), userId, tenantId, items: clientCartItems, updatedAt: new Date() },
                 update: { tenantId, items: clientCartItems, updatedAt: new Date() },
             })
-            .catch((e) =>
+            .catch((e: unknown) =>
                 log('WARN: cart mirror write failed (non-blocking)', {
                     error: e instanceof Error ? e.message : String(e),
                 }),
