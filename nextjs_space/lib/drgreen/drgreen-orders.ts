@@ -106,11 +106,24 @@ export async function submitOrder(params: {
             itemCount: clientCartItems.length,
             overwroteStaleRow: !!(cart?.items && (cart.items as any[]).length > 0),
         });
-        cart = await prisma.drgreen_carts.upsert({
-            where: { userId },
-            create: { id: crypto.randomUUID(), userId, tenantId, items: clientCartItems, updatedAt: new Date() },
-            update: { tenantId, items: clientCartItems, updatedAt: new Date() },
-        });
+        // Build the order from the customer's live selection in memory. The
+        // drgreen_carts row is only a server-side MIRROR of the cart, and writing
+        // it can stall on a row lock or the connection pooler (observed ~30s on a
+        // single upsert). Keep that write OFF the order's critical path — persist
+        // it best-effort and non-blocking — so a slow mirror write can never delay
+        // or fail a checkout. The order below uses these items directly.
+        cart = { ...(cart ?? {}), userId, tenantId, items: clientCartItems } as any;
+        prisma.drgreen_carts
+            .upsert({
+                where: { userId },
+                create: { id: crypto.randomUUID(), userId, tenantId, items: clientCartItems, updatedAt: new Date() },
+                update: { tenantId, items: clientCartItems, updatedAt: new Date() },
+            })
+            .catch((e) =>
+                log('WARN: cart mirror write failed (non-blocking)', {
+                    error: e instanceof Error ? e.message : String(e),
+                }),
+            );
     }
 
     if (!cart || !cart.items || (cart.items as any[]).length === 0) {
