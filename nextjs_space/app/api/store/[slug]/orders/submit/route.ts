@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { submitOrder } from "@/lib/drgreen/drgreen-orders";
+import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
 import { checkUserKycStatus } from "@/app/actions/kyc-check";
 import { apiError, apiValidationError } from "@/lib/api-error";
@@ -124,12 +125,38 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       });
     }
 
+    // ── Cart reconciliation (guard) ──────────────────────────────────────
+    // A persisted cart can hold strain ids that were removed, went out of
+    // stock, or were recreated with a new id. Sending a dead id makes Dr Green
+    // 400 the WHOLE order. Validate against the live catalog and drop anything
+    // no longer available, so a stale item can never fail a customer's order.
+    let itemsToOrder = cartItems;
+    if (cartItems && cartItems.length > 0) {
+      const country = tenant.countryCode || "ZA";
+      const liveProducts = await fetchProducts(country, drGreenConfig);
+      const availableIds = new Set(
+        liveProducts.filter((p) => p.isAvailable !== false).map((p) => p.id),
+      );
+      itemsToOrder = cartItems.filter((i) => availableIds.has(i.strainId));
+      const dropped = cartItems.filter((i) => !availableIds.has(i.strainId));
+      if (dropped.length > 0) {
+        log('CART_RECONCILE_DROPPED', { dropped: dropped.map((d) => d.strainId) });
+      }
+      if (itemsToOrder.length === 0) {
+        log('FAIL: all cart items unavailable', { sent: cartItems.map((c) => c.strainId) });
+        return apiValidationError(
+          "The items in your cart are no longer available. Please refresh your cart and add them again.",
+          "POST /api/store/[slug]/orders/submit",
+        );
+      }
+    }
+
     // Submit order
     log('SUBMITTING_ORDER', {
       userId: dbUser.id,
       tenantId: tenant.id,
       apiUrl: drGreenConfig.apiUrl,
-      clientCartItems: cartItems?.length || 0,
+      clientCartItems: itemsToOrder?.length || 0,
     });
 
     const orderResponse = await submitOrder({
@@ -139,7 +166,7 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       apiKey: drGreenConfig.apiKey,
       secretKey: drGreenConfig.secretKey,
       apiUrl: drGreenConfig.apiUrl,
-      clientCartItems: cartItems,
+      clientCartItems: itemsToOrder,
     });
 
     log('ORDER_RESULT', {
