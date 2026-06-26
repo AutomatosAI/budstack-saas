@@ -55,6 +55,7 @@ export const POST = withTenantAuth(async (_request, { tenantId }) => {
       const data = {
         name: dg.name,
         slug,
+        drGreenStrainId: dg.id, // canonical Dr Green strain UUID (the id used for cart/orders)
         description: dg.description || "",
         category: dg.type?.toLowerCase() || "flower",
         strainType: strainType as "SATIVA" | "INDICA" | "HYBRID",

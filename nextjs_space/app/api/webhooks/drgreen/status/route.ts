@@ -11,6 +11,7 @@ import {
 import { dispatchEvent } from "@/lib/drgreen/status-event-handlers";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { logger } from "@/lib/logger";
+import { invalidateProductCache } from "@/lib/drgreen/doctor-green-api";
 
 // SECURITY (C14, M9): Cap payload size to prevent DoS from oversized POSTs.
 const MAX_WEBHOOK_BODY_BYTES = 100_000;
@@ -147,6 +148,16 @@ export async function POST(request: NextRequest) {
       }
     } else {
       await handleEvent(event, resolved.tenantId, payload);
+    }
+
+    // A strain/inventory change can mean a strain was recreated with a new id;
+    // bust the in-memory product cache so the storefront/cart reflect it now.
+    if (
+      event.startsWith("inventory.") ||
+      event.startsWith("stock.") ||
+      event.startsWith("strain.")
+    ) {
+      invalidateProductCache();
     }
 
     return NextResponse.json({ message: "Webhook processed", event });
