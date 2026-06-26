@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { submitOrder, createDirectCheckout } from "@/lib/drgreen/drgreen-orders";
+import { isDirectPaySupported } from "@/lib/payments/direct-pay";
 import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
 import { checkUserKycStatus } from "@/app/actions/kyc-check";
@@ -176,14 +177,15 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       total: orderResponse.total,
     });
 
-    // ── Direct pay-at-checkout (PayCloud) ────────────────────────────────
-    // ZA tenants flagged for direct payments mint a hosted checkout now and
-    // send the customer straight to pay, instead of a link being emailed on
-    // admin approval. Gated per-tenant (settings.directPayments) + ZA market.
+    // ── Direct pay-at-checkout ───────────────────────────────────────────
+    // Budstacks is direct-pay-first: the customer pays upfront wherever a
+    // provider is wired for their market (ZA/ZAR via PayCloud today); other
+    // markets fall back to the email-link flow. Per-tenant opt-out via
+    // settings.directPayments===false; global kill via DIRECT_PAY_DISABLED.
     let payUrl: string | undefined;
     const directPayEnabled =
-      tenant.countryCode === "ZA" &&
-      (tenant.settings as any)?.directPayments === true;
+      isDirectPaySupported(tenant.countryCode) &&
+      (tenant.settings as any)?.directPayments !== false;
     if (directPayEnabled && orderResponse.drGreenOrderId) {
       const origin =
         request.headers.get("origin") ||
