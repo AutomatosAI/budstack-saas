@@ -259,6 +259,37 @@ export async function submitOrder(params: {
 }
 
 /**
+ * Direct pay-at-checkout: ask Dr Green to mint a PayCloud hosted checkout for
+ * an EXISTING order and return its pay_url, so the storefront can redirect the
+ * customer to pay immediately instead of a link being emailed on admin
+ * approval. Hits POST /payments/checkout on the same /api/v1 base the dapp
+ * flow uses; callDrGreenAPI signs the body for Dr Green's DualAuthGuard.
+ */
+export async function createDirectCheckout(params: {
+    drGreenOrderId: string;
+    returnUrl: string;
+    apiKey: string;
+    secretKey: string;
+    apiUrl?: string;
+}): Promise<{ orderId: string; payUrl: string; expiresAt: string }> {
+    const { drGreenOrderId, returnUrl, apiKey, secretKey, apiUrl } = params;
+    const res = await callDrGreenAPI<any>("/payments/checkout", {
+        apiKey,
+        secretKey,
+        baseUrl: apiUrl,
+        method: "POST",
+        body: { orderId: drGreenOrderId, returnUrl },
+    });
+    // Dr Green responses are sometimes wrapped in { data }, sometimes raw.
+    const data = res?.data || res;
+    return {
+        orderId: data.orderId,
+        payUrl: data.payUrl,
+        expiresAt: data.expiresAt,
+    };
+}
+
+/**
  * Get order by ID (with Dr. Green sync)
  */
 export async function getOrder(params: {

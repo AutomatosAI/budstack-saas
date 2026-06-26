@@ -134,6 +134,15 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
         throw new Error(data.error || "Failed to submit order");
       }
 
+      // Direct pay-at-checkout: if the backend minted a hosted checkout, clear
+      // the cart and send the customer straight there to pay now. They return
+      // to the payment-return page, which polls the order status.
+      if (data.order?.payUrl) {
+        clearCart();
+        window.location.href = data.order.payUrl;
+        return;
+      }
+
       setOrderResult(data.order);
       clearCart();
     } catch (err) {

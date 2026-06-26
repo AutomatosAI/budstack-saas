@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
-import { submitOrder } from "@/lib/drgreen/drgreen-orders";
+import { submitOrder, createDirectCheckout } from "@/lib/drgreen/drgreen-orders";
 import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
 import { checkUserKycStatus } from "@/app/actions/kyc-check";
@@ -176,6 +176,42 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       total: orderResponse.total,
     });
 
+    // ── Direct pay-at-checkout (PayCloud) ────────────────────────────────
+    // ZA tenants flagged for direct payments mint a hosted checkout now and
+    // send the customer straight to pay, instead of a link being emailed on
+    // admin approval. Gated per-tenant (settings.directPayments) + ZA market.
+    let payUrl: string | undefined;
+    const directPayEnabled =
+      tenant.countryCode === "ZA" &&
+      (tenant.settings as any)?.directPayments === true;
+    if (directPayEnabled && orderResponse.drGreenOrderId) {
+      const origin =
+        request.headers.get("origin") ||
+        (request.headers.get("host")
+          ? `https://${request.headers.get("host")}`
+          : "");
+      try {
+        const checkout = await createDirectCheckout({
+          drGreenOrderId: orderResponse.drGreenOrderId,
+          returnUrl: `${origin}/store/${slug}/payment/return/${orderResponse.orderId}`,
+          apiKey: drGreenConfig.apiKey,
+          secretKey: drGreenConfig.secretKey,
+          apiUrl: drGreenConfig.apiUrl,
+        });
+        payUrl = checkout.payUrl;
+        log('DIRECT_CHECKOUT', {
+          hasPayUrl: !!payUrl,
+          expiresAt: checkout.expiresAt,
+        });
+      } catch (e) {
+        // Never fail the order if minting fails — the order exists and remains
+        // payable via the email-link flow on admin approval (fallback).
+        log('DIRECT_CHECKOUT_FAILED', {
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+
     // Trigger webhook
     await triggerWebhook({
       event: WEBHOOK_EVENTS.ORDER_CREATED,
@@ -191,7 +227,7 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
     });
 
     log('SUCCESS');
-    return NextResponse.json({ order: orderResponse });
+    return NextResponse.json({ order: { ...orderResponse, payUrl } });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     log('UNHANDLED_ERROR', { message: msg });
