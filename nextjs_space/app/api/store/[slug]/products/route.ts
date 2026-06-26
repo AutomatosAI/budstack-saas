@@ -5,6 +5,11 @@ import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { ApiError, apiError } from "@/lib/api-error";
 import { parseSlug } from "@/lib/validation/parse-uuid";
 
+// Strain ids and stock must never be served stale (a cached old id breaks the
+// cart) — always fetch live from Dr Green.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * GET /api/store/[slug]/products
  * Fetch products for a specific tenant's country

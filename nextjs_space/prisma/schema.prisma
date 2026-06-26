@@ -313,10 +313,11 @@ model posts {
 }
 
 model products {
-  id           String      @id
-  name         String
-  slug         String
-  description  String?
+  id              String      @id
+  name            String
+  slug            String
+  drGreenStrainId String? // canonical Dr Green strain UUID (catalog parity / stable cart id)
+  description     String?
   category     String
   strainType   StrainType?
   thcContent   Float?
@@ -334,6 +335,7 @@ model products {
 
   @@unique([slug, tenantId])
   @@index([tenantId, deletedAt]) // PRD-208 soft-delete: tenant-scoped not-deleted filter
+  @@index([tenantId, drGreenStrainId])
 }
 
 model templates {

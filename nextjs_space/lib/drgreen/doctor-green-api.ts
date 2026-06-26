@@ -337,7 +337,16 @@ export async function fetchProducts(
 
 // In-memory product cache to avoid re-fetching all products for single lookups
 const productCache = new Map<string, { products: DoctorGreenProduct[]; expiresAt: number }>();
-const PRODUCT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const PRODUCT_CACHE_TTL_MS = 60 * 1000; // 60s — short, and busted on Dr Green strain/inventory webhooks
+
+/**
+ * Clear the in-memory product cache. Called from the Dr Green webhook so a
+ * strain/inventory change (including a strain recreated with a new id) is
+ * reflected immediately instead of after the TTL.
+ */
+export function invalidateProductCache(): void {
+  productCache.clear();
+}
 
 export async function fetchProduct(
   productId: string,
