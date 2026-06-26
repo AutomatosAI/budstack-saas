@@ -211,6 +211,12 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
           "POST /api/store/[slug]/orders/submit",
         );
       }
+      if (error.message.includes("still available")) {
+        return apiValidationError(
+          error.message,
+          "POST /api/store/[slug]/orders/submit",
+        );
+      }
     }
 
     // SECURITY (H_e1): generic internal error message — orders flow may

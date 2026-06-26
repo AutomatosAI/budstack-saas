@@ -92,11 +92,20 @@ export async function submitOrder(params: {
         drGreenCartId: cart?.drGreenCartId || 'NONE',
     });
 
-    // If server-side cart is empty but client sent cart items, sync them to DB.
-    // Refresh tenantId on every save so a stale value from a previous store
-    // doesn't pin the cart to the wrong tenant.
-    if ((!cart || !cart.items || (cart.items as any[]).length === 0) && clientCartItems?.length) {
-        log('SYNCING_CLIENT_CART_TO_DB', { itemCount: clientCartItems.length });
+    // The client cart reflects what the customer has on screen RIGHT NOW and is
+    // the source of truth. The persisted server-side row can be stale: it is keyed
+    // by userId alone, so it survives across stores/sessions and can hold an old
+    // tenantId or a strain id that Dr Green later recreated with a new id. Honoring
+    // it over the live selection silently orders the wrong/dead item — and because
+    // it is server-side, it re-orders that dead item in EVERY browser and on every
+    // device, making Dr Green 400 the whole order no matter what the customer adds.
+    // So whenever the client sends items, they WIN: overwrite the server row. Only
+    // fall back to the persisted row when the request carried no cart at all.
+    if (clientCartItems?.length) {
+        log('CLIENT_CART_AUTHORITATIVE', {
+            itemCount: clientCartItems.length,
+            overwroteStaleRow: !!(cart?.items && (cart.items as any[]).length > 0),
+        });
         cart = await prisma.drgreen_carts.upsert({
             where: { userId },
             create: { id: crypto.randomUUID(), userId, tenantId, items: clientCartItems, updatedAt: new Date() },
@@ -109,7 +118,7 @@ export async function submitOrder(params: {
     }
 
     // Normalize cart items
-    const cartItems = (cart.items as any[]).map(item => ({
+    let cartItems = (cart.items as any[]).map(item => ({
         ...item,
         price: item.price || item.strain?.retailPrice || item.retailPrice || 0,
         name: item.name || item.strain?.name || 'Unknown Product',
@@ -117,6 +126,49 @@ export async function submitOrder(params: {
     log('CART_ITEMS', cartItems.map(i => ({
         strainId: i.strainId, name: i.name, qty: i.quantity, price: i.price,
     })));
+
+    // Reconcile against the LIVE Dr Green catalog. A strain can be discontinued
+    // or recreated with a new id between adding to cart and checkout; sending a
+    // dead id makes Dr Green reject the ENTIRE order. Drop anything not currently
+    // orderable so one stale line can never block a customer's checkout. This is
+    // the single chokepoint every order path flows through, and fetchProducts is
+    // cached 60s (shared with the storefront fetch) so it costs effectively nothing.
+    try {
+        const { fetchProducts } = await import("@/lib/drgreen/doctor-green-api");
+        const country = shippingInfo.countryCode || shippingInfo.country || "ZA";
+        const liveProducts = await fetchProducts(country, { apiKey, secretKey, apiUrl });
+        const availableIds = new Set(
+            liveProducts.filter((p) => p.isAvailable !== false).map((p) => p.id),
+        );
+        const reconciled = cartItems.filter((i) => availableIds.has(i.strainId));
+        const dropped = cartItems.filter((i) => !availableIds.has(i.strainId));
+        if (dropped.length > 0) {
+            log('CART_RECONCILED', {
+                dropped: dropped.map((d) => d.strainId),
+                kept: reconciled.map((k) => k.strainId),
+            });
+        }
+        if (reconciled.length === 0) {
+            throw new Error(
+                "None of the items in your cart are still available. Please refresh the page and add them again.",
+            );
+        }
+        if (dropped.length > 0) {
+            cartItems = reconciled;
+            // Persist the cleaned cart so a dropped item can't resurface later.
+            await prisma.drgreen_carts
+                .update({ where: { userId }, data: { items: cartItems, updatedAt: new Date() } })
+                .catch(() => {});
+        }
+    } catch (e) {
+        // Re-throw the genuine "all unavailable" signal so the customer sees it;
+        // otherwise (the catalog fetch itself failed) don't block the order — let
+        // Dr Green do the final validation rather than fail a valid checkout.
+        if (e instanceof Error && e.message.includes("still available")) throw e;
+        log('WARN: catalog reconcile skipped', {
+            error: e instanceof Error ? e.message : String(e),
+        });
+    }
 
     // ========== Step 0: Get clientCartId ==========
     const clientCartId = await getClientCartId(clientId, apiOpts);
