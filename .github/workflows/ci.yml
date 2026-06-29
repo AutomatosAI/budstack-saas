@@ -30,7 +30,7 @@ jobs:
           version: 9
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.pnpm-store
           key: pnpm-${{ runner.os }}-${{ hashFiles('nextjs_space/pnpm-lock.yaml') }}
@@ -123,7 +123,7 @@ jobs:
           version: 9
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.pnpm-store
           key: pnpm-${{ runner.os }}-${{ hashFiles('nextjs_space/pnpm-lock.yaml') }}
