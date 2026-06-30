@@ -3,16 +3,21 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Loader2, Clock } from "lucide-react";
+import { CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 
-type Status = "checking" | "paid" | "pending";
+type Status = "checking" | "paid" | "unconfirmed";
 
-// Customer lands here after returning from the PayCloud hosted checkout. We
-// poll the order (which syncs paymentStatus from Dr Green) until it reads PAID,
-// then show success. PayCloud confirms server-side via webhook, so this is just
-// the customer-facing confirmation — we never re-charge from this page.
+// Customer lands here after returning from the PayCloud hosted checkout.
+// PayCloud redirects to a single return_url regardless of outcome (no reliable
+// status param), and a payment is confirmed server-side via webhook + a
+// reconciliation sweep — so we poll the order until it reads PAID and show
+// success. If it never clears within the window the payment was most likely
+// cancelled or declined (Dr Green has no FAILED status — it stays PENDING), so
+// we show a "not confirmed" state with a Retry that re-mints a fresh checkout
+// for the SAME order. We never re-charge from this page: the mint endpoint only
+// works on a PENDING order, so an already-paid order can't be paid twice.
 const POLL_INTERVAL_MS = 3000;
-const MAX_ATTEMPTS = 12; // ~36s before we fall back to "still confirming"
+const MAX_ATTEMPTS = 20; // ~60s before we treat it as not confirmed
 
 export default function PaymentReturnPage() {
     const params = useParams<{ slug: string; orderId: string }>();
@@ -22,6 +27,8 @@ export default function PaymentReturnPage() {
 
     const [status, setStatus] = useState<Status>("checking");
     const [orderNumber, setOrderNumber] = useState<string | null>(null);
+    const [retrying, setRetrying] = useState(false);
+    const [retryError, setRetryError] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -44,7 +51,7 @@ export default function PaymentReturnPage() {
             }
             if (cancelled) return;
             if (attempts >= MAX_ATTEMPTS) {
-                setStatus("pending");
+                setStatus("unconfirmed");
                 return;
             }
             setTimeout(poll, POLL_INTERVAL_MS);
@@ -55,6 +62,34 @@ export default function PaymentReturnPage() {
             cancelled = true;
         };
     }, [slug, orderId]);
+
+    const handleRetry = async () => {
+        setRetrying(true);
+        setRetryError(null);
+        try {
+            const res = await fetch(`/api/store/${slug}/orders/${orderId}/pay`, {
+                method: "POST",
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data?.payUrl) {
+                window.location.href = data.payUrl;
+                return; // leaving the page
+            }
+            if (res.ok && data?.paid) {
+                setStatus("paid");
+                setRetrying(false);
+                return;
+            }
+            setRetryError(
+                data?.error ||
+                    data?.message ||
+                    "We couldn't start the payment. Please try again.",
+            );
+        } catch {
+            setRetryError("Network error — please try again.");
+        }
+        setRetrying(false);
+    };
 
     const textColor = "hsl(var(--tenant-color-foreground, 222 47% 11%))";
     const mutedStyle = { color: textColor, opacity: 0.7 };
@@ -110,23 +145,40 @@ export default function PaymentReturnPage() {
                     </>
                 )}
 
-                {status === "pending" && (
+                {status === "unconfirmed" && (
                     <>
-                        <Clock
-                            className="w-12 h-12 mx-auto"
-                            style={{ color: "hsl(var(--tenant-color-primary, 142 71% 45%))" }}
-                        />
+                        <AlertTriangle className="w-12 h-12 mx-auto" style={{ color: "hsl(38 92% 50%)" }} />
                         <h1 className="mt-6 text-xl font-semibold" style={{ color: textColor }}>
-                            Still confirming your payment
+                            Payment not confirmed
                         </h1>
                         <p className="mt-2 text-sm" style={mutedStyle}>
-                            This is taking a little longer than usual to clear. We&apos;ll email you
-                            as soon as it&apos;s confirmed — there&apos;s no need to pay again.
+                            We couldn&apos;t confirm your payment{orderNumber ? ` for order ${orderNumber}` : ""}. If
+                            you cancelled or it didn&apos;t go through, you can try again — you won&apos;t
+                            be charged twice. If you already completed payment, it may still be
+                            clearing; we&apos;ll email you once it&apos;s confirmed.
                         </p>
+
+                        {retryError && (
+                            <p className="mt-3 text-sm" style={{ color: "hsl(0 72% 51%)" }}>
+                                {retryError}
+                            </p>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={handleRetry}
+                            disabled={retrying}
+                            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium disabled:opacity-60"
+                            style={primaryBtnStyle}
+                        >
+                            {retrying && <Loader2 className="w-4 h-4 animate-spin" />}
+                            {retrying ? "Starting payment…" : "Try payment again"}
+                        </button>
+
                         <Link
                             href={`${basePath}/orders/${orderId}`}
-                            className="mt-6 inline-block rounded-lg px-5 py-2.5 text-sm font-medium"
-                            style={primaryBtnStyle}
+                            className="mt-3 inline-block text-sm font-medium underline"
+                            style={{ color: textColor, opacity: 0.8 }}
                         >
                             View order status
                         </Link>
