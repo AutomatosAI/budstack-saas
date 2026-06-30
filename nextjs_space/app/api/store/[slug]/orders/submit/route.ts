@@ -6,6 +6,7 @@ import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { submitOrder, createDirectCheckout } from "@/lib/drgreen/drgreen-orders";
 import { isDirectPaySupported } from "@/lib/payments/direct-pay";
+import { storefrontUrl } from "@/lib/storefront-url";
 import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
 import { checkUserKycStatus } from "@/app/actions/kyc-check";
@@ -187,15 +188,20 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       isDirectPaySupported(tenant.countryCode) &&
       (tenant.settings as any)?.directPayments !== false;
     if (directPayEnabled && orderResponse.drGreenOrderId) {
+      const host = request.headers.get("host") || "";
       const origin =
-        request.headers.get("origin") ||
-        (request.headers.get("host")
-          ? `https://${request.headers.get("host")}`
-          : "");
+        request.headers.get("origin") || (host ? `https://${host}` : "");
       try {
         const checkout = await createDirectCheckout({
           drGreenOrderId: orderResponse.drGreenOrderId,
-          returnUrl: `${origin}/store/${slug}/payment/return/${orderResponse.orderId}`,
+          // Tenant hosts ({slug}.budstacks.io / custom domains) serve the store
+          // at root; the legacy "/store/<slug>" path 404s there.
+          returnUrl: storefrontUrl(
+            origin,
+            host,
+            slug,
+            `/payment/return/${orderResponse.orderId}`,
+          ),
           apiKey: drGreenConfig.apiKey,
           secretKey: drGreenConfig.secretKey,
           apiUrl: drGreenConfig.apiUrl,
