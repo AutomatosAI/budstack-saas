@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getStorefrontDashboard } from "@/app/actions/dashboard";
 import { OrderListItem } from "@/components/storefront/order-list-item";
-import { StorefrontOrder } from "@/lib/orders/storefront-orders";
+import { StorefrontOrder } from "@/lib/orders/order-presentation";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 
 export default function OrdersPage() {

@@ -1,32 +1,16 @@
 import { prisma } from "@/lib/db";
 import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 import { logger } from "@/lib/logger";
+import type { StorefrontOrder } from "./order-presentation";
+
+// Re-export the pure types so server callers can import them from here too.
+export type { StorefrontOrder, StorefrontOrderItem } from "./order-presentation";
 
 /**
  * Storefront order helpers — list a customer's orders and pull live status from
  * Dr Green so the dashboard / orders page reflect a payment or fulfilment update
  * the moment the customer opens the page (not only when the webhook lands).
  */
-
-export interface StorefrontOrderItem {
-  id: string;
-  productName: string;
-  quantity: number;
-  price: number;
-}
-
-export interface StorefrontOrder {
-  id: string;
-  orderNumber: string;
-  total: number;
-  subtotal: number;
-  shippingCost: number;
-  status: string; // budstacks OrderStatus
-  paymentStatus: string; // budstacks PaymentStatus
-  drGreenOrderId: string | null;
-  createdAt: string; // ISO
-  items: StorefrontOrderItem[];
-}
 
 export interface DrGreenStorefrontConfig {
   apiKey: string;
@@ -198,55 +182,4 @@ export async function listUserOrdersWithSync(params: {
   // Re-read so the response reflects synced changes.
   const fresh = (await prisma.orders.findMany(query)) as unknown as OrderRow[];
   return fresh.map(toStorefrontOrder);
-}
-
-// ── Presentation ─────────────────────────────────────────────────────────────
-
-export type OrderTone = "success" | "info" | "pending" | "failed";
-
-export interface OrderPresentation {
-  label: string;
-  tone: OrderTone;
-}
-
-/**
- * Collapse (status, paymentStatus) into a single customer-facing label + tone.
- * Until an order is PAID the payment state leads (that is what the customer
- * acts on); once PAID, fulfilment leads.
- */
-export function orderPresentation(
-  status: string,
-  paymentStatus: string,
-): OrderPresentation {
-  const pay = (paymentStatus || "").toUpperCase();
-  const ful = (status || "").toUpperCase();
-
-  if (pay !== "PAID") {
-    switch (pay) {
-      case "FAILED":
-        return { label: "Payment failed", tone: "failed" };
-      case "EXPIRED":
-        return { label: "Payment expired", tone: "failed" };
-      case "CANCELLED":
-        return { label: "Cancelled", tone: "failed" };
-      case "AWAITING_PROCESSING":
-        return { label: "Confirming payment", tone: "pending" };
-      default:
-        return { label: "Awaiting payment", tone: "pending" };
-    }
-  }
-
-  switch (ful) {
-    case "DELIVERED":
-      return { label: "Delivered", tone: "success" };
-    case "SHIPPED":
-      return { label: "Shipped", tone: "info" };
-    case "PROCESSING":
-    case "CONFIRMED":
-      return { label: "Processing", tone: "info" };
-    case "CANCELLED":
-      return { label: "Cancelled", tone: "failed" };
-    default:
-      return { label: "Paid", tone: "success" };
-  }
 }
