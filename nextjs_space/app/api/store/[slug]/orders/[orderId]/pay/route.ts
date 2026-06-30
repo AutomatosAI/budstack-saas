@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { createDirectCheckout } from "@/lib/drgreen/drgreen-orders";
+import { storefrontUrl } from "@/lib/storefront-url";
 import { apiError } from "@/lib/api-error";
 import { parseSlug, parseUuid } from "@/lib/validation/parse-uuid";
 
@@ -70,15 +71,14 @@ export const POST = withAuth(async (request, { user }, params) => {
     }
 
     const drGreenConfig = await getTenantDrGreenConfig(tenant.id);
+    const host = request.headers.get("host") || "";
     const origin =
-      request.headers.get("origin") ||
-      (request.headers.get("host")
-        ? `https://${request.headers.get("host")}`
-        : "");
+      request.headers.get("origin") || (host ? `https://${host}` : "");
 
     const checkout = await createDirectCheckout({
       drGreenOrderId: order.drGreenOrderId,
-      returnUrl: `${origin}/store/${slug}/payment/return/${orderId}`,
+      // Tenant hosts serve the store at root; "/store/<slug>" 404s there.
+      returnUrl: storefrontUrl(origin, host, slug, `/payment/return/${orderId}`),
       apiKey: drGreenConfig.apiKey,
       secretKey: drGreenConfig.secretKey,
       apiUrl: drGreenConfig.apiUrl,

@@ -25,7 +25,6 @@ export default function PaymentReturnPage() {
     const params = useParams<{ slug: string; orderId: string }>();
     const slug = params.slug;
     const orderId = params.orderId;
-    const basePath = `/store/${slug}`;
     const clearCart = useCartStore((s) => s.clearCart);
 
     const [status, setStatus] = useState<Status>("checking");
@@ -33,6 +32,16 @@ export default function PaymentReturnPage() {
     const [retrying, setRetrying] = useState(false);
     const [returning, setReturning] = useState(false);
     const [actionError, setActionError] = useState<string | null>(null);
+    // Tenant hosts ({slug}.budstacks.io / custom domains) serve the store at
+    // root; the apex serves it under /store/<slug>. Default to root (the live
+    // tenant-host case) and correct to /store/<slug> on the apex after mount, so
+    // the View-order / Back-to-cart links resolve on whichever host we're on.
+    const [basePath, setBasePath] = useState("");
+    useEffect(() => {
+        if (window.location.pathname.startsWith(`/store/${slug}`)) {
+            setBasePath(`/store/${slug}`);
+        }
+    }, [slug]);
 
     useEffect(() => {
         let cancelled = false;
