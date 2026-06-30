@@ -3,32 +3,36 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Loader2, AlertTriangle, XCircle } from "lucide-react";
+import { useCartStore } from "@/lib/cart-store";
 
-type Status = "checking" | "paid" | "unconfirmed";
+type Status = "checking" | "paid" | "failed" | "unconfirmed";
 
 // Customer lands here after returning from the PayCloud hosted checkout.
 // PayCloud redirects to a single return_url regardless of outcome (no reliable
-// status param), and a payment is confirmed server-side via webhook + a
-// reconciliation sweep — so we poll the order until it reads PAID and show
-// success. If it never clears within the window the payment was most likely
-// cancelled or declined (Dr Green has no FAILED status — it stays PENDING), so
-// we show a "not confirmed" state with a Retry that re-mints a fresh checkout
-// for the SAME order. We never re-charge from this page: the mint endpoint only
-// works on a PENDING order, so an already-paid order can't be paid twice.
+// status param), so we ask Dr Green for the DEFINITIVE status (a live
+// order.query): paid → success and we clear the cart (the order is only really
+// placed now); failed/cancelled/expired → a failure screen with Retry +
+// Back-to-cart; still pending → keep polling, then a soft "not confirmed yet".
+// The cart is cleared ONLY on a confirmed PAID, so a cancelled/failed payment
+// keeps the cart intact for retry. "Back to cart" voids the unpaid order so it
+// never lingers as placed-but-unpaid. We never re-charge here — the retry mint
+// only works on a still-PENDING order.
 const POLL_INTERVAL_MS = 3000;
-const MAX_ATTEMPTS = 20; // ~60s before we treat it as not confirmed
+const MAX_ATTEMPTS = 20; // ~60s before a still-pending order is "not confirmed yet"
 
 export default function PaymentReturnPage() {
     const params = useParams<{ slug: string; orderId: string }>();
     const slug = params.slug;
     const orderId = params.orderId;
     const basePath = `/store/${slug}`;
+    const clearCart = useCartStore((s) => s.clearCart);
 
     const [status, setStatus] = useState<Status>("checking");
     const [orderNumber, setOrderNumber] = useState<string | null>(null);
     const [retrying, setRetrying] = useState(false);
-    const [retryError, setRetryError] = useState<string | null>(null);
+    const [returning, setReturning] = useState(false);
+    const [actionError, setActionError] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -37,13 +41,26 @@ export default function PaymentReturnPage() {
         const poll = async () => {
             attempts += 1;
             try {
-                const res = await fetch(`/api/store/${slug}/orders/${orderId}`);
+                const res = await fetch(
+                    `/api/store/${slug}/orders/${orderId}/payment-status`,
+                );
                 if (res.ok) {
-                    const { order } = await res.json();
-                    if (order?.orderNumber) setOrderNumber(order.orderNumber);
-                    if (order?.paymentStatus === "PAID") {
-                        if (!cancelled) setStatus("paid");
-                        return; // stop polling
+                    const data = await res.json();
+                    if (data?.orderNumber) setOrderNumber(data.orderNumber);
+                    if (data?.state === "paid") {
+                        if (!cancelled) {
+                            clearCart(); // order is genuinely placed → safe to clear now
+                            setStatus("paid");
+                        }
+                        return;
+                    }
+                    if (
+                        data?.state === "failed" ||
+                        data?.state === "cancelled" ||
+                        data?.state === "expired"
+                    ) {
+                        if (!cancelled) setStatus("failed");
+                        return;
                     }
                 }
             } catch {
@@ -61,11 +78,11 @@ export default function PaymentReturnPage() {
         return () => {
             cancelled = true;
         };
-    }, [slug, orderId]);
+    }, [slug, orderId, clearCart]);
 
     const handleRetry = async () => {
         setRetrying(true);
-        setRetryError(null);
+        setActionError(null);
         try {
             const res = await fetch(`/api/store/${slug}/orders/${orderId}/pay`, {
                 method: "POST",
@@ -76,19 +93,36 @@ export default function PaymentReturnPage() {
                 return; // leaving the page
             }
             if (res.ok && data?.paid) {
+                clearCart();
                 setStatus("paid");
                 setRetrying(false);
                 return;
             }
-            setRetryError(
+            setActionError(
                 data?.error ||
                     data?.message ||
                     "We couldn't start the payment. Please try again.",
             );
         } catch {
-            setRetryError("Network error — please try again.");
+            setActionError("Network error — please try again.");
         }
         setRetrying(false);
+    };
+
+    const handleBackToCart = async () => {
+        setReturning(true);
+        setActionError(null);
+        // Void the unpaid order so it never lingers as placed-but-unpaid, then
+        // return to the (still-intact) cart. Navigation isn't blocked on the
+        // cancel succeeding — the TTL void cron retires it either way.
+        try {
+            await fetch(`/api/store/${slug}/orders/${orderId}/cancel`, {
+                method: "POST",
+            });
+        } catch {
+            // best-effort
+        }
+        window.location.href = `${basePath}/cart`;
     };
 
     const textColor = "hsl(var(--tenant-color-foreground, 222 47% 11%))";
@@ -97,6 +131,37 @@ export default function PaymentReturnPage() {
         backgroundColor: "hsl(var(--tenant-color-primary, 142 71% 45%))",
         color: "hsl(var(--tenant-color-primary-foreground, 0 0% 100%))",
     };
+
+    // Shared retry + back-to-cart actions for the failed / unconfirmed screens.
+    const recoveryActions = (
+        <>
+            {actionError && (
+                <p className="mt-3 text-sm" style={{ color: "hsl(0 72% 51%)" }}>
+                    {actionError}
+                </p>
+            )}
+            <button
+                type="button"
+                onClick={handleRetry}
+                disabled={retrying || returning}
+                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium disabled:opacity-60"
+                style={primaryBtnStyle}
+            >
+                {retrying && <Loader2 className="w-4 h-4 animate-spin" />}
+                {retrying ? "Starting payment…" : "Try payment again"}
+            </button>
+            <button
+                type="button"
+                onClick={handleBackToCart}
+                disabled={retrying || returning}
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-medium disabled:opacity-60"
+                style={{ color: textColor, borderColor: "hsl(var(--tenant-color-border, 220 13% 91%))" }}
+            >
+                {returning && <Loader2 className="w-4 h-4 animate-spin" />}
+                {returning ? "Returning…" : "Back to cart"}
+            </button>
+        </>
+    );
 
     return (
         <div
@@ -145,43 +210,34 @@ export default function PaymentReturnPage() {
                     </>
                 )}
 
+                {status === "failed" && (
+                    <>
+                        <XCircle className="w-12 h-12 mx-auto" style={{ color: "hsl(0 72% 51%)" }} />
+                        <h1 className="mt-6 text-xl font-semibold" style={{ color: textColor }}>
+                            Payment not completed
+                        </h1>
+                        <p className="mt-2 text-sm" style={mutedStyle}>
+                            Your payment{orderNumber ? ` for order ${orderNumber}` : ""} didn&apos;t go
+                            through, so the order hasn&apos;t been placed and you weren&apos;t charged.
+                            Your cart is saved — try again, or head back to review it.
+                        </p>
+                        {recoveryActions}
+                    </>
+                )}
+
                 {status === "unconfirmed" && (
                     <>
                         <AlertTriangle className="w-12 h-12 mx-auto" style={{ color: "hsl(38 92% 50%)" }} />
                         <h1 className="mt-6 text-xl font-semibold" style={{ color: textColor }}>
-                            Payment not confirmed
+                            Payment not confirmed yet
                         </h1>
                         <p className="mt-2 text-sm" style={mutedStyle}>
-                            We couldn&apos;t confirm your payment{orderNumber ? ` for order ${orderNumber}` : ""}. If
-                            you cancelled or it didn&apos;t go through, you can try again — you won&apos;t
-                            be charged twice. If you already completed payment, it may still be
-                            clearing; we&apos;ll email you once it&apos;s confirmed.
+                            We couldn&apos;t confirm your payment{orderNumber ? ` for order ${orderNumber}` : ""} in
+                            time. If you completed it, it may still be clearing — we&apos;ll email you
+                            once it&apos;s confirmed. Otherwise you can try again (you won&apos;t be
+                            charged twice) or go back to your cart.
                         </p>
-
-                        {retryError && (
-                            <p className="mt-3 text-sm" style={{ color: "hsl(0 72% 51%)" }}>
-                                {retryError}
-                            </p>
-                        )}
-
-                        <button
-                            type="button"
-                            onClick={handleRetry}
-                            disabled={retrying}
-                            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium disabled:opacity-60"
-                            style={primaryBtnStyle}
-                        >
-                            {retrying && <Loader2 className="w-4 h-4 animate-spin" />}
-                            {retrying ? "Starting payment…" : "Try payment again"}
-                        </button>
-
-                        <Link
-                            href={`${basePath}/orders/${orderId}`}
-                            className="mt-3 inline-block text-sm font-medium underline"
-                            style={{ color: textColor, opacity: 0.8 }}
-                        >
-                            View order status
-                        </Link>
+                        {recoveryActions}
                     </>
                 )}
             </div>

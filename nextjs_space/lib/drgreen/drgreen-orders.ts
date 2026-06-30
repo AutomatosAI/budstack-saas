@@ -290,6 +290,71 @@ export async function createDirectCheckout(params: {
 }
 
 /**
+ * Definitive payment status for a direct-pay order. PayCloud's return URL
+ * carries no reliable status, so this hits Dr Green's live order.query-backed
+ * endpoint: paid | failed | pending | cancelled | expired | refunded. A "paid"
+ * result has self-healed the Dr Green order to PAID even if the webhook was
+ * late. GET with a path param → DualAuthGuard signs JSON.stringify(req.params),
+ * so we sign { orderId } (same convention as getOrder).
+ */
+export async function getDirectCheckoutStatus(params: {
+    drGreenOrderId: string;
+    apiKey: string;
+    secretKey: string;
+    apiUrl?: string;
+}): Promise<{ orderId: string; state: string; paymentStatus: string }> {
+    const { drGreenOrderId, apiKey, secretKey, apiUrl } = params;
+    const res = await callDrGreenAPI<any>(
+        `/payments/checkout/${drGreenOrderId}/status`,
+        {
+            apiKey,
+            secretKey,
+            baseUrl: apiUrl,
+            method: "GET",
+            signBody: { orderId: drGreenOrderId },
+        },
+    );
+    const data = res?.data || res;
+    return {
+        orderId: data.orderId,
+        state: data.state,
+        paymentStatus: data.paymentStatus,
+    };
+}
+
+/**
+ * Void an unpaid direct-pay order (customer abandoned payment). Dr Green
+ * re-checks PayCloud first, so a payment that actually completed is reported
+ * paid and never voided. POST → DualAuthGuard signs JSON.stringify(req.body),
+ * so we send { orderId } as the (signed) body; the server reads the id from the
+ * path param.
+ */
+export async function cancelDirectCheckout(params: {
+    drGreenOrderId: string;
+    apiKey: string;
+    secretKey: string;
+    apiUrl?: string;
+}): Promise<{ orderId: string; state: string; cancelled: boolean }> {
+    const { drGreenOrderId, apiKey, secretKey, apiUrl } = params;
+    const res = await callDrGreenAPI<any>(
+        `/payments/checkout/${drGreenOrderId}/cancel`,
+        {
+            apiKey,
+            secretKey,
+            baseUrl: apiUrl,
+            method: "POST",
+            body: { orderId: drGreenOrderId },
+        },
+    );
+    const data = res?.data || res;
+    return {
+        orderId: data.orderId,
+        state: data.state,
+        cancelled: data.cancelled,
+    };
+}
+
+/**
  * Get order by ID (with Dr. Green sync)
  */
 export async function getOrder(params: {
