@@ -161,6 +161,13 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       clientCartItems: itemsToOrder?.length || 0,
     });
 
+    // Decide the payment flow BEFORE creating the order so Dr Green can gate the
+    // "order placed" admin email at creation: DIRECT (pay-at-checkout) defers it
+    // to payment success; LINK (email-link fallback) emails the orders team now.
+    const directPayEnabled =
+      isDirectPaySupported(tenant.countryCode) &&
+      (tenant.settings as any)?.directPayments !== false;
+
     const orderResponse = await submitOrder({
       userId: dbUser.id,
       tenantId: tenant.id,
@@ -169,6 +176,7 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       secretKey: drGreenConfig.secretKey,
       apiUrl: drGreenConfig.apiUrl,
       clientCartItems: itemsToOrder,
+      paymentFlow: directPayEnabled ? "DIRECT" : "LINK",
     });
 
     log('ORDER_RESULT', {
@@ -184,9 +192,6 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
     // markets fall back to the email-link flow. Per-tenant opt-out via
     // settings.directPayments===false; global kill via DIRECT_PAY_DISABLED.
     let payUrl: string | undefined;
-    const directPayEnabled =
-      isDirectPaySupported(tenant.countryCode) &&
-      (tenant.settings as any)?.directPayments !== false;
     if (directPayEnabled && orderResponse.drGreenOrderId) {
       const host = request.headers.get("host") || "";
       const origin =

@@ -46,8 +46,12 @@ export async function submitOrder(params: {
     secretKey: string;
     apiUrl?: string;
     clientCartItems?: any[];
+    // "DIRECT" for pay-at-checkout storefronts so Dr Green defers the admin
+    // "order placed" email until payment succeeds; omitted/"LINK" keeps the
+    // legacy behaviour (order placed → orders team emailed now).
+    paymentFlow?: "DIRECT" | "LINK";
 }): Promise<DrGreenOrderResponse> {
-    const { userId, tenantId, shippingInfo, apiKey, secretKey, apiUrl, clientCartItems } = params;
+    const { userId, tenantId, shippingInfo, apiKey, secretKey, apiUrl, clientCartItems, paymentFlow } = params;
     const requestId = `ord_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const log = (step: string, data?: any) => {
         logger.info(`[${requestId}] ${step}`, data !== undefined ? { data } : undefined);
@@ -173,7 +177,7 @@ export async function submitOrder(params: {
     const drGreenResponse = await callDrGreenAPI("/dapp/orders", {
         ...apiOpts,
         method: "POST",
-        body: { clientId },
+        body: { clientId, ...(paymentFlow ? { paymentFlow } : {}) },
     });
     const orderData = (drGreenResponse as any)?.data || (drGreenResponse as any)?.order || drGreenResponse;
     log('STEP_2: Order SUCCESS', orderData);
