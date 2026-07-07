@@ -1,0 +1,35 @@
+# Cloudflare Worker — budstacks custom-domain reverse proxy.
+#
+# Deploy:  wrangler deploy            (from this dir, authenticated to the CF account)
+# Secret:  wrangler secret put CF_PROXY_SECRET   (MUST match the Next.js app env)
+#
+# Routes are per external tenant hostname and are added as each tenant is
+# provisioned (or uncommented below). Platform traffic (budstacks.io /
+# *.budstacks.io) is intentionally NOT routed here — it is DNS-proxied straight
+# to Railway and resolves via the Host header.
+
+name = "budstacks-custom-domain-proxy"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+workers_dev = false
+
+[vars]
+BASE_DOMAIN = "budstacks.io"
+# The Railway origin the Worker rewrites Host to. Set to the endpoint that serves
+# tenant storefronts — *.budstacks.io currently resolves here (verified via DNS).
+# If you cut over to a dedicated production Railway service, update this + redeploy.
+RAILWAY_ORIGIN = "dkzw32lt.up.railway.app"
+
+# Enable once budstacks.io is active on Cloudflare — one pair per tenant host:
+# [[routes]]
+# pattern = "lekkerweed.co.za/*"
+# zone_name = "budstacks.io"
+# [[routes]]
+# pattern = "www.lekkerweed.co.za/*"
+# zone_name = "budstacks.io"
+# [[routes]]
+# pattern = "healingbuds.co.za/*"
+# zone_name = "budstacks.io"
+# [[routes]]
+# pattern = "www.healingbuds.co.za/*"
+# zone_name = "budstacks.io"
