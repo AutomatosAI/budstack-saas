@@ -41,7 +41,19 @@ export default clerkMiddleware(async (auth, req) => {
   // the public route pattern. If auth runs first, bare paths like /products
   // would incorrectly require login on subdomain sites.
   const url = req.nextUrl;
-  const hostname = req.headers.get('host') || '';
+  // Cloudflare-for-SaaS custom domains: tenant hostnames are proxied by a CF
+  // Worker that rewrites Host → the Railway origin (Railway routes by Host and
+  // would otherwise 404), carrying the real hostname in X-Original-Host. Trust
+  // that header ONLY when the Worker's shared secret matches — otherwise a client
+  // hitting the Railway origin directly could spoof another tenant's domain.
+  // Falls back to the Host header for platform traffic + local dev.
+  const cfProxySecret = process.env.CF_PROXY_SECRET;
+  const forwardedHost = req.headers.get('x-original-host');
+  const proxySecret = req.headers.get('x-cf-proxy-secret');
+  const hostname =
+    cfProxySecret && forwardedHost && proxySecret === cfProxySecret
+      ? forwardedHost
+      : req.headers.get('host') || '';
   const pathname = url.pathname;
   const requestHeaders = new Headers(req.headers);
 
@@ -49,6 +61,8 @@ export default clerkMiddleware(async (auth, req) => {
   requestHeaders.delete('x-tenant-slug');
   requestHeaders.delete('x-tenant-subdomain');
   requestHeaders.delete('x-tenant-custom-domain');
+  // Never let the CF proxy secret propagate past middleware (logs / app / SSR).
+  requestHeaders.delete('x-cf-proxy-secret');
 
   // SECURITY (PRD-218, AC-2): one fresh nonce per request. Exposed to Server
   // Components / <ClerkProvider dynamic> via the x-nonce request header and
