@@ -5,7 +5,6 @@ import { prisma } from "@/lib/db";
 import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { apiError } from "@/lib/api-error";
-import { withDeleted } from "@/lib/soft-delete";
 
 /**
  * POST /api/tenant-admin/products/sync
@@ -68,37 +67,43 @@ export const POST = withTenantAuth(async (_request, { tenantId }) => {
         updatedAt: new Date(),
       };
 
-      // Upsert on the unique (slug, tenantId) constraint so each tenant
-      // gets their own copy of every strain and re-syncs are idempotent.
+      // Idempotent upsert on the (slug, tenantId) UNIQUE constraint.
       //
-      // findFirst (not findUnique w/ the slug_tenantId compound key): the
-      // tenant-scope extension rewrites findUnique→findFirst and injects the
-      // bound tenantId + deletedAt, and findFirst rejects the compound key.
+      // Why upsert (not findUnique/findFirst + create):
+      //  - findUnique w/ the slug_tenantId compound key crashes: the tenant-scope
+      //    extension rewrites findUnique→findFirst, which rejects the compound key.
+      //  - a plain findFirst has `deletedAt: null` injected, so a previously
+      //    SOFT-DELETED strain is invisible to it → create() collides on the
+      //    unique constraint (P2002).
+      //  upsert is NOT rewritten by the extension and matches on the real unique
+      //  index (including soft-deleted rows), reviving them (deletedAt: null)
+      //  instead of colliding. `tenantId` is injected into `create` by the
+      //  extension (also passed explicitly here).
       //
-      // withDeleted: the (slug, tenantId) UNIQUE constraint is NOT
-      // soft-delete-aware, so a previously soft-deleted product would slip past
-      // the default deletedAt:null read and make create() throw P2002. Look it
-      // up INCLUDING soft-deleted rows and revive it (deletedAt:null) on update.
-      const existing = await withDeleted(() =>
-        prisma.products.findFirst({ where: { slug } }),
-      );
+      // The existence check only drives the created/updated tally shown to the
+      // admin — the upsert is authoritative for the write. (A previously
+      // soft-deleted strain is hidden from this read and so counts as "created"
+      // even though the upsert revives it — a cosmetic tally detail only.)
+      const existing = await prisma.products.findFirst({
+        where: { slug },
+        select: { id: true },
+      });
+
+      await prisma.products.upsert({
+        where: { slug_tenantId: { slug, tenantId } },
+        update: { ...data, deletedAt: null },
+        create: {
+          id: randomUUID(),
+          tenantId,
+          ...data,
+          displayOrder: created,
+          createdAt: new Date(),
+        },
+      });
 
       if (existing) {
-        await prisma.products.update({
-          where: { id: existing.id },
-          data: { ...data, deletedAt: null },
-        });
         updated++;
       } else {
-        await prisma.products.create({
-          data: {
-            id: randomUUID(),
-            tenantId,
-            ...data,
-            displayOrder: created,
-            createdAt: new Date(),
-          },
-        });
         created++;
       }
     }
