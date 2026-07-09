@@ -1029,6 +1029,42 @@ html {
   min-height: 100vh;
 }
 
+/* ============================================================
+   Dark token scope for Radix overlays.
+   Dialog / AlertDialog / Popover render in a PORTAL attached to
+   <body>, OUTSIDE .budstacks-theme — so they fall back to the light
+   :root shadcn tokens and render white with unreadable light text.
+   .bs-overlay re-applies ONLY the admin dark token overrides (no
+   background/min-height/font side-effects) so portaled overlay content
+   renders in the admin dark theme. Applied on the overlay Content in
+   components/ui/{dialog,alert-dialog,popover}.tsx.
+   ============================================================ */
+.bs-overlay {
+  --background: 200 9% 4%;
+  --foreground: 90 8% 96%;
+  --card: 197 11% 9%;
+  --card-foreground: 90 8% 96%;
+  --popover: 197 11% 9%;
+  --popover-foreground: 90 8% 96%;
+  --primary: 137 64% 51%;
+  --primary-foreground: 200 16% 4%;
+  --secondary: 195 9% 12%;
+  --secondary-foreground: 90 8% 96%;
+  --muted: 195 9% 12%;
+  --muted-foreground: 165 4% 72%;
+  --accent: 195 9% 12%;
+  --accent-foreground: 90 8% 96%;
+  --destructive: 0 75% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 197 9% 16%;
+  --input: 197 9% 16%;
+  --ring: 137 64% 51%;
+  /* Default text to the (now light) foreground so overlay content that does not
+     set its own color inherits readable light text instead of the body's dark
+     :root color (avoids dark-on-dark). Children with explicit text-* win. */
+  color: hsl(var(--foreground));
+}
+
 /* Override legacy utility classes inside the dark scope — REMOVED in US-009.
    Admin pages must now use bs-* tokens directly (see @layer components below).
    The .section-badge class is kept (used on the homepage) — see below. */
