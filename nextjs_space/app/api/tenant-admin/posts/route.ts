@@ -32,14 +32,15 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
     // Generate base slug
     let slug = slugify(validatedData.title);
 
-    // Ensure uniqueness within tenant
+    // Ensure uniqueness within tenant. findFirst (not findUnique w/ the
+    // slug_tenantId compound key): the tenant-scope extension rewrites
+    // findUnique→findFirst and injects the bound tenantId, and findFirst
+    // rejects the compound key (would throw PrismaClientValidationError).
     let uniqueSlug = slug;
     let counter = 1;
     while (
-      await prisma.posts.findUnique({
-        where: {
-          slug_tenantId: { slug: uniqueSlug, tenantId: tenantId },
-        },
+      await prisma.posts.findFirst({
+        where: { slug: uniqueSlug },
       })
     ) {
       uniqueSlug = `${slug}-${counter}`;

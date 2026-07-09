@@ -2,6 +2,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { ERASURE_EMAIL_DOMAIN } from "@/lib/gdpr/erasure";
 import { Users, UserCheck, UserPlus } from "lucide-react";
 import { StatCard } from "@/components/admin/shared";
 import { CustomersTable } from "./customers-table";
@@ -79,10 +80,19 @@ export default async function CustomersListPage({
       ? sortOrderParam
       : "asc";
 
+  // Exclude GDPR-erased (anonymized) customers from every count/list below.
+  // Erasure nulls PII and rewrites the email to the deletion marker but keeps
+  // the row for order-history integrity — so an erased customer still matches
+  // { role: PATIENT, tenantId } and would otherwise linger as "Deleted User".
+  const notErased: Prisma.usersWhereInput = {
+    NOT: { email: { endsWith: `@${ERASURE_EMAIL_DOMAIN}` } },
+  };
+
   // Build Prisma where clause for server-side filtering
   const whereClause: Prisma.usersWhereInput = {
     role: "PATIENT",
     ...(tenantId && { tenantId }),
+    ...notErased,
   };
 
   // Apply search filter (case-insensitive across multiple fields)
@@ -132,6 +142,7 @@ export default async function CustomersListPage({
         where: {
           role: "PATIENT",
           ...(tenantId && { tenantId }),
+          ...notErased,
         },
       }),
       // Count recent sign-ups (last 30 days)
@@ -139,6 +150,7 @@ export default async function CustomersListPage({
         where: {
           role: "PATIENT",
           ...(tenantId && { tenantId }),
+          ...notErased,
           createdAt: { gte: thirtyDaysAgo },
         },
       }),

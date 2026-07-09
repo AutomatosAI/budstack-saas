@@ -69,8 +69,11 @@ export const POST = withTenantAuth(async (_request, { tenantId }) => {
 
       // Upsert on the unique (slug, tenantId) constraint so each tenant
       // gets their own copy of every strain and re-syncs are idempotent.
-      const existing = await prisma.products.findUnique({
-        where: { slug_tenantId: { slug, tenantId } },
+      // NB: findFirst (not findUnique w/ the slug_tenantId compound key) — the
+      // tenant-scope extension rewrites findUnique→findFirst and injects the
+      // bound tenantId + deletedAt, and findFirst rejects the compound key.
+      const existing = await prisma.products.findFirst({
+        where: { slug },
       });
 
       if (existing) {

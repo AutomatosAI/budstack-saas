@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
+import { ERASURE_EMAIL_DOMAIN } from "@/lib/gdpr/erasure";
 
 /**
  * GET /api/tenant-admin/customers
@@ -16,6 +17,9 @@ export const GET = withTenantAuth(async (request: NextRequest, { tenantId }) => 
   const where: any = {
     role: "PATIENT",
     tenantId,
+    // Hide GDPR-erased (anonymized) customers — the row is retained for order
+    // history but must not surface in the active customer list.
+    NOT: { email: { endsWith: `@${ERASURE_EMAIL_DOMAIN}` } },
   };
 
   if (search) {
