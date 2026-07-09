@@ -318,6 +318,22 @@ The review identified ~14 quick wins. They are absorbed into PRDs as follows:
 
 ---
 
+## Addendum — 2026-07-10 CX review additions (R6)
+
+The 2026-07-10 CX/enterprise-readiness review (triggered by the first hands-on new-tenant setup, 2026-07-09) added a second wave of remediation PRDs. Unlike the 2026-05-29 suite these are **customer-experience-first, security explicitly out of scope** (Gerard's framing). Numbering: **219–224 reserved** for this wave (2xx = remediation); its growth counterparts live at top level (`../PRD-305`…`PRD-307` reserved).
+
+### Phase R6 — CX Review 2026-07-10
+
+| PRD | Title | Severity | Effort | Owner |
+|---|---|---|---|---|
+| [**219**](./PRD-219-admin-fulfilment-bug-cluster.md) | Admin & Storefront Fulfilment Bug Cluster (Prisma relation names) — webhooks page dead, customer order-detail 500 + dead PAID-sync. Scope already reduced by PR #187 (admin order-status PATCH, merged 2026-07-09) | HIGH | 0.5 day | Gerard + Claude |
+| [**220**](./PRD-220-silent-failure-cluster.md) | Silent-Failure Cluster: email pipeline (BullMQ worker deployment unverified — nothing in repo starts it), ID-upload swallow, image signed-URL persistence/expiry | HIGH | 2–3 days | Gerard + Claude |
+| 221–224 | _Reserved_ — remaining items from the 2026-07-10 review's 10-PRD list (delivered in chat; to be filed as they are re-derived/prioritised) | — | — | — |
+
+Related decisions recorded 2026-07-10 (billing): **PRD-303 stays** (plans/gating) but its schema must be **provider-independent (de-Striped)**; a new top-level **PRD-307** owns the payment-provider integration behind a swappable interface — cannabis-adjacency rules out merchant-of-record providers (Lemon Squeezy/Paddle prohibit), so a high-risk merchant account path is being evaluated (PayCloud question open with Gerard).
+
+---
+
 ## Changelog
 
 | Version | Date | Author | Changes |
@@ -326,3 +342,4 @@ The review identified ~14 quick wins. They are absorbed into PRDs as follows:
 | 0.2 | 2026-05-29 | Claude (Opus 4.8 verification pass) | Pre-flight code verification of every checkable claim. Down-rated PRD-200 (CRITICAL→HIGH) and PRD-201 (CRITICAL→MEDIUM); confirmed PRD-202 CRITICAL (Prisma `$use` middleware depends on the leaky `enterWith()`); elevated PHI-in-logs + outbound webhook SSRF to HIGH; corrected monster-file count (5→14); retracted the false "HMAC" praise (it is a plain SHA-256). Added "Pre-flight verification" section. Re-ordered top-findings so the one true critical leads. |
 | 0.3 | 2026-05-29 | Claude (Opus 4.8) | **PRD-200 split + status reconciled with shipped code.** Added **PRD-218** (framework upgrade + CSP nonces, AC-1/AC-1a/AC-8 lifted from PRD-200) to the R1 index + phasing table. Re-pointed findings #2 (Next.js) and CSP to PRD-218. Corrected the scrambled quick-wins AC numbers (PRD-200 secret-purge AC-1→AC-2/2a, Next AC-2→PRD-218 AC-1, legacyCss AC-5→AC-3, email AC-6→AC-4, apiError AC-7→AC-5) and flagged which are shipped. Noted PRD-217 still reserved for performance & build. |
 | 0.3 | 2026-05-29 | Claude (Opus 4.8 reconciliation) | Count/path reconciliation across index + PRDs: `console.*` 437→839 repo-wide (~450 in app/lib/components, 384 in `scripts/`); `tenant.settings as any` 27→35 (across 34 lines); replaced the unverifiable "19 routes hand-roll `FAILURE_STATUS`" (no such symbol) with the real "33 of 107 routes import `lib/api-error.ts`; ~85 hand-roll `NextResponse.json({ error })`"; fixed all `lib/api-response.ts`→`lib/api-error.ts` (module never existed); refined `getCurrentUser()` "email only"→unscoped `findFirst({where:{email}})` fallback (`lib/resolve-tenant-id.ts:37-40`); fixed PRD-211 decrypt fail-open line `:134`→`:135`. Spot-verified PRD-207/211 code anchors against source (all line-accurate). |
+| 0.4 | 2026-07-10 | Claude (with Gerard) | Added **R6 addendum** — 2026-07-10 CX review wave: PRD-219 (fulfilment relation-name bugs; scope net of merged PR #187) + PRD-220 (silent-failure cluster: email worker, ID-upload swallow, image URLs); 221–224 reserved. Recorded the billing split decision (PRD-303 de-Striped, PRD-307 owns provider integration). |
