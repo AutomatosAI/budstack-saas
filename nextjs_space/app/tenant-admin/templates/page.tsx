@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { requirePagePermission } from "@/lib/permissions/require-page-permission";
 import { getFileUrl } from "@/lib/storage/s3";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,6 +35,7 @@ async function signUrl(key: string | null | undefined): Promise<string | null> {
 }
 
 export default async function TemplatesPage() {
+  await requirePagePermission("canViewTemplates");
   const user = await currentUser();
 
   if (

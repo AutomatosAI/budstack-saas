@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { requirePagePermission } from "@/lib/permissions/require-page-permission";
 import { Prisma } from "@prisma/client";
 import { ERASURE_EMAIL_DOMAIN } from "@/lib/gdpr/erasure";
 import { Users, UserCheck, UserPlus } from "lucide-react";
@@ -22,6 +23,7 @@ interface CustomersPageProps {
 export default async function CustomersListPage({
   searchParams,
 }: CustomersPageProps) {
+  await requirePagePermission("canViewCustomers");
   const user = await currentUser();
 
   if (

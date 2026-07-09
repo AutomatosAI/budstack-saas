@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { requirePagePermission } from "@/lib/permissions/require-page-permission";
 import { Prisma } from "@prisma/client";
 import { ProductsTable } from "./products-table";
 import { SyncButton } from "./sync-button";
@@ -28,6 +29,7 @@ interface ProductsPageProps {
 export default async function ProductsPage({
   searchParams,
 }: ProductsPageProps) {
+  await requirePagePermission("canViewProducts");
   const user = await currentUser();
 
   if (
