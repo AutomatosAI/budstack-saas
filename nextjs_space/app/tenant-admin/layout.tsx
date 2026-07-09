@@ -8,6 +8,7 @@ import crypto from "crypto";
 import { logger } from "@/lib/logger";
 
 import { HeaderProfile } from "@/components/admin/HeaderProfile";
+import { resolveUserPermissions } from "@/lib/permissions/current-user-permissions";
 
 export default async function TenantAdminLayout({
   children,
@@ -130,12 +131,30 @@ export default async function TenantAdminLayout({
   // TODO: Replace with real notifications from DB
   const mockNotifications: Array<{ id: string; type: "SYSTEM_ALERT"; title: string; message: string; timestamp: Date; isRead: boolean }> = [];
 
+  // PRD-301: resolve the admin's permissions to filter the sidebar nav. Fail-open
+  // to a full nav on error — the pages/APIs enforce actual access.
+  let sidebarPermissions;
+  try {
+    sidebarPermissions = (
+      await resolveUserPermissions(
+        { role: String(user.publicMetadata.role), email },
+        localUser.tenants.id,
+      )
+    ).permissions;
+  } catch (err) {
+    logger.error("[tenant-admin] permission resolution failed", {
+      clerkId: user.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   return (
     <div data-surface="admin" data-tier="tenant" className="budstacks-theme flex min-h-screen canvas-bg">
       <TenantAdminSidebar
         userName={`${user.firstName || ""} ${user.lastName || ""}`.trim() || "Tenant Admin"}
         userEmail={user.emailAddresses[0]?.emailAddress || ""}
         tenantName={localUser.tenants.businessName || "My Store"}
+        permissions={sidebarPermissions}
       />
       <AccessibleAdminLayout theme="tenant-admin">
         {/* Top bar — Budstacks Admin DS: bg-bs-bg, hairline border, 56px */}
