@@ -63,6 +63,8 @@ const tenantScopedModels = new Set([
   'tenant_templates',
   'users',
   'webhooks',
+  'role_permissions',
+  'team_invitations',
 ]);
 
 const tenantScopedModelsWithNullAccess = new Set([
