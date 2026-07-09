@@ -23,8 +23,11 @@ export interface RoleWithPermissions {
  * All 5 preset roles with their CURRENT permissions (the tenant's stored matrix
  * row, or the seeded defaults when a row doesn't exist). Tenant-scoped read.
  */
+/** Stored matrix row shape (prisma is `any`, so annotate to keep strict tsc happy). */
+type StoredRoleRow = { role: string } & Partial<Record<PermissionKey, boolean>>;
+
 export async function listRolesWithPermissions(): Promise<RoleWithPermissions[]> {
-  const rows = await prisma.role_permissions.findMany();
+  const rows: StoredRoleRow[] = await prisma.role_permissions.findMany();
   const byRole = new Map(rows.map((r) => [r.role, r]));
   return TEAM_ROLES.map((role) => {
     if (role === "admin") {
