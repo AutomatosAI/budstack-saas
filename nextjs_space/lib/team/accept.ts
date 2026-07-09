@@ -141,19 +141,34 @@ export async function acceptInvitation(input: AcceptInvitationInput) {
       });
     }
 
+    // Point the Clerk user at this tenant BEFORE consuming the invitation:
+    // getCurrentUser derives the role from Clerk publicMetadata, so if this write
+    // fails we must leave the invite pending (retryable) rather than burn the
+    // token and strand a user who can't authenticate as TENANT_ADMIN. The org id
+    // is included when the tenant has one; otherwise the email fallback in the
+    // tenant resolver finds the users row we just wrote.
+    const clerkOrgId = clerkOrgIdOf(tenant.settings);
+    try {
+      const client = await clerkClient();
+      await client.users.updateUserMetadata(clerkUserId, {
+        publicMetadata: {
+          role: "TENANT_ADMIN",
+          ...(clerkOrgId ? { tenantId: clerkOrgId } : {}),
+        },
+      });
+    } catch (err) {
+      console.error("[team] Clerk metadata write failed during accept:", err);
+      throw new ApiError(
+        "We couldn't finish setting up your account. Please try the link again.",
+        502,
+      );
+    }
+
+    // Only now consume the invitation — everything above is idempotent on retry.
     await prisma.team_invitations.update({
       where: { id: invitation.id },
       data: { status: "accepted", acceptedAt: new Date() },
     });
-
-    // Point the Clerk user at this tenant's org so getCurrentUser resolves them.
-    const clerkOrgId = clerkOrgIdOf(tenant.settings);
-    if (clerkOrgId) {
-      const client = await clerkClient();
-      await client.users.updateUserMetadata(clerkUserId, {
-        publicMetadata: { role: "TENANT_ADMIN", tenantId: clerkOrgId },
-      });
-    }
 
     return { tenantId, role };
   });

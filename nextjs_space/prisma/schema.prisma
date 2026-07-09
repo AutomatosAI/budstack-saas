@@ -612,7 +612,7 @@ model team_invitations {
   email           String
   role            String // admin | editor | customer_support | web_designer | manager
   invitationToken String    @unique
-  invitedBy       String // users.id of the admin who sent it (matches audit_logs.userId convention)
+  invitedBy       String // Clerk user id of the inviting admin (matches audit_logs.userId convention)
   status          String    @default("pending") // pending | accepted | expired | revoked
   acceptedAt      DateTime?
   expiresAt       DateTime // set by app at creation (sentAt + 7 days)

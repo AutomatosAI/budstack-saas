@@ -10,9 +10,20 @@ import { sendTeamInviteEmail } from "@/lib/team/invite-email";
 
 export const POST = requirePermission(
   "canInviteTeamMembers",
-  async (req, { user, tenantId }) => {
+  async (req, { user, tenantId, teamRole }) => {
     try {
       const { email, role } = await parseJsonBody(req, inviteSchema);
+
+      // Privilege cap: only an effective admin may mint another admin. (teamRole
+      // null = legacy pre-teams admin; SUPER_ADMIN resolves to teamRole "admin".)
+      const callerIsAdmin =
+        user.role === "SUPER_ADMIN" || teamRole === "admin" || teamRole === null;
+      if (role === "admin" && !callerIsAdmin) {
+        return NextResponse.json(
+          { error: "Only admins can invite new admins." },
+          { status: 403 },
+        );
+      }
 
       const invitation = await createOrRenewInvitation({
         tenantId,

@@ -26,13 +26,17 @@ export async function resolveUserPermissions(
     return { teamRole: "admin", permissions: resolvePermissions({ role: "SUPER_ADMIN" }) };
   }
 
+  // Fail CLOSED when the subject has no resolvable email — we can't look up their
+  // teamRole, and the legacy null-teamRole default would otherwise grant full access.
+  if (!user.email) {
+    return { teamRole: null, permissions: ALL_FALSE };
+  }
+
   return runWithTenantContextAsync(tenantId, async () => {
-    const dbUser = user.email
-      ? await prisma.users.findFirst({
-          where: { email: user.email },
-          select: { teamRole: true },
-        })
-      : null;
+    const dbUser = await prisma.users.findFirst({
+      where: { email: user.email },
+      select: { teamRole: true },
+    });
 
     const teamRole = dbUser?.teamRole ?? null;
 

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { clerkClient } from "@clerk/nextjs/server";
 import { ApiError } from "@/lib/api-error";
+import { ERASURE_EMAIL_DOMAIN } from "@/lib/gdpr/erasure";
 
 export interface TeamMember {
   id: string;
@@ -12,10 +13,17 @@ export interface TeamMember {
   clerkUserId: string | null;
 }
 
-/** Staff (role = TENANT_ADMIN) for the current bound tenant, oldest first. */
+/**
+ * Staff (role = TENANT_ADMIN) for the current bound tenant, oldest first.
+ * GDPR-erased rows (anonymized to the erasure domain) are excluded — same rule
+ * as the customers list.
+ */
 export function listMembers(): Promise<TeamMember[]> {
   return prisma.users.findMany({
-    where: { role: "TENANT_ADMIN" },
+    where: {
+      role: "TENANT_ADMIN",
+      NOT: { email: { endsWith: ERASURE_EMAIL_DOMAIN } },
+    },
     select: {
       id: true,
       email: true,
