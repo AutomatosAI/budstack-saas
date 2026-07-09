@@ -19,11 +19,13 @@ model audit_logs {
   metadata   Json?
   ipAddress  String?
   userAgent  String?
+  impersonationSessionId String? // PRD-302: set when the action was performed inside a super-admin impersonation session
   createdAt  DateTime @default(now())
 
   @@index([action, createdAt])
   @@index([tenantId, createdAt])
   @@index([userId, createdAt])
+  @@index([impersonationSessionId]) // PRD-302: "view everything support did in this session"
 }
 
 model email_logs {
@@ -472,6 +474,8 @@ model tenants {
   authoredTemplates      templates[]               @relation("AuthoredTemplates")
   marketplaceSubmissions marketplace_submissions[]
   users                  users[]
+  role_permissions       role_permissions[]
+  team_invitations       team_invitations[]
 
   @@index([deletedAt]) // PRD-208 soft-delete: keep "not-deleted" filters fast
 }
@@ -542,6 +546,7 @@ model users {
   password            String
   name                String?
   role                Role                      @default(PATIENT)
+  teamRole            String? // PRD-301: team permission-set selector (admin|editor|customer_support|web_designer|manager). NULL => legacy full-access admin (pre-teams). Only meaningful for TENANT_ADMIN rows.
   tenantId            String? // PRD-208 backfill target; nullable today => global-unique email is load-bearing
   drGreenClientId     String?
   createdAt           DateTime                  @default(now())
@@ -561,6 +566,62 @@ model users {
   tenants             tenants?                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId]) // PRD-208 AC-4: tenant-scoped user lookups ($use auto-scopes by tenantId)
+}
+
+// PRD-301: per-tenant permission matrix. One row per (tenant, preset role); each
+// boolean gates a feature. Seeded with sensible defaults at tenant creation and
+// editable by tenant admins — except the `admin` role, which is always all-true.
+model role_permissions {
+  id                   String   @id @default(uuid())
+  tenantId             String
+  role                 String // admin | editor | customer_support | web_designer | manager
+  canViewCustomers     Boolean  @default(false)
+  canEditCustomers     Boolean  @default(false)
+  canExportCustomers   Boolean  @default(false)
+  canDeleteCustomer    Boolean  @default(false)
+  canViewOrders        Boolean  @default(false)
+  canEditOrders        Boolean  @default(false)
+  canViewProducts      Boolean  @default(false)
+  canEditProducts      Boolean  @default(false)
+  canDeleteProducts    Boolean  @default(false)
+  canViewAnalytics     Boolean  @default(false)
+  canEditSettings      Boolean  @default(false)
+  canManageBranding    Boolean  @default(false)
+  canInviteTeamMembers Boolean  @default(false)
+  canDeleteTeamMembers Boolean  @default(false)
+  canViewAuditLogs     Boolean  @default(false)
+  canViewCRM           Boolean  @default(false)
+  canViewEmails        Boolean  @default(false)
+  canEditEmails        Boolean  @default(false)
+  canViewTemplates     Boolean  @default(false)
+  canEditTemplates     Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  tenants              tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, role])
+  @@index([tenantId])
+}
+
+// PRD-301: team member invitations. Email + secure token; Clerk handles the
+// eventual sign-up, our accept endpoint links the new users row to the tenant.
+// One row per (tenant, email) — re-invites upsert this row (reset token/status/expiry).
+model team_invitations {
+  id              String    @id @default(uuid())
+  tenantId        String
+  email           String
+  role            String // admin | editor | customer_support | web_designer | manager
+  invitationToken String    @unique
+  invitedBy       String // Clerk user id of the inviting admin (matches audit_logs.userId convention)
+  status          String    @default("pending") // pending | accepted | expired | revoked
+  acceptedAt      DateTime?
+  expiresAt       DateTime // set by app at creation (sentAt + 7 days)
+  sentAt          DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  tenants         tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId, status])
 }
 
 model webhook_deliveries {

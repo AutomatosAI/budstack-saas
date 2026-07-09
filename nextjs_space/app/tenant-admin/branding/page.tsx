@@ -1,6 +1,7 @@
 import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
+import { requirePagePermission } from '@/lib/permissions/require-page-permission';
 import BrandingForm from './branding-form';
 
 import { getJsonFromS3, getTextFromS3 } from '@/lib/storage/s3';
@@ -10,6 +11,7 @@ import { logger } from '@/lib/logger';
 export const dynamic = 'force-dynamic';
 
 export default async function BrandingPage({ searchParams }: { searchParams: { templateId?: string } }) {
+  await requirePagePermission("canManageBranding");
   const user = await currentUser();
 
   if (!user || (user.publicMetadata.role !== 'TENANT_ADMIN' && user.publicMetadata.role !== 'SUPER_ADMIN')) {

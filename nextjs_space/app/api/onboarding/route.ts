@@ -8,6 +8,7 @@ import { z } from "zod";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { isReservedSubdomain, isValidSubdomain } from "@/lib/reserved-subdomains";
 import { createAuditLog } from "@/lib/audit-log";
+import { seedDefaultRolePermissions } from "@/lib/permissions/seed";
 import {
   DPA_ACCEPTED_AUDIT_ACTION,
   dpaAcceptanceSchema,
@@ -270,6 +271,18 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // PRD-301: seed this tenant's default team-role permission matrix. Best-effort —
+      // resolvePermissions() falls back to DEFAULT_PERMISSIONS for any un-seeded role,
+      // so a failure here must NOT roll back onboarding.
+      try {
+        await seedDefaultRolePermissions(tenant.id);
+      } catch (err) {
+        console.error(
+          "[onboarding] Failed to seed role permissions (defaults still apply):",
+          err,
+        );
+      }
+
       // Copy ALL base template files to tenant's own S3 path
       const templateSlug = dbTemplate.slug || dbTemplate.id;
       const sourceS3Prefix = `templates/${templateSlug}/`;
@@ -346,6 +359,7 @@ export async function POST(req: NextRequest) {
         update: {
           name: businessName,
           role: "TENANT_ADMIN",
+          teamRole: "admin", // PRD-301: tenant owner is the always-all-permissions admin
           tenantId: tenant.id,
           updatedAt: new Date(),
         },
@@ -355,6 +369,7 @@ export async function POST(req: NextRequest) {
           password: "CLERK_MANAGED_ACCOUNT",
           name: businessName,
           role: "TENANT_ADMIN",
+          teamRole: "admin", // PRD-301: tenant owner is the always-all-permissions admin
           tenantId: tenant.id,
           updatedAt: new Date(),
         }

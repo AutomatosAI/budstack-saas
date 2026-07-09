@@ -15,8 +15,11 @@ import {
   Cookie,
   Mail,
   Search,
+  UsersRound,
 } from "lucide-react";
 import { AdminSidebar, type AdminMenuItem } from "./AdminSidebar";
+import { NAV_ITEM_PERMISSIONS } from "@/lib/permissions/nav-permissions";
+import type { PermissionSet } from "@/lib/permissions/permission-keys";
 
 /**
  * Menu items for the tenant admin sidebar
@@ -93,6 +96,12 @@ const tenantAdminMenuItems: AdminMenuItem[] = [
     href: "/tenant-admin/audit-logs",
   },
   {
+    id: "team",
+    label: "Team",
+    icon: UsersRound,
+    href: "/tenant-admin/team",
+  },
+  {
     id: "settings",
     label: "Settings",
     icon: Settings,
@@ -110,6 +119,8 @@ interface TenantAdminSidebarProps {
   userName: string;
   userEmail: string;
   tenantName: string;
+  /** Resolved permissions; when provided, nav items are filtered by NAV_ITEM_PERMISSIONS. */
+  permissions?: PermissionSet;
 }
 
 /**
@@ -128,12 +139,20 @@ export function TenantAdminSidebar({
   userName,
   userEmail,
   tenantName,
+  permissions,
 }: TenantAdminSidebarProps) {
+  const menuItems = permissions
+    ? tenantAdminMenuItems.filter((item) => {
+        const required = NAV_ITEM_PERMISSIONS[item.id];
+        return !required || permissions[required] === true;
+      })
+    : tenantAdminMenuItems;
+
   return (
     <AdminSidebar
       theme="tenant-admin"
       accent="green"
-      menuItems={tenantAdminMenuItems}
+      menuItems={menuItems}
       userName={userName}
       userEmail={userEmail}
       headerBadge={tenantName}

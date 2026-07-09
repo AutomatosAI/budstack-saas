@@ -138,6 +138,17 @@ export const AUDIT_ACTIONS = {
   CUSTOMER_DELETED_GDPR: "customer.deleted_gdpr",
   ACCOUNT_DATA_EXPORTED: "account.data_exported",
   ACCOUNT_DELETED_GDPR_SELF: "account.deleted_gdpr_self",
+
+  // Team Management (PRD-301)
+  TEAM: {
+    MEMBER_INVITED: "team.member_invited",
+    MEMBER_REMOVED: "team.member_removed",
+    INVITATION_ACCEPTED: "team.invitation_accepted",
+    INVITATION_RESENT: "team.invitation_resent",
+    INVITATION_REVOKED: "team.invitation_revoked",
+    ROLE_PERMISSIONS_UPDATED: "team.role_permissions_updated",
+    AUDIT_RETENTION_UPDATED: "team.audit_retention_updated",
+  },
 } as const;
 
 /**

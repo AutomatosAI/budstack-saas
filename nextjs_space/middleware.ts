@@ -27,6 +27,8 @@ const isPublicRoute = createRouteMatcher([
   "/terms", // Terms of service
   "/privacy", // Privacy policy
   "/cookies", // Cookie policy
+  "/accept-invite(.*)", // PRD-301 team invitation acceptance (logged-out invitees)
+  "/api/team/invitation(.*)", // PRD-301 public token-gated invitation preview
 ]);
 
 // Define routes that require Tenant Context but might be public (like Storefront)
