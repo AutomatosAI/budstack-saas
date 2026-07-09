@@ -5,6 +5,25 @@ import type { TeamRole } from "@/lib/permissions/preset-roles";
 
 export const INVITATION_TTL_DAYS = 7;
 
+/**
+ * Shape of a team_invitations row. Explicit because `prisma` is exported as
+ * `any` (lib/db.ts) — without annotations, callers' `.map((i) => …)` params
+ * become implicit-any and fail the strict build.
+ */
+export interface TeamInvitationRecord {
+  id: string;
+  tenantId: string;
+  email: string;
+  role: string;
+  invitationToken: string;
+  invitedBy: string;
+  status: string;
+  acceptedAt: Date | null;
+  expiresAt: Date;
+  sentAt: Date;
+  createdAt: Date;
+}
+
 /** Cryptographically-strong, URL-safe invitation token. */
 export function generateInvitationToken(): string {
   return crypto.randomBytes(32).toString("base64url");
@@ -26,7 +45,9 @@ export interface CreateInvitationInput {
  * admin's bound tenant context. Uses find-then-create/update (NOT a compound-key
  * upsert) to avoid the tenant-scope $extends compound-`@@unique` rewrite trap.
  */
-export async function createOrRenewInvitation(input: CreateInvitationInput) {
+export async function createOrRenewInvitation(
+  input: CreateInvitationInput,
+): Promise<TeamInvitationRecord> {
   const email = input.email.trim().toLowerCase();
   const { tenantId, role, invitedBy } = input;
 
@@ -69,7 +90,7 @@ export async function createOrRenewInvitation(input: CreateInvitationInput) {
 }
 
 /** Pending invitations for the current (bound) tenant, newest first. */
-export function listPendingInvitations() {
+export function listPendingInvitations(): Promise<TeamInvitationRecord[]> {
   return prisma.team_invitations.findMany({
     where: { status: "pending" },
     orderBy: { sentAt: "desc" },
@@ -77,14 +98,14 @@ export function listPendingInvitations() {
 }
 
 /** Fetch one invitation (scoped) by id, or throw 404. */
-async function requireInvitation(id: string) {
+async function requireInvitation(id: string): Promise<TeamInvitationRecord> {
   const inv = await prisma.team_invitations.findFirst({ where: { id } });
   if (!inv) throw new ApiError("Invitation not found.", 404);
   return inv;
 }
 
 /** Re-issue a fresh token + expiry (for "resend"). Returns the updated row. */
-export async function renewInvitation(id: string) {
+export async function renewInvitation(id: string): Promise<TeamInvitationRecord> {
   const inv = await requireInvitation(id);
   return prisma.team_invitations.update({
     where: { id: inv.id },
@@ -99,7 +120,7 @@ export async function renewInvitation(id: string) {
 }
 
 /** Mark an invitation revoked (keeps the row for audit). */
-export async function revokeInvitation(id: string) {
+export async function revokeInvitation(id: string): Promise<TeamInvitationRecord> {
   const inv = await requireInvitation(id);
   return prisma.team_invitations.update({
     where: { id: inv.id },
