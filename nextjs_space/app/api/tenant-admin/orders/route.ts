@@ -234,13 +234,16 @@ export const PATCH = withTenantAuth(async (req, { tenantId }) => {
       });
     }
 
-    // Update order status
+    // Update order status. NB: the `orders` relations are `order_items` and
+    // `users` — NOT `items`/`user` (those are the *transformed* names the GET
+    // handler exposes). Using the wrong names in `include` throws
+    // PrismaClientValidationError ("Unknown field `items`") → 500.
     const updatedOrder = await prisma.orders.update({
       where: { id: orderId },
       data: { status },
       include: {
-        items: true,
-        user: {
+        order_items: true,
+        users: {
           select: {
             name: true,
             email: true,
@@ -249,7 +252,11 @@ export const PATCH = withTenantAuth(async (req, { tenantId }) => {
       },
     });
 
-    return NextResponse.json({ order: updatedOrder });
+    // Match the GET response shape (order_items → items, users → user).
+    const { order_items, users, ...orderRest } = updatedOrder as any;
+    return NextResponse.json({
+      order: { ...orderRest, items: order_items, user: users },
+    });
   } catch (error) {
     return apiError(error, {
       route: "PATCH /api/tenant-admin/orders",

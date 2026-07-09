@@ -37,7 +37,11 @@ export default function CustomerActions({ customer }: CustomerActionsProps) {
       if (!res.ok) throw new Error("Failed to delete customer");
 
       toast.success("Customer deleted successfully (GDPR compliant)");
+      // Navigate back to the list AND invalidate the RSC router cache so the
+      // (now anonymized) customer is re-fetched and filtered out — without
+      // refresh the client shows the stale cached list and the row lingers.
       router.push("/tenant-admin/customers");
+      router.refresh();
     } catch (error) {
       toast.error("Failed to delete customer");
       console.error(error);
