@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { apiError } from "@/lib/api-error";
+import { withDeleted } from "@/lib/soft-delete";
 
 /**
  * POST /api/tenant-admin/products/sync
@@ -69,15 +70,24 @@ export const POST = withTenantAuth(async (_request, { tenantId }) => {
 
       // Upsert on the unique (slug, tenantId) constraint so each tenant
       // gets their own copy of every strain and re-syncs are idempotent.
-      // NB: findFirst (not findUnique w/ the slug_tenantId compound key) — the
+      //
+      // findFirst (not findUnique w/ the slug_tenantId compound key): the
       // tenant-scope extension rewrites findUnique→findFirst and injects the
       // bound tenantId + deletedAt, and findFirst rejects the compound key.
-      const existing = await prisma.products.findFirst({
-        where: { slug },
-      });
+      //
+      // withDeleted: the (slug, tenantId) UNIQUE constraint is NOT
+      // soft-delete-aware, so a previously soft-deleted product would slip past
+      // the default deletedAt:null read and make create() throw P2002. Look it
+      // up INCLUDING soft-deleted rows and revive it (deletedAt:null) on update.
+      const existing = await withDeleted(() =>
+        prisma.products.findFirst({ where: { slug } }),
+      );
 
       if (existing) {
-        await prisma.products.update({ where: { id: existing.id }, data });
+        await prisma.products.update({
+          where: { id: existing.id },
+          data: { ...data, deletedAt: null },
+        });
         updated++;
       } else {
         await prisma.products.create({
