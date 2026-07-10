@@ -9,7 +9,7 @@ import { logger } from "@/lib/logger";
 export type KycStatus = {
     isLoggedIn: boolean;
     kycVerified: boolean; // Computed from status==ACTIVE && verified==true
-    status: string; // 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'NO_ID' | 'ERROR' | 'GUEST' | 'NO_TENANT' | 'API_ERROR'
+    status: string; // 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'NO_ID' | 'REJECTED' | 'ERROR' | 'GUEST' | 'NO_TENANT' | 'API_ERROR'
     message?: string;
     // PRD-220 Part B — inline ID-document upload outcome for ID-upload
     // tenants: 'UPLOADED' | 'UPLOAD_FAILED' | null. Only meaningful while
@@ -151,6 +151,20 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                 adminApproval: client.adminApproval,
                 verified: isVerified,
             });
+
+            // A rejected ID/KYC submission — surface it distinctly so the
+            // dashboard can show the reason + a re-upload CTA rather than a
+            // misleading "being reviewed" pending banner. The client simply
+            // re-uploads a valid ID; they do NOT need to create a new account.
+            if (!isVerified && client.adminApproval === "REJECTED") {
+                return {
+                    isLoggedIn: true,
+                    kycVerified: false,
+                    status: "REJECTED",
+                    message: client.rejectionNote || undefined,
+                    idDocumentStatus,
+                };
+            }
 
             // Persist verified status locally so we never need to check again.
             //

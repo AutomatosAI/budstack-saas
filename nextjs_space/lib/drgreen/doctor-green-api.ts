@@ -182,6 +182,7 @@ export interface DoctorGreenClient {
   isKYCVerified: boolean;
   verifiedAt?: string;
   rejectedAt?: string;
+  rejectionNote?: string; // reason shown to the client when their ID is rejected
   nft?: any;
   shippings?: any[];
   clientCart?: any;
