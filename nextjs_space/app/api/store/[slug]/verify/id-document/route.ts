@@ -17,6 +17,7 @@ import {
   getTenantVerificationMode,
   isSaIdUploadEnabled,
 } from "@/lib/verification-mode";
+import { recordIdDocumentOutcome } from "@/lib/verification/id-document-status";
 
 // Node runtime is REQUIRED: drgreen-identity signs over a Node Buffer, whose
 // JSON.stringify form differs from a Uint8Array/Blob. Edge would break signing.
@@ -113,17 +114,31 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
     const config = await getTenantDrGreenConfig(tenant.id);
     const fileBuffer = Buffer.from(await fileEntry.arrayBuffer());
 
-    await uploadIdentityDocument({
-      clientId: dbUser.drGreenClientId,
-      documentType: meta.data.documentType as IdentityDocumentType,
-      documentNumber: meta.data.documentNumber,
-      file: fileBuffer,
-      mimeType,
-      config: { apiKey: config.apiKey, secretKey: config.secretKey },
-      baseUrl: config.apiUrl,
-    });
+    try {
+      await uploadIdentityDocument({
+        clientId: dbUser.drGreenClientId,
+        documentType: meta.data.documentType as IdentityDocumentType,
+        documentNumber: meta.data.documentNumber,
+        file: fileBuffer,
+        mimeType,
+        config: { apiKey: config.apiKey, secretKey: config.secretKey },
+        baseUrl: config.apiUrl,
+      });
+    } catch (uploadError) {
+      // PRD-220 Part B: keep the outcome flag truthful so the dashboard CTA
+      // and the tenant-admin badge stay in sync with reality.
+      await recordIdDocumentOutcome({
+        tenantId: tenant.id,
+        email,
+        outcome: "UPLOAD_FAILED",
+        error: uploadError,
+      });
+      throw uploadError;
+    }
 
-    // Pass-through complete. Nothing about the document is persisted here.
+    // Pass-through complete. Nothing about the document itself is persisted —
+    // only the PRD-220 outcome FLAG (no image, number, key, or preview URL).
+    await recordIdDocumentOutcome({ tenantId: tenant.id, email, outcome: "UPLOADED" });
     return NextResponse.json({ status: "PENDING" });
   } catch (error) {
     return apiError(error, {

@@ -118,7 +118,7 @@ export default async function CustomersListPage({
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [filteredCount, customers, totalCustomersCount, recentSignupsCount] =
+  const [filteredCount, rawCustomers, totalCustomersCount, recentSignupsCount, failedIdUploads] =
     await Promise.all([
       prisma.users.count({ where: whereClause }),
       prisma.users.findMany({
@@ -156,7 +156,25 @@ export default async function CustomersListPage({
           createdAt: { gte: thirtyDaysAgo },
         },
       }),
+      // PRD-220 Part B: customers whose inline ID-document upload failed —
+      // questionnaires are keyed by (tenantId, email), not userId, so match
+      // by lowercased email in JS (few failed rows per tenant; cheap fetch).
+      prisma.consultation_questionnaires.findMany({
+        where: {
+          ...(tenantId && { tenantId }),
+          idDocumentStatus: "UPLOAD_FAILED",
+        },
+        select: { email: true },
+      }),
     ]);
+
+  const failedIdUploadEmails = new Set(
+    failedIdUploads.map((q: { email: string }) => q.email.toLowerCase()),
+  );
+  const customers = rawCustomers.map((customer: { email: string }) => ({
+    ...customer,
+    idUploadFailed: failedIdUploadEmails.has(customer.email.toLowerCase()),
+  }));
 
   return (
     <div className="space-y-8">

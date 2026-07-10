@@ -11,6 +11,10 @@ export type KycStatus = {
     kycVerified: boolean; // Computed from status==ACTIVE && verified==true
     status: string; // 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'NO_ID' | 'ERROR' | 'GUEST' | 'NO_TENANT' | 'API_ERROR'
     message?: string;
+    // PRD-220 Part B — inline ID-document upload outcome for ID-upload
+    // tenants: 'UPLOADED' | 'UPLOAD_FAILED' | null. Only meaningful while
+    // unverified; drives the dashboard re-upload CTA.
+    idDocumentStatus?: string | null;
 };
 
 export async function checkUserKycStatus(): Promise<KycStatus> {
@@ -48,11 +52,16 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                     tenantId: tenantId,
                     email: { equals: clerkUser.email, mode: 'insensitive' }
                 },
-                select: { id: true }
+                select: { id: true, idDocumentStatus: true }
             });
 
             if (questionnaire) {
-                return { isLoggedIn: true, kycVerified: false, status: "PENDING" };
+                return {
+                    isLoggedIn: true,
+                    kycVerified: false,
+                    status: "PENDING",
+                    idDocumentStatus: questionnaire.idDocumentStatus ?? null,
+                };
             }
 
             return { isLoggedIn: true, kycVerified: false, status: "NO_ID" };
@@ -75,8 +84,9 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                 { isKycVerified: 'desc' },
                 { createdAt: 'desc' }
             ],
-            select: { isKycVerified: true, adminApproval: true }
+            select: { isKycVerified: true, adminApproval: true, idDocumentStatus: true }
         });
+        const idDocumentStatus = questionnaire?.idDocumentStatus ?? null;
 
         // If explicitly verified in local DB, trust it
         if (questionnaire?.isKycVerified) {
@@ -207,6 +217,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                 isLoggedIn: true,
                 kycVerified: isVerified,
                 status,
+                idDocumentStatus: isVerified ? null : idDocumentStatus,
             };
         } catch (configOrApiError) {
             const errMsg = configOrApiError instanceof Error ? configOrApiError.message : String(configOrApiError);
@@ -216,6 +227,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                 kycVerified: false,
                 status: "API_ERROR",
                 message: `Dr Green API error: ${errMsg}`,
+                idDocumentStatus,
             };
         }
 
