@@ -28,6 +28,9 @@
 
 ## Common situations
 
+### Known incident — 2026-07-10 sidecar crash-loop
+First prod deploy of the sidecar crash-looped (`[EmailWorker] exited with code 1 — restarting in 5s` every ~5s): `scripts/email-worker.ts` imported `../lib/encryption`, which had long moved to `lib/security/encryption` — never caught because nothing had ever run the worker and scripts/ is outside the build's type-check graph. Fixed + regression-tested (`tests/unit/scripts-import-resolution.test.ts`). If you see that exit line repeating, suspect an import/startup throw first and read the lines right after `[EmailWorker] Starting...`.
+
 ### "Emails aren't arriving"
 1. `GET /api/super-admin/ops/email-health` → `worker.alive`?
    - **false** → check deploy logs for the sidecar start line (`📧 Starting email worker sidecar...`) or the `REDIS_URL not set` warning. Redis down? → [redis-down.md](./redis-down.md).
