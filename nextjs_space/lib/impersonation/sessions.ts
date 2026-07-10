@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ApiError } from "@/lib/api-error";
 import { impersonationExpiry } from "./constants";
@@ -77,20 +78,37 @@ export async function startImpersonation(
   });
 
   const rawToken = generateImpersonationToken();
-  const session = await prisma.impersonation_sessions.create({
-    data: {
-      id: crypto.randomUUID(),
-      superAdminClerkId: params.superAdminClerkId,
-      superAdminEmail: params.superAdminEmail,
-      tenantId: params.tenantId,
-      tenantEmail: owner?.email ?? null,
-      tokenHash: hashImpersonationToken(rawToken),
-      startedAt: now,
-      expiresAt: impersonationExpiry(now),
-      superAdminIpAddress: params.ipAddress ?? null,
-      notes: params.notes ?? null,
-    },
-  });
+  let session;
+  try {
+    session = await prisma.impersonation_sessions.create({
+      data: {
+        id: crypto.randomUUID(),
+        superAdminClerkId: params.superAdminClerkId,
+        superAdminEmail: params.superAdminEmail,
+        tenantId: params.tenantId,
+        tenantEmail: owner?.email ?? null,
+        tokenHash: hashImpersonationToken(rawToken),
+        startedAt: now,
+        expiresAt: impersonationExpiry(now),
+        superAdminIpAddress: params.ipAddress ?? null,
+        notes: params.notes ?? null,
+      },
+    });
+  } catch (err) {
+    // Two concurrent starts by the same admin (double-click) both pass the
+    // updateMany, then race the create; the partial unique active-session index
+    // rejects the loser with P2002. Surface a clean 409 instead of a raw 500.
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      throw new ApiError(
+        "Another impersonation session was just started. Refresh and try again.",
+        409,
+      );
+    }
+    throw err;
+  }
 
   return {
     session: toRecord(session),

@@ -37,16 +37,21 @@ export function ImpersonationBanner({
   startedAt,
   expiresAt,
 }: ImpersonationBannerProps) {
-  const [now, setNow] = useState(() => Date.now());
+  // null until mounted: the elapsed string is time-dependent, so rendering it
+  // during SSR guarantees a hydration text mismatch. First paint shows a dash,
+  // the effect fills it in immediately and then ticks every 10s (AC-2).
+  const [now, setNow] = useState<number | null>(null);
   const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
+    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 10_000);
     return () => clearInterval(timer);
   }, []);
 
-  const elapsed = formatElapsed(now - new Date(startedAt).getTime());
-  const expired = now >= new Date(expiresAt).getTime();
+  const elapsed =
+    now === null ? "—" : formatElapsed(now - new Date(startedAt).getTime());
+  const expired = now !== null && now >= new Date(expiresAt).getTime();
 
   async function exitImpersonation() {
     setExiting(true);

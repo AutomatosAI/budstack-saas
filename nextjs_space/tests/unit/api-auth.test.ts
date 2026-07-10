@@ -38,6 +38,7 @@ function makeUser(overrides: Partial<AuthUser> = {}): AuthUser {
     role: "TENANT_ADMIN",
     tenantId: "tenant-A",
     clerkOrgId: "org_1",
+    impersonation: null, // PRD-302: required field; non-impersonated by default
     ...overrides,
   };
 }

@@ -49,6 +49,7 @@ interface TenantHit {
 
 interface ImpersonationClientProps {
   currentSuperAdminEmail: string;
+  maxHours: number;
   initialSessions: SessionRow[];
   initialTotal: number;
 }
@@ -66,6 +67,7 @@ function formatDuration(seconds: number): string {
 
 export function ImpersonationClient({
   currentSuperAdminEmail,
+  maxHours,
   initialSessions,
   initialTotal,
 }: ImpersonationClientProps) {
@@ -296,7 +298,9 @@ export function ImpersonationClient({
                       )}
                     </td>
                     <td>{s.superAdminEmail}</td>
-                    <td title={s.startedAt}>
+                    {/* Locale/TZ-formatted: server renders UTC, client renders
+                        the viewer's zone — suppress the expected 1-level mismatch. */}
+                    <td title={s.startedAt} suppressHydrationWarning>
                       {new Date(s.startedAt).toLocaleString()}
                     </td>
                     <td>{formatDuration(s.durationSeconds)}</td>
@@ -372,7 +376,8 @@ export function ImpersonationClient({
               You will be logged in as this tenant&apos;s admin. Every action is
               recorded in the audit trail with your identity
               {currentSuperAdminEmail ? ` (${currentSuperAdminEmail})` : ""}.
-              The session expires automatically after 4 hours.
+              The session expires automatically after {maxHours}{" "}
+              {maxHours === 1 ? "hour" : "hours"}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">

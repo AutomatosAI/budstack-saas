@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { listSessions } from "@/lib/impersonation/sessions";
+import { impersonationMaxHours } from "@/lib/impersonation/constants";
 import { ImpersonationClient } from "./impersonation-client";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ export default async function ImpersonationPage() {
   return (
     <ImpersonationClient
       currentSuperAdminEmail={user.emailAddresses[0]?.emailAddress ?? ""}
+      maxHours={impersonationMaxHours()}
       initialTotal={total}
       initialSessions={sessions.map((s) => ({
         id: s.id,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withSuperAdminParams } from "@/lib/api-auth";
 import { apiError } from "@/lib/api-error";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { prisma } from "@/lib/db";
 import { getSessionById } from "@/lib/impersonation/sessions";
 
@@ -14,8 +15,13 @@ const CSV_EXPORT_CAP = 5000;
  * the ambient context), including the start/end lifecycle events.
  * `?format=csv` downloads the trail for compliance; JSON paginates.
  */
-export const GET = withSuperAdminParams(async (req, _ctx, params) => {
+export const GET = withSuperAdminParams(async (req, { user }, params) => {
   try {
+    const rateLimitResult = await checkRateLimit(user.id);
+    if (!rateLimitResult.success) {
+      return rateLimitResult.response;
+    }
+
     const sessionId = params.id;
     const session = await getSessionById(sessionId);
     if (!session) {
@@ -100,7 +106,14 @@ export const GET = withSuperAdminParams(async (req, _ctx, params) => {
   }
 });
 
-/** RFC-4180 quoting: wrap every field, double any embedded quotes. */
+/**
+ * RFC-4180 quoting plus spreadsheet formula-injection neutralization: a field
+ * starting with = + - @ tab or CR would execute as a formula when the export
+ * is opened in Excel/Sheets — exactly the file a compliance reviewer opens.
+ * Such fields get a leading apostrophe (renders as text, ignored by parsers).
+ */
+const FORMULA_PREFIX = /^[=+\-@\t\r]/;
+
 function csvField(value: unknown): string {
   const s =
     value === null || value === undefined
@@ -108,7 +121,8 @@ function csvField(value: unknown): string {
       : typeof value === "object"
         ? JSON.stringify(value)
         : String(value);
-  return `"${s.replace(/"/g, '""')}"`;
+  const neutralized = FORMULA_PREFIX.test(s) ? `'${s}` : s;
+  return `"${neutralized.replace(/"/g, '""')}"`;
 }
 
 function toCsv(
