@@ -476,6 +476,7 @@ model tenants {
   users                  users[]
   role_permissions       role_permissions[]
   team_invitations       team_invitations[]
+  impersonation_sessions impersonation_sessions[]
 
   @@index([deletedAt]) // PRD-208 soft-delete: keep "not-deleted" filters fast
 }
@@ -622,6 +623,33 @@ model team_invitations {
 
   @@unique([tenantId, email])
   @@index([tenantId, status])
+}
+
+// PRD-302: super-admin impersonation sessions. NOT tenant-scoped in lib/db.ts —
+// this is a cross-tenant support table, only ever reached through withSuperAdmin
+// (which binds tenant context to an explicit null) or the auth-helper resolver.
+// `tokenHash` is the SHA-256 of the cookie bearer token; the raw token is never
+// persisted, so a DB read can't be replayed as a session cookie. At most ONE
+// active (endedAt IS NULL) session per super-admin — enforced by a partial
+// unique index in the migration (Prisma can't express partial indexes).
+model impersonation_sessions {
+  id                  String    @id
+  superAdminClerkId   String // Clerk user id of the support person (audit_logs.userId convention)
+  superAdminEmail     String
+  tenantId            String
+  tenantEmail         String? // owner-admin email snapshot at session start (tenants has no email column)
+  tokenHash           String    @unique
+  startedAt           DateTime  @default(now())
+  expiresAt           DateTime // startedAt + IMPERSONATION_MAX_HOURS (default 4h)
+  endedAt             DateTime?
+  endedReason         String? // manual | timeout | replaced | tenant_inactive | super_admin_deleted
+  superAdminIpAddress String?
+  notes               String? // optional support reason, shown in the sessions table
+  createdAt           DateTime  @default(now())
+  tenants             tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([superAdminClerkId, endedAt])
+  @@index([tenantId, startedAt])
 }
 
 model webhook_deliveries {

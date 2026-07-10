@@ -16,6 +16,7 @@
 
 import { prisma } from "@/lib/db";
 import { sanitizeForLogging } from "@/lib/security/redact";
+import { getImpersonationContext } from "@/lib/impersonation/context";
 import type { audit_logs } from "@prisma/client";
 import crypto from "crypto";
 
@@ -29,6 +30,14 @@ export interface AuditLogParams {
   metadata?: Record<string, any>;
   ipAddress?: string;
   userAgent?: string;
+  /**
+   * PRD-302: link this row to an impersonation session. Normally OMITTED —
+   * rows written inside an impersonated request are stamped automatically from
+   * the ambient impersonation context bound by the api-auth wrappers. Pass
+   * explicitly only for the session lifecycle events themselves (start/end),
+   * which are written from super-admin routes outside that binding.
+   */
+  impersonationSessionId?: string;
 }
 
 /**
@@ -58,6 +67,15 @@ export async function createAuditLog(params: AuditLogParams): Promise<void> {
       ? sanitizeForLogging(params.metadata)
       : {};
 
+    // PRD-302 AC-5: rows written inside an impersonated request are linked to
+    // the session automatically. userId/userEmail already carry the REAL actor
+    // (getCurrentUser never fakes identity, only the tenant binding), so the
+    // session link is all that's needed to reconstruct "what support did".
+    const impersonationSessionId =
+      params.impersonationSessionId ??
+      getImpersonationContext()?.sessionId ??
+      null;
+
     await prisma.audit_logs.create({
       data: {
         id: crypto.randomUUID(),
@@ -70,6 +88,7 @@ export async function createAuditLog(params: AuditLogParams): Promise<void> {
         metadata: safeMetadata as any,
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
+        impersonationSessionId,
       },
     });
   } catch (error) {
@@ -148,6 +167,12 @@ export const AUDIT_ACTIONS = {
     INVITATION_REVOKED: "team.invitation_revoked",
     ROLE_PERMISSIONS_UPDATED: "team.role_permissions_updated",
     AUDIT_RETENTION_UPDATED: "team.audit_retention_updated",
+  },
+
+  // Super-Admin Impersonation (PRD-302)
+  IMPERSONATION: {
+    STARTED: "super_admin.impersonation_start",
+    ENDED: "super_admin.impersonation_end",
   },
 } as const;
 

@@ -3,6 +3,28 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { apiError } from "@/lib/api-error";
 import { getTenantFromRequest } from "@/lib/tenant/tenant";
 import { runWithTenantContextAsync } from "@/lib/tenant/tenant-context";
+import {
+  runWithImpersonationContextAsync,
+  type ImpersonationAuditContext,
+} from "@/lib/impersonation/context";
+
+/**
+ * PRD-302 AC-5: when the authenticated caller is an impersonating super-admin,
+ * bind the impersonation audit context around the handler so createAuditLog
+ * stamps impersonationSessionId on every row written inside the request.
+ * Bound by EVERY wrapper below (not just the tenant ones) so the stamp is
+ * wrapper-independent — legacy withAuth routes (e.g. customer mutations) and
+ * super-admin console actions taken mid-session are all captured in the trail.
+ * Null (the overwhelmingly common case) makes the wrapper a pure passthrough.
+ */
+function impersonationCtxOf(user: AuthUser): ImpersonationAuditContext | null {
+  if (!user.impersonation) return null;
+  return {
+    sessionId: user.impersonation.sessionId,
+    superAdminClerkId: user.impersonation.superAdminClerkId,
+    superAdminEmail: user.impersonation.superAdminEmail,
+  };
+}
 
 /**
  * Authenticated user shape returned by getCurrentUser()
@@ -65,7 +87,9 @@ export function withTenantAuth(handler: RouteHandler<TenantAuthContext>) {
       }
 
       return await runWithTenantContextAsync(tenantId, () =>
-        handler(req, { user, tenantId }),
+        runWithImpersonationContextAsync(impersonationCtxOf(user), () =>
+          handler(req, { user, tenantId }),
+        ),
       );
     } catch (error) {
       return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
@@ -103,7 +127,9 @@ export function withTenantAuthParams(
       }
 
       return await runWithTenantContextAsync(tenantId, () =>
-        handler(req, { user, tenantId }, params),
+        runWithImpersonationContextAsync(impersonationCtxOf(user), () =>
+          handler(req, { user, tenantId }, params),
+        ),
       );
     } catch (error) {
       return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
@@ -130,7 +156,11 @@ export function withSuperAdmin(handler: RouteHandler<SuperAdminAuthContext>) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
-      return await runWithTenantContextAsync(null, () => handler(req, { user }));
+      return await runWithTenantContextAsync(null, () =>
+        runWithImpersonationContextAsync(impersonationCtxOf(user), () =>
+          handler(req, { user }),
+        ),
+      );
     } catch (error) {
       return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
     }
@@ -156,7 +186,9 @@ export function withSuperAdminParams(
       }
 
       return await runWithTenantContextAsync(null, () =>
-        handler(req, { user }, params),
+        runWithImpersonationContextAsync(impersonationCtxOf(user), () =>
+          handler(req, { user }, params),
+        ),
       );
     } catch (error) {
       return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
@@ -192,7 +224,9 @@ export function withAuth(handler: RouteHandlerWithParams<AuthContext>) {
       const tenant = await getTenantFromRequest(req);
       const params = routeCtx?.params ?? {};
       return await runWithTenantContextAsync(tenant?.id ?? null, () =>
-        handler(req, { user }, params),
+        runWithImpersonationContextAsync(impersonationCtxOf(user), () =>
+          handler(req, { user }, params),
+        ),
       );
     } catch (error) {
       return apiError(error, { route: `${req.method} ${req.nextUrl.pathname}` });
