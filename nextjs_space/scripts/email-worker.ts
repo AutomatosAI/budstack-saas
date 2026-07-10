@@ -6,11 +6,25 @@ import Handlebars from 'handlebars';
 import { prisma as db } from '../lib/db';
 import { decrypt } from '../lib/encryption';
 import { emailQueueName } from '../lib/queue';
+import {
+    DEFAULT_MAX_JOB_AGE_MS,
+    DEFAULT_QUEUED_ALERT_AGE_MS,
+    EMAIL_WORKER_HEARTBEAT_KEY,
+    HEARTBEAT_INTERVAL_MS,
+    HEARTBEAT_TTL_SECONDS,
+    QUEUED_ALERT_DEBOUNCE_MS,
+    isJobExpired,
+    msFromEnv,
+    queuedAlertLine,
+} from '../lib/email/worker-health';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const MAX_JOB_AGE_MS = msFromEnv(process.env.EMAIL_MAX_JOB_AGE_MS, DEFAULT_MAX_JOB_AGE_MS);
+const QUEUED_ALERT_AGE_MS = msFromEnv(process.env.EMAIL_QUEUED_ALERT_AGE_MS, DEFAULT_QUEUED_ALERT_AGE_MS);
 
 console.log('[EmailWorker] Starting...');
 console.log(`[EmailWorker] Connecting to Redis: ${REDIS_URL.replace(/\/\/.*@/, '//***@')}`);
+console.log(`[EmailWorker] Max job age ${MAX_JOB_AGE_MS}ms; queued-alert threshold ${QUEUED_ALERT_AGE_MS}ms`);
 
 // Register Helpers
 Handlebars.registerHelper('multiply', (a, b) => {
@@ -23,6 +37,48 @@ Handlebars.registerHelper('toFixed', (num) => {
 const worker = new Worker(emailQueueName, async (job: Job) => {
     console.log(`[EmailWorker] Processing job ${job.id} for tenant ${job.data.tenantId}`);
     const { tenantId, to, subject, html, templateName, from, variables } = job.data;
+
+    // Flip the matching QUEUED email_logs row (or create one) to FAILED.
+    const markLogFailed = async (errorMessage: string) => {
+        const queuedLog = await db.email_logs.findFirst({
+            where: {
+                tenantId,
+                recipient: Array.isArray(to) ? to.join(',') : to,
+                subject,
+                status: 'QUEUED',
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        if (queuedLog) {
+            await db.email_logs.update({
+                where: { id: queuedLog.id },
+                data: { status: 'FAILED', errorMessage },
+            });
+        } else {
+            await db.email_logs.create({
+                data: {
+                    tenantId,
+                    recipient: Array.isArray(to) ? to.join(',') : to,
+                    subject,
+                    templateName,
+                    status: 'FAILED',
+                    errorMessage,
+                },
+            });
+        }
+    };
+
+    // PRD-220: a job past its max age is expired, NOT sent — the backlog that
+    // accumulated while no worker was deployed must never blast customers
+    // with weeks-old invites/confirmations the moment the worker comes up.
+    // Return (don't throw) so BullMQ doesn't retry an intentional expiry.
+    if (isJobExpired(job.timestamp, Date.now(), MAX_JOB_AGE_MS)) {
+        const message = `Expired unsent (PRD-220): enqueued ${new Date(job.timestamp).toISOString()}, exceeds EMAIL_MAX_JOB_AGE_MS=${MAX_JOB_AGE_MS}`;
+        console.warn(`[EmailWorker] Job ${job.id} ${message}`);
+        await markLogFailed(message);
+        return { success: false, expired: true };
+    }
 
     let finalHtml = html;
     let finalSubject = subject;
@@ -198,39 +254,7 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
 
     } catch (error: any) {
         console.error(`[EmailWorker] Job ${job.id} failed:`, error);
-
-        // Update log to FAILED status
-        const queuedLog = await db.email_logs.findFirst({
-            where: {
-                tenantId,
-                recipient: Array.isArray(to) ? to.join(',') : to,
-                subject,
-                status: 'QUEUED',
-            },
-            orderBy: { createdAt: 'desc' },
-        });
-
-        if (queuedLog) {
-            await db.email_logs.update({
-                where: { id: queuedLog.id },
-                data: {
-                    status: 'FAILED',
-                    errorMessage: error.message,
-                },
-            });
-        } else {
-            await db.email_logs.create({
-                data: {
-                    tenantId,
-                    recipient: Array.isArray(to) ? to.join(',') : to,
-                    subject,
-                    templateName,
-                    status: 'FAILED',
-                    errorMessage: error.message,
-                },
-            });
-        }
-
+        await markLogFailed(error.message);
         throw error;
     }
 }, {
@@ -248,6 +272,52 @@ worker.on('failed', (job, err) => {
 
 worker.on('error', err => {
     console.error('[EmailWorker] Worker error:', err);
+});
+
+// PRD-220 AC-A2/A3 — liveness heartbeat + stuck-queue alert. The super-admin
+// email-health route reads the heartbeat key; Railway log alerting matches
+// the QUEUED_ALERT_PREFIX line (see docs/runbooks/email-worker.md).
+const healthRedis = new Redis(REDIS_URL, { maxRetriesPerRequest: null, lazyConnect: true });
+let lastQueuedAlertAt = 0;
+const healthTimer = setInterval(async () => {
+    try {
+        await healthRedis.set(
+            EMAIL_WORKER_HEARTBEAT_KEY,
+            new Date().toISOString(),
+            'EX',
+            HEARTBEAT_TTL_SECONDS,
+        );
+
+        // Only send-eligible rows count as "stuck" — anything past the max
+        // job age belongs to the expiry guard / drain script, not the alert.
+        const oldest = await db.email_logs.findFirst({
+            where: {
+                status: 'QUEUED',
+                createdAt: { gt: new Date(Date.now() - MAX_JOB_AGE_MS) },
+            },
+            orderBy: { createdAt: 'asc' },
+            select: { createdAt: true },
+        });
+
+        const alert = queuedAlertLine(
+            oldest?.createdAt?.getTime() ?? null,
+            Date.now(),
+            QUEUED_ALERT_AGE_MS,
+        );
+        if (alert && Date.now() - lastQueuedAlertAt > QUEUED_ALERT_DEBOUNCE_MS) {
+            console.error(alert);
+            lastQueuedAlertAt = Date.now();
+        }
+    } catch (e) {
+        console.error('[EmailWorker] Health tick failed:', e);
+    }
+}, HEARTBEAT_INTERVAL_MS);
+
+process.on('SIGTERM', async () => {
+    console.log('[EmailWorker] SIGTERM received — closing gracefully...');
+    clearInterval(healthTimer);
+    await worker.close();
+    process.exit(0);
 });
 
 console.log('[EmailWorker] Worker is now listening for jobs...');
