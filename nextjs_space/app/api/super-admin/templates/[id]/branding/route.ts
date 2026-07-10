@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { getJsonFromS3, uploadFile } from "@/lib/storage/s3";
 import { createS3Client, getBucketConfig } from "@/lib/storage/aws-config";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
+import { stripSignedUrls } from "@/lib/templates/strip-signed-urls";
 import { apiError, apiValidationError, ApiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { validateUploadBuffer } from "@/lib/storage/upload-validation";
@@ -140,20 +140,6 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
       updatedDefaults.pageContent = { ...(existingDefaults.pageContent || {}), ...settings.pageContent };
     }
 
-    // ── Strip signed S3 URLs back to raw S3 keys ───────────────
-    const stripSignedUrl = (val: string): string => {
-      if (!val || typeof val !== 'string' || !val.startsWith('http')) return val;
-      const s3Match = val.split('?')[0].match(/\.amazonaws\.com\/(.+)$/);
-      if (!s3Match) return val;
-      const fullKey = decodeURIComponent(s3Match[1]);
-      const idx = fullKey.indexOf(s3Prefix);
-      if (idx !== -1) {
-        const relative = fullKey.slice(idx + s3Prefix.length + 1);
-        if (relative && !relative.includes('//')) return relative;
-      }
-      return fullKey;
-    };
-
     // ── Handle layout sections ──────────────────────────────────
     const hasLayoutSections = Array.isArray(settings.layoutSections) && settings.layoutSections.length > 0;
     const hasSectionConfigs = settings.sectionConfigs && Object.keys(settings.sectionConfigs).length > 0;
@@ -217,31 +203,8 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
           Object.assign(mergedConfig, settings.sectionConfigs[s.id]);
         }
 
-        // Top-level asset keys
-        for (const key of SECTION_ASSET_KEYS) {
-          if (mergedConfig[key]) mergedConfig[key] = stripSignedUrl(mergedConfig[key]);
-        }
-
-        // Nested arrays (e.g. categories[].imageUrl, logos[].src)
-        for (const key of Object.keys(mergedConfig)) {
-          if (Array.isArray(mergedConfig[key])) {
-            mergedConfig[key] = mergedConfig[key].map((item: any) => {
-              // Handle flat string arrays (e.g. SocialProof avatars[])
-              if (typeof item === 'string' && item.includes('.amazonaws.com/')) {
-                return stripSignedUrl(item);
-              }
-              if (!item || typeof item !== 'object') return item;
-              const cleaned = { ...item };
-              for (const itemKey of Object.keys(cleaned)) {
-                if (typeof cleaned[itemKey] === 'string' && cleaned[itemKey].includes('.amazonaws.com/')) {
-                  cleaned[itemKey] = stripSignedUrl(cleaned[itemKey]);
-                }
-              }
-              return cleaned;
-            });
-          }
-        }
-
+        // Signed S3 URLs are stripped structurally below (stripSignedUrls),
+        // not per-key here — see PRD-220 Part C.
         const colorOvr = sectionColorOverrides[s.id];
         const hasColorOvr = colorOvr && Object.keys(colorOvr).some((k: string) => colorOvr[k]?.trim());
 
@@ -280,8 +243,12 @@ export const POST = withSuperAdminParams(async (req, _ctx, params) => {
       );
     };
 
-    await writeJson(`${s3Prefix}/layout.json`, updatedLayout);
-    await writeJson(`${s3Prefix}/defaults.json`, updatedDefaults);
+    // AC-C1: recursive walk rejects/strips signed URLs anywhere in the
+    // persisted layout/defaults (sections, navigationConfig, footerConfig,
+    // pageContent) — replaces the old per-shape SECTION_ASSET_KEYS + array
+    // loops, which missed nested objects and nav/footer config entirely.
+    await writeJson(`${s3Prefix}/layout.json`, stripSignedUrls(updatedLayout, [s3Prefix]));
+    await writeJson(`${s3Prefix}/defaults.json`, stripSignedUrls(updatedDefaults, [s3Prefix]));
 
     logger.info(`[super-admin] Saved marketplace template "${template.name}" (${template.slug}) to S3`);
 
