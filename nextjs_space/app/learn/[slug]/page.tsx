@@ -10,6 +10,13 @@ import { Navbar, Footer } from "@/components/landing";
 import { LearnChatbot } from "../learn-chatbot";
 import { MarkdownContent } from "./markdown-content";
 
+// PRD-220 AC-C2: no dynamic API calls here, so without a revalidate window
+// Next.js would statically cache the signed doc-download URL baked in at
+// render time — and getFileUrl's signatures expire after 3600s (see
+// lib/storage/s3.ts). Revalidate well under that so cached HTML re-signs
+// before the URL goes stale.
+export const revalidate = 1800;
+
 export async function generateMetadata({
   params,
 }: {
