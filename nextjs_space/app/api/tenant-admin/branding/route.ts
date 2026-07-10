@@ -8,7 +8,7 @@ import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 import { TenantSettings } from "@/lib/types";
 import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { deepMerge } from "@/lib/utils";
-import { SECTION_ASSET_KEYS } from "@/lib/types/template-layout";
+import { stripSignedUrls } from "@/lib/templates/strip-signed-urls";
 import { hexToHsl } from "@/lib/color-utils";
 import { logger } from "@/lib/logger";
 
@@ -183,6 +183,15 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
 
       const currentDS = currentTemplate?.designSystem || {};
 
+      // S3 key prefixes tried (in order) when relativizing a signed URL
+      // back to its object key — the tenant's own template path, then the
+      // base marketplace template path it was cloned from. Reused by every
+      // stripSignedUrls() call below (PRD-220 Part C).
+      const assetKeyPrefixes: string[] = [
+        currentTemplate?.s3Path?.replace(/\/+$/, ''),
+        currentTemplate?.templates?.slug ? `templates/${currentTemplate.templates.slug}` : null,
+      ].filter((p): p is string => Boolean(p));
+
       // Helper: only include defined, non-empty values (prevents overriding template CSS vars with empty strings)
       const defined = (obj: Record<string, any>) =>
         Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined && v !== null && v !== ''));
@@ -294,7 +303,9 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
           ? incomingSettings.layoutSections
           : (baseLayout.sections || []);
 
-        // Merge sections with config overrides + color overrides, stripping signed S3 URLs back to relative paths
+        // Merge sections with sectionConfig overrides + color overrides.
+        // Signed S3 URLs are stripped structurally below (stripSignedUrls),
+        // not here — see PRD-220 Part C.
         const sectionColorOverrides: Record<string, Record<string, string>> =
           incomingSettings.sectionColorOverrides || {};
         const updatedSections = sourceSections.map((s: any) => {
@@ -305,56 +316,9 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
             Object.assign(mergedConfig, incomingSettings.sectionConfigs[s.id]);
           }
 
-          // Strip signed S3 URLs back to raw S3 keys so layout.json stays portable.
-          // page.tsx signs keys on load; we must reverse that before writing back.
-          const stripSignedUrl = (val: string): string => {
-            if (!val || typeof val !== 'string' || !val.startsWith('http')) return val;
-            const urlWithoutQuery = val.split('?')[0];
-            const s3Match = urlWithoutQuery.match(/\.amazonaws\.com\/(.+)$/);
-            if (!s3Match) return val;
-            const fullKey = decodeURIComponent(s3Match[1]);
-            const prefixes = [
-              currentTemplate?.s3Path,
-              currentTemplate?.templates?.slug ? `templates/${currentTemplate.templates.slug}` : null,
-            ].filter(Boolean) as string[];
-            for (const prefix of prefixes) {
-              const idx = fullKey.indexOf(prefix);
-              if (idx !== -1) {
-                const relativePath = fullKey.slice(idx + prefix.length + 1);
-                if (relativePath && !relativePath.includes('//')) return relativePath;
-              }
-            }
-            return fullKey;
-          };
-
-          // Strip top-level asset URLs
-          for (const key of SECTION_ASSET_KEYS) {
-            if (mergedConfig[key]) mergedConfig[key] = stripSignedUrl(mergedConfig[key]);
-          }
-
-          // Strip signed URLs inside nested arrays (e.g. categories[].imageUrl, logos[].src)
-          for (const key of Object.keys(mergedConfig)) {
-            if (Array.isArray(mergedConfig[key])) {
-              mergedConfig[key] = mergedConfig[key].map((item: any) => {
-                // Handle flat string arrays (e.g. SocialProof avatars[])
-                if (typeof item === 'string' && item.includes('.amazonaws.com/')) {
-                  return stripSignedUrl(item);
-                }
-                if (!item || typeof item !== 'object') return item;
-                const cleaned = { ...item };
-                for (const itemKey of Object.keys(cleaned)) {
-                  if (typeof cleaned[itemKey] === 'string' && cleaned[itemKey].includes('.amazonaws.com/')) {
-                    cleaned[itemKey] = stripSignedUrl(cleaned[itemKey]);
-                  }
-                }
-                return cleaned;
-              });
-            }
-          }
-
           // Merge per-section color overrides
           const colorOvr = sectionColorOverrides[s.id];
-          const hasColorOverrides = colorOvr && Object.keys(colorOvr).some(k => colorOvr[k]?.trim());
+          const hasColorOverrides = colorOvr && Object.keys(colorOvr).some((k: string) => colorOvr[k]?.trim());
 
           return {
             ...s,
@@ -363,14 +327,21 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
           };
         });
 
-        const finalLayout = {
-          ...baseLayout,
-          navigation: incomingSettings.navigationStyle || baseLayout.navigation || "NavDark",
-          navigationConfig: incomingSettings.navigationConfig || baseLayout.navigationConfig || undefined,
-          footer: incomingSettings.footerStyle || baseLayout.footer || "FooterSimple",
-          footerConfig: incomingSettings.footerConfig || baseLayout.footerConfig || undefined,
-          sections: updatedSections,
-        };
+        // AC-C1: recursive walk rejects/strips signed URLs anywhere in the
+        // assembled layout (sections, navigationConfig, footerConfig) —
+        // replaces the old per-shape SECTION_ASSET_KEYS + array loops, which
+        // missed nested objects and top-level nav/footer config entirely.
+        const finalLayout = stripSignedUrls(
+          {
+            ...baseLayout,
+            navigation: incomingSettings.navigationStyle || baseLayout.navigation || "NavDark",
+            navigationConfig: incomingSettings.navigationConfig || baseLayout.navigationConfig || undefined,
+            footer: incomingSettings.footerStyle || baseLayout.footer || "FooterSimple",
+            footerConfig: incomingSettings.footerConfig || baseLayout.footerConfig || undefined,
+            sections: updatedSections,
+          },
+          assetKeyPrefixes,
+        );
 
         // Auto-generate s3Path if missing so layout sections can be saved.
         // Also copy ALL files from base template so the tenant is self-contained.
@@ -431,10 +402,12 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
       logger.info("[branding] Saving designSystem", { designSystemKeys: Object.keys(newDesignSystem), colorKeys: Object.keys(newDesignSystem.colors || {}) });
       logger.info("[branding] Saving pageContent", { pageContentKeys: Object.keys(updateData.pageContent || {}) });
 
-      // Update TenantTemplate
+      // Update TenantTemplate — AC-C1: structurally strip any signed URL
+      // (designSystem/pageContent/customCss are all walked, not just the
+      // fields a per-shape list happened to anticipate).
       await prisma.tenant_templates.update({
         where: { id: activeTemplateId },
-        data: updateData,
+        data: stripSignedUrls(updateData, assetKeyPrefixes),
       });
 
       // ALSO update Tenant settings for fallback/consistency
@@ -442,16 +415,18 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         where: { id: tenant.id },
         data: {
           businessName,
-          settings: settings as Prisma.InputJsonValue,
+          settings: stripSignedUrls(settings, assetKeyPrefixes) as Prisma.InputJsonValue,
         },
       });
     } else {
-      // Legacy behavior: Update only Tenant settings
+      // Legacy behavior: Update only Tenant settings. No template context
+      // yet, so no prefix to relativize against — stripSignedUrls still
+      // strips the signature and falls back to the decoded full key.
       await prisma.tenants.update({
         where: { id: tenant.id },
         data: {
           businessName,
-          settings: settings as Prisma.InputJsonValue,
+          settings: stripSignedUrls(settings, []) as Prisma.InputJsonValue,
         },
       });
     }

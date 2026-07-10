@@ -13,6 +13,13 @@ export const metadata: Metadata = {
     "Browse professional storefront themes for your cannabis business. Preview and choose the perfect design.",
 };
 
+// PRD-220 AC-C2: this page has no dynamic API calls, so without a revalidate
+// window Next.js would statically cache the signed preview URLs it bakes in
+// at render time — and getFileUrl's signatures expire after 3600s (see
+// lib/storage/s3.ts). Revalidate well under that so the page re-signs before
+// any cached copy's URLs go stale.
+export const revalidate = 1800;
+
 /** Sign an S3 key to a URL, or pass through if already a URL */
 async function signUrl(key: string | null | undefined): Promise<string | null> {
   if (!key) return null;

@@ -21,6 +21,13 @@ export const metadata: Metadata = {
     "Guides, tutorials, and documentation to help you get the most out of BudStacks.",
 };
 
+// PRD-220 AC-C2: no dynamic API calls here, so without a revalidate window
+// Next.js would statically cache the signed cover-image URLs baked in at
+// render time — and getFileUrl's signatures expire after 3600s (see
+// lib/storage/s3.ts). Revalidate well under that so cached HTML re-signs
+// before any URL goes stale.
+export const revalidate = 1800;
+
 const CATEGORY_META: Record<
   string,
   { label: string; icon: string; color: string }
