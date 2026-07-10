@@ -117,6 +117,20 @@ describe("stripSignedUrls (PRD-220 AC-C1/AC-C3)", () => {
     expect(result).toEqual(input);
   });
 
+  it("does not treat an unrelated host as S3 just because its path/query contains the amazonaws.com marker", () => {
+    // CodeQL: substring-matching the whole URL string for ".amazonaws.com/"
+    // is spoofable by a path or query on an unrelated host. Real URL parsing
+    // must check the hostname, not the raw string.
+    const spoofed = {
+      pathLike: "https://evil.com/foo.amazonaws.com/bar",
+      queryLike: "https://evil.com/redirect?next=https://x.amazonaws.com/y",
+    };
+
+    const result = stripSignedUrls(spoofed, PREFIXES);
+
+    expect(result).toEqual(spoofed);
+  });
+
   it("works with no prefixes supplied (defaults to [])", () => {
     const input = { imageUrl: signedUrl("tenants/t1/templates/modern/uploads/hero.png") };
 

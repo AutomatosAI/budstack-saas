@@ -9,11 +9,24 @@
 
 const SIGNED_QUERY_PARAM = /(?:^|[?&])X-Amz-/i;
 
-function isSignedS3Url(value: string): boolean {
-  if (!value.startsWith("http")) return false;
-  if (value.includes(".amazonaws.com/")) return true;
-  const queryIndex = value.indexOf("?");
-  return queryIndex !== -1 && SIGNED_QUERY_PARAM.test(value.slice(queryIndex));
+// A real URL parse, not a substring match — a raw `.includes(".amazonaws.com/")`
+// on the whole string can be spoofed by an unrelated host whose path or query
+// happens to contain that text (e.g. `https://evil.com/foo.amazonaws.com/bar`).
+function parseUrl(value: string): URL | null {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+
+function isAmazonawsHost(hostname: string): boolean {
+  return hostname === "amazonaws.com" || hostname.endsWith(".amazonaws.com");
+}
+
+function isSignedS3Url(parsed: URL): boolean {
+  if (isAmazonawsHost(parsed.hostname)) return true;
+  return SIGNED_QUERY_PARAM.test(parsed.search);
 }
 
 function relativizeKey(fullKey: string, prefixes: readonly string[]): string {
@@ -28,14 +41,14 @@ function relativizeKey(fullKey: string, prefixes: readonly string[]): string {
 }
 
 function stripSignedUrl(value: string, prefixes: readonly string[]): string {
-  if (!isSignedS3Url(value)) return value;
+  if (!value.startsWith("http")) return value;
+  const parsed = parseUrl(value);
+  if (!parsed || !isSignedS3Url(parsed)) return value;
 
   // Never keep the query string — that's where the signature/expiry lives.
-  const urlWithoutQuery = value.split("?")[0];
-  const amazonawsMatch = urlWithoutQuery.match(/\.amazonaws\.com\/(.+)$/);
-  const fullKey = amazonawsMatch
-    ? decodeURIComponent(amazonawsMatch[1])
-    : decodeURIComponent(urlWithoutQuery.replace(/^https?:\/\/[^/]+\//, ""));
+  // `pathname` is already query-free by construction (real URL parse, not a
+  // string split), and independent of hostname/userinfo/port games.
+  const fullKey = decodeURIComponent(parsed.pathname.replace(/^\/+/, ""));
 
   return relativizeKey(fullKey, prefixes);
 }
