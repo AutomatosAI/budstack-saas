@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Building2,
   UserPlus,
+  UserCog,
   BarChart3,
   Palette,
   Layout,
@@ -19,6 +20,7 @@ import { AdminSidebar, type AdminMenuItem } from "./AdminSidebar";
 export enum PanelType {
   OVERVIEW = "overview",
   TENANTS = "tenants",
+  IMPERSONATION = "impersonation",
   ONBOARDING = "onboarding",
   ANALYTICS = "analytics",
   BRANDING = "branding",
@@ -45,6 +47,13 @@ const superAdminMenuItems: AdminMenuItem[] = [
     icon: Building2,
     href: "/super-admin/tenants",
     shortcut: ["G", "T"],
+  },
+  {
+    id: PanelType.IMPERSONATION,
+    label: "Impersonation",
+    icon: UserCog,
+    href: "/super-admin/impersonation",
+    shortcut: ["G", "I"],
   },
   {
     id: PanelType.ONBOARDING,

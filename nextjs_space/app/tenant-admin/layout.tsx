@@ -8,7 +8,10 @@ import crypto from "crypto";
 import { logger } from "@/lib/logger";
 
 import { HeaderProfile } from "@/components/admin/HeaderProfile";
+import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { resolveUserPermissions } from "@/lib/permissions/current-user-permissions";
+import { resolveActiveImpersonation } from "@/lib/impersonation/resolve";
+import type { ActiveImpersonation } from "@/lib/impersonation/resolve";
 
 export default async function TenantAdminLayout({
   children,
@@ -44,29 +47,55 @@ export default async function TenantAdminLayout({
     tenantId: user.publicMetadata.tenantId,
   });
 
-  // Try email-based lookup first
-  let localUser = await prisma.users.findFirst({
-    where: { email: email },
-    include: {
-      tenants: {
+  // PRD-302: an impersonating super-admin renders this layout as the TARGET
+  // tenant. Identity stays their own (audit rows record the real actor); only
+  // the tenant binding changes. resolveActiveImpersonation is fail-closed —
+  // ended/expired/foreign cookies and non-super-admin roles all resolve to
+  // null and fall through to the normal lookup below.
+  const impersonation: ActiveImpersonation | null =
+    user.publicMetadata.role === "SUPER_ADMIN"
+      ? await resolveActiveImpersonation(user.id)
+      : null;
+
+  const impersonatedTenant = impersonation
+    ? await prisma.tenants.findFirst({
+        where: { id: impersonation.tenantId },
         select: {
           id: true,
           businessName: true,
           automatosApiKey: true,
           automatosAgentId: true,
         },
-      },
-    },
-  });
+      })
+    : null;
 
-  logger.info("[tenant-admin] DB user lookup", {
-    clerkId: user.id,
-    found: !!localUser,
-    tenantId: localUser?.tenantId,
-  });
+  // Try email-based lookup first (skipped while impersonating — the super-admin
+  // may have no tenant-linked users row, and must not self-heal one below)
+  let localUser: any = null;
+  if (!impersonatedTenant) {
+    localUser = await prisma.users.findFirst({
+      where: { email: email },
+      include: {
+        tenants: {
+          select: {
+            id: true,
+            businessName: true,
+            automatosApiKey: true,
+            automatosAgentId: true,
+          },
+        },
+      },
+    });
+
+    logger.info("[tenant-admin] DB user lookup", {
+      clerkId: user.id,
+      found: !!localUser,
+      tenantId: localUser?.tenantId,
+    });
+  }
 
   // Fallback: if no DB user found by email, try resolving via Clerk org ID
-  if (!localUser?.tenants && user.publicMetadata.tenantId) {
+  if (!impersonatedTenant && !localUser?.tenants && user.publicMetadata.tenantId) {
     const clerkOrgId = user.publicMetadata.tenantId as string;
     logger.info("[tenant-admin] Trying Clerk org ID fallback", { clerkOrgId });
     try {
@@ -112,7 +141,11 @@ export default async function TenantAdminLayout({
     }
   }
 
-  if (!localUser?.tenants) {
+  // The tenant this layout renders: the impersonated tenant when a session is
+  // live, otherwise the admin's own (via users-row / org-id lookup above).
+  const activeTenant = impersonatedTenant ?? localUser?.tenants ?? null;
+
+  if (!activeTenant) {
     logger.error("[tenant-admin] No tenant found for user", { clerkId: user.id });
     return (
       <div data-surface="admin" data-tier="tenant" className="budstacks-theme min-h-screen canvas-bg flex items-center justify-center">
@@ -138,7 +171,7 @@ export default async function TenantAdminLayout({
     sidebarPermissions = (
       await resolveUserPermissions(
         { role: String(user.publicMetadata.role), email },
-        localUser.tenants.id,
+        activeTenant.id,
       )
     ).permissions;
   } catch (err) {
@@ -148,12 +181,12 @@ export default async function TenantAdminLayout({
     });
   }
 
-  return (
-    <div data-surface="admin" data-tier="tenant" className="budstacks-theme flex min-h-screen canvas-bg">
+  const shell = (
+    <>
       <TenantAdminSidebar
         userName={`${user.firstName || ""} ${user.lastName || ""}`.trim() || "Tenant Admin"}
         userEmail={user.emailAddresses[0]?.emailAddress || ""}
-        tenantName={localUser.tenants.businessName || "My Store"}
+        tenantName={activeTenant.businessName || "My Store"}
         permissions={sidebarPermissions}
       />
       <AccessibleAdminLayout theme="tenant-admin">
@@ -171,6 +204,31 @@ export default async function TenantAdminLayout({
           <div className="mx-auto max-w-[1800px]">{children}</div>
         </div>
       </AccessibleAdminLayout>
+    </>
+  );
+
+  // PRD-302 AC-2: while impersonating, the red banner spans the full viewport
+  // width ABOVE sidebar + navbar and cannot be dismissed. The non-impersonation
+  // return below is byte-identical to the pre-PRD-302 layout.
+  if (impersonation) {
+    return (
+      <div data-surface="admin" data-tier="tenant" className="budstacks-theme min-h-screen canvas-bg flex flex-col">
+        <ImpersonationBanner
+          sessionId={impersonation.sessionId}
+          tenantName={activeTenant.businessName || impersonation.tenantBusinessName}
+          tenantEmail={impersonation.tenantEmail}
+          superAdminEmail={impersonation.superAdminEmail}
+          startedAt={impersonation.startedAt.toISOString()}
+          expiresAt={impersonation.expiresAt.toISOString()}
+        />
+        <div className="flex flex-1 min-h-0">{shell}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div data-surface="admin" data-tier="tenant" className="budstacks-theme flex min-h-screen canvas-bg">
+      {shell}
     </div>
   );
 }

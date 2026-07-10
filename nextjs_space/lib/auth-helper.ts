@@ -5,6 +5,10 @@ import {
   isAmbiguousTenantResolution,
 } from "@/lib/tenant/tenant-resolver";
 import { ApiError } from "@/lib/api-error";
+import {
+  resolveActiveImpersonation,
+  type ActiveImpersonation,
+} from "@/lib/impersonation/resolve";
 
 /**
  * A valid Clerk session arrived before the `user.created` webhook provisioned
@@ -62,7 +66,20 @@ export async function getCurrentUser() {
     throw new AmbiguousTenantError();
   }
 
-  const tenantId = resolved?.tenantId ?? null;
+  let tenantId = resolved?.tenantId ?? null;
+
+  // PRD-302: a SUPER_ADMIN with a live impersonation session acts inside the
+  // impersonated tenant. ONLY the tenant binding changes — id/email below stay
+  // the super-admin's own, so every audit row records the REAL actor (AC-5).
+  // The cookie is ignored for all other roles (fail-closed), and an invalid /
+  // expired / foreign session resolves to null, leaving normal auth untouched.
+  let impersonation: ActiveImpersonation | null = null;
+  if (role === "SUPER_ADMIN") {
+    impersonation = await resolveActiveImpersonation(user.id);
+    if (impersonation) {
+      tenantId = impersonation.tenantId;
+    }
+  }
 
   // The user.created race: a valid Clerk session can arrive before the webhook
   // has written the users row (keyed by email — see app/api/webhooks/clerk).
@@ -91,5 +108,6 @@ export async function getCurrentUser() {
     role,
     tenantId, // database tenant UUID (or null), not the Clerk org id
     clerkOrgId, // Clerk org id kept available if needed
+    impersonation, // PRD-302: live session when a super-admin is impersonating, else null
   };
 }

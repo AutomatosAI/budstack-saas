@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { eraseUser } from "@/lib/gdpr/erasure";
 import { getClientInfo } from "@/lib/audit-log";
+import { endImpersonation } from "@/lib/impersonation/sessions";
 import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
@@ -153,6 +154,23 @@ export async function POST(req: Request) {
                 "[clerk.webhook] user.deleted erasure failed:",
                 erasureErr instanceof Error ? erasureErr.message : erasureErr,
             );
+        }
+
+        // PRD-302 AC-7 (GDPR): a deleted super-admin must not leave a live
+        // impersonation session behind — the cookie would otherwise stay valid
+        // until expiry even though the Clerk account is gone. Idempotent and a
+        // no-op for ordinary users (they never have sessions).
+        if (deletedClerkId) {
+            try {
+                await endImpersonation(deletedClerkId, "super_admin_deleted");
+            } catch (impersonationErr) {
+                console.error(
+                    "[clerk.webhook] user.deleted impersonation cleanup failed:",
+                    impersonationErr instanceof Error
+                        ? impersonationErr.message
+                        : impersonationErr,
+                );
+            }
         }
     }
 
