@@ -137,7 +137,7 @@ export const GET = withAuth(async (_request, { user }, params) => {
     }
 
     // Get medical history (consultation questionnaires)
-    const medicalHistory = await prisma.consultationQuestionnaire.findMany({
+    const medicalHistory = await prisma.consultation_questionnaires.findMany({
       where: { email: customer.email },
       select: {
         id: true,

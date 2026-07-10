@@ -10,7 +10,6 @@ import {
   PackageMinus,
   Download,
   Trash2,
-  RefreshCw,
 } from "lucide-react";
 import {
   DndContext,
@@ -534,11 +533,6 @@ export function ProductsTable({
               size="lg"
               theme="emerald"
               showDecoration
-              action={{
-                label: "Sync from Dr Green Admin",
-                href: "/tenant-admin/settings",
-                icon: RefreshCw,
-              }}
               className="my-8"
             />
           ) : (

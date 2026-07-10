@@ -11,7 +11,6 @@ import {
   Users,
   Package,
   Calendar,
-  ArrowUpRight,
   ShoppingBag,
 } from "lucide-react";
 
@@ -36,10 +35,7 @@ import {
 } from "recharts";
 
 import {
-  generateSalesTrendData,
   getRevenueMetrics,
-  generateRecentOrders,
-  generateRecentCustomers,
   formatCurrency,
   getStatusTone,
   formatTimeAgo,
@@ -57,6 +53,26 @@ const Plot = dynamic(() => import("react-plotly.js") as any, {
   ssr: false,
 }) as any;
 
+// Blank-slate analytics used on API error and for brand-new tenants — no mock.
+const EMPTY_ANALYTICS: AnalyticsData = {
+  totalProducts: 0,
+  totalOrders: 0,
+  totalCustomers: 0,
+  totalRevenue: 0,
+  recentOrders: 0,
+  recentCustomers: 0,
+  recentRevenue: 0,
+  avgOrderValue: 0,
+  revenueByDay: [],
+  ordersByDay: [],
+  topProducts: [],
+  customerGrowth: [],
+  ordersByStatus: [],
+  recentOrdersList: [],
+  recentCustomersList: [],
+  pendingConsultations: 0,
+};
+
 export default function TenantAnalyticsPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
@@ -66,7 +82,7 @@ export default function TenantAnalyticsPage() {
   const [salesTrendData, setSalesTrendData] = useState<any[]>([]);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [recentCustomers, setRecentCustomers] = useState<RecentCustomer[]>([]);
-  const [pendingConsultations] = useState(7);
+  const [pendingConsultations, setPendingConsultations] = useState(0);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -83,91 +99,42 @@ export default function TenantAnalyticsPage() {
     }
   }, [user, timeRange]);
 
-  useEffect(() => {
-    setSalesTrendData(generateSalesTrendData());
-    setRecentOrders(generateRecentOrders());
-    setRecentCustomers(generateRecentCustomers());
-  }, []);
-
   const fetchAnalytics = async () => {
     try {
       const response = await fetch(
         `/api/tenant-admin/analytics?timeRange=${timeRange}`,
       );
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as AnalyticsData;
         setAnalytics(data);
+        setRecentOrders((data.recentOrdersList ?? []) as RecentOrder[]);
+        setRecentCustomers((data.recentCustomersList ?? []) as RecentCustomer[]);
+        setSalesTrendData(
+          (data.revenueByDay ?? []).map(
+            (d: { date: string; revenue: number }) => ({
+              date: d.date,
+              sales: d.revenue,
+            }),
+          ),
+        );
+        setPendingConsultations(data.pendingConsultations ?? 0);
       } else {
         console.error("API error:", response.status, response.statusText);
-        setAnalytics({
-          totalProducts: 10,
-          totalOrders: 25,
-          totalCustomers: 15,
-          totalRevenue: 2500.0,
-          recentOrders: 8,
-          recentCustomers: 5,
-          recentRevenue: 850.0,
-          avgOrderValue: 100.0,
-          revenueByDay: Array.from({ length: 7 }, (_, i) => ({
-            date: `Day ${i + 1}`,
-            revenue: Math.random() * 500 + 200,
-          })),
-          ordersByDay: Array.from({ length: 7 }, (_, i) => ({
-            date: `Day ${i + 1}`,
-            orders: Math.floor(Math.random() * 10) + 1,
-          })),
-          topProducts: [
-            { id: "1", name: "Product 1", quantity: 15, revenue: 450, orders: 8 },
-            { id: "2", name: "Product 2", quantity: 12, revenue: 360, orders: 6 },
-            { id: "3", name: "Product 3", quantity: 10, revenue: 300, orders: 5 },
-          ],
-          customerGrowth: Array.from({ length: 7 }, (_, i) => ({
-            date: `Day ${i + 1}`,
-            customers: Math.floor(Math.random() * 5),
-          })),
-          ordersByStatus: [
-            { name: "COMPLETED", value: 15 },
-            { name: "PROCESSING", value: 5 },
-            { name: "PENDING", value: 3 },
-            { name: "CANCELLED", value: 2 },
-          ],
-        });
+        // Blank slate on error — never fabricate data.
+        setAnalytics(EMPTY_ANALYTICS);
+        setRecentOrders([]);
+        setRecentCustomers([]);
+        setSalesTrendData([]);
+        setPendingConsultations(0);
       }
     } catch (error) {
       console.error("Error fetching analytics:", error);
-      setAnalytics({
-        totalProducts: 10,
-        totalOrders: 25,
-        totalCustomers: 15,
-        totalRevenue: 2500.0,
-        recentOrders: 8,
-        recentCustomers: 5,
-        recentRevenue: 850.0,
-        avgOrderValue: 100.0,
-        revenueByDay: Array.from({ length: 7 }, (_, i) => ({
-          date: `Day ${i + 1}`,
-          revenue: Math.random() * 500 + 200,
-        })),
-        ordersByDay: Array.from({ length: 7 }, (_, i) => ({
-          date: `Day ${i + 1}`,
-          orders: Math.floor(Math.random() * 10) + 1,
-        })),
-        topProducts: [
-          { id: "1", name: "Product 1", quantity: 15, revenue: 450, orders: 8 },
-          { id: "2", name: "Product 2", quantity: 12, revenue: 360, orders: 6 },
-          { id: "3", name: "Product 3", quantity: 10, revenue: 300, orders: 5 },
-        ],
-        customerGrowth: Array.from({ length: 7 }, (_, i) => ({
-          date: `Day ${i + 1}`,
-          customers: Math.floor(Math.random() * 5),
-        })),
-        ordersByStatus: [
-          { name: "COMPLETED", value: 15 },
-          { name: "PROCESSING", value: 5 },
-          { name: "PENDING", value: 3 },
-          { name: "CANCELLED", value: 2 },
-        ],
-      });
+      // Blank slate on error — never fabricate data.
+      setAnalytics(EMPTY_ANALYTICS);
+      setRecentOrders([]);
+      setRecentCustomers([]);
+      setSalesTrendData([]);
+      setPendingConsultations(0);
     } finally {
       setLoading(false);
     }
@@ -638,41 +605,39 @@ export default function TenantAnalyticsPage() {
               </div>
             </div>
 
-            <div className="bs-card bs-card-pad">
-              <div className="flex items-center gap-2 mb-6">
-                <Calendar className="h-5 w-5 text-bs-warn" />
-                <h3
-                  className="text-[22px] font-semibold text-bs-fg"
-                  style={sectionTitleStyle}
-                >
-                  Consultations
-                </h3>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bs-card-2 rounded-bs-md border border-bs-border-100">
-                  <div>
-                    <p className="text-sm text-bs-fg-muted mb-1">
-                      Pending Requests
-                    </p>
-                    <p className="text-3xl font-bold text-bs-warn font-mono tabular-nums">
-                      {pendingConsultations}
-                    </p>
-                  </div>
-                  <div className="w-16 h-16 rounded-full bs-card-2 border border-bs-border-100 flex items-center justify-center">
-                    <Calendar className="h-8 w-8 text-bs-warn" />
-                  </div>
+            {/* Consultations card is hidden for ID-upload tenants (they skip
+                consultations). The former "View All Consultations" link pointed
+                to a non-existent /tenant-admin/consultations route (404) and was
+                removed. */}
+            {analytics.verificationMode !== "ID_UPLOAD" && (
+              <div className="bs-card bs-card-pad">
+                <div className="flex items-center gap-2 mb-6">
+                  <Calendar className="h-5 w-5 text-bs-warn" />
+                  <h3
+                    className="text-[22px] font-semibold text-bs-fg"
+                    style={sectionTitleStyle}
+                  >
+                    Consultations
+                  </h3>
                 </div>
 
-                <Link
-                  href="/tenant-admin/consultations"
-                  className="bs-btn bs-btn-green w-full justify-center"
-                >
-                  View All Consultations
-                  <ArrowUpRight className="ml-2 h-4 w-4" aria-hidden="true" />
-                </Link>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bs-card-2 rounded-bs-md border border-bs-border-100">
+                    <div>
+                      <p className="text-sm text-bs-fg-muted mb-1">
+                        Pending Requests
+                      </p>
+                      <p className="text-3xl font-bold text-bs-warn font-mono tabular-nums">
+                        {pendingConsultations}
+                      </p>
+                    </div>
+                    <div className="w-16 h-16 rounded-full bs-card-2 border border-bs-border-100 flex items-center justify-center">
+                      <Calendar className="h-8 w-8 text-bs-warn" />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </section>
 

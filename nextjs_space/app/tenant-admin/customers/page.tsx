@@ -125,7 +125,7 @@ export default async function CustomersListPage({
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [filteredCount, rawCustomers, totalCustomersCount, recentSignupsCount, failedIdUploads] =
+  const [filteredCount, rawCustomers, totalCustomersCount, recentSignupsCount, tenantQuestionnaires] =
     await Promise.all([
       prisma.users.count({ where: whereClause }),
       prisma.users.findMany({
@@ -169,19 +169,64 @@ export default async function CustomersListPage({
       prisma.consultation_questionnaires.findMany({
         where: {
           ...(tenantId && { tenantId }),
-          idDocumentStatus: "UPLOAD_FAILED",
         },
-        select: { email: true },
+        orderBy: { createdAt: "desc" },
+        select: {
+          email: true,
+          idDocumentStatus: true,
+          firstName: true,
+          lastName: true,
+          phoneCode: true,
+          phoneNumber: true,
+        },
       }),
     ]);
 
   const failedIdUploadEmails = new Set(
-    failedIdUploads.map((q: { email: string }) => q.email.toLowerCase()),
+    tenantQuestionnaires
+      .filter(
+        (q: { idDocumentStatus: string | null }) =>
+          q.idDocumentStatus === "UPLOAD_FAILED",
+      )
+      .map((q: { email: string }) => q.email.toLowerCase()),
   );
-  const customers = rawCustomers.map((customer: { email: string }) => ({
-    ...customer,
-    idUploadFailed: failedIdUploadEmails.has(customer.email.toLowerCase()),
-  }));
+  // Backfill name/phone for customers whose intake saved the name only to
+  // users.name and the phone only on the questionnaire (granular users columns
+  // were left null). Latest questionnaire per email wins (rows ordered desc).
+  const questionnaireByEmail = new Map<
+    string,
+    {
+      firstName: string | null;
+      lastName: string | null;
+      phoneCode: string | null;
+      phoneNumber: string | null;
+    }
+  >();
+  for (const q of tenantQuestionnaires as Array<{
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    phoneCode: string | null;
+    phoneNumber: string | null;
+  }>) {
+    const key = q.email.toLowerCase();
+    if (!questionnaireByEmail.has(key)) questionnaireByEmail.set(key, q);
+  }
+  const customers = rawCustomers.map(
+    (customer: { email: string; name: string | null; phone: string | null }) => {
+      const q = questionnaireByEmail.get(customer.email.toLowerCase());
+      return {
+        ...customer,
+        name:
+          customer.name ??
+          (q ? `${q.firstName ?? ""} ${q.lastName ?? ""}`.trim() || null : null),
+        phone:
+          customer.phone ??
+          (q?.phoneNumber ? `${q.phoneCode ?? ""} ${q.phoneNumber}`.trim() : null),
+        idUploadFailed: failedIdUploadEmails.has(customer.email.toLowerCase()),
+      };
+    },
+  );
 
   return (
     <div className="space-y-8">
