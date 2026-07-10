@@ -60,6 +60,39 @@ export default async function CustomerDetailPage({
     notFound();
   }
 
+  // Existing customers created via the ID-upload/consultation intake had their
+  // name saved only to users.name and phone only on the questionnaire (the
+  // granular users.firstName/lastName/phone were left null). Backfill for
+  // display so the form doesn't show "Not set" for data actually provided.
+  const needsBackfill = !(customer.firstName && customer.lastName && customer.phone);
+  const questionnaire =
+    needsBackfill && customer.email
+      ? await prisma.consultation_questionnaires.findFirst({
+          where: {
+            email: customer.email,
+            ...(customer.tenantId && { tenantId: customer.tenantId }),
+          },
+          orderBy: { createdAt: "desc" },
+          select: {
+            firstName: true,
+            lastName: true,
+            phoneCode: true,
+            phoneNumber: true,
+          },
+        })
+      : null;
+  const [derivedFirst, ...derivedRest] = (customer.name ?? "").trim().split(/\s+/);
+  const resolvedCustomer = {
+    ...customer,
+    firstName: customer.firstName ?? questionnaire?.firstName ?? (derivedFirst || null),
+    lastName: customer.lastName ?? questionnaire?.lastName ?? (derivedRest.join(" ") || null),
+    phone:
+      customer.phone ??
+      (questionnaire?.phoneNumber
+        ? `${questionnaire.phoneCode ?? ""} ${questionnaire.phoneNumber}`.trim()
+        : null),
+  };
+
   return (
     <div className="space-y-8">
       <Breadcrumbs
@@ -82,7 +115,7 @@ export default async function CustomerDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <CustomerEditForm customer={customer} />
+          <CustomerEditForm customer={resolvedCustomer} />
 
           <section className="bs-card bs-card-pad">
             <div className="bs-card-head mb-4">

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { subDays, startOfDay, format, eachDayOfInterval } from "date-fns";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { apiError } from "@/lib/api-error";
+import { getTenantVerificationMode } from "@/lib/verification-mode";
 
 export const GET = withTenantAuth(async (req, { user, tenantId }) => {
   try {
@@ -183,6 +184,56 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
       value: item._count.id,
     }));
 
+    // Verification mode — drives whether the consultations card renders
+    // (ID-upload tenants skip consultations).
+    const tenantRow = await prisma.tenants.findUnique({
+      where: { id: tenantId },
+      select: { countryCode: true, settings: true },
+    });
+    const verificationMode = getTenantVerificationMode(tenantRow ?? {});
+
+    // Real, tenant-scoped recent orders — replaces the former client-side mock.
+    const recentOrdersRows = await prisma.orders.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        orderNumber: true,
+        total: true,
+        status: true,
+        createdAt: true,
+        users: { select: { name: true, email: true } },
+      },
+    });
+    const recentOrdersList = recentOrdersRows.map((o: any) => ({
+      id: o.id,
+      orderNumber: o.orderNumber,
+      customer: o.users?.name || o.users?.email || "Unknown",
+      total: o.total,
+      status: o.status,
+      createdAt: o.createdAt,
+    }));
+
+    // Real, tenant-scoped recent customers — replaces the former client-side mock.
+    const recentCustomersRows = await prisma.users.findMany({
+      where: { tenantId, role: "PATIENT" },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, name: true, email: true, createdAt: true },
+    });
+    const recentCustomersList = recentCustomersRows.map((c: any) => ({
+      id: c.id,
+      name: c.name || c.email || "Unknown",
+      email: c.email,
+      createdAt: c.createdAt,
+    }));
+
+    // Real pending consultation count (0 for a new tenant = blank slate).
+    const pendingConsultations = await prisma.consultation_questionnaires.count({
+      where: { tenantId },
+    });
+
     return NextResponse.json({
       totalProducts,
       totalOrders,
@@ -197,6 +248,10 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
       topProducts: topProductsWithDetails,
       customerGrowth: customerGrowthData,
       ordersByStatus,
+      verificationMode,
+      recentOrdersList,
+      recentCustomersList,
+      pendingConsultations,
     });
   } catch (error) {
     console.error("Error fetching analytics:", error);

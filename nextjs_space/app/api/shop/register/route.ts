@@ -148,6 +148,12 @@ export const POST = withAuth(async (req, { user }) => {
       where: { id: dbUser.id },
       data: {
         name: `${personal.firstName} ${personal.lastName}`,
+        firstName: personal.firstName,
+        lastName: personal.lastName,
+        // Phone was collected + validated above but previously only sent to
+        // Dr Green — persist it locally so Customers detail/export show it.
+        phone: `${phoneCode} ${contactNumber}`.trim(),
+        updatedAt: new Date(),
       },
     });
 

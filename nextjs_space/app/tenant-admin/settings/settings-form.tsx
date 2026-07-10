@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/sonner";
-import { Globe, Key, Zap, Mail, ShieldCheck } from "lucide-react";
+import { Globe, Zap, Mail, ShieldCheck } from "lucide-react";
 import {
   getTenantVerificationMode,
   isSaIdEligibleTenant,
@@ -157,36 +157,7 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
         </div>
       </section>
 
-      {/* NFT Information */}
-      <section className="bs-card bs-card-pad">
-        <header className="mb-6 flex items-center gap-4">
-          <div className="rounded-xl border border-bs-border-100 bg-bs-card-2 p-2.5">
-            <Key className="h-5 w-5 text-bs-green-soft" aria-hidden="true" />
-          </div>
-          <div className="space-y-1">
-            <h2
-              className="font-display text-[22px] text-bs-fg"
-              style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
-            >
-              NFT License
-            </h2>
-            <p className="text-sm text-bs-fg-muted">
-              Your store license information
-            </p>
-          </div>
-        </header>
-        <div className="space-y-2">
-          <label className="bs-eyebrow">NFT Token ID</label>
-          <input
-            value={tenant.nftTokenId || "Not set"}
-            disabled
-            className="bs-input w-full font-mono opacity-70"
-          />
-          <p className="text-xs text-bs-fg-muted">
-            This NFT verifies your license to operate on BudStacks.io
-          </p>
-        </div>
-      </section>
+      {/* NFT License section hidden — feature not in use (tenant.nftTokenId retained in DB) */}
 
       {/* Dr. Green Integration */}
       <section className="bs-card bs-card-pad">
