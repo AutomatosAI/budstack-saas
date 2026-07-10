@@ -24,6 +24,7 @@ import { checkUserKycStatus, KycStatus } from "@/app/actions/kyc-check";
 import { getStorefrontDashboard, StorefrontDashboard } from "@/app/actions/dashboard";
 import { OrderListItem, money } from "@/components/storefront/order-list-item";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
+import { ReUploadIdDocument } from "@/components/shop/ReUploadIdDocument";
 
 function StatCard({
   icon,
@@ -88,6 +89,10 @@ export default function DashboardPage() {
 
   const verified = !!kycStatus?.kycVerified;
   const showClinical = data?.verificationMode !== "ID_UPLOAD"; // KYC tenants only
+  // PRD-220 Part B: registration succeeded but the inline ID upload failed —
+  // only meaningful for ID-upload tenants and only while unverified.
+  const idUploadFailed =
+    !verified && !showClinical && kycStatus?.idDocumentStatus === "UPLOAD_FAILED";
   const orders = data?.orders ?? [];
 
   return (
@@ -129,6 +134,28 @@ export default function DashboardPage() {
                 <ShoppingBag className="mr-2 h-4 w-4" /> Start shopping
               </Button>
             </Link>
+          </div>
+        ) : idUploadFailed ? (
+          /* PRD-220 Part B: the inline upload during registration failed —
+             the account exists but Dr Green never received the document.
+             Say so and offer the re-upload right here. */
+          <div className="mb-8 rounded-2xl border border-rose-200 bg-rose-50/70 p-5">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-rose-600" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-rose-900">
+                  We didn&apos;t receive your ID document
+                </h3>
+                <p className="text-sm text-rose-800">
+                  Your account was created, but the ID upload didn&apos;t go through —
+                  verification can&apos;t start until we have it. Please upload it again below.
+                </p>
+                <ReUploadIdDocument
+                  slug={slug}
+                  onUploaded={() => checkUserKycStatus().then(setKycStatus)}
+                />
+              </div>
+            </div>
           </div>
         ) : (
           <div

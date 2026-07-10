@@ -154,6 +154,11 @@ model consultation_questionnaires {
   kycLink               String?
   isKycVerified         Boolean  @default(false)
   adminApproval         String   @default("PENDING")
+  // PRD-220 Part B — inline ID-document upload OUTCOME (SA ID-upload mode).
+  // Status flag only, never document data. UPLOADED | UPLOAD_FAILED | null.
+  idDocumentStatus      String?
+  idDocumentError       String?
+  idDocumentUpdatedAt   DateTime?
   createdAt             DateTime @default(now())
   updatedAt             DateTime
 }

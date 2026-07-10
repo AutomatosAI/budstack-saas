@@ -6,6 +6,7 @@ import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 import { createSaIdClient, uploadIdentityDocument } from "@/lib/drgreen-identity";
+import { recordIdDocumentOutcome } from "@/lib/verification/id-document-status";
 import {
   getTenantVerificationMode,
   isSaIdUploadEnabled,
@@ -355,8 +356,9 @@ export async function POST(request: NextRequest) {
         // Inline ID upload — BEST-EFFORT. The account + Dr Green client are
         // already created above, so an upload failure must NOT fail the whole
         // registration: the client lands as verification-pending and can
-        // re-upload the document from the dashboard. (The Dr Green identity
-        // upload signature contract is being finalised separately.)
+        // re-upload the document from the dashboard. PRD-220 Part B: the
+        // outcome is persisted either way so the failure is visible (customer
+        // re-upload CTA + tenant-admin badge) instead of log-only.
         if (clientId && body.idDocument?.fileBase64) {
           try {
             await uploadIdentityDocument({
@@ -367,6 +369,10 @@ export async function POST(request: NextRequest) {
               mimeType: body.idDocument.mimeType,
               config: { apiKey, secretKey },
               baseUrl: apiUrl,
+            });
+            await recordIdDocumentOutcome({
+              questionnaireId: questionnaire.id,
+              outcome: "UPLOADED",
             });
           } catch (uploadErr) {
             logger.error(
@@ -380,6 +386,11 @@ export async function POST(request: NextRequest) {
                     : String(uploadErr),
               },
             );
+            await recordIdDocumentOutcome({
+              questionnaireId: questionnaire.id,
+              outcome: "UPLOAD_FAILED",
+              error: uploadErr,
+            });
           }
         }
       } else {

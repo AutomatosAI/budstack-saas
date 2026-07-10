@@ -37,7 +37,7 @@ export const GET = withTenantAuth(async (request: NextRequest, { tenantId }) => 
     where.isActive = false;
   }
 
-  const [total, customers] = await Promise.all([
+  const [total, customers, failedIdUploads] = await Promise.all([
     prisma.users.count({ where }),
     prisma.users.findMany({
       where,
@@ -62,10 +62,25 @@ export const GET = withTenantAuth(async (request: NextRequest, { tenantId }) => 
       skip: (page - 1) * limit,
       take: limit,
     }),
+    // PRD-220 Part B: customers whose inline ID-document upload failed —
+    // questionnaires are keyed by (tenantId, email), not userId, so match by
+    // lowercased email in JS (Prisma `in` has no insensitive mode). Failed
+    // uploads per tenant are few, so the unfiltered fetch is cheap.
+    prisma.consultation_questionnaires.findMany({
+      where: { tenantId, idDocumentStatus: "UPLOAD_FAILED" },
+      select: { email: true },
+    }),
   ]);
 
+  const failedIdUploadEmails = new Set(
+    failedIdUploads.map((q: { email: string }) => q.email.toLowerCase()),
+  );
+
   return NextResponse.json({
-    customers,
+    customers: customers.map((customer: { email: string }) => ({
+      ...customer,
+      idUploadFailed: failedIdUploadEmails.has(customer.email.toLowerCase()),
+    })),
     pagination: {
       page,
       limit,

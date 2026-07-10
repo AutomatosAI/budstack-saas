@@ -26,6 +26,9 @@ export interface Customer {
   _count: {
     orders: number;
   };
+  // PRD-220 Part B: inline ID-document upload failed during registration —
+  // the customer is stuck unverified until they (or we) re-upload.
+  idUploadFailed?: boolean;
 }
 
 interface CustomersTableProps {
@@ -217,6 +220,11 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                           <p className="font-medium text-bs-fg truncate">
                             {customer.name || "N/A"}
                           </p>
+                          {customer.idUploadFailed && (
+                            <RowPill tone="red" className="mt-0.5">
+                              ID upload failed
+                            </RowPill>
+                          )}
                           <a
                             href={`mailto:${customer.email}`}
                             className="text-xs font-mono text-bs-fg-muted hover:text-bs-green-soft md:hidden truncate block"
