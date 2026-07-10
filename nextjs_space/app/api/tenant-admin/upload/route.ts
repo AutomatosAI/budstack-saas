@@ -56,7 +56,12 @@ export const POST = withAuth(async (req, { user }) => {
 
     // Tenant-scoped upload path — prevents cross-tenant overwrites
     const uploadPrefix = tenantId ? `tenants/${tenantId}/` : '';
-    const key = await uploadFile(buffer, sanitizedName, file.type, uploadPrefix);
+    // publicRead: this endpoint backs cover-image uploads rendered via a raw
+    // direct URL (editor preview + public storefront + og:image), so the
+    // object must be publicly readable — a private object 403s the <img>.
+    const key = await uploadFile(buffer, sanitizedName, file.type, uploadPrefix, {
+      publicRead: true,
+    });
 
     const { bucketName, region } = await getBucketConfig();
     const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;

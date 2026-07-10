@@ -31,6 +31,7 @@ export async function uploadFile(
   fileName: string,
   contentType?: string,
   tenantPrefix?: string,
+  options?: { publicRead?: boolean },
 ): Promise<string> {
   const s3Client = await createS3Client();
   const { bucketName, folderPrefix } = await getBucketConfig();
@@ -61,6 +62,11 @@ export async function uploadFile(
       Key: key,
       Body: buffer,
       ...(contentType ? { ContentType: contentType } : {}),
+      // Opt-in public-read for assets served via a stable direct URL (e.g.
+      // blog cover images rendered raw on the public storefront + og:image).
+      // Requires the bucket to permit object ACLs. Default (undefined) keeps
+      // objects private — those are served via signed URLs.
+      ...(options?.publicRead ? { ACL: "public-read" as const } : {}),
     }),
   );
 

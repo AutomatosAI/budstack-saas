@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
@@ -47,8 +48,12 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       counter++;
     }
 
+    // The `posts` model declares neither an `id` default nor `@updatedAt`
+    // (introspected schema), so Prisma requires both on create — mirror the
+    // convention used across the other create() call sites.
     const post = await prisma.posts.create({
       data: {
+        id: crypto.randomUUID(),
         title: validatedData.title,
         slug: uniqueSlug,
         content: validatedData.content,
@@ -57,6 +62,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
         published: validatedData.published,
         tenantId: tenantId,
         authorId: user.id,
+        updatedAt: new Date(),
       },
     });
 
