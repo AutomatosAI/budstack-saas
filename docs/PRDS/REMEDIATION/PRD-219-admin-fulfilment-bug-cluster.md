@@ -20,14 +20,14 @@ The Prisma schema names relations in snake_case (`order_items`, `webhook_deliver
 | # | Surface | Bug | Blast radius |
 |---|---|---|---|
 | 1 | `GET /api/tenant-admin/webhooks` — `app/api/tenant-admin/webhooks/route.ts:30` | `_count: { select: { deliveries: true } }` — relation is `webhook_deliveries` | The **entire tenant-admin Webhooks/Integrations page is dead** (`app/tenant-admin/webhooks/page.tsx` renders from this endpoint and expects `_count.deliveries`) |
-| 2 | `getOrder()` — `lib/drgreen/drgreen-orders.ts:375` and `:401` | `include: { items: true }` — relation is `order_items` (the `createOrder()` path in the *same file* already uses `order_items` correctly at `:217–227`) | `GET /api/store/[slug]/orders/[orderId]` **500s for customers** ("Failed to get order"), and the Dr Green **PAID payment-status sync side-effect never runs** (it lives inside the same function, `:397–403`) |
+| 2 | `getOrder()` — `lib/drgreen/drgreen-orders.ts:375` and `:401` | `include: { items: true }` — relation is `order_items` (the `createOrder()` path in the *same file* already uses `order_items` correctly at `:217–227`) | `GET /api/store/[slug]/orders/[orderId]` **500s** ("Failed to get order") for any consumer — though no first-party UI fetches it today (the RSC order page queries the DB directly; payment flows use the `/payment-status` sub-route), so the sharper impact is that the Dr Green **PAID payment-status sync side-effect never runs** (it lives inside the same function, `:397–403`) |
 
 Note the storefront order-confirmation **RSC page** (`app/store/[slug]/orders/[orderId]/page.tsx:20`) queries correctly with `order_items` — so the page shell renders while its API sibling 500s. That asymmetry is exactly how this class of bug hides.
 
 ## 2. Users / personas
 
 - **Tenant operator (admin):** cannot open the Webhooks page at all; cannot see delivery counts or manage integrations.
-- **Patient / customer:** order-detail fetches fail; payment status shown can stay stale (`PENDING`) even after PayCloud/Dr Green marks the order `PAID`, because the sync path is unreachable.
+- **Patient / customer:** payment status shown can stay stale (`PENDING`) even after PayCloud/Dr Green marks the order `PAID`, because the sync path is unreachable; the order-detail API itself 500s for any external/API consumer.
 - **Platform (us):** every new tenant onboarded hits both within their first day of real use.
 
 ## 3. User stories
