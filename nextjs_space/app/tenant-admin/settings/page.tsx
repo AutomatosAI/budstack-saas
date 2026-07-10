@@ -1,36 +1,32 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import SettingsForm from "./settings-form";
 
 export default async function SettingsPage() {
   await requirePagePermission("canEditSettings");
-  const user = await currentUser();
 
-  if (
-    !user ||
-    (user.publicMetadata.role !== "TENANT_ADMIN" &&
-      user.publicMetadata.role !== "SUPER_ADMIN")
-  ) {
+  // PRD-302: impersonation-aware tenant (matches the banner).
+  const active = await getActiveAdminTenant();
+  if (!active) {
     redirect("/auth/login");
   }
 
-  const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
-    where: { email: email },
-    include: { tenants: true },
+  const tenant = await prisma.tenants.findUnique({
+    where: { id: active.tenantId },
   });
 
-  if (localUser?.tenants?.drGreenSecretKey) {
-    localUser.tenants.drGreenSecretKey = "********";
-  }
-  if (localUser?.tenants?.drGreenApiKey) {
-    localUser.tenants.drGreenApiKey = "********";
+  if (!tenant) {
+    redirect("/tenant-admin");
   }
 
-  if (!localUser?.tenants) {
-    redirect("/tenant-admin");
+  // Never expose Dr Green secrets to the client form.
+  if (tenant.drGreenSecretKey) {
+    tenant.drGreenSecretKey = "********";
+  }
+  if (tenant.drGreenApiKey) {
+    tenant.drGreenApiKey = "********";
   }
 
   return (
@@ -47,7 +43,7 @@ export default async function SettingsPage() {
         </p>
       </header>
 
-      <SettingsForm tenant={localUser.tenants} />
+      <SettingsForm tenant={tenant} />
     </div>
   );
 }

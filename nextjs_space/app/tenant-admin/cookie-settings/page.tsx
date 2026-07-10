@@ -1,31 +1,23 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { Cookie } from "lucide-react";
 import CookieSettingsForm from "./settings-form";
 
 export default async function CookieSettingsPage() {
-  const user = await currentUser();
-
-  if (
-    !user ||
-    (user.publicMetadata.role !== "TENANT_ADMIN" &&
-      user.publicMetadata.role !== "SUPER_ADMIN")
-  ) {
+  // PRD-302: impersonation-aware tenant (matches the banner).
+  const active = await getActiveAdminTenant();
+  if (!active) {
     redirect("/auth/login");
   }
 
-  const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
-    where: { email: email },
-    include: { tenants: true },
+  const tenant = await prisma.tenants.findUnique({
+    where: { id: active.tenantId },
   });
 
-  if (!localUser?.tenants) {
+  if (!tenant) {
     redirect("/tenant-admin");
   }
-
-  const tenant = localUser.tenants;
   const settings = (tenant.settings as Record<string, any>) || {};
 
   return (

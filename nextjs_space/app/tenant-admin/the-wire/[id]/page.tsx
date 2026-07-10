@@ -1,6 +1,6 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import PostForm from "../post-form";
 
 export const metadata = {
@@ -12,9 +12,9 @@ export default async function EditPostPage({
 }: {
   params: { id: string };
 }) {
-  const user = await currentUser();
-
-  if (!user) {
+  // PRD-302: impersonation-aware tenant (matches the banner).
+  const active = await getActiveAdminTenant();
+  if (!active) {
     redirect("/auth/login");
   }
 
@@ -28,14 +28,8 @@ export default async function EditPostPage({
     notFound();
   }
 
-  // Verify tenant access
-  const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
-    where: { email: email },
-    include: { tenants: true },
-  });
-
-  if (post.tenantId !== localUser?.tenantId) {
+  // Verify tenant access against the active (impersonation-aware) tenant.
+  if (post.tenantId !== active.tenantId) {
     redirect("/tenant-admin/the-wire");
   }
 

@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import CustomerEditForm from "./customer-edit-form";
 import CustomerActions from "./customer-actions";
 import { Breadcrumbs } from "@/components/admin/shared";
@@ -19,8 +20,14 @@ export default async function CustomerDetailPage({
     redirect("/auth/login");
   }
 
+  // Tenant scope: TENANT_ADMIN → own; impersonating SUPER_ADMIN → the
+  // impersonated tenant (PRD-302); non-impersonating SUPER_ADMIN → undefined
+  // (any tenant's customer, unchanged).
   let tenantId: string | undefined;
-  if (user.publicMetadata.role === "TENANT_ADMIN") {
+  const active = await getActiveAdminTenant();
+  if (active?.isImpersonating) {
+    tenantId = active.tenantId;
+  } else if (user.publicMetadata.role === "TENANT_ADMIN") {
     const email = user.emailAddresses[0]?.emailAddress;
     const localUser = await prisma.users.findFirst({
       where: { email: email },

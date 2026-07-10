@@ -1,8 +1,8 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import PostsList from "./posts-list";
 
 export const metadata = {
@@ -10,24 +10,14 @@ export const metadata = {
 };
 
 export default async function TheWirePage() {
-  const user = await currentUser();
-
-  if (!user) {
+  // PRD-302: impersonation-aware tenant (matches the banner).
+  const active = await getActiveAdminTenant();
+  if (!active) {
     redirect("/auth/login");
   }
 
-  const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
-    where: { email: email },
-    include: { tenants: true },
-  });
-
-  if (!localUser?.tenants) {
-    redirect("/tenant-admin");
-  }
-
   const posts = await prisma.posts.findMany({
-    where: { tenantId: localUser.tenants.id },
+    where: { tenantId: active.tenantId },
     orderBy: { createdAt: "desc" },
     include: { users: true },
   });

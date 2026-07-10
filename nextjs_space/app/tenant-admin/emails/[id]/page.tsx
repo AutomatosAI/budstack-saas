@@ -1,6 +1,6 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { TenantEditTemplateClient } from "./client";
 
 export default async function TenantEditEmailPage({
@@ -8,30 +8,17 @@ export default async function TenantEditEmailPage({
 }: {
   params: { id: string };
 }) {
-  const user = await currentUser();
-
-  if (
-    !user ||
-    !["TENANT_ADMIN", "SUPER_ADMIN"].includes((user.publicMetadata.role as string) || "")
-  ) {
+  // PRD-302: impersonation-aware tenant (matches the banner).
+  const active = await getActiveAdminTenant();
+  if (!active) {
     redirect("/auth/login");
-  }
-
-  const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
-    where: { email: email },
-    include: { tenants: true },
-  });
-
-  if (!localUser?.tenants) {
-    redirect("/tenant-admin");
   }
 
   const template = await prisma.email_templates.findFirst({
     where: {
       id: params.id,
-      tenantId: localUser.tenants.id, // Strict ownership
-    }, // Strict ownership
+      tenantId: active.tenantId, // Strict ownership (impersonation-aware)
+    },
   });
 
   if (!template) {

@@ -1,7 +1,7 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { Prisma } from "@prisma/client";
 import { ProductsTable } from "./products-table";
 import { SyncButton } from "./sync-button";
@@ -30,27 +30,15 @@ export default async function ProductsPage({
   searchParams,
 }: ProductsPageProps) {
   await requirePagePermission("canViewProducts");
-  const user = await currentUser();
 
-  if (
-    !user ||
-    (user.publicMetadata.role !== "TENANT_ADMIN" &&
-      user.publicMetadata.role !== "SUPER_ADMIN")
-  ) {
+  // PRD-302: impersonation-aware tenant (the impersonated tenant for a
+  // super-admin mid-session, else the admin's own).
+  const active = await getActiveAdminTenant();
+  if (!active) {
     redirect("/auth/login");
   }
 
-  const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
-    where: { email: email },
-    select: { tenantId: true },
-  });
-
-  if (!localUser?.tenantId) {
-    redirect("/tenant-admin");
-  }
-
-  const tenantId = localUser.tenantId;
+  const tenantId = active.tenantId;
 
   // Get tenant currency symbol from country code
   const tenant = await prisma.tenants.findUnique({
