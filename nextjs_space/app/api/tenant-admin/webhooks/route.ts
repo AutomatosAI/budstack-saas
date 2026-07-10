@@ -23,17 +23,26 @@ const webhookCreateSchema = z
  */
 export const GET = withTenantAuth(async (_request, { tenantId }) => {
   try {
+    // NB: the `webhooks` relation is `webhook_deliveries` — NOT `deliveries`
+    // (that is the transformed name this response exposes). Using the wrong
+    // name in `_count.select` throws PrismaClientValidationError → 500.
     const webhooks = await prisma.webhooks.findMany({
       where: { tenantId },
       include: {
         _count: {
-          select: { deliveries: true },
+          select: { webhook_deliveries: true },
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ webhooks });
+    // Match the public shape the page expects (`_count.deliveries`).
+    return NextResponse.json({
+      webhooks: webhooks.map(({ _count, ...webhook }: any) => ({
+        ...webhook,
+        _count: { deliveries: _count.webhook_deliveries },
+      })),
+    });
   } catch (error) {
     console.error("[API] Error fetching webhooks:", error);
     return apiError(error, {

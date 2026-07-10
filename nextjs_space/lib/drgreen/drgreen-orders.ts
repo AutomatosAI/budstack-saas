@@ -370,14 +370,24 @@ export async function getOrder(params: {
 }): Promise<any> {
     const { orderId, userId, tenantId, apiKey, secretKey } = params;
 
+    // NB: the `orders` relation is `order_items` — NOT `items` (that is the
+    // transformed name the API layer exposes; see createOrder above and the
+    // tenant-admin PATCH, PR #187). The wrong name in `include` throws
+    // PrismaClientValidationError ("Unknown field `items`") → 500.
     const order = await prisma.orders.findFirst({
         where: { id: orderId, userId, tenantId },
-        include: { items: true },
+        include: { order_items: true },
     });
 
     if (!order) {
         throw new Error("Order not found");
     }
+
+    // Every exit maps to the public shape (order_items → items).
+    const toPublicShape = ({ order_items, ...rest }: any) => ({
+        ...rest,
+        items: order_items,
+    });
 
     if (order.drGreenOrderId) {
         try {
@@ -395,16 +405,17 @@ export async function getOrder(params: {
 
             const orderDetails = (drGreenOrder as any).data?.orderDetails;
             if (orderDetails?.paymentStatus === "PAID" && order.paymentStatus !== "PAID") {
-                return prisma.orders.update({
+                const updated = await prisma.orders.update({
                     where: { id: order.id },
                     data: { paymentStatus: "PAID" },
-                    include: { items: true },
+                    include: { order_items: true },
                 });
+                return toPublicShape(updated);
             }
         } catch (error) {
             console.error("[Order Sync] Failed to sync with Dr. Green:", error);
         }
     }
 
-    return order;
+    return toPublicShape(order);
 }
