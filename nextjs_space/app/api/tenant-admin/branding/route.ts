@@ -188,7 +188,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
       // base marketplace template path it was cloned from. Reused by every
       // stripSignedUrls() call below (PRD-220 Part C).
       const assetKeyPrefixes: string[] = [
-        currentTemplate?.s3Path,
+        currentTemplate?.s3Path?.replace(/\/+$/, ''),
         currentTemplate?.templates?.slug ? `templates/${currentTemplate.templates.slug}` : null,
       ].filter((p): p is string => Boolean(p));
 

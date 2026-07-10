@@ -90,6 +90,17 @@ describe("stripSignedUrls (PRD-220 AC-C1/AC-C3)", () => {
     expect(result.imageUrl).toBe("templates/other-template/uploads/hero.png");
   });
 
+  it("falls back to the raw key instead of throwing on malformed percent-encoding", () => {
+    const input = {
+      imageUrl: "https://my-bucket.s3.amazonaws.com/uploads/bad%zzname.png?X-Amz-Signature=abc",
+    };
+
+    const result = stripSignedUrls(input, PREFIXES);
+
+    expect(countXAmz(result)).toBe(0);
+    expect(result.imageUrl).toBe("uploads/bad%zzname.png");
+  });
+
   it("detects an X-Amz-signed URL even without an .amazonaws.com host", () => {
     const input = {
       imageUrl: "https://cdn.example.com/tenants/t1/templates/modern/uploads/hero.png?X-Amz-Signature=abc",

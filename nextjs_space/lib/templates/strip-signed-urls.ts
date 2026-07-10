@@ -48,7 +48,15 @@ function stripSignedUrl(value: string, prefixes: readonly string[]): string {
   // Never keep the query string — that's where the signature/expiry lives.
   // `pathname` is already query-free by construction (real URL parse, not a
   // string split), and independent of hostname/userinfo/port games.
-  const fullKey = decodeURIComponent(parsed.pathname.replace(/^\/+/, ""));
+  const rawKey = parsed.pathname.replace(/^\/+/, "");
+  let fullKey: string;
+  try {
+    fullKey = decodeURIComponent(rawKey);
+  } catch {
+    // Malformed percent-encoding (e.g. a stray "%zz") — fall back to the raw
+    // key rather than letting URIError propagate and fail the whole save.
+    fullKey = rawKey;
+  }
 
   return relativizeKey(fullKey, prefixes);
 }
