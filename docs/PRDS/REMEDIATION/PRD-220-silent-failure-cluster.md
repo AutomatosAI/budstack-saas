@@ -64,7 +64,7 @@ Net effect: a tenant uploads branding, everything looks right, and images die la
 
 ### Part A — email pipeline
 
-**AC-A1 — Worker deployment is explicit.** The BullMQ worker runs as a declared Railway service (start command `pnpm email:worker`), documented in the repo (deploy doc + service inventory). If the dashboard check finds one already, this AC becomes "document + healthcheck it".
+**AC-A1 — Worker deployment is explicit.** ~~The BullMQ worker runs as a declared Railway service~~ **Amended 0.2:** the 2026-07-10 Railway check found **no worker service exists** (project = Redis + web + Postgres only) → email was live-dead. v1 runs the worker as an **in-container sidecar** (`entrypoint.sh` restart-loop before the web `exec`) — ships via PR with zero dashboard dependency, auto-deploys with web, and warns loudly if `REDIS_URL` is absent. A separate Railway service (same `pnpm email:worker` start command) remains the documented scale-up path — see [runbook](../../runbooks/email-worker.md).
 **AC-A2 — Liveness signal.** The worker heartbeats (updates a row/key on an interval). An admin-visible status (super-admin ops panel or `/api/health` extension) exposes: worker last-seen, queue depth, oldest `QUEUED` age.
 **AC-A3 — Aging alert.** When oldest `QUEUED` exceeds a threshold (default 15 min), an alert fires (log-based Railway alert or webhook — align with PRD-215's alerting choices).
 **AC-A4 — Backlog drain.** One-off runbook/script to drain or expire the existing stuck `QUEUED` backlog (if part A turns out to be live-dead), so counters start clean.
@@ -111,3 +111,4 @@ Three independently shippable parts (A, B, C) — land as separate PRs in that o
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 0.1 | 2026-07-10 | Claude (with Gerard) | Drafted from the 2026-07-10 CX review (new-tenant setup day). Email-worker deployment question flagged to Gerard. |
+| 0.2 | 2026-07-10 | Claude (with Gerard) | **Part A question answered + shipped**: Railway project has NO worker service → email confirmed enqueue-only/dead. AC-A1 amended to in-container sidecar (rationale inline); AC-A2 heartbeat (Redis key + super-admin `ops/email-health` route), AC-A3 alert line (`[EmailWorker][ALERT]…`, Railway log-alert matchable), AC-A4 expiry guard (`EMAIL_MAX_JOB_AGE_MS`, default 48h — stale backlog expires instead of blasting customers) + drain script `scripts/expire-stale-queued-email-logs.ts`. Runbook `docs/runbooks/email-worker.md`. |
