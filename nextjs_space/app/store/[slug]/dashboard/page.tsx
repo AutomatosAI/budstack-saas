@@ -93,6 +93,10 @@ export default function DashboardPage() {
   // only meaningful for ID-upload tenants and only while unverified.
   const idUploadFailed =
     !verified && !showClinical && kycStatus?.idDocumentStatus === "UPLOAD_FAILED";
+  // Admin reviewed the uploaded ID and rejected it — show the reason and let
+  // the client re-upload right here (they do NOT need a new account).
+  const rejected =
+    !verified && !showClinical && kycStatus?.status === "REJECTED";
   const orders = data?.orders ?? [];
 
   return (
@@ -149,6 +153,33 @@ export default function DashboardPage() {
                 <p className="text-sm text-rose-800">
                   Your account was created, but the ID upload didn&apos;t go through —
                   verification can&apos;t start until we have it. Please upload it again below.
+                </p>
+                <ReUploadIdDocument
+                  slug={slug}
+                  onUploaded={() => checkUserKycStatus().then(setKycStatus)}
+                />
+              </div>
+            </div>
+          </div>
+        ) : rejected ? (
+          /* Admin rejected the uploaded ID — show the reason and let the client
+             re-upload here. They do NOT need to create a new account. */
+          <div className="mb-8 rounded-2xl border border-rose-200 bg-rose-50/70 p-5">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-rose-600" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-rose-900">
+                  Your ID wasn&apos;t approved
+                </h3>
+                {kycStatus?.message && (
+                  <p className="mt-1 text-sm text-rose-800">
+                    <span className="font-medium">Reason:</span>{" "}
+                    {kycStatus.message}
+                  </p>
+                )}
+                <p className="mt-1 text-sm text-rose-800">
+                  You don&apos;t need to create a new account. Please re-upload a
+                  clear photo of a valid government ID (not a selfie) below.
                 </p>
                 <ReUploadIdDocument
                   slug={slug}

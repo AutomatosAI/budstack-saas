@@ -70,8 +70,11 @@ export function IdUploadStep({
           Verify your identity
         </h2>
         <p className="text-gray-600">
-          Upload a clear photo of a valid government ID. An admin reviews it to
-          verify your account — no medical consultation needed.
+          Upload a clear photo of a <strong>valid government ID</strong> (National
+          ID, passport or driving licence). It must be your actual ID
+          document&nbsp;— <strong>selfies or other photos will be rejected</strong>.
+          An admin reviews it to verify your account — no medical consultation
+          needed.
         </p>
       </div>
 
