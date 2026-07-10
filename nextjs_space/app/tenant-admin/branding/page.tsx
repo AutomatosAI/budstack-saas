@@ -1,7 +1,7 @@
-import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { requirePagePermission } from '@/lib/permissions/require-page-permission';
+import { getActiveAdminTenant } from '@/lib/tenant/active-admin-tenant';
 import BrandingForm from './branding-form';
 
 import { getJsonFromS3, getTextFromS3 } from '@/lib/storage/s3';
@@ -12,25 +12,21 @@ export const dynamic = 'force-dynamic';
 
 export default async function BrandingPage({ searchParams }: { searchParams: { templateId?: string } }) {
   await requirePagePermission("canManageBranding");
-  const user = await currentUser();
 
-  if (!user || (user.publicMetadata.role !== 'TENANT_ADMIN' && user.publicMetadata.role !== 'SUPER_ADMIN')) {
+  // PRD-302: impersonation-aware tenant (matches the banner).
+  const active = await getActiveAdminTenant();
+  if (!active) {
     redirect('/auth/login');
   }
 
-  const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
-    where: { email: email },
+  const tenant = await prisma.tenants.findUnique({
+    where: { id: active.tenantId },
     include: {
-      tenants: {
-        include: {
-          template: true,
-        },
-      },
+      template: true,
     },
   });
 
-  if (!localUser?.tenants) {
+  if (!tenant) {
     redirect("/dashboard");
   }
 
@@ -40,11 +36,11 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
     orderBy: { name: "asc" },
   });
 
-  const templateIdToEdit = searchParams.templateId || localUser.tenants.activeTenantTemplateId;
+  const templateIdToEdit = searchParams.templateId || tenant.activeTenantTemplateId;
 
-  logger.info(`[branding-page] Tenant ${localUser.tenants.id}`, {
-    businessName: localUser.tenants.businessName,
-    activeTenantTemplateId: localUser.tenants.activeTenantTemplateId,
+  logger.info(`[branding-page] Tenant ${tenant.id}`, {
+    businessName: tenant.businessName,
+    activeTenantTemplateId: tenant.activeTenantTemplateId,
     templateIdToEdit,
     searchParamTemplateId: searchParams.templateId || null,
   });
@@ -178,7 +174,7 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
   return (
     <div className="h-full w-full max-w-full overflow-hidden">
       {/* Branding Form (now a full-screen Live Editor) */}
-      <BrandingForm tenant={localUser.tenants as any} activeTemplate={activeTemplate} />
+      <BrandingForm tenant={tenant as any} activeTemplate={activeTemplate} />
     </div>
   );
 }

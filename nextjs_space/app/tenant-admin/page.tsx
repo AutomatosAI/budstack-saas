@@ -1,4 +1,3 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
@@ -9,44 +8,35 @@ import {
   Store,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { getTenantUrl } from "@/lib/tenant/tenant-utils";
 import { QuickActionsWidget } from "@/components/admin/QuickActionsWidget";
 import { StatCard } from "@/components/admin/shared/StatCard";
 
 export default async function TenantAdminDashboard() {
-  const user = await currentUser();
-
-  if (
-    !user ||
-    (user.publicMetadata.role !== "TENANT_ADMIN" &&
-      user.publicMetadata.role !== "SUPER_ADMIN")
-  ) {
+  // PRD-302: impersonation-aware — renders the impersonated tenant when a
+  // super-admin is impersonating, else the admin's own (unchanged).
+  const active = await getActiveAdminTenant();
+  if (!active) {
     redirect("/auth/login");
   }
 
-  const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
-    where: { email: email },
+  const tenant = await prisma.tenants.findUnique({
+    where: { id: active.tenantId },
     include: {
-      tenants: {
-        include: {
-          _count: {
-            select: {
-              products: true,
-              orders: true,
-              users: true,
-            },
-          },
+      _count: {
+        select: {
+          products: true,
+          orders: true,
+          users: true,
         },
       },
     },
   });
 
-  if (!localUser?.tenants) {
+  if (!tenant) {
     redirect("/auth/login");
   }
-
-  const tenant = localUser.tenants;
   const tenantStoreUrl = getTenantUrl(tenant);
 
   return (

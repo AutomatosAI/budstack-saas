@@ -1,26 +1,13 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { TenantNewTemplateClient } from "./client";
 
 export default async function TenantNewEmailPage() {
-  const user = await currentUser();
-
-  if (
-    !user ||
-    !["TENANT_ADMIN", "SUPER_ADMIN"].includes((user.publicMetadata.role as string) || "")
-  ) {
+  // PRD-302: impersonation-aware admin gate (the editor client fetches its data
+  // via impersonation-aware APIs, so this page only needs the access check).
+  const active = await getActiveAdminTenant();
+  if (!active) {
     redirect("/auth/login");
-  }
-
-  const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
-    where: { email: email },
-    include: { tenants: true },
-  });
-
-  if (!localUser?.tenants) {
-    redirect("/tenant-admin");
   }
 
   return <TenantNewTemplateClient />;

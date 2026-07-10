@@ -2,6 +2,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { Prisma } from "@prisma/client";
 import { ERASURE_EMAIL_DOMAIN } from "@/lib/gdpr/erasure";
 import { Users, UserCheck, UserPlus } from "lucide-react";
@@ -33,9 +34,15 @@ export default async function CustomersListPage({
     redirect("/auth/login");
   }
 
-  // Tenant admins only see their own customers
+  // Tenant scope for the customer list:
+  //  - TENANT_ADMIN → their own tenant
+  //  - SUPER_ADMIN impersonating → the impersonated tenant (PRD-302)
+  //  - SUPER_ADMIN otherwise → undefined (cross-tenant view, unchanged)
   let tenantId: string | undefined;
-  if (user.publicMetadata.role === "TENANT_ADMIN") {
+  const active = await getActiveAdminTenant();
+  if (active?.isImpersonating) {
+    tenantId = active.tenantId;
+  } else if (user.publicMetadata.role === "TENANT_ADMIN") {
     const email = user.emailAddresses[0]?.emailAddress;
     const localUser = await prisma.users.findFirst({
       where: { email: email },

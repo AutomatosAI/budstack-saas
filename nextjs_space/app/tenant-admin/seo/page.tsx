@@ -1,37 +1,18 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
 import { Search } from "lucide-react";
 import { SeoPageClient } from "./seo-page-client";
 
 export default async function SeoPage() {
-  const user = await currentUser();
-
-  if (
-    !user ||
-    (user.publicMetadata.role !== "TENANT_ADMIN" &&
-      user.publicMetadata.role !== "SUPER_ADMIN")
-  ) {
+  // PRD-302: impersonation-aware tenant (matches the banner).
+  const active = await getActiveAdminTenant();
+  if (!active) {
     redirect("/auth/login");
   }
 
-  const email = user.emailAddresses[0]?.emailAddress;
-
-  if (!email) {
-    redirect("/auth/login");
-  }
-
-  const localUser = await prisma.users.findUnique({
-    where: { email: email },
-    select: { tenantId: true },
-  });
-
-  if (!localUser?.tenantId) {
-    redirect("/tenant-admin");
-  }
-
-  const tenantId = localUser.tenantId;
+  const tenantId = active.tenantId;
 
   const [tenant, products, posts] = await Promise.all([
     prisma.tenants.findUnique({

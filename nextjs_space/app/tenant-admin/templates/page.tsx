@@ -1,7 +1,7 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
+import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { getFileUrl } from "@/lib/storage/s3";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,27 +36,20 @@ async function signUrl(key: string | null | undefined): Promise<string | null> {
 
 export default async function TemplatesPage() {
   await requirePagePermission("canViewTemplates");
-  const user = await currentUser();
 
-  if (
-    !user ||
-    (user.publicMetadata.role !== "TENANT_ADMIN" &&
-      user.publicMetadata.role !== "SUPER_ADMIN")
-  ) {
+  // PRD-302: impersonation-aware tenant (matches the banner).
+  const active = await getActiveAdminTenant();
+  if (!active) {
     redirect("/auth/login");
   }
 
-  const email = user.emailAddresses[0]?.emailAddress;
-  const localUser = await prisma.users.findFirst({
-    where: { email: email },
-    include: { tenants: true },
+  const tenant = await prisma.tenants.findUnique({
+    where: { id: active.tenantId },
   });
 
-  if (!localUser?.tenants) {
+  if (!tenant) {
     redirect("/tenant-admin");
   }
-
-  const tenant = localUser.tenants;
 
   const myTemplatesRaw = await prisma.tenant_templates.findMany({
     where: { tenantId: tenant.id },
