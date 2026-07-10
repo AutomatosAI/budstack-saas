@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
-import { uploadFile } from "@/lib/storage/s3";
-import { getBucketConfig } from "@/lib/storage/aws-config";
+import { uploadFile, getFileUrl } from "@/lib/storage/s3";
 import { validateUploadBuffer } from "@/lib/storage/upload-validation";
 import { getCurrentTenantId } from "@/lib/tenant/tenant";
 import { apiError, apiValidationError } from "@/lib/api-error";
@@ -56,20 +55,18 @@ export const POST = withAuth(async (req, { user }) => {
 
     // Tenant-scoped upload path — prevents cross-tenant overwrites
     const uploadPrefix = tenantId ? `tenants/${tenantId}/` : '';
-    // publicRead: this endpoint backs cover-image uploads rendered via a raw
-    // direct URL (editor preview + public storefront + og:image), so the
-    // object must be publicly readable — a private object 403s the <img>.
-    const key = await uploadFile(buffer, sanitizedName, file.type, uploadPrefix, {
-      publicRead: true,
-    });
+    const key = await uploadFile(buffer, sanitizedName, file.type, uploadPrefix);
 
-    const { bucketName, region } = await getBucketConfig();
-    const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
+    // The bucket is private (Object Ownership = bucket-owner-enforced, so ACLs
+    // are rejected). Return a SIGNED URL so the cover-image preview + storefront
+    // <img> can load it. NOTE: signed URLs expire (~1h) — a follow-up will store
+    // the key and sign at render for durable public covers.
+    const url = await getFileUrl(key, tenantId ? { tenantId } : undefined);
 
     return NextResponse.json({
       success: true,
       key,
-      url: publicUrl,
+      url,
     });
   } catch (error) {
     console.error("Upload error:", error);
