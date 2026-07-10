@@ -16,7 +16,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import { isEncryptedValue } from "../lib/encryption";
+import { isEncryptedValue } from "../lib/security/encryption";
 
 const prisma = new PrismaClient();
 

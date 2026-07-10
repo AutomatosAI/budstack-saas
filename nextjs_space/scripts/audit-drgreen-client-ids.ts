@@ -11,8 +11,8 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { getTenantDrGreenConfig } from '../lib/tenant-config';
-import { fetchClient, fetchClientByEmail } from '../lib/doctor-green-api';
+import { getTenantDrGreenConfig } from '../lib/tenant/tenant-config';
+import { fetchClient, fetchClientByEmail } from '../lib/drgreen/doctor-green-api';
 
 const prisma = new PrismaClient();
 

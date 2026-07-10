@@ -4,7 +4,7 @@ import nodemailer from 'nodemailer';
 import Redis from 'ioredis';
 import Handlebars from 'handlebars';
 import { prisma as db } from '../lib/db';
-import { decrypt } from '../lib/encryption';
+import { decrypt } from '../lib/security/encryption';
 import { emailQueueName } from '../lib/queue';
 import {
     DEFAULT_MAX_JOB_AGE_MS,

@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { uploadFile } from '../lib/s3';
+import { uploadFile } from '../lib/storage/s3';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { getBucketConfig, createS3Client } from '../lib/aws-config';
+import { getBucketConfig, createS3Client } from '../lib/storage/aws-config';
 import dotenv from 'dotenv';
 
 // Load env vars
