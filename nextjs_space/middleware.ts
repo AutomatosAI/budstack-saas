@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest, type NextFetchEvent } from "next/server";
 import { parseHostToTenantHint } from "@/lib/parse-host";
 import { customDomainRewritePath } from "@/lib/custom-domain-rewrite";
 import { applyCsp, buildCsp, generateNonce, variantForServedPath } from "@/lib/security/csp";
@@ -37,25 +37,30 @@ const isTenantRoute = createRouteMatcher([
   "/tenant-admin/(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
+// Resolve the real tenant host behind the Cloudflare-for-SaaS proxy. The CF
+// Worker rewrites Host → the Railway origin (Railway routes by Host and would
+// otherwise 404) and carries the real hostname in X-Original-Host, secret-gated
+// so a client hitting the Railway origin directly cannot spoof another tenant's
+// domain. Falls back to the Host header for platform traffic + local dev.
+function resolveTenantHost(req: NextRequest): string {
+  const cfProxySecret = process.env.CF_PROXY_SECRET;
+  const originalHost = req.headers.get('x-original-host');
+  const proxySecret = req.headers.get('x-cf-proxy-secret');
+  return cfProxySecret && originalHost && proxySecret === cfProxySecret
+    ? originalHost
+    : req.headers.get('host') || '';
+}
+
+const clerkHandler = clerkMiddleware(async (auth, req) => {
   // 1. Tenant Routing Logic (must run BEFORE auth check)
   // Subdomain rewrites change /products → /store/slug/products which matches
   // the public route pattern. If auth runs first, bare paths like /products
   // would incorrectly require login on subdomain sites.
   const url = req.nextUrl;
-  // Cloudflare-for-SaaS custom domains: tenant hostnames are proxied by a CF
-  // Worker that rewrites Host → the Railway origin (Railway routes by Host and
-  // would otherwise 404), carrying the real hostname in X-Original-Host. Trust
-  // that header ONLY when the Worker's shared secret matches — otherwise a client
-  // hitting the Railway origin directly could spoof another tenant's domain.
-  // Falls back to the Host header for platform traffic + local dev.
-  const cfProxySecret = process.env.CF_PROXY_SECRET;
-  const forwardedHost = req.headers.get('x-original-host');
-  const proxySecret = req.headers.get('x-cf-proxy-secret');
-  const hostname =
-    cfProxySecret && forwardedHost && proxySecret === cfProxySecret
-      ? forwardedHost
-      : req.headers.get('host') || '';
+  // Real tenant host behind the CF-for-SaaS proxy (see resolveTenantHost). The
+  // outer middleware() wrapper has already re-published this as x-forwarded-host
+  // so Clerk builds its redirects against the tenant domain, not the Railway origin.
+  const hostname = resolveTenantHost(req);
   const pathname = url.pathname;
   const requestHeaders = new Headers(req.headers);
 
@@ -208,6 +213,27 @@ export default clerkMiddleware(async (auth, req) => {
     variantForServedPath(pathname),
   );
 });
+
+// Clerk derives every absolute URL it builds — most visibly the dev-browser
+// handshake redirect_url, but also sign-in / after-auth / satellite-sync
+// redirects — from `x-forwarded-host ?? host` (see @clerk/backend
+// ClerkRequest.deriveUrlFromHeaders). Behind the CF-for-SaaS proxy the Host
+// header is the Railway origin (budstack-saas-development.up.railway.app), so
+// without this Clerk sends users to the Railway URL instead of back to their
+// tenant domain. Re-derive the real tenant host and publish it as
+// x-forwarded-host BEFORE clerkMiddleware runs, so Clerk (and any SSR
+// absolute-URL construction downstream) uses the tenant domain. Platform
+// traffic (budstacks.io) and local dev are unaffected — realHost === Host there.
+export default function middleware(req: NextRequest, evt: NextFetchEvent) {
+  const realHost = resolveTenantHost(req);
+  if (realHost && req.headers.get('x-forwarded-host') !== realHost) {
+    const headers = new Headers(req.headers);
+    headers.set('x-forwarded-host', realHost);
+    if (!headers.get('x-forwarded-proto')) headers.set('x-forwarded-proto', 'https');
+    return clerkHandler(new NextRequest(req, { headers }), evt);
+  }
+  return clerkHandler(req, evt);
+}
 
 export const config = {
   matcher: [
