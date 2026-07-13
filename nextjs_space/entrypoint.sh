@@ -34,11 +34,21 @@ if [ -n "$REDIS_URL" ]; then
   echo "📧 Starting email worker sidecar..."
   (
     set +e
+    backoff=5
     while true; do
+      started=$(date +%s)
       npx tsx scripts/email-worker.ts
       code=$?
-      echo "⚠️  [EmailWorker] exited with code $code — restarting in 5s..."
-      sleep 5
+      # A worker that ran healthily for 60s+ resets the backoff; a fast crash
+      # escalates it (capped at 120s) so a hard-failing worker can't hammer the
+      # container into `spawn esbuild EAGAIN` by respawning tsx+esbuild every 5s.
+      if [ $(( $(date +%s) - started )) -ge 60 ]; then
+        backoff=5
+      fi
+      echo "⚠️  [EmailWorker] exited with code $code — restarting in ${backoff}s..."
+      sleep "$backoff"
+      backoff=$(( backoff * 2 ))
+      [ "$backoff" -gt 120 ] && backoff=120
     done
   ) &
 else

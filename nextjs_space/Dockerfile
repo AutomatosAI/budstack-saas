@@ -74,6 +74,15 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/lib ./lib
 
+# Copy tsconfig.json so `tsx` can resolve the "@/*" path alias at runtime.
+# The email-worker sidecar runs via `tsx scripts/email-worker.ts` and imports
+# lib/db, which transitively pulls in @/lib/tenant/tenant-context et al. Without
+# tsconfig in the image, tsx can't resolve "@/" → "Cannot find module
+# '@/lib/tenant/tenant-context'", crash-looping the worker every 5s until the
+# repeated tsx+esbuild spawns exhaust the container and mutate into
+# `spawn esbuild EAGAIN`. tsx reads compilerOptions.paths from this file.
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+
 # Create templates directory for S3 sync with correct permissions
 RUN mkdir -p /app/templates && chown nextjs:nodejs /app/templates
 
