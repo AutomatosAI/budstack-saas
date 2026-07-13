@@ -1,29 +1,19 @@
 import { NextResponse } from "next/server";
-import { withAuth } from "@/lib/api-auth";
+import { withTenantAuth } from "@/lib/api-auth";
 import { uploadFile, getFileUrl } from "@/lib/storage/s3";
 import { validateUploadBuffer } from "@/lib/storage/upload-validation";
-import { getCurrentTenantId } from "@/lib/tenant/tenant";
 import { apiError, apiValidationError } from "@/lib/api-error";
 
-export const POST = withAuth(async (req, { user }) => {
+// withTenantAuth derives tenantId from the authenticated user (user.tenantId),
+// NOT from the request host. The host-based getCurrentTenantId() this route used
+// to call returns null on the shared admin dashboard, which 403'd every real
+// TENANT_ADMIN while silently waving SUPER_ADMINs (incl. impersonation) past —
+// so uploads only "worked" under impersonation. Matching the sibling /posts
+// route (also withTenantAuth) fixes it for all tenant admins; during
+// impersonation user.tenantId is the impersonated tenant, so that path still
+// works and now writes to the correct tenant folder instead of the bucket root.
+export const POST = withTenantAuth(async (req, { tenantId }) => {
   try {
-    if (!["TENANT_ADMIN", "SUPER_ADMIN"].includes(user.role || "")) {
-      return apiError(new Error("Unauthorized"), {
-        route: "POST /api/tenant-admin/upload",
-        status: 401,
-        safeMessage: "Unauthorized",
-      });
-    }
-
-    const tenantId = await getCurrentTenantId();
-    if (!tenantId && user.role !== "SUPER_ADMIN") {
-      return apiError(new Error("No tenant context"), {
-        route: "POST /api/tenant-admin/upload",
-        status: 403,
-        safeMessage: "No tenant context",
-      });
-    }
-
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
@@ -54,14 +44,14 @@ export const POST = withAuth(async (req, { user }) => {
     }
 
     // Tenant-scoped upload path — prevents cross-tenant overwrites
-    const uploadPrefix = tenantId ? `tenants/${tenantId}/` : '';
+    const uploadPrefix = `tenants/${tenantId}/`;
     const key = await uploadFile(buffer, sanitizedName, file.type, uploadPrefix);
 
     // The bucket is private (Object Ownership = bucket-owner-enforced, so ACLs
     // are rejected). Return a SIGNED URL so the cover-image preview + storefront
     // <img> can load it. NOTE: signed URLs expire (~1h) — a follow-up will store
     // the key and sign at render for durable public covers.
-    const url = await getFileUrl(key, tenantId ? { tenantId } : undefined);
+    const url = await getFileUrl(key, { tenantId });
 
     return NextResponse.json({
       success: true,
