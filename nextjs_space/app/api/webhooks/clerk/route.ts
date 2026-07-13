@@ -107,7 +107,12 @@ export async function POST(req: Request) {
                         lastName: last_name || null,
                         role: "CONSUMER",
                         isActive: true,
-                        id: `user_${id}`,
+                        // Clerk ids are ALREADY `user_…`. getCurrentUser() returns this id
+                        // verbatim and routes stamp it as a FK (e.g. posts.authorId → users.id),
+                        // so the row must be keyed by the raw Clerk id. The old `user_${id}`
+                        // double-prefixed it (`user_user_…`), so every webhook-provisioned user
+                        // hit `posts_authorId_fkey` on create. Key by the Clerk id directly.
+                        id: id,
                         // PRD-213 AC-1a: dedicated Clerk-id column for reliable erasure mapping.
                         clerkUserId: id || null,
                         updatedAt: new Date(),
