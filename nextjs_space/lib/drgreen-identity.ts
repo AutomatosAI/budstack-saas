@@ -157,11 +157,24 @@ export async function uploadIdentityDocument(
     );
   }
 
-  const json = (await response.json()) as { data?: IdentityDocumentResult };
-  if (!json?.data?.id) {
+  // Dr Green's global response interceptor wraps every controller return in a
+  // `{ success, statusCode, message, data }` envelope (dr-green-backend
+  // src/interceptor/response.interceptor.ts), and uploadDocument's own return
+  // is `{ message, data: document }` — so on the wire the document is
+  // DOUBLE-wrapped: body.data.data. Tolerate single- AND double-wrap, mirroring
+  // the nesting-tolerant extractClientId() on the client-create path. Reading
+  // only body.data.id here silently turned every SUCCESSFUL upload into a false
+  // "unexpected response shape" failure (PRD-220 → UPLOAD_FAILED), so customers
+  // were told "We didn't receive your ID document" even though it was stored
+  // and pending review on Dr Green.
+  const json = (await response.json()) as {
+    data?: (IdentityDocumentResult & { data?: IdentityDocumentResult }) | null;
+  };
+  const doc = json?.data?.data ?? json?.data ?? undefined;
+  if (!doc?.id) {
     throw new Error('Dr Green identity upload returned an unexpected response shape');
   }
-  return json.data;
+  return doc;
 }
 
 // CONTRACT: Dr Green — create client (design doc §5.0). The other client calls
