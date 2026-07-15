@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { submitOrder, createDirectCheckout } from "@/lib/drgreen/drgreen-orders";
+import { syncOrderById } from "@/lib/orders/storefront-orders";
 import { isDirectPaySupported } from "@/lib/payments/direct-pay";
 import { storefrontUrl } from "@/lib/storefront-url";
 import { fetchProducts } from "@/lib/drgreen/doctor-green-api";
@@ -223,6 +224,17 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
           error: e instanceof Error ? e.message : String(e),
         });
       }
+    }
+
+    // The PayCloud mint (re)writes Dr Green's invoiceNumber; capture it now so
+    // our stored order number matches Dr Green admin + the customer emails,
+    // without waiting for the customer to re-open the dashboard. Best-effort.
+    if (orderResponse.drGreenOrderId) {
+      await syncOrderById(orderResponse.orderId, {
+        apiKey: drGreenConfig.apiKey,
+        secretKey: drGreenConfig.secretKey,
+        apiUrl: drGreenConfig.apiUrl,
+      }).catch(() => {});
     }
 
     // Trigger webhook

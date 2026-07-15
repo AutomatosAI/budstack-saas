@@ -26,6 +26,9 @@ export interface OrderItem {
 export interface Order {
   id: string;
   orderNumber: string;
+  // Dr Green's order number (source of truth). Shown in place of orderNumber so
+  // Budstacks matches Dr Green admin + the customer emails. Null until synced.
+  drGreenInvoiceNum?: string | null;
   status: string;
   total: number;
   subtotal: number;

@@ -94,7 +94,7 @@ export default async function OrderConfirmationPage({
           <p className="text-gray-600 mb-4">{status.message}</p>
           <p className="text-sm text-gray-500">
             Order Number:{" "}
-            <span className="font-mono font-semibold">{order.orderNumber}</span>
+            <span className="font-mono font-semibold">{order.drGreenInvoiceNum || order.orderNumber}</span>
           </p>
         </CardContent>
       </Card>

@@ -69,7 +69,7 @@ export function OrderListItem({
           <OrderStatusBadge status={order.status} paymentStatus={order.paymentStatus} />
         </div>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {order.orderNumber} · {shortDate(order.createdAt)} · {itemCount} item
+          {order.drGreenInvoiceNum || order.orderNumber} · {shortDate(order.createdAt)} · {itemCount} item
           {itemCount === 1 ? "" : "s"}
         </p>
       </div>

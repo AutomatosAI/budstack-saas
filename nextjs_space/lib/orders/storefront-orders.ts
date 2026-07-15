@@ -56,6 +56,7 @@ type OrderRow = {
   status: string;
   paymentStatus: string;
   drGreenOrderId: string | null;
+  drGreenInvoiceNum: string | null;
   createdAt: Date;
   order_items: {
     id: string;
@@ -71,7 +72,13 @@ type OrderRow = {
  * getOrder()'s payment sync and additionally tracks fulfilment (orderStatus).
  */
 async function syncOneOrder(
-  order: { id: string; drGreenOrderId: string; paymentStatus: string; status: string },
+  order: {
+    id: string;
+    drGreenOrderId: string;
+    paymentStatus: string;
+    status: string;
+    drGreenInvoiceNum: string | null;
+  },
   config: DrGreenStorefrontConfig,
 ): Promise<void> {
   try {
@@ -86,7 +93,11 @@ async function syncOneOrder(
     const details =
       res?.data?.orderDetails ?? res?.orderDetails ?? res?.data ?? res ?? {};
 
-    const data: { paymentStatus?: string; status?: string } = {};
+    const data: {
+      paymentStatus?: string;
+      status?: string;
+      drGreenInvoiceNum?: string;
+    } = {};
 
     const pay =
       typeof details?.paymentStatus === "string"
@@ -102,6 +113,17 @@ async function syncOneOrder(
         : null;
     if (ful && ful !== order.status && SYNCABLE_FULFILMENT.has(ful)) {
       data.status = ful;
+    }
+
+    // Order number: Dr Green is the source of truth. It (re)writes the order's
+    // invoiceNumber at each PayCloud checkout mint, so mirror the current value
+    // — this is the number Dr Green admin and the customer emails display.
+    const inv =
+      typeof details?.invoiceNumber === "string" && details.invoiceNumber.trim()
+        ? details.invoiceNumber.trim()
+        : null;
+    if (inv && inv !== order.drGreenInvoiceNum) {
+      data.drGreenInvoiceNum = inv;
     }
 
     if (Object.keys(data).length > 0) {
@@ -124,6 +146,7 @@ function toStorefrontOrder(o: OrderRow): StorefrontOrder {
     status: o.status,
     paymentStatus: o.paymentStatus,
     drGreenOrderId: o.drGreenOrderId,
+    drGreenInvoiceNum: o.drGreenInvoiceNum,
     createdAt: o.createdAt.toISOString(),
     items: (o.order_items ?? []).map((it) => ({
       id: it.id,
@@ -173,6 +196,7 @@ export async function listUserOrdersWithSync(params: {
           drGreenOrderId: o.drGreenOrderId as string,
           paymentStatus: o.paymentStatus,
           status: o.status,
+          drGreenInvoiceNum: o.drGreenInvoiceNum,
         },
         config,
       ),
@@ -182,4 +206,37 @@ export async function listUserOrdersWithSync(params: {
   // Re-read so the response reflects synced changes.
   const fresh = (await prisma.orders.findMany(query)) as unknown as OrderRow[];
   return fresh.map(toStorefrontOrder);
+}
+
+/**
+ * Refresh a single order from Dr Green by our local id. Used right after a
+ * PayCloud checkout is minted (order submit + retry) so we capture the current
+ * Dr Green invoiceNumber — which the mint (re)writes — instead of the pre-mint
+ * value stored at creation. Best-effort: never throws.
+ */
+export async function syncOrderById(
+  localOrderId: string,
+  config: DrGreenStorefrontConfig,
+): Promise<void> {
+  const o = await prisma.orders.findUnique({
+    where: { id: localOrderId },
+    select: {
+      id: true,
+      drGreenOrderId: true,
+      paymentStatus: true,
+      status: true,
+      drGreenInvoiceNum: true,
+    },
+  });
+  if (!o?.drGreenOrderId) return;
+  await syncOneOrder(
+    {
+      id: o.id,
+      drGreenOrderId: o.drGreenOrderId,
+      paymentStatus: o.paymentStatus,
+      status: o.status,
+      drGreenInvoiceNum: o.drGreenInvoiceNum,
+    },
+    config,
+  );
 }

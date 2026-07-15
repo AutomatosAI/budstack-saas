@@ -17,6 +17,9 @@ export interface StorefrontOrderItem {
 export interface StorefrontOrder {
   id: string;
   orderNumber: string;
+  // Dr Green's order number (source of truth; matches Dr Green admin + emails).
+  // Null until the first Dr Green sync; display falls back to orderNumber.
+  drGreenInvoiceNum: string | null;
   total: number;
   subtotal: number;
   shippingCost: number;
