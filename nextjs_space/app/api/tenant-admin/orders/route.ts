@@ -139,6 +139,7 @@ export const GET = withTenantAuth(async (req, { tenantId }) => {
         select: {
           id: true,
           orderNumber: true,
+          drGreenInvoiceNum: true,
           status: true,
           total: true,
           subtotal: true,

@@ -34,6 +34,7 @@ interface OrderItem {
 interface Order {
   id: string;
   orderNumber: string;
+  drGreenInvoiceNum?: string | null;
   status: string;
   total: number;
   subtotal: number;
@@ -340,7 +341,7 @@ export default function TenantOrdersPage() {
               Order Details
             </DialogTitle>
             <DialogDescription className="font-mono text-bs-fg-muted">
-              Order #{selectedOrder?.orderNumber.slice(-8).toUpperCase()}
+              Order {selectedOrder?.drGreenInvoiceNum || `#${selectedOrder?.orderNumber.slice(-8).toUpperCase() ?? ""}`}
             </DialogDescription>
           </DialogHeader>
 
@@ -427,10 +428,10 @@ export default function TenantOrdersPage() {
                             {item.quantity}
                           </td>
                           <td className="text-right font-mono tabular-nums">
-                            €{item.price.toFixed(2)}
+                            R{item.price.toFixed(2)}
                           </td>
                           <td className="text-right font-mono tabular-nums">
-                            €{(item.quantity * item.price).toFixed(2)}
+                            R{(item.quantity * item.price).toFixed(2)}
                           </td>
                         </tr>
                       ))}
@@ -444,19 +445,19 @@ export default function TenantOrdersPage() {
                   <div className="flex justify-between text-bs-fg-muted">
                     <span>Subtotal</span>
                     <span className="font-mono tabular-nums">
-                      €{selectedOrder.subtotal.toFixed(2)}
+                      R{selectedOrder.subtotal.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-bs-fg-muted">
                     <span>Shipping</span>
                     <span className="font-mono tabular-nums">
-                      €{selectedOrder.shippingCost.toFixed(2)}
+                      R{selectedOrder.shippingCost.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between border-t border-bs-border-100 pt-2 text-xl font-bold text-bs-fg">
                     <span>Total</span>
                     <span className="font-mono tabular-nums">
-                      €{selectedOrder.total.toFixed(2)}
+                      R{selectedOrder.total.toFixed(2)}
                     </span>
                   </div>
                 </div>

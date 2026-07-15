@@ -62,14 +62,14 @@ export const GET = withAuth(async (_request, { user }, params) => {
       return NextResponse.json({
         state: "paid",
         paymentStatus: "PAID",
-        orderNumber: order.orderNumber,
+        orderNumber: order.drGreenInvoiceNum || order.orderNumber,
       });
     }
     if (!order.drGreenOrderId) {
       return NextResponse.json({
         state: "pending",
         paymentStatus: order.paymentStatus,
-        orderNumber: order.orderNumber,
+        orderNumber: order.drGreenInvoiceNum || order.orderNumber,
       });
     }
 
@@ -87,7 +87,7 @@ export const GET = withAuth(async (_request, { user }, params) => {
       return NextResponse.json({
         state: "pending",
         paymentStatus: order.paymentStatus,
-        orderNumber: order.orderNumber,
+        orderNumber: order.drGreenInvoiceNum || order.orderNumber,
       });
     }
 

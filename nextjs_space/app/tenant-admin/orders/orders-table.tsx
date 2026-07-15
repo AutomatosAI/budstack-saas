@@ -257,12 +257,12 @@ export function OrdersTable({
     if (orders.length === 0) return;
 
     const exportData = orders.map((o) => ({
-      orderNumber: o.orderNumber,
+      orderNumber: o.drGreenInvoiceNum || o.orderNumber,
       customerName: o.user?.name || "Guest",
       customerEmail: o.user?.email || "N/A",
       status: o.status,
       items: o.items.length,
-      total: `$${o.total.toFixed(2)}`,
+      total: `R${o.total.toFixed(2)}`,
       createdAt: format(new Date(o.createdAt), "yyyy-MM-dd"),
     }));
 
@@ -295,12 +295,12 @@ export function OrdersTable({
     if (selectedOrders.length === 0) return;
 
     const exportData = selectedOrders.map((o) => ({
-      orderNumber: o.orderNumber,
+      orderNumber: o.drGreenInvoiceNum || o.orderNumber,
       customerName: o.user?.name || "Guest",
       customerEmail: o.user?.email || "N/A",
       status: o.status,
       items: o.items.length,
-      total: `$${o.total.toFixed(2)}`,
+      total: `R${o.total.toFixed(2)}`,
       createdAt: format(new Date(o.createdAt), "yyyy-MM-dd"),
     }));
 
@@ -401,7 +401,7 @@ export function OrdersTable({
   const selectedOrderNumbers = useMemo(() => {
     return orders
       .filter((o) => selectedIds.has(o.id))
-      .map((o) => `#${o.orderNumber.slice(-8).toUpperCase()}`)
+      .map((o) => o.drGreenInvoiceNum || `#${o.orderNumber.slice(-8).toUpperCase()}`)
       .slice(0, 5);
   }, [orders, selectedIds]);
 
@@ -618,7 +618,7 @@ export function OrdersTable({
                           />
                         </td>
                         <td className="font-mono font-medium text-bs-fg">
-                          #{order.orderNumber.slice(-8).toUpperCase()}
+                          {order.drGreenInvoiceNum || `#${order.orderNumber.slice(-8).toUpperCase()}`}
                         </td>
                         <td>
                           <div>
@@ -640,7 +640,7 @@ export function OrdersTable({
                           {order.items.length}
                         </td>
                         <td className="text-right font-mono tabular-nums font-medium text-bs-fg">
-                          €{order.total.toFixed(2)}
+                          R{order.total.toFixed(2)}
                         </td>
                         <td className="font-mono text-bs-fg-muted">
                           {format(new Date(order.createdAt), "MMM d, yyyy")}

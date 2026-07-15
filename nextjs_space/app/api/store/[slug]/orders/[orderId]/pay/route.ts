@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { createDirectCheckout } from "@/lib/drgreen/drgreen-orders";
+import { syncOrderById } from "@/lib/orders/storefront-orders";
 import { storefrontUrl } from "@/lib/storefront-url";
 import { apiError } from "@/lib/api-error";
 import { parseSlug, parseUuid } from "@/lib/validation/parse-uuid";
@@ -83,6 +84,14 @@ export const POST = withAuth(async (request, { user }, params) => {
       secretKey: drGreenConfig.secretKey,
       apiUrl: drGreenConfig.apiUrl,
     });
+
+    // The retry mint (re)writes Dr Green's invoiceNumber; capture it so our
+    // order number stays in sync with Dr Green admin + emails. Best-effort.
+    await syncOrderById(orderId, {
+      apiKey: drGreenConfig.apiKey,
+      secretKey: drGreenConfig.secretKey,
+      apiUrl: drGreenConfig.apiUrl,
+    }).catch(() => {});
 
     return NextResponse.json({ payUrl: checkout.payUrl });
   } catch (error) {
