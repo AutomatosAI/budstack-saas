@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { createDirectCheckout } from "@/lib/drgreen/drgreen-orders";
+import { getPublicClientIp } from "@/lib/client-ip";
 import { syncOrderById } from "@/lib/orders/storefront-orders";
 import { storefrontUrl } from "@/lib/storefront-url";
 import { apiError } from "@/lib/api-error";
@@ -83,6 +84,9 @@ export const POST = withAuth(async (request, { user }, params) => {
       apiKey: drGreenConfig.apiKey,
       secretKey: drGreenConfig.secretKey,
       apiUrl: drGreenConfig.apiUrl,
+      // US-008: the shopper's IP becomes PayCloud's term_ip fraud hint —
+      // without it the retry is attributed to this server's egress.
+      customerIp: getPublicClientIp(request.headers),
     });
 
     // The retry mint (re)writes Dr Green's invoiceNumber; capture it so our
