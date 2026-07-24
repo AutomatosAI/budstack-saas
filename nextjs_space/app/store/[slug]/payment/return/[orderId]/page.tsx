@@ -20,6 +20,10 @@ type Status = "checking" | "paid" | "failed" | "unconfirmed";
 // only works on a still-PENDING order.
 const POLL_INTERVAL_MS = 3000;
 const MAX_ATTEMPTS = 20; // ~60s before a still-pending order is "not confirmed yet"
+// After a decline, hold the retry button for a moment (US-009): instant
+// re-attempts are what manufacture the gateway-side velocity that gets the
+// NEXT attempt declined too. The backend also cools down mints server-side.
+const RETRY_COOLDOWN_SECONDS = 15;
 
 export default function PaymentReturnPage() {
     const params = useParams<{ slug: string; orderId: string }>();
@@ -32,6 +36,17 @@ export default function PaymentReturnPage() {
     const [retrying, setRetrying] = useState(false);
     const [returning, setReturning] = useState(false);
     const [actionError, setActionError] = useState<string | null>(null);
+    const [retryCooldown, setRetryCooldown] = useState(0);
+
+    // Entering the failed state starts the retry cooldown countdown.
+    useEffect(() => {
+        if (status !== "failed") return;
+        setRetryCooldown(RETRY_COOLDOWN_SECONDS);
+        const timer = setInterval(() => {
+            setRetryCooldown((s) => (s <= 1 ? 0 : s - 1));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [status]);
     // Tenant hosts ({slug}.budstacks.io / custom domains) serve the store at
     // root; the apex serves it under /store/<slug>. Default to root (the live
     // tenant-host case) and correct to /store/<slug> on the apex after mount, so
@@ -152,12 +167,16 @@ export default function PaymentReturnPage() {
             <button
                 type="button"
                 onClick={handleRetry}
-                disabled={retrying || returning}
+                disabled={retrying || returning || retryCooldown > 0}
                 className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium disabled:opacity-60"
                 style={primaryBtnStyle}
             >
                 {retrying && <Loader2 className="w-4 h-4 animate-spin" />}
-                {retrying ? "Starting payment…" : "Try payment again"}
+                {retrying
+                    ? "Starting payment…"
+                    : retryCooldown > 0
+                      ? `Try again in ${retryCooldown}s…`
+                      : "Try payment again"}
             </button>
             <button
                 type="button"

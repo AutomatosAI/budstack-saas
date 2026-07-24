@@ -275,14 +275,26 @@ export async function createDirectCheckout(params: {
     apiKey: string;
     secretKey: string;
     apiUrl?: string;
+    /**
+     * The shopper's public IP (from getPublicClientIp), forwarded to Dr Green
+     * as the PayCloud term_ip fraud hint (PRD payment-decline-reduction
+     * US-008). Optional and best-effort: omitted when unknown, and Dr Green
+     * ignores invalid values server-side — it can never fail a checkout.
+     */
+    customerIp?: string;
 }): Promise<{ orderId: string; payUrl: string; expiresAt: string }> {
-    const { drGreenOrderId, returnUrl, apiKey, secretKey, apiUrl } = params;
+    const { drGreenOrderId, returnUrl, apiKey, secretKey, apiUrl, customerIp } =
+        params;
     const res = await callDrGreenAPI<any>("/payments/checkout", {
         apiKey,
         secretKey,
         baseUrl: apiUrl,
         method: "POST",
-        body: { orderId: drGreenOrderId, returnUrl },
+        body: {
+            orderId: drGreenOrderId,
+            returnUrl,
+            ...(customerIp ? { customerIp } : {}),
+        },
     });
     // Dr Green responses are sometimes wrapped in { data }, sometimes raw.
     const data = res?.data || res;

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { submitOrder, createDirectCheckout } from "@/lib/drgreen/drgreen-orders";
+import { getPublicClientIp } from "@/lib/client-ip";
 import { syncOrderById } from "@/lib/orders/storefront-orders";
 import { isDirectPaySupported } from "@/lib/payments/direct-pay";
 import { storefrontUrl } from "@/lib/storefront-url";
@@ -211,6 +212,9 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
           apiKey: drGreenConfig.apiKey,
           secretKey: drGreenConfig.secretKey,
           apiUrl: drGreenConfig.apiUrl,
+          // US-008: the shopper's IP becomes PayCloud's term_ip fraud hint —
+          // without it the transaction is attributed to this server's egress.
+          customerIp: getPublicClientIp(request.headers),
         });
         payUrl = checkout.payUrl;
         log('DIRECT_CHECKOUT', {
