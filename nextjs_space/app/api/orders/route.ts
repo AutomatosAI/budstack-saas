@@ -10,6 +10,7 @@ import {
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { logger } from "@/lib/logger";
+import { FALLBACK_DELIVERY_CHARGE } from "@/lib/drgreen/delivery";
 
 export const POST = withAuth(async (req, { user }) => {
   try {
@@ -61,7 +62,12 @@ export const POST = withAuth(async (req, { user }) => {
       (sum: number, item: any) => sum + item.price * item.quantity,
       0,
     );
-    const shippingCost = 5.0;
+    // Legacy path: this route creates the local order BEFORE talking to Dr
+    // Green, and does so through a different (snake_case) contract than the
+    // live storefront checkout, so there is no authoritative delivery charge to
+    // read here. Named rather than magic — the real number comes from Dr Green
+    // on the /api/store/[slug]/orders/submit path (see lib/drgreen/delivery.ts).
+    const shippingCost = FALLBACK_DELIVERY_CHARGE;
     const calculatedTotal = subtotal + shippingCost;
 
     // Determine currency from shipping country (default to ZAR - South Africa, the only live site)

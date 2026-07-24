@@ -12,6 +12,7 @@
 import { prisma } from "@/lib/db";
 import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 import { getClientCartId } from "@/lib/drgreen/drgreen-client-cart";
+import { deliveryChargeFromOrder } from "@/lib/drgreen/delivery";
 import { logger } from "@/lib/logger";
 
 export interface OrderSubmissionData {
@@ -188,7 +189,12 @@ export async function submitOrder(params: {
 
     // ========== Save order locally ==========
     const subtotal = cartItems.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
-    const shippingCost = 5.0;
+    // Dr Green owns the delivery charge and bills it on top of the order total,
+    // so take it from the order it just created rather than inventing one. A
+    // hardcoded 5.0 here meant the customer saw R5 while their card was charged
+    // the market's real rate (~R110 in ZA once backfilled) — US-011 / defect H.
+    // Falls back only when the backend predates dr-green-backend #539.
+    const shippingCost = deliveryChargeFromOrder(orderData);
     const total = subtotal + shippingCost;
 
     log('DR_GREEN_ORDER_SUCCESS', { drGreenOrderId: orderData.id });
