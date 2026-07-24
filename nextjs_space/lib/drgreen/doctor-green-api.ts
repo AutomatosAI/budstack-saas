@@ -240,14 +240,24 @@ async function normalizeProduct(product: DoctorGreenProduct, country: string): P
 
   const fullImageUrl = resolveImageUrl(product.imageUrl);
 
-  // Calculate stock from strainLocations, fall back to product-level fields
+  // Calculate stock from strainLocations, fall back to product-level fields.
+  // A location only counts as sellable when it is BOTH active AND available:
+  // Dr Green's order-creation gate rejects an inactive strain/location, so a
+  // strain that is available-but-inactive is a dead listing that 400s at
+  // checkout ("not active"). Historically only isAvailable was checked here,
+  // which is why inactive strains still showed and were orderable. The /strains
+  // response carries isActive per location regardless of auth, so we filter on
+  // it. (See PRD order-commission-stock-delivery-gas Defect C.)
   const locations = product.strainLocations || [];
-  const locationStock = locations.reduce((sum: number, loc: any) => sum + (loc.stockQuantity || 0), 0);
-  const isAvailableAtAnyLocation = locations.some((loc: any) => loc.isAvailable === true);
+  const sellableLocations = locations.filter(
+    (loc: any) => loc.isActive === true && loc.isAvailable === true,
+  );
+  const locationStock = sellableLocations.reduce((sum: number, loc: any) => sum + (loc.stockQuantity || 0), 0);
+  const isAvailableAtAnyLocation = sellableLocations.length > 0;
   const totalStock = locationStock > 0 ? locationStock : (product.stockQuantity || 0);
   const isAvailable = locations.length > 0
     ? isAvailableAtAnyLocation
-    : (product.isAvailable !== false && totalStock > 0);
+    : ((product as any).isActive !== false && product.isAvailable !== false && totalStock > 0);
 
   // Dr Green local pricing priority (from their implementation doc):
   //   1. localRetailPrice + localCurrency  (not yet deployed)
