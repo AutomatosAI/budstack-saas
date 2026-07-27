@@ -165,6 +165,64 @@ model compliance_purge_records {
   details    Json
 }
 
+/// Vendors BudStacks engages to deliver the platform (GDPR Art. 28(2)/(4)).
+///
+/// Database-backed rather than hardcoded so the list can change without a
+/// deploy, and — more importantly — so adding or replacing a vendor can start
+/// the 30-day notice clock the DPA promises operators. A list nobody can change
+/// without an engineer is a list that silently goes stale.
+///
+/// See docs/PRDS/prd-data-protection-remediation.md (WS3, US-011).
+model subprocessors {
+  id                String   @id
+  name              String
+  purpose           String
+  region            String
+  transferMechanism String
+  dpaUrl            String?
+  /// pending = announced, not yet in force. active = processing. retired = gone.
+  status            String   @default("pending")
+  /// The date processing may begin. Must be >= 30 days after announcedAt
+  /// unless a super admin overrides, which is written to the audit log.
+  effectiveFrom     DateTime
+  /// When operators were notified. Null until the notification job has run.
+  announcedAt       DateTime?
+  /// Set when status becomes retired, so the register keeps its history.
+  retiredAt         DateTime?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+
+  objections        subprocessor_objections[]
+
+  @@index([status, effectiveFrom])
+}
+
+/// An operator's objection to a sub-processor, per DPA §6. Recorded against the
+/// specific vendor rather than left in an inbox — an objection that cannot be
+/// evidenced is one the operator cannot rely on.
+model subprocessor_objections {
+  id             String   @id
+  subprocessorId String
+  tenantId       String
+  raisedByUserId String?
+  reason         String
+  /// open | acknowledged | resolved | withdrawn
+  status         String   @default("open")
+  /// True when raised more than 14 days after announcement (DPA §6 window).
+  outOfWindow    Boolean  @default(false)
+  resolution     String?
+  resolvedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+
+  subprocessor   subprocessors @relation(fields: [subprocessorId], references: [id], onDelete: Cascade)
+  tenants        tenants       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([subprocessorId, status])
+  @@index([tenantId])
+}
+
 model consultations {
   id        String             @id
   userId    String
@@ -469,6 +527,7 @@ model tenants {
   drgreen_webhook_logs   drgreen_webhook_logs[]
   kyc_journey_logs       kyc_journey_logs[]
   email_event_mappings   email_event_mappings[]
+  subprocessor_objections subprocessor_objections[]
   email_logs             email_logs[]
   email_templates        email_templates[]
   orders                 orders[]
