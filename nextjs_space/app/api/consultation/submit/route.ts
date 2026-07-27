@@ -303,23 +303,13 @@ export async function POST(request: NextRequest) {
         businessCountry: body.businessCountry,
         businessCountryCode: body.businessCountryCode,
 
-        medicalConditions: body.medicalConditions,
-        otherCondition: body.otherCondition,
-        prescribedMedications: body.prescribedMedications,
-        prescribedSupplements: body.prescribedSupplements,
-
-        hasHeartProblems: body.hasHeartProblems,
-        hasCancerTreatment: body.hasCancerTreatment,
-        hasImmunosuppressants: body.hasImmunosuppressants,
-        hasLiverDisease: body.hasLiverDisease,
-        hasPsychiatricHistory: body.hasPsychiatricHistory,
-
-        hasAlcoholAbuse: body.hasAlcoholAbuse,
-        hasDrugServices: body.hasDrugServices,
-        alcoholUnitsPerWeek: body.alcoholUnitsPerWeek,
-        cannabisReducesMeds: body.cannabisReducesMeds,
-        cannabisFrequency: body.cannabisFrequency,
-        cannabisAmountPerDay: body.cannabisAmountPerDay,
+        // Article 9 special-category health data is deliberately NOT persisted.
+        // It is validated on the way in, forwarded to Dr Green from `body` below
+        // (see the drGreenPayload build), and then discarded with the request.
+        // Dr Green is the controller for the clinical record; BudStacks has no
+        // lawful basis or functional need to retain it (Art 5(1)(c)).
+        // Do not add health fields here — tests/unit/no-article9-persistence.test.ts
+        // will fail. See docs/PRDS/prd-data-protection-remediation.md (US-002).
         updatedAt: new Date(),
       },
     });
@@ -627,33 +617,42 @@ export async function POST(request: NextRequest) {
         message: drGreenError instanceof Error ? drGreenError.message : String(drGreenError),
       });
 
-      // Update questionnaire with error
-      await prisma.consultation_questionnaires.update({
-        where: { id: questionnaire.id },
-        data: {
-          submittedToDrGreen: false,
-          submissionError: drGreenError.message,
-        },
-      });
-
       // Parse Dr Green error for user-friendly messages
       const errorMsg = drGreenError.message || "";
       let userMessage = "Registration failed. Please try again or contact support.";
       let statusCode = 500;
+      let failureCode = "UNKNOWN";
 
       if (errorMsg.includes("Phone Number already exists") || errorMsg.includes("phone") && errorMsg.includes("exists")) {
         userMessage = "This phone number is already registered. Please use a different phone number or contact support.";
         statusCode = 409;
+        failureCode = "PHONE_EXISTS";
       } else if (errorMsg.includes("email") && errorMsg.includes("exists")) {
         userMessage = "This email address is already registered. Please use a different email or try logging in.";
         statusCode = 409;
+        failureCode = "EMAIL_EXISTS";
       } else if (errorMsg.includes("409")) {
         userMessage = "An account with these details already exists. Please use different details or contact support.";
         statusCode = 409;
+        failureCode = "CONFLICT";
       } else if (errorMsg.includes("400")) {
         userMessage = "Invalid information provided. Please check your details and try again.";
         statusCode = 400;
+        failureCode = "BAD_REQUEST";
       }
+
+      // Persist a stable classification, NOT the upstream message. Dr Green
+      // error bodies echo back submitted values (see the logger note above), so
+      // writing `drGreenError.message` into a durable row would reintroduce the
+      // Art. 9 data this endpoint no longer stores. Full detail stays in the
+      // logs, which are redacted and rotate. Nothing reads submissionError.
+      await prisma.consultation_questionnaires.update({
+        where: { id: questionnaire.id },
+        data: {
+          submittedToDrGreen: false,
+          submissionError: `${failureCode} (${statusCode})`,
+        },
+      });
 
       return NextResponse.json(
         {

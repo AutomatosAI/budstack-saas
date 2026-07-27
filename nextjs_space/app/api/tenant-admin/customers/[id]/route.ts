@@ -136,29 +136,17 @@ export const GET = withAuth(async (_request, { user }, params) => {
       });
     }
 
-    // Get medical history (consultation questionnaires)
-    const medicalHistory = await prisma.consultation_questionnaires.findMany({
-      where: { email: customer.email },
-      select: {
-        id: true,
-        medicalConditions: true,
-        prescribedMedications: true,
-        hasHeartProblems: true,
-        hasCancerTreatment: true,
-        hasLiverDisease: true,
-        hasPsychiatricHistory: true,
-        kycLink: true,
-        isKycVerified: true,
-        adminApproval: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-      take: 1,
-    });
-
+    // NOTE: this endpoint previously returned a `medicalHistory` object built
+    // from consultation_questionnaires (medicalConditions, prescribedMedications,
+    // hasHeartProblems, hasCancerTreatment, hasLiverDisease, hasPsychiatricHistory).
+    // That is Article 9 special-category data and no client ever consumed it —
+    // the detail page is a server component that reads Prisma directly, and the
+    // only fetch callers of this route are PATCH and DELETE. It was removed
+    // rather than gated: operators have no lawful basis to read patient health
+    // data, and BudStacks no longer stores it at all. See
+    // docs/PRDS/prd-data-protection-remediation.md (US-001).
     return NextResponse.json({
       customer,
-      medicalHistory: medicalHistory[0] || null,
     });
   } catch (error) {
     return apiError(error, { route: "GET /api/tenant-admin/customers/[id]" });
