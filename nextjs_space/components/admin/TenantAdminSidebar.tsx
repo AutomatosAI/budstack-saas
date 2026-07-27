@@ -13,6 +13,7 @@ import {
   Webhook,
   Newspaper,
   Cookie,
+  Scale,
   Mail,
   Search,
   UsersRound,
@@ -112,6 +113,12 @@ const tenantAdminMenuItems: AdminMenuItem[] = [
     label: "Cookie Settings",
     icon: Cookie,
     href: "/tenant-admin/cookie-settings",
+  },
+  {
+    id: "legal",
+    label: "Privacy Policy",
+    icon: Scale,
+    href: "/tenant-admin/legal",
   },
 ];
 

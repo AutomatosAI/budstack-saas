@@ -154,6 +154,36 @@ model consultation_questionnaires {
   updatedAt             DateTime
 }
 
+/// Per-tenant controller identity, merged into the BudStacks-managed privacy
+/// policy template and served on the tenant's own domain. Operators are
+/// controllers of their storefront's patient data and must publish a notice
+/// naming themselves — serving the BudStacks corporate policy does not
+/// discharge their Art. 13 duty.
+///
+/// The policy BODY is NOT stored here: it is a versioned template owned by
+/// BudStacks (lib/legal/privacy-template.ts) so counsel reviews one document
+/// rather than one per tenant. Tenants supply merge values only.
+///
+/// See docs/PRDS/prd-data-protection-remediation.md (WS2).
+model tenant_legal_profiles {
+  id                    String    @id
+  tenantId              String    @unique
+  tenants               tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  controllerLegalName   String
+  registeredAddress     String
+  privacyContactEmail   String
+  icoRegistrationNumber String?
+  dpoName               String?
+  dpoContact            String?
+  ukRepresentative      String?
+  /// Template version stamped at publish time; null until first publish.
+  templateVersion       String?
+  /// Null means never published — the storefront serves the fallback notice.
+  publishedAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime
+}
+
 /// Append-only ledger of data-protection purges. Each row records what was
 /// destroyed and the counts captured immediately before destruction, so the
 /// evidence trail lives in the database rather than in a file that can be
@@ -469,6 +499,7 @@ model tenants {
   drgreen_webhook_logs   drgreen_webhook_logs[]
   kyc_journey_logs       kyc_journey_logs[]
   email_event_mappings   email_event_mappings[]
+  tenant_legal_profiles  tenant_legal_profiles?
   email_logs             email_logs[]
   email_templates        email_templates[]
   orders                 orders[]
