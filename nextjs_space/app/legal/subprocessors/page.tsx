@@ -5,6 +5,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { LegalDraftNotice } from "@/components/legal/LegalDraftNotice";
 import { prisma } from "@/lib/db";
+import type { SubprocessorRecord } from "@/lib/legal/subprocessor-notice";
 
 export const metadata: Metadata = {
     title: "Sub-processors | BudStacks",
@@ -17,7 +18,9 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function SubprocessorsPage() {
-    const entries = await prisma.subprocessors.findMany({
+    // Annotated because `prisma` is exported as `any`, so the result would
+    // otherwise be untyped and every callback below an implicit `any`.
+    const entries: SubprocessorRecord[] = await prisma.subprocessors.findMany({
         where: { status: { in: ["active", "pending"] } },
         orderBy: [{ status: "asc" }, { name: "asc" }],
     });
@@ -27,7 +30,7 @@ export default async function SubprocessorsPage() {
     // see until it is already in force.
     const pending = entries.filter((entry) => entry.status === "pending");
     const lastChange = entries.reduce<Date | null>(
-        (latest, entry) =>
+        (latest: Date | null, entry: SubprocessorRecord) =>
             !latest || entry.updatedAt > latest ? entry.updatedAt : latest,
         null,
     );
@@ -100,7 +103,7 @@ export default async function SubprocessorsPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {entries.map((s) => (
+                                    {entries.map((s: SubprocessorRecord) => (
                                         <tr
                                             key={s.id}
                                             className="border-t border-bs-border align-top text-bs-fg-1"

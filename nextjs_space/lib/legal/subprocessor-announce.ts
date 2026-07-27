@@ -119,7 +119,14 @@ export async function announceSubprocessor(
     );
   }
 
-  const tenants = await prisma.tenants.findMany({
+  // Annotated because `prisma` is exported as `any`.
+  interface NotifiableTenant {
+    id: string;
+    businessName: string;
+    users: Array<{ email: string; role: string | null }>;
+  }
+
+  const tenants: NotifiableTenant[] = await prisma.tenants.findMany({
     where: { isActive: true, deletedAt: null },
     select: { id: true, businessName: true, users: { select: { email: true, role: true } } },
   });
@@ -200,7 +207,7 @@ export async function announceSubprocessor(
  * begin on a vendor operators were never told about, whatever the date says.
  */
 export async function activateDueSubprocessors(now = new Date()): Promise<string[]> {
-  const due = await prisma.subprocessors.findMany({
+  const due: Array<{ id: string; name: string }> = await prisma.subprocessors.findMany({
     where: {
       status: "pending",
       announcedAt: { not: null },

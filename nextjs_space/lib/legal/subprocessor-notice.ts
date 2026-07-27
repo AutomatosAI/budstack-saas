@@ -20,6 +20,30 @@ export const OBJECTION_WINDOW_DAYS = 14;
 
 export type SubprocessorStatus = "pending" | "active" | "retired";
 
+/**
+ * A register row.
+ *
+ * Declared by hand because `prisma` is exported as `any` (lib/db.ts), so query
+ * results carry no type and every callback parameter over them lands as an
+ * implicit `any`. Annotating the query result restores checking at the one
+ * boundary that matters.
+ */
+export interface SubprocessorRecord {
+  id: string;
+  name: string;
+  purpose: string;
+  region: string;
+  transferMechanism: string;
+  dpaUrl: string | null;
+  status: string;
+  effectiveFrom: Date;
+  announcedAt: Date | null;
+  retiredAt: Date | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function addDays(date: Date, days: number): Date {
