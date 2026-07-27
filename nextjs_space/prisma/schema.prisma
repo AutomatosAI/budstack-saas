@@ -133,21 +133,12 @@ model consultation_questionnaires {
   businessPostalCode    String?
   businessCountry       String?
   businessCountryCode   String?
-  medicalConditions     String[] @default([])
-  otherCondition        String?
-  prescribedMedications String[] @default([])
-  prescribedSupplements String?
-  hasHeartProblems      Boolean  @default(false)
-  hasCancerTreatment    Boolean  @default(false)
-  hasImmunosuppressants Boolean  @default(false)
-  hasLiverDisease       Boolean  @default(false)
-  hasPsychiatricHistory Boolean  @default(false)
-  hasAlcoholAbuse       Boolean  @default(false)
-  hasDrugServices       Boolean  @default(false)
-  alcoholUnitsPerWeek   String?
-  cannabisReducesMeds   Boolean  @default(false)
-  cannabisFrequency     String?
-  cannabisAmountPerDay  String?
+  // Article 9 special-category health data was REMOVED from this model on
+  // 2026-07-27 (migration 20260727000000_drop_article9_health_columns).
+  // BudStacks forwards health answers to Dr Green from the request body and
+  // does not retain them — Dr Green is the controller for the clinical record.
+  // Do NOT re-add health fields here; see lib/security/article9.ts and
+  // docs/PRDS/prd-data-protection-remediation.md.
   drGreenClientId       String?
   submittedToDrGreen    Boolean  @default(false)
   submissionError       String?
@@ -161,6 +152,17 @@ model consultation_questionnaires {
   idDocumentUpdatedAt   DateTime?
   createdAt             DateTime @default(now())
   updatedAt             DateTime
+}
+
+/// Append-only ledger of data-protection purges. Each row records what was
+/// destroyed and the counts captured immediately before destruction, so the
+/// evidence trail lives in the database rather than in a file that can be
+/// edited after the fact. Written by migrations, never by application code.
+model compliance_purge_records {
+  id         String   @id
+  purgeName  String
+  executedAt DateTime @default(now()) @db.Timestamptz(6)
+  details    Json
 }
 
 model consultations {

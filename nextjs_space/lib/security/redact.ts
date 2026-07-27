@@ -8,12 +8,17 @@
  * Recursive — descends into nested objects (but not arrays of primitives).
  */
 
+import { ARTICLE_9_FIELDS } from "./article9";
+
 /**
  * Single source of truth for the sensitive-field set.
  *
  * Exported (read-only) so `lib/logger.ts` can derive pino `redact` paths from
  * the SAME set rather than forking a second list — see `pinoRedactPaths()`.
  * Extend HERE; never maintain a parallel list elsewhere (AC-1a).
+ *
+ * The Art. 9 health names are imported from `./article9` rather than restated,
+ * so the redaction list and the persistence guard share one definition.
  */
 export const SENSITIVE_FIELDS: ReadonlySet<string> = new Set([
   // emails (variants seen across the codebase)
@@ -52,16 +57,17 @@ export const SENSITIVE_FIELDS: ReadonlySet<string> = new Set([
   "addressLine2",
   "postalCode",
 
-  // identifiers / health (special-category — GDPR Art. 9)
+  // identifiers
   "kycLink",
   "dateOfBirth",
   "dob",
   "ssn",
   "nationalId",
-  "medicalConditions",
-  "otherCondition",
-  "prescribedMedications",
-  "prescribedSupplements",
+
+  // health (special-category — GDPR Art. 9). The individual field names come
+  // from ARTICLE_9_FIELDS so this list and the persistence guard cannot drift.
+  ...ARTICLE_9_FIELDS,
+  // Container keys that wrap the above in Dr Green payloads.
   "medicalRecord",
   "medicalHistory",
   // Dr Green client/consultation payloads — never dump these whole
