@@ -1,87 +1,39 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { Database, FileText } from "lucide-react";
+import { Clock, Database, FileText } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { LegalDraftNotice } from "@/components/legal/LegalDraftNotice";
+import { prisma } from "@/lib/db";
+import type { SubprocessorRecord } from "@/lib/legal/subprocessor-notice";
 
 export const metadata: Metadata = {
     title: "Sub-processors | BudStacks",
     description: "Vendors that BudStacks engages to deliver the platform — purpose, region, and transfer mechanism.",
 };
 
-interface Subprocessor {
-    name: string;
-    purpose: string;
-    region: string;
-    transfer: string;
-    dpaUrl?: string;
-}
+// The register is database-backed (WS3 US-011). It was a hardcoded array, so it
+// could only change with a deploy and nothing could start the 30-day notice
+// clock the DPA promises operators.
+export const dynamic = "force-dynamic";
 
-const SUBPROCESSORS: Subprocessor[] = [
-    {
-        name: "Clerk",
-        purpose: "Authentication, session management, user identity",
-        region: "United States",
-        transfer: "EU SCCs + UK addendum",
-        dpaUrl: "https://clerk.com/legal/dpa",
-    },
-    {
-        name: "Railway",
-        purpose: "Application hosting, build pipelines, deployment",
-        region: "United States",
-        transfer: "EU SCCs + UK addendum",
-        dpaUrl: "https://railway.com/legal/dpa",
-    },
-    {
-        name: "Amazon Web Services (AWS S3)",
-        purpose: "Object storage for tenant assets and backups",
-        region: "EU (eu-west-1) primary; US for cross-region replication",
-        transfer: "EU SCCs + UK addendum",
-        dpaUrl: "https://aws.amazon.com/service-terms/",
-    },
-    {
-        name: "PostgreSQL (managed by Railway)",
-        purpose: "Primary application database",
-        region: "United States (Railway-managed)",
-        transfer: "EU SCCs + UK addendum",
-    },
-    {
-        name: "Redis (managed by Railway)",
-        purpose: "Cache, session store, background-job queues",
-        region: "United States (Railway-managed)",
-        transfer: "EU SCCs + UK addendum",
-    },
-    {
-        name: "Stripe",
-        purpose: "Payment processing for platform subscription fees",
-        region: "United States / Ireland",
-        transfer: "EU SCCs + UK addendum; adequacy where applicable",
-        dpaUrl: "https://stripe.com/legal/dpa",
-    },
-    {
-        name: "Resend",
-        purpose: "Transactional email delivery (system notifications)",
-        region: "United States",
-        transfer: "EU SCCs + UK addendum",
-        dpaUrl: "https://resend.com/legal/dpa",
-    },
-    {
-        name: "Dr. Green API",
-        purpose: "Product catalogue and order routing for partner storefronts",
-        region: "Portugal / European Union",
-        transfer: "Within EEA — no SCCs required",
-    },
-    {
-        name: "Sentry",
-        purpose: "Error monitoring and performance telemetry",
-        region: "United States / EU",
-        transfer: "EU SCCs + UK addendum",
-        dpaUrl: "https://sentry.io/legal/dpa/",
-    },
-];
+export default async function SubprocessorsPage() {
+    // Annotated because `prisma` is exported as `any`, so the result would
+    // otherwise be untyped and every callback below an implicit `any`.
+    const entries: SubprocessorRecord[] = await prisma.subprocessors.findMany({
+        where: { status: { in: ["active", "pending"] } },
+        orderBy: [{ status: "asc" }, { name: "asc" }],
+    });
 
-export default function SubprocessorsPage() {
+    // Pending entries are shown deliberately: advance notice is the point, and
+    // an operator cannot exercise the objection right over a change they cannot
+    // see until it is already in force.
+    const pending = entries.filter((entry) => entry.status === "pending");
+    const lastChange = entries.reduce<Date | null>(
+        (latest: Date | null, entry: SubprocessorRecord) =>
+            !latest || entry.updatedAt > latest ? entry.updatedAt : latest,
+        null,
+    );
     return (
         <div className="budstacks-theme min-h-screen">
             <Navbar />
@@ -98,7 +50,12 @@ export default function SubprocessorsPage() {
                             Sub-processors
                         </h1>
                         <p className="mx-auto mt-4 max-w-2xl text-lg text-bs-fg-2">
-                            Last updated: April 25, 2026
+                            Last updated:{" "}
+                            {(lastChange ?? new Date()).toLocaleDateString("en-GB", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                            })}
                         </p>
                     </div>
 
@@ -115,6 +72,25 @@ export default function SubprocessorsPage() {
                             . Operators may object to a new sub-processor as set out in the DPA.
                         </p>
 
+                        {pending.length > 0 && (
+                            <div className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/[0.06] p-5">
+                                <Clock className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+                                <div className="text-sm">
+                                    <p className="font-medium text-bs-fg-0">
+                                        {pending.length === 1
+                                            ? "One upcoming change"
+                                            : `${pending.length} upcoming changes`}
+                                    </p>
+                                    <p className="mt-1 leading-relaxed text-bs-fg-2">
+                                        The vendors marked below are announced but not yet
+                                        processing. They are listed here during the notice
+                                        period so operators can object before the change
+                                        takes effect, rather than after.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="overflow-x-auto rounded-2xl border border-bs-border">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-bs-bg-2 text-bs-fg-1">
@@ -127,15 +103,27 @@ export default function SubprocessorsPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {SUBPROCESSORS.map((s) => (
+                                    {entries.map((s: SubprocessorRecord) => (
                                         <tr
-                                            key={s.name}
+                                            key={s.id}
                                             className="border-t border-bs-border align-top text-bs-fg-1"
                                         >
-                                            <td className="px-4 py-3 font-medium text-bs-fg-0">{s.name}</td>
+                                            <td className="px-4 py-3 font-medium text-bs-fg-0">
+                                                {s.name}
+                                                {s.status === "pending" && (
+                                                    <span className="ml-2 whitespace-nowrap rounded-full border border-amber-400/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-amber-300">
+                                                        From{" "}
+                                                        {s.effectiveFrom.toLocaleDateString("en-GB", {
+                                                            day: "numeric",
+                                                            month: "short",
+                                                            year: "numeric",
+                                                        })}
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td className="px-4 py-3 text-bs-fg-2">{s.purpose}</td>
                                             <td className="px-4 py-3 text-bs-fg-2">{s.region}</td>
-                                            <td className="px-4 py-3 text-bs-fg-2">{s.transfer}</td>
+                                            <td className="px-4 py-3 text-bs-fg-2">{s.transferMechanism}</td>
                                             <td className="px-4 py-3">
                                                 {s.dpaUrl ? (
                                                     <a
@@ -157,17 +145,22 @@ export default function SubprocessorsPage() {
                         </div>
 
                         <p className="mt-8 text-sm text-bs-fg-2 leading-relaxed">
-                            To be notified of changes, subscribe by emailing{" "}
+                            Operators do not need to subscribe to hear about changes. Every
+                            active operator is emailed at least 30 days before a vendor is
+                            added or replaced, at the contact address on their account —
+                            notice you have to opt into is not notice. Changes are also
+                            recorded in the{" "}
+                            <Link href="/legal/changelog" className="text-bs-green-300 underline-offset-2 hover:underline">
+                                legal changelog
+                            </Link>
+                            . To object to a sub-processor, or to ask anything about this
+                            list, contact{" "}
                             <a
-                                href="mailto:legal@budstacks.io?subject=Subprocessor%20updates%20subscribe"
+                                href="mailto:legal@budstacks.io?subject=Sub-processor%20query"
                                 className="text-bs-green-300 underline-offset-2 hover:underline"
                             >
                                 legal@budstacks.io
                             </a>
-                            . You can also follow updates in the{" "}
-                            <Link href="/legal/changelog" className="text-bs-green-300 underline-offset-2 hover:underline">
-                                legal changelog
-                            </Link>
                             .
                         </p>
                     </div>
