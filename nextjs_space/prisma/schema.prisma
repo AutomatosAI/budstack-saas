@@ -558,6 +558,7 @@ model tenants {
   kyc_journey_logs       kyc_journey_logs[]
   email_event_mappings   email_event_mappings[]
   subprocessor_objections subprocessor_objections[]
+  tenant_legal_profiles  tenant_legal_profiles?
   email_logs             email_logs[]
   email_templates        email_templates[]
   orders                 orders[]
