@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { decide, enforcementDate, isEnforcing } from "@/lib/legal/policy-gate";
+import {
+  decide,
+  enforcementDate,
+  isEnforcing,
+  type PolicyEnv,
+} from "@/lib/legal/policy-gate";
 
 /**
  * WS2 US-010 — the gate on collecting personal data with no published notice.
@@ -9,9 +14,9 @@ import { decide, enforcementDate, isEnforcing } from "@/lib/legal/policy-gate";
  * storefronts taking orders: a self-inflicted outage in the name of compliance.
  */
 
-const PAST = { LEGAL_POLICY_ENFORCEMENT_DATE: "2026-01-01" } as NodeJS.ProcessEnv;
-const FUTURE = { LEGAL_POLICY_ENFORCEMENT_DATE: "2099-01-01" } as NodeJS.ProcessEnv;
-const UNSET = {} as NodeJS.ProcessEnv;
+const PAST = { LEGAL_POLICY_ENFORCEMENT_DATE: "2026-01-01" } as PolicyEnv;
+const FUTURE = { LEGAL_POLICY_ENFORCEMENT_DATE: "2099-01-01" } as PolicyEnv;
+const UNSET = {} as PolicyEnv;
 const NOW = new Date("2026-07-27T12:00:00Z");
 
 describe("enforcementDate", () => {
@@ -21,13 +26,13 @@ describe("enforcementDate", () => {
 
   it("is null when blank", () => {
     expect(
-      enforcementDate({ LEGAL_POLICY_ENFORCEMENT_DATE: "   " } as NodeJS.ProcessEnv),
+      enforcementDate({ LEGAL_POLICY_ENFORCEMENT_DATE: "   " } as PolicyEnv),
     ).toBeNull();
   });
 
   it("is null — not a crash — when the value is nonsense", () => {
     expect(
-      enforcementDate({ LEGAL_POLICY_ENFORCEMENT_DATE: "soon" } as NodeJS.ProcessEnv),
+      enforcementDate({ LEGAL_POLICY_ENFORCEMENT_DATE: "soon" } as PolicyEnv),
     ).toBeNull();
   });
 

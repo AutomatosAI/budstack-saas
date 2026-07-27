@@ -23,12 +23,15 @@
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
+/** Just the slice of the environment this module reads. */
+export type PolicyEnv = Readonly<Record<string, string | undefined>>;
+
 export type PolicyGateDecision =
   | { allowed: true; published: boolean }
   | { allowed: false; reason: string };
 
 /** Parsed enforcement date, or null when enforcement is not configured. */
-export function enforcementDate(env = process.env): Date | null {
+export function enforcementDate(env: PolicyEnv = process.env): Date | null {
   const raw = env.LEGAL_POLICY_ENFORCEMENT_DATE;
   if (!raw || raw.trim() === "") return null;
 
@@ -43,7 +46,7 @@ export function enforcementDate(env = process.env): Date | null {
 }
 
 /** True once the configured enforcement date has passed. */
-export function isEnforcing(now: Date, env = process.env): boolean {
+export function isEnforcing(now: Date, env: PolicyEnv = process.env): boolean {
   const date = enforcementDate(env);
   return date !== null && now >= date;
 }
@@ -57,7 +60,7 @@ export function isEnforcing(now: Date, env = process.env): boolean {
 export function decide(
   hasPublishedPolicy: boolean,
   now: Date,
-  env = process.env,
+  env: PolicyEnv = process.env,
 ): PolicyGateDecision {
   if (hasPublishedPolicy) return { allowed: true, published: true };
 

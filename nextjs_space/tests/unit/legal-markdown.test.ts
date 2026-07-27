@@ -53,6 +53,24 @@ describe("renderMarkdown", () => {
   });
 });
 
+/**
+ * The tags the renderer is allowed to emit. Anything else in the output came
+ * from input, which would mean escaping failed.
+ *
+ * Note this is a TAG check, not a substring check: `onerror=` legitimately
+ * survives inside escaped text (`&lt;img src=x onerror=&quot;…&quot;&gt;`),
+ * where it is inert character data rather than an attribute. Asserting on the
+ * substring would fail on correctly-escaped output.
+ */
+const ALLOWED_TAGS = new Set([
+  "h2", "p", "ul", "li", "strong", "table", "thead", "tbody", "tr", "th", "td",
+]);
+
+function disallowedTags(html: string): string[] {
+  const tags = [...html.matchAll(/<\/?([a-z0-9]+)/gi)].map((m) => m[1].toLowerCase());
+  return [...new Set(tags)].filter((tag) => !ALLOWED_TAGS.has(tag));
+}
+
 describe("tenant input cannot inject markup", () => {
   it.each([
     ["script tag", "<script>alert(1)</script>"],
@@ -63,11 +81,9 @@ describe("tenant input cannot inject markup", () => {
   ])("neutralises %s in controllerLegalName", (_label, payload) => {
     const html = renderPolicyHtml({ ...BASE, controllerLegalName: payload });
 
-    expect(html).not.toContain("<script");
-    expect(html).not.toContain("<img");
-    expect(html).not.toContain("<iframe");
-    expect(html).not.toContain("onerror=");
-    expect(html).not.toContain("onmouseover=");
+    expect(disallowedTags(html)).toEqual([]);
+    // The payload survives only in escaped form, never verbatim.
+    expect(html).not.toContain(payload);
   });
 
   it("neutralises a payload in the registered address", () => {
@@ -75,7 +91,7 @@ describe("tenant input cannot inject markup", () => {
       ...BASE,
       registeredAddress: "<script>alert(1)</script>",
     });
-    expect(html).not.toContain("<script");
+    expect(disallowedTags(html)).toEqual([]);
     expect(html).toContain("&lt;script&gt;");
   });
 
@@ -85,8 +101,21 @@ describe("tenant input cannot inject markup", () => {
       dpoName: "<img src=x onerror=alert(1)>",
       dpoContact: "dpo@example.com",
     });
-    expect(html).not.toContain("<img");
-    expect(html).not.toContain("onerror=");
+    expect(disallowedTags(html)).toEqual([]);
+    expect(html).toContain("&lt;img");
+  });
+
+  it("resolves a conditional nested inside a kept conditional", () => {
+    // Regression: one replace pass left {{#dpoContact}} intact inside
+    // {{#dpoName}}, which tripped the unresolved-token guard and took the
+    // whole notice down rather than rendering it.
+    const html = renderPolicyHtml({
+      ...BASE,
+      dpoName: "Jordan Reeves",
+      dpoContact: "dpo@example.com",
+    });
+    expect(html).not.toContain("{{");
+    expect(html).toContain("dpo@example.com");
   });
 
   it("stops block-level markdown injection through a multi-line value", () => {
@@ -115,11 +144,6 @@ describe("tenant input cannot inject markup", () => {
       icoRegistrationNumber: "<div>u</div>",
     });
 
-    const ALLOWED = new Set([
-      "h2", "p", "ul", "li", "strong", "table", "thead", "tbody", "tr", "th", "td",
-    ]);
-    const tags = [...html.matchAll(/<\/?([a-z0-9]+)/gi)].map((m) => m[1].toLowerCase());
-
-    expect([...new Set(tags)].filter((t) => !ALLOWED.has(t))).toEqual([]);
+    expect(disallowedTags(html)).toEqual([]);
   });
 });
