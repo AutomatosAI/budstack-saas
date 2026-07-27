@@ -21,4 +21,5 @@ export const NAV_ITEM_PERMISSIONS: Record<string, PermissionKey | undefined> = {
   team: "canInviteTeamMembers",
   settings: "canEditSettings",
   "cookie-settings": undefined,
+  legal: "canEditSettings",
 };
