@@ -1439,3 +1439,58 @@ html {
   @apply text-bs-fg;
 }
 
+
+/* Storefront legal documents (privacy notice).
+   The typography plugin is not installed, so `prose` classes are no-ops here —
+   the generated h2/p/ul/table markup is styled explicitly against the tenant's
+   own colour variables so the notice is readable on every storefront theme.
+   See lib/legal/markdown.ts for the tag set this has to cover. */
+.legal-document {
+  color: hsl(var(--tenant-color-foreground));
+  line-height: 1.7;
+}
+.legal-document h2 {
+  color: hsl(var(--tenant-color-heading));
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+.legal-document h2:first-child {
+  margin-top: 0;
+}
+.legal-document p {
+  margin-bottom: 1rem;
+}
+.legal-document strong {
+  color: hsl(var(--tenant-color-heading));
+  font-weight: 600;
+}
+.legal-document ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+.legal-document li {
+  margin-bottom: 0.375rem;
+}
+.legal-document table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.9375rem;
+  display: block;
+  overflow-x: auto;
+}
+.legal-document th,
+.legal-document td {
+  border: 1px solid hsl(var(--tenant-color-border));
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+.legal-document th {
+  color: hsl(var(--tenant-color-heading));
+  font-weight: 600;
+}
