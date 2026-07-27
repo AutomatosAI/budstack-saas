@@ -23,6 +23,7 @@ import { getTenantFromRequest } from '@/lib/tenant/tenant';
 import { resolveTenant } from '@/lib/tenant/tenant-resolver';
 import { logger } from '@/lib/logger';
 import { apiError, apiValidationError } from '@/lib/api-error';
+import { checkPolicyGate } from '@/lib/legal/policy-gate';
 
 // SECURITY (C1, C13): Strict whitelist schema — no `.passthrough()`. Every
 // field that lands in the database or is forwarded to Dr. Green must be
@@ -153,6 +154,20 @@ export async function POST(request: NextRequest) {
       });
     }
     const tenantId = tenant.id;
+
+    // A storefront with no published privacy notice tells visitors exactly that
+    // — so taking a consultation here would collect special-category data with
+    // no Art. 13 notice at all. Checked before ANY account or record is created.
+    // Ships warn-only: enforcement begins on LEGAL_POLICY_ENFORCEMENT_DATE, so
+    // deploying this cannot stop a live storefront taking orders.
+    const policyGate = await checkPolicyGate(tenantId);
+    if (!policyGate.allowed) {
+      return apiError(new Error("No published privacy policy for tenant"), {
+        route: "POST /api/consultation/submit",
+        status: 503,
+        safeMessage: policyGate.reason,
+      });
+    }
 
     // 1. Create Clerk User (Auth)
     let clerkUser;
