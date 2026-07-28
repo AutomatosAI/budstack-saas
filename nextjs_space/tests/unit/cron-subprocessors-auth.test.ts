@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AUTH_PUBLIC_ROUTES, n as isAuthPublicRoute } from "@/lib/auth-public-routes";
+import { AUTH_PUBLIC_ROUTES, isAuthPublicRoute } from "@/lib/auth-public-routes";
 
 /**
  * WS3 US-013 — the scheduled tick is deliberately outside the api-auth
