@@ -70,6 +70,50 @@ const FIELDS: ReadonlyArray<{
     help: "Optional. Required only if your company is established outside the UK but offers services to UK customers.",
     placeholder: "LHI Consulting Ltd, 1 Example Road, London",
   },
+  {
+    name: "tradingName",
+    label: "Trading name",
+    help: "Optional. Only if you trade under a name different from the legal entity above.",
+    placeholder: "HealingBuds",
+  },
+  {
+    name: "supportContactEmail",
+    label: "Customer support email",
+    help: "Where customers raise order problems and complaints. Required for your terms of sale.",
+    placeholder: "support@yourcompany.com",
+  },
+  {
+    name: "governingLaw",
+    label: "Governing law",
+    help: "The law your terms of sale operate under. Required for your terms of sale.",
+    placeholder: "England and Wales",
+  },
+  {
+    name: "regulatorName",
+    label: "Your regulator",
+    help: "Who regulates your activity. Required for your regulatory information page.",
+    placeholder: "the MHRA",
+  },
+  {
+    name: "licenceNumber",
+    label: "Licence number",
+    help: "Optional. Shown on your regulatory information page when provided.",
+    placeholder: "MHRA-12345",
+  },
+  {
+    name: "deliveryTerms",
+    label: "Delivery terms",
+    help: "Optional. Your dispatch times and delivery arrangements, in your own words.",
+    placeholder: "We dispatch within 2 working days. Tracked delivery is included.",
+    multiline: true,
+  },
+  {
+    name: "returnsPolicy",
+    label: "Returns",
+    help: "Optional. Returns beyond the statutory minimum. Prescribed medicines cannot be returned once dispatched — that is stated for you.",
+    placeholder: "Unopened accessories may be returned within 14 days.",
+    multiline: true,
+  },
 ];
 
 export default function LegalProfileForm({
@@ -233,14 +277,19 @@ export default function LegalProfileForm({
           <div className="rounded-xl border border-bs-border p-4">
             <div className="flex items-center gap-2 text-sm font-medium text-bs-fg">
               <Lock className="h-4 w-4" />
-              Policy wording — managed by BudStacks
+              Standard wording — maintained by BudStacks
             </div>
             <p className="mt-2 text-xs leading-relaxed text-bs-fg-2">
-              The body of the notice is a single document reviewed by our legal
-              counsel and kept up to date for every operator, currently version{" "}
-              {currentVersion}. You supply the details on the left; we merge them
-              in. This is deliberate — a policy each operator writes themselves
-              is a policy nobody has checked.
+              These details are merged into the four legal documents published on
+              your site — privacy, terms, cookies and regulatory information.
+              Privacy is previewed below; the rest are managed under{" "}
+              <strong>Legal pages</strong>, where you can also replace any of them
+              with your own wording.
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-bs-fg-2">
+              Fields marked as required for a document must be filled before that
+              document can publish. Terms needs a governing law and support
+              address; regulatory needs your regulator.
             </p>
           </div>
 

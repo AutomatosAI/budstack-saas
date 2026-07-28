@@ -3,7 +3,6 @@ import Link from "next/link";
 import { FileSignature, FileText } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { LegalDraftNotice } from "@/components/legal/LegalDraftNotice";
 
 export const metadata: Metadata = {
     title: "Data Processing Agreement | BudStacks",
@@ -290,7 +289,6 @@ export default function DpaPage() {
                         </p>
                     </div>
 
-                    <LegalDraftNotice documentName="Data Processing Agreement" />
 
                     <div className="card-floating p-10 lg:p-12">
                         <div className="prose prose-invert prose-lg max-w-none prose-headings:font-bs-serif prose-headings:text-bs-fg-0 prose-p:text-bs-fg-2 prose-li:text-bs-fg-2 prose-strong:text-bs-fg-1 prose-a:text-bs-green-300">

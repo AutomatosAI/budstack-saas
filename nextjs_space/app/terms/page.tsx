@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Scale, FileText } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { LegalDraftNotice } from "@/components/legal/LegalDraftNotice";
 
 export const metadata: Metadata = {
     title: "Terms of Service | BudStacks",
@@ -357,7 +356,6 @@ export default function TermsPage() {
                         </p>
                     </div>
 
-                    <LegalDraftNotice documentName="Terms of Service" />
 
                     {/* Content Card */}
                     <div className="card-floating p-10 lg:p-12">

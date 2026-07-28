@@ -30,7 +30,8 @@
     "postinstall": "prisma generate",
     "email:worker": "tsx scripts/email-worker.ts",
     "sync-templates": "tsx scripts/sync-template-registry.ts",
-    "sync-s3-templates": "tsx scripts/sync-templates-from-s3.ts"
+    "sync-s3-templates": "tsx scripts/sync-templates-from-s3.ts",
+    "compliance:purge-record": "npx tsx scripts/compliance-purge-record.ts"
   },
   "prisma": {
     "seed": "npx tsx scripts/seed.ts"

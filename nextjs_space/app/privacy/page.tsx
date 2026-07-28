@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Shield, FileText } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { LegalDraftNotice } from "@/components/legal/LegalDraftNotice";
 
 export const metadata: Metadata = {
     title: "Privacy Policy | BudStacks",
@@ -318,7 +317,6 @@ export default function PrivacyPage() {
                         </p>
                     </div>
 
-                    <LegalDraftNotice documentName="Privacy Policy" />
 
                     {/* Content Card */}
                     <div className="card-floating p-10 lg:p-12">

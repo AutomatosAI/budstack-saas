@@ -31,6 +31,8 @@ export class MissingLegalTokenError extends Error {
 export type TemplateValues = Readonly<Record<string, string | null | undefined>>;
 
 const CONDITIONAL = /\{\{#(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/g;
+/** Inverted: kept only when the value is ABSENT. Mustache's `^` convention. */
+const INVERTED = /\{\{\^(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/g;
 const TOKEN = /\{\{(\w+)\}\}/g;
 
 function isBlank(value: string | null | undefined): boolean {
@@ -53,9 +55,13 @@ function applyConditionals(template: string, values: TemplateValues): string {
   let current = template;
 
   for (let pass = 0; pass < MAX_CONDITIONAL_PASSES; pass++) {
-    const next = current.replace(CONDITIONAL, (_match, token: string, body: string) =>
-      isBlank(values[token]) ? "" : body,
-    );
+    const next = current
+      .replace(CONDITIONAL, (_match, token: string, body: string) =>
+        isBlank(values[token]) ? "" : body,
+      )
+      .replace(INVERTED, (_match, token: string, body: string) =>
+        isBlank(values[token]) ? body : "",
+      );
     if (next === current) return next;
     current = next;
   }

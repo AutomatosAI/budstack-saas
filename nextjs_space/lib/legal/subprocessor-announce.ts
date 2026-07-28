@@ -71,10 +71,12 @@ export function buildAnnouncementEmail(
         <tr><td><strong>Starts</strong></td><td>${formatDate(entry.effectiveFrom)}</td></tr>
       </table>
       <p>
-        If you object, reply to this email or write to
-        <a href="mailto:legal@budstacks.io">legal@budstacks.io</a> by
-        <strong>${formatDate(objectionDeadline)}</strong>. Tell us which vendor
-        and why, and we will come back to you before the change takes effect.
+        If you object, do it by <strong>${formatDate(objectionDeadline)}</strong>.
+        The quickest way is in your dashboard under
+        <strong>Privacy Policy &rsaquo; Sub-processors</strong>, where the
+        objection is recorded against this vendor and we can act on it. You can
+        also reply to this email or write to
+        <a href="mailto:legal@budstacks.io">legal@budstacks.io</a>.
       </p>
       <p>
         You do not need to do anything if you are content with the change. The
