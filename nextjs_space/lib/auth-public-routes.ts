@@ -101,6 +101,13 @@ export const AUTH_PUBLIC_ROUTES: readonly PublicRoute[] = [
     pattern: "/api/store/[slug]/products/featured",
     reason: "Public storefront read: featured products by tenant slug.",
   },
+  {
+    pattern: "/api/cron/subprocessors",
+    reason:
+      "Scheduled tick called by an external scheduler with no user session; " +
+      "authenticates on a constant-time CRON_SECRET header and fails CLOSED when " +
+      "the secret is unset, so an unconfigured deploy is inert rather than open.",
+  },
 ];
 
 /**

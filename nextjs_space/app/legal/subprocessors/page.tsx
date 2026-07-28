@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Clock, Database, FileText } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { LegalDraftNotice } from "@/components/legal/LegalDraftNotice";
 import { prisma } from "@/lib/db";
 import type { SubprocessorRecord } from "@/lib/legal/subprocessor-notice";
 
@@ -59,7 +58,6 @@ export default async function SubprocessorsPage() {
                         </p>
                     </div>
 
-                    <LegalDraftNotice documentName="Sub-processor list" />
 
                     <div className="card-floating p-8 lg:p-10">
                         <p className="mb-8 text-bs-fg-2 leading-relaxed">
