@@ -3,10 +3,8 @@
 **Date:** 28 July 2026
 **Re:** Items (a)–(e) raised ahead of resuming template work
 
-> **Internal note — not for sending.** Drafting principles for this document are
-> in `docs/compliance/RESPONSE-DRAFTING-NOTES.md`. Read that before editing.
-> Two placeholders below need filling before this goes anywhere: BudStacks'
-> legal entity details, and LHI's engaged role.
+> **Internal note — not for sending.** Needs BudStacks' legal entity details
+> and LHI's engaged role filled in before this goes anywhere.
 
 ---
 
@@ -47,7 +45,7 @@ We would like to confirm one point before responding substantively: **who issues
 
 Our understanding is that it is not a BudStacks instrument, in which case the variation needs to be raised with whoever holds it, and we will gladly make that introduction and support the drafting.
 
-The underlying point is well made. If non-clinical operators are to be onboarded, an eligibility clause drafted around licence holders needs a corresponding variation, or those subscribers are non-compliant with their own agreement from signature.
+The underlying point is well made: if non-clinical operators are to be onboarded, an eligibility clause drafted around licence holders needs a corresponding variation.
 
 ---
 
