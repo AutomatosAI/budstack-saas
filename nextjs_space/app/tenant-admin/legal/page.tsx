@@ -59,6 +59,13 @@ export default async function TenantLegalPage() {
         dpoName: profile.dpoName ?? "",
         dpoContact: profile.dpoContact ?? "",
         ukRepresentative: profile.ukRepresentative ?? "",
+        tradingName: profile.tradingName ?? "",
+        supportContactEmail: profile.supportContactEmail ?? "",
+        governingLaw: profile.governingLaw ?? "",
+        deliveryTerms: profile.deliveryTerms ?? "",
+        returnsPolicy: profile.returnsPolicy ?? "",
+        licenceNumber: profile.licenceNumber ?? "",
+        regulatorName: profile.regulatorName ?? "",
       }
     : // Pre-fill from trading details, but the operator must confirm them: the
       // registered legal entity and its registered address are frequently not

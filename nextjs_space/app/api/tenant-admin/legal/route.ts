@@ -7,7 +7,7 @@ import { apiError, apiValidationError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { legalProfileSchema } from "@/lib/legal/legal-profile-schema";
-import { renderPolicyHtml } from "@/lib/legal/tenant-policy";
+import { renderPolicyHtml, renderableDocuments } from "@/lib/legal/tenant-policy";
 import { PRIVACY_TEMPLATE_VERSION } from "@/lib/legal/privacy-template";
 import { MissingLegalTokenError } from "@/lib/legal/render-policy";
 import { logger } from "@/lib/logger";
@@ -117,6 +117,10 @@ export const PUT = withTenantAuth(async (request, { user, tenantId }) => {
       success: true,
       profile: saved,
       published: Boolean(saved.publishedAt),
+      // Which documents these fields can actually produce. A profile can be
+      // published while terms or regulatory still fall back, because those
+      // carry required fields of their own.
+      renderable: renderableDocuments(parsed.data),
     });
   } catch (error) {
     return apiError(error, { route: ROUTE });
@@ -134,7 +138,10 @@ export const POST = withTenantAuth(async (request) => {
       return apiValidationError(firstIssue(parsed.error), previewRoute);
     }
 
-    return NextResponse.json({ html: renderPolicyHtml(parsed.data) });
+    return NextResponse.json({
+      html: renderPolicyHtml(parsed.data),
+      renderable: renderableDocuments(parsed.data),
+    });
   } catch (error) {
     if (error instanceof MissingLegalTokenError) {
       return apiError(error, {

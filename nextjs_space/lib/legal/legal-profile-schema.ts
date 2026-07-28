@@ -39,6 +39,18 @@ export const legalProfileSchema = z.object({
   dpoName: optional(200),
   dpoContact: optional(200),
   ukRepresentative: optional(300),
+
+  // Commercial + regulatory details. Optional at the schema level because a
+  // profile is valid with only the identity fields — but a document whose
+  // required tokens are missing serves the fallback rather than rendering
+  // half a legal page. See lib/legal/documents.
+  tradingName: optional(200),
+  supportContactEmail: optional(200),
+  governingLaw: optional(120),
+  deliveryTerms: optional(2000),
+  returnsPolicy: optional(2000),
+  licenceNumber: optional(120),
+  regulatorName: optional(200),
 });
 
 export type LegalProfileInput = z.input<typeof legalProfileSchema>;
@@ -57,5 +69,12 @@ export function emptyLegalProfile(defaults?: {
     dpoName: "",
     dpoContact: "",
     ukRepresentative: "",
+    tradingName: "",
+    supportContactEmail: "",
+    governingLaw: "",
+    deliveryTerms: "",
+    returnsPolicy: "",
+    licenceNumber: "",
+    regulatorName: "",
   };
 }

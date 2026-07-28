@@ -176,6 +176,16 @@ model tenant_legal_profiles {
   dpoName               String?
   dpoContact            String?
   ukRepresentative      String?
+  /// Commercial + regulatory details used by the terms and regulatory
+  /// documents. Nullable: a document whose required fields are absent serves
+  /// the fallback rather than rendering half a legal page.
+  tradingName           String?
+  supportContactEmail   String?
+  governingLaw          String?
+  deliveryTerms         String?
+  returnsPolicy         String?
+  licenceNumber         String?
+  regulatorName         String?
   /// Template version stamped at publish time; null until first publish.
   templateVersion       String?
   /// Null means never published — the storefront serves the fallback notice.
