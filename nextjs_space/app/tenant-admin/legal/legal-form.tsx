@@ -277,14 +277,19 @@ export default function LegalProfileForm({
           <div className="rounded-xl border border-bs-border p-4">
             <div className="flex items-center gap-2 text-sm font-medium text-bs-fg">
               <Lock className="h-4 w-4" />
-              Policy wording — managed by BudStacks
+              Standard wording — maintained by BudStacks
             </div>
             <p className="mt-2 text-xs leading-relaxed text-bs-fg-2">
-              The body of the notice is a single document reviewed by our legal
-              counsel and kept up to date for every operator, currently version{" "}
-              {currentVersion}. You supply the details on the left; we merge them
-              in. This is deliberate — a policy each operator writes themselves
-              is a policy nobody has checked.
+              These details are merged into the four legal documents published on
+              your site — privacy, terms, cookies and regulatory information.
+              Privacy is previewed below; the rest are managed under{" "}
+              <strong>Legal pages</strong>, where you can also replace any of them
+              with your own wording.
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-bs-fg-2">
+              Fields marked as required for a document must be filled before that
+              document can publish. Terms needs a governing law and support
+              address; regulatory needs your regulator.
             </p>
           </div>
 

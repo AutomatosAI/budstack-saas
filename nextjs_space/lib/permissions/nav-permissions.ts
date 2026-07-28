@@ -22,4 +22,6 @@ export const NAV_ITEM_PERMISSIONS: Record<string, PermissionKey | undefined> = {
   settings: "canEditSettings",
   "cookie-settings": undefined,
   legal: "canEditSettings",
+  "legal-documents": "canEditSettings",
+  "legal-subprocessors": "canEditSettings",
 };

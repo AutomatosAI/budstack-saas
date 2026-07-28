@@ -14,6 +14,8 @@ import {
   Newspaper,
   Cookie,
   Scale,
+  FileText,
+  Database,
   Mail,
   Search,
   UsersRound,
@@ -116,9 +118,21 @@ const tenantAdminMenuItems: AdminMenuItem[] = [
   },
   {
     id: "legal",
-    label: "Privacy Policy",
+    label: "Company Details",
     icon: Scale,
     href: "/tenant-admin/legal",
+  },
+  {
+    id: "legal-documents",
+    label: "Legal Pages",
+    icon: FileText,
+    href: "/tenant-admin/legal/documents",
+  },
+  {
+    id: "legal-subprocessors",
+    label: "Data Processors",
+    icon: Database,
+    href: "/tenant-admin/legal/subprocessors",
   },
 ];
 
