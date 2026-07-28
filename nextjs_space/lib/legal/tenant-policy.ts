@@ -13,6 +13,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { renderMarkdown } from "./markdown";
 import { getLegalDocument, type LegalDocumentSlug } from "./documents";
+import { resolveDocumentSource } from "./document-resolution";
 import { MissingLegalTokenError, renderTemplate } from "./render-policy";
 
 export type TenantLegalDocument =
@@ -124,43 +125,94 @@ export async function getTenantLegalDocument(
   tenantId: string,
   slug: LegalDocumentSlug,
 ): Promise<TenantLegalDocument> {
-  const doc = getLegalDocument(slug);
+  const shipped = getLegalDocument(slug);
 
-  // findFirst with a flat field: the tenant-scoping $extends rewrites findUnique
+  // findFirst with flat fields: the tenant-scoping $extends rewrites findUnique
   // to findFirst without flattening compound keys, which 500s on `Unknown
   // argument`. Flat findFirst is the safe form.
-  const profile = await prisma.tenant_legal_profiles.findFirst({
-    where: { tenantId },
-  });
+  const [profile, doc, platform] = await Promise.all([
+    prisma.tenant_legal_profiles.findFirst({ where: { tenantId } }),
+    prisma.tenant_legal_documents.findFirst({ where: { tenantId, slug } }),
+    prisma.platform_legal_templates.findFirst({ where: { slug } }),
+  ]);
 
-  if (!profile) {
-    return { status: "unpublished", slug, title: doc.title, reason: "no-profile" };
-  }
-  if (!profile.publishedAt) {
-    return { status: "unpublished", slug, title: doc.title, reason: "not-published" };
+  const source = resolveDocumentSource(
+    slug,
+    doc,
+    platform,
+    Boolean(profile?.publishedAt),
+  );
+
+  if (source.kind === "unpublished") {
+    return {
+      status: "unpublished",
+      slug,
+      title: shipped.title,
+      reason:
+        source.reason === "no-profile" || source.reason === "no-document"
+          ? "no-profile"
+          : "not-published",
+    };
   }
 
-  try {
+  // The tenant's own wording. Rendered through the same escaping markdown
+  // pipeline as everything else — it is their text, but it is still untrusted
+  // input being written into a page.
+  if (source.kind === "custom") {
     return {
       status: "published",
       slug,
-      title: doc.title,
-      html: renderDocumentHtml(slug, profile),
-      publishedAt: profile.publishedAt,
-      templateVersion: profile.templateVersion ?? doc.version,
-      controllerLegalName: singleLine(profile.controllerLegalName),
+      title: shipped.title,
+      html: renderMarkdown(source.body),
+      publishedAt: source.publishedAt,
+      templateVersion: "custom",
+      controllerLegalName: profile
+        ? singleLine(profile.controllerLegalName)
+        : "",
+    };
+  }
+
+  if (source.fromCodeFallback) {
+    // Degrading to the shipped wording rather than to nothing, but this means
+    // the platform template table is unseeded for this document.
+    logger.warn("[Legal] No platform template row; serving shipped default", {
+      slug,
+    });
+  }
+
+  try {
+    const merged = renderTemplate(
+      source.template,
+      toTemplateValues(profile as LegalProfileValues),
+      shipped.requiredTokens,
+    );
+    return {
+      status: "published",
+      slug,
+      title: shipped.title,
+      html: renderMarkdown(merged),
+      publishedAt: source.publishedAt,
+      templateVersion: doc?.templateVersion ?? source.version,
+      controllerLegalName: singleLine(
+        (profile as LegalProfileValues).controllerLegalName,
+      ),
     };
   } catch (error) {
     if (error instanceof MissingLegalTokenError) {
-      // Published overall, but THIS document's required fields are absent — e.g.
-      // terms published before a governing law was set. Serving the fallback is
-      // correct: half a contract is worse than an honest gap.
+      // Published, but THIS document's required fields are absent — e.g. terms
+      // published before a governing law was set. Half a contract is worse than
+      // an honest gap.
       logger.warn("[Legal] Document not renderable for tenant", {
         tenantId,
         slug,
         tokens: error.tokens,
       });
-      return { status: "unpublished", slug, title: doc.title, reason: "incomplete" };
+      return {
+        status: "unpublished",
+        slug,
+        title: shipped.title,
+        reason: "incomplete",
+      };
     }
     throw error;
   }

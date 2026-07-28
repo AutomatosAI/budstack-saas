@@ -194,6 +194,65 @@ model tenant_legal_profiles {
   updatedAt             DateTime
 }
 
+/// Per-document publishing state for a tenant's legal pages.
+///
+/// A tenant either accepts the BudStacks-maintained default for a document or
+/// supplies their own text. The choice is per DOCUMENT, not per tenant: an
+/// operator will commonly accept the cookie notice and write their own terms,
+/// because terms are their commercial contract.
+///
+/// The operator is the controller and these are their documents, so writing
+/// their own is theirs to do. What matters is that the choice is recorded —
+/// which mode, when, and by whom — so responsibility for the wording is never
+/// ambiguous in either direction.
+///
+/// Updates to a default reach only tenants on `default`. That is the whole
+/// value of accepting it.
+///
+/// See docs/PRDS/prd-data-protection-remediation.md.
+model tenant_legal_documents {
+  id                      String    @id
+  tenantId                String
+  /// privacy | terms | cookies | regulatory
+  slug                    String
+  /// default = inherit the maintained template. custom = this tenant's own text.
+  mode                    String    @default("default")
+  /// Markdown, used only in custom mode. Null while on the default.
+  body                    String?
+  /// Null means not published — the storefront serves the fallback notice.
+  publishedAt             DateTime?
+  /// Template version in force at publish time (default mode only).
+  templateVersion         String?
+  /// Recorded when a tenant switches to custom and accepts that the wording,
+  /// and keeping it current, is theirs.
+  responsibilityAcceptedAt     DateTime?
+  responsibilityAcceptedByUserId String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime
+
+  tenants                 tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+/// The BudStacks-maintained default text for each legal document.
+///
+/// Database-backed so wording can be corrected without a deploy — when counsel
+/// or a DPO reviews these, their revisions should not need a developer. The
+/// code templates in lib/legal/documents remain the seed and the fallback, so
+/// an empty table degrades to the shipped text rather than to nothing.
+model platform_legal_templates {
+  /// privacy | terms | cookies | regulatory
+  slug            String   @id
+  title           String
+  body            String
+  version         String
+  updatedByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+}
+
 /// Append-only ledger of data-protection purges. Each row records what was
 /// destroyed and the counts captured immediately before destruction, so the
 /// evidence trail lives in the database rather than in a file that can be
@@ -569,6 +628,7 @@ model tenants {
   email_event_mappings   email_event_mappings[]
   subprocessor_objections subprocessor_objections[]
   tenant_legal_profiles  tenant_legal_profiles?
+  tenant_legal_documents tenant_legal_documents[]
   email_logs             email_logs[]
   email_templates        email_templates[]
   orders                 orders[]
