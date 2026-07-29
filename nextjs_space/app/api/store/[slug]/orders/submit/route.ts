@@ -194,39 +194,69 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
     // markets fall back to the email-link flow. Per-tenant opt-out via
     // settings.directPayments===false; global kill via DIRECT_PAY_DISABLED.
     let payUrl: string | undefined;
+    // DIRECT stores are pay-upfront: an order with no minted checkout is a
+    // FAILED checkout, not a placed order. Reported to the caller so the
+    // storefront can say so instead of showing a confirmation. Always false on
+    // email-link stores, where an unminted order is the normal, correct state.
+    let paymentStartFailed = false;
     if (directPayEnabled && orderResponse.drGreenOrderId) {
       const host = request.headers.get("host") || "";
       const origin =
         request.headers.get("origin") || (host ? `https://${host}` : "");
-      try {
-        const checkout = await createDirectCheckout({
-          drGreenOrderId: orderResponse.drGreenOrderId,
-          // Tenant hosts ({slug}.budstacks.io / custom domains) serve the store
-          // at root; the legacy "/store/<slug>" path 404s there.
-          returnUrl: storefrontUrl(
-            origin,
-            host,
-            slug,
-            `/payment/return/${orderResponse.orderId}`,
-          ),
-          apiKey: drGreenConfig.apiKey,
-          secretKey: drGreenConfig.secretKey,
-          apiUrl: drGreenConfig.apiUrl,
-          // US-008: the shopper's IP becomes PayCloud's term_ip fraud hint —
-          // without it the transaction is attributed to this server's egress.
-          customerIp: getPublicClientIp(request.headers),
-        });
-        payUrl = checkout.payUrl;
-        log('DIRECT_CHECKOUT', {
-          hasPayUrl: !!payUrl,
-          expiresAt: checkout.expiresAt,
-        });
-      } catch (e) {
-        // Never fail the order if minting fails — the order exists and remains
-        // payable via the email-link flow on admin approval (fallback).
-        log('DIRECT_CHECKOUT_FAILED', {
-          error: e instanceof Error ? e.message : String(e),
-        });
+      // Retry the mint. A single backend blip must not strand a pay-upfront
+      // order: on 2026-07-29 a production task exited mid-request, the ALB
+      // returned a 502 in 87ms, and one LekkerWeed order was created with no
+      // payment ever started. Transient by nature — the replacement task was
+      // healthy ~2 minutes later.
+      const MINT_ATTEMPTS = 3;
+      for (let attempt = 1; attempt <= MINT_ATTEMPTS; attempt++) {
+        try {
+          const checkout = await createDirectCheckout({
+            drGreenOrderId: orderResponse.drGreenOrderId,
+            // Tenant hosts ({slug}.budstacks.io / custom domains) serve the
+            // store at root; the legacy "/store/<slug>" path 404s there.
+            returnUrl: storefrontUrl(
+              origin,
+              host,
+              slug,
+              `/payment/return/${orderResponse.orderId}`,
+            ),
+            apiKey: drGreenConfig.apiKey,
+            secretKey: drGreenConfig.secretKey,
+            apiUrl: drGreenConfig.apiUrl,
+            // US-008: the shopper's IP becomes PayCloud's term_ip fraud hint —
+            // without it the transaction is attributed to this server's egress.
+            customerIp: getPublicClientIp(request.headers),
+          });
+          payUrl = checkout.payUrl;
+          log("DIRECT_CHECKOUT", {
+            hasPayUrl: !!payUrl,
+            expiresAt: checkout.expiresAt,
+            attempt,
+          });
+          break;
+        } catch (e) {
+          const lastAttempt = attempt === MINT_ATTEMPTS;
+          log("DIRECT_CHECKOUT_ATTEMPT_FAILED", {
+            attempt,
+            lastAttempt,
+            error: e instanceof Error ? e.message : String(e),
+          });
+          if (!lastAttempt) {
+            await new Promise((r) => setTimeout(r, 400 * attempt));
+            continue;
+          }
+          // Out of attempts on a pay-upfront store. The Dr Green order stays:
+          // it is still payable by retrying via /orders/{id}/pay, or through
+          // the email-link flow on admin approval. But the customer must NOT
+          // be told the order is placed. The abandoned-order sweep releases
+          // its stock if nobody ever pays.
+          paymentStartFailed = true;
+          log("DIRECT_CHECKOUT_FAILED", {
+            error: e instanceof Error ? e.message : String(e),
+            attempts: MINT_ATTEMPTS,
+          });
+        }
       }
     }
 
@@ -255,8 +285,10 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       },
     });
 
-    log('SUCCESS');
-    return NextResponse.json({ order: { ...orderResponse, payUrl } });
+    log(paymentStartFailed ? 'ORDER_CREATED_PAYMENT_NOT_STARTED' : 'SUCCESS');
+    return NextResponse.json({
+      order: { ...orderResponse, payUrl, paymentStartFailed },
+    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     log('UNHANDLED_ERROR', { message: msg });
