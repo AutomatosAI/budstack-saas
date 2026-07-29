@@ -31,6 +31,47 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
+  // Set when a pay-upfront order was created but its checkout could not be
+  // minted. Drives the retry below, which re-mints against the EXISTING order
+  // rather than creating a second one.
+  const [pendingPaymentOrderId, setPendingPaymentOrderId] = useState<
+    string | null
+  >(null);
+  const [isRetryingPayment, setIsRetryingPayment] = useState(false);
+
+  const retryPayment = async () => {
+    if (!pendingPaymentOrderId) return;
+    setIsRetryingPayment(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/store/${params.slug}/orders/${pendingPaymentOrderId}/pay`,
+        { method: "POST" },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not start payment");
+      if (data.payUrl) {
+        window.location.href = data.payUrl;
+        return;
+      }
+      if (data.paid) {
+        // Already settled (e.g. the first mint actually succeeded upstream).
+        setPendingPaymentOrderId(null);
+        setError(null);
+        clearCart();
+        return;
+      }
+      throw new Error("Could not start payment");
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? `${e.message}. Nothing has been charged.`
+          : "Could not start payment. Nothing has been charged.",
+      );
+    } finally {
+      setIsRetryingPayment(false);
+    }
+  };
 
   // Saved address state
   const [savedAddress, setSavedAddress] = useState<ShippingAddress | null>(null);
@@ -141,6 +182,19 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
       // the cart intact for retry / back-to-cart.
       if (data.order?.payUrl) {
         window.location.href = data.order.payUrl;
+        return;
+      }
+
+      // Pay-upfront store where the checkout could not be minted. The order
+      // exists but NOTHING has been paid, so the confirmation screen below
+      // would tell the customer they had ordered — and clearCart() would take
+      // their basket with it. That is exactly what happened on LekkerWeed on
+      // 2026-07-29. Keep the cart, say what happened, offer the retry.
+      if (data.order?.paymentStartFailed) {
+        setPendingPaymentOrderId(data.order.orderId ?? null);
+        setError(
+          "We couldn't start the payment for your order. Nothing has been charged — please try again.",
+        );
         return;
       }
 
@@ -640,9 +694,26 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                   )}
 
                   {error && (
-                    <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <span>{error}</span>
+                    <div className="flex flex-col gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <span>{error}</span>
+                      </div>
+                      {pendingPaymentOrderId && (
+                        <Button
+                          type="button"
+                          onClick={retryPayment}
+                          disabled={isRetryingPayment}
+                          className="w-full h-11 text-sm font-semibold text-white"
+                          style={{
+                            backgroundColor: "hsl(var(--tenant-color-primary))",
+                          }}
+                        >
+                          {isRetryingPayment
+                            ? "Starting payment…"
+                            : "Retry payment"}
+                        </Button>
+                      )}
                     </div>
                   )}
 
