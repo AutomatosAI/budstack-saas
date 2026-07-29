@@ -73,8 +73,20 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             return { isLoggedIn: true, kycVerified: false, status: "NO_TENANT" };
         }
 
-        // Check if user has a verified consultation locally first (DB source of truth override)
-        // This allows manual verification or cached verification to work even if API is down
+        // Read the local row for idDocumentStatus ONLY. Dr Green owns whether a
+        // client is verified; this table does not get a vote.
+        //
+        // This used to short-circuit: `if (questionnaire?.isKycVerified) return
+        // { kycVerified: true }` — returning ACTIVE without ever calling Dr
+        // Green. Because the block below only ever wrote `true` and never
+        // `false`, that made the flag a one-way latch: once set, the API was
+        // never consulted again and the two systems could drift apart forever.
+        //
+        // Observed 2026-07-29: a client showed "You're verified — start
+        // shopping" from this flag while Dr Green production had no such client
+        // at all. The user only found out at checkout, where the order failed
+        // with a 500. Verification state must be answered by the system that
+        // owns it, at the moment it is asked.
         const questionnaire = await prisma.consultation_questionnaires.findFirst({
             where: {
                 tenantId: dbUser.tenantId,
@@ -87,15 +99,6 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             select: { isKycVerified: true, adminApproval: true, idDocumentStatus: true }
         });
         const idDocumentStatus = questionnaire?.idDocumentStatus ?? null;
-
-        // If explicitly verified in local DB, trust it
-        if (questionnaire?.isKycVerified) {
-            return {
-                isLoggedIn: true,
-                kycVerified: true,
-                status: "ACTIVE"
-            };
-        }
 
         // Fetch Config and check Dr Green API
         try {
@@ -156,33 +159,36 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             // dashboard can show the reason + a re-upload CTA rather than a
             // misleading "being reviewed" pending banner. The client simply
             // re-uploads a valid ID; they do NOT need to create a new account.
-            if (!isVerified && client.adminApproval === "REJECTED") {
-                return {
-                    isLoggedIn: true,
-                    kycVerified: false,
-                    status: "REJECTED",
-                    message: client.rejectionNote || undefined,
-                    idDocumentStatus,
-                };
-            }
+            //
+            // Deliberately NOT an early return any more: it used to skip the
+            // mirror below, so a client who was verified once and later
+            // REJECTED kept `isKycVerified = true` in our table — still reading
+            // as verified on every other surface.
+            const rejected = !isVerified && client.adminApproval === "REJECTED";
 
-            // Persist verified status locally so we never need to check again.
+            // MIRROR Dr Green's answer into the local row — it is not consulted
+            // above and carries no authority here. It is kept in step because
+            // other surfaces still read it: /api/consultation/status and
+            // components/shop/RestrictedRegionGate.
+            //
+            // Written in BOTH directions. Previously this only ever wrote
+            // `true`, so a client who was verified once stayed "verified" in
+            // BudStacks forever — even after Dr Green stopped recognising them.
+            // Mirroring `false` is what lets the drift correct itself.
             //
             // If there's no questionnaire row under the user's current tenant
             // (e.g. the user was moved between flagship stores — their
             // consultation still lives under the original tenant), migrate the
-            // row to the current tenant so the cache actually writes. Without
-            // this, checkout keeps hitting the Dr Green paginated scan and
-            // fails once the client list exceeds a few thousand.
-            if (isVerified) {
+            // row to the current tenant so the mirror actually writes.
+            {
                 const current = await prisma.consultation_questionnaires.updateMany({
                     where: {
                         tenantId: dbUser.tenantId,
                         email: { equals: clerkUser.email, mode: 'insensitive' },
                     },
                     data: {
-                        isKycVerified: true,
-                        adminApproval: "APPROVED",
+                        isKycVerified: isVerified,
+                        ...(isVerified ? { adminApproval: "APPROVED" } : {}),
                         updatedAt: new Date(),
                     },
                 });
@@ -201,8 +207,11 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                             where: { id: orphan.id },
                             data: {
                                 tenantId: dbUser.tenantId,
-                                isKycVerified: true,
-                                adminApproval: "APPROVED",
+                                // Mirror Dr Green here too. Hardcoding `true`
+                                // on this path would re-create the latch for
+                                // any user whose row lives under another tenant.
+                                isKycVerified: isVerified,
+                                ...(isVerified ? { adminApproval: "APPROVED" } : {}),
                                 updatedAt: new Date(),
                             },
                         });
@@ -210,16 +219,31 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                             userId: dbUser.id,
                             fromTenantId: orphan.tenantId,
                             toTenantId: dbUser.tenantId,
+                            verified: isVerified,
                         });
                     } else {
-                        logger.warn("[KYC] verified but no questionnaire row in any tenant — cache will not persist", {
+                        logger.warn("[KYC] no questionnaire row in any tenant — local mirror not written", {
                             userId: dbUser.id,
                             tenantId: dbUser.tenantId,
+                            verified: isVerified,
                         });
                     }
                 } else {
-                    logger.info("[KYC] verified, cached locally", { userId: dbUser.id });
+                    logger.info("[KYC] local mirror updated from Dr Green", {
+                        userId: dbUser.id,
+                        verified: isVerified,
+                    });
                 }
+            }
+
+            if (rejected) {
+                return {
+                    isLoggedIn: true,
+                    kycVerified: false,
+                    status: "REJECTED",
+                    message: client.rejectionNote || undefined,
+                    idDocumentStatus,
+                };
             }
 
             // Map Dr Green fields to our status format.
