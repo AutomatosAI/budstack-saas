@@ -30,6 +30,26 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
     const body = await parseJsonBody(req, undefined, { maxBytes: 512 * 1024 });
     const validatedData = postSchema.parse(body);
 
+    // posts.authorId FKs users.id, but user.id is the CLERK id — the two only
+    // coincide for rows the Clerk webhook itself created (keyed by the raw
+    // Clerk id). Admins provisioned by tenant-create / team-invite / seeding
+    // have UUID PKs, so stamping user.id violates posts_authorId_fkey (every
+    // lekkerweed blog create 500'd this way). Resolve the local row — Clerk id
+    // first, then email (globally unique). The lookup runs tenant-scoped, so an
+    // impersonating super-admin (row outside this tenant) misses and falls back
+    // to user.id: exactly the Clerk-keyed row the FK already accepts today.
+    const localAuthor = await prisma.users.findFirst({
+      where: {
+        OR: [
+          { clerkUserId: user.id },
+          { id: user.id },
+          ...(user.email ? [{ email: user.email }] : []),
+        ],
+      },
+      select: { id: true },
+    });
+    const authorId = localAuthor?.id ?? user.id;
+
     // Generate base slug
     let slug = slugify(validatedData.title);
 
@@ -61,7 +81,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
         coverImage: validatedData.coverImage,
         published: validatedData.published,
         tenantId: tenantId,
-        authorId: user.id,
+        authorId,
         updatedAt: new Date(),
       },
     });
@@ -71,19 +91,32 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
+    // P2003 = FK violation on authorId: no users row carries this id. Surface
+    // it as a clear, actionable 409 instead of an opaque 500.
+    if ((error as { code?: string })?.code === "P2003") {
+      return NextResponse.json(
+        { error: "Your author account is not linked to this store yet. Please contact support." },
+        { status: 409 },
+      );
+    }
     return apiError(error, { route: "POST /api/tenant-admin/posts" });
   }
 });
 
 export const GET = withTenantAuth(async (_request, { tenantId }) => {
   try {
+    // The Prisma relation on posts is `users` (introspected name) — there is
+    // no `author` field, so including it threw P2009 and 500'd this route.
+    // Alias it back to `author` in the response to keep the intended contract.
     const posts = await prisma.posts.findMany({
       where: { tenantId: tenantId },
       orderBy: { createdAt: "desc" },
-      include: { author: { select: { name: true, email: true } } },
+      include: { users: { select: { name: true, email: true } } },
     });
 
-    return NextResponse.json(posts);
+    return NextResponse.json(
+      posts.map(({ users, ...post }) => ({ ...post, author: users })),
+    );
   } catch (error) {
     console.error("Error fetching posts:", error);
     return apiError(error, { route: "GET /api/tenant-admin/posts", safeMessage: "Internal server error" });

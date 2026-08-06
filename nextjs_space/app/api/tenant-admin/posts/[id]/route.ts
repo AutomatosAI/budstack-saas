@@ -35,9 +35,11 @@ export const GET = withAuth(async (_req, { user }, { id: rawId }) => {
 
     const id = parseUuid(rawId);
 
+    // Relation on posts is `users` (introspected name) — `author` does not
+    // exist and threw P2009, 500ing this route. Aliased in the response below.
     const post = await prisma.posts.findUnique({
       where: { id },
-      include: { author: { select: { name: true } } },
+      include: { users: { select: { name: true } } },
     });
 
     if (!post) {
@@ -54,7 +56,8 @@ export const GET = withAuth(async (_req, { user }, { id: rawId }) => {
       return apiError(new Error("Unauthorized"), { route: "GET /api/tenant-admin/posts/[id]", status: 403, safeMessage: "Unauthorized" });
     }
 
-    return NextResponse.json(post);
+    const { users: author, ...rest } = post;
+    return NextResponse.json({ ...rest, author });
   } catch (error) {
     return apiError(error, { route: "GET /api/tenant-admin/posts/[id]" });
   }
