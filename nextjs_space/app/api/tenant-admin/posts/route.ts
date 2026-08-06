@@ -115,7 +115,7 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
     });
 
     return NextResponse.json(
-      posts.map(({ users, ...post }) => ({ ...post, author: users })),
+      posts.map(({ users, ...post }: any) => ({ ...post, author: users })),
     );
   } catch (error) {
     console.error("Error fetching posts:", error);
