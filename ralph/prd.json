@@ -160,7 +160,7 @@
       ],
       "priority": 10,
       "passes": false,
-      "notes": "Pattern: the 9 react-email components in emails/ and render() usage in lib/email/email.ts:53-151. Shell must survive lib/security/email-sanitize.ts allowlist (tables, inline styles OK; no <button> — buttons are styled <a>)."
+      "notes": "Pattern: the 9 react-email components in emails/ and render() usage in lib/email/email.ts:53-151. Shell must survive lib/security/email-sanitize.ts allowlist (tables, inline styles OK; no <button> — buttons are styled <a>). EMAIL-CRITICAL: every asset URL the shell embeds (logo included) must be ABSOLUTE — US-005's publicUrl is origin-relative by design (storefront CSP img-src 'self'), and email clients have no origin; prefix the tenant base URL the way US-003's confirm links do (getTenantBaseUrl)."
     },
     {
       "id": "US-011",
@@ -178,7 +178,7 @@
       ],
       "priority": 11,
       "passes": false,
-      "notes": "Sanitizer: lib/security/email-sanitize.ts (EMAIL_HTML_MAX_LENGTH L5). Routes: app/api/super-admin/email-templates/route.ts + [id], app/api/tenant-admin/email-templates/route.ts + [id]. TipTap 3 is a dependency — use @tiptap/core generateHTML with the same extension set as US-012's composer (share the extension list in one module)."
+      "notes": "Sanitizer: lib/security/email-sanitize.ts (EMAIL_HTML_MAX_LENGTH L5). Routes: app/api/super-admin/email-templates/route.ts + [id], app/api/tenant-admin/email-templates/route.ts + [id]. TipTap 3 is a dependency — use @tiptap/core generateHTML with the same extension set as US-012's composer (share the extension list in one module). EMAIL-CRITICAL: final contentHtml must contain only ABSOLUTE image src URLs — absolutise any relative /api/public/images/... src with the tenant base URL inside the pipeline (email clients have no origin)."
     },
     {
       "id": "US-012",
