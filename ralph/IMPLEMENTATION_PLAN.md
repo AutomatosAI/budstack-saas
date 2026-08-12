@@ -17,7 +17,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 
 ## Workstream B — Non-technical editor
 
-- [ ] US-010 Branded email shell renderer
+- [x] US-010 Branded email shell renderer
 - [ ] US-011 Save-path render pipeline (JSON → email-safe HTML)
 - [ ] US-012 EmailComposer component (TipTap simple mode)
 - [ ] US-013 Merge-tag chips

@@ -40,6 +40,12 @@ const tenantSettingsShape = {
   contactEmail: z.string().max(320).nullable().optional(),
   contactPhone: z.string().max(50).nullable().optional(),
   address: z.union([z.string().max(1000), z.record(z.unknown())]).nullable().optional(),
+  // Email Phase 2 US-010 — the postal address printed in the email footer.
+  // Deliberately separate from `address` (a storefront display value that is
+  // sometimes an object): this one is a single free-text line an operator sets
+  // to exactly what their jurisdiction requires marketing mail to carry, and it
+  // has to stay a string because the footer prints it verbatim.
+  businessAddress: z.string().max(500).nullable().optional(),
   socialMedia: structural.optional(),
 
   // Brand colors
