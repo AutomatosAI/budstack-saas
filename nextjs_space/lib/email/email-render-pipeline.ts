@@ -30,6 +30,7 @@ import juice from "juice";
 
 import { ApiError } from "@/lib/api-error";
 import { emailEditorExtensions } from "@/lib/email/editor-extensions";
+import { EMAIL_BODY_CLASS, EMAIL_BODY_CSS } from "@/lib/email/email-body-css";
 import {
   normaliseEmailContentJson,
   parseEmailContentJson,
@@ -43,8 +44,11 @@ import {
 } from "@/lib/security/email-sanitize";
 import { getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
 
-/** Marks the authored region inside the shell so the body CSS can be scoped. */
-export const EMAIL_BODY_CLASS = "bs-email-body";
+// US-012 moved the body stylesheet to `lib/email/email-body-css.ts` so the
+// composer can style the author's screen with the same rules this inlines into
+// their email. Re-exported because this module is where every consumer of the
+// pipeline already looks for it.
+export { EMAIL_BODY_CLASS, EMAIL_BODY_CSS };
 
 /**
  * The slot a SYSTEM template's shell carries where a tenant's name would go.
@@ -72,31 +76,6 @@ const SYSTEM_SHELL_TENANT: EmailShellTenant = {
   subdomain: "",
   customDomain: null,
 };
-
-/**
- * Typography for the authored body, scoped to the region the author owns so it
- * cannot reach the shell's own header and footer.
- *
- * Every declaration is written in a shape `lib/security/email-sanitize.ts`
- * accepts (longhand margins, no `border-left`, no shorthand `padding`) — juice
- * inlines these onto the elements and the sanitizer then re-checks every one of
- * them. Colour is deliberately absent: the shell's content wrapper already sets
- * it, and re-declaring it on every block would drag links into body colour too.
- */
-const EMAIL_BODY_CSS = `
-.${EMAIL_BODY_CLASS} p { margin-top: 0; margin-bottom: 16px; font-size: 16px; line-height: 24px; }
-.${EMAIL_BODY_CLASS} h1 { margin-top: 0; margin-bottom: 16px; font-size: 28px; line-height: 34px; font-weight: bold; }
-.${EMAIL_BODY_CLASS} h2 { margin-top: 0; margin-bottom: 12px; font-size: 22px; line-height: 28px; font-weight: bold; }
-.${EMAIL_BODY_CLASS} h3 { margin-top: 0; margin-bottom: 12px; font-size: 18px; line-height: 24px; font-weight: bold; }
-.${EMAIL_BODY_CLASS} ul { margin-top: 0; margin-bottom: 16px; padding-left: 24px; }
-.${EMAIL_BODY_CLASS} ol { margin-top: 0; margin-bottom: 16px; padding-left: 24px; }
-.${EMAIL_BODY_CLASS} li { margin-bottom: 8px; font-size: 16px; line-height: 24px; }
-.${EMAIL_BODY_CLASS} li p { margin-top: 0; margin-bottom: 0; }
-.${EMAIL_BODY_CLASS} a { text-decoration: underline; }
-.${EMAIL_BODY_CLASS} img { max-width: 100%; height: auto; display: block; }
-.${EMAIL_BODY_CLASS} blockquote { margin-top: 0; margin-bottom: 16px; margin-left: 0; padding-left: 16px; }
-.${EMAIL_BODY_CLASS} hr { border-width: 1px; border-style: solid; border-color: #e5e7eb; margin-top: 24px; margin-bottom: 24px; }
-`;
 
 const RENDER_FAILED_MESSAGE =
   "This email's content could not be rendered. Remove the last thing you added and try again.";

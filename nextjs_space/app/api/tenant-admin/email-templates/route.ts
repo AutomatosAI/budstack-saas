@@ -133,6 +133,12 @@ export const POST = requirePermission("canEditEmails", async (req, { tenantId })
               0,
               TEMPLATE_DESCRIPTION_MAX,
             ),
+          // US-012 — carry the source's document, so a clone of a visually
+          // authored template re-opens in the composer instead of stranding the
+          // author in raw HTML that the next save would overwrite. The copied
+          // contentHtml was derived from this document, so the two agree; a
+          // request that also carries its own document still wins below.
+          contentJson: source.contentJson ?? undefined,
         };
       }
     }

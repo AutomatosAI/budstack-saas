@@ -8,6 +8,7 @@ import {
   EmailEditor,
   EmailTemplateData,
 } from "@/components/admin/email/EmailEditor";
+import type { EmailContentJson } from "@/lib/email/email-content-json";
 import { toast } from "sonner";
 
 const sectionTitleStyle = {
@@ -22,6 +23,12 @@ interface EditTemplateClientProps {
     contentHtml: string;
     description: string;
     category: string;
+    /**
+     * US-012 — the composer document, straight off the Json column. Present
+     * means the template opens in the visual editor; the editor re-checks the
+     * shape before trusting it.
+     */
+    contentJson?: EmailContentJson | null;
   };
 }
 

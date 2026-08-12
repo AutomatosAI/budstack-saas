@@ -19,7 +19,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 
 - [x] US-010 Branded email shell renderer
 - [x] US-011 Save-path render pipeline (JSON → email-safe HTML)
-- [ ] US-012 EmailComposer component (TipTap simple mode)
+- [x] US-012 EmailComposer component (TipTap simple mode)
 - [ ] US-013 Merge-tag chips
 - [ ] US-014 In-editor image upload
 - [ ] US-015 Preview modes + test-send integration

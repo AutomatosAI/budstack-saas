@@ -39,6 +39,12 @@ export const POST = requirePermission("canEditEmails", async (req, { tenantId })
         name: `${original.name} (Custom)`,
         subject: original.subject,
         contentHtml: original.contentHtml,
+        // US-012 — the composer document travels with the copy. Without it a
+        // clone of a visually-authored template opens in the HTML editor, and
+        // the first save from there overwrites the layout it was cloned from.
+        // `undefined` (not null) leaves the column unset for a source that has
+        // no document, which is every template written before the composer.
+        contentJson: original.contentJson ?? undefined,
         category: original.category,
         isSystem: false,
         tenantId: tenantId,
