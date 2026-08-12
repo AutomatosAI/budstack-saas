@@ -7,6 +7,7 @@ vi.mock("sonner", () => ({
 }));
 
 import {
+  createSequentialQueue,
   EMAIL_IMAGE_MAX_BYTES,
   EMAIL_IMAGE_TYPES,
   emailImageAlt,
@@ -154,6 +155,17 @@ describe("US-014 upload — the URL that gets stored", () => {
     );
   });
 
+  it("does not put the browser's own network error in front of the author", async () => {
+    // A dropped connection rejects with a TypeError ("Failed to fetch"), which
+    // is an Error like every deliberate throw here — so without a guard it
+    // reaches the toast verbatim.
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+
+    await expect(uploadEmailImage(pngFile(), UPLOAD_URL)).rejects.toThrow(
+      /could not be uploaded/,
+    );
+  });
+
   it("still fails cleanly when the response is not JSON at all", async () => {
     stubFetch({
       ok: false,
@@ -166,6 +178,56 @@ describe("US-014 upload — the URL that gets stored", () => {
     await expect(uploadEmailImage(pngFile(), UPLOAD_URL)).rejects.toThrow(
       /could not be uploaded/,
     );
+  });
+});
+
+// Two drops in quick succession are two calls into the hook. Without a queue
+// their loops interleave and images land in whichever order the network
+// settled — the same failure uploading one file at a time inside a batch was
+// added to prevent, just one level up.
+describe("US-014 upload — batches run one after another", () => {
+  const deferred = () => {
+    let resolve!: () => void;
+    const promise = new Promise<void>((done) => {
+      resolve = done;
+    });
+    return { promise, resolve };
+  };
+
+  it("holds a second batch until the first has finished", async () => {
+    const enqueue = createSequentialQueue();
+    const order: string[] = [];
+    const first = deferred();
+
+    const a = enqueue(async () => {
+      order.push("a:start");
+      await first.promise;
+      order.push("a:end");
+    });
+    const b = enqueue(async () => {
+      order.push("b:start");
+    });
+
+    // A queued task starts on a microtask, so let the pending ones run: `a` is
+    // then mid-flight, and `b` — handed over while it was — has not begun.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(order).toEqual(["a:start"]);
+
+    first.resolve();
+    await Promise.all([a, b]);
+
+    expect(order).toEqual(["a:start", "a:end", "b:start"]);
+  });
+
+  it("keeps running after a batch fails, and still reports that failure", async () => {
+    const enqueue = createSequentialQueue();
+
+    const failed = enqueue(async () => {
+      throw new Error("upload exploded");
+    });
+
+    await expect(failed).rejects.toThrow("upload exploded");
+    await expect(enqueue(async () => "next")).resolves.toBe("next");
   });
 });
 

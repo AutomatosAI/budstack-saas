@@ -19,7 +19,7 @@
  * the message will claim to come from.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { toast } from "sonner";
 
@@ -133,7 +133,16 @@ export async function uploadEmailImage(
   const body = new FormData();
   body.append("file", file);
 
-  const response = await fetch(uploadUrl, { method: "POST", body });
+  let response: Response;
+  try {
+    response = await fetch(uploadUrl, { method: "POST", body });
+  } catch {
+    // A dropped connection throws a TypeError, and its message ("Failed to
+    // fetch") is the browser's wording, not ours. Everything else this module
+    // throws is written for the author, so this is too.
+    throw new Error(UPLOAD_FAILED_MESSAGE);
+  }
+
   const payload = (await response.json().catch(() => null)) as {
     publicUrl?: unknown;
     error?: unknown;
@@ -293,6 +302,26 @@ export function handleEmailImageDrop(
   return true;
 }
 
+/**
+ * A queue that runs whatever it is handed after everything handed to it before,
+ * however the calls arrive.
+ *
+ * Two drops in quick succession are two independent calls into the hook, and
+ * without this their loops interleave: images land in whichever order the
+ * network settles, which is exactly what uploading one file at a time inside a
+ * batch was meant to prevent. A rejection is swallowed from the CHAIN only —
+ * the caller still sees it — so one failure cannot stall every later upload.
+ */
+export function createSequentialQueue() {
+  let tail: Promise<unknown> = Promise.resolve();
+
+  return function enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const run = tail.then(task);
+    tail = run.catch(() => undefined);
+    return run;
+  };
+}
+
 export interface EmailImageUpload {
   /** False when no upload endpoint was supplied — the UI then offers only a URL. */
   readonly enabled: boolean;
@@ -316,23 +345,33 @@ export interface EmailImageUpload {
  */
 export function useEmailImageUpload(uploadUrl?: string): EmailImageUpload {
   const [uploading, setUploading] = useState(false);
+  const enqueueRef = useRef(createSequentialQueue());
+  // Batches in flight, not a boolean: a second drop arriving during the first
+  // would otherwise clear the flag when IT finished, leaving the spinner off
+  // and the "Choose an image" button live while an upload was still running.
+  const inFlightRef = useRef(0);
 
   const uploadFiles = useCallback(
-    async (editor: Editor, files: readonly File[]): Promise<number> => {
-      if (!uploadUrl || files.length === 0) return 0;
+    (editor: Editor, files: readonly File[]): Promise<number> => {
+      if (!uploadUrl || files.length === 0) return Promise.resolve(0);
 
+      inFlightRef.current += 1;
       setUploading(true);
-      try {
-        // Sequential: parallel uploads finish in arrival order and each inserts
-        // at the caret, so a batch would land in an order nobody chose.
-        let inserted = 0;
-        for (const file of files) {
-          if (await uploadAndInsert(editor, file, uploadUrl)) inserted += 1;
-        }
-        return inserted;
-      } finally {
-        setUploading(false);
-      }
+
+      return enqueueRef
+        .current(async () => {
+          // One file at a time: each insert lands at the caret, so uploading in
+          // parallel would order a batch by whichever request settled first.
+          let inserted = 0;
+          for (const file of files) {
+            if (await uploadAndInsert(editor, file, uploadUrl)) inserted += 1;
+          }
+          return inserted;
+        })
+        .finally(() => {
+          inFlightRef.current -= 1;
+          if (inFlightRef.current === 0) setUploading(false);
+        });
     },
     [uploadUrl],
   );
