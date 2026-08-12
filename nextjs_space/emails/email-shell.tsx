@@ -11,6 +11,11 @@ import {
 } from "@react-email/components";
 import React from "react";
 
+import {
+  EMAIL_CARD_WIDTH_PX,
+  EMAIL_CONTENT_PADDING_PX,
+} from "@/lib/email/email-layout";
+
 /**
  * US-010 — the branded chrome every authored email is wrapped in.
  *
@@ -61,7 +66,11 @@ const page: React.CSSProperties = {
 
 const card: React.CSSProperties = {
   backgroundColor: CARD_BACKGROUND,
-  maxWidth: "600px",
+  // US-014: the card width and the content padding below are what
+  // `EMAIL_CONTENT_WIDTH_PX` is derived from — the width an inserted image is
+  // clamped to. They are imported rather than restated so the composer cannot
+  // size content for a card this file has since resized.
+  maxWidth: `${EMAIL_CARD_WIDTH_PX}px`,
   width: "100%",
   margin: "0 auto",
   borderRadius: "8px",
@@ -97,8 +106,8 @@ const wordmark = (primaryColor: string): React.CSSProperties => ({
 const content: React.CSSProperties = {
   paddingTop: "8px",
   paddingBottom: "8px",
-  paddingLeft: "32px",
-  paddingRight: "32px",
+  paddingLeft: `${EMAIL_CONTENT_PADDING_PX}px`,
+  paddingRight: `${EMAIL_CONTENT_PADDING_PX}px`,
 };
 
 /** Typography the authored body inherits when it sets none of its own. */

@@ -21,7 +21,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 - [x] US-011 Save-path render pipeline (JSON → email-safe HTML)
 - [x] US-012 EmailComposer component (TipTap simple mode)
 - [x] US-013 Merge-tag chips
-- [ ] US-014 In-editor image upload
+- [x] US-014 In-editor image upload
 - [ ] US-015 Preview modes + test-send integration
 
 ## Workstream C — Newsletters & campaigns

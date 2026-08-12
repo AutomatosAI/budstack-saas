@@ -43,12 +43,20 @@ import {
 import { EMAIL_HEADING_LEVELS } from "@/lib/email/editor-extensions";
 
 import {
+  composerDialogCopy,
+  type DialogKind,
+} from "./email-composer-dialogs";
+import {
   EmailComposerDialog,
   type ComposerDialogValues,
 } from "./EmailComposerDialog";
+import {
+  insertEmailImage,
+  measureImageWidth,
+  type EmailImageUpload,
+} from "./email-image-upload";
+import { EmailImageUploadField } from "./EmailImageUploadField";
 import { EmailMergeTagMenu } from "./EmailMergeTagMenu";
-
-type DialogKind = "link" | "image" | "button";
 
 const HEADING_ICONS = [Heading1, Heading2, Heading3] as const;
 const ALIGNMENTS = [
@@ -56,48 +64,6 @@ const ALIGNMENTS = [
   { value: "center", label: "Centre", icon: AlignCenter },
   { value: "right", label: "Align right", icon: AlignRight },
 ] as const;
-
-const DIALOGS: Record<
-  DialogKind,
-  {
-    title: string;
-    description: string;
-    urlLabel: string;
-    urlPlaceholder: string;
-    textLabel?: string;
-    textPlaceholder?: string;
-    submitLabel: string;
-  }
-> = {
-  link: {
-    title: "Add a link",
-    description: "The words you enter become a link in the email.",
-    textLabel: "Link text",
-    textPlaceholder: "See what's new",
-    urlLabel: "Web address",
-    urlPlaceholder: "https://example.com/offers",
-    submitLabel: "Add link",
-  },
-  image: {
-    title: "Add an image",
-    description:
-      "Paste the address of an image that is already online. Email clients cannot show images that only exist on your computer.",
-    textLabel: "Description (for screen readers)",
-    textPlaceholder: "Our new summer range",
-    urlLabel: "Image address",
-    urlPlaceholder: "https://example.com/photo.jpg",
-    submitLabel: "Add image",
-  },
-  button: {
-    title: "Add a button",
-    description: "A button is a link styled to stand out. Both parts are editable later.",
-    textLabel: "Button text",
-    textPlaceholder: EMAIL_BUTTON_DEFAULT_LABEL,
-    urlLabel: "Web address",
-    urlPlaceholder: "https://example.com/shop",
-    submitLabel: "Add button",
-  },
-};
 
 interface ToolbarButtonProps {
   readonly label: string;
@@ -172,13 +138,20 @@ function dialogDefaults(editor: Editor, kind: DialogKind): ComposerDialogValues 
 }
 
 /** Apply a dialog's result. One place, so every tool focuses the editor after. */
-function applyDialog(
+async function applyDialog(
   editor: Editor,
   kind: DialogKind,
   { url, text }: ComposerDialogValues,
 ) {
   if (kind === "image") {
-    editor.chain().focus().setImage({ src: url, alt: text }).run();
+    // US-014 — a linked image is sized like an uploaded one, so the column
+    // constraint does not depend on which way the image arrived. `null` (a
+    // host the admin origin cannot load) inserts it unsized, as before.
+    insertEmailImage(editor, {
+      src: url,
+      alt: text,
+      width: await measureImageWidth(url),
+    });
     return;
   }
   if (kind === "button") {
@@ -208,14 +181,18 @@ export interface EmailComposerToolbarProps {
   readonly editor: Editor;
   /** US-013 — the mapped event, which decides the tags on offer. */
   readonly eventType?: string | null;
+  /** US-014 — image uploading, when the screen has an endpoint for it. */
+  readonly imageUpload?: EmailImageUpload;
 }
 
 export function EmailComposerToolbar({
   editor,
   eventType,
+  imageUpload,
 }: EmailComposerToolbarProps) {
   const state = useToolbarState(editor);
   const [dialog, setDialog] = useState<DialogKind | null>(null);
+  const canUpload = Boolean(imageUpload?.enabled);
 
   const initialValues = useMemo(
     () => (dialog ? dialogDefaults(editor, dialog) : { url: "", text: "" }),
@@ -224,7 +201,7 @@ export function EmailComposerToolbar({
 
   const handleSubmit = (values: ComposerDialogValues) => {
     if (!dialog) return;
-    applyDialog(editor, dialog, values);
+    void applyDialog(editor, dialog, values);
     setDialog(null);
   };
 
@@ -347,14 +324,22 @@ export function EmailComposerToolbar({
 
       {dialog && (
         <EmailComposerDialog
-          {...DIALOGS[dialog]}
+          {...composerDialogCopy(dialog, canUpload)}
           open
           initialValues={initialValues}
           onSubmit={handleSubmit}
           onOpenChange={(open) => {
             if (!open) setDialog(null);
           }}
-        />
+        >
+          {dialog === "image" && imageUpload?.enabled && (
+            <EmailImageUploadField
+              editor={editor}
+              upload={imageUpload}
+              onUploaded={() => setDialog(null)}
+            />
+          )}
+        </EmailComposerDialog>
       )}
     </>
   );

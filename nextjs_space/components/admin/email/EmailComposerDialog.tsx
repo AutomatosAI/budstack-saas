@@ -40,6 +40,13 @@ export interface EmailComposerDialogProps {
   readonly initialValues: ComposerDialogValues;
   readonly onSubmit: (values: ComposerDialogValues) => void;
   readonly onOpenChange: (open: boolean) => void;
+  /**
+   * US-014 — rendered above the fields, separated by an "or". The image tool
+   * puts its upload control here; the link and button tools pass nothing and
+   * the divider disappears with it, so this file needs no idea what an upload
+   * is.
+   */
+  readonly children?: React.ReactNode;
 }
 
 /**
@@ -72,6 +79,7 @@ export function EmailComposerDialog({
   initialValues,
   onSubmit,
   onOpenChange,
+  children,
 }: EmailComposerDialogProps) {
   const [url, setUrl] = useState(initialValues.url);
   const [text, setText] = useState(initialValues.text);
@@ -106,6 +114,17 @@ export function EmailComposerDialog({
               {description}
             </DialogDescription>
           </DialogHeader>
+
+          {children && (
+            <>
+              {children}
+              <div className="flex items-center gap-3">
+                <span className="h-px flex-1 bg-bs-border-100" />
+                <span className="text-xs uppercase text-bs-fg-muted">or</span>
+                <span className="h-px flex-1 bg-bs-border-100" />
+              </div>
+            </>
+          )}
 
           {textLabel && (
             <div className="space-y-2">

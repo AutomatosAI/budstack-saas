@@ -24,11 +24,11 @@
  */
 
 import type { Extensions } from "@tiptap/core";
-import Image from "@tiptap/extension-image";
 import TextAlign from "@tiptap/extension-text-align";
 import StarterKit from "@tiptap/starter-kit";
 
 import { EmailButton, EMAIL_BUTTON_NAME } from "@/lib/email/email-button-node";
+import { EmailImage } from "@/lib/email/email-image-node";
 import { EmailMergeTag } from "@/lib/email/email-merge-tag-node";
 
 /**
@@ -80,7 +80,8 @@ export function emailEditorExtensions(): Extensions {
         protocols: LINK_PROTOCOLS,
       },
     }),
-    Image.configure({
+    // US-014 extends this with a `width` attribute — see email-image-node.ts.
+    EmailImage.configure({
       inline: false,
       allowBase64: true,
     }),

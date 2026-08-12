@@ -80,6 +80,7 @@ export function TenantEditTemplateClient({
           isSaving={isSaving}
           testSendUrl={`/api/tenant-admin/email-templates/${template.id}/test-send`}
           eventType={eventType}
+          uploadUrl="/api/tenant-admin/upload"
         />
       </div>
     </div>

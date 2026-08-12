@@ -74,6 +74,17 @@ interface EmailEditorProps {
    * the create screens: a template cannot be mapped before it exists.
    */
   eventType?: string | null;
+  /**
+   * US-014 — endpoint the visual editor uploads images to.
+   *
+   * Supplied only by the tenant-admin screens. `/api/tenant-admin/upload`
+   * derives its tenant from the signed-in user, so a super-admin editing a
+   * SYSTEM template has none to upload for — and a system template is rendered
+   * with no base URL, so an origin-relative image path could not be
+   * absolutised for it anyway. Omitting it there leaves the image tool on its
+   * "paste a web address" behaviour rather than offering an upload that 403s.
+   */
+  uploadUrl?: string;
 }
 
 const LEGACY_BANNER =
@@ -85,6 +96,7 @@ export const EmailEditor = ({
   isSaving = false,
   testSendUrl,
   eventType,
+  uploadUrl,
 }: EmailEditorProps) => {
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [mode, setMode] = useState<EmailEditorMode>(() =>
@@ -283,6 +295,7 @@ export const EmailEditor = ({
             value={formData.contentJson ?? null}
             onChange={handleDocumentChange}
             eventType={eventType}
+            uploadUrl={uploadUrl}
           />
         ) : (
           <EmailHtmlPane

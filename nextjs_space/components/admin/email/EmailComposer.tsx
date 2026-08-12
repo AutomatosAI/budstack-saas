@@ -20,9 +20,9 @@
  * different constraints and are deliberately kept apart.
  */
 
-import React from "react";
+import React, { useRef } from "react";
 import type { JSONContent } from "@tiptap/core";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 
 import { emailEditorExtensions } from "@/lib/email/editor-extensions";
 import { EMAIL_BODY_CLASS, EMAIL_BODY_CSS } from "@/lib/email/email-body-css";
@@ -30,6 +30,10 @@ import { EMAIL_BUTTON_BACKGROUND_COLOR } from "@/lib/email/email-button-node";
 import type { EmailContentJson } from "@/lib/email/email-content-json";
 import { EMAIL_MERGE_TAG_CSS } from "@/lib/email/email-merge-tag-node";
 
+import {
+  handleEmailImageDrop,
+  useEmailImageUpload,
+} from "./email-image-upload";
 import { EMPTY_EMAIL_DOC } from "./email-editor-mode";
 import { EmailComposerToolbar } from "./EmailComposerToolbar";
 
@@ -67,6 +71,12 @@ export interface EmailComposerProps {
   readonly editable?: boolean;
   /** US-013 — the mapped event, which decides the merge tags on offer. */
   readonly eventType?: string | null;
+  /**
+   * US-014 — where an inserted image is uploaded. Omitted on screens with no
+   * tenant to upload for (super-admin system templates), where the image tool
+   * then offers only a web address.
+   */
+  readonly uploadUrl?: string;
 }
 
 /**
@@ -83,7 +93,17 @@ export function EmailComposer({
   onChange,
   editable = true,
   eventType,
+  uploadUrl,
 }: EmailComposerProps) {
+  const imageUpload = useEmailImageUpload(uploadUrl);
+
+  // The drop handler is installed when the editor is built, before `useEditor`
+  // has returned one, so it reaches the instance through a ref rather than the
+  // variable it is being assigned to. `imageUpload` needs no such treatment:
+  // `useEditor` re-applies `editorProps` whenever they differ by identity, which
+  // a fresh handler closure does on every render.
+  const editorRef = useRef<Editor | null>(null);
+
   const editor = useEditor({
     extensions: emailEditorExtensions(),
     // Set once, on mount. `value` is not pushed back in on later renders: the
@@ -93,12 +113,21 @@ export function EmailComposer({
     editable,
     // Required under the App Router: rendering the editor during SSR mismatches.
     immediatelyRender: false,
+    onCreate: ({ editor: instance }) => {
+      editorRef.current = instance;
+    },
     onUpdate: ({ editor: instance }) =>
       onChange(toEmailContentJson(instance.getJSON())),
     editorProps: {
       attributes: {
         class: `${EMAIL_BODY_CLASS} min-h-[320px] px-8 py-6`,
       },
+      // US-014 — dropping image files uploads them. The decision itself lives
+      // in `handleEmailImageDrop` so it can be asserted without a DOM; anything
+      // that is not an image is declined and falls through to ProseMirror's own
+      // drop handling.
+      handleDrop: (_view, event) =>
+        handleEmailImageDrop(imageUpload, editorRef.current, event),
     },
   });
 
@@ -106,7 +135,11 @@ export function EmailComposer({
     <div className="flex h-full flex-col overflow-hidden">
       <style>{`${EMAIL_BODY_CSS}${COMPOSER_CSS}${EMAIL_MERGE_TAG_CSS}`}</style>
       {editable && editor && (
-        <EmailComposerToolbar editor={editor} eventType={eventType} />
+        <EmailComposerToolbar
+          editor={editor}
+          eventType={eventType}
+          imageUpload={imageUpload}
+        />
       )}
       <div className="flex-1 overflow-auto bg-bs-canvas p-4">
         <div className="mx-auto w-full max-w-[600px] rounded bg-white shadow-sm">

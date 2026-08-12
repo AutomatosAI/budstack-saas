@@ -46,7 +46,11 @@ export function TenantNewTemplateClient() {
         <p className="bs-page-subtitle">Design a custom email template.</p>
       </div>
       <div className="flex-1 pt-6 overflow-hidden">
-        <EmailEditor onSave={handleSave} isSaving={isSaving} />
+        <EmailEditor
+          onSave={handleSave}
+          isSaving={isSaving}
+          uploadUrl="/api/tenant-admin/upload"
+        />
       </div>
     </div>
   );
