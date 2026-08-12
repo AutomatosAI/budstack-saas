@@ -68,6 +68,7 @@ export function TenantEditTemplateClient({
           initialData={template}
           onSave={handleSave}
           isSaving={isSaving}
+          testSendUrl={`/api/tenant-admin/email-templates/${template.id}/test-send`}
         />
       </div>
     </div>

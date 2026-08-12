@@ -76,6 +76,7 @@ export function EditTemplateClient({ template }: EditTemplateClientProps) {
         initialData={template}
         onSave={handleSave}
         isSaving={isSaving}
+        testSendUrl={`/api/super-admin/email-templates/${template.id}/test-send`}
       />
     </div>
   );

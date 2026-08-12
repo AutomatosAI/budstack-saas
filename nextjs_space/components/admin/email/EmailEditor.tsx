@@ -7,7 +7,7 @@ import {
     ResizablePanel,
     ResizableHandle,
 } from "@/components/ui/resizable";
-import { Loader2, Save, Eye, Code, HelpCircle } from "lucide-react";
+import { Loader2, Save, Eye, Code, HelpCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 import {
     Popover,
@@ -27,6 +27,11 @@ interface EmailEditorProps {
     initialData?: Partial<EmailTemplateData>;
     onSave: (data: EmailTemplateData) => Promise<void>;
     isSaving?: boolean;
+    /**
+     * US-006 — POST endpoint that queues this template to the signed-in admin.
+     * Omitted on the create screens, where there is no saved template yet.
+     */
+    testSendUrl?: string;
 }
 
 const COMMON_VARIABLES = [
@@ -68,7 +73,9 @@ export const EmailEditor = ({
     initialData,
     onSave,
     isSaving = false,
+    testSendUrl,
 }: EmailEditorProps) => {
+    const [isSendingTest, setIsSendingTest] = useState(false);
     const [formData, setFormData] = useState<EmailTemplateData>({
         name: initialData?.name || "",
         subject: initialData?.subject || "",
@@ -87,6 +94,35 @@ export const EmailEditor = ({
             return;
         }
         await onSave(formData);
+    };
+
+    // Sends the SAVED template — the server renders it with sample variables so
+    // the inbox copy matches what the worker would produce for a real event.
+    const handleSendTest = async () => {
+        if (!testSendUrl) return;
+        setIsSendingTest(true);
+        try {
+            const res = await fetch(testSendUrl, { method: "POST" });
+            const payload = await res.json().catch(() => null);
+            if (!res.ok) {
+                // Rate-limit replies carry the useful detail in `message`;
+                // the standard apiError envelope only has `error`.
+                throw new Error(
+                    payload?.message || payload?.error || "Failed to queue test email",
+                );
+            }
+            toast.success(
+                payload?.sentTo
+                    ? `Test email queued to ${payload.sentTo}`
+                    : "Test email queued",
+            );
+        } catch (error) {
+            toast.error(
+                error instanceof Error ? error.message : "Failed to send test email",
+            );
+        } finally {
+            setIsSendingTest(false);
+        }
     };
 
     return (
@@ -113,7 +149,26 @@ export const EmailEditor = ({
                             className="bs-input w-full"
                         />
                     </div>
-                    <div className="flex justify-end pb-0.5">
+                    <div className="flex justify-end gap-2 pb-0.5">
+                        {testSendUrl && (
+                            <button
+                                type="button"
+                                onClick={handleSendTest}
+                                disabled={isSendingTest}
+                                title="Sends the saved version of this template to your admin email address"
+                                className="bs-btn bs-btn-ghost"
+                            >
+                                {isSendingTest ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" /> <span>Sending...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="h-4 w-4" /> <span>Send test</span>
+                                    </>
+                                )}
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={handleSave}

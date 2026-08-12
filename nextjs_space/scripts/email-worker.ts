@@ -6,6 +6,7 @@ import Handlebars from 'handlebars';
 import { prisma as db } from '../lib/db';
 import { decrypt } from '../lib/security/encryption';
 import { emailQueueName } from '../lib/queue';
+import { registerEmailHelpers } from '../lib/email/handlebars-helpers';
 import { SUPPRESSED_LOG_MESSAGE } from '../lib/email/suppression';
 import { resolveSuppressionBlock } from '../lib/email/suppression-store';
 import { bypassTenantScope } from '../lib/tenant/tenant-scope-policy';
@@ -29,13 +30,9 @@ console.log('[EmailWorker] Starting...');
 console.log(`[EmailWorker] Connecting to Redis: ${REDIS_URL.replace(/\/\/.*@/, '//***@')}`);
 console.log(`[EmailWorker] Max job age ${MAX_JOB_AGE_MS}ms; queued-alert threshold ${QUEUED_ALERT_AGE_MS}ms`);
 
-// Register Helpers
-Handlebars.registerHelper('multiply', (a, b) => {
-    return (Number(a) * Number(b)).toFixed(2);
-});
-Handlebars.registerHelper('toFixed', (num) => {
-    return Number(num).toFixed(2);
-});
+// Register Helpers — shared with the request-path renderer (US-006) so a test
+// send compiles a template exactly the way this worker will.
+registerEmailHelpers(Handlebars);
 
 const worker = new Worker(emailQueueName, async (job: Job) => {
     console.log(`[EmailWorker] Processing job ${job.id} for tenant ${job.data.tenantId}`);

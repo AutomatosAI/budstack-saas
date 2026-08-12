@@ -4,11 +4,21 @@ import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { NEWSLETTER_CONFIRM_TEMPLATE } from "@/lib/email/newsletter-confirm";
+import {
+  isReservedEventType,
+  RESERVED_EVENT_TYPE_MESSAGE,
+} from "@/lib/email/reserved-event-types";
 import { parseJsonBody } from "@/lib/validation/body";
 
 const emailMappingSchema = z
   .object({
-    eventType: z.string().min(1).max(100),
+    eventType: z
+      .string()
+      .min(1)
+      .max(100)
+      .refine((value) => !isReservedEventType(value), {
+        message: RESERVED_EVENT_TYPE_MESSAGE,
+      }),
     templateId: z.string().min(1).max(200),
   })
   .strict();
