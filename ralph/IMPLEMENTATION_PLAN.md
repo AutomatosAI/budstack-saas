@@ -12,7 +12,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 - [x] US-005 Durable public image URLs
 - [x] US-006 Test-send endpoint + button
 - [x] US-007 Tenant email-log page
-- [ ] US-008 Deterministic email-log linkage
+- [x] US-008 Deterministic email-log linkage
 - [ ] US-009 Permission enforcement on email routes
 
 ## Workstream B — Non-technical editor

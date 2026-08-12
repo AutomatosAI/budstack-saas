@@ -7,6 +7,7 @@ import { prisma as db } from '../lib/db';
 import { decrypt } from '../lib/security/encryption';
 import { emailQueueName } from '../lib/queue';
 import { registerEmailHelpers } from '../lib/email/handlebars-helpers';
+import { markEmailLogFailed, markEmailLogSent } from '../lib/email/email-log-linkage';
 import { SUPPRESSED_LOG_MESSAGE } from '../lib/email/suppression';
 import { resolveSuppressionBlock } from '../lib/email/suppression-store';
 import { bypassTenantScope } from '../lib/tenant/tenant-scope-policy';
@@ -36,38 +37,21 @@ registerEmailHelpers(Handlebars);
 
 const worker = new Worker(emailQueueName, async (job: Job) => {
     console.log(`[EmailWorker] Processing job ${job.id} for tenant ${job.data.tenantId}`);
-    const { tenantId, to, subject, html, templateName, from, variables } = job.data;
+    const { tenantId, to, subject, html, templateName, from, variables, logId } = job.data;
 
-    // Flip the matching QUEUED email_logs row (or create one) to FAILED.
-    const markLogFailed = async (errorMessage: string) => {
-        const queuedLog = await db.email_logs.findFirst({
-            where: {
-                tenantId,
-                recipient: Array.isArray(to) ? to.join(',') : to,
-                subject,
-                status: 'QUEUED',
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+    // US-008: `logId` is the row MailerService created before enqueueing, so the
+    // outcome lands on this job's own log row. Jobs enqueued before US-008 carry
+    // no logId and fall back to the (recipient, subject) heuristic inside.
+    //
+    // bypassTenantScope for the same reason the suppression check below uses it:
+    // email_logs is tenant-scoped and the worker has no request context, so an
+    // EXPLICIT null context keeps these writes legal under
+    // TENANT_CONTEXT_STRICT. The helpers put tenantId in the query themselves.
+    const logTarget = { logId, tenantId, to, subject, templateName };
 
-        if (queuedLog) {
-            await db.email_logs.update({
-                where: { id: queuedLog.id },
-                data: { status: 'FAILED', errorMessage },
-            });
-        } else {
-            await db.email_logs.create({
-                data: {
-                    tenantId,
-                    recipient: Array.isArray(to) ? to.join(',') : to,
-                    subject,
-                    templateName,
-                    status: 'FAILED',
-                    errorMessage,
-                },
-            });
-        }
-    };
+    // Flip this job's email_logs row (or create one) to FAILED.
+    const markLogFailed = (errorMessage: string) =>
+        bypassTenantScope(() => markEmailLogFailed({ ...logTarget, errorMessage }));
 
     // PRD-220: a job past its max age is expired, NOT sent — the backlog that
     // accumulated while no worker was deployed must never blast customers
@@ -236,41 +220,10 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
 
         console.log(`[EmailWorker] Email sent: ${info.messageId}`);
 
-        // Update the email log to SENT status
-        // Find the most recent QUEUED log for this tenant/recipient/subject
-        const queuedLog = await db.email_logs.findFirst({
-            where: {
-                tenantId,
-                recipient: Array.isArray(to) ? to.join(',') : to,
-                subject,
-                status: 'QUEUED',
-            },
-            orderBy: { createdAt: 'desc' },
-        });
-
-        if (queuedLog) {
-            await db.email_logs.update({
-                where: { id: queuedLog.id },
-                data: {
-                    status: 'SENT',
-                    smtpResponse: info.response,
-                    sentAt: new Date(),
-                },
-            });
-        } else {
-            // Create a new SENT log if we couldn't find the QUEUED one
-            await db.email_logs.create({
-                data: {
-                    tenantId,
-                    recipient: Array.isArray(to) ? to.join(',') : to,
-                    subject,
-                    templateName,
-                    status: 'SENT',
-                    smtpResponse: info.response,
-                    sentAt: new Date(),
-                },
-            });
-        }
+        // Flip this job's own log row to SENT (US-008 — by id, not by guesswork).
+        await bypassTenantScope(() =>
+            markEmailLogSent({ ...logTarget, smtpResponse: info.response }),
+        );
 
         return { success: true, messageId: info.messageId };
 

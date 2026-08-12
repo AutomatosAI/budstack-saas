@@ -1,6 +1,6 @@
 import { getEmailQueue } from "@/lib/queue";
-import { prisma as db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { createQueuedEmailLog } from "@/lib/email/email-log-linkage";
 import type { EmailCategory } from "@/lib/email/suppression";
 
 interface SendEmailOptions {
@@ -37,8 +37,17 @@ export class MailerService {
       category,
     } = options;
 
-    // Persist intent to log immediately (optional, or rely on worker to create first log)
-    // For now, we'll let the worker handle the heavy lifting, but we could create a "QUEUED" log here.
+    // US-008: the QUEUED row is written BEFORE the job is enqueued so its id can
+    // travel in the payload — that id is how the worker finds this exact row
+    // again instead of guessing at (recipient, subject). A failed write returns
+    // null and the send still goes out; the worker falls back to the heuristic.
+    const logId = await createQueuedEmailLog({
+      tenantId,
+      to,
+      subject,
+      templateName,
+      metadata,
+    });
 
     // Add to BullMQ
     await getEmailQueue().add("send-email", {
@@ -51,26 +60,11 @@ export class MailerService {
       variables,
       from,
       category,
+      logId: logId ?? undefined,
     });
 
     logger.info(`[MailerService] Enqueued email for tenant ${tenantId}`, {
       to,
     });
-
-    // Create initial log entry
-    try {
-      await db.email_logs.create({
-        data: {
-          tenantId,
-          recipient: Array.isArray(to) ? to.join(",") : to,
-          subject,
-          templateName,
-          status: "QUEUED",
-          metadata: metadata ? JSON.stringify(metadata) : undefined,
-        },
-      });
-    } catch (err) {
-      console.error("[MailerService] Failed to create initial email log", err);
-    }
   }
 }
