@@ -24,10 +24,13 @@ interface EditTemplateClientProps {
      */
     contentJson?: EmailContentJson | null;
   };
+  /** US-013 — the mapped event, or null. Selects the merge tags on offer. */
+  eventType?: string | null;
 }
 
 export function TenantEditTemplateClient({
   template,
+  eventType,
 }: EditTemplateClientProps) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
@@ -76,6 +79,7 @@ export function TenantEditTemplateClient({
           onSave={handleSave}
           isSaving={isSaving}
           testSendUrl={`/api/tenant-admin/email-templates/${template.id}/test-send`}
+          eventType={eventType}
         />
       </div>
     </div>

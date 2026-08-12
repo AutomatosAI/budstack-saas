@@ -67,6 +67,13 @@ interface EmailEditorProps {
    * Omitted on the create screens, where there is no saved template yet.
    */
   testSendUrl?: string;
+  /**
+   * US-013 — the event this template is mapped to, when it is mapped to one.
+   * Both editors offer that event's merge tags on top of the common set, the
+   * same way US-006 picks that event's sample values for a test send. Absent on
+   * the create screens: a template cannot be mapped before it exists.
+   */
+  eventType?: string | null;
 }
 
 const LEGACY_BANNER =
@@ -77,6 +84,7 @@ export const EmailEditor = ({
   onSave,
   isSaving = false,
   testSendUrl,
+  eventType,
 }: EmailEditorProps) => {
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [mode, setMode] = useState<EmailEditorMode>(() =>
@@ -274,11 +282,13 @@ export const EmailEditor = ({
           <EmailComposer
             value={formData.contentJson ?? null}
             onChange={handleDocumentChange}
+            eventType={eventType}
           />
         ) : (
           <EmailHtmlPane
             value={formData.contentHtml}
             onChange={handleHtmlChange}
+            eventType={eventType}
           />
         )}
       </div>

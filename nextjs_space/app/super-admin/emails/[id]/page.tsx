@@ -19,6 +19,14 @@ export default async function EditEmailTemplatePage({ params }: PageProps) {
     notFound();
   }
 
+  // US-013 — the event this template is mapped to, which decides the merge tags
+  // the editor offers. Unscoped like the template lookup above: this screen is
+  // super-admin only and a system template's mapping carries no tenant.
+  const mapping = await prisma.email_event_mappings.findFirst({
+    where: { templateId: template.id },
+    select: { eventType: true },
+  });
+
   // Transform to plain object for client component if needed (dates)
   // But Nextjs handles dates fine usually in recent versions,
   // though safe to pass simplified object.
@@ -29,5 +37,10 @@ export default async function EditEmailTemplatePage({ params }: PageProps) {
     contentJson: template.contentJson || null,
   };
 
-  return <EditTemplateClient template={serializedTemplate as any} />;
+  return (
+    <EditTemplateClient
+      template={serializedTemplate as any}
+      eventType={mapping?.eventType ?? null}
+    />
+  );
 }

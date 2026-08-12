@@ -28,6 +28,7 @@ import { emailEditorExtensions } from "@/lib/email/editor-extensions";
 import { EMAIL_BODY_CLASS, EMAIL_BODY_CSS } from "@/lib/email/email-body-css";
 import { EMAIL_BUTTON_BACKGROUND_COLOR } from "@/lib/email/email-button-node";
 import type { EmailContentJson } from "@/lib/email/email-content-json";
+import { EMAIL_MERGE_TAG_CSS } from "@/lib/email/email-merge-tag-node";
 
 import { EMPTY_EMAIL_DOC } from "./email-editor-mode";
 import { EmailComposerToolbar } from "./EmailComposerToolbar";
@@ -64,6 +65,8 @@ export interface EmailComposerProps {
   /** Fires on every edit with the whole document. */
   readonly onChange: (doc: EmailContentJson) => void;
   readonly editable?: boolean;
+  /** US-013 — the mapped event, which decides the merge tags on offer. */
+  readonly eventType?: string | null;
 }
 
 /**
@@ -79,6 +82,7 @@ export function EmailComposer({
   value,
   onChange,
   editable = true,
+  eventType,
 }: EmailComposerProps) {
   const editor = useEditor({
     extensions: emailEditorExtensions(),
@@ -100,8 +104,10 @@ export function EmailComposer({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <style>{`${EMAIL_BODY_CSS}${COMPOSER_CSS}`}</style>
-      {editable && editor && <EmailComposerToolbar editor={editor} />}
+      <style>{`${EMAIL_BODY_CSS}${COMPOSER_CSS}${EMAIL_MERGE_TAG_CSS}`}</style>
+      {editable && editor && (
+        <EmailComposerToolbar editor={editor} eventType={eventType} />
+      )}
       <div className="flex-1 overflow-auto bg-bs-canvas p-4">
         <div className="mx-auto w-full max-w-[600px] rounded bg-white shadow-sm">
           <EditorContent editor={editor} />

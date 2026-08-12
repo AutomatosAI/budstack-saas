@@ -1,11 +1,17 @@
 /**
  * US-006 — canned sample data for test sends.
  *
- * Seeded from the variable reference the editor shows authors (COMMON_VARIABLES
- * in components/admin/email/EmailEditor.tsx) plus the props each react-email
- * template is rendered with, so a test send exercises the placeholders an author
- * can actually reference. Nothing here is tenant-specific: the caller passes the
- * live business name / recipient as overrides.
+ * Seeded from the variable reference the editor shows authors plus the props
+ * each react-email template is rendered with, so a test send exercises the
+ * placeholders an author can actually reference. Nothing here is tenant-specific:
+ * the caller passes the live business name / recipient as overrides.
+ *
+ * THE OTHER HALF OF ONE SOURCE. `lib/email/email-merge-tags.ts` (US-013) owns
+ * which tags exist and what an author calls them; this module owns what each one
+ * is worth in a test send. Both are keyed by the same event type, and
+ * `tests/unit/email-merge-tags.test.ts` fails if a tag offered there has no
+ * sample value here — a test send arriving with a raw `{{tag}}` in it being
+ * exactly the drift that pairing prevents. Adding a tag means adding both.
  */
 
 const APP_URL_FALLBACK = "http://localhost:3000";

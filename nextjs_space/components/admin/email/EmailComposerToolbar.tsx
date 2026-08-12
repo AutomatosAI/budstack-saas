@@ -46,6 +46,7 @@ import {
   EmailComposerDialog,
   type ComposerDialogValues,
 } from "./EmailComposerDialog";
+import { EmailMergeTagMenu } from "./EmailMergeTagMenu";
 
 type DialogKind = "link" | "image" | "button";
 
@@ -205,9 +206,14 @@ function applyDialog(
 
 export interface EmailComposerToolbarProps {
   readonly editor: Editor;
+  /** US-013 — the mapped event, which decides the tags on offer. */
+  readonly eventType?: string | null;
 }
 
-export function EmailComposerToolbar({ editor }: EmailComposerToolbarProps) {
+export function EmailComposerToolbar({
+  editor,
+  eventType,
+}: EmailComposerToolbarProps) {
   const state = useToolbarState(editor);
   const [dialog, setDialog] = useState<DialogKind | null>(null);
 
@@ -318,6 +324,10 @@ export function EmailComposerToolbar({ editor }: EmailComposerToolbarProps) {
           icon={Minus}
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
         />
+
+        <Separator orientation="vertical" className="mx-1 h-6" />
+
+        <EmailMergeTagMenu editor={editor} eventType={eventType} />
 
         <div className="flex-1" />
 

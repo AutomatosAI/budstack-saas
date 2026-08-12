@@ -29,6 +29,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import StarterKit from "@tiptap/starter-kit";
 
 import { EmailButton, EMAIL_BUTTON_NAME } from "@/lib/email/email-button-node";
+import { EmailMergeTag } from "@/lib/email/email-merge-tag-node";
 
 /**
  * h4–h6 render at or below body size in most clients, so they read as
@@ -89,5 +90,9 @@ export function emailEditorExtensions(): Extensions {
       defaultAlignment: "left",
     }),
     EmailButton,
+    // US-013. In the list for the same reason as the button: the composer
+    // creates the node and the save pipeline must be able to render it, and a
+    // stored document containing a chip is unreadable to a schema without it.
+    EmailMergeTag,
   ];
 }

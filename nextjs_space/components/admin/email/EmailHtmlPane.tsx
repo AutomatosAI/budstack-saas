@@ -7,6 +7,12 @@
  * that component could hold the two modes without growing a second job. This is
  * the pre-US-012 experience exactly: an HTML source pane, a live preview of that
  * source, and the merge-tag reference.
+ *
+ * US-013 took the one thing that was NOT presentation out of it. The reference
+ * list used to be a literal in this file; it now comes from
+ * `lib/email/email-merge-tags.ts`, the same module the visual composer's
+ * Personalize menu reads, so the two editors cannot offer different tags for the
+ * same template.
  */
 
 import React from "react";
@@ -23,24 +29,28 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import {
+  EMAIL_TEMPLATE_HELPERS,
+  EMAIL_TEMPLATE_HELPERS_CATEGORY,
+  mergeTagGroupsForEvent,
+} from "@/lib/email/email-merge-tags";
 
-const COMMON_VARIABLES = [
-  {
-    category: "Global",
-    vars: ["businessName", "subdomain", "loginUrl", "logoUrl", "primaryColor"],
-  },
-  { category: "User", vars: ["userName", "email", "resetLink"] },
-  {
-    category: "Order",
-    vars: ["orderNumber", "total", "shippingAddress", "items"],
-  },
-  {
-    category: "Helpers",
-    vars: ["#each items", "/each", "toFixed price", "multiply price quantity"],
-  },
-];
+/**
+ * The reference the HTML author sees: every tag the composer offers, plus the
+ * block helpers — which only this pane lists, because they are half of a pair
+ * and cannot be a chip.
+ */
+function referenceGroups(eventType?: string | null) {
+  return [
+    ...mergeTagGroupsForEvent(eventType).map((group) => ({
+      category: group.category,
+      vars: group.tags.map((tag) => tag.name),
+    })),
+    { category: EMAIL_TEMPLATE_HELPERS_CATEGORY, vars: [...EMAIL_TEMPLATE_HELPERS] },
+  ];
+}
 
-function VariablesReference() {
+function VariablesReference({ eventType }: { readonly eventType?: string | null }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -60,7 +70,7 @@ function VariablesReference() {
             </p>
           </div>
           <div className="grid gap-3">
-            {COMMON_VARIABLES.map((group) => (
+            {referenceGroups(eventType).map((group) => (
               <div key={group.category} className="space-y-1">
                 <h5 className="bs-eyebrow">{group.category}</h5>
                 <div className="flex flex-wrap gap-1.5">
@@ -90,9 +100,15 @@ function VariablesReference() {
 export interface EmailHtmlPaneProps {
   readonly value: string;
   readonly onChange: (html: string) => void;
+  /** US-013 — the mapped event, which decides the tags the reference lists. */
+  readonly eventType?: string | null;
 }
 
-export function EmailHtmlPane({ value, onChange }: EmailHtmlPaneProps) {
+export function EmailHtmlPane({
+  value,
+  onChange,
+  eventType,
+}: EmailHtmlPaneProps) {
   return (
     <ResizablePanelGroup direction="horizontal">
       <ResizablePanel defaultSize={50} minSize={30}>
@@ -101,7 +117,7 @@ export function EmailHtmlPane({ value, onChange }: EmailHtmlPaneProps) {
             <span className="flex items-center font-mono text-xs uppercase tracking-wide text-bs-fg-muted">
               <Code className="mr-1 h-3 w-3" /> HTML Source
             </span>
-            <VariablesReference />
+            <VariablesReference eventType={eventType} />
           </div>
           <textarea
             className="bs-input flex-1 resize-none rounded-none border-0 p-4 font-mono text-sm leading-relaxed focus-visible:ring-0"
