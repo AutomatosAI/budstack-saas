@@ -81,6 +81,28 @@ model email_event_mappings {
   @@unique([eventType, tenantId])
 }
 
+// Storefront newsletter list. Double opt-in: a signup lands PENDING and only
+// becomes CONFIRMED when the emailed token is followed, so the list stays
+// consented and deliverable. `token` is the single credential behind both the
+// confirm and the unsubscribe link, so it is globally unique and rotated on use.
+model newsletter_subscribers {
+  id             String           @id @default(uuid())
+  tenantId       String
+  email          String
+  status         SubscriberStatus @default(PENDING)
+  source         String? // where the signup came from, e.g. "storefront-cta"
+  consentAt      DateTime? // when the visitor asked to subscribe
+  confirmedAt    DateTime? // when the opt-in token was followed
+  unsubscribedAt DateTime?
+  token          String           @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  tenants        tenants          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId, status])
+}
+
 model conditions {
   id              String   @id
   slug            String
@@ -631,6 +653,7 @@ model tenants {
   tenant_legal_documents tenant_legal_documents[]
   email_logs             email_logs[]
   email_templates        email_templates[]
+  newsletter_subscribers newsletter_subscribers[]
   orders                 orders[]
   posts                  posts[]
   products               products[]
@@ -855,6 +878,17 @@ enum EmailStatus {
   QUEUED
   SENT
   FAILED
+}
+
+// PENDING     — signed up, opt-in token not yet followed (never mail marketing to these)
+// CONFIRMED   — double opt-in complete; the only mailable state
+// UNSUBSCRIBED— the subscriber opted out
+// SUPPRESSED  — the platform stopped mailing them (bounce/complaint/manual)
+enum SubscriberStatus {
+  PENDING
+  CONFIRMED
+  UNSUBSCRIBED
+  SUPPRESSED
 }
 
 enum ConsultationStatus {

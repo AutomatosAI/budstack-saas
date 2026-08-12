@@ -3,3 +3,10 @@
 # Branch: ralph/email-authoring-campaigns
 # Started: 2026-08-12
 # PRD: tasks/prd-email-authoring-campaigns.md · Review: docs/EMAIL-SYSTEM-REVIEW.md
+
+[2026-08-12] US-001 PASS — Newsletter subscribers model
+- schema.prisma: model newsletter_subscribers (id/tenantId/email/status/source/consentAt/confirmedAt/unsubscribedAt/token @unique/timestamps), @@unique([tenantId,email]) + @@index([tenantId,status]), tenants FK onDelete: Cascade like email_logs; enum SubscriberStatus (PENDING|CONFIRMED|UNSUBSCRIBED|SUPPRESSED) beside EmailStatus.
+- Migration hand-authored at prisma/migrations/20260812000000_add_newsletter_subscribers/migration.sql — no migrate dev/db push run. Verified equivalent to `prisma migrate diff --from-empty --to-schema-datamodel --script` (same column types, same index/constraint names, same cascade).
+- lib/db.ts: registered 'newsletter_subscribers' in tenantScopedModels so the $extends scope layer covers it from day one (schema-only would leave the model unscoped at query time). Not in the null-access set — subscribers are always tenant-owned.
+- Verified: pnpm prisma validate OK; pnpm prisma generate OK (client exposes the delegate + 4-value enum); pnpm vitest run tests/unit/{tenant-scope-policy,email-template-tenant-scope,soft-delete}.test.ts → 39 passed.
+- typecheck: `pnpm exec tsc --noEmit` reports exactly ONE error, tests/helpers/withPostgres.ts TS2307 '@testcontainers/postgresql' — PRE-EXISTING on HEAD (reproduced with my two edits stashed). Declared in package.json + pnpm-lock.yaml but absent from local node_modules; `pnpm install --frozen-lockfile` wants to purge and rebuild node_modules from scratch, which is out of scope for this story and risks the whole run. Zero errors attributable to this diff.
