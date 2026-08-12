@@ -103,6 +103,26 @@ model newsletter_subscribers {
   @@index([tenantId, status])
 }
 
+/// Addresses this tenant must never send MARKETING email to (Email Phase 2,
+/// US-004). Checked by the worker before every marketing send; transactional
+/// mail (order confirmations, password resets) is deliberately unaffected — an
+/// opt-out is not a request to stop being told about your own order.
+///
+/// One row per address is the whole contract: the reason is provenance, not a
+/// filter, so a bounced address is suppressed exactly as hard as an
+/// unsubscribed one and re-suppressing keeps the first reason recorded.
+model email_suppressions {
+  id        String            @id @default(uuid())
+  tenantId  String
+  email     String
+  reason    SuppressionReason
+  createdAt DateTime          @default(now())
+  tenants   tenants           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId, createdAt])
+}
+
 model conditions {
   id              String   @id
   slug            String
@@ -653,6 +673,7 @@ model tenants {
   tenant_legal_documents tenant_legal_documents[]
   email_logs             email_logs[]
   email_templates        email_templates[]
+  email_suppressions     email_suppressions[]
   newsletter_subscribers newsletter_subscribers[]
   orders                 orders[]
   posts                  posts[]
@@ -889,6 +910,15 @@ enum SubscriberStatus {
   CONFIRMED
   UNSUBSCRIBED
   SUPPRESSED
+}
+
+/// Why an address is suppressed. Lower-case on purpose: unlike the other enums
+/// here these values are also the wire values the API and the audit trail use,
+/// and US-004 pins them as `unsubscribed | bounced | manual`.
+enum SuppressionReason {
+  unsubscribed
+  bounced
+  manual
 }
 
 enum ConsultationStatus {

@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 import { MailerService } from "@/lib/email/mailer";
+import type { EmailCategory } from "@/lib/email/suppression";
 import WelcomeEmail from "@/emails/welcome";
 import PasswordResetEmail from "@/emails/password-reset";
 import OrderConfirmationEmail from "@/emails/order-confirmation";
@@ -19,6 +20,8 @@ export interface EmailOptions {
   templateName: string;
   metadata?: any;
   variables?: any;
+  /** US-004 — omit for transactional; "marketing" is gated on suppression. */
+  category?: EmailCategory;
 }
 
 export async function sendEmail({
@@ -30,6 +33,7 @@ export async function sendEmail({
   templateName,
   metadata,
   variables,
+  category,
 }: EmailOptions) {
   if (!tenantId) {
     console.warn(
@@ -47,6 +51,7 @@ export async function sendEmail({
     metadata,
     variables,
     from,
+    category,
   });
 }
 

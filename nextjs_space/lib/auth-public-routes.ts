@@ -111,6 +111,16 @@ export const AUTH_PUBLIC_ROUTES: readonly PublicRoute[] = [
       "rotates the token so the link cannot be replayed.",
   },
   {
+    pattern: "/api/storefront/newsletter/unsubscribe",
+    reason:
+      "Public unsubscribe, and the RFC 8058 one-click POST target: the caller is " +
+      "a mail provider acting for the recipient, so it must work with no session, " +
+      "no cookies and no custom headers (which also rules out a CSRF token). The " +
+      "256-bit token in the URL is the credential, the tenant is resolved from the " +
+      "request host, and the only effect is removing the holder from marketing — " +
+      "there is nothing an attacker gains and nothing to read back.",
+  },
+  {
     pattern: "/api/store/[slug]/products",
     reason: "Public storefront read: product list by tenant slug.",
   },

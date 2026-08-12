@@ -7,6 +7,11 @@ import {
   decideConfirmOutcome,
 } from "@/lib/email/newsletter-confirm";
 import type { NewsletterSource } from "@/lib/email/newsletter-signup";
+import {
+  type UnsubscribeOutcome,
+  decideUnsubscribeOutcome,
+} from "@/lib/email/newsletter-unsubscribe";
+import { suppressEmail } from "@/lib/email/suppression-store";
 
 /**
  * Persistence for storefront newsletter signups (US-002) and their double
@@ -152,6 +157,51 @@ export async function confirmNewsletterSubscriber(
       confirmedAt: now,
       token: generateSubscriberToken(),
     },
+  });
+
+  return outcome;
+}
+
+/**
+ * Redeem an unsubscribe token for the bound tenant (US-004).
+ *
+ * Two writes, and the second is the load-bearing one: flipping the subscriber
+ * row only stops NEWSLETTER sends, while the suppression row is what every
+ * future marketing send is checked against — campaigns address customers and
+ * imported addresses that may have no subscriber row at all.
+ *
+ * The token is deliberately NOT rotated. It is the durable address of this
+ * subscriber's opt-out: it lives in the footer of every message already in
+ * people's inboxes, and those links have to keep working. Re-following one is
+ * idempotent, which is also why an already-terminal row still (re-)asserts the
+ * suppression instead of returning early — a row that reached UNSUBSCRIBED by
+ * some other path is repaired by the first click rather than staying mailable.
+ */
+export async function unsubscribeNewsletterSubscriber(
+  token: string,
+  now: Date = new Date(),
+): Promise<UnsubscribeOutcome> {
+  const subscriber = await prisma.newsletter_subscribers.findFirst({
+    // The scope layer adds `tenantId`, so a token belonging to another tenant
+    // simply does not resolve here.
+    where: { token },
+    select: { id: true, tenantId: true, email: true, status: true },
+  });
+
+  const outcome = decideUnsubscribeOutcome(subscriber);
+  if (!subscriber) return outcome;
+
+  if (outcome === "unsubscribe") {
+    await prisma.newsletter_subscribers.update({
+      where: { id: subscriber.id },
+      data: { status: "UNSUBSCRIBED", unsubscribedAt: now },
+    });
+  }
+
+  await suppressEmail({
+    tenantId: subscriber.tenantId,
+    email: subscriber.email,
+    reason: "unsubscribed",
   });
 
   return outcome;

@@ -6,6 +6,9 @@ import Handlebars from 'handlebars';
 import { prisma as db } from '../lib/db';
 import { decrypt } from '../lib/security/encryption';
 import { emailQueueName } from '../lib/queue';
+import { SUPPRESSED_LOG_MESSAGE } from '../lib/email/suppression';
+import { resolveSuppressionBlock } from '../lib/email/suppression-store';
+import { bypassTenantScope } from '../lib/tenant/tenant-scope-policy';
 import {
     DEFAULT_MAX_JOB_AGE_MS,
     DEFAULT_QUEUED_ALERT_AGE_MS,
@@ -78,6 +81,28 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
         console.warn(`[EmailWorker] Job ${job.id} ${message}`);
         await markLogFailed(message);
         return { success: false, expired: true };
+    }
+
+    // US-004: a MARKETING job addressed to a suppressed recipient must never be
+    // sent. Same shape as the expiry guard above — return, don't throw, because
+    // this is an intentional drop and a retry would only re-decide it the same
+    // way. Transactional jobs (and every legacy payload, which carries no
+    // `category`) skip the check entirely and are unaffected.
+    //
+    // bypassTenantScope binds an EXPLICIT null context so this stays correct
+    // when TENANT_CONTEXT_STRICT is on: the worker runs outside any request, and
+    // resolveSuppressionBlock puts the tenantId in the query itself. The callee
+    // is async and starts executing synchronously inside the bound store, so the
+    // lazy Prisma promise is awaited while the context is still live.
+    const suppression = await bypassTenantScope(() =>
+        resolveSuppressionBlock({ tenantId, to, category: job.data.category }),
+    );
+    if (suppression.blocked) {
+        console.warn(
+            `[EmailWorker] Job ${job.id} ${SUPPRESSED_LOG_MESSAGE} (${suppression.suppressed.length} recipient(s))`,
+        );
+        await markLogFailed(SUPPRESSED_LOG_MESSAGE);
+        return { success: false, suppressed: true };
     }
 
     let finalHtml = html;

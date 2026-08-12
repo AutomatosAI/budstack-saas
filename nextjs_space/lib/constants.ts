@@ -76,3 +76,13 @@ export const NEWSLETTER_CONFIRM_WINDOW_MS = 60_000; // 1 minute
  * consent. Re-subscribing refreshes `consentAt`, so the clock restarts.
  */
 export const NEWSLETTER_CONFIRM_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/**
+ * Unsubscribe is metered loosest of the three. It is the RFC 8058 one-click
+ * target, so the caller is often a mail provider POSTing on the recipient's
+ * behalf from shared infrastructure — throttling that means someone stays
+ * subscribed against their wishes, which is a worse outcome than the token
+ * guessing this cap exists to bound.
+ */
+export const NEWSLETTER_UNSUBSCRIBE_MAX_REQUESTS = 60;
+export const NEWSLETTER_UNSUBSCRIBE_WINDOW_MS = 60_000; // 1 minute

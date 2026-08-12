@@ -1,6 +1,7 @@
 import { getEmailQueue } from "@/lib/queue";
 import { prisma as db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import type { EmailCategory } from "@/lib/email/suppression";
 
 interface SendEmailOptions {
   tenantId: string;
@@ -11,6 +12,12 @@ interface SendEmailOptions {
   metadata?: Record<string, any>;
   variables?: Record<string, any>; // Data for dynamic rendering
   from?: string; // Optional override
+  /**
+   * US-004. Omit for transactional mail — the worker defaults absent to
+   * transactional so every job enqueued before this field existed keeps its old
+   * behaviour. Set "marketing" and the send is gated on the suppression list.
+   */
+  category?: EmailCategory;
 }
 
 export class MailerService {
@@ -27,6 +34,7 @@ export class MailerService {
       metadata,
       variables,
       from,
+      category,
     } = options;
 
     // Persist intent to log immediately (optional, or rely on worker to create first log)
@@ -42,6 +50,7 @@ export class MailerService {
       metadata,
       variables,
       from,
+      category,
     });
 
     logger.info(`[MailerService] Enqueued email for tenant ${tenantId}`, {

@@ -51,6 +51,7 @@ const tenantScopedModels = new Set([
   'email_logs',
   'email_templates',
   'email_event_mappings',
+  'email_suppressions',
   'newsletter_subscribers',
   'conditions',
   'consultations',
