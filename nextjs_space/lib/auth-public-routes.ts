@@ -94,6 +94,14 @@ export const AUTH_PUBLIC_ROUTES: readonly PublicRoute[] = [
     reason: "Public storefront read: single medical condition by slug.",
   },
   {
+    pattern: "/api/storefront/newsletter/subscribe",
+    reason:
+      "Public storefront newsletter signup: a visitor has no session by definition. " +
+      "Tenant resolved from the request host (never the body), Zod-validated, own " +
+      "IP rate-limit, and it can only create/refresh a PENDING row — it can never " +
+      "revive an UNSUBSCRIBED one or read a subscriber back.",
+  },
+  {
     pattern: "/api/store/[slug]/products",
     reason: "Public storefront read: product list by tenant slug.",
   },

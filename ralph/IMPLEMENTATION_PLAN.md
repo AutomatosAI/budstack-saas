@@ -6,7 +6,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 ## Workstream A — Foundations & fixes
 
 - [x] US-001 Newsletter subscribers model
-- [ ] US-002 Public subscribe endpoint + wire the storefront stubs
+- [x] US-002 Public subscribe endpoint + wire the storefront stubs
 - [ ] US-003 Double opt-in confirmation
 - [ ] US-004 Unsubscribe route + suppression enforcement
 - [ ] US-005 Durable public image URLs

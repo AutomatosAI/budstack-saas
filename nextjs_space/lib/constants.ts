@@ -51,3 +51,12 @@ export const UPLOAD_MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 MB
 export const RATE_LIMIT_DEFAULT_MAX_REQUESTS = 20;
 /** Default fixed-window length, in milliseconds. */
 export const RATE_LIMIT_DEFAULT_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * Newsletter signup is an unauthenticated write reachable from every
+ * storefront, so it gets a tighter budget than the default: enough for a
+ * visitor who mistypes their address a few times, far too little to enumerate
+ * or to pump a tenant's subscriber table.
+ */
+export const NEWSLETTER_SUBSCRIBE_MAX_REQUESTS = 5;
+export const NEWSLETTER_SUBSCRIBE_WINDOW_MS = 60_000; // 1 minute

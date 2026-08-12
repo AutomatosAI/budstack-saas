@@ -18,13 +18,31 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { subscribeToNewsletter } from "@/lib/email/newsletter-signup";
 
-export function EducationalContent() {
+/** `tenantSlug` is the dev/localhost fallback — see NewsletterSubscribeInput. */
+export function EducationalContent({ tenantSlug }: { tenantSlug?: string }) {
   const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [subscribing, setSubscribing] = useState(false);
 
-  const handleNewsletterSubscribe = () => {
+  // Success is reported only after the server records the signup — the old
+  // stub toasted success without sending anything anywhere.
+  const handleNewsletterSubscribe = async () => {
     if (!newsletterEmail || !newsletterEmail.includes("@")) {
       toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setSubscribing(true);
+    const result = await subscribeToNewsletter({
+      email: newsletterEmail,
+      source: "storefront-education",
+      tenantSlug,
+    });
+    setSubscribing(false);
+
+    if (!result.ok) {
+      toast.error(result.message ?? "Subscription failed");
       return;
     }
     toast.success("Successfully subscribed to newsletter!");
@@ -267,13 +285,15 @@ export function EducationalContent() {
                     placeholder="Your email address"
                     value={newsletterEmail}
                     onChange={(e) => setNewsletterEmail(e.target.value)}
-                    className="w-full px-4 py-2 text-gray-900 rounded-lg border border-green-400 focus:outline-none focus:ring-2 focus:ring-green-300"
+                    disabled={subscribing}
+                    className="w-full px-4 py-2 text-gray-900 rounded-lg border border-green-400 focus:outline-none focus:ring-2 focus:ring-green-300 disabled:opacity-60"
                   />
                   <Button
                     onClick={handleNewsletterSubscribe}
+                    disabled={subscribing}
                     className="w-full bg-white text-green-700 hover:bg-green-50 shadow-lg hover:shadow-xl transition-all duration-300"
                   >
-                    Subscribe to Newsletter
+                    {subscribing ? "Subscribing…" : "Subscribe to Newsletter"}
                   </Button>
                 </div>
                 <p className="text-xs text-green-200">
