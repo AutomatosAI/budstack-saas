@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { apiError, apiValidationError } from "@/lib/api-error";
+import { NEWSLETTER_CONFIRM_TEMPLATE } from "@/lib/email/newsletter-confirm";
 import { parseJsonBody } from "@/lib/validation/body";
 
 const emailMappingSchema = z
@@ -20,6 +21,7 @@ const SYSTEM_EVENTS = [
   "userInvite",
   "paymentFailed",
   "subscriptionUpdated",
+  NEWSLETTER_CONFIRM_TEMPLATE,
 ];
 
 export const GET = withTenantAuth(async (_request, { tenantId }) => {

@@ -60,3 +60,19 @@ export const RATE_LIMIT_DEFAULT_WINDOW_MS = 60_000; // 1 minute
  */
 export const NEWSLETTER_SUBSCRIBE_MAX_REQUESTS = 5;
 export const NEWSLETTER_SUBSCRIBE_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * Confirming is a read-mostly follow of a 256-bit token, so it is metered
+ * loosely — one shared corporate NAT clicking several confirmation links must
+ * not be throttled — while still capping a token-guessing loop.
+ */
+export const NEWSLETTER_CONFIRM_MAX_REQUESTS = 20;
+export const NEWSLETTER_CONFIRM_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * How long a double opt-in link stays followable. Long enough for someone who
+ * subscribes on a Friday and reads their mail the next weekend; short enough
+ * that a mailbox compromised months later cannot be used to manufacture
+ * consent. Re-subscribing refreshes `consentAt`, so the clock restarts.
+ */
+export const NEWSLETTER_CONFIRM_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days

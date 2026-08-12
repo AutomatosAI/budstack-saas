@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import WelcomeEmail from '../emails/welcome';
 import PasswordResetEmail from '../emails/password-reset';
 import TenantWelcomeEmail from '../emails/tenant-welcome';
+import NewsletterConfirmEmail from '../emails/newsletter-confirm';
 
 // Instantiate Prisma directly to avoid potential side-effects from lib/db
 const prisma = new PrismaClient();
@@ -45,6 +46,18 @@ async function seedEmailTemplates() {
                 tenantName: '{{businessName}}',
                 subdomain: '{{subdomain}}',
                 loginUrl: '{{loginUrl}}'
+            })
+        },
+        {
+            // US-003 double opt-in. Transactional, not marketing: it is the
+            // request for consent, so it must send before any consent exists.
+            key: 'newsletterConfirm',
+            name: 'Default Newsletter Confirmation',
+            subject: 'Confirm your subscription to {{businessName}}',
+            category: 'transactional',
+            component: NewsletterConfirmEmail({
+                confirmUrl: '{{confirmUrl}}',
+                tenantName: '{{businessName}}'
             })
         }
     ];

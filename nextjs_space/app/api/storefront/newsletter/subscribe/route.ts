@@ -6,6 +6,7 @@ import {
   NEWSLETTER_SOURCES,
   NEWSLETTER_SUBSCRIBE_ERROR,
 } from "@/lib/email/newsletter-signup";
+import { sendNewsletterConfirmation } from "@/lib/email/newsletter-confirm-email";
 import { recordNewsletterSignup } from "@/lib/email/newsletter-subscriptions";
 import {
   NEWSLETTER_SUBSCRIBE_MAX_REQUESTS,
@@ -93,9 +94,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    await runWithTenantContextAsync(tenant.id, () =>
-      recordNewsletterSignup({ email, source }),
-    );
+    // One bound context for both writes: `email_logs` (written by the queue
+    // enqueue) is tenant-scoped too, so the send has to run inside it.
+    // A queue failure surfaces as an error rather than a lie — the row stays
+    // PENDING and a retry refreshes the token and re-sends.
+    const store = tenant;
+    await runWithTenantContextAsync(store.id, async () => {
+      const { token } = await recordNewsletterSignup({ email, source });
+      if (token) {
+        await sendNewsletterConfirmation({ tenant: store, email, token });
+      }
+    });
 
     return genericSuccess();
   } catch (error) {

@@ -16,6 +16,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/auth(.*)", // Legacy NextAuth routes
   "/api/store(.*)", // Storefront APIs
   "/api/storefront/newsletter/subscribe", // Public newsletter signup (US-002)
+  "/api/storefront/newsletter/confirm", // Public double opt-in confirm (US-003)
   "/onboarding", // Customer onboarding wizard
   "/api/onboarding", // Public onboarding validation/submission
   "/api/consultation(.*)", // Public consultation submission

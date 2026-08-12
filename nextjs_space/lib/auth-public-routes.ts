@@ -102,6 +102,15 @@ export const AUTH_PUBLIC_ROUTES: readonly PublicRoute[] = [
       "revive an UNSUBSCRIBED one or read a subscriber back.",
   },
   {
+    pattern: "/api/storefront/newsletter/confirm",
+    reason:
+      "Public double opt-in confirm: the visitor follows a link from their inbox and " +
+      "has no session. Tenant resolved from the request host, token charset/length " +
+      "pinned and redeemed inside that tenant's context, rate-limited by IP. It can " +
+      "only move a PENDING row to CONFIRMED — never revive an UNSUBSCRIBED one — and " +
+      "rotates the token so the link cannot be replayed.",
+  },
+  {
     pattern: "/api/store/[slug]/products",
     reason: "Public storefront read: product list by tenant slug.",
   },

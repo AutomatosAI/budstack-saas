@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+import { NEWSLETTER_CONFIRM_TEMPLATE } from "@/lib/email/newsletter-confirm";
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Template {
@@ -56,6 +58,12 @@ const SYSTEM_EVENTS = [
     id: "subscriptionUpdated",
     label: "Subscription Updated",
     description: "Sent on plan change.",
+  },
+  {
+    id: NEWSLETTER_CONFIRM_TEMPLATE,
+    label: "Newsletter Confirmation",
+    description:
+      "Double opt-in: sent when a visitor signs up, carries the confirm link.",
   },
 ];
 

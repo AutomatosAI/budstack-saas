@@ -1,16 +1,19 @@
 import crypto from "crypto";
 import type { SubscriberStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { NEWSLETTER_CONFIRM_TTL_MS } from "@/lib/constants";
+import {
+  type ConfirmOutcome,
+  decideConfirmOutcome,
+} from "@/lib/email/newsletter-confirm";
 import type { NewsletterSource } from "@/lib/email/newsletter-signup";
 
 /**
- * Persistence for storefront newsletter signups (US-002). Runs inside the
- * caller's bound tenant context, so the lib/db.ts scope layer injects
- * `tenantId` on create and constrains every read — the row can only ever
- * belong to the tenant whose host served the request.
- *
- * The double opt-in email that consumes `token` is US-003; this module only
- * records consent and mints the token it will carry.
+ * Persistence for storefront newsletter signups (US-002) and their double
+ * opt-in confirmation (US-003). Runs inside the caller's bound tenant context,
+ * so the lib/db.ts scope layer injects `tenantId` on create and constrains
+ * every read — a row can only ever belong to the tenant whose host served the
+ * request, and a token minted for one tenant cannot be redeemed on another.
  */
 
 /** Cryptographically-strong, URL-safe confirm/unsubscribe token. */
@@ -52,6 +55,16 @@ export interface RecordSignupInput {
   readonly source: NewsletterSource;
 }
 
+export interface RecordSignupResult {
+  readonly action: SubscribeAction;
+  /**
+   * The confirmation token to mail out — set ONLY when this request actually
+   * wrote one. `null` on `ignore`, so a caller can never re-send a live
+   * subscriber's token to whoever typed their address into the form.
+   */
+  readonly token: string | null;
+}
+
 /**
  * Record a signup for the bound tenant. Idempotent and non-destructive: the
  * caller gets no signal about which branch ran, because the route's response
@@ -59,7 +72,7 @@ export interface RecordSignupInput {
  */
 export async function recordNewsletterSignup(
   input: RecordSignupInput,
-): Promise<SubscribeAction> {
+): Promise<RecordSignupResult> {
   const existing = await prisma.newsletter_subscribers.findFirst({
     where: { email: input.email },
     select: { id: true, status: true },
@@ -67,6 +80,7 @@ export async function recordNewsletterSignup(
 
   const action = decideSubscribeAction(existing?.status ?? null);
   const now = new Date();
+  const token = generateSubscriberToken();
 
   if (action === "refresh" && existing) {
     await prisma.newsletter_subscribers.update({
@@ -75,10 +89,10 @@ export async function recordNewsletterSignup(
       data: {
         source: input.source,
         consentAt: now,
-        token: generateSubscriberToken(),
+        token,
       },
     });
-    return action;
+    return { action, token };
   }
 
   if (action === "create") {
@@ -89,7 +103,7 @@ export async function recordNewsletterSignup(
           status: "PENDING",
           source: input.source,
           consentAt: now,
-          token: generateSubscriberToken(),
+          token,
         },
       });
     } catch (error) {
@@ -97,10 +111,48 @@ export async function recordNewsletterSignup(
       // row now exists in a state this request is not allowed to overwrite,
       // so treat it exactly like the `ignore` branch rather than clobbering it.
       if (!isUniqueViolation(error)) throw error;
-      return "ignore";
+      return { action: "ignore", token: null };
     }
-    return action;
+    return { action, token };
   }
 
-  return "ignore";
+  return { action: "ignore", token: null };
+}
+
+/**
+ * Redeem a confirmation token for the bound tenant (US-003).
+ *
+ * The token is rotated on a successful confirm, which is what makes the link
+ * single-use: the value that arrived can never be replayed, and the fresh value
+ * becomes the subscriber's durable unsubscribe token. Every non-`confirm`
+ * outcome writes nothing at all.
+ */
+export async function confirmNewsletterSubscriber(
+  token: string,
+  now: Date = new Date(),
+): Promise<ConfirmOutcome> {
+  const subscriber = await prisma.newsletter_subscribers.findFirst({
+    // The scope layer adds `tenantId`, so a token belonging to another tenant
+    // simply does not resolve here.
+    where: { token },
+    select: { id: true, status: true, consentAt: true, createdAt: true },
+  });
+
+  const outcome = decideConfirmOutcome(
+    subscriber,
+    now,
+    NEWSLETTER_CONFIRM_TTL_MS,
+  );
+  if (outcome !== "confirm" || !subscriber) return outcome;
+
+  await prisma.newsletter_subscribers.update({
+    where: { id: subscriber.id },
+    data: {
+      status: "CONFIRMED",
+      confirmedAt: now,
+      token: generateSubscriberToken(),
+    },
+  });
+
+  return outcome;
 }

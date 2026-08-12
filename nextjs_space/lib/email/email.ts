@@ -8,6 +8,7 @@ import KycLinkEmail from "@/emails/kyc-link";
 import KycStatusEmail from "@/emails/kyc-status";
 import ClientStatusEmail from "@/emails/client-status";
 import OrderStatusUpdateEmail from "@/emails/order-status-update";
+import NewsletterConfirmEmail from "@/emails/newsletter-confirm";
 
 export interface EmailOptions {
   to: string;
@@ -129,6 +130,14 @@ export const emailTemplates = {
     return render(
       ClientStatusEmail({ userName, status, tenantName, rejectionReason }),
     );
+  },
+
+  newsletterConfirm: (
+    confirmUrl: string,
+    tenantName: string,
+    logoUrl?: string,
+  ) => {
+    return render(NewsletterConfirmEmail({ confirmUrl, tenantName, logoUrl }));
   },
 
   orderStatusUpdate: (

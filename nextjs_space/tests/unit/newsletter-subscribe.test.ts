@@ -19,9 +19,19 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
+// US-003 hangs the double opt-in mail off this route. Stubbed here so the
+// suite never reaches BullMQ/Redis; the send itself is covered in
+// tests/unit/newsletter-confirm.test.ts.
+const { sendNewsletterConfirmation } = vi.hoisted(() => ({
+  sendNewsletterConfirmation: vi.fn(),
+}));
+
 vi.mock("@/lib/tenant/tenant", () => ({ getTenantFromRequest }));
 vi.mock("@/lib/security/rate-limit", () => ({ checkRateLimit }));
 vi.mock("@/lib/db", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/email/newsletter-confirm-email", () => ({
+  sendNewsletterConfirmation,
+}));
 
 import { POST as subscribe } from "@/app/api/storefront/newsletter/subscribe/route";
 import { decideSubscribeAction } from "@/lib/email/newsletter-subscriptions";
@@ -51,6 +61,7 @@ beforeEach(() => {
   prismaMock.newsletter_subscribers.findFirst.mockResolvedValue(null);
   prismaMock.newsletter_subscribers.create.mockResolvedValue({ id: "sub_1" });
   prismaMock.newsletter_subscribers.update.mockResolvedValue({ id: "sub_1" });
+  sendNewsletterConfirmation.mockResolvedValue(undefined);
 });
 
 describe("decideSubscribeAction — a public signup never downgrades a subscriber", () => {
@@ -130,6 +141,48 @@ describe("POST /api/storefront/newsletter/subscribe", () => {
 
     expect(known).toEqual(fresh);
   });
+
+  it("mails the confirmation link built from the token it just persisted", async () => {
+    await post(validBody);
+
+    const persisted =
+      prismaMock.newsletter_subscribers.create.mock.calls[0][0].data.token;
+    expect(sendNewsletterConfirmation).toHaveBeenCalledTimes(1);
+    expect(sendNewsletterConfirmation).toHaveBeenCalledWith({
+      tenant: TENANT,
+      email: "visitor@example.com",
+      token: persisted,
+    });
+  });
+
+  it("re-mails on a PENDING refresh with the refreshed token", async () => {
+    prismaMock.newsletter_subscribers.findFirst.mockResolvedValue({
+      id: "sub_pending",
+      status: "PENDING",
+    });
+
+    await post(validBody);
+
+    const refreshed =
+      prismaMock.newsletter_subscribers.update.mock.calls[0][0].data.token;
+    expect(sendNewsletterConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({ token: refreshed }),
+    );
+  });
+
+  it.each(["CONFIRMED", "UNSUBSCRIBED", "SUPPRESSED"] as const)(
+    "mails nothing to a %s subscriber — a stranger cannot re-issue their token",
+    async (status) => {
+      prismaMock.newsletter_subscribers.findFirst.mockResolvedValue({
+        id: "sub_x",
+        status,
+      });
+
+      await post(validBody);
+
+      expect(sendNewsletterConfirmation).not.toHaveBeenCalled();
+    },
+  );
 
   it("treats a lost create race (P2002) as success without clobbering the row", async () => {
     prismaMock.newsletter_subscribers.create.mockRejectedValue(
