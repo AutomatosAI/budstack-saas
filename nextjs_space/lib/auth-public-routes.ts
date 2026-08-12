@@ -121,6 +121,17 @@ export const AUTH_PUBLIC_ROUTES: readonly PublicRoute[] = [
       "there is nothing an attacker gains and nothing to read back.",
   },
   {
+    pattern: "/api/public/images/[...key]",
+    reason:
+      "Durable delivery of images the tenant already published: a mail client " +
+      "rendering a campaign and an anonymous storefront visitor both fetch it " +
+      "with no session, which is the whole point of replacing the 1h presigned " +
+      "URL. Read-only, restricted by the s3-tenant-guard to keys under " +
+      "tenants/{id}/uploads/, extension-allow-listed to non-SVG images with the " +
+      "Content-Type derived locally, and every rejection is an identical 404 so " +
+      "the bucket cannot be probed.",
+  },
+  {
     pattern: "/api/store/[slug]/products",
     reason: "Public storefront read: product list by tenant slug.",
   },

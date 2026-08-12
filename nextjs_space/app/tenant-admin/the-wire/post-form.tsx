@@ -51,7 +51,10 @@ export default function PostForm({
       if (!res.ok) throw new Error("Upload failed");
 
       const data = await res.json();
-      form.setValue("coverImage", data.url);
+      // Prefer the durable URL (US-005) — data.url is a presigned link that
+      // stops resolving about an hour after the post is written. Older uploads
+      // and non-image files have no durable form, hence the fallback.
+      form.setValue("coverImage", data.publicUrl || data.url);
       toast.success("Image uploaded");
     } catch (error) {
       toast.error("Failed to upload image");

@@ -31,8 +31,12 @@ function decodeOnce(value: string): string | null {
 /**
  * Normalise a raw S3 key for prefix comparison, or return null if the key
  * is structurally unsafe (malformed encoding, traversal, or backslash).
+ *
+ * Exported so callers that must derive a key from untrusted input (the public
+ * image route, US-005) clean it with exactly the same rules this guard checks
+ * against, instead of hand-rolling a second normaliser that could drift.
  */
-function normaliseKey(key: string, folderPrefix?: string): string | null {
+export function normaliseTenantScopedKey(key: string, folderPrefix?: string): string | null {
   const decoded = decodeOnce(key);
   if (decoded === null) return null;
   // Reject traversal and Windows-separator tricks outright (post-decode so
@@ -60,7 +64,7 @@ export function isKeyInTenantScope(
   if (!key) return false;
   if (!tenantId || tenantId.trim() === '') return false;
 
-  const normalised = normaliseKey(key, opts?.folderPrefix);
+  const normalised = normaliseTenantScopedKey(key, opts?.folderPrefix);
   if (normalised === null) return false;
 
   return normalised.startsWith(`tenants/${tenantId}/`);

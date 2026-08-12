@@ -9,7 +9,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 - [x] US-002 Public subscribe endpoint + wire the storefront stubs
 - [x] US-003 Double opt-in confirmation
 - [x] US-004 Unsubscribe route + suppression enforcement
-- [ ] US-005 Durable public image URLs
+- [x] US-005 Durable public image URLs
 - [ ] US-006 Test-send endpoint + button
 - [ ] US-007 Tenant email-log page
 - [ ] US-008 Deterministic email-log linkage
