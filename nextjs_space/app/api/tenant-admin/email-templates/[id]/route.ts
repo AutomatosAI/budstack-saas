@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withTenantAuthParams } from "@/lib/api-auth";
+import { requirePermissionParams } from "@/lib/permissions/require-permission";
 import { prisma } from "@/lib/db";
 import {
   sanitizeEmailHtml,
@@ -26,7 +26,8 @@ const emailTemplateUpdateSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export const GET = withTenantAuthParams(async (_request, { tenantId }, params) => {
+// US-009 — read gated on canViewEmails; every mutation on canEditEmails.
+export const GET = requirePermissionParams("canViewEmails", async (_request, { tenantId }, params) => {
   try {
     const id = parseUuid(params.id);
 
@@ -47,7 +48,7 @@ export const GET = withTenantAuthParams(async (_request, { tenantId }, params) =
   }
 });
 
-export const PUT = withTenantAuthParams(async (req, { tenantId }, params) => {
+export const PUT = requirePermissionParams("canEditEmails", async (req, { tenantId }, params) => {
   try {
     const id = parseUuid(params.id);
 
@@ -96,7 +97,7 @@ export const PUT = withTenantAuthParams(async (req, { tenantId }, params) => {
   }
 });
 
-export const DELETE = withTenantAuthParams(async (_request, { tenantId }, params) => {
+export const DELETE = requirePermissionParams("canEditEmails", async (_request, { tenantId }, params) => {
   try {
     const id = parseUuid(params.id);
 

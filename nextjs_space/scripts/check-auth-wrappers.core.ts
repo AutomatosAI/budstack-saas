@@ -29,16 +29,55 @@ export const HTTP_METHODS = [
 ] as const;
 export type HttpMethod = (typeof HTTP_METHODS)[number];
 
-export const APPROVED_WRAPPERS = [
+/** The base wrappers from `lib/api-auth` (PRD-203). */
+export const AUTH_WRAPPERS = [
   "withTenantAuth",
   "withTenantAuthParams",
   "withSuperAdmin",
   "withSuperAdminParams",
   "withAuth",
 ] as const;
+
+/**
+ * PRD-301's permission gates (US-009). These are NOT a second way to skip auth:
+ * each one delegates to the api-auth wrapper of the same shape
+ * (requirePermission → withTenantAuth, requirePermissionParams →
+ * withTenantAuthParams; see lib/permissions/require-permission.ts) and then
+ * additionally 403s a caller lacking the required permission key. A route using
+ * one is strictly MORE guarded than a plain withTenantAuth route, so counting it
+ * as a violation inverted the gate's signal.
+ */
+export const PERMISSION_WRAPPERS = [
+  "requirePermission",
+  "requirePermissionParams",
+] as const;
+
+export const APPROVED_WRAPPERS = [...AUTH_WRAPPERS, ...PERMISSION_WRAPPERS] as const;
 export type ApprovedWrapper = (typeof APPROVED_WRAPPERS)[number];
 
-const AUTH_MODULE_SUFFIX = "lib/api-auth";
+/**
+ * Which module each wrapper name may legitimately come from. A name only counts
+ * when imported from ITS OWN module, so a locally-defined `withTenantAuth` — or
+ * a `requirePermission` imported from somewhere else — cannot launder a bare
+ * handler past the gate.
+ */
+const WRAPPER_MODULES: ReadonlyArray<{
+  readonly suffix: string;
+  readonly wrappers: ReadonlySet<string>;
+}> = [
+  { suffix: "lib/api-auth", wrappers: new Set(AUTH_WRAPPERS) },
+  {
+    suffix: "lib/permissions/require-permission",
+    wrappers: new Set(PERMISSION_WRAPPERS),
+  },
+];
+
+/** The wrapper names a given import specifier is allowed to contribute. */
+function wrappersForModule(spec: string): ReadonlySet<string> | undefined {
+  return WRAPPER_MODULES.find(
+    (mod) => spec === `@/${mod.suffix}` || spec.endsWith(mod.suffix),
+  )?.wrappers;
+}
 
 export type HandlerStatus = "wrapped" | "allow-listed" | "violation";
 
@@ -88,18 +127,18 @@ function unwrap(expression: ts.Expression): ts.Expression {
   return current;
 }
 
-/** Imports from `…/lib/api-auth`: local binding name → canonical wrapper name. */
+/** Imports from a wrapper module: local binding name → canonical wrapper name. */
 function collectWrapperImports(sf: ts.SourceFile): ReadonlyMap<string, ApprovedWrapper> {
   const map = new Map<string, ApprovedWrapper>();
   for (const stmt of sf.statements) {
     if (!ts.isImportDeclaration(stmt) || !ts.isStringLiteral(stmt.moduleSpecifier)) continue;
-    const spec = stmt.moduleSpecifier.text;
-    if (!(spec === `@/${AUTH_MODULE_SUFFIX}` || spec.endsWith(AUTH_MODULE_SUFFIX))) continue;
+    const allowed = wrappersForModule(stmt.moduleSpecifier.text);
+    if (!allowed) continue;
     const named = stmt.importClause?.namedBindings;
     if (!named || !ts.isNamedImports(named)) continue;
     for (const el of named.elements) {
       const original = (el.propertyName ?? el.name).text;
-      if (APPROVED_WRAPPER_SET.has(original)) {
+      if (allowed.has(original)) {
         map.set(el.name.text, original as ApprovedWrapper);
       }
     }

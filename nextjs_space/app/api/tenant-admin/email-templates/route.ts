@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withTenantAuth } from "@/lib/api-auth";
+import { requirePermission } from "@/lib/permissions/require-permission";
 import { prisma } from "@/lib/db";
 import {
   sanitizeEmailHtml,
@@ -29,7 +29,9 @@ const emailTemplateCreateSchema = z.object({
   sourceTemplateId: z.string().max(200).optional(),
 });
 
-export const GET = withTenantAuth(async (_request, { tenantId }) => {
+// US-009 — reading a template exposes its authored HTML and subject lines, so
+// the list is gated on canViewEmails; authoring is gated on canEditEmails.
+export const GET = requirePermission("canViewEmails", async (_request, { tenantId }) => {
   try {
     const templates = await prisma.email_templates.findMany({
       where: {
@@ -50,7 +52,7 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
   }
 });
 
-export const POST = withTenantAuth(async (req, { tenantId }) => {
+export const POST = requirePermission("canEditEmails", async (req, { tenantId }) => {
   try {
     const body = await parseJsonBody(req, emailTemplateCreateSchema, {
       maxBytes: 512 * 1024,
