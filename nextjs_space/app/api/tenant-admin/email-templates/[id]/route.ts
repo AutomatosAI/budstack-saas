@@ -3,12 +3,13 @@ import { z } from "zod";
 import { requirePermissionParams } from "@/lib/permissions/require-permission";
 import { prisma } from "@/lib/db";
 import {
-  sanitizeEmailHtml,
   sanitizeEmailSubject,
   EMAIL_HTML_MAX_LENGTH,
   EMAIL_SUBJECT_MAX_LENGTH,
 } from "@/lib/security/email-sanitize";
 import { apiError, apiValidationError } from "@/lib/api-error";
+import { emailContentJsonSchema } from "@/lib/email/email-content-json";
+import { resolveTemplateContent } from "@/lib/email/email-template-content";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -22,6 +23,10 @@ const emailTemplateUpdateSchema = z.object({
   name: z.string().max(1000).optional(),
   subject: z.string().optional(),
   contentHtml: z.string().optional(),
+  // US-011 — a document re-renders contentHtml through the save pipeline; an
+  // explicit null clears it (the author switched to the raw-HTML editor);
+  // omitting it leaves both columns to the pre-US-011 path.
+  contentJson: emailContentJsonSchema.nullish(),
   description: z.string().max(5000).optional(),
   isActive: z.boolean().optional(),
 });
@@ -55,7 +60,8 @@ export const PUT = requirePermissionParams("canEditEmails", async (req, { tenant
     const body = await parseJsonBody(req, emailTemplateUpdateSchema, {
       maxBytes: 512 * 1024,
     });
-    const { name, subject, contentHtml, description, isActive } = body;
+    const { name, subject, contentHtml, contentJson, description, isActive } =
+      body;
 
     // SECURITY (C7): Length caps + HTML allowlist + subject tag-strip.
     // See lib/email-sanitize.ts for the full email-safe policy.
@@ -66,23 +72,31 @@ export const PUT = requirePermissionParams("canEditEmails", async (req, { tenant
       return apiValidationError(`Subject exceeds maximum length of ${EMAIL_SUBJECT_MAX_LENGTH} characters`, "PUT /api/tenant-admin/email-templates/[id]");
     }
 
-    // Verify ownership before update
-    const count = await prisma.email_templates.count({
+    // Verify ownership before update. US-011 reads the row's `category` in the
+    // same query — the update body cannot change it, and it is what decides
+    // whether the rendered shell carries an unsubscribe footer.
+    const existing = await prisma.email_templates.findFirst({
       where: { id, tenantId: tenantId },
+      select: { category: true },
     });
 
-    if (count === 0) {
+    if (!existing) {
       return apiError(new Error("Template not found or access denied"), { route: "PUT /api/tenant-admin/email-templates/[id]", status: 404, safeMessage: "Template not found or access denied" });
     }
+
+    const content = await resolveTemplateContent({
+      contentHtml,
+      contentJson,
+      tenantId,
+      category: existing.category,
+    });
 
     const updated = await prisma.email_templates.update({
       where: { id },
       data: {
         ...(typeof name === "string" && { name: name.slice(0, TEMPLATE_NAME_MAX) }),
         ...(typeof subject === "string" && { subject: sanitizeEmailSubject(subject) }),
-        ...(typeof contentHtml === "string" && {
-          contentHtml: sanitizeEmailHtml(contentHtml),
-        }),
+        ...content,
         ...(typeof description === "string" && {
           description: description.slice(0, TEMPLATE_DESCRIPTION_MAX),
         }),

@@ -9,6 +9,8 @@ import {
   EMAIL_SUBJECT_MAX_LENGTH,
 } from "@/lib/security/email-sanitize";
 import { apiError, apiValidationError } from "@/lib/api-error";
+import { emailContentJsonSchema } from "@/lib/email/email-content-json";
+import { resolveTemplateContent } from "@/lib/email/email-template-content";
 import { parseJsonBody } from "@/lib/validation/body";
 
 const TEMPLATE_NAME_MAX = 200;
@@ -24,6 +26,10 @@ const emailTemplateCreateSchema = z.object({
   name: z.string().max(1000).optional(),
   subject: z.string().optional(),
   contentHtml: z.string().optional(),
+  // US-011 — the composer document. Present: contentHtml is derived from it by
+  // the save pipeline. Absent (or an explicit null from a client in raw-HTML
+  // mode): the raw-HTML path below runs exactly as before.
+  contentJson: emailContentJsonSchema.nullish(),
   description: z.string().max(5000).optional(),
   category: z.string().max(1000).optional(),
   sourceTemplateId: z.string().max(200).optional(),
@@ -61,6 +67,7 @@ export const POST = requirePermission("canEditEmails", async (req, { tenantId })
       name,
       subject,
       contentHtml,
+      contentJson,
       description,
       category,
       sourceTemplateId,
@@ -128,6 +135,22 @@ export const POST = requirePermission("canEditEmails", async (req, { tenantId })
             ),
         };
       }
+    }
+
+    // US-011 — last, so a composer document beats both the raw contentHtml
+    // field and a clone source: whichever of those the request also carried,
+    // the stored HTML is the one this pipeline produced (shell -> inline ->
+    // sanitize). No document and this never runs, leaving the raw path above
+    // exactly as it was.
+    if (contentJson) {
+      data = {
+        ...data,
+        ...(await resolveTemplateContent({
+          contentJson,
+          tenantId,
+          category: data.category,
+        })),
+      };
     }
 
     const newTemplate = await prisma.email_templates.create({ data });

@@ -1,4 +1,4 @@
-import type { ZodSchema } from "zod";
+import type { ZodType, ZodTypeDef } from "zod";
 import { ApiError } from "@/lib/api-error";
 
 /**
@@ -22,9 +22,16 @@ export interface ParseJsonBodyOptions {
   maxBytes?: number;
 }
 
+/**
+ * The schema's INPUT is `unknown`, not `T`. What arrives here is whatever
+ * `JSON.parse` produced, so a schema that preprocesses its input before
+ * validating (US-011's contentJson runs a depth guard first) is as valid at this
+ * boundary as a plain object schema. `ZodSchema<T>` fixes input === output and
+ * silently degrades those to `T = unknown` at the call site.
+ */
 export async function parseJsonBody<T = unknown>(
   req: Request,
-  schema?: ZodSchema<T>,
+  schema?: ZodType<T, ZodTypeDef, unknown>,
   opts: ParseJsonBodyOptions = {},
 ): Promise<T> {
   const maxBytes = opts.maxBytes ?? DEFAULT_MAX_BYTES;
