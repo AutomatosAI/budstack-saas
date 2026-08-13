@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Ralph Wiggum Build Loop (Claude) — SEO Supercharge (Basic $99 / Pro $169)
+# Ralph Wiggum Build Loop (Claude) — Email System Phase 2 (Authoring, Newsletters & Campaigns)
 # Run from the repo root: /Users/gkavanagh/Development/Dr-Green-Cannexis/budstack-saas
-# Branch: ralph/seo-supercharge (the prompt enforces a hard branch lock)
+# Branch: ralph/email-authoring-campaigns (the prompt enforces a hard branch lock)
 # Usage:
-#   caffeinate -i ./ralph/loop.sh    # Build mode (caffeinate prevents the overnight-sleep crash from the email run)
+#   ./ralph/loop.sh           # Build mode (runs until COMPLETE/BLOCKED)
 #   ./ralph/loop.sh 3         # Max 3 iterations
 
 set -e
@@ -39,8 +39,8 @@ if [[ ! -f "$PROMPT_FILE" ]]; then
 fi
 
 CURRENT_BRANCH=$(git branch --show-current)
-if [[ "$CURRENT_BRANCH" != "ralph/seo-supercharge" ]]; then
-  echo -e "${RED}Error: on branch '$CURRENT_BRANCH', expected 'ralph/seo-supercharge'. Checkout the ralph branch first.${NC}"
+if [[ "$CURRENT_BRANCH" != "ralph/email-authoring-campaigns" ]]; then
+  echo -e "${RED}Error: on branch '$CURRENT_BRANCH', expected 'ralph/email-authoring-campaigns'. Checkout the ralph branch first.${NC}"
   exit 1
 fi
 
@@ -152,9 +152,9 @@ handle_usage_limit() {
   CONSECUTIVE_FAILURES=0
 }
 
-echo -e "${GREEN}Ralph loop: BUILD mode — SEO Supercharge (Basic $99 / Pro $169)${NC}"
-echo -e "${CYAN}26 stories (US-001..US-026): A make-SEO-real, B plan plumbing, C pro features.${NC}"
-echo -e "${CYAN}Model: ${RALPH_MODEL} (override with RALPH_MODEL=...). Branch: ralph/seo-supercharge. Never pushes.${NC}"
+echo -e "${GREEN}Ralph loop: BUILD mode — Email System Phase 2 (Authoring, Newsletters & Campaigns)${NC}"
+echo -e "${CYAN}28 stories (US-001..US-028): A fixes/foundations, B TipTap editor, C campaigns, D CRM-lite.${NC}"
+echo -e "${CYAN}Model: ${RALPH_MODEL} (override with RALPH_MODEL=...). Branch: ralph/email-authoring-campaigns. Never pushes.${NC}"
 [[ $MAX_ITERATIONS -gt 0 ]] && echo "Max iterations: $MAX_ITERATIONS"
 echo "Press Ctrl+C to stop"
 echo "---"
@@ -230,7 +230,7 @@ while true; do
   if [[ "$RESULT_MSG" =~ RALPH_COMPLETE ]]; then
     echo ""
     echo -e "${GREEN}=== Ralph Complete ===${NC}"
-    echo -e "${GREEN}SEO Supercharge: all executable stories finished. Review the branch, then push + PR per workstream (human decision — merge deploys).${NC}"
+    echo -e "${GREEN}Email Phase 2: all executable stories finished. Review the branch, then push + PR per workstream (human decision — merge deploys).${NC}"
     break
   fi
 

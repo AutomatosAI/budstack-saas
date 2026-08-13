@@ -1,0 +1,451 @@
+{
+  "project": "BudStack SaaS",
+  "branchName": "ralph/email-authoring-campaigns",
+  "description": "Email System Phase 2 — non-technical authoring (TipTap branded-shell editor), newsletter subscribers with consent/unsubscribe, durable public image URLs, campaigns with rate-capped fan-out, blog-to-newsletter, CRM-lite. Source: tasks/prd-email-authoring-campaigns.md + docs/EMAIL-SYSTEM-REVIEW.md.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Newsletter subscribers model",
+      "description": "As the platform, I need a tenant-scoped subscriber table so storefront signups persist.",
+      "acceptanceCriteria": [
+        "Prisma model newsletter_subscribers: id, tenantId (FK tenants, cascade), email, status enum SubscriberStatus (PENDING|CONFIRMED|UNSUBSCRIBED|SUPPRESSED), source, consentAt, confirmedAt, unsubscribedAt, token (unique), createdAt, updatedAt",
+        "@@unique([tenantId, email]) and index on [tenantId, status]",
+        "Migration authored under prisma/migrations following existing pattern (do NOT run migrate dev against the configured DB — see PROMPT validation rules)",
+        "pnpm prisma validate and pnpm prisma generate pass",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Schema: nextjs_space/prisma/schema.prisma — follow existing snake_case model style (email_logs L31, email_templates L50). Migrations run on boot in deploy; no manual apply step. Wire the tenants relation like email_logs does."
+    },
+    {
+      "id": "US-002",
+      "title": "Public subscribe endpoint + wire the storefront stubs",
+      "description": "As a storefront visitor, I want my newsletter signup to actually register so the store can email me.",
+      "acceptanceCriteria": [
+        "POST /api/storefront/newsletter/subscribe: public, tenant resolved from request host, zod-validated email, rate-limited with the existing rate-limit util",
+        "Upserts PENDING row with fresh token; never downgrades CONFIRMED/UNSUBSCRIBED status (unit test)",
+        "Response is generic success regardless of prior state (no subscriber enumeration)",
+        "components/sections/ctas/Newsletter.tsx and components/home/educational-content.tsx POST to the endpoint; failure shows an error state (success copy no longer lies)",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)",
+        "Verify in browser using dev-browser skill (fallback per PROMPT if dev server unavailable)"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Dead stubs: Newsletter.tsx:24-27 (setSubmitted only), educational-content.tsx:25-32 (toast only). Host-based tenant resolution: lib/tenant-resolver.ts / lib/parse-host.ts — same mechanism storefront pages use. Find the existing API rate-limit util (grep lib for rateLimit) before writing one."
+    },
+    {
+      "id": "US-003",
+      "title": "Double opt-in confirmation",
+      "description": "As a store owner, I want subscribers confirmed so my list is consented and deliverable.",
+      "acceptanceCriteria": [
+        "Subscribe enqueues a confirmation email via sendEmail (templateName newsletterConfirm) containing the signed confirm link",
+        "GET /api/storefront/newsletter/confirm?token= sets CONFIRMED + confirmedAt, invalidates the token for reuse, redirects to the storefront with a notice",
+        "Expired/unknown token renders a friendly error, no state change",
+        "newsletterConfirm added to the tenant event allowlist and TenantEventMapper, with a seeded default template",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Allowlist: app/api/tenant-admin/email-mappings/route.ts:15-23. Mapper UI: components/admin/email/TenantEventMapper.tsx:24-60. Seed pattern: scripts/seed-email-templates.ts (react-email component rendered with {{placeholder}} props). sendEmail: lib/email/email.ts:23."
+    },
+    {
+      "id": "US-004",
+      "title": "Unsubscribe route + suppression enforcement",
+      "description": "As a recipient, I want one-click unsubscribe that is honored on every future marketing send.",
+      "acceptanceCriteria": [
+        "Prisma model email_suppressions: tenantId, email, reason (unsubscribed|bounced|manual), createdAt, @@unique([tenantId, email]); migration authored",
+        "GET /api/storefront/newsletter/unsubscribe?token= shows a confirmation page; POST with the same token unsubscribes — POST must work with no cookies/headers (RFC 8058 one-click target)",
+        "Unsubscribe sets subscriber UNSUBSCRIBED + writes a suppression row",
+        "Worker: jobs with category 'marketing' check suppression before sending; suppressed -> email_logs FAILED with reason 'suppressed', no send, no retry (return, don't throw)",
+        "Unit tests: suppression blocks marketing send; transactional sends unaffected; jobs without category default to transactional",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Worker: scripts/email-worker.ts — add the check near the PRD-220 expiry guard (L76-81); mirror its return-not-throw pattern. Job payload gains optional 'category'; older in-flight payloads have none — must not break. Worker DB access must stay bypassTenantScope-safe (TENANT_CONTEXT_STRICT landmine, PR #209)."
+    },
+    {
+      "id": "US-005",
+      "title": "Durable public image URLs",
+      "description": "As a tenant admin, I want uploaded images to keep working forever so emails and blog covers don't break after an hour.",
+      "acceptanceCriteria": [
+        "GET /api/public/images/[...key] streams from S3, only under the tenants/{tenantId}/uploads/ prefix (reuse s3-tenant-guard assertion; reject path traversal)",
+        "Sets Cache-Control: public, max-age=31536000, immutable and the correct Content-Type",
+        "Non-image keys rejected 404 (extension allowlist + content-type check); unknown key -> 404 without leaking S3 errors",
+        "Upload API responses include the durable URL alongside the presigned one",
+        "The Wire cover-image flow stores/uses the durable URL for new uploads (no backfill of old posts)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (image loads; check response headers)"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "S3 client + presigned getFileUrl: lib/storage/s3.ts:29-130. Guard: lib/storage/s3-tenant-guard.ts. The upload route comment at app/api/tenant-admin/upload/route.ts:50-53 documents this exact follow-up. Wire cover upload: app/tenant-admin/the-wire/post-form.tsx:46-54."
+    },
+    {
+      "id": "US-006",
+      "title": "Test-send endpoint + button",
+      "description": "As an admin editing a template, I want to send it to myself so I can see it in a real inbox.",
+      "acceptanceCriteria": [
+        "POST /api/tenant-admin/email-templates/[id]/test-send and the super-admin equivalent",
+        "Renders subject+body with the same Handlebars helpers the worker registers, using a canned sample-variable set per event type; queues to the logged-in admin's email with templateName 'test-send'",
+        "Rate-limited (5/min/tenant); tenant route enforces canEditEmails via requirePermission",
+        "'Send test' button in the EmailEditor header with success/failure toast",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Extract multiply/toFixed helpers from scripts/email-worker.ts:30-35 into a shared module (e.g. lib/email/handlebars-helpers.ts) imported by both worker and route — do not duplicate. Sample variable sets: new shared module; seed values from COMMON_VARIABLES in components/admin/email/EmailEditor.tsx:32-46. requirePermission pattern: see team routes (PRD-301)."
+    },
+    {
+      "id": "US-007",
+      "title": "Tenant email-log page",
+      "description": "As a tenant admin, I want to see what was sent, to whom, and why it failed.",
+      "acceptanceCriteria": [
+        "GET /api/tenant-admin/email-logs: withTenantAuth + canViewEmails, paginated, filters status + date range, search by recipient",
+        "New 'Activity' tab on app/tenant-admin/emails/page.tsx: table (recipient, subject, template, status, timestamp) + detail drawer showing smtpResponse/errorMessage",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "email_logs model: prisma/schema.prisma L31-48 (indexed [tenantId, createdAt]). Tabs pattern already on that page (Templates/Events). Reuse bs-table styles per components/admin/email/EmailTemplateList.tsx."
+    },
+    {
+      "id": "US-008",
+      "title": "Deterministic email-log linkage",
+      "description": "As the platform, I need SENT/FAILED to update the right log row — the (recipient, subject) heuristic mis-attributes under concurrency.",
+      "acceptanceCriteria": [
+        "MailerService.send creates the email_logs row FIRST and passes logId in the BullMQ job payload",
+        "Worker updates by logId; falls back to the legacy heuristic only when logId is absent (in-flight jobs during deploy)",
+        "Both markLogFailed and the SENT path migrated",
+        "Unit tests cover logId path and legacy-fallback path",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "MailerService: lib/email/mailer.ts:20-66 (currently enqueues THEN logs — reverse the order). Worker log matching: scripts/email-worker.ts:42-70 and 219-251."
+    },
+    {
+      "id": "US-009",
+      "title": "Permission enforcement on email routes",
+      "description": "As a store owner, I want team-member email access governed by the existing permission keys, not just role.",
+      "acceptanceCriteria": [
+        "canViewEmails enforced on GET, canEditEmails on POST/PUT/DELETE across app/api/tenant-admin/email-templates*, email-mappings, email-logs, and any email routes added by earlier stories",
+        "Owner-admin unaffected; member without permission gets 403 in the standard error shape",
+        "Integration test: member with canViewEmails only cannot PUT a template",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Keys exist: lib/permissions/permission-keys.ts:25-26 (currently nav-only: lib/permissions/nav-permissions.ts:17). Copy the requirePermission usage pattern from the PRD-301 team routes. This is a slice of the known ~31-route sweep — email routes only, do not widen scope."
+    },
+    {
+      "id": "US-010",
+      "title": "Branded email shell renderer",
+      "description": "As a tenant admin, I want my logo, colors, and footer applied automatically so I only ever edit the message body.",
+      "acceptanceCriteria": [
+        "EmailShell react-email component: header (tenant logo via durable URL, primaryColor accents), content slot, footer (businessName, businessAddress, {{unsubscribeUrl}} slot rendered only for category 'marketing')",
+        "Server util renderEmailBody(bodyHtml, tenant, opts) returns the shell-wrapped full document",
+        "businessAddress read from tenant settings; add the settings key if absent (settings is Json)",
+        "Deterministic snapshot test of rendered output for a fixture tenant",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Pattern: the 9 react-email components in emails/ and render() usage in lib/email/email.ts:53-151. Shell must survive lib/security/email-sanitize.ts allowlist (tables, inline styles OK; no <button> — buttons are styled <a>). EMAIL-CRITICAL: every asset URL the shell embeds (logo included) must be ABSOLUTE — US-005's publicUrl is origin-relative by design (storefront CSP img-src 'self'), and email clients have no origin; prefix the tenant base URL the way US-003's confirm links do (getTenantBaseUrl)."
+    },
+    {
+      "id": "US-011",
+      "title": "Save-path render pipeline (JSON -> email-safe HTML)",
+      "description": "As the platform, I need editor output converted to inbox-safe HTML while the worker contract stays untouched.",
+      "acceptanceCriteria": [
+        "Add juice dependency (pnpm add, lockfile staged by name)",
+        "Pipeline util: TipTap JSON -> HTML (server-side generateHTML) -> EmailShell wrap -> juice inline CSS -> sanitizeEmailHtml -> contentHtml; TipTap JSON persisted to email_templates.contentJson",
+        "Literal {{variable}} text survives the whole pipeline verbatim (unit test) — worker Handlebars.compile keeps working with zero worker changes",
+        "Hostile fixture test: no <script>/on* handler/javascript: URL survives; sanitize is the LAST step",
+        "Pasted data: images larger than 10KB rejected with a clear error; 3-hosted-image fixture output stays under EMAIL_HTML_MAX_LENGTH (200k)",
+        "Template POST/PUT at both admin levels accept contentJson and run the pipeline; raw contentHtml-only path unchanged",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "Sanitizer: lib/security/email-sanitize.ts (EMAIL_HTML_MAX_LENGTH L5). Routes: app/api/super-admin/email-templates/route.ts + [id], app/api/tenant-admin/email-templates/route.ts + [id]. TipTap 3 is a dependency — use @tiptap/core generateHTML with the same extension set as US-012's composer (share the extension list in one module). EMAIL-CRITICAL: final contentHtml must contain only ABSOLUTE image src URLs — absolutise any relative /api/public/images/... src with the tenant base URL inside the pipeline (email clients have no origin)."
+    },
+    {
+      "id": "US-012",
+      "title": "EmailComposer component (TipTap simple mode)",
+      "description": "As a non-technical admin, I want to write an email like a document — headings, lists, buttons, dividers, images.",
+      "acceptanceCriteria": [
+        "New EmailComposer on TipTap 3: StarterKit + image + link + text-align + a button node (renders styled <a> with editable label/URL) + divider",
+        "EmailEditor gains Simple/Advanced tabs: Simple (composer) is default for new templates and templates with contentJson; Advanced is the existing HTML textarea",
+        "Switching Simple -> Advanced clears contentJson only after an explicit confirm dialog",
+        "Legacy contentHtml-only templates open in Advanced with a banner explaining Simple mode",
+        "Component is fetch-free (data + callbacks in props) and shared by both super-admin and tenant-admin pages",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "Reference components/editor/tiptap.tsx (The Wire's editor) for setup — do NOT modify it. Host: components/admin/email/EmailEditor.tsx (textarea at L190-195, preview iframe L210-215). Extension list shared with US-011's server-side generateHTML."
+    },
+    {
+      "id": "US-013",
+      "title": "Merge-tag chips",
+      "description": "As a non-technical admin, I want to insert 'Customer name' from a menu instead of typing {{userName}}.",
+      "acceptanceCriteria": [
+        "Mention-style TipTap node triggered by '{{' or a 'Personalize' toolbar menu; renders as a labeled chip in-editor",
+        "Serializes to literal {{variable}} text; round-trips through the US-011 pipeline (unit test)",
+        "Tag list from a shared module keyed by event type (move COMMON_VARIABLES out of EmailEditor.tsx); free-text custom tag allowed",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "COMMON_VARIABLES currently at components/admin/email/EmailEditor.tsx:32-46. US-006 also consumes the shared variable-set module — keep one source."
+    },
+    {
+      "id": "US-014",
+      "title": "In-editor image upload",
+      "description": "As a non-technical admin, I want to drag or pick an image and have it just work in the sent email.",
+      "acceptanceCriteria": [
+        "Composer image button opens a file picker and accepts drag-drop; uploads via POST /api/tenant-admin/upload",
+        "Inserts the durable public URL from US-005 (never the presigned URL)",
+        "Client-side max size 2MB with a clear error; server magic-byte validation already exists",
+        "Inserted images width-constrained to the shell content width by default",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "Upload route: app/api/tenant-admin/upload/route.ts (magic-byte validation L33-38, tenant prefix L47). Depends on US-005's durable URL in the upload response."
+    },
+    {
+      "id": "US-015",
+      "title": "Preview modes + test-send integration",
+      "description": "As an admin, I want to see the email as recipients will, on mobile and desktop, before activating it.",
+      "acceptanceCriteria": [
+        "Preview pane renders the FULL pipeline output (shell-wrapped, inlined, sanitized) in the existing sandboxed iframe — not raw editor HTML",
+        "Width toggle: 375px / 800px",
+        "Sample variables substituted in preview (same canned sets as US-006)",
+        "'Send test' (US-006) reachable from the composer toolbar",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "Add a preview endpoint or server action that runs the US-011 pipeline with sample variables (client must not duplicate the pipeline). Iframe: components/admin/email/EmailEditor.tsx:210-215, keep sandbox attrs. CRASH RECOVERY (2026-08-13): a prior US-015 iteration died mid-story (machine sleep) AFTER writing its edits but BEFORE journaling/committing — its uncommitted work for exactly this story is sitting in the working tree (editor pages, EmailComposer*, EmailHtmlPane, EmailEditor, sample-variables, test-send). The dirty-tree rule is waived for THOSE files only, this once: review them as a starting draft, verify/finish/replace on your judgement, then journal and commit normally. Do not treat the dirty tree as an abort condition."
+    },
+    {
+      "id": "US-016",
+      "title": "Campaign data model",
+      "description": "As the platform, I need campaign state with per-recipient delivery tracking.",
+      "acceptanceCriteria": [
+        "Prisma model campaigns: id, tenantId, name, subject, contentHtml, contentJson, status enum CampaignStatus (DRAFT|SCHEDULED|SENDING|SENT|CANCELLED), audience Json, scheduledAt, sentAt, stats Json, timestamps",
+        "Prisma model campaign_recipients: id, campaignId, email, userId nullable, status enum (PENDING|QUEUED|SENT|FAILED|SUPPRESSED), emailLogId nullable, error nullable; @@unique([campaignId, email]), index [campaignId, status]",
+        "users.marketingConsentAt DateTime? added",
+        "Migration authored; pnpm prisma validate + generate pass",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": "Same snake_case model conventions. users model is load-bearing (PRD-208 note around schema L680-718) — only ADD the nullable column, change nothing else on it."
+    },
+    {
+      "id": "US-017",
+      "title": "Campaign CRUD + compose UI",
+      "description": "As a tenant admin, I want to create a campaign using the same composer I use for templates.",
+      "acceptanceCriteria": [
+        "app/api/tenant-admin/campaigns (+[id]): withTenantAuth + requirePermission(canEditEmails); create/update limited to DRAFT|SCHEDULED",
+        "Campaign content runs the US-011 pipeline with category 'marketing'; save rejects content whose rendered output lacks the unsubscribe slot (shell provides it by default)",
+        "'Campaigns' tab under app/tenant-admin/emails/: list (status, audience size, sent count) + compose page (subject, EmailComposer, audience picker placeholder, save draft)",
+        "SMTP settings surface short guidance copy: newsletters need a real ESP SMTP, Gmail app-password caps ~500/day",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": "Tab + page patterns from app/tenant-admin/emails/page.tsx. Keep API handlers thin; pipeline util from US-011 does the heavy lifting."
+    },
+    {
+      "id": "US-018",
+      "title": "Audience selection v1",
+      "description": "As a tenant admin, I want to choose who receives the campaign and see the count before sending.",
+      "acceptanceCriteria": [
+        "Audience options stored as structured Json: subscribers (CONFIRMED), consented customers (marketingConsentAt set), or both deduped by email",
+        "GET /api/tenant-admin/campaigns/[id]/audience-count returns the live count AFTER suppression and status filtering",
+        "Recipients materialized into campaign_recipients at send time, not draft time",
+        "Unit test: dedupe + suppression exclusion",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": "Customer query pattern: app/api/tenant-admin/customers/route.ts (role PATIENT, tenant scope, GDPR-erased rows excluded at L22 — replicate that exclusion)."
+    },
+    {
+      "id": "US-019",
+      "title": "Fan-out send with rate cap",
+      "description": "As the platform, I must send one message per recipient, rate-limited per tenant, with progress and cancel — never a single message exposing all addresses.",
+      "acceptanceCriteria": [
+        "POST /api/tenant-admin/campaigns/[id]/send: flips to SENDING, materializes recipients, enqueues ONE BullMQ job per recipient carrying campaignId, recipientId, logId, category 'marketing'",
+        "Per-tenant rate cap via delayed-job spacing from env CAMPAIGN_RATE_PER_MINUTE (default 60)",
+        "Worker: per-recipient variables (name, unsubscribeUrl from recipient token); suppression checked at send time; updates campaign_recipients.status + emailLogId",
+        "Campaign auto-flips to SENT when no PENDING/QUEUED recipients remain; list/compose UI shows sent/failed/suppressed progress",
+        "POST /api/tenant-admin/campaigns/[id]/cancel sets CANCELLED; worker drops jobs whose campaign is cancelled (status check before send)",
+        "Integration test with fake transport: 3 recipients -> 3 discrete messages with distinct To: headers",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": "NEVER pass string[] to a single sendMail 'to'. Worker payload changes must tolerate legacy shapes (US-008 pattern). Worker stays bypassTenantScope-safe. Queue defaults: lib/queue.ts:21-37."
+    },
+    {
+      "id": "US-020",
+      "title": "Compliance headers + enforced footer",
+      "description": "As a store owner, I need marketing email to meet Gmail/Yahoo bulk-sender and POPIA/GDPR requirements by default.",
+      "acceptanceCriteria": [
+        "Marketing sends set List-Unsubscribe (mailto + https) and List-Unsubscribe-Post: List-Unsubscribe=One-Click via nodemailer headers option",
+        "Worker refuses a marketing send whose HTML lacks the rendered unsubscribe URL: email_logs FAILED reason 'missing-footer', no send, no retry",
+        "Transactional category completely unaffected (test)",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": "Worker sendMail call: scripts/email-worker.ts:208-213 — add headers only for category 'marketing'. One-click POST target is US-004's headerless unsubscribe route."
+    },
+    {
+      "id": "US-021",
+      "title": "Campaign scheduling",
+      "description": "As a tenant admin, I want to schedule a campaign for later.",
+      "acceptanceCriteria": [
+        "Compose page date-time picker sets SCHEDULED + scheduledAt; a delayed BullMQ job triggers the US-019 send path at time",
+        "Rescheduling replaces the delayed job; cancel works while SCHEDULED",
+        "Send-time guard re-checks status — a cancelled campaign never sends (test)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": "Use BullMQ delayed jobs on the existing queue or a small campaign queue in lib/queue.ts; store the jobId on the campaign for replace/cancel."
+    },
+    {
+      "id": "US-022",
+      "title": "Send blog post as newsletter",
+      "description": "As a tenant admin, I want one click to turn a Wire post into a campaign draft.",
+      "acceptanceCriteria": [
+        "'Send as newsletter' action on published Wire posts creates a DRAFT campaign: subject = post title; body = post content as composer doc + cover image (durable URL) + excerpt intro + 'Read more' button linking to the post",
+        "Content passes the US-011 pipeline; opens in campaign compose for review — never auto-sends",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": "Posts API: app/api/tenant-admin/posts (+[id]). Wire UI: app/tenant-admin/the-wire/posts-list.tsx + post-form.tsx. Post HTML -> composer doc via @tiptap/core generateJSON with the shared extension list."
+    },
+    {
+      "id": "US-023",
+      "title": "Marketing consent capture",
+      "description": "As a storefront customer, I choose whether to receive marketing, and the store records when I consented.",
+      "acceptanceCriteria": [
+        "Unticked-by-default checkbox ('Email me offers and updates') on storefront signup and checkout; checked -> users.marketingConsentAt = now, unchecked -> null",
+        "Admin customer detail shows consent state; manual toggle writes/clears the timestamp with an audit-log entry",
+        "Unsubscribe (US-004) also clears marketingConsentAt for a matching customer email in that tenant",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": "Signup route: app/api/signup/route.ts. Locate the storefront checkout form before editing — touch ONLY the consent checkbox; payment logic is fraud-sensitive and out of scope. Audit-log util exists (grep lib for auditLog)."
+    },
+    {
+      "id": "US-024",
+      "title": "Customer tags",
+      "description": "As a tenant admin, I want to tag customers so I can target them.",
+      "acceptanceCriteria": [
+        "Prisma model customer_tags: tenantId, userId, tag; @@unique([tenantId, userId, tag]); migration authored",
+        "Add/remove tags on customer detail page; requires canEditCustomers",
+        "Tag filter on customers list UI + API filter param",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": "Customers pages: app/tenant-admin/customers/ (+[id], customers-table.tsx). Permission keys at lib/permissions/permission-keys.ts:9-12."
+    },
+    {
+      "id": "US-025",
+      "title": "Segments as saved audiences",
+      "description": "As a tenant admin, I want reusable audience filters — 'hasn't ordered in 60 days' is the reorder play.",
+      "acceptanceCriteria": [
+        "Prisma model segments: tenantId, name, filter Json; migration authored",
+        "Filter grammar v1: last-order age (days), order count (>= / = 0), has tag, KYC-approved, marketing consent — always ANDed with consent + suppression",
+        "Segment builder UI with live count preview; campaign audience picker (US-018) accepts a segment",
+        "Unit tests for each filter axis",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": "Implement filters against existing users/orders relations (customers route shows the shapes). Keep the grammar a typed union, not free-form Json."
+    },
+    {
+      "id": "US-026",
+      "title": "Campaign results page",
+      "description": "As a tenant admin, I want to see how a campaign did.",
+      "acceptanceCriteria": [
+        "Campaign detail: delivered/failed/suppressed counts, failure reasons from linked email_logs, unsubscribes attributed via recipient token",
+        "Export recipients CSV gated by canExportCustomers",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": "campaign_recipients.emailLogId (US-008/US-019) is the join. CSV export: stream, don't buffer the whole list."
+    },
+    {
+      "id": "US-027",
+      "title": "Open/click tracking (per-tenant opt-in)",
+      "description": "As a tenant admin, I may want open/click stats — but tracking is off by default and disclosed.",
+      "acceptanceCriteria": [
+        "Tenant setting emailTrackingEnabled (default false)",
+        "When on: 1px pixel route + link-wrapping redirect route (signed recipient token, no PII in URLs), recorded per campaign_recipients",
+        "Counts surface on the US-026 results page",
+        "Privacy-policy template gains a tracking disclosure clause when enabled",
+        "When off: sent HTML contains no tracking artifacts (test)",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": "Link wrapping happens in the US-011/US-019 render path, gated on the tenant setting. Policy templates: lib/legal/ (render-policy.ts token pattern)."
+    },
+    {
+      "id": "US-028",
+      "title": "Reorder-reminder automation (MVP)",
+      "description": "As a store owner, I want an automatic 'time to reorder?' email — the core BudStacks retention play.",
+      "acceptanceCriteria": [
+        "Tenant-configurable rule: N days (default 60) after a customer's last DELIVERED order, send mapped template reorderReminder — only if consented, not suppressed, and no newer order; once per customer per window",
+        "Daily trigger via BullMQ repeatable job, safe if multiple workers run (single-instance guard)",
+        "reorderReminder added to event allowlists + TenantEventMapper with a seeded default template; per-tenant toggle default OFF",
+        "Unit tests: window logic, consent/suppression gates, idempotency",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": "Record last-reminded-at (new column or Json on the customer/tenant) to enforce once-per-window. Repeatable job registration must be idempotent across worker restarts (BullMQ dedupes by repeat opts — verify)."
+    }
+  ]
+}
