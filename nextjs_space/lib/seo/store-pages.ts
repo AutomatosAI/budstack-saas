@@ -19,7 +19,11 @@
  * `generateMetadata`, which renders with no error.tsx boundary above it.
  */
 
-import { seoText } from "@/lib/seo/store-identity";
+import {
+  isEmptyEntitySeo,
+  readEntitySeo,
+  type EntitySeo,
+} from "@/lib/seo/entity-seo";
 
 /** The authorable pages. The write route's Zod enum is built from this tuple. */
 export const STORE_SEO_PAGE_KEYS = [
@@ -73,39 +77,17 @@ export const LEGACY_STORE_SEO_PAGE_KEYS: Readonly<
   Record<string, StoreSeoPageKey>
 > = { faq: "support" };
 
-export interface StorePageSeo {
-  readonly title?: string;
-  readonly description?: string;
-  readonly ogImage?: string;
-}
+/**
+ * A `pageSeo` entry is the same authored record every other SEO-bearing entity
+ * carries (US-003 shares the parser with `posts.seo`), so the shape and the
+ * fail-closed parsing live in `entity-seo.ts`.
+ */
+export type StorePageSeo = EntitySeo;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return (
     typeof value === "object" && value !== null && !Array.isArray(value)
   );
-}
-
-/**
- * One `pageSeo` entry, keeping only the fields that are non-empty strings.
- * `tenants.pageSeo` is a Json column with no DB-level shape, so a nested value
- * can be anything at all; a number title would render `<title>7</title>`.
- */
-function entry(value: unknown): StorePageSeo {
-  if (!isRecord(value)) return {};
-
-  const title = seoText(value.title);
-  const description = seoText(value.description);
-  const ogImage = seoText(value.ogImage);
-
-  return {
-    ...(title ? { title } : {}),
-    ...(description ? { description } : {}),
-    ...(ogImage ? { ogImage } : {}),
-  };
-}
-
-function isEmpty(seo: StorePageSeo): boolean {
-  return !seo.title && !seo.description && !seo.ogImage;
 }
 
 /**
@@ -125,15 +107,15 @@ export function readStorePageSeo(
 ): StorePageSeo {
   if (!isRecord(pageSeo)) return {};
 
-  const current = entry(pageSeo[key]);
-  if (!isEmpty(current)) return current;
+  const current = readEntitySeo(pageSeo[key]);
+  if (!isEmptyEntitySeo(current)) return current;
 
   for (const [legacyKey, replacedBy] of Object.entries(
     LEGACY_STORE_SEO_PAGE_KEYS,
   )) {
     if (replacedBy !== key) continue;
-    const legacy = entry(pageSeo[legacyKey]);
-    if (!isEmpty(legacy)) return legacy;
+    const legacy = readEntitySeo(pageSeo[legacyKey]);
+    if (!isEmptyEntitySeo(legacy)) return legacy;
   }
 
   return {};

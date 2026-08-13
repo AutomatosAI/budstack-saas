@@ -186,3 +186,116 @@ FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
   and must survive its per-key rewrite.
 - SEO Manager still previews products at /products/{slug}, a 404 (US-004 AC-4).
 - The sitemap still lists /faq (US-006 AC-2 removes it).
+
+================================================================================
+[2026-08-13] US-003 PASS — The Wire post metadata reads post.seo
+
+WHAT LANDED
+- lib/seo/post-metadata.ts — buildPostMetadata() + buildWireIndexMetadata(),
+  pure and total like every other builder here. The article cascade is
+  seo.title -> post.title, seo.description -> post.excerpt, seo.ogImage ->
+  post.coverImage, plus og type=article with publishedTime + authors, a
+  canonical on the primary host, and the summary_large_image card.
+- lib/seo/entity-seo.ts — readEntitySeo()/isEmptyEntitySeo(), the fail-closed
+  parser for ONE authored SEO record. posts.seo and a tenants.pageSeo entry are
+  the same three fields, so US-002's private entry()/isEmpty() moved here and
+  store-pages.ts now imports them (StorePageSeo is a type alias for EntitySeo).
+  products.seo and conditions.seo (US-004/US-005) get it for free.
+- app/store/[slug]/the-wire/[postSlug]/page.tsx — one cache()d loadPublishedPost
+  shared by generateMetadata and the page body; the two identical queries per
+  article render are now one.
+- app/store/[slug]/the-wire/page.tsx — the index gains generateMetadata (title
+  "The Wire", canonical /the-wire, og:url), which it had none of.
+- tests/unit/wire-post-metadata.test.ts — 26 tests.
+
+WHAT WAS FOUND (decision-level)
+- US-001 LEFT A LIVE DOUBLE SUFFIX, now fixed. The article page built its own
+  `"{post.title} | {businessName}"` title, and US-001's layout stashes a
+  "%s | {businessName}" template for every segment below the homepage. An
+  article sits at metadataItems i=2 with length=6 (root, store, [slug] layout,
+  the-wire, [postSlug], __PAGE__ — collectMetadata pushes layout-less nodes
+  too), so 2 < length-2=4 and the template applied: every Wire post has been
+  rendering "Terpenes explained | Acme | Acme" since f81a2e6. Titles are handed
+  over unsuffixed now and there is a named regression test.
+- DESCRIPTION IS OMITTED, NOT undefined, when there is neither an authored one
+  nor an excerpt. mergeMetadata assigns `target[key] = source[key] || null` for
+  that field (resolve-metadata.js:194-205), and `for (const key_ in source)`
+  walks own keys INCLUDING undefined ones — so `description: undefined` would
+  NULL the layout's description instead of inheriting it. No invented third
+  tier: a per-store fallback sentence would put the same description on every
+  article, which is the duplicate-content defect this workstream is removing.
+- twitter is declared for the CARD TYPE ONLY. postProcessMetadata (:406-442)
+  fills twitter title/description/images from the resolved openGraph/metadata,
+  which is the only way the card and the page cannot disagree; declaring
+  images here would freeze them out of that.
+- findFirst WITH FLAT FIELDS, not findUnique on slug_tenantId. `posts` is
+  tenant-scoped in lib/db.ts:67, and the extension rewrites findUnique->findFirst
+  while injecting tenantId — findFirst rejects a compound key
+  (PrismaClientValidationError). Both call sites in this file used the compound
+  form; the repo already documents the trap at api/tenant-admin/posts/route.ts:56.
+- The loader binds runWithTenantContextAsync. generateMetadata resolves OUTSIDE
+  the layout's context scope, so a tenant-scoped read there is an implicit
+  unbound query: it warns on security.tenant_context_missing today and would
+  THROW under TENANT_CONTEXT_STRICT — inside metadata, where a throw is a blank
+  page (no error.tsx above it). Same pattern as
+  app/tenant-admin/emails/campaigns/[id]/page.tsx:56. The explicit tenantId in
+  the where is what makes the query correct; the binding makes it legal.
+- `published: true` moved INTO the query (it was a check on the result). An
+  unpublished draft's title can no longer reach the 404 page's <title>:
+  metadata resolves before the body calls notFound().
+- WirePost row type is stated explicitly. The any-widened prisma export
+  collapses a generic's inferred T to `{}` through runWithTenantContextAsync<T>
+  — 14 TS2339s until the type was named (the #229-class repo trap, one layer on).
+- og:image passes through storedPublicImagePath, never re-signed: a presigned S3
+  URL left over from before Email US-005 is DROPPED (it 403s an hour later and
+  the tag looks correct). An unusable authored ogImage falls through to the
+  cover image rather than emitting nothing.
+- createdAt is parsed defensively (Date OR string OR neither). A JSON round trip
+  turns the Date into a string and `new Date("nonsense").toISOString()` throws
+  RangeError — the #229 failure class, in a path with no error boundary.
+- The index page is NOT in STORE_SEO_PAGE_KEYS. The PRD allows "pageSeo key or
+  sensible default" (tasks/prd-seo-supercharge.md:59); the default keeps the SEO
+  Manager tab and the write-route enum untouched. Making it authorable later is
+  one entry in store-pages.ts plus the delegator swap.
+
+VERIFICATION
+- pnpm exec tsc --noEmit -> exit 0.
+- pnpm vitest run --project unit tests/unit/wire-post-metadata.test.ts -> 26
+  passed. Targeted re-run with the two US-001/002 suites -> 67 passed.
+- Full unit project: pnpm vitest run --project unit -> 125 files, 1889 tests,
+  all passed (1863 + the 26 new). No pre-existing failures to flag.
+- pnpm check:security -> both gates pass. next lint on the touched files ->
+  only the pre-existing @next/next/no-img-element warnings on render-body <img>
+  tags this story does not touch.
+- LIVE: pnpm dev + curl of /store/demo/the-wire and
+  /store/demo/the-wire/some-post -> both new generateMetadata bodies executed
+  and emitted <title>Store Not Found</title> (the no-tenant branch), HTTP 404,
+  no unhandled throw; platform / still 200. The TENANT branch stays unrenderable
+  on this machine — 11 PrismaClientInitializationError lines in the dev log,
+  DATABASE_URL points at Railway's private network. visual: deferred to human
+  review.
+- Docker: no new runtime import chain leaves the Next bundle — everything added
+  is lib/seo/* imported from app/, and Dockerfile:74 already COPYs lib/
+  wholesale. No Dockerfile change needed (email-p2 #232 lesson checked).
+
+TEST DESIGN
+The builders are exercised directly (no prisma, no request) because they are
+pure by construction — that is what makes "a malformed Json blob degrades, never
+throws" assertable as a property rather than a mock. Named guards for the
+regressions that would be silent: the title carries no business name (the US-001
+double suffix), `description` is ABSENT rather than undefined, a presigned cover
+never appears (asserted on the serialised object, so no "X-Amz" string can hide
+in a nested field), and the platform strings appear nowhere.
+
+FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
+- The article's back link is hardcoded `/store/{subdomain}/the-wire`
+  ([postSlug]/page.tsx:105). On a tenant host the store is served at ROOT, so
+  that path 404s in production — getTenantBasePath() is the fix (the index page
+  already uses it). Route-shape debt: US-010's neighbourhood.
+- /api/tenant-admin/seo/posts/[id] has no permission gate (withTenantAuthParams
+  only) — the same gap already flagged on /api/tenant-admin/seo/pages, US-010.
+- Wire cover images render alt={post.title} on both pages — US-009's scope.
+- For US-006: the sitemap's /the-wire/{slug} URLs are REAL (posts are
+  slug-routed and the query already filters published:true). It is the
+  /products/{slug} URLs that are dead — the sitemap fix is narrower than "all
+  entity URLs".

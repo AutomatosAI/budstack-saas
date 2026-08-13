@@ -7,7 +7,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 
 - [x] US-001 Store-layout metadata foundation
 - [x] US-002 Static store pages consume pageSeo
-- [ ] US-003 The Wire post metadata reads post.seo
+- [x] US-003 The Wire post metadata reads post.seo
 - [ ] US-004 Product detail metadata
 - [ ] US-005 Conditions SEO wired end-to-end
 - [ ] US-006 Sitemap correctness + platform sitemap
