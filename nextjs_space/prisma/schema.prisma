@@ -123,6 +123,60 @@ model email_suppressions {
   @@index([tenantId, createdAt])
 }
 
+/// One-off marketing send — a newsletter or a blog digest (Email Phase 2,
+/// US-016). Authored exactly like a template: `contentJson` is the composer
+/// document and `contentHtml` is what the US-011 pipeline derived from it, so
+/// the worker's Handlebars step consumes it unchanged.
+///
+/// `audience` is the *rule* (which lists to mail), never the resolved list —
+/// recipients are materialised into campaign_recipients at send time so the
+/// count reflects consent and suppression as they stand then, not at draft time.
+/// `stats` is a denormalised progress cache for the list view; the recipient
+/// rows remain the source of truth.
+model campaigns {
+  id          String                @id @default(uuid())
+  tenantId    String
+  name        String
+  subject     String
+  contentHtml String
+  contentJson Json?
+  status      CampaignStatus        @default(DRAFT)
+  audience    Json? // null = audience not chosen yet
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  stats       Json? // null = never sent
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  tenants     tenants               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recipients  campaign_recipients[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+/// One row per address a campaign fans out to (Email Phase 2, US-016), created
+/// at send time. This is the per-recipient delivery record: exactly one message
+/// per row, never a multi-address To:.
+///
+/// `userId` and `emailLogId` are plain columns rather than relations on purpose
+/// — the recipient row must outlive an erased customer or a pruned log row, and
+/// `users` is load-bearing (PRD-208) so it gains no back-relation here.
+model campaign_recipients {
+  id         String                  @id @default(uuid())
+  campaignId String
+  email      String
+  userId     String? // customer this address belongs to, when it is one
+  status     CampaignRecipientStatus @default(PENDING)
+  emailLogId String? // US-008 linkage: the email_logs row carrying the outcome
+  error      String?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  campaigns  campaigns               @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, email])
+  @@index([campaignId, status])
+}
+
 model conditions {
   id              String   @id
   slug            String
@@ -675,6 +729,7 @@ model tenants {
   email_templates        email_templates[]
   email_suppressions     email_suppressions[]
   newsletter_subscribers newsletter_subscribers[]
+  campaigns              campaigns[]
   orders                 orders[]
   posts                  posts[]
   products               products[]
@@ -770,6 +825,7 @@ model users {
   phone               String?
   address             Json?
   isActive            Boolean                   @default(true)
+  marketingConsentAt  DateTime? // Email Phase 2 (US-016/US-023): when this customer opted in to marketing. NULL = no consent, never mail them a campaign.
   consultations       consultations[]
   drgreen_carts       drgreen_carts?
   orders              orders[]
@@ -919,6 +975,31 @@ enum SuppressionReason {
   unsubscribed
   bounced
   manual
+}
+
+// DRAFT     — being authored; editable
+// SCHEDULED — scheduledAt set and a delayed job is armed; still editable/cancellable
+// SENDING   — recipients materialised and fanned out to the queue
+// SENT      — no PENDING/QUEUED recipients remain
+// CANCELLED — terminal; the worker refuses to send a job for this campaign
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+}
+
+// PENDING    — materialised, not yet enqueued
+// QUEUED     — a job exists for this recipient
+// SENT/FAILED— the worker's outcome (detail lives on the linked email_logs row)
+// SUPPRESSED — blocked at send time by the tenant suppression list (US-004)
+enum CampaignRecipientStatus {
+  PENDING
+  QUEUED
+  SENT
+  FAILED
+  SUPPRESSED
 }
 
 enum ConsultationStatus {
