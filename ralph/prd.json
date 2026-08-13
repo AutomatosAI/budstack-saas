@@ -242,7 +242,7 @@
       ],
       "priority": 15,
       "passes": false,
-      "notes": "Add a preview endpoint or server action that runs the US-011 pipeline with sample variables (client must not duplicate the pipeline). Iframe: components/admin/email/EmailEditor.tsx:210-215, keep sandbox attrs."
+      "notes": "Add a preview endpoint or server action that runs the US-011 pipeline with sample variables (client must not duplicate the pipeline). Iframe: components/admin/email/EmailEditor.tsx:210-215, keep sandbox attrs. CRASH RECOVERY (2026-08-13): a prior US-015 iteration died mid-story (machine sleep) AFTER writing its edits but BEFORE journaling/committing — its uncommitted work for exactly this story is sitting in the working tree (editor pages, EmailComposer*, EmailHtmlPane, EmailEditor, sample-variables, test-send). The dirty-tree rule is waived for THOSE files only, this once: review them as a starting draft, verify/finish/replace on your judgement, then journal and commit normally. Do not treat the dirty tree as an abort condition."
     },
     {
       "id": "US-016",
