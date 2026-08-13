@@ -131,14 +131,16 @@ Ordered by workstream. **A ships to everyone; B before C; every C story checks `
 
 ### Workstream B — Plan plumbing (thin, Clerk-carried, PRD-303-compatible)
 
-### US-011: Tenant plan resolution + seoPro gate
-**Description:** As the platform, I need to know a tenant's plan and gate pro features on it — with zero billing code.
+### US-011: Tenant plan column + entitlement matrix (extends the shipped seam)
+**Description:** As the platform, I need the operator-controlled plan column that the #235 entitlement seam (`lib/entitlements/features.ts`) was explicitly built to consume, plus SEO keys in its matrix.
 
 **Acceptance Criteria:**
-- [ ] `tenants.plan` column (`basic` | `pro`, default `basic`) + hand-authored migration (never `migrate dev`)
-- [ ] `resolveTenantPlan(tenant)`: Clerk org `publicMetadata.plan` claim wins when present and valid, else the column; unreadable values → `basic` (fail closed)
-- [ ] `requirePlanFeature("seoPro")` server gate (composes with the permission wrappers) returning 403 with a distinct `upgrade_required` error shape; `PLAN_CONFIG` typed map compatible with PRD-303's shape (`basic: $99`, `pro: $169`)
-- [ ] Unit tests: claim precedence, fail-closed parsing, gate 403 shape
+- [ ] `tenants.plan` column (`trial` | `basic` | `pro` | `custom`, default `trial` — the 3-month all-features launch window) + hand-authored migration (never `migrate dev`)
+- [ ] `FEATURES` gains `SEO_CORE`/`SEO_PRO`; `getTenantFeatures` resolves from the plan matrix per its docstring contract (trial/custom/pro → all; basic → analytics keys unchanged + `seo.core` only — analytics tiering stays the analytics module's decision)
+- [ ] Plan parsing fails closed: unknown value → `basic`
+- [ ] `requireFeature(FEATURES.SEO_PRO)` server gate (composes with the permission wrappers), 403 `upgrade_required` shape; existing analytics `features[]` call sites unchanged (their suites re-run green)
+- [ ] Clerk org `publicMetadata.plan` is a best-effort **mirror on write, never read** — column is source of truth (decision: `tenants.settings` is tenant-writable; Clerk Billing rejected as Stripe-underneath)
+- [ ] Unit tests: matrix per plan, fail-closed parsing, 403 shape, composition
 - [ ] Typecheck passes; tests pass
 
 ### US-012: Super-admin plan control
@@ -305,7 +307,7 @@ Ordered by workstream. **A ships to everyone; B before C; every C story checks `
 
 ## 5. Non-Goals (Out of Scope)
 
-- **No payments/billing** — Clerk carries the plan claim; PRD-303 (Stripe) lands separately with zero rework to the gate.
+- **No payments/billing** — `tenants.plan` is operator-set (super-admin) with Clerk metadata as a write-mirror; Clerk Billing was evaluated and rejected (Stripe-underneath, cannabis-adjacent). PRD-303 evolves separately with zero rework to the seam.
 - **No Search Console data integration** (impressions/clicks/rankings) — external OAuth app setup; follow-up PRD.
 - **No Automatos chatbot work** — the chat widget cross-sell exists; this PRD only consumes Automatos for SEO generation.
 - **No keyword rank tracking, no crawler**, no multi-language/hreflang, no raw custom-head HTML injection (structured fields only), no AMP.

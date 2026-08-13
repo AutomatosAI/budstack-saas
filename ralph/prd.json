@@ -164,27 +164,28 @@
     },
     {
       "id": "US-011",
-      "title": "Tenant plan resolution + seoPro gate",
-      "description": "As the platform, I need to know a tenant's plan and gate pro features on it — with zero billing code.",
+      "title": "Tenant plan column + entitlement matrix (extend the #235 seam)",
+      "description": "As the platform, I need the operator-controlled plan column the entitlement seam was built to consume, plus SEO feature keys in its matrix.",
       "acceptanceCriteria": [
-        "tenants.plan column ('basic'|'pro', default 'basic') + hand-authored migration (no migrate dev/db push; validate + generate + diff vs prisma migrate diff canonical output)",
-        "resolveTenantPlan(tenant): Clerk org publicMetadata.plan claim wins when present and valid; else the column; unreadable/unknown values -> 'basic' (fail closed, asserted)",
-        "requirePlanFeature('seoPro') server gate composing with requirePermission* — 403 with a distinct 'upgrade_required' error shape",
-        "PLAN_CONFIG typed map (basic $99 / pro $169) shape-compatible with docs/PRDS/PRD-303-subscription-plans-feature-gating.md AC-1/AC-2 (note: its feature union lacks SEO — add the seoPro key here)",
-        "Unit tests: claim precedence, fail-closed parsing, 403 shape, composition with permission gate",
+        "tenants.plan column ('trial'|'basic'|'pro'|'custom', default 'trial') + hand-authored migration (no migrate dev/db push; validate + generate + diff vs prisma migrate diff canonical output)",
+        "lib/entitlements/features.ts FEATURES gains SEO_CORE 'seo.core' + SEO_PRO 'seo.pro'; getTenantFeatures resolves from a plan matrix per its own docstring contract: trial/custom -> ALL features; pro -> ALL; basic -> all analytics.* keys UNCHANGED (their basic/pro split is the analytics module's pending decision — do NOT decide it here) + seo.core, NOT seo.pro",
+        "Plan parsing fails closed: unknown/unreadable column value -> treated as 'basic' (asserted); absent value impossible (column default trial)",
+        "requireFeature(FEATURES.SEO_PRO) server gate composing with requirePermission* — 403 with a distinct 'upgrade_required' error shape; existing analytics call sites (features[] in API responses, hasFeature checks) keep working unchanged (asserted by running their suites)",
+        "Clerk org publicMetadata.plan is a MIRROR only (written best-effort on plan change, NEVER read as source of truth) — the column is authoritative by explicit decision: tenants.settings is tenant-writable, and Clerk Billing was rejected (Stripe-underneath, cannabis-adjacent)",
+        "Unit tests: matrix per plan value, fail-closed parsing, 403 shape, permission+feature composition",
         "Typecheck passes",
         "Tests pass (targeted vitest run)"
       ],
       "priority": 11,
       "passes": false,
-      "notes": "NO plan/subscription code exists anywhere (grep-verified). Clerk metadata today: role/tenantId on users (onboarding/route.ts:145-199), nftTokenId/countryCode on orgs. tenants model at prisma/schema.prisma:770-830 — add ONLY the column (users model is load-bearing; tenants is safer but same discipline). Gate mechanics to mirror: lib/permissions/require-permission.ts + require-page-permission.ts."
+      "notes": "The seam SHIPPED in PR #235 (analytics session, 2026-08-13): lib/entitlements/features.ts — read its docstring first; it is the contract ('when the operator-controlled tenants.plan column lands, getTenantFeatures resolves from the plan matrix instead — call sites are already wired and do not change'). Business model (Gerard): 3 months all-features trial -> lock -> $99 basic / $169 pro / custom. tenants model at prisma/schema.prisma:770-830 — add ONLY the column. Gate mechanics mirror lib/permissions/require-permission.ts. REPO TRAP (#235 session): lib/db.ts prisma export is any-widened — annotate every callback param explicitly or TS7006 fails the build."
     },
     {
       "id": "US-012",
       "title": "Super-admin plan control",
       "description": "As the super admin, I set a tenant's plan until billing exists.",
       "acceptanceCriteria": [
-        "Plan selector on app/super-admin/tenants/[id]/tenant-edit-form.tsx; writes tenants.plan and best-effort syncs Clerk org publicMetadata.plan (sync failure -> warning surfaced, column stays authoritative)",
+        "Plan selector (trial/basic/pro/custom) on app/super-admin/tenants/[id]/tenant-edit-form.tsx; writes tenants.plan and best-effort MIRRORS to Clerk org publicMetadata.plan (sync failure -> warning surfaced, column stays authoritative)",
         "Audit-log entry on plan change (existing audit util)",
         "Typecheck passes",
         "Tests pass (targeted vitest run)",
@@ -200,7 +201,7 @@
       "description": "As a Basic tenant, I should see what Pro does and how to get it — not a blank space.",
       "acceptanceCriteria": [
         "Plan surfaced to admin UI server-side (resolved prop through the SEO page loader — no client-side Clerk parsing)",
-        "Pro features render locked cards for Basic in the SEO Manager: feature name, one-line value prop, 'Upgrade to Pro — $169/mo' CTA linking to a static upgrade/contact page (no checkout)",
+        "Locked cards appear ONLY for plan 'basic' (trial and custom tenants have all features — trial is the 3-month launch window and must see pro features working, not locked): feature name, one-line value prop, 'Upgrade to Pro — $169/mo' CTA linking to a static upgrade/contact page (no checkout)",
         "UI lock is presentation only — the US-011 server gate remains the boundary (asserted: a Basic tenant's direct API call 403s regardless of UI)",
         "Typecheck passes",
         "Tests pass (targeted vitest run)",
