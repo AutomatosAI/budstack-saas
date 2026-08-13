@@ -337,6 +337,18 @@ export function ContactDetailsStep({
         )}
       </div>
 
+      {/* US-023 (POPIA): marketing consent — optional and UNTICKED by default.
+          No validation on purpose: leaving it unticked is always valid. */}
+      <label className="flex items-start space-x-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={data.marketingConsent}
+          onChange={(e) => onUpdate({ marketingConsent: e.target.checked })}
+          className="h-4 w-4 mt-0.5 text-emerald-600 focus:ring-emerald-500"
+        />
+        <span className="text-sm">Email me offers and updates</span>
+      </label>
+
       <div className="flex justify-end">
         <Button
           type="submit"

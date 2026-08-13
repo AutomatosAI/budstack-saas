@@ -4,9 +4,10 @@ import { useState } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Edit, Trash2, Eye, EyeOff, Newspaper } from "lucide-react";
+import { Edit, Trash2, Eye, EyeOff, Newspaper, Mail } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { RowPill } from "@/components/admin/shared/RowPill";
+import { createCampaignFromPost } from "@/components/admin/email/campaign-from-post";
 
 interface Post {
   id: string;
@@ -17,10 +18,18 @@ interface Post {
   users?: { name: string | null } | null;
 }
 
-export default function PostsList({ initialPosts }: { initialPosts: any[] }) {
+export default function PostsList({
+  initialPosts,
+  canSendAsNewsletter = false,
+}: {
+  initialPosts: any[];
+  /** US-022 — resolved server-side from `canEditEmails`. Defaults to hiding it. */
+  canSendAsNewsletter?: boolean;
+}) {
   const router = useRouter();
   const [posts, setPosts] = useState(initialPosts);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isDrafting, setIsDrafting] = useState<string | null>(null);
 
   const handleTogglePublish = async (id: string, currentStatus: boolean) => {
     try {
@@ -43,6 +52,28 @@ export default function PostsList({ initialPosts }: { initialPosts: any[] }) {
       router.refresh();
     } catch (error) {
       toast.error("Failed to update article");
+    }
+  };
+
+  // US-022 — turns the article into a campaign DRAFT and opens it. It never
+  // sends: the author still chooses an audience and presses send in the
+  // composer, which is why this needs no confirmation step.
+  const handleSendAsNewsletter = async (id: string) => {
+    setIsDrafting(id);
+    try {
+      const campaign = await createCampaignFromPost(id);
+      toast.success("Newsletter draft created");
+      // Left disabled on the way out: clearing it here would re-arm the button
+      // for the moment before the route change lands, and a second click would
+      // leave the author with two drafts of the same article.
+      router.push(`/tenant-admin/emails/campaigns/${campaign.id}`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to create the newsletter draft",
+      );
+      setIsDrafting(null);
     }
   };
 
@@ -140,6 +171,17 @@ export default function PostsList({ initialPosts }: { initialPosts: any[] }) {
                     >
                       <Edit className="h-4 w-4" aria-hidden="true" />
                     </Link>
+                    {canSendAsNewsletter && post.published && (
+                      <button
+                        type="button"
+                        onClick={() => handleSendAsNewsletter(post.id)}
+                        disabled={isDrafting === post.id}
+                        title="Send as newsletter"
+                        className="bs-btn bs-btn-ghost bs-btn-sm disabled:opacity-50"
+                      >
+                        <Mail className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleTogglePublish(post.id, post.published)}

@@ -2,6 +2,7 @@ import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
+import { NewsletterNotice } from "@/components/newsletter-notice";
 import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/lib/tenant/tenant";
 import { runWithTenantContextAsync } from "@/lib/tenant/tenant-context";
 import { getFileUrl } from "@/lib/storage/s3";
@@ -350,6 +351,9 @@ async function renderTenantStore(
           {legacyFontUrl && <link rel="stylesheet" href={legacyFontUrl} />}
           {/* Skip nav/footer when: data-driven (TemplateRenderer handles it) or legacy (template bundles its own) */}
           {!skipLayoutChrome && renderNavigation()}
+          {/* Newsletter double opt-in outcome (US-003), rendered above the page
+              content whatever chrome the template brings. */}
+          <NewsletterNotice />
           <main>{children}</main>
           {!skipLayoutChrome && renderFooter()}
           <CookieConsent tenant={tenantWithTemplate} />

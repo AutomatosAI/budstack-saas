@@ -51,3 +51,58 @@ export const UPLOAD_MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 MB
 export const RATE_LIMIT_DEFAULT_MAX_REQUESTS = 20;
 /** Default fixed-window length, in milliseconds. */
 export const RATE_LIMIT_DEFAULT_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * Newsletter signup is an unauthenticated write reachable from every
+ * storefront, so it gets a tighter budget than the default: enough for a
+ * visitor who mistypes their address a few times, far too little to enumerate
+ * or to pump a tenant's subscriber table.
+ */
+export const NEWSLETTER_SUBSCRIBE_MAX_REQUESTS = 5;
+export const NEWSLETTER_SUBSCRIBE_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * Confirming is a read-mostly follow of a 256-bit token, so it is metered
+ * loosely — one shared corporate NAT clicking several confirmation links must
+ * not be throttled — while still capping a token-guessing loop.
+ */
+export const NEWSLETTER_CONFIRM_MAX_REQUESTS = 20;
+export const NEWSLETTER_CONFIRM_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * How long a double opt-in link stays followable. Long enough for someone who
+ * subscribes on a Friday and reads their mail the next weekend; short enough
+ * that a mailbox compromised months later cannot be used to manufacture
+ * consent. Re-subscribing refreshes `consentAt`, so the clock restarts.
+ */
+export const NEWSLETTER_CONFIRM_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/**
+ * Unsubscribe is metered loosest of the three. It is the RFC 8058 one-click
+ * target, so the caller is often a mail provider POSTing on the recipient's
+ * behalf from shared infrastructure — throttling that means someone stays
+ * subscribed against their wishes, which is a worse outcome than the token
+ * guessing this cap exists to bound.
+ */
+export const NEWSLETTER_UNSUBSCRIBE_MAX_REQUESTS = 60;
+export const NEWSLETTER_UNSUBSCRIBE_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * Open/click tracking (US-027) is metered loosest of all, and the cap bounds
+ * only the WRITE — a throttled caller still gets the pixel and still gets the
+ * redirect. Mail providers fetch images and pre-resolve links through shared
+ * proxy infrastructure, so a single address here can stand for thousands of
+ * unrelated recipients; a tight cap would silently stop counting exactly the
+ * inboxes most people use.
+ */
+export const EMAIL_TRACKING_MAX_REQUESTS = 300;
+export const EMAIL_TRACKING_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * How long a tracking route waits for the rate limiter before carrying on
+ * without it. Redis normally answers in single-digit milliseconds; anything
+ * past this is an outage, and the reader waiting on it is following a link out
+ * of an email. See `lib/email/tracking-rate-limit.ts` for why the shared
+ * limiter's own fail-open does not cover this case.
+ */
+export const EMAIL_TRACKING_TIMEOUT_MS = 500;

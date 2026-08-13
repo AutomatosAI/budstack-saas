@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { Prisma } from "@prisma/client";
+import { listTenantTags } from "@/lib/customers/customer-tags";
+import { tagSchema } from "@/lib/customers/tag-format";
 import { ERASURE_EMAIL_DOMAIN } from "@/lib/gdpr/erasure";
 import { Users, UserCheck, UserPlus } from "lucide-react";
 import { StatCard } from "@/components/admin/shared";
@@ -74,6 +76,13 @@ export default async function CustomersListPage({
   // Parse search param from URL
   const search = typeof params.search === "string" ? params.search.trim() : "";
 
+  // US-024: tag filter param, matched in the tag's canonical form. A malformed
+  // value (blank after trim, over-long) is treated as no filter — a shared URL
+  // should degrade to the full list, not an error page.
+  const rawTag = typeof params.tag === "string" ? params.tag : "";
+  const parsedTag = rawTag ? tagSchema.safeParse(rawTag) : null;
+  const tagFilter = parsedTag?.success ? parsedTag.data : "";
+
   // Parse sort params from URL
   const sortByParam = typeof params.sortBy === "string" ? params.sortBy : null;
   const sortOrderParam =
@@ -113,6 +122,15 @@ export default async function CustomersListPage({
     ];
   }
 
+  // US-024: only customers carrying the selected tag. The relation rows repeat
+  // the tenantId, so the predicate re-asserts it where a tenant is in scope —
+  // belt and braces on top of the users-level scoping above.
+  if (tagFilter) {
+    whereClause.customer_tags = {
+      some: { tag: tagFilter, ...(tenantId && { tenantId }) },
+    };
+  }
+
   // Calculate skip for pagination
   const skip = (page - 1) * pageSize;
 
@@ -125,7 +143,7 @@ export default async function CustomersListPage({
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [filteredCount, rawCustomers, totalCustomersCount, recentSignupsCount, tenantQuestionnaires] =
+  const [filteredCount, rawCustomers, totalCustomersCount, recentSignupsCount, tenantQuestionnaires, availableTags] =
     await Promise.all([
       prisma.users.count({ where: whereClause }),
       prisma.users.findMany({
@@ -180,6 +198,8 @@ export default async function CustomersListPage({
           phoneNumber: true,
         },
       }),
+      // US-024: every tag in use across this tenant — the filter's options.
+      listTenantTags(tenantId),
     ]);
 
   const failedIdUploadEmails = new Set(
@@ -263,7 +283,11 @@ export default async function CustomersListPage({
         />
       </div>
 
-      <CustomersTable customers={customers} totalCount={filteredCount} />
+      <CustomersTable
+        customers={customers}
+        totalCount={filteredCount}
+        availableTags={availableTags}
+      />
     </div>
   );
 }

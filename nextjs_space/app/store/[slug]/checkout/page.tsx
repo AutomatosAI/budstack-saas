@@ -78,6 +78,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const [addressMode, setAddressMode] = useState<"saved" | "custom">("custom");
   const [loadingAddress, setLoadingAddress] = useState(true);
 
+  // US-023 (POPIA): marketing consent — UNTICKED by default, never inferred.
+  const [marketingConsent, setMarketingConsent] = useState(false);
+
   const [formData, setFormData] = useState({
     address1: "",
     address2: "",
@@ -166,6 +169,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               imageUrl: item.image,
             },
           })),
+          // US-023: explicit marketing opt-in from the checkbox below the
+          // shipping form. false/absent never clears an earlier consent.
+          marketingConsent,
         }),
       });
 
@@ -638,6 +644,27 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                       </div>
                     </div>
                   )}
+
+                  {/* US-023 (POPIA): marketing consent — UNTICKED by default.
+                      Purely additive: has no effect on the order itself. */}
+                  <label className="flex items-start gap-2 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={marketingConsent}
+                      onChange={(e) => setMarketingConsent(e.target.checked)}
+                      className="h-4 w-4 mt-0.5"
+                      style={{ accentColor: "hsl(var(--tenant-color-primary))" }}
+                    />
+                    <span
+                      className="text-sm"
+                      style={{
+                        color: "hsl(var(--tenant-color-text))",
+                        fontFamily: "var(--tenant-font-base, sans-serif)",
+                      }}
+                    >
+                      Email me offers and updates
+                    </span>
+                  </label>
                 </CardContent>
               </Card>
 

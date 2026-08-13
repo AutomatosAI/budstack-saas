@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
 import { uploadFile, getFileUrl } from "@/lib/storage/s3";
 import { validateUploadBuffer } from "@/lib/storage/upload-validation";
+import {
+  publicImageContentType,
+  publicImagePath,
+} from "@/lib/storage/public-image-url";
 import { apiError, apiValidationError } from "@/lib/api-error";
 
 // withTenantAuth derives tenantId from the authenticated user (user.tenantId),
@@ -48,15 +52,18 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
     const key = await uploadFile(buffer, sanitizedName, file.type, uploadPrefix);
 
     // The bucket is private (Object Ownership = bucket-owner-enforced, so ACLs
-    // are rejected). Return a SIGNED URL so the cover-image preview + storefront
-    // <img> can load it. NOTE: signed URLs expire (~1h) — a follow-up will store
-    // the key and sign at render for durable public covers.
+    // are rejected). The signed URL is the immediate preview; it expires after
+    // ~1h, so anything that has to keep resolving — a blog cover, an image in a
+    // campaign — stores publicUrl instead (US-005). Non-image uploads (PDFs)
+    // have no durable route and stay presigned-only.
     const url = await getFileUrl(key, { tenantId });
+    const publicUrl = publicImageContentType(key) ? publicImagePath(key) : null;
 
     return NextResponse.json({
       success: true,
       key,
       url,
+      publicUrl,
     });
   } catch (error) {
     console.error("Upload error:", error);

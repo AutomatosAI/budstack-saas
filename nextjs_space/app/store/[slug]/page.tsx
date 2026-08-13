@@ -340,7 +340,7 @@ export default async function TenantStorePage({
       <ProcessSteps consultationUrl={consultationUrl} />
 
       {/* Educational Content */}
-      <EducationalContent />
+      <EducationalContent tenantSlug={tenant.subdomain} />
 
       {/* Testimonials */}
       <TestimonialsSlider />

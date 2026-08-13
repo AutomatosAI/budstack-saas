@@ -5,6 +5,8 @@ import useSWR, { mutate } from "swr";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
+import { REORDER_REMINDER_EVENT } from "@/lib/email/reorder-reminder";
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface EmailTemplate {
@@ -39,6 +41,12 @@ const SYSTEM_EVENTS = [
         id: "orderConfirmation",
         label: "Order Confirmation",
         description: "Sent after purchase.",
+    },
+    {
+        id: REORDER_REMINDER_EVENT,
+        label: "Reorder Reminder",
+        description:
+            "US-028 automation. The platform default every store falls back to until it maps one of its own.",
     },
 ];
 

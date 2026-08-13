@@ -6,6 +6,7 @@ import {
   EmailEditor,
   EmailTemplateData,
 } from "@/components/admin/email/EmailEditor";
+import type { EmailContentJson } from "@/lib/email/email-content-json";
 import { toast } from "sonner";
 
 interface EditTemplateClientProps {
@@ -16,11 +17,20 @@ interface EditTemplateClientProps {
     contentHtml: string;
     description: string;
     category: string;
+    /**
+     * US-012 — the composer document, straight off the Json column. Present
+     * means the template opens in the visual editor; the editor re-checks the
+     * shape before trusting it.
+     */
+    contentJson?: EmailContentJson | null;
   };
+  /** US-013 — the mapped event, or null. Selects the merge tags on offer. */
+  eventType?: string | null;
 }
 
 export function TenantEditTemplateClient({
   template,
+  eventType,
 }: EditTemplateClientProps) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
@@ -68,6 +78,11 @@ export function TenantEditTemplateClient({
           initialData={template}
           onSave={handleSave}
           isSaving={isSaving}
+          testSendUrl={`/api/tenant-admin/email-templates/${template.id}/test-send`}
+          previewUrl="/api/tenant-admin/email-templates/preview"
+          templateId={template.id}
+          eventType={eventType}
+          uploadUrl="/api/tenant-admin/upload"
         />
       </div>
     </div>

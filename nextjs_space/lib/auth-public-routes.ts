@@ -94,6 +94,44 @@ export const AUTH_PUBLIC_ROUTES: readonly PublicRoute[] = [
     reason: "Public storefront read: single medical condition by slug.",
   },
   {
+    pattern: "/api/storefront/newsletter/subscribe",
+    reason:
+      "Public storefront newsletter signup: a visitor has no session by definition. " +
+      "Tenant resolved from the request host (never the body), Zod-validated, own " +
+      "IP rate-limit, and it can only create/refresh a PENDING row — it can never " +
+      "revive an UNSUBSCRIBED one or read a subscriber back.",
+  },
+  {
+    pattern: "/api/storefront/newsletter/confirm",
+    reason:
+      "Public double opt-in confirm: the visitor follows a link from their inbox and " +
+      "has no session. Tenant resolved from the request host, token charset/length " +
+      "pinned and redeemed inside that tenant's context, rate-limited by IP. It can " +
+      "only move a PENDING row to CONFIRMED — never revive an UNSUBSCRIBED one — and " +
+      "rotates the token so the link cannot be replayed.",
+  },
+  {
+    pattern: "/api/storefront/newsletter/unsubscribe",
+    reason:
+      "Public unsubscribe, and the RFC 8058 one-click POST target: the caller is " +
+      "a mail provider acting for the recipient, so it must work with no session, " +
+      "no cookies and no custom headers (which also rules out a CSRF token). The " +
+      "256-bit token in the URL is the credential, the tenant is resolved from the " +
+      "request host, and the only effect is removing the holder from marketing — " +
+      "there is nothing an attacker gains and nothing to read back.",
+  },
+  {
+    pattern: "/api/public/images/[...key]",
+    reason:
+      "Durable delivery of images the tenant already published: a mail client " +
+      "rendering a campaign and an anonymous storefront visitor both fetch it " +
+      "with no session, which is the whole point of replacing the 1h presigned " +
+      "URL. Read-only, restricted by the s3-tenant-guard to keys under " +
+      "tenants/{id}/uploads/, extension-allow-listed to non-SVG images with the " +
+      "Content-Type derived locally, and every rejection is an identical 404 so " +
+      "the bucket cannot be probed.",
+  },
+  {
     pattern: "/api/store/[slug]/products",
     reason: "Public storefront read: product list by tenant slug.",
   },

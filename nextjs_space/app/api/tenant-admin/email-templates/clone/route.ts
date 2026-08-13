@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withTenantAuth } from "@/lib/api-auth";
+import { requirePermission } from "@/lib/permissions/require-permission";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
@@ -12,7 +12,9 @@ const emailCloneSchema = z
   })
   .strict();
 
-export const POST = withTenantAuth(async (req, { tenantId }) => {
+// US-009 — cloning creates a tenant template and rebinds an event mapping, so
+// it is an authoring action: canEditEmails.
+export const POST = requirePermission("canEditEmails", async (req, { tenantId }) => {
   try {
     const { originalTemplateId, eventType } = await parseJsonBody(
       req,
@@ -37,6 +39,12 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
         name: `${original.name} (Custom)`,
         subject: original.subject,
         contentHtml: original.contentHtml,
+        // US-012 — the composer document travels with the copy. Without it a
+        // clone of a visually-authored template opens in the HTML editor, and
+        // the first save from there overwrites the layout it was cloned from.
+        // `undefined` (not null) leaves the column unset for a source that has
+        // no document, which is every template written before the composer.
+        contentJson: original.contentJson ?? undefined,
         category: original.category,
         isSystem: false,
         tenantId: tenantId,

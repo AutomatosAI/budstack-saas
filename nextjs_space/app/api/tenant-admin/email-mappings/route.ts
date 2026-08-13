@@ -1,13 +1,25 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withTenantAuth } from "@/lib/api-auth";
+import { requirePermission } from "@/lib/permissions/require-permission";
 import { prisma } from "@/lib/db";
 import { apiError, apiValidationError } from "@/lib/api-error";
+import { NEWSLETTER_CONFIRM_TEMPLATE } from "@/lib/email/newsletter-confirm";
+import { REORDER_REMINDER_EVENT } from "@/lib/email/reorder-reminder";
+import {
+  isReservedEventType,
+  RESERVED_EVENT_TYPE_MESSAGE,
+} from "@/lib/email/reserved-event-types";
 import { parseJsonBody } from "@/lib/validation/body";
 
 const emailMappingSchema = z
   .object({
-    eventType: z.string().min(1).max(100),
+    eventType: z
+      .string()
+      .min(1)
+      .max(100)
+      .refine((value) => !isReservedEventType(value), {
+        message: RESERVED_EVENT_TYPE_MESSAGE,
+      }),
     templateId: z.string().min(1).max(200),
   })
   .strict();
@@ -20,9 +32,17 @@ const SYSTEM_EVENTS = [
   "userInvite",
   "paymentFailed",
   "subscriptionUpdated",
+  NEWSLETTER_CONFIRM_TEMPLATE,
+  // US-028. Must stay in step with the same list in
+  // `components/admin/email/TenantEventMapper.tsx` — a mapping row whose
+  // eventType is missing here is invisible to that screen, which reads as "this
+  // event has no template" whatever the database says.
+  REORDER_REMINDER_EVENT,
 ];
 
-export const GET = withTenantAuth(async (_request, { tenantId }) => {
+// US-009 — the mapping list embeds each bound template (subject + HTML), so it
+// reads as canViewEmails; binding and resetting an event are canEditEmails.
+export const GET = requirePermission("canViewEmails", async (_request, { tenantId }) => {
   try {
     const results = [];
 
@@ -70,7 +90,7 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
   }
 });
 
-export const POST = withTenantAuth(async (req, { tenantId }) => {
+export const POST = requirePermission("canEditEmails", async (req, { tenantId }) => {
   try {
     const { eventType, templateId } = await parseJsonBody(
       req,
@@ -109,7 +129,7 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
   }
 });
 
-export const DELETE = withTenantAuth(async (req, { tenantId }) => {
+export const DELETE = requirePermission("canEditEmails", async (req, { tenantId }) => {
   try {
     const { searchParams } = new URL(req.url);
     const eventType = searchParams.get("eventType");

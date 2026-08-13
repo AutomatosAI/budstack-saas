@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 import { MailerService } from "@/lib/email/mailer";
+import type { EmailCategory } from "@/lib/email/suppression";
 import WelcomeEmail from "@/emails/welcome";
 import PasswordResetEmail from "@/emails/password-reset";
 import OrderConfirmationEmail from "@/emails/order-confirmation";
@@ -8,6 +9,7 @@ import KycLinkEmail from "@/emails/kyc-link";
 import KycStatusEmail from "@/emails/kyc-status";
 import ClientStatusEmail from "@/emails/client-status";
 import OrderStatusUpdateEmail from "@/emails/order-status-update";
+import NewsletterConfirmEmail from "@/emails/newsletter-confirm";
 
 export interface EmailOptions {
   to: string;
@@ -18,6 +20,8 @@ export interface EmailOptions {
   templateName: string;
   metadata?: any;
   variables?: any;
+  /** US-004 — omit for transactional; "marketing" is gated on suppression. */
+  category?: EmailCategory;
 }
 
 export async function sendEmail({
@@ -29,6 +33,7 @@ export async function sendEmail({
   templateName,
   metadata,
   variables,
+  category,
 }: EmailOptions) {
   if (!tenantId) {
     console.warn(
@@ -46,6 +51,7 @@ export async function sendEmail({
     metadata,
     variables,
     from,
+    category,
   });
 }
 
@@ -129,6 +135,14 @@ export const emailTemplates = {
     return render(
       ClientStatusEmail({ userName, status, tenantName, rejectionReason }),
     );
+  },
+
+  newsletterConfirm: (
+    confirmUrl: string,
+    tenantName: string,
+    logoUrl?: string,
+  ) => {
+    return render(NewsletterConfirmEmail({ confirmUrl, tenantName, logoUrl }));
   },
 
   orderStatusUpdate: (

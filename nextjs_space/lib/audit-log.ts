@@ -154,6 +154,9 @@ export const AUDIT_ACTIONS = {
   CUSTOMER_UPDATED: "customer.updated",
   CUSTOMER_EMAIL_CHANGED: "customer.email_changed",
   CUSTOMER_KYC_VERIFIED: "customer.kyc_verified",
+  // US-023: admin manually records / withdraws a customer's marketing consent
+  CUSTOMER_MARKETING_CONSENT_GRANTED: "customer.marketing_consent_granted",
+  CUSTOMER_MARKETING_CONSENT_REVOKED: "customer.marketing_consent_revoked",
   CUSTOMER_DELETED_GDPR: "customer.deleted_gdpr",
   ACCOUNT_DATA_EXPORTED: "account.data_exported",
   ACCOUNT_DELETED_GDPR_SELF: "account.deleted_gdpr_self",

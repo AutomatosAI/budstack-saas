@@ -5,7 +5,36 @@ import Redis from 'ioredis';
 import Handlebars from 'handlebars';
 import { prisma as db } from '../lib/db';
 import { decrypt } from '../lib/security/encryption';
-import { emailQueueName } from '../lib/queue';
+import { campaignQueueName, emailQueueName, getReorderQueue, reorderQueueName } from '../lib/queue';
+import { registerEmailHelpers, renderEmailTemplate } from '../lib/email/handlebars-helpers';
+import { markEmailLogFailed, markEmailLogSent } from '../lib/email/email-log-linkage';
+import {
+    MISSING_FOOTER_LOG_MESSAGE,
+    listUnsubscribeHeaders,
+    resolveMarketingCompliance,
+} from '../lib/email/marketing-headers';
+import { SUPPRESSED_LOG_MESSAGE } from '../lib/email/suppression';
+import { resolveSuppressionBlock } from '../lib/email/suppression-store';
+import {
+    finalizeCampaignIfComplete,
+    loadCampaignForSend,
+    markCampaignRecipient,
+    type CampaignSendSource,
+} from '../lib/email/campaign-recipient-store';
+import {
+    CAMPAIGN_CANCELLED_LOG_MESSAGE,
+    CAMPAIGN_MISSING_LOG_MESSAGE,
+    campaignJobTarget,
+} from '../lib/email/campaign-send';
+import { SCHEDULED_SEND_REASON } from '../lib/email/campaign-schedule';
+import { runScheduledCampaign } from '../lib/email/campaign-scheduled-runner';
+import {
+    REORDER_REMINDER_CRON,
+    REORDER_REMINDER_JOB,
+    REORDER_REMINDER_SCHEDULER_ID,
+} from '../lib/email/reorder-reminder';
+import { runReorderReminderSweep } from '../lib/email/reorder-reminder-runner';
+import { bypassTenantScope } from '../lib/tenant/tenant-scope-policy';
 import {
     DEFAULT_MAX_JOB_AGE_MS,
     DEFAULT_QUEUED_ALERT_AGE_MS,
@@ -26,48 +55,55 @@ console.log('[EmailWorker] Starting...');
 console.log(`[EmailWorker] Connecting to Redis: ${REDIS_URL.replace(/\/\/.*@/, '//***@')}`);
 console.log(`[EmailWorker] Max job age ${MAX_JOB_AGE_MS}ms; queued-alert threshold ${QUEUED_ALERT_AGE_MS}ms`);
 
-// Register Helpers
-Handlebars.registerHelper('multiply', (a, b) => {
-    return (Number(a) * Number(b)).toFixed(2);
-});
-Handlebars.registerHelper('toFixed', (num) => {
-    return Number(num).toFixed(2);
-});
+// Register Helpers — shared with the request-path renderer (US-006) so a test
+// send compiles a template exactly the way this worker will.
+registerEmailHelpers(Handlebars);
 
 const worker = new Worker(emailQueueName, async (job: Job) => {
     console.log(`[EmailWorker] Processing job ${job.id} for tenant ${job.data.tenantId}`);
-    const { tenantId, to, subject, html, templateName, from, variables } = job.data;
+    const { tenantId, to, subject, html, templateName, from, variables, logId } = job.data;
 
-    // Flip the matching QUEUED email_logs row (or create one) to FAILED.
-    const markLogFailed = async (errorMessage: string) => {
-        const queuedLog = await db.email_logs.findFirst({
-            where: {
-                tenantId,
-                recipient: Array.isArray(to) ? to.join(',') : to,
-                subject,
-                status: 'QUEUED',
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+    // US-008: `logId` is the row MailerService created before enqueueing, so the
+    // outcome lands on this job's own log row. Jobs enqueued before US-008 carry
+    // no logId and fall back to the (recipient, subject) heuristic inside.
+    //
+    // bypassTenantScope for the same reason the suppression check below uses it:
+    // email_logs is tenant-scoped and the worker has no request context, so an
+    // EXPLICIT null context keeps these writes legal under
+    // TENANT_CONTEXT_STRICT. The helpers put tenantId in the query themselves.
+    const logTarget = { logId, tenantId, to, subject, templateName };
 
-        if (queuedLog) {
-            await db.email_logs.update({
-                where: { id: queuedLog.id },
-                data: { status: 'FAILED', errorMessage },
-            });
-        } else {
-            await db.email_logs.create({
-                data: {
-                    tenantId,
-                    recipient: Array.isArray(to) ? to.join(',') : to,
-                    subject,
-                    templateName,
-                    status: 'FAILED',
-                    errorMessage,
-                },
-            });
-        }
+    // US-019: present only on a campaign fan-out job. Null is every
+    // transactional send and every payload enqueued before this story — the
+    // same versioned-by-tolerance rule `category` and `logId` follow — and
+    // leaves every branch below exactly as it was.
+    const campaignTarget = campaignJobTarget(job.data);
+
+    // Record this recipient's outcome on the campaign, then flip the campaign
+    // itself to SENT if this was the last one outstanding. Both writes go
+    // through bypassTenantScope for the same reason as the log writes above:
+    // the worker has no request context, and the helpers put tenantId in the
+    // query themselves.
+    const markRecipient = async (
+        status: 'SENT' | 'FAILED' | 'SUPPRESSED',
+        detail: { emailLogId?: string | null; error?: string | null } = {},
+    ) => {
+        if (!campaignTarget) return;
+        await bypassTenantScope(() =>
+            markCampaignRecipient({
+                recipientId: campaignTarget.recipientId,
+                status,
+                ...detail,
+            }),
+        );
+        await bypassTenantScope(() =>
+            finalizeCampaignIfComplete(campaignTarget.campaignId, tenantId),
+        );
     };
+
+    // Flip this job's email_logs row (or create one) to FAILED.
+    const markLogFailed = (errorMessage: string) =>
+        bypassTenantScope(() => markEmailLogFailed({ ...logTarget, errorMessage }));
 
     // PRD-220: a job past its max age is expired, NOT sent — the backlog that
     // accumulated while no worker was deployed must never blast customers
@@ -77,7 +113,66 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
         const message = `Expired unsent (PRD-220): enqueued ${new Date(job.timestamp).toISOString()}, exceeds EMAIL_MAX_JOB_AGE_MS=${MAX_JOB_AGE_MS}`;
         console.warn(`[EmailWorker] Job ${job.id} ${message}`);
         await markLogFailed(message);
+        await markRecipient('FAILED', { emailLogId: logId ?? null, error: message });
         return { success: false, expired: true };
+    }
+
+    // US-004: a MARKETING job addressed to a suppressed recipient must never be
+    // sent. Same shape as the expiry guard above — return, don't throw, because
+    // this is an intentional drop and a retry would only re-decide it the same
+    // way. Transactional jobs (and every legacy payload, which carries no
+    // `category`) skip the check entirely and are unaffected.
+    //
+    // bypassTenantScope binds an EXPLICIT null context so this stays correct
+    // when TENANT_CONTEXT_STRICT is on: the worker runs outside any request, and
+    // resolveSuppressionBlock puts the tenantId in the query itself. The callee
+    // is async and starts executing synchronously inside the bound store, so the
+    // lazy Prisma promise is awaited while the context is still live.
+    const suppression = await bypassTenantScope(() =>
+        resolveSuppressionBlock({ tenantId, to, category: job.data.category }),
+    );
+    if (suppression.blocked) {
+        console.warn(
+            `[EmailWorker] Job ${job.id} ${SUPPRESSED_LOG_MESSAGE} (${suppression.suppressed.length} recipient(s))`,
+        );
+        await markLogFailed(SUPPRESSED_LOG_MESSAGE);
+        await markRecipient('SUPPRESSED', {
+            emailLogId: logId ?? null,
+            error: SUPPRESSED_LOG_MESSAGE,
+        });
+        return { success: false, suppressed: true };
+    }
+
+    // US-019: the campaign this job belongs to, read BEFORE any rendering so a
+    // cancel stops the rest of a fan-out at the first opportunity. Same
+    // return-don't-throw shape as the two guards above: a cancelled campaign and
+    // a deleted one are both decisions, not failures, and retrying either would
+    // only reach the same answer three more times.
+    let campaignSource: CampaignSendSource | null = null;
+    if (campaignTarget) {
+        campaignSource = await bypassTenantScope(() =>
+            loadCampaignForSend(campaignTarget.campaignId, tenantId),
+        );
+
+        if (!campaignSource) {
+            console.warn(`[EmailWorker] Job ${job.id} ${CAMPAIGN_MISSING_LOG_MESSAGE}`);
+            await markLogFailed(CAMPAIGN_MISSING_LOG_MESSAGE);
+            await markRecipient('FAILED', {
+                emailLogId: logId ?? null,
+                error: CAMPAIGN_MISSING_LOG_MESSAGE,
+            });
+            return { success: false, campaignMissing: true };
+        }
+
+        if (campaignSource.status === 'CANCELLED') {
+            console.warn(`[EmailWorker] Job ${job.id} ${CAMPAIGN_CANCELLED_LOG_MESSAGE}`);
+            await markLogFailed(CAMPAIGN_CANCELLED_LOG_MESSAGE);
+            await markRecipient('FAILED', {
+                emailLogId: logId ?? null,
+                error: CAMPAIGN_CANCELLED_LOG_MESSAGE,
+            });
+            return { success: false, cancelled: true };
+        }
     }
 
     let finalHtml = html;
@@ -135,6 +230,44 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
     } catch (e) {
         console.error('[EmailWorker] Failed to resolve dynamic template:', e);
         // Continue with default provided html/subject
+    }
+
+    // US-019: a campaign carries no `html` in its payload — 5,000 copies of the
+    // same email body do not belong in Redis. The stored `contentHtml` is the
+    // US-011 pipeline's output with `{{unsubscribeUrl}}` left as a literal slot
+    // precisely so this compile can fill it per address. Deliberately LAST, so a
+    // stray event mapping can never swap a campaign the author approved for
+    // another template (its templateName is reserved for the same reason).
+    if (campaignSource) {
+        finalHtml = renderEmailTemplate(campaignSource.contentHtml, variables || {});
+        finalSubject = renderEmailTemplate(campaignSource.subject, variables || {});
+    }
+
+    // US-020: the enforced footer, checked on the RENDERED body — the last
+    // moment it is still possible to refuse. US-017 asserts the stored HTML
+    // carries `href="{{unsubscribeUrl}}"`; only here is it known whether the
+    // worker actually filled that slot with a link a recipient can follow.
+    //
+    // Every transactional job — and every payload enqueued before this story,
+    // which carries no `category` — resolves to no refusal and no header, so it
+    // takes exactly the path it took before.
+    const compliance = resolveMarketingCompliance({
+        category: job.data.category,
+        variables,
+        html: finalHtml,
+    });
+
+    // Return, don't throw — the same intentional-drop shape as the expiry,
+    // suppression and cancel guards above. Three retries would re-render the
+    // same document and reach the same answer three more times.
+    if (compliance.refuse) {
+        console.warn(`[EmailWorker] Job ${job.id} ${MISSING_FOOTER_LOG_MESSAGE}`);
+        await markLogFailed(MISSING_FOOTER_LOG_MESSAGE);
+        await markRecipient('FAILED', {
+            emailLogId: logId ?? null,
+            error: MISSING_FOOTER_LOG_MESSAGE,
+        });
+        return { success: false, missingFooter: true };
     }
 
     try {
@@ -205,56 +338,47 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
 
         // Send Email
         console.log(`[EmailWorker] Sending email to ${to}...`);
+        // US-020: RFC 8058 one-click, spread conditionally so a transactional
+        // send's payload is exactly the object it was before this story. The
+        // mailto half is derived from `fromAddress`, which is only resolved
+        // above — the one reason these headers are built here and not with the
+        // footer guard.
         const info = await transporter.sendMail({
             from: fromAddress,
             to,
             subject: finalSubject,
             html: finalHtml,
+            ...(compliance.unsubscribeUrl
+                ? {
+                      headers: listUnsubscribeHeaders(
+                          compliance.unsubscribeUrl,
+                          fromAddress,
+                      ),
+                  }
+                : {}),
         });
 
         console.log(`[EmailWorker] Email sent: ${info.messageId}`);
 
-        // Update the email log to SENT status
-        // Find the most recent QUEUED log for this tenant/recipient/subject
-        const queuedLog = await db.email_logs.findFirst({
-            where: {
-                tenantId,
-                recipient: Array.isArray(to) ? to.join(',') : to,
-                subject,
-                status: 'QUEUED',
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+        // Flip this job's own log row to SENT (US-008 — by id, not by guesswork).
+        await bypassTenantScope(() =>
+            markEmailLogSent({ ...logTarget, smtpResponse: info.response }),
+        );
 
-        if (queuedLog) {
-            await db.email_logs.update({
-                where: { id: queuedLog.id },
-                data: {
-                    status: 'SENT',
-                    smtpResponse: info.response,
-                    sentAt: new Date(),
-                },
-            });
-        } else {
-            // Create a new SENT log if we couldn't find the QUEUED one
-            await db.email_logs.create({
-                data: {
-                    tenantId,
-                    recipient: Array.isArray(to) ? to.join(',') : to,
-                    subject,
-                    templateName,
-                    status: 'SENT',
-                    smtpResponse: info.response,
-                    sentAt: new Date(),
-                },
-            });
-        }
+        // US-019: the delivery record, and the campaign's own completion.
+        await markRecipient('SENT', { emailLogId: logId ?? null, error: null });
 
         return { success: true, messageId: info.messageId };
 
     } catch (error: any) {
         console.error(`[EmailWorker] Job ${job.id} failed:`, error);
         await markLogFailed(error.message);
+        // FAILED now, and SENT later if a BullMQ retry gets through — the
+        // recipient row records the latest attempt, not the first one.
+        await markRecipient('FAILED', {
+            emailLogId: logId ?? null,
+            error: error.message,
+        });
         throw error;
     }
 }, {
@@ -273,6 +397,125 @@ worker.on('failed', (job, err) => {
 worker.on('error', err => {
     console.error('[EmailWorker] Worker error:', err);
 });
+
+// US-021 — the delayed triggers that start a SCHEDULED campaign's fan-out.
+//
+// Its own queue and its own worker: one job here becomes thousands of jobs on
+// the email queue, and the PRD-220 expiry guard above would drop a trigger
+// deliberately dated weeks ahead as stale the moment it came due. Concurrency
+// of 1 because each of these is a fan-out — two at once is two fan-outs
+// competing for the same SMTP mailbox.
+//
+// The decision is made inside runScheduledCampaign against the campaign row as
+// it stands right now, which is why a campaign cancelled while it waited never
+// sends. Nothing here decides anything; this is the log.
+const campaignWorker = new Worker(campaignQueueName, async (job: Job) => {
+    const outcome = await runScheduledCampaign(job.data, String(job.id));
+
+    if (outcome.decision === 'UNREADABLE') {
+        console.warn(`[CampaignScheduler] Job ${job.id} carries no campaign target — ignored`);
+    } else if (outcome.decision !== 'SEND') {
+        console.warn(
+            `[CampaignScheduler] Campaign ${outcome.campaignId} not sent: ${SCHEDULED_SEND_REASON[outcome.decision]}`,
+        );
+    } else if (outcome.refusal) {
+        console.warn(
+            `[CampaignScheduler] Campaign ${outcome.campaignId} refused at send time (${outcome.refusal}) — returned to draft`,
+        );
+    } else {
+        console.log(
+            `[CampaignScheduler] Campaign ${outcome.campaignId} sending: ${outcome.queued} message(s) queued`,
+        );
+    }
+
+    return outcome;
+}, {
+    connection: new Redis(REDIS_URL, { maxRetriesPerRequest: null }) as any,
+    concurrency: 1,
+});
+
+campaignWorker.on('failed', (job, err) => {
+    console.error(`[CampaignScheduler] Trigger ${job?.id} failed: ${err.message}`);
+});
+
+campaignWorker.on('error', err => {
+    console.error('[CampaignScheduler] Worker error:', err);
+});
+
+// US-028 — the daily reorder-reminder sweep.
+//
+// SINGLE-INSTANCE BY CONSTRUCTION, at two independent levels, because worker
+// count is a deployment decision nobody wants to couple a send to:
+//
+//   1. Registration is an UPSERT keyed on a fixed scheduler id. Every worker
+//      that boots registers the same id, and BullMQ keeps one scheduler for it —
+//      so N workers produce one sweep a day, not N.
+//   2. Each sweep claims every customer it mails with a conditional write
+//      (`claimReorderReminder`) before queueing anything. Even two sweeps
+//      running at once mail nobody twice; the second one finds nothing to claim.
+//
+// Concurrency of 1 because a sweep fans out across every enabled store — two at
+// once is two fan-outs competing for the same connection pool.
+const reorderWorker = new Worker(reorderQueueName, async (job: Job) => {
+    const outcome = await runReorderReminderSweep();
+
+    console.log(
+        `[ReorderReminder] Sweep ${job.id}: ${outcome.queued} reminder(s) queued across ${outcome.tenants} store(s)`,
+    );
+    for (const tenant of outcome.perTenant) {
+        // A store that threw queued nothing, exactly like a store with nobody
+        // due. This is the only line that tells them apart, so it comes first
+        // and is never filtered out by the "nothing to report" skip below.
+        if (tenant.error) {
+            console.error(
+                `[ReorderReminder]   ${tenant.tenantId}: pass failed, other stores unaffected — ${tenant.error}`,
+            );
+            continue;
+        }
+        if (tenant.due === 0 && !tenant.deferred) continue;
+        console.log(
+            `[ReorderReminder]   ${tenant.tenantId}: ${tenant.due} due, ${tenant.queued} queued, ${tenant.skipped} already claimed`,
+        );
+        // Never a silent truncation: a store at the cap has customers waiting,
+        // and tomorrow's sweep takes them first.
+        if (tenant.deferred) {
+            console.warn(
+                `[ReorderReminder]   ${tenant.tenantId}: hit the per-sweep cap — more customers are due and will be taken first on the next run`,
+            );
+        }
+    }
+
+    return outcome;
+}, {
+    connection: new Redis(REDIS_URL, { maxRetriesPerRequest: null }) as any,
+    concurrency: 1,
+});
+
+reorderWorker.on('failed', (job, err) => {
+    console.error(`[ReorderReminder] Sweep ${job?.id} failed: ${err.message}`);
+});
+
+reorderWorker.on('error', err => {
+    console.error('[ReorderReminder] Worker error:', err);
+});
+
+// Idempotent across restarts and across replicas — see the note above. Failing
+// this must not take the worker down: the email queue is what actually delivers
+// mail, and a missing scheduler costs a retention nudge, not a receipt.
+getReorderQueue()
+    .upsertJobScheduler(
+        REORDER_REMINDER_SCHEDULER_ID,
+        { pattern: REORDER_REMINDER_CRON, tz: 'UTC' },
+        { name: REORDER_REMINDER_JOB },
+    )
+    .then(() => {
+        console.log(
+            `[ReorderReminder] Daily sweep scheduled (${REORDER_REMINDER_CRON} UTC)`,
+        );
+    })
+    .catch(err => {
+        console.error('[ReorderReminder] Failed to schedule daily sweep:', err);
+    });
 
 // PRD-220 AC-A2/A3 — liveness heartbeat + stuck-queue alert. The super-admin
 // email-health route reads the heartbeat key; Railway log alerting matches
@@ -317,7 +560,10 @@ process.on('SIGTERM', async () => {
     console.log('[EmailWorker] SIGTERM received — closing gracefully...');
     clearInterval(healthTimer);
     await worker.close();
+    await campaignWorker.close();
+    await reorderWorker.close();
     process.exit(0);
 });
 
 console.log('[EmailWorker] Worker is now listening for jobs...');
+console.log('[CampaignScheduler] Listening for scheduled campaign triggers...');

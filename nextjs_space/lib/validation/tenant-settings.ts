@@ -40,6 +40,12 @@ const tenantSettingsShape = {
   contactEmail: z.string().max(320).nullable().optional(),
   contactPhone: z.string().max(50).nullable().optional(),
   address: z.union([z.string().max(1000), z.record(z.unknown())]).nullable().optional(),
+  // Email Phase 2 US-010 — the postal address printed in the email footer.
+  // Deliberately separate from `address` (a storefront display value that is
+  // sometimes an object): this one is a single free-text line an operator sets
+  // to exactly what their jurisdiction requires marketing mail to carry, and it
+  // has to stay a string because the footer prints it verbatim.
+  businessAddress: z.string().max(500).nullable().optional(),
   socialMedia: structural.optional(),
 
   // Brand colors
@@ -104,6 +110,28 @@ const tenantSettingsShape = {
   marketingCookiesEnabled: flag.optional(),
   analyticsEnabled: flag.optional(),
   cookieBannerMessage: z.string().max(2000).nullable().optional(),
+
+  // Email Phase 2 US-027 — per-tenant open/click tracking on marketing
+  // campaigns. Absent means OFF, which is the default and the only safe
+  // interpretation of a settings blob that has never mentioned it: the store's
+  // privacy notice only discloses tracking while this is true.
+  emailTrackingEnabled: flag.optional(),
+
+  // Email Phase 2 US-028 — the reorder-reminder automation. Absent means OFF,
+  // the same reading as the tracking flag above and for the same reason: a
+  // store that has never mentioned this has not agreed to it mailing anyone.
+  //
+  // The interval is bounded HERE only loosely enough to round-trip whatever is
+  // already stored; the exact window
+  // (MIN_REORDER_REMINDER_DAYS..MAX_REORDER_REMINDER_DAYS in
+  // `lib/email/reorder-reminder.ts`) is enforced by the settings route on the
+  // way in and re-applied on the way out, so an out-of-range value that reached
+  // the column some other way falls back to the default instead of sending. The
+  // constants are deliberately not imported: this module is a dependency of
+  // `parseTenantSettings`, which that one reads, and the cycle would leave the
+  // bounds undefined at module-init time.
+  reorderReminderEnabled: flag.optional(),
+  reorderReminderDays: z.number().int().min(1).max(3650).nullable().optional(),
 
   // Third-party integration credentials / ids (bounded)
   automatosApiKey: z.string().max(500).nullable().optional(),

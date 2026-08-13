@@ -1,0 +1,24 @@
+-- Backfill the column the visual composer stores its document in
+-- (Email Phase 2, US-011).
+--
+-- `email_templates.contentJson` has been DECLARED in schema.prisma since
+-- commit 44be647 ("// For the visual editor state") but no migration ever
+-- created it, and nothing read or wrote it, so the gap was invisible. US-011 is
+-- the first code to write it: the save pipeline persists the authored TipTap
+-- document here and DERIVES `contentHtml` from it (shell wrap -> CSS inlining
+-- -> sanitize). Without this column every template save carrying a document
+-- fails with `column "contentJson" does not exist`.
+--
+-- Deploys apply migrations with `prisma migrate deploy` (entrypoint.sh), which
+-- replays migration files and does NOT diff against schema.prisma — a declared
+-- but unmigrated column is never created and never reported.
+--
+-- Nullable with no default and no backfill: null means "no document", which is
+-- every template authored before the composer existed and every one authored
+-- through the raw-HTML editor after it. Those keep rendering from `contentHtml`
+-- exactly as they do today. IF NOT EXISTS so this is a no-op on any environment
+-- where the column was already patched in by hand.
+--
+-- See tasks/prd-email-authoring-campaigns.md (US-011, US-012).
+
+ALTER TABLE "email_templates" ADD COLUMN IF NOT EXISTS "contentJson" JSONB;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { withTenantAuth } from "@/lib/api-auth";
+import { requirePermission } from "@/lib/permissions/require-permission";
 import { prisma } from "@/lib/db";
 import {
   sanitizeEmailHtml,
@@ -9,6 +9,8 @@ import {
   EMAIL_SUBJECT_MAX_LENGTH,
 } from "@/lib/security/email-sanitize";
 import { apiError, apiValidationError } from "@/lib/api-error";
+import { emailContentJsonSchema } from "@/lib/email/email-content-json";
+import { resolveTemplateContent } from "@/lib/email/email-template-content";
 import { parseJsonBody } from "@/lib/validation/body";
 
 const TEMPLATE_NAME_MAX = 200;
@@ -24,12 +26,18 @@ const emailTemplateCreateSchema = z.object({
   name: z.string().max(1000).optional(),
   subject: z.string().optional(),
   contentHtml: z.string().optional(),
+  // US-011 — the composer document. Present: contentHtml is derived from it by
+  // the save pipeline. Absent (or an explicit null from a client in raw-HTML
+  // mode): the raw-HTML path below runs exactly as before.
+  contentJson: emailContentJsonSchema.nullish(),
   description: z.string().max(5000).optional(),
   category: z.string().max(1000).optional(),
   sourceTemplateId: z.string().max(200).optional(),
 });
 
-export const GET = withTenantAuth(async (_request, { tenantId }) => {
+// US-009 — reading a template exposes its authored HTML and subject lines, so
+// the list is gated on canViewEmails; authoring is gated on canEditEmails.
+export const GET = requirePermission("canViewEmails", async (_request, { tenantId }) => {
   try {
     const templates = await prisma.email_templates.findMany({
       where: {
@@ -50,7 +58,7 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
   }
 });
 
-export const POST = withTenantAuth(async (req, { tenantId }) => {
+export const POST = requirePermission("canEditEmails", async (req, { tenantId }) => {
   try {
     const body = await parseJsonBody(req, emailTemplateCreateSchema, {
       maxBytes: 512 * 1024,
@@ -59,6 +67,7 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
       name,
       subject,
       contentHtml,
+      contentJson,
       description,
       category,
       sourceTemplateId,
@@ -124,8 +133,30 @@ export const POST = withTenantAuth(async (req, { tenantId }) => {
               0,
               TEMPLATE_DESCRIPTION_MAX,
             ),
+          // US-012 — carry the source's document, so a clone of a visually
+          // authored template re-opens in the composer instead of stranding the
+          // author in raw HTML that the next save would overwrite. The copied
+          // contentHtml was derived from this document, so the two agree; a
+          // request that also carries its own document still wins below.
+          contentJson: source.contentJson ?? undefined,
         };
       }
+    }
+
+    // US-011 — last, so a composer document beats both the raw contentHtml
+    // field and a clone source: whichever of those the request also carried,
+    // the stored HTML is the one this pipeline produced (shell -> inline ->
+    // sanitize). No document and this never runs, leaving the raw path above
+    // exactly as it was.
+    if (contentJson) {
+      data = {
+        ...data,
+        ...(await resolveTemplateContent({
+          contentJson,
+          tenantId,
+          category: data.category,
+        })),
+      };
     }
 
     const newTemplate = await prisma.email_templates.create({ data });

@@ -10,7 +10,16 @@ import { NextRequest } from "next/server";
 // runWithTenantContextAsync run, so each handler executes under a genuine bound
 // tenant; we assert the explicit `where` scoping the handlers now carry. Real-DB
 // row filtering is proven separately in the Docker-gated integration suite.
+//
+// US-009 moved every one of these handlers from the bare auth wrapper to the
+// permission gate, which resolves the caller's matrix through its own module.
+// Without that mock the gate answers 403 and no handler body runs at all, so
+// each `where`-scoping assertion below silently degrades into "prisma was never
+// called" — it must stay mocked for these tests to mean anything.
 const { getCurrentUser } = vi.hoisted(() => ({ getCurrentUser: vi.fn() }));
+const { resolveUserPermissions } = vi.hoisted(() => ({
+  resolveUserPermissions: vi.fn(),
+}));
 const prismaMock = vi.hoisted(() => ({
   email_templates: {
     findFirst: vi.fn(),
@@ -29,7 +38,11 @@ const prismaMock = vi.hoisted(() => ({
 
 vi.mock("@/lib/auth-helper", () => ({ getCurrentUser }));
 vi.mock("@/lib/db", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/permissions/current-user-permissions", () => ({
+  resolveUserPermissions,
+}));
 
+import { resolvePermissions } from "@/lib/permissions/resolve";
 import { POST as clonePost } from "@/app/api/tenant-admin/email-templates/clone/route";
 import { POST as createTemplate } from "@/app/api/tenant-admin/email-templates/route";
 import { DELETE as deleteTemplate } from "@/app/api/tenant-admin/email-templates/[id]/route";
@@ -54,6 +67,13 @@ function adminUser(over: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   getCurrentUser.mockResolvedValue(adminUser());
+  // The REAL pure resolver, so the fixture cannot drift from the shipped
+  // precedence rules. `admin` is all-true — tenant scoping, not authorisation,
+  // is what this file is about, and US-009's suite owns the 403 matrix.
+  resolveUserPermissions.mockResolvedValue({
+    teamRole: "admin",
+    permissions: resolvePermissions({ role: "TENANT_ADMIN", teamRole: "admin" }),
+  });
 });
 
 describe("POST email-templates/clone — tenant-scoped source (HIGH leak)", () => {

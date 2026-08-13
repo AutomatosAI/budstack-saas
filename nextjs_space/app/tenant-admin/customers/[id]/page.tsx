@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import CustomerEditForm from "./customer-edit-form";
 import CustomerActions from "./customer-actions";
+import CustomerTags from "./customer-tags";
+import MarketingConsentCard from "./marketing-consent-card";
 import { Breadcrumbs } from "@/components/admin/shared";
 
 export default async function CustomerDetailPage({
@@ -81,6 +83,19 @@ export default async function CustomerDetailPage({
           },
         })
       : null;
+  // US-024: the customer's tag chips. Tag rows always carry the tenant they
+  // were created under; the extra tenant predicate keeps a super-admin's
+  // cross-tenant view scoped to the row's own tenant.
+  const tagRows = await prisma.customer_tags.findMany({
+    where: {
+      userId: customer.id,
+      ...(customer.tenantId && { tenantId: customer.tenantId }),
+    },
+    select: { tag: true },
+    orderBy: { tag: "asc" },
+  });
+  const tags = tagRows.map((row: { tag: string }) => row.tag);
+
   const [derivedFirst, ...derivedRest] = (customer.name ?? "").trim().split(/\s+/);
   const resolvedCustomer = {
     ...customer,
@@ -156,6 +171,35 @@ export default async function CustomerDetailPage({
         </div>
 
         <div className="space-y-6">
+          <section className="bs-card bs-card-pad">
+            <div className="bs-card-head mb-4">
+              <h2
+                className="text-[22px] text-bs-fg"
+                style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+              >
+                Tags
+              </h2>
+            </div>
+            <CustomerTags customerId={customer.id} initialTags={tags} />
+          </section>
+
+          <section className="bs-card bs-card-pad">
+            <div className="bs-card-head mb-4">
+              <h2
+                className="text-[22px] text-bs-fg"
+                style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+              >
+                Marketing Consent
+              </h2>
+            </div>
+            <MarketingConsentCard
+              customerId={customer.id}
+              marketingConsentAt={
+                customer.marketingConsentAt?.toISOString() ?? null
+              }
+            />
+          </section>
+
           <section className="bs-card bs-card-pad">
             <div className="bs-card-head mb-4">
               <h2

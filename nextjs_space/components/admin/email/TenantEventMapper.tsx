@@ -7,6 +7,9 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+import { NEWSLETTER_CONFIRM_TEMPLATE } from "@/lib/email/newsletter-confirm";
+import { REORDER_REMINDER_EVENT } from "@/lib/email/reorder-reminder";
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Template {
@@ -56,6 +59,18 @@ const SYSTEM_EVENTS = [
     id: "subscriptionUpdated",
     label: "Subscription Updated",
     description: "Sent on plan change.",
+  },
+  {
+    id: NEWSLETTER_CONFIRM_TEMPLATE,
+    label: "Newsletter Confirmation",
+    description:
+      "Double opt-in: sent when a visitor signs up, carries the confirm link.",
+  },
+  {
+    id: REORDER_REMINDER_EVENT,
+    label: "Reorder Reminder",
+    description:
+      "Marketing: sent by the reorder automation once the switch on this page is on. Only to customers who opted in.",
   },
 ];
 

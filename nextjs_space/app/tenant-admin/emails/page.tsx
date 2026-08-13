@@ -3,7 +3,12 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TenantTemplateList } from "@/components/admin/email/TenantTemplateList";
+import { TenantCampaignList } from "@/components/admin/email/TenantCampaignList";
+import { TenantSegmentList } from "@/components/admin/email/TenantSegmentList";
 import { TenantEventMapper } from "@/components/admin/email/TenantEventMapper";
+import { EmailActivityLog } from "@/components/admin/email/EmailActivityLog";
+import { EmailTrackingToggle } from "@/components/admin/email/EmailTrackingToggle";
+import { ReorderReminderToggle } from "@/components/admin/email/ReorderReminderToggle";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -16,10 +21,11 @@ export default function TenantEmailsPage() {
             className="bs-page-title"
             style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
           >
-            Email Templates
+            Email
           </h1>
           <p className="bs-page-subtitle">
-            Create templates and map them to system events.
+            Create templates and campaigns, map templates to system events, and
+            review what was sent.
           </p>
         </div>
         <div className="flex justify-start sm:justify-end">
@@ -36,14 +42,33 @@ export default function TenantEmailsPage() {
         <div className="flex justify-start">
           <TabsList>
             <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+            <TabsTrigger value="segments">Segments</TabsTrigger>
             <TabsTrigger value="events">Event Triggers</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
         </div>
         <TabsContent value="templates" className="mt-0">
           <TenantTemplateList />
         </TabsContent>
+        <TabsContent value="campaigns" className="mt-0">
+          <TenantCampaignList />
+        </TabsContent>
+        <TabsContent value="segments" className="mt-0">
+          <TenantSegmentList />
+        </TabsContent>
         <TabsContent value="events" className="mt-0">
+          {/* US-028. Above the mapper because the switch decides WHETHER the
+              reorder reminder sends at all, and the row below decides which
+              template it sends when it does. */}
+          <ReorderReminderToggle />
           <TenantEventMapper />
+        </TabsContent>
+        <TabsContent value="activity" className="mt-0 space-y-4">
+          {/* US-027. Beside the activity log rather than on its own tab: both
+              answer "what is this store recording about the mail it sends". */}
+          <EmailTrackingToggle />
+          <EmailActivityLog />
         </TabsContent>
       </Tabs>
     </div>

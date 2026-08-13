@@ -57,7 +57,11 @@ export default function NewEmailTemplatePage() {
         </p>
       </div>
 
-      <EmailEditor onSave={handleSave} isSaving={isSaving} />
+      <EmailEditor
+        onSave={handleSave}
+        isSaving={isSaving}
+        previewUrl="/api/super-admin/email-templates/preview"
+      />
     </div>
   );
 }

@@ -3,27 +3,49 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { Mail, ArrowRight } from 'lucide-react';
+import { Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { SectionProps } from '@/lib/types/section-props';
 import { headerAlignClasses } from '@/lib/templates/section-align';
+import { subscribeToNewsletter } from '@/lib/email/newsletter-signup';
 
 export function Newsletter(props: SectionProps) {
-  const { sectionConfig } = props;
+  const { sectionConfig, tenant } = props;
   const heading = sectionConfig?.heading || 'Stay in the Loop';
   const subtitle = sectionConfig?.subtitle || 'Get the latest news, offers, and wellness tips delivered to your inbox.';
   const placeholder = sectionConfig?.placeholder || 'you@example.com';
   const buttonText = sectionConfig?.buttonText || 'Subscribe';
+  const successText = sectionConfig?.successText || 'Thanks for subscribing!';
   const backgroundImageUrl = sectionConfig?.backgroundImageUrl || null;
   const overlayOpacity = parseFloat(sectionConfig?.overlayOpacity ?? '0.5');
 
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.2 });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // The success state is only entered once the server has actually recorded
+  // the signup — the old stub set it unconditionally and the copy lied.
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) setSubmitted(true);
+    if (!email || submitting) return;
+
+    setSubmitting(true);
+    setError(null);
+    const result = await subscribeToNewsletter({
+      email,
+      source: 'storefront-cta',
+      tenantSlug: tenant?.subdomain,
+    });
+    setSubmitting(false);
+
+    if (result.ok) {
+      setSubmitted(true);
+      setEmail('');
+      return;
+    }
+    setError(result.message ?? null);
   };
 
   return (
@@ -74,7 +96,7 @@ export function Newsletter(props: SectionProps) {
               animate={{ opacity: 1, scale: 1 }}
               className="text-white text-lg font-medium"
             >
-              Thanks for subscribing! Check your inbox soon.
+              {successText}
             </motion.div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
@@ -84,20 +106,33 @@ export function Newsletter(props: SectionProps) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={placeholder}
                 required
-                className="flex-1 px-5 py-3.5 rounded-full bg-white/10 text-white placeholder-white/50 border border-white/20 focus:outline-none focus:border-white/50 transition-colors text-base"
+                disabled={submitting}
+                aria-invalid={error ? true : undefined}
+                className="flex-1 px-5 py-3.5 rounded-full bg-white/10 text-white placeholder-white/50 border border-white/20 focus:outline-none focus:border-white/50 transition-colors text-base disabled:opacity-60"
               />
               <button
                 type="submit"
-                className="px-8 py-3.5 rounded-full font-semibold transition-all hover:scale-105 flex items-center justify-center gap-2 shrink-0"
+                disabled={submitting}
+                className="px-8 py-3.5 rounded-full font-semibold transition-all hover:scale-105 flex items-center justify-center gap-2 shrink-0 disabled:opacity-60 disabled:hover:scale-100"
                 style={{
                   backgroundColor: 'white',
                   color: 'hsl(var(--tenant-color-primary))',
                 }}
               >
                 {buttonText}
-                <ArrowRight size={18} />
+                {submitting ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <ArrowRight size={18} />
+                )}
               </button>
             </form>
+          )}
+
+          {error && !submitted && (
+            <p role="alert" className="mt-4 text-white text-sm font-medium">
+              {error}
+            </p>
           )}
 
           <p className="mt-6 text-white/50 text-sm">

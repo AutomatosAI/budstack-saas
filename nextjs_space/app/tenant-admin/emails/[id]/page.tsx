@@ -25,8 +25,21 @@ export default async function TenantEditEmailPage({
     notFound();
   }
 
+  // US-013 — the event this template is mapped to, which decides the merge tags
+  // the editor offers. Tenant-scoped like the template itself, and null when
+  // nothing is mapped to it yet: the editor then offers the common tags only.
+  const mapping = await prisma.email_event_mappings.findFirst({
+    where: { templateId: template.id, tenantId: active.tenantId },
+    select: { eventType: true },
+  });
+
   // Convert Decimals/Dates if needed? Prisma usually fine for simple objects passed to client component.
   // Assuming simple fields.
 
-  return <TenantEditTemplateClient template={template as any} />;
+  return (
+    <TenantEditTemplateClient
+      template={template as any}
+      eventType={mapping?.eventType ?? null}
+    />
+  );
 }

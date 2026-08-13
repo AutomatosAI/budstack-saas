@@ -51,6 +51,13 @@ const tenantScopedModels = new Set([
   'email_logs',
   'email_templates',
   'email_event_mappings',
+  'email_suppressions',
+  'newsletter_subscribers',
+  // campaign_recipients is deliberately absent: it carries no tenantId and is
+  // reachable only through its campaign, which IS scoped here.
+  'campaigns',
+  'customer_tags',
+  'segments',
   'conditions',
   'consultations',
   'drgreen_carts',

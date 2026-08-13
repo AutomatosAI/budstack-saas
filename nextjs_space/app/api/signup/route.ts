@@ -23,6 +23,9 @@ const signupSchema = z.object({
   acceptTerms: z.literal(true, {
     errorMap: () => ({ message: "You must accept the terms and conditions" }),
   }),
+  // US-023 (POPIA): explicit marketing opt-in. Optional and UNTICKED by
+  // default — absent or false means NO consent is recorded, ever.
+  marketingConsent: z.boolean().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -80,6 +83,8 @@ export async function POST(request: NextRequest) {
         name: `${body.firstName} ${body.lastName}`,
         role: "PATIENT",
         tenantId: tenant.id,
+        // US-023: consent only on an explicit tick — never inferred.
+        marketingConsentAt: body.marketingConsent === true ? new Date() : null,
       },
     });
 

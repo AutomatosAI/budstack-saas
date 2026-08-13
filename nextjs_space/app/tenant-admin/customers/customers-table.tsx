@@ -11,9 +11,11 @@ import {
   SortableTableHeader,
   ExportButton,
   RowPill,
+  StatusFilter,
 } from "@/components/admin/shared";
 import { useTableState } from "@/lib/admin/url-state";
 import { exportToCSV } from "@/lib/admin/csv-export";
+import { normalizeTag } from "@/lib/customers/tag-format";
 import { toast } from "@/components/ui/sonner";
 import { useCallback } from "react";
 
@@ -34,28 +36,72 @@ export interface Customer {
 interface CustomersTableProps {
   customers: Customer[];
   totalCount: number;
+  /** US-024: every tag in use across the tenant — the tag filter's options. */
+  availableTags?: string[];
 }
 
-export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
+/** Filter shape for useTableState — `tag` rides the URL as ?tag=<value>. */
+type CustomerFilters = { tag: string } & Record<string, string>;
+
+/** Module-level so the object identity is stable across renders. */
+const DEFAULT_FILTERS: CustomerFilters = { tag: "" };
+
+export function CustomersTable({
+  customers,
+  totalCount,
+  availableTags = [],
+}: CustomersTableProps) {
   const [
-    { search, page, pageSize, sort },
-    { setSearch, setPage, setPageSize, setSort },
-  ] = useTableState({
+    { search, filters, page, pageSize, sort },
+    { setSearch, setFilter, setPage, setPageSize, setSort, resetFilters },
+  ] = useTableState<CustomerFilters>({
     defaultPageSize: 20,
+    defaultFilters: DEFAULT_FILTERS,
   });
 
+  // A hand-edited URL may carry an un-normalised value ("?tag=VIP") — read it
+  // in canonical form so the select and the server agree on what is active.
+  const tagFilter = normalizeTag(filters.tag || "");
+  const hasTagFilter = tagFilter.length > 0;
+
   const hasSearchQuery = search.trim().length > 0;
-  const noResults = totalCount === 0 && hasSearchQuery;
+  const hasActiveFilters = hasSearchQuery || hasTagFilter;
+  const noResults = totalCount === 0 && hasActiveFilters;
+
+  const tagOptions = useMemo(() => {
+    // Keep an active-but-unknown tag selectable so the control shows the truth.
+    const tags = hasTagFilter && !availableTags.includes(tagFilter)
+      ? [tagFilter, ...availableTags]
+      : availableTags;
+    return [
+      { value: "", label: "All tags" },
+      ...tags.map((tag) => ({ value: tag, label: tag })),
+    ];
+  }, [availableTags, hasTagFilter, tagFilter]);
 
   const emptyDescription = useMemo(() => {
+    if (hasSearchQuery && hasTagFilter) {
+      return `No customers tagged "${tagFilter}" match "${search}". Try different filters.`;
+    }
+    if (hasTagFilter) {
+      return `No customers are tagged "${tagFilter}".`;
+    }
     if (hasSearchQuery) {
       return `No customers found matching "${search}". Try a different search term.`;
     }
     return "No customers yet. Share your store URL to get started.";
-  }, [hasSearchQuery, search]);
+  }, [hasSearchQuery, hasTagFilter, search, tagFilter]);
 
-  const handleClearSearch = () => {
-    setSearch("");
+  const handleClearFilters = () => {
+    // Consecutive URL-state setters clobber each other (each reads the not-yet-
+    // updated params), so clear with exactly one call per case.
+    if (hasSearchQuery && hasTagFilter) {
+      resetFilters();
+    } else if (hasTagFilter) {
+      setFilter("tag", null);
+    } else {
+      setSearch("");
+    }
   };
 
   const handleExportAll = useCallback(async () => {
@@ -112,7 +158,7 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
               className="text-[22px] text-bs-fg"
               style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
             >
-              {hasSearchQuery
+              {hasActiveFilters
                 ? `Results (${totalCount})`
                 : `All Customers (${totalCount})`}
             </h2>
@@ -128,6 +174,15 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
                 debounceMs={300}
               />
             </div>
+
+            {(availableTags.length > 0 || hasTagFilter) && (
+              <StatusFilter
+                value={tagFilter}
+                onChange={(value) => setFilter("tag", value || null)}
+                options={tagOptions}
+                aria-label="Filter by tag"
+              />
+            )}
 
             <ExportButton
               onExport={handleExportAll}
@@ -148,13 +203,13 @@ export function CustomersTable({ customers, totalCount }: CustomersTableProps) {
             variant="muted"
             size="default"
             action={{
-              label: "Clear search",
-              onClick: handleClearSearch,
+              label: hasTagFilter ? "Clear filters" : "Clear search",
+              onClick: handleClearFilters,
               variant: "outline",
             }}
             className="my-8"
           />
-        ) : customers.length === 0 && !hasSearchQuery ? (
+        ) : customers.length === 0 && !hasActiveFilters ? (
           <EmptyState
             icon={Users}
             heading="No customers yet"

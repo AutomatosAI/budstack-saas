@@ -81,6 +81,182 @@ model email_event_mappings {
   @@unique([eventType, tenantId])
 }
 
+// Storefront newsletter list. Double opt-in: a signup lands PENDING and only
+// becomes CONFIRMED when the emailed token is followed, so the list stays
+// consented and deliverable. `token` is the single credential behind both the
+// confirm and the unsubscribe link, so it is globally unique and rotated on use.
+model newsletter_subscribers {
+  id             String           @id @default(uuid())
+  tenantId       String
+  email          String
+  status         SubscriberStatus @default(PENDING)
+  source         String? // where the signup came from, e.g. "storefront-cta"
+  consentAt      DateTime? // when the visitor asked to subscribe
+  confirmedAt    DateTime? // when the opt-in token was followed
+  unsubscribedAt DateTime?
+  token          String           @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  tenants        tenants          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId, status])
+}
+
+/// Addresses this tenant must never send MARKETING email to (Email Phase 2,
+/// US-004). Checked by the worker before every marketing send; transactional
+/// mail (order confirmations, password resets) is deliberately unaffected — an
+/// opt-out is not a request to stop being told about your own order.
+///
+/// One row per address is the whole contract: the reason is provenance, not a
+/// filter, so a bounced address is suppressed exactly as hard as an
+/// unsubscribed one and re-suppressing keeps the first reason recorded.
+model email_suppressions {
+  id        String            @id @default(uuid())
+  tenantId  String
+  email     String
+  reason    SuppressionReason
+  createdAt DateTime          @default(now())
+  tenants   tenants           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId, createdAt])
+}
+
+/// One-off marketing send — a newsletter or a blog digest (Email Phase 2,
+/// US-016). Authored exactly like a template: `contentJson` is the composer
+/// document and `contentHtml` is what the US-011 pipeline derived from it, so
+/// the worker's Handlebars step consumes it unchanged.
+///
+/// `audience` is the *rule* (which lists to mail), never the resolved list —
+/// recipients are materialised into campaign_recipients at send time so the
+/// count reflects consent and suppression as they stand then, not at draft time.
+/// `stats` is a denormalised progress cache for the list view; the recipient
+/// rows remain the source of truth.
+model campaigns {
+  id          String                @id @default(uuid())
+  tenantId    String
+  name        String
+  subject     String
+  contentHtml String
+  contentJson Json?
+  status      CampaignStatus        @default(DRAFT)
+  audience    Json? // null = audience not chosen yet
+  scheduledAt DateTime?
+  /// US-021: the BullMQ trigger this campaign is waiting on, or null when it is
+  /// waiting on nothing. Authoritative over the queue — Redis and Postgres are
+  /// not written atomically, so a trigger that fires checks whether it is still
+  /// the one named here before it sends anything. That is what makes
+  /// rescheduling a replacement rather than a second send.
+  scheduledJobId String?
+  sentAt      DateTime?
+  stats       Json? // null = never sent
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  tenants     tenants               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recipients  campaign_recipients[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+/// One row per address a campaign fans out to (Email Phase 2, US-016), created
+/// at send time. This is the per-recipient delivery record: exactly one message
+/// per row, never a multi-address To:.
+///
+/// `userId` and `emailLogId` are plain columns rather than relations on purpose
+/// — the recipient row must outlive an erased customer or a pruned log row, and
+/// `users` is load-bearing (PRD-208) so it gains no back-relation here.
+model campaign_recipients {
+  id               String                  @id @default(uuid())
+  campaignId       String
+  email            String
+  userId           String? // customer this address belongs to, when it is one
+  status           CampaignRecipientStatus @default(PENDING)
+  emailLogId       String? // US-008 linkage: the email_logs row carrying the outcome
+  error            String?
+  /// US-019: this recipient's own opt-out credential, minted at fan-out and put
+  /// in the footer link. Per-recipient rather than per-subscriber because a
+  /// campaign also reaches consented customers who have no subscriber row at
+  /// all, and because it is what attributes an unsubscribe to a campaign
+  /// (US-026). Nullable only so the column could be added to an existing table.
+  unsubscribeToken String?                 @unique
+  /// US-026: when this recipient redeemed the token above, or null. Stamped by
+  /// `unsubscribeByToken` at the moment the link is followed, because the token
+  /// is the ONLY thing that ties an opt-out to the message that caused it —
+  /// `email_suppressions` records that an address left the list, never which
+  /// email it left from. First redemption wins: the link stays live in an inbox
+  /// forever and following it again must not move the timestamp.
+  unsubscribedAt   DateTime?
+  /// US-027: FIRST open and FIRST click, or null. Timestamps rather than
+  /// counters on purpose — "did this person engage, and when" is the whole
+  /// question the results page asks, and a per-open counter would turn an
+  /// inbox that re-fetches images on every scroll into a behavioural log
+  /// nobody consented to. Written only while the tenant's
+  /// `emailTrackingEnabled` setting is on; first write wins, so a link
+  /// followed again months later never restates an old engagement as new.
+  openedAt         DateTime?
+  clickedAt        DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  campaigns        campaigns               @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, email])
+  @@index([campaignId, status])
+}
+
+/// CRM-lite customer tag (Email Phase 2, US-024): one row per
+/// (tenant, customer, tag). `tag` is stored normalised — trimmed, lowercased —
+/// so "VIP" and " vip " are the same chip everywhere; the compound unique key
+/// makes re-adding a tag idempotent at the database, not just in the route.
+///
+/// Unlike campaign_recipients above, `userId` here IS a relation with Cascade:
+/// a tag is targeting metadata with no life of its own, so it must die with the
+/// user row rather than outlive it. (GDPR erasure anonymises the row in place,
+/// so erased customers keep their tags but are filtered from every surface.)
+/// `@@index([tenantId, tag])` serves the customers-list tag filter and US-025's
+/// "has tag" segment axis.
+model customer_tags {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  tag       String
+  createdAt DateTime @default(now())
+  tenants   tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, tag])
+  @@index([tenantId, tag])
+}
+
+/// A reusable audience filter (Email Phase 2, US-025) — "customers who have not
+/// ordered in 60 days", written once and pointed at by any number of campaigns.
+///
+/// A segment is a RULE and never a list. It names no addresses, so a campaign
+/// that resolves it in April reaches whoever matches in April — the same
+/// contract `campaigns.audience` keeps, and the reason neither column can hold
+/// a stale set of people.
+///
+/// `filter` is a Json COLUMN but is NOT free-form Json: it holds the criterion
+/// union declared in lib/email/segment-filter.ts, re-parsed on every read. A
+/// rule this version cannot understand resolves to NOBODY rather than to
+/// everybody, so a filter written by a later version can never widen a send.
+///
+/// `@@unique([tenantId, name])` is what stops "Reorder 60d" existing four times
+/// in one store's audience picker.
+model segments {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  filter    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenants   tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId, updatedAt])
+}
+
 model conditions {
   id              String   @id
   slug            String
@@ -631,6 +807,11 @@ model tenants {
   tenant_legal_documents tenant_legal_documents[]
   email_logs             email_logs[]
   email_templates        email_templates[]
+  email_suppressions     email_suppressions[]
+  newsletter_subscribers newsletter_subscribers[]
+  campaigns              campaigns[]
+  customer_tags          customer_tags[]
+  segments               segments[]
   orders                 orders[]
   posts                  posts[]
   products               products[]
@@ -726,7 +907,11 @@ model users {
   phone               String?
   address             Json?
   isActive            Boolean                   @default(true)
+  marketingConsentAt  DateTime? // Email Phase 2 (US-016/US-023): when this customer opted in to marketing. NULL = no consent, never mail them a campaign.
+  reorderReminderAt   DateTime? // US-028: when the reorder-reminder automation last mailed this customer. NULL = never. The once-per-window guard is a conditional write against this column.
+  reorderReminderToken String?  @unique // US-028: this customer's permanent opt-out credential for the reorder reminder. Minted on the first reminder and never rotated — the link lives in an inbox and has to keep working.
   consultations       consultations[]
+  customer_tags       customer_tags[] // US-024 CRM-lite tags; rows cascade away with the user
   drgreen_carts       drgreen_carts?
   orders              orders[]
   posts               posts[]
@@ -855,6 +1040,51 @@ enum EmailStatus {
   QUEUED
   SENT
   FAILED
+}
+
+// PENDING     — signed up, opt-in token not yet followed (never mail marketing to these)
+// CONFIRMED   — double opt-in complete; the only mailable state
+// UNSUBSCRIBED— the subscriber opted out
+// SUPPRESSED  — the platform stopped mailing them (bounce/complaint/manual)
+enum SubscriberStatus {
+  PENDING
+  CONFIRMED
+  UNSUBSCRIBED
+  SUPPRESSED
+}
+
+/// Why an address is suppressed. Lower-case on purpose: unlike the other enums
+/// here these values are also the wire values the API and the audit trail use,
+/// and US-004 pins them as `unsubscribed | bounced | manual`.
+enum SuppressionReason {
+  unsubscribed
+  bounced
+  manual
+}
+
+// DRAFT     — being authored; editable
+// SCHEDULED — scheduledAt set and a delayed job is armed; still editable/cancellable
+// SENDING   — recipients materialised and fanned out to the queue
+// SENT      — no PENDING/QUEUED recipients remain
+// CANCELLED — terminal; the worker refuses to send a job for this campaign
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+}
+
+// PENDING    — materialised, not yet enqueued
+// QUEUED     — a job exists for this recipient
+// SENT/FAILED— the worker's outcome (detail lives on the linked email_logs row)
+// SUPPRESSED — blocked at send time by the tenant suppression list (US-004)
+enum CampaignRecipientStatus {
+  PENDING
+  QUEUED
+  SENT
+  FAILED
+  SUPPRESSED
 }
 
 enum ConsultationStatus {

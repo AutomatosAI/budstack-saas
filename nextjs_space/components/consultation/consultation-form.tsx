@@ -42,6 +42,7 @@ export function ConsultationForm({
     gender: "",
     password: "",
     confirmPassword: "",
+    marketingConsent: false,
 
     addressLine1: "",
     addressLine2: "",

@@ -20,7 +20,24 @@
  */
 
 /** Semver. Bump on any substantive change; patch for typos and formatting. */
-export const PRIVACY_TEMPLATE_VERSION = "1.0.0";
+export const PRIVACY_TEMPLATE_VERSION = "1.1.0";
+
+/**
+ * Conditional token for the email-tracking clause (Email Phase 2, US-027).
+ *
+ * The block below renders ONLY for a store that has turned open/click tracking
+ * on. It is conditional rather than always-present for the reason the whole
+ * feature is opt-in: a notice that describes tracking a store does not do is
+ * inaccurate in the direction that matters — it tells people they are being
+ * measured when they are not, and it makes the one sentence that would have
+ * been a real disclosure indistinguishable from boilerplate.
+ *
+ * Fed from `tenants.settings.emailTrackingEnabled` by `lib/legal/tenant-
+ * policy.ts`, not from the legal profile, because the switch lives with the
+ * email surface that acts on it. Not in {@link PRIVACY_REQUIRED_TOKENS}: its
+ * absence is the common case, not a missing value.
+ */
+export const PRIVACY_EMAIL_TRACKING_TOKEN = "emailTrackingEnabled";
 
 /** Tokens that must be present, or rendering throws. */
 export const PRIVACY_REQUIRED_TOKENS = [
@@ -123,6 +140,18 @@ You also have the right to complain to a supervisory authority. In the UK that i
 ## Cookies
 
 We use cookies that are strictly necessary for the site to function. Anything beyond that — analytics or preferences — is only set once you agree, and you can change your choice at any time through the cookie settings link in our footer.
+{{#emailTrackingEnabled}}
+
+## Marketing emails and how we measure them
+
+Our marketing emails — the ones you receive because you asked for them — contain a small invisible image and links that pass through our own website before taking you where they say. Together these tell us whether a message was opened and which links in it were followed, so we can tell what is worth sending and stop sending what is not.
+
+We record this against your subscription, not against your name: the addresses used are made up of a random code that identifies the message, and your email address never appears in them.
+
+This is measurement of our own mail, and we rely on our legitimate interest in understanding whether it is any use. You can stop it entirely at any time by using the unsubscribe link at the bottom of any marketing email — that removes you from the list and there is nothing further to measure. Many email apps also block the image by default, and blocking it is enough to prevent the open being recorded.
+
+We do not do this to service messages about your order or your account, and we do not use what we collect to build a profile of you or to make any decision about you.
+{{/emailTrackingEnabled}}
 
 ## Automated decisions
 

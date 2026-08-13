@@ -8,6 +8,8 @@ import {
   classifySource,
   deriveApiPath,
   APPROVED_WRAPPERS,
+  AUTH_WRAPPERS,
+  PERMISSION_WRAPPERS,
 } from "@/scripts/check-auth-wrappers.core";
 
 function statusOf(src: string, apiPath: string, method = "GET") {
@@ -106,12 +108,72 @@ export const GET = withAuth(async () => new Response("x"));`;
 
 describe("APPROVED_WRAPPERS", () => {
   it("is exactly the five api-auth wrappers PRD-203 rolls out", () => {
-    expect([...APPROVED_WRAPPERS]).toEqual([
+    expect([...AUTH_WRAPPERS]).toEqual([
       "withTenantAuth",
       "withTenantAuthParams",
       "withSuperAdmin",
       "withSuperAdminParams",
       "withAuth",
     ]);
+  });
+
+  it("plus PRD-301's two permission gates (US-009)", () => {
+    expect([...PERMISSION_WRAPPERS]).toEqual([
+      "requirePermission",
+      "requirePermissionParams",
+    ]);
+    expect([...APPROVED_WRAPPERS]).toEqual([
+      ...AUTH_WRAPPERS,
+      ...PERMISSION_WRAPPERS,
+    ]);
+  });
+});
+
+// US-009 — requirePermission* wrap the api-auth wrappers and then add a
+// permission check, so a route using one is strictly MORE guarded than a plain
+// withTenantAuth route. Before this, every such route was reported as an
+// unguarded violation — the gate's signal inverted on its best-protected routes.
+describe("classifySource — the permission gates count as wrapped", () => {
+  it("passes a route gated by requirePermission", () => {
+    const src = `import { requirePermission } from "@/lib/permissions/require-permission";
+export const GET = requirePermission("canViewEmails", async (req, { tenantId }) => new Response(tenantId));`;
+    const handler = statusOf(src, "/api/tenant-admin/email-templates");
+    expect(handler?.status).toBe("wrapped");
+    expect(handler?.wrapper).toBe("requirePermission");
+  });
+
+  it("passes a [param] route gated by requirePermissionParams", () => {
+    const src = `import { requirePermissionParams } from "@/lib/permissions/require-permission";
+export const PUT = requirePermissionParams("canEditEmails", async (req, ctx, params) => new Response(params.id));`;
+    const handler = statusOf(src, "/api/tenant-admin/email-templates/[id]", "PUT");
+    expect(handler?.status).toBe("wrapped");
+    expect(handler?.wrapper).toBe("requirePermissionParams");
+  });
+
+  it("follows an alias on a permission gate, like any other wrapper", () => {
+    const src = `import { requirePermission as gate } from "@/lib/permissions/require-permission";
+export const DELETE = gate("canEditEmails", async () => new Response("x"));`;
+    const handler = statusOf(src, "/api/tenant-admin/email-mappings", "DELETE");
+    expect(handler?.status).toBe("wrapped");
+    expect(handler?.wrapper).toBe("requirePermission");
+  });
+
+  it("still flags a bare handler sitting beside a gated one", () => {
+    const src = `import { requirePermission } from "@/lib/permissions/require-permission";
+export const GET = requirePermission("canViewEmails", async () => new Response("x"));
+export async function DELETE() { return new Response("y"); }`;
+    const result = classifySource("/api/tenant-admin/email-mappings", src);
+    expect(result.violations).toEqual(["DELETE"]);
+  });
+});
+
+describe("classifySource — adding a wrapper module mints no new wrapper names", () => {
+  it("flags an arbitrary export of the permission module as a VIOLATION", () => {
+    // The module table widens WHERE the known names may come from — it must not
+    // make every export of lib/permissions/require-permission a free pass.
+    const src = `import { pretendGuard } from "@/lib/permissions/require-permission";
+export const POST = pretendGuard(async () => new Response("x"));`;
+    expect(statusOf(src, "/api/tenant-admin/orders", "POST")?.status).toBe("violation");
+    expect(classifySource("/api/tenant-admin/orders", src).violations).toEqual(["POST"]);
   });
 });
