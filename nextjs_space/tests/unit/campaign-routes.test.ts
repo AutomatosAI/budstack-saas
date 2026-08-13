@@ -251,7 +251,14 @@ describe("GET /api/tenant-admin/campaigns", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual([
-      { ...LISTED, recipientCount: 14, sentCount: 12 },
+      {
+        ...LISTED,
+        recipientCount: 14,
+        sentCount: 12,
+        // US-019 progress: the two outcomes that are not a delivery.
+        failedCount: 2,
+        suppressedCount: 0,
+      },
     ]);
     expect(prismaMock.campaigns.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { tenantId: TENANT_A } }),

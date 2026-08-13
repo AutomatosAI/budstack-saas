@@ -11,7 +11,17 @@
  */
 export const TEST_SEND_TEMPLATE_NAME = "test-send";
 
-export const RESERVED_EVENT_TYPES: readonly string[] = [TEST_SEND_TEMPLATE_NAME];
+/**
+ * US-019 — every campaign fan-out job. Reserved for the same reason: a mapping
+ * on this name would swap the campaign the author wrote and approved for some
+ * other template, for the whole list at once.
+ */
+export const CAMPAIGN_TEMPLATE_NAME = "campaign";
+
+export const RESERVED_EVENT_TYPES: readonly string[] = [
+  TEST_SEND_TEMPLATE_NAME,
+  CAMPAIGN_TEMPLATE_NAME,
+];
 
 export const RESERVED_EVENT_TYPE_MESSAGE =
   "That event type is reserved by the platform";

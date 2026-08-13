@@ -6,10 +6,21 @@ import Handlebars from 'handlebars';
 import { prisma as db } from '../lib/db';
 import { decrypt } from '../lib/security/encryption';
 import { emailQueueName } from '../lib/queue';
-import { registerEmailHelpers } from '../lib/email/handlebars-helpers';
+import { registerEmailHelpers, renderEmailTemplate } from '../lib/email/handlebars-helpers';
 import { markEmailLogFailed, markEmailLogSent } from '../lib/email/email-log-linkage';
 import { SUPPRESSED_LOG_MESSAGE } from '../lib/email/suppression';
 import { resolveSuppressionBlock } from '../lib/email/suppression-store';
+import {
+    finalizeCampaignIfComplete,
+    loadCampaignForSend,
+    markCampaignRecipient,
+    type CampaignSendSource,
+} from '../lib/email/campaign-recipient-store';
+import {
+    CAMPAIGN_CANCELLED_LOG_MESSAGE,
+    CAMPAIGN_MISSING_LOG_MESSAGE,
+    campaignJobTarget,
+} from '../lib/email/campaign-send';
 import { bypassTenantScope } from '../lib/tenant/tenant-scope-policy';
 import {
     DEFAULT_MAX_JOB_AGE_MS,
@@ -49,6 +60,34 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
     // TENANT_CONTEXT_STRICT. The helpers put tenantId in the query themselves.
     const logTarget = { logId, tenantId, to, subject, templateName };
 
+    // US-019: present only on a campaign fan-out job. Null is every
+    // transactional send and every payload enqueued before this story — the
+    // same versioned-by-tolerance rule `category` and `logId` follow — and
+    // leaves every branch below exactly as it was.
+    const campaignTarget = campaignJobTarget(job.data);
+
+    // Record this recipient's outcome on the campaign, then flip the campaign
+    // itself to SENT if this was the last one outstanding. Both writes go
+    // through bypassTenantScope for the same reason as the log writes above:
+    // the worker has no request context, and the helpers put tenantId in the
+    // query themselves.
+    const markRecipient = async (
+        status: 'SENT' | 'FAILED' | 'SUPPRESSED',
+        detail: { emailLogId?: string | null; error?: string | null } = {},
+    ) => {
+        if (!campaignTarget) return;
+        await bypassTenantScope(() =>
+            markCampaignRecipient({
+                recipientId: campaignTarget.recipientId,
+                status,
+                ...detail,
+            }),
+        );
+        await bypassTenantScope(() =>
+            finalizeCampaignIfComplete(campaignTarget.campaignId, tenantId),
+        );
+    };
+
     // Flip this job's email_logs row (or create one) to FAILED.
     const markLogFailed = (errorMessage: string) =>
         bypassTenantScope(() => markEmailLogFailed({ ...logTarget, errorMessage }));
@@ -61,6 +100,7 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
         const message = `Expired unsent (PRD-220): enqueued ${new Date(job.timestamp).toISOString()}, exceeds EMAIL_MAX_JOB_AGE_MS=${MAX_JOB_AGE_MS}`;
         console.warn(`[EmailWorker] Job ${job.id} ${message}`);
         await markLogFailed(message);
+        await markRecipient('FAILED', { emailLogId: logId ?? null, error: message });
         return { success: false, expired: true };
     }
 
@@ -83,7 +123,43 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
             `[EmailWorker] Job ${job.id} ${SUPPRESSED_LOG_MESSAGE} (${suppression.suppressed.length} recipient(s))`,
         );
         await markLogFailed(SUPPRESSED_LOG_MESSAGE);
+        await markRecipient('SUPPRESSED', {
+            emailLogId: logId ?? null,
+            error: SUPPRESSED_LOG_MESSAGE,
+        });
         return { success: false, suppressed: true };
+    }
+
+    // US-019: the campaign this job belongs to, read BEFORE any rendering so a
+    // cancel stops the rest of a fan-out at the first opportunity. Same
+    // return-don't-throw shape as the two guards above: a cancelled campaign and
+    // a deleted one are both decisions, not failures, and retrying either would
+    // only reach the same answer three more times.
+    let campaignSource: CampaignSendSource | null = null;
+    if (campaignTarget) {
+        campaignSource = await bypassTenantScope(() =>
+            loadCampaignForSend(campaignTarget.campaignId, tenantId),
+        );
+
+        if (!campaignSource) {
+            console.warn(`[EmailWorker] Job ${job.id} ${CAMPAIGN_MISSING_LOG_MESSAGE}`);
+            await markLogFailed(CAMPAIGN_MISSING_LOG_MESSAGE);
+            await markRecipient('FAILED', {
+                emailLogId: logId ?? null,
+                error: CAMPAIGN_MISSING_LOG_MESSAGE,
+            });
+            return { success: false, campaignMissing: true };
+        }
+
+        if (campaignSource.status === 'CANCELLED') {
+            console.warn(`[EmailWorker] Job ${job.id} ${CAMPAIGN_CANCELLED_LOG_MESSAGE}`);
+            await markLogFailed(CAMPAIGN_CANCELLED_LOG_MESSAGE);
+            await markRecipient('FAILED', {
+                emailLogId: logId ?? null,
+                error: CAMPAIGN_CANCELLED_LOG_MESSAGE,
+            });
+            return { success: false, cancelled: true };
+        }
     }
 
     let finalHtml = html;
@@ -141,6 +217,17 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
     } catch (e) {
         console.error('[EmailWorker] Failed to resolve dynamic template:', e);
         // Continue with default provided html/subject
+    }
+
+    // US-019: a campaign carries no `html` in its payload — 5,000 copies of the
+    // same email body do not belong in Redis. The stored `contentHtml` is the
+    // US-011 pipeline's output with `{{unsubscribeUrl}}` left as a literal slot
+    // precisely so this compile can fill it per address. Deliberately LAST, so a
+    // stray event mapping can never swap a campaign the author approved for
+    // another template (its templateName is reserved for the same reason).
+    if (campaignSource) {
+        finalHtml = renderEmailTemplate(campaignSource.contentHtml, variables || {});
+        finalSubject = renderEmailTemplate(campaignSource.subject, variables || {});
     }
 
     try {
@@ -225,11 +312,20 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
             markEmailLogSent({ ...logTarget, smtpResponse: info.response }),
         );
 
+        // US-019: the delivery record, and the campaign's own completion.
+        await markRecipient('SENT', { emailLogId: logId ?? null, error: null });
+
         return { success: true, messageId: info.messageId };
 
     } catch (error: any) {
         console.error(`[EmailWorker] Job ${job.id} failed:`, error);
         await markLogFailed(error.message);
+        // FAILED now, and SENT later if a BullMQ retry gets through — the
+        // recipient row records the latest attempt, not the first one.
+        await markRecipient('FAILED', {
+            emailLogId: logId ?? null,
+            error: error.message,
+        });
         throw error;
     }
 }, {

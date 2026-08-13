@@ -145,7 +145,9 @@ describe("dedupeAudienceRecipients", () => {
       { email: "jane@x.com", userId: null },
     ]);
 
-    expect(merged).toEqual([{ email: "jane@x.com", userId: "user_1" }]);
+    expect(merged).toEqual([
+      { email: "jane@x.com", userId: "user_1", name: null },
+    ]);
   });
 
   it("keeps the first occurrence, which is why customers are listed first", () => {
@@ -157,15 +159,15 @@ describe("dedupeAudienceRecipients", () => {
 
     expect(dedupeAudienceRecipients([...customers, ...subscribers])).toEqual([
       // The userId survives — US-019 writes it onto campaign_recipients.
-      { email: "a@x.com", userId: "user_a" },
-      { email: "b@x.com", userId: null },
+      { email: "a@x.com", userId: "user_a", name: null },
+      { email: "b@x.com", userId: null, name: null },
     ]);
   });
 
   it("normalizes what it emits, so the suppression compare is exact", () => {
     expect(
       dedupeAudienceRecipients([{ email: "  Bob@Example.COM ", userId: null }]),
-    ).toEqual([{ email: "bob@example.com", userId: null }]);
+    ).toEqual([{ email: "bob@example.com", userId: null, name: null }]);
   });
 
   it("drops blanks rather than letting them pad the count", () => {
@@ -175,7 +177,7 @@ describe("dedupeAudienceRecipients", () => {
         { email: "", userId: "user_1" },
         { email: "real@x.com", userId: null },
       ]),
-    ).toEqual([{ email: "real@x.com", userId: null }]);
+    ).toEqual([{ email: "real@x.com", userId: null, name: null }]);
   });
 });
 
@@ -231,7 +233,9 @@ describe("resolveCampaignAudience", () => {
       TENANT_A,
     );
 
-    expect(result.recipients).toEqual([{ email: "sub@x.com", userId: null }]);
+    expect(result.recipients).toEqual([
+      { email: "sub@x.com", userId: null, name: null },
+    ]);
     expect(prismaMock.newsletter_subscribers.findMany).toHaveBeenCalledWith({
       // PENDING never confirmed the opt-in; UNSUBSCRIBED/SUPPRESSED left.
       where: { tenantId: TENANT_A, status: "CONFIRMED" },
@@ -242,13 +246,13 @@ describe("resolveCampaignAudience", () => {
 
   it("reads consented customers only, excluding GDPR-erased rows", async () => {
     prismaMock.users.findMany.mockResolvedValue([
-      { id: "user_1", email: "customer@x.com" },
+      { id: "user_1", email: "customer@x.com", name: "Sample Customer" },
     ]);
 
     const result = await resolveCampaignAudience({ type: "customers" }, TENANT_A);
 
     expect(result.recipients).toEqual([
-      { email: "customer@x.com", userId: "user_1" },
+      { email: "customer@x.com", userId: "user_1", name: "Sample Customer" },
     ]);
     expect(prismaMock.users.findMany).toHaveBeenCalledWith({
       where: {
@@ -258,7 +262,8 @@ describe("resolveCampaignAudience", () => {
         marketingConsentAt: { not: null },
         NOT: { email: { endsWith: "@deleted.local" } },
       },
-      select: { id: true, email: true },
+      // `name` feeds the {{userName}} merge tag US-019 fills per recipient.
+      select: { id: true, email: true, name: true },
     });
     expect(prismaMock.newsletter_subscribers.findMany).not.toHaveBeenCalled();
   });
@@ -277,13 +282,15 @@ describe("resolveCampaignAudience", () => {
       TENANT_A,
     );
 
-    expect(result.recipients).toEqual([{ email: "jane@x.com", userId: null }]);
+    expect(result.recipients).toEqual([
+      { email: "jane@x.com", userId: null, name: null },
+    ]);
   });
 
   it("dedupes across both sources and applies the suppression list", async () => {
     prismaMock.users.findMany.mockResolvedValue([
-      { id: "user_1", email: "Both@x.com" },
-      { id: "user_2", email: "opted-out@x.com" },
+      { id: "user_1", email: "Both@x.com", name: "Both Lists" },
+      { id: "user_2", email: "opted-out@x.com", name: null },
     ]);
     prismaMock.newsletter_subscribers.findMany.mockResolvedValue([
       { email: "both@x.com" },
@@ -296,9 +303,10 @@ describe("resolveCampaignAudience", () => {
     const result = await resolveCampaignAudience({ type: "both" }, TENANT_A);
 
     expect(result.recipients).toEqual([
-      // One message for the person on both lists, carrying the customer's id.
-      { email: "both@x.com", userId: "user_1" },
-      { email: "subscriber@x.com", userId: null },
+      // One message for the person on both lists, carrying the customer's id —
+      // and the customer's name, which the subscriber row does not have.
+      { email: "both@x.com", userId: "user_1", name: "Both Lists" },
+      { email: "subscriber@x.com", userId: null, name: null },
     ]);
     expect(result.suppressedCount).toBe(1);
   });

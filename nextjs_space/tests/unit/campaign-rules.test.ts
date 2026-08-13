@@ -103,7 +103,7 @@ describe("campaign recipient counts", () => {
     _count: { _all: count },
   });
 
-  it("totals every status but counts only SENT as sent", () => {
+  it("totals every status, and keeps the three outcomes apart", () => {
     const totals = foldCampaignRecipientCounts([
       bucket("a", "SENT", 40),
       bucket("a", "FAILED", 3),
@@ -111,7 +111,14 @@ describe("campaign recipient counts", () => {
       bucket("a", "PENDING", 5),
     ]);
 
-    expect(totals.get("a")).toEqual({ recipientCount: 50, sentCount: 40 });
+    // US-019: suppressed is counted apart from failed — honouring an opt-out
+    // is the compliance rules working, not a delivery problem to investigate.
+    expect(totals.get("a")).toEqual({
+      recipientCount: 50,
+      sentCount: 40,
+      failedCount: 3,
+      suppressedCount: 2,
+    });
   });
 
   it("keeps campaigns apart", () => {
@@ -120,8 +127,18 @@ describe("campaign recipient counts", () => {
       bucket("b", "QUEUED", 7),
     ]);
 
-    expect(totals.get("a")).toEqual({ recipientCount: 1, sentCount: 1 });
-    expect(totals.get("b")).toEqual({ recipientCount: 7, sentCount: 0 });
+    expect(totals.get("a")).toEqual({
+      recipientCount: 1,
+      sentCount: 1,
+      failedCount: 0,
+      suppressedCount: 0,
+    });
+    expect(totals.get("b")).toEqual({
+      recipientCount: 7,
+      sentCount: 0,
+      failedCount: 0,
+      suppressedCount: 0,
+    });
   });
 
   it("reads a draft with no recipient rows as zero, not unknown", () => {
@@ -136,7 +153,13 @@ describe("campaign recipient counts", () => {
     };
 
     expect(summariseCampaigns([draft], [])).toEqual([
-      { ...draft, recipientCount: 0, sentCount: 0 },
+      {
+        ...draft,
+        recipientCount: 0,
+        sentCount: 0,
+        failedCount: 0,
+        suppressedCount: 0,
+      },
     ]);
   });
 

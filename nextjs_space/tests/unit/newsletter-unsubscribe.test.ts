@@ -16,6 +16,14 @@ const prismaMock = vi.hoisted(() => ({
   newsletter_subscribers: {
     findFirst: vi.fn(),
     update: vi.fn(),
+    // US-019 reaches this one when a campaign token is redeemed: the recipient
+    // may have no subscriber row of their own, but if one exists for the same
+    // address it must not be left looking mailable.
+    updateMany: vi.fn(),
+  },
+  campaign_recipients: {
+    // The second token shape the same URL accepts (US-019).
+    findFirst: vi.fn(),
   },
   email_suppressions: {
     create: vi.fn(),
@@ -74,6 +82,8 @@ beforeEach(() => {
   getTenantFromRequest.mockResolvedValue(TENANT);
   prismaMock.newsletter_subscribers.findFirst.mockResolvedValue(null);
   prismaMock.newsletter_subscribers.update.mockResolvedValue({ id: "sub_1" });
+  prismaMock.newsletter_subscribers.updateMany.mockResolvedValue({ count: 0 });
+  prismaMock.campaign_recipients.findFirst.mockResolvedValue(null);
   prismaMock.email_suppressions.create.mockResolvedValue({ id: "sup_1" });
 });
 

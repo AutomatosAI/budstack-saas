@@ -48,6 +48,32 @@ export function isCampaignEditable(status: CampaignStatus): boolean {
   );
 }
 
+/**
+ * The states a campaign can be called off from (US-019).
+ *
+ * SENDING is the interesting one: the fan-out is already in the queue, and
+ * cancelling is how an author stops the rest of it — each job re-checks the
+ * campaign's status before it sends, so the messages that have not gone yet
+ * never go. DRAFT is absent because there is nothing to stop; SENT and
+ * CANCELLED because there is nothing left to stop.
+ */
+export const CAMPAIGN_CANCELLABLE_STATUSES = [
+  "SCHEDULED",
+  "SENDING",
+] as const satisfies readonly CampaignStatus[];
+
+/** True while a cancel would still change anything. */
+export function isCampaignCancellable(status: CampaignStatus): boolean {
+  return (CAMPAIGN_CANCELLABLE_STATUSES as readonly CampaignStatus[]).includes(
+    status,
+  );
+}
+
+/** True while the fan-out is still producing outcomes worth polling for. */
+export function isCampaignInFlight(status: CampaignStatus): boolean {
+  return status === "SENDING";
+}
+
 /** 409 body for an edit aimed at a campaign that has left the author's hands. */
 export const CAMPAIGN_LOCKED_MESSAGE =
   "This campaign has already been sent or is sending, so it can no longer be changed. Duplicate it to send a revised version.";

@@ -11,6 +11,9 @@ import {
   CAMPAIGN_NAME_MAX,
   CAMPAIGN_SUBJECT_MAX,
   EMPTY_SUBJECT_MESSAGE,
+  NO_RECIPIENTS,
+  foldCampaignRecipientCounts,
+  type CampaignRecipientCountRow,
 } from "@/lib/email/campaign-fields";
 import {
   CAMPAIGN_EDITABLE_STATUSES,
@@ -111,7 +114,22 @@ export const GET = requirePermissionParams(
         });
       }
 
-      return NextResponse.json(campaign);
+      // US-019 progress, from the recipient rows rather than `campaigns.stats`:
+      // the send panel polls this while a fan-out is running, and the rows are
+      // what stay true mid-send. The id came from the tenant-scoped read above,
+      // which is what keeps this count inside the tenant.
+      const counts: CampaignRecipientCountRow[] =
+        await prisma.campaign_recipients.groupBy({
+          by: ["campaignId", "status"],
+          where: { campaignId: campaign.id },
+          _count: { _all: true },
+        });
+
+      return NextResponse.json({
+        ...campaign,
+        ...(foldCampaignRecipientCounts(counts).get(campaign.id) ??
+          NO_RECIPIENTS),
+      });
     } catch (error) {
       return apiError(error, { route: GET_ROUTE });
     }

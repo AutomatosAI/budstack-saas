@@ -142,6 +142,25 @@ export function TenantCampaignList() {
                   </td>
                   <td className="text-right font-mono text-bs-fg-muted tabular-nums">
                     {campaign.sentCount}
+                    {/* US-019: the two outcomes that are not a delivery, shown
+                        only when there are any — a clean send should read as a
+                        clean send, not as three zeroes. */}
+                    {(campaign.failedCount > 0 ||
+                      campaign.suppressedCount > 0) && (
+                      <div className="text-xs">
+                        {campaign.failedCount > 0 && (
+                          <span className="text-bs-danger">
+                            {campaign.failedCount} failed
+                          </span>
+                        )}
+                        {campaign.failedCount > 0 &&
+                          campaign.suppressedCount > 0 &&
+                          " · "}
+                        {campaign.suppressedCount > 0 && (
+                          <span>{campaign.suppressedCount} opted out</span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="hidden font-mono text-bs-fg-muted tabular-nums md:table-cell">
                     {format(new Date(campaign.updatedAt), "MMM d, yyyy")}

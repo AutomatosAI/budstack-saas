@@ -10,7 +10,7 @@ import {
   unsubscribeOutcomeCopy,
   unsubscribePromptCopy,
 } from "@/lib/email/newsletter-unsubscribe";
-import { unsubscribeNewsletterSubscriber } from "@/lib/email/newsletter-subscriptions";
+import { unsubscribeByToken } from "@/lib/email/unsubscribe-token";
 import {
   UNSUBSCRIBE_PAGE_HEADERS,
   renderUnsubscribePrompt,
@@ -132,8 +132,11 @@ export async function POST(request: NextRequest) {
 
   let outcome: UnsubscribeOutcome;
   try {
+    // Either token shape (subscriber, or US-019's per-campaign-recipient one)
+    // resolves here — the person following the link cannot be expected to know
+    // which list put the message in front of them.
     outcome = await runWithTenantContextAsync(resolved.tenantId, () =>
-      unsubscribeNewsletterSubscriber(resolved.token),
+      unsubscribeByToken(resolved.token, resolved.tenantId),
     );
   } catch (error) {
     // A failed write must read as a failure, not as "you're unsubscribed" —

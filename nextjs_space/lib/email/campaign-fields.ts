@@ -78,14 +78,25 @@ export interface CampaignListRow extends CampaignSummaryRow {
   readonly recipientCount: number;
   /** Of those, how many the worker actually delivered. */
   readonly sentCount: number;
+  /** Attempted and rejected — SMTP refusal, a cancel, an expired job (US-019). */
+  readonly failedCount: number;
+  /** Never attempted: the address was on the suppression list at send time. */
+  readonly suppressedCount: number;
 }
 
-interface CampaignCounts {
+export interface CampaignCounts {
   readonly recipientCount: number;
   readonly sentCount: number;
+  readonly failedCount: number;
+  readonly suppressedCount: number;
 }
 
-const NO_RECIPIENTS: CampaignCounts = { recipientCount: 0, sentCount: 0 };
+export const NO_RECIPIENTS: CampaignCounts = {
+  recipientCount: 0,
+  sentCount: 0,
+  failedCount: 0,
+  suppressedCount: 0,
+};
 
 /**
  * Fold the count buckets into one entry per campaign.
@@ -106,10 +117,16 @@ export function foldCampaignRecipientCounts(
   const totals = new Map<string, CampaignCounts>();
   for (const row of rows) {
     const current = totals.get(row.campaignId) ?? NO_RECIPIENTS;
+    const count = row._count._all;
     totals.set(row.campaignId, {
-      recipientCount: current.recipientCount + row._count._all,
-      sentCount:
-        current.sentCount + (row.status === "SENT" ? row._count._all : 0),
+      recipientCount: current.recipientCount + count,
+      sentCount: current.sentCount + (row.status === "SENT" ? count : 0),
+      failedCount: current.failedCount + (row.status === "FAILED" ? count : 0),
+      // Counted apart from failures on purpose: a suppressed address is the
+      // system honouring an opt-out, which is a success of the compliance rules
+      // rather than a delivery problem anybody should go and investigate.
+      suppressedCount:
+        current.suppressedCount + (row.status === "SUPPRESSED" ? count : 0),
     });
   }
   return totals;

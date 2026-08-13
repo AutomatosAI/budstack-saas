@@ -9,6 +9,7 @@ import {
   CampaignEditor,
   type CampaignDraft,
 } from "@/components/admin/email/CampaignEditor";
+import { CampaignSendPanel } from "@/components/admin/email/CampaignSendPanel";
 import { saveCampaign } from "@/components/admin/email/campaign-save";
 import type { CampaignAudience } from "@/lib/email/campaign-audience";
 import { CAMPAIGN_LOCKED_MESSAGE } from "@/lib/email/campaign-rules";
@@ -64,8 +65,19 @@ export function EditCampaignClient({
         </p>
       </div>
 
+      {/* US-019. Shown in BOTH states: before a send it is the control, during
+          and after one it is the only place the progress appears. */}
+      <div className="pt-6">
+        <CampaignSendPanel
+          campaignId={campaign.id}
+          status={campaign.status}
+          hasAudience={campaign.audience !== null}
+          onChanged={() => router.refresh()}
+        />
+      </div>
+
       {isEditable ? (
-        <div className="flex-1 overflow-hidden pt-6">
+        <div className="flex-1 overflow-hidden pt-4">
           <CampaignEditor
             initialData={campaign}
             campaignId={campaign.id}
@@ -78,7 +90,7 @@ export function EditCampaignClient({
         // The server refuses this edit with a 409 either way; showing the
         // composer first would let an author retype a sent campaign and only
         // then be told none of it could be kept.
-        <div className="pt-6">
+        <div className="pt-4">
           <div className="bs-card bs-card-pad flex items-start gap-3 text-sm text-bs-fg-muted">
             <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <p>{CAMPAIGN_LOCKED_MESSAGE}</p>

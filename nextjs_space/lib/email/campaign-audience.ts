@@ -98,6 +98,12 @@ export interface AudienceRecipient {
   readonly email: string;
   /** The customer this address belongs to, when it is one. */
   readonly userId: string | null;
+  /**
+   * What to call this person in `{{userName}}` (US-019). Known only for a
+   * customer, and not for all of them — a subscriber gave an address and
+   * nothing else, so this is absent far more often than it is set.
+   */
+  readonly name?: string | null;
 }
 
 export interface AudienceResolution {
@@ -127,7 +133,11 @@ export function dedupeAudienceRecipients(
   for (const candidate of candidates) {
     const email = normalizeEmail(candidate.email);
     if (!email || byEmail.has(email)) continue;
-    byEmail.set(email, { email, userId: candidate.userId });
+    byEmail.set(email, {
+      email,
+      userId: candidate.userId,
+      name: candidate.name ?? null,
+    });
   }
   return [...byEmail.values()];
 }

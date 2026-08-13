@@ -97,18 +97,22 @@ async function confirmedSubscribers(
 async function consentedCustomers(
   tenantId: string,
 ): Promise<AudienceRecipient[]> {
-  const rows: { id: string; email: string }[] = await prisma.users.findMany({
-    where: {
-      tenantId,
-      role: "PATIENT",
-      marketingConsentAt: { not: null },
-      NOT: { email: { endsWith: `@${ERASURE_EMAIL_DOMAIN}` } },
-    },
-    select: { id: true, email: true },
-  });
+  const rows: { id: string; email: string; name: string | null }[] =
+    await prisma.users.findMany({
+      where: {
+        tenantId,
+        role: "PATIENT",
+        marketingConsentAt: { not: null },
+        NOT: { email: { endsWith: `@${ERASURE_EMAIL_DOMAIN}` } },
+      },
+      // `name` is only for the `{{userName}}` merge tag US-019 fills per
+      // recipient; the count endpoint never returns it.
+      select: { id: true, email: true, name: true },
+    });
   return rows.map((row) => ({
     email: normalizeEmail(row.email),
     userId: row.id,
+    name: row.name,
   }));
 }
 

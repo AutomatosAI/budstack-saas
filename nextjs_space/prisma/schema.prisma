@@ -162,16 +162,22 @@ model campaigns {
 /// — the recipient row must outlive an erased customer or a pruned log row, and
 /// `users` is load-bearing (PRD-208) so it gains no back-relation here.
 model campaign_recipients {
-  id         String                  @id @default(uuid())
-  campaignId String
-  email      String
-  userId     String? // customer this address belongs to, when it is one
-  status     CampaignRecipientStatus @default(PENDING)
-  emailLogId String? // US-008 linkage: the email_logs row carrying the outcome
-  error      String?
-  createdAt  DateTime                @default(now())
-  updatedAt  DateTime                @updatedAt
-  campaigns  campaigns               @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  id               String                  @id @default(uuid())
+  campaignId       String
+  email            String
+  userId           String? // customer this address belongs to, when it is one
+  status           CampaignRecipientStatus @default(PENDING)
+  emailLogId       String? // US-008 linkage: the email_logs row carrying the outcome
+  error            String?
+  /// US-019: this recipient's own opt-out credential, minted at fan-out and put
+  /// in the footer link. Per-recipient rather than per-subscriber because a
+  /// campaign also reaches consented customers who have no subscriber row at
+  /// all, and because it is what attributes an unsubscribe to a campaign
+  /// (US-026). Nullable only so the column could be added to an existing table.
+  unsubscribeToken String?                 @unique
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  campaigns        campaigns               @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@unique([campaignId, email])
   @@index([campaignId, status])
