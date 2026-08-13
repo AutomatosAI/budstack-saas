@@ -74,6 +74,29 @@ export function isCampaignInFlight(status: CampaignStatus): boolean {
   return status === "SENDING";
 }
 
+/**
+ * The states in which a campaign has a delivery record to show (US-026).
+ *
+ * The complement of `CAMPAIGN_EDITABLE_STATUSES`, and not by coincidence: a
+ * campaign has recipients exactly once it has stopped being a draft, because
+ * `audience` stores a RULE and the rows are only materialised at send time.
+ * CANCELLED is included — a campaign stopped half way still mailed the first
+ * part of its list, and that is the state where an author most wants to know
+ * how far it got.
+ */
+export const CAMPAIGN_RESULT_STATUSES = [
+  "SENDING",
+  "SENT",
+  "CANCELLED",
+] as const satisfies readonly CampaignStatus[];
+
+/** True once a campaign has fanned out and has outcomes worth reading. */
+export function hasCampaignResults(status: CampaignStatus): boolean {
+  return (CAMPAIGN_RESULT_STATUSES as readonly CampaignStatus[]).includes(
+    status,
+  );
+}
+
 /** 409 body for an edit aimed at a campaign that has left the author's hands. */
 export const CAMPAIGN_LOCKED_MESSAGE =
   "This campaign has already been sent or is sending, so it can no longer be changed. Duplicate it to send a revised version.";

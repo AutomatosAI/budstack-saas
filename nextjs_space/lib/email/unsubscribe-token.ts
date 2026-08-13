@@ -30,7 +30,7 @@ const TERMINAL_SUBSCRIBER_STATUSES = ["UNSUBSCRIBED", "SUPPRESSED"] as const;
 /**
  * Redeem a per-recipient campaign token.
  *
- * Two writes, and the first is the load-bearing one: the suppression row is
+ * Three writes, and the first is the load-bearing one: the suppression row is
  * what stops the next campaign, while flipping a subscriber row only stops the
  * newsletter — and this recipient may well have no subscriber row at all. The
  * flip still happens when there is one, so the two lists cannot disagree about
@@ -48,10 +48,10 @@ async function unsubscribeCampaignRecipient(
   // `campaign_recipients` carries no tenantId and is not in the scope set
   // (lib/db.ts); the relation filter is what keeps this inside the tenant whose
   // host served the request.
-  const recipient: { email: string } | null =
+  const recipient: { id: string; email: string } | null =
     await prisma.campaign_recipients.findFirst({
       where: { unsubscribeToken: token, campaigns: { tenantId } },
-      select: { email: true },
+      select: { id: true, email: true },
     });
 
   if (!recipient) return "invalid";
@@ -59,6 +59,17 @@ async function unsubscribeCampaignRecipient(
   const email = normalizeEmail(recipient.email);
 
   await suppressEmail({ tenantId, email, reason: "unsubscribed" });
+
+  // US-026: attribute the opt-out to the campaign that prompted it. Only the
+  // token knows — a suppression row records that this address left, never which
+  // message it left from. `unsubscribedAt: null` in the where keeps the FIRST
+  // redemption: the link outlives the campaign in somebody's inbox, and a
+  // second click months later must not restate it as a fresh opt-out. Keyed on
+  // the id that came out of the tenant-scoped read above.
+  await prisma.campaign_recipients.updateMany({
+    where: { id: recipient.id, unsubscribedAt: null },
+    data: { unsubscribedAt: now },
+  });
 
   await prisma.newsletter_subscribers.updateMany({
     where: {

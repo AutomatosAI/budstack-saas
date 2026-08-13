@@ -7,6 +7,7 @@ import { parseCampaignAudience } from "@/lib/email/campaign-audience";
 import { CAMPAIGN_DETAIL_SELECT } from "@/lib/email/campaign-fields";
 import { isCampaignEditable } from "@/lib/email/campaign-rules";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
+import { can } from "@/lib/permissions/resolve";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { runWithTenantContextAsync } from "@/lib/tenant/tenant-context";
 
@@ -37,7 +38,7 @@ export default async function EditCampaignPage({
   // — see lib/permissions/preset-roles.ts); without this they would be 403'd by
   // the campaign endpoints but could still read a campaign's subject and
   // document by navigating straight here.
-  await requirePagePermission("canViewEmails");
+  const { permissions } = await requirePagePermission("canViewEmails");
 
   // PRD-302: impersonation-aware tenant (matches the banner).
   const active = await getActiveAdminTenant();
@@ -86,6 +87,10 @@ export default async function EditCampaignPage({
         audience: parseCampaignAudience(campaign.audience),
       }}
       isEditable={isCampaignEditable(campaign.status)}
+      // US-026. Resolved here rather than fetched by the panel: the page has
+      // already paid for the permission set, and the export route re-checks it
+      // regardless — this only decides whether the button is offered.
+      canExportRecipients={can(permissions, "canExportCustomers")}
     />
   );
 }

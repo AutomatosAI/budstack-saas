@@ -181,6 +181,13 @@ model campaign_recipients {
   /// all, and because it is what attributes an unsubscribe to a campaign
   /// (US-026). Nullable only so the column could be added to an existing table.
   unsubscribeToken String?                 @unique
+  /// US-026: when this recipient redeemed the token above, or null. Stamped by
+  /// `unsubscribeByToken` at the moment the link is followed, because the token
+  /// is the ONLY thing that ties an opt-out to the message that caused it —
+  /// `email_suppressions` records that an address left the list, never which
+  /// email it left from. First redemption wins: the link stays live in an inbox
+  /// forever and following it again must not move the timestamp.
+  unsubscribedAt   DateTime?
   createdAt        DateTime                @default(now())
   updatedAt        DateTime                @updatedAt
   campaigns        campaigns               @relation(fields: [campaignId], references: [id], onDelete: Cascade)

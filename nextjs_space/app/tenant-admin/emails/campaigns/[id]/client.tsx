@@ -9,11 +9,15 @@ import {
   CampaignEditor,
   type CampaignDraft,
 } from "@/components/admin/email/CampaignEditor";
+import { CampaignResultsPanel } from "@/components/admin/email/CampaignResultsPanel";
 import { CampaignSchedulePanel } from "@/components/admin/email/CampaignSchedulePanel";
 import { CampaignSendPanel } from "@/components/admin/email/CampaignSendPanel";
 import { saveCampaign } from "@/components/admin/email/campaign-save";
 import type { CampaignAudience } from "@/lib/email/campaign-audience";
-import { CAMPAIGN_LOCKED_MESSAGE } from "@/lib/email/campaign-rules";
+import {
+  CAMPAIGN_LOCKED_MESSAGE,
+  hasCampaignResults,
+} from "@/lib/email/campaign-rules";
 import type { CampaignStatus } from "@prisma/client";
 import type { EmailContentJson } from "@/lib/email/email-content-json";
 
@@ -29,11 +33,14 @@ interface EditCampaignClientProps {
   };
   /** DRAFT or SCHEDULED. Anything else is history and opens read-only. */
   readonly isEditable: boolean;
+  /** US-026: whether to offer the recipient CSV. The route re-checks it. */
+  readonly canExportRecipients: boolean;
 }
 
 export function EditCampaignClient({
   campaign,
   isEditable,
+  canExportRecipients,
 }: EditCampaignClientProps) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
@@ -86,6 +93,17 @@ export function EditCampaignClient({
             scheduledAt={campaign.scheduledAt}
             hasAudience={campaign.audience !== null}
             onChanged={() => router.refresh()}
+          />
+        )}
+
+        {/* US-026. Only once there is a delivery record to read: a draft has no
+            recipient rows at all, because the audience is a rule until send
+            time, and a panel of zeroes would read as a failed send. */}
+        {hasCampaignResults(campaign.status) && (
+          <CampaignResultsPanel
+            campaignId={campaign.id}
+            status={campaign.status}
+            canExport={canExportRecipients}
           />
         )}
       </div>

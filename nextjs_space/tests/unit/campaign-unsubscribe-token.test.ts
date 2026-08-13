@@ -11,7 +11,9 @@ const prismaMock = vi.hoisted(() => ({
     update: vi.fn(),
     updateMany: vi.fn(),
   },
-  campaign_recipients: { findFirst: vi.fn() },
+  // US-026: the redemption is also stamped on the recipient row, which is what
+  // attributes the opt-out to the campaign that prompted it.
+  campaign_recipients: { findFirst: vi.fn(), updateMany: vi.fn() },
   email_suppressions: { create: vi.fn() },
   // US-023: unsubscribeNewsletterSubscriber also clears users.marketingConsentAt
   users: { updateMany: vi.fn() },
@@ -24,6 +26,7 @@ import { unsubscribeByToken } from "@/lib/email/unsubscribe-token";
 const TENANT_A = "tenant-a";
 const TOKEN = "a-very-long-unsubscribe-token-value";
 const NOW = new Date("2026-08-13T10:00:00Z");
+const RECIPIENT_ID = "rec-1";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -32,6 +35,7 @@ beforeEach(() => {
   prismaMock.newsletter_subscribers.updateMany.mockResolvedValue({ count: 0 });
   prismaMock.users.updateMany.mockResolvedValue({ count: 0 });
   prismaMock.campaign_recipients.findFirst.mockResolvedValue(null);
+  prismaMock.campaign_recipients.updateMany.mockResolvedValue({ count: 1 });
   prismaMock.email_suppressions.create.mockResolvedValue({ id: "sup_1" });
 });
 
@@ -52,6 +56,7 @@ describe("unsubscribeByToken", () => {
 
   it("honours a campaign recipient token by writing the suppression row", async () => {
     prismaMock.campaign_recipients.findFirst.mockResolvedValue({
+      id: RECIPIENT_ID,
       email: "Customer@Example.com",
     });
 
@@ -73,6 +78,7 @@ describe("unsubscribeByToken", () => {
 
   it("also retires a subscriber row for the same address, without downgrading a stronger one", async () => {
     prismaMock.campaign_recipients.findFirst.mockResolvedValue({
+      id: RECIPIENT_ID,
       email: "jane@example.com",
     });
 
@@ -108,5 +114,56 @@ describe("unsubscribeByToken", () => {
     );
     expect(prismaMock.email_suppressions.create).not.toHaveBeenCalled();
     expect(prismaMock.newsletter_subscribers.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.campaign_recipients.updateMany).not.toHaveBeenCalled();
+  });
+
+  // US-026 — attribution. A suppression row knows that an address left; only
+  // the per-recipient token knows which email it left from.
+  it("stamps the recipient row so the opt-out is attributed to its campaign", async () => {
+    prismaMock.campaign_recipients.findFirst.mockResolvedValue({
+      id: RECIPIENT_ID,
+      email: "jane@example.com",
+    });
+
+    await unsubscribeByToken(TOKEN, TENANT_A, NOW);
+
+    const write = prismaMock.campaign_recipients.updateMany.mock.calls[0][0];
+    // Keyed on the id that came out of the tenant-scoped read above, never on
+    // the token again.
+    expect(write.where).toEqual({ id: RECIPIENT_ID, unsubscribedAt: null });
+    expect(write.data).toEqual({ unsubscribedAt: NOW });
+  });
+
+  it("keeps the FIRST redemption when the link is followed again", async () => {
+    prismaMock.campaign_recipients.findFirst.mockResolvedValue({
+      id: RECIPIENT_ID,
+      email: "jane@example.com",
+    });
+
+    await unsubscribeByToken(TOKEN, TENANT_A, NOW);
+
+    // The link outlives the campaign in somebody's inbox, so a second click
+    // months later must not restate an old opt-out as a fresh one. The
+    // predicate is in the write, so Postgres decides it, not a read.
+    expect(
+      prismaMock.campaign_recipients.updateMany.mock.calls[0][0].where
+        .unsubscribedAt,
+    ).toBeNull();
+  });
+
+  it("never touches a campaign recipient when a subscriber token matched", async () => {
+    prismaMock.newsletter_subscribers.findFirst.mockResolvedValue({
+      id: "sub_1",
+      tenantId: TENANT_A,
+      email: "jane@example.com",
+      status: "CONFIRMED",
+    });
+
+    await unsubscribeByToken(TOKEN, TENANT_A, NOW);
+
+    // A newsletter opt-out is not attributable to any campaign — inventing an
+    // attribution here would inflate a campaign's unsubscribe count with
+    // people who left from somewhere else entirely.
+    expect(prismaMock.campaign_recipients.updateMany).not.toHaveBeenCalled();
   });
 });
