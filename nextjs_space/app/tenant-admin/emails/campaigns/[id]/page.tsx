@@ -3,6 +3,7 @@ import type { CampaignStatus } from "@prisma/client";
 
 import { asEmailContentJson } from "@/components/admin/email/email-editor-mode";
 import { prisma } from "@/lib/db";
+import { parseCampaignAudience } from "@/lib/email/campaign-audience";
 import { CAMPAIGN_DETAIL_SELECT } from "@/lib/email/campaign-fields";
 import { isCampaignEditable } from "@/lib/email/campaign-rules";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
@@ -21,6 +22,7 @@ interface CampaignDetailRow {
   subject: string;
   status: CampaignStatus;
   contentJson: unknown;
+  audience: unknown;
 }
 
 export default async function EditCampaignPage({
@@ -74,6 +76,9 @@ export default async function EditCampaignPage({
         // Narrowed here rather than in the client: the Json column is genuinely
         // unknown, and the composer must be handed a document or nothing.
         contentJson: asEmailContentJson(campaign.contentJson),
+        // Same rule for the audience rule (US-018): anything this version
+        // cannot read comes through as "not chosen", never as "everybody".
+        audience: parseCampaignAudience(campaign.audience),
       }}
       isEditable={isCampaignEditable(campaign.status)}
     />

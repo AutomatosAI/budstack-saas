@@ -19,9 +19,10 @@
  */
 
 import React, { useCallback, useState } from "react";
-import { Loader2, Save, Users } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
+import type { CampaignAudience } from "@/lib/email/campaign-audience";
 import {
   CAMPAIGN_NAME_MAX,
   CAMPAIGN_SUBJECT_MAX,
@@ -29,6 +30,7 @@ import {
 import { CAMPAIGN_EMAIL_CATEGORY } from "@/lib/email/campaign-rules";
 import type { EmailContentJson } from "@/lib/email/email-content-json";
 
+import { CampaignAudiencePicker } from "./CampaignAudiencePicker";
 import { EmailComposer } from "./EmailComposer";
 import { EmailEditorPanes } from "./EmailEditorPanes";
 import { emailPreviewRequest } from "./email-preview-request";
@@ -39,6 +41,12 @@ export interface CampaignDraft {
   name: string;
   subject: string;
   contentJson: EmailContentJson;
+  /**
+   * US-018's rule, omitted while the author has not chosen one. A draft
+   * without an audience is legitimate — it simply has nobody to go to yet, and
+   * US-019's send is where that becomes a refusal.
+   */
+  audience?: CampaignAudience;
 }
 
 export interface CampaignEditorProps {
@@ -47,26 +55,31 @@ export interface CampaignEditorProps {
     readonly subject?: string;
     /** Straight off the Json column, so genuinely unknown until narrowed. */
     readonly contentJson?: EmailContentJson | null;
+    /** Likewise narrowed by the page, from the `audience` Json column. */
+    readonly audience?: CampaignAudience | null;
   };
   readonly onSave: (draft: CampaignDraft) => Promise<void>;
   readonly isSaving?: boolean;
   /** US-015's render endpoint. Omitted leaves the screen without a preview. */
   readonly previewUrl?: string;
+  /** Absent until the draft exists, which is when a count can be asked for. */
+  readonly campaignId?: string;
 }
-
-const AUDIENCE_PLACEHOLDER =
-  "Who this campaign goes to is chosen in the next step of the rollout. Until then you can write, preview and save it as a draft — a draft is never sent to anyone.";
 
 export function CampaignEditor({
   initialData,
   onSave,
   isSaving = false,
   previewUrl,
+  campaignId,
 }: CampaignEditorProps) {
   const [name, setName] = useState(initialData?.name ?? "");
   const [subject, setSubject] = useState(initialData?.subject ?? "");
   const [contentJson, setContentJson] = useState<EmailContentJson | null>(
     initialData?.contentJson ?? null,
+  );
+  const [audience, setAudience] = useState<CampaignAudience | null>(
+    initialData?.audience ?? null,
   );
 
   // Stable identity, and it must stay stable: the composer's onUpdate closure
@@ -91,6 +104,9 @@ export function CampaignEditor({
       // template save in Simple mode, and the same one the preview request
       // below makes, so all three describe one email.
       contentJson: contentJson ?? EMPTY_EMAIL_DOC,
+      // Omitted rather than sent as null: the schema has no "clear it" state,
+      // and an unset audience is the column's default anyway.
+      ...(audience ? { audience } : {}),
     });
   };
 
@@ -149,13 +165,11 @@ export function CampaignEditor({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-start gap-2 rounded-bs-md border border-bs-border-100 bg-bs-card-2 p-3 text-sm text-bs-fg-muted">
-        <Users className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <p>
-          <span className="font-medium text-bs-fg">Audience: not set.</span>{" "}
-          {AUDIENCE_PLACEHOLDER}
-        </p>
-      </div>
+      <CampaignAudiencePicker
+        value={audience}
+        onChange={setAudience}
+        campaignId={campaignId}
+      />
 
       <div className="flex-1 overflow-hidden rounded-bs-md border border-bs-border-100 bg-bs-canvas">
         <EmailEditorPanes

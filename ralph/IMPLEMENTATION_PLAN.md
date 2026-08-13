@@ -28,7 +28,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 
 - [x] US-016 Campaign data model
 - [x] US-017 Campaign CRUD + compose UI
-- [ ] US-018 Audience selection v1
+- [x] US-018 Audience selection v1
 - [ ] US-019 Fan-out send with rate cap
 - [ ] US-020 Compliance headers + enforced footer
 - [ ] US-021 Campaign scheduling

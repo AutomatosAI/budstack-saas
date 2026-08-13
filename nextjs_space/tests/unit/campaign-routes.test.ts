@@ -21,7 +21,13 @@ const prismaMock = vi.hoisted(() => ({
     updateMany: vi.fn(),
     deleteMany: vi.fn(),
   },
-  campaign_recipients: { groupBy: vi.fn() },
+  campaign_recipients: {
+    groupBy: vi.fn(),
+    // Present so US-018's "materialized at send time" rule can be asserted:
+    // choosing an audience stores a RULE and writes no recipient rows.
+    create: vi.fn(),
+    createMany: vi.fn(),
+  },
   tenants: { findFirst: vi.fn() },
 }));
 
@@ -462,6 +468,97 @@ describe("DELETE /api/tenant-admin/campaigns/[id]", () => {
 
     expect(response.status).toBe(409);
     expect(prismaMock.campaigns.deleteMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("the audience rule (US-018)", () => {
+  it("stores the rule a create was given, and writes no recipients for it", async () => {
+    await createCampaign(
+      request("POST", "/api/tenant-admin/campaigns", {
+        name: "October newsletter",
+        subject: "What's new",
+        contentJson: DOC,
+        audience: { type: "both" },
+      }),
+    );
+
+    const data = writtenData(prismaMock.campaigns.create);
+    expect(data.audience).toEqual({ type: "both" });
+    // The addresses are resolved from this rule at send time (US-019). A draft
+    // that materialized its own recipients would mail whoever happened to be
+    // consented on the day it was written.
+    expect(prismaMock.campaign_recipients.create).not.toHaveBeenCalled();
+    expect(prismaMock.campaign_recipients.createMany).not.toHaveBeenCalled();
+  });
+
+  it("leaves the column NULL when no audience is chosen", async () => {
+    await createCampaign(
+      request("POST", "/api/tenant-admin/campaigns", {
+        name: "Not addressed yet",
+        subject: "Draft",
+        contentJson: DOC,
+      }),
+    );
+
+    // NULL reads as "not chosen yet" everywhere — never as "everybody".
+    expect(writtenData(prismaMock.campaigns.create)).not.toHaveProperty(
+      "audience",
+    );
+  });
+
+  it("changes the audience on its own, without re-rendering the document", async () => {
+    await updateCampaign(
+      request("PUT", `/api/tenant-admin/campaigns/${CAMPAIGN_UUID}`, {
+        audience: { type: "customers" },
+      }),
+      params,
+    );
+
+    const data = writtenData(prismaMock.campaigns.updateMany);
+    expect(data.audience).toEqual({ type: "customers" });
+    expect(data).not.toHaveProperty("contentHtml");
+    expect(prismaMock.tenants.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("does not re-assert an audience when only the document is saved", async () => {
+    await updateCampaign(
+      request("PUT", `/api/tenant-admin/campaigns/${CAMPAIGN_UUID}`, {
+        contentJson: DOC,
+      }),
+      params,
+    );
+
+    expect(writtenData(prismaMock.campaigns.updateMany)).not.toHaveProperty(
+      "audience",
+    );
+  });
+
+  it("400s an audience type the platform does not know", async () => {
+    const response = await createCampaign(
+      request("POST", "/api/tenant-admin/campaigns", {
+        name: "Everyone",
+        subject: "Hi",
+        contentJson: DOC,
+        audience: { type: "everyone" },
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(prismaMock.campaigns.create).not.toHaveBeenCalled();
+  });
+
+  it("403s an admin without canEditEmails changing who a campaign reaches", async () => {
+    signInAs("editor");
+
+    const response = await updateCampaign(
+      request("PUT", `/api/tenant-admin/campaigns/${CAMPAIGN_UUID}`, {
+        audience: { type: "both" },
+      }),
+      params,
+    );
+
+    expect(response.status).toBe(403);
+    expect(prismaMock.campaigns.updateMany).not.toHaveBeenCalled();
   });
 });
 

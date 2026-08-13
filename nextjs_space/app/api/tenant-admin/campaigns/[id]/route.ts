@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { ApiError, apiError, apiValidationError } from "@/lib/api-error";
 import { prisma } from "@/lib/db";
+import { campaignAudienceBodySchema } from "@/lib/email/campaign-audience-query";
 import { resolveCampaignContent } from "@/lib/email/campaign-content";
 import {
   CAMPAIGN_BODY_MAX_BYTES,
@@ -40,6 +41,13 @@ const campaignUpdateSchema = z.object({
   name: z.string().trim().min(1).max(CAMPAIGN_NAME_MAX).optional(),
   subject: z.string().trim().min(1).max(CAMPAIGN_SUBJECT_MAX).optional(),
   contentJson: emailContentJsonSchema.optional(),
+  // US-018. Optional like the rest, so this endpoint ACCEPTS an audience-only
+  // update without re-rendering anything — note the composer does not send one:
+  // "Save draft" posts the whole draft, document included. What the optionality
+  // buys today is the other direction: a body with no `audience` leaves the
+  // column exactly as it is, so saving the document cannot silently re-assert
+  // an audience the author has since changed elsewhere.
+  audience: campaignAudienceBodySchema.optional(),
 });
 
 /**
@@ -115,7 +123,7 @@ export const PUT = requirePermissionParams(
   async (req, { tenantId }, params) => {
     try {
       const id = parseUuid(params.id);
-      const { name, subject, contentJson } = await parseJsonBody(
+      const { name, subject, contentJson, audience } = await parseJsonBody(
         req,
         campaignUpdateSchema,
         { maxBytes: CAMPAIGN_BODY_MAX_BYTES },
@@ -145,6 +153,7 @@ export const PUT = requirePermissionParams(
           // `name` arrives trimmed and length-capped from the schema.
           ...(name !== undefined && { name }),
           ...(safeSubject !== undefined && { subject: safeSubject }),
+          ...(audience !== undefined && { audience }),
           ...content,
         },
       });

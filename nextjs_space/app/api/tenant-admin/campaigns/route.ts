@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { prisma } from "@/lib/db";
+import { campaignAudienceBodySchema } from "@/lib/email/campaign-audience-query";
 import { resolveCampaignContent } from "@/lib/email/campaign-content";
 import {
   CAMPAIGN_BODY_MAX_BYTES,
@@ -31,11 +32,16 @@ const CREATE_ROUTE = "POST /api/tenant-admin/campaigns";
  * mean accepting a marketing email whose only compliance guarantee is that the
  * author remembered. `status` is absent on purpose — a campaign is created as a
  * DRAFT and only US-021's scheduling moves it on.
+ *
+ * `audience` (US-018) is optional: a draft is written before its audience is
+ * chosen, and it is a RULE — the addresses it resolves to are materialized by
+ * US-019 at send time and never stored here.
  */
 const campaignCreateSchema = z.object({
   name: z.string().trim().min(1).max(CAMPAIGN_NAME_MAX),
   subject: z.string().trim().min(1).max(CAMPAIGN_SUBJECT_MAX),
   contentJson: emailContentJsonSchema,
+  audience: campaignAudienceBodySchema.optional(),
 });
 
 // Reading a campaign exposes its subject lines and audience the same way a
@@ -75,7 +81,7 @@ export const GET = requirePermission("canViewEmails", async (_req, { tenantId })
 
 export const POST = requirePermission("canEditEmails", async (req, { tenantId }) => {
   try {
-    const { name, subject, contentJson } = await parseJsonBody(
+    const { name, subject, contentJson, audience } = await parseJsonBody(
       req,
       campaignCreateSchema,
       { maxBytes: CAMPAIGN_BODY_MAX_BYTES },
@@ -101,6 +107,9 @@ export const POST = requirePermission("canEditEmails", async (req, { tenantId })
         name,
         subject: safeSubject,
         status: "DRAFT",
+        // Absent leaves the column NULL, which reads as "audience not chosen
+        // yet" everywhere — never as "everybody".
+        ...(audience !== undefined && { audience }),
         ...content,
       },
       select: CAMPAIGN_DETAIL_SELECT,

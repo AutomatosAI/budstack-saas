@@ -10,6 +10,7 @@ import {
   type CampaignDraft,
 } from "@/components/admin/email/CampaignEditor";
 import { saveCampaign } from "@/components/admin/email/campaign-save";
+import type { CampaignAudience } from "@/lib/email/campaign-audience";
 import { CAMPAIGN_LOCKED_MESSAGE } from "@/lib/email/campaign-rules";
 import type { CampaignStatus } from "@prisma/client";
 import type { EmailContentJson } from "@/lib/email/email-content-json";
@@ -21,6 +22,7 @@ interface EditCampaignClientProps {
     readonly subject: string;
     readonly status: CampaignStatus;
     readonly contentJson: EmailContentJson | null;
+    readonly audience: CampaignAudience | null;
   };
   /** DRAFT or SCHEDULED. Anything else is history and opens read-only. */
   readonly isEditable: boolean;
@@ -66,6 +68,7 @@ export function EditCampaignClient({
         <div className="flex-1 overflow-hidden pt-6">
           <CampaignEditor
             initialData={campaign}
+            campaignId={campaign.id}
             onSave={handleSave}
             isSaving={isSaving}
             previewUrl="/api/tenant-admin/email-templates/preview"
