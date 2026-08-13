@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // EVERY recipient, including the consented customers who have no subscriber row
 // and therefore no subscriber token. Both token shapes arrive on the same URL,
 // so the resolver tries both before calling one invalid.
+//
+// US-028 added a third shape (`users.reorderReminderToken`), tried last. Its own
+// behaviour is covered in tests/unit/reorder-reminder.test.ts; here it only has
+// to be reachable, so `users.findFirst` returns null throughout and the two
+// campaign paths below are unchanged.
 
 const prismaMock = vi.hoisted(() => ({
   newsletter_subscribers: {
@@ -16,7 +21,8 @@ const prismaMock = vi.hoisted(() => ({
   campaign_recipients: { findFirst: vi.fn(), updateMany: vi.fn() },
   email_suppressions: { create: vi.fn() },
   // US-023: unsubscribeNewsletterSubscriber also clears users.marketingConsentAt
-  users: { updateMany: vi.fn() },
+  // US-028: `findFirst` is the third token kind's lookup, tried after this one.
+  users: { findFirst: vi.fn(), updateMany: vi.fn() },
 }));
 
 vi.mock("@/lib/db", () => ({ prisma: prismaMock }));
@@ -33,6 +39,7 @@ beforeEach(() => {
   prismaMock.newsletter_subscribers.findFirst.mockResolvedValue(null);
   prismaMock.newsletter_subscribers.update.mockResolvedValue({ id: "sub_1" });
   prismaMock.newsletter_subscribers.updateMany.mockResolvedValue({ count: 0 });
+  prismaMock.users.findFirst.mockResolvedValue(null);
   prismaMock.users.updateMany.mockResolvedValue({ count: 0 });
   prismaMock.campaign_recipients.findFirst.mockResolvedValue(null);
   prismaMock.campaign_recipients.updateMany.mockResolvedValue({ count: 1 });

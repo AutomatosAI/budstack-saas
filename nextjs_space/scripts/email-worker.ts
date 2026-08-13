@@ -5,7 +5,7 @@ import Redis from 'ioredis';
 import Handlebars from 'handlebars';
 import { prisma as db } from '../lib/db';
 import { decrypt } from '../lib/security/encryption';
-import { campaignQueueName, emailQueueName } from '../lib/queue';
+import { campaignQueueName, emailQueueName, getReorderQueue, reorderQueueName } from '../lib/queue';
 import { registerEmailHelpers, renderEmailTemplate } from '../lib/email/handlebars-helpers';
 import { markEmailLogFailed, markEmailLogSent } from '../lib/email/email-log-linkage';
 import {
@@ -28,6 +28,12 @@ import {
 } from '../lib/email/campaign-send';
 import { SCHEDULED_SEND_REASON } from '../lib/email/campaign-schedule';
 import { runScheduledCampaign } from '../lib/email/campaign-scheduled-runner';
+import {
+    REORDER_REMINDER_CRON,
+    REORDER_REMINDER_JOB,
+    REORDER_REMINDER_SCHEDULER_ID,
+} from '../lib/email/reorder-reminder';
+import { runReorderReminderSweep } from '../lib/email/reorder-reminder-runner';
 import { bypassTenantScope } from '../lib/tenant/tenant-scope-policy';
 import {
     DEFAULT_MAX_JOB_AGE_MS,
@@ -436,6 +442,81 @@ campaignWorker.on('error', err => {
     console.error('[CampaignScheduler] Worker error:', err);
 });
 
+// US-028 — the daily reorder-reminder sweep.
+//
+// SINGLE-INSTANCE BY CONSTRUCTION, at two independent levels, because worker
+// count is a deployment decision nobody wants to couple a send to:
+//
+//   1. Registration is an UPSERT keyed on a fixed scheduler id. Every worker
+//      that boots registers the same id, and BullMQ keeps one scheduler for it —
+//      so N workers produce one sweep a day, not N.
+//   2. Each sweep claims every customer it mails with a conditional write
+//      (`claimReorderReminder`) before queueing anything. Even two sweeps
+//      running at once mail nobody twice; the second one finds nothing to claim.
+//
+// Concurrency of 1 because a sweep fans out across every enabled store — two at
+// once is two fan-outs competing for the same connection pool.
+const reorderWorker = new Worker(reorderQueueName, async (job: Job) => {
+    const outcome = await runReorderReminderSweep();
+
+    console.log(
+        `[ReorderReminder] Sweep ${job.id}: ${outcome.queued} reminder(s) queued across ${outcome.tenants} store(s)`,
+    );
+    for (const tenant of outcome.perTenant) {
+        // A store that threw queued nothing, exactly like a store with nobody
+        // due. This is the only line that tells them apart, so it comes first
+        // and is never filtered out by the "nothing to report" skip below.
+        if (tenant.error) {
+            console.error(
+                `[ReorderReminder]   ${tenant.tenantId}: pass failed, other stores unaffected — ${tenant.error}`,
+            );
+            continue;
+        }
+        if (tenant.due === 0 && !tenant.deferred) continue;
+        console.log(
+            `[ReorderReminder]   ${tenant.tenantId}: ${tenant.due} due, ${tenant.queued} queued, ${tenant.skipped} already claimed`,
+        );
+        // Never a silent truncation: a store at the cap has customers waiting,
+        // and tomorrow's sweep takes them first.
+        if (tenant.deferred) {
+            console.warn(
+                `[ReorderReminder]   ${tenant.tenantId}: hit the per-sweep cap — more customers are due and will be taken first on the next run`,
+            );
+        }
+    }
+
+    return outcome;
+}, {
+    connection: new Redis(REDIS_URL, { maxRetriesPerRequest: null }) as any,
+    concurrency: 1,
+});
+
+reorderWorker.on('failed', (job, err) => {
+    console.error(`[ReorderReminder] Sweep ${job?.id} failed: ${err.message}`);
+});
+
+reorderWorker.on('error', err => {
+    console.error('[ReorderReminder] Worker error:', err);
+});
+
+// Idempotent across restarts and across replicas — see the note above. Failing
+// this must not take the worker down: the email queue is what actually delivers
+// mail, and a missing scheduler costs a retention nudge, not a receipt.
+getReorderQueue()
+    .upsertJobScheduler(
+        REORDER_REMINDER_SCHEDULER_ID,
+        { pattern: REORDER_REMINDER_CRON, tz: 'UTC' },
+        { name: REORDER_REMINDER_JOB },
+    )
+    .then(() => {
+        console.log(
+            `[ReorderReminder] Daily sweep scheduled (${REORDER_REMINDER_CRON} UTC)`,
+        );
+    })
+    .catch(err => {
+        console.error('[ReorderReminder] Failed to schedule daily sweep:', err);
+    });
+
 // PRD-220 AC-A2/A3 — liveness heartbeat + stuck-queue alert. The super-admin
 // email-health route reads the heartbeat key; Railway log alerting matches
 // the QUEUED_ALERT_PREFIX line (see docs/runbooks/email-worker.md).
@@ -480,6 +561,7 @@ process.on('SIGTERM', async () => {
     clearInterval(healthTimer);
     await worker.close();
     await campaignWorker.close();
+    await reorderWorker.close();
     process.exit(0);
 });
 

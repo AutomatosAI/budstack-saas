@@ -41,4 +41,4 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 - [x] US-025 Segments as saved audiences
 - [x] US-026 Campaign results page
 - [x] US-027 Open/click tracking (per-tenant opt-in)
-- [ ] US-028 Reorder-reminder automation (MVP)
+- [x] US-028 Reorder-reminder automation (MVP)

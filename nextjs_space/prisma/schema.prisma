@@ -908,6 +908,8 @@ model users {
   address             Json?
   isActive            Boolean                   @default(true)
   marketingConsentAt  DateTime? // Email Phase 2 (US-016/US-023): when this customer opted in to marketing. NULL = no consent, never mail them a campaign.
+  reorderReminderAt   DateTime? // US-028: when the reorder-reminder automation last mailed this customer. NULL = never. The once-per-window guard is a conditional write against this column.
+  reorderReminderToken String?  @unique // US-028: this customer's permanent opt-out credential for the reorder reminder. Minted on the first reminder and never rotated — the link lives in an inbox and has to keep working.
   consultations       consultations[]
   customer_tags       customer_tags[] // US-024 CRM-lite tags; rows cascade away with the user
   drgreen_carts       drgreen_carts?

@@ -453,7 +453,12 @@ describe("/api/tenant-admin/email-settings", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ [EMAIL_TRACKING_SETTING]: false });
+    // US-028 put the reorder-reminder rule on the same endpoint, so the body
+    // carries every email switch. The property that matters here is unchanged:
+    // a blob that never mentioned tracking reads as off.
+    expect(await response.json()).toMatchObject({
+      [EMAIL_TRACKING_SETTING]: false,
+    });
   });
 
   it("turns tracking on without disturbing the rest of the blob", async () => {
@@ -493,9 +498,12 @@ describe("/api/tenant-admin/email-settings", () => {
       expect.objectContaining({
         entityId: TENANT_ID,
         metadata: expect.objectContaining({
-          setting: EMAIL_TRACKING_SETTING,
-          previous: true,
-          next: false,
+          // US-028: the route now writes several switches, so the row names the
+          // keys this request touched and carries every switch either side of
+          // it — a superset of the single `setting` it named before.
+          settings: [EMAIL_TRACKING_SETTING],
+          previous: expect.objectContaining({ [EMAIL_TRACKING_SETTING]: true }),
+          next: expect.objectContaining({ [EMAIL_TRACKING_SETTING]: false }),
         }),
       }),
     );

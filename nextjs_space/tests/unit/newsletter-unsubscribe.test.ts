@@ -29,7 +29,10 @@ const prismaMock = vi.hoisted(() => ({
     create: vi.fn(),
   },
   // US-023: unsubscribing also clears users.marketingConsentAt in-tenant.
+  // US-028: `findFirst` is the third token shape the same URL accepts — a
+  // reorder-reminder token, tried after the two above.
   users: {
+    findFirst: vi.fn(),
     updateMany: vi.fn(),
   },
 }));
@@ -89,6 +92,7 @@ beforeEach(() => {
   prismaMock.newsletter_subscribers.updateMany.mockResolvedValue({ count: 0 });
   prismaMock.campaign_recipients.findFirst.mockResolvedValue(null);
   prismaMock.email_suppressions.create.mockResolvedValue({ id: "sup_1" });
+  prismaMock.users.findFirst.mockResolvedValue(null);
   prismaMock.users.updateMany.mockResolvedValue({ count: 1 });
 });
 

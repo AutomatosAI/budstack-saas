@@ -8,6 +8,7 @@ import { TenantSegmentList } from "@/components/admin/email/TenantSegmentList";
 import { TenantEventMapper } from "@/components/admin/email/TenantEventMapper";
 import { EmailActivityLog } from "@/components/admin/email/EmailActivityLog";
 import { EmailTrackingToggle } from "@/components/admin/email/EmailTrackingToggle";
+import { ReorderReminderToggle } from "@/components/admin/email/ReorderReminderToggle";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -57,6 +58,10 @@ export default function TenantEmailsPage() {
           <TenantSegmentList />
         </TabsContent>
         <TabsContent value="events" className="mt-0">
+          {/* US-028. Above the mapper because the switch decides WHETHER the
+              reorder reminder sends at all, and the row below decides which
+              template it sends when it does. */}
+          <ReorderReminderToggle />
           <TenantEventMapper />
         </TabsContent>
         <TabsContent value="activity" className="mt-0 space-y-4">

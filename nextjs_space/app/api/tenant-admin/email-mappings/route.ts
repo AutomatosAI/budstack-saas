@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/permissions/require-permission";
 import { prisma } from "@/lib/db";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { NEWSLETTER_CONFIRM_TEMPLATE } from "@/lib/email/newsletter-confirm";
+import { REORDER_REMINDER_EVENT } from "@/lib/email/reorder-reminder";
 import {
   isReservedEventType,
   RESERVED_EVENT_TYPE_MESSAGE,
@@ -32,6 +33,11 @@ const SYSTEM_EVENTS = [
   "paymentFailed",
   "subscriptionUpdated",
   NEWSLETTER_CONFIRM_TEMPLATE,
+  // US-028. Must stay in step with the same list in
+  // `components/admin/email/TenantEventMapper.tsx` — a mapping row whose
+  // eventType is missing here is invisible to that screen, which reads as "this
+  // event has no template" whatever the database says.
+  REORDER_REMINDER_EVENT,
 ];
 
 // US-009 — the mapping list embeds each bound template (subject + HTML), so it
