@@ -33,14 +33,15 @@ export interface RecentOrder {
   customer: string;
   total: number;
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED";
-  createdAt: Date;
+  // ISO string over the wire; Date only in code that constructs rows locally
+  createdAt: Date | string;
 }
 
 export interface RecentCustomer {
   id: string;
   name: string;
   email: string;
-  createdAt: Date;
+  createdAt: Date | string;
 }
 
 export const getRevenueMetrics = (
@@ -93,8 +94,10 @@ export const getStatusTone = (status: string): RowPillTone => {
   return map[status] || "slate";
 };
 
-export const formatTimeAgo = (date: Date) => {
-  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+export const formatTimeAgo = (date: Date | string) => {
+  const timestamp = new Date(date).getTime();
+  if (Number.isNaN(timestamp)) return "—";
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
 
   if (seconds < 60) return "just now";
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
