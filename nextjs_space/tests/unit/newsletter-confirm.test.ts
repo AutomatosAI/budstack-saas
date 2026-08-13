@@ -47,7 +47,7 @@ const TENANT = {
   customDomain: null,
 };
 
-const TOKEN = "n1qUiaR3GxV9Zt-Kp_QsL0mB2cD4eF6gH8iJ0kL2mN4";
+const TOKEN = "n1qUiaR3GxV9Zt-Kp_QsL0mB2cD4eF6gH8iJ0kL2mN4"; // gitleaks:allow — test fixture, not a credential
 
 function get(query: string): Promise<Response> {
   return confirm(

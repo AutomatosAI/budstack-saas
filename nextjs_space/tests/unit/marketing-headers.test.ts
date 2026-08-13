@@ -52,7 +52,7 @@ const TENANT: EmailShellTenant = {
 };
 
 /** base64url, exactly what `generateSubscriberToken()` mints. */
-const TOKEN = "Zm9vYmFy_qux-123";
+const TOKEN = "Zm9vYmFy_qux-123"; // gitleaks:allow — test fixture, not a credential
 const UNSUBSCRIBE_URL = buildNewsletterUnsubscribeUrl(TENANT, TOKEN);
 const RECIPIENT = "jane@example.com";
 
