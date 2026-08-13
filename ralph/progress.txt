@@ -3,3 +3,83 @@
 # Branch: ralph/seo-supercharge
 # Started: 2026-08-13
 # PRD: tasks/prd-seo-supercharge.md · Review: docs/SEO-SYSTEM-REVIEW.md
+
+[2026-08-13] US-001 PASS — Store-layout metadata foundation
+
+WHAT LANDED
+- lib/seo/store-metadata.ts (new): buildStoreMetadata(), a PURE builder for the
+  layout-level Metadata. Pure because generateMetadata runs in a render path with
+  no error.tsx above it — a throw there is a blank page, so every input (Json
+  blob, stored asset ref, custom domain) degrades instead of throwing.
+- app/store/[slug]/layout.tsx: generateMetadata export (~35 lines incl. docs). It
+  reuses the layout's OWN two cached reads — getCurrentTenant() and
+  getTenantWithTemplate() are both React cache()d — so metadata adds ZERO
+  queries. No second copy of the page's fetch (PROMPT anti-pattern).
+- lib/tenant/tenant.ts: tenant_branding added to getTenantWithTemplate's include
+  (the favicon source), i.e. one more nested join on a query the layout already
+  makes, not a new round trip.
+- lib/storage/public-image-url.ts: storedPublicImagePath() — resolves a STORED
+  image ref (bare S3 key / path / absolute URL / presigned URL) to a durable,
+  origin-relative /api/public/images/ path, or null. Fails CLOSED, which is what
+  keeps presigned URLs out of SEO-visible tags (PROMPT anti-pattern).
+
+HOW NEXT ACTUALLY MERGES THIS (read from next/dist/lib/metadata/resolve-metadata.js,
+14.2.35 — not assumed):
+- title.template is stashed for deeper segments ONLY: the guard is
+  `i < metadataItems.length - 2`, and app/store/[slug]/layout.tsx sits at exactly
+  length-2 for app/store/[slug]/page.tsx. => THE HOMEPAGE TITLE IS NOT WRAPPED.
+  Its existing "{businessName} - Medical Cannabis Solutions" renders verbatim, so
+  page.tsx:358-418 needed no edit and is not regressed. /products, /the-wire/...
+  DO get "%s | {businessName}" (they sit a segment deeper).
+- openGraph and twitter are REPLACED, never deep-merged, by the deepest segment
+  that declares them. That is why the layout declares BOTH: not declaring twitter
+  would leave app/layout.tsx:45-49's "BudStacks - Medical Cannabis SaaS" as the
+  twitter:title of every store page. Their title/description are then auto-filled
+  per page by Next's postProcessMetadata from the resolved title/description — so
+  no page-specific value is hardcoded at layout level.
+- Deliberately NOT set at layout level: og:url and alternates.canonical. A store-
+  root URL on a product page is a worse tag than none; US-007 emits them per page.
+
+FINDINGS / DISCREPANCY (needs a human call, does not block)
+- The AC names tenant_branding.faviconUrl as the favicon source. NOTHING WRITES
+  THAT COLUMN. onboarding (app/api/onboarding/route.ts:262) creates the row with
+  colors only; the branding route writes the uploaded favicon to
+  tenant_templates.faviconUrl (app/api/tenant-admin/branding/route.ts:394) and to
+  tenants.settings.faviconPath. Implemented as a cascade —
+  tenant_branding.faviconUrl ?? activeTenantTemplate.faviconUrl ?? /favicon.svg —
+  so the AC's named source is honoured AND an uploaded favicon actually renders
+  today. If US-018/019 pick a canonical home for brand assets, collapse this.
+- Favicon uploads are constrained to jpeg/png/gif/webp by
+  lib/storage/upload-validation.ts (SVG is refused as a stored-XSS vector), which
+  is exactly the set /api/public/images/ serves — so no .ico/.svg case exists.
+- Description cascade is settings.tagline -> "Premium medical cannabis products
+  and consultations from {businessName}" (the homepage's own default wording).
+  pageSeo is deliberately NOT read here: a layout-level default is inherited by
+  every page, and pageSeo.home.description is page-specific. US-002 owns pageSeo.
+- FLAGGED, not fixed (adjacent debt): app/layout.tsx's `keywords` still leaks the
+  platform's keyword list onto store pages. Left alone — Google ignores keywords,
+  and clearing an inherited field needs more than an override.
+
+VERIFICATION
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm vitest run tests/unit/store-metadata.test.ts tests/unit/public-image-url.test.ts
+  → 46 passed (15 new store-metadata + 16 existing/new public-image-url).
+- Full unit project: pnpm vitest run --project unit → 123 files, 1837 tests, all
+  passed. No pre-existing failures to flag.
+- pnpm check:security → both gates pass. next lint on the 6 touched files → clean.
+- LIVE: pnpm dev + curl http://localhost:3000/store/healingbuds/products → the new
+  generateMetadata executed and emitted <title>Store Not Found</title> (its
+  no-tenant branch). The TENANT branch is not renderable on this machine: the dev
+  log shows PrismaClientInitializationError — DATABASE_URL points at Railway's
+  private network, unreachable locally. curl / → HTTP 200, platform title intact
+  (root layout untouched). visual: deferred to human review.
+- Docker: no new runtime import chain leaves the Next bundle. lib/seo/ is imported
+  by app/ so it ships inside .next/standalone, and Dockerfile:74 already COPYs
+  lib/ wholesale. No Dockerfile change needed (email-p2 #232 lesson checked).
+
+TEST DESIGN
+The load-bearing assertion is a serialise-and-scan: JSON.stringify(metadata) must
+contain none of "BudStacks", "Medical Cannabis SaaS Platform", the platform
+description, or "budstacks.io". That encodes the story's actual guarantee — no
+store page can fall through to the platform brand — instead of pinning field
+shapes a refactor would churn.

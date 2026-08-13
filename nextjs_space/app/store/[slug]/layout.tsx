@@ -19,6 +19,47 @@ import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrapper";
 import { sanitizeCss, extractGoogleFontsImports } from "@/lib/security/css-utils";
 import { hexToHsl } from "@/lib/color-utils";
+import type { Metadata } from "next";
+import {
+  buildStoreMetadata,
+  STORE_NOT_FOUND_TITLE,
+} from "@/lib/seo/store-metadata";
+
+/**
+ * SEO US-001 — the metadata every store page inherits.
+ *
+ * Both reads are React-`cache()`d and are the SAME calls the layout body makes
+ * below, so this adds no query: `getCurrentTenant()` is deduped per request and
+ * `getTenantWithTemplate()` is the layout's own fetch. Neither needs the tenant
+ * context — `tenants` is not in `tenantScopedModels` (lib/db.ts) and the
+ * branding/template rows come back as nested includes on that one query, which
+ * the scope extension does not intercept.
+ *
+ * The favicon cascade prefers `tenant_branding.faviconUrl` (the column the PRD
+ * names) and falls back to `tenant_templates.faviconUrl`, which is where the
+ * branding route actually writes an uploaded favicon today
+ * (app/api/tenant-admin/branding/route.ts:394).
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await getCurrentTenant();
+  if (!tenant) {
+    return { title: STORE_NOT_FOUND_TITLE };
+  }
+
+  const tenantWithTemplate = await getTenantWithTemplate(tenant.id);
+
+  return buildStoreMetadata({
+    tenantId: tenant.id,
+    businessName: tenant.businessName,
+    subdomain: tenant.subdomain,
+    customDomain: tenant.customDomain,
+    settings: tenant.settings,
+    faviconRef:
+      tenantWithTemplate?.tenant_branding?.faviconUrl ??
+      tenantWithTemplate?.activeTenantTemplate?.faviconUrl ??
+      null,
+  });
+}
 
 // Extract runtime-safe CSS from a template's styles.css on disk
 // Keeps :root vars, class rules, @keyframes — strips @tailwind/@layer/@apply/body/* selectors

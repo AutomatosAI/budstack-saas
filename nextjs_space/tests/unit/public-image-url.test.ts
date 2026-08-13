@@ -16,6 +16,7 @@ import {
   parsePublicImageRequest,
   publicImageContentType,
   publicImagePath,
+  storedPublicImagePath,
 } from "@/lib/storage/public-image-url";
 
 const PREFIX = "development/";
@@ -84,6 +85,54 @@ describe("isServablePublicImageType", () => {
     expect(isServablePublicImageType("text/html")).toBe(false);
     expect(isServablePublicImageType("image/svg+xml")).toBe(false);
     expect(isServablePublicImageType("application/pdf")).toBe(false);
+  });
+});
+
+// SEO US-001 — the resolver that decides what may appear in rendered metadata
+// (<link rel="icon">, og:image). It fails CLOSED: a URL that expires, or a key
+// the route above would 404, resolves to nothing so the caller can fall back to
+// a platform default instead of shipping a tag that breaks silently.
+describe("storedPublicImagePath", () => {
+  it("routes a stored upload key through the durable public route", () => {
+    expect(storedPublicImagePath(KEY)).toBe(
+      `${PUBLIC_IMAGE_ROUTE_PREFIX}${KEY}`,
+    );
+    expect(storedPublicImagePath(`  ${KEY}  `)).toBe(
+      `${PUBLIC_IMAGE_ROUTE_PREFIX}${KEY}`,
+    );
+  });
+
+  it("passes through a path that is already on this origin", () => {
+    expect(storedPublicImagePath("/favicon.svg")).toBe("/favicon.svg");
+    expect(storedPublicImagePath(`${PUBLIC_IMAGE_ROUTE_PREFIX}${KEY}`)).toBe(
+      `${PUBLIC_IMAGE_ROUTE_PREFIX}${KEY}`,
+    );
+  });
+
+  it("keeps a durable absolute URL but drops a presigned one", () => {
+    expect(storedPublicImagePath("https://cdn.example/logo.png")).toBe(
+      "https://cdn.example/logo.png",
+    );
+    expect(
+      storedPublicImagePath(
+        `https://bucket.s3.eu-west-1.amazonaws.com/${KEY}?X-Amz-Expires=3600&X-Amz-Signature=abc`,
+      ),
+    ).toBeNull();
+  });
+
+  it("drops anything with no route: wrong prefix, wrong extension, no value", () => {
+    for (const stored of [
+      null,
+      undefined,
+      "",
+      "   ",
+      "//cdn.example/logo.png", // protocol-relative — no scheme to resolve against
+      "development/tenants/tenant-a/templates/x/favicon.png", // not an upload
+      "development/uploads/1-cover.png", // no tenant segment
+      `${PREFIX}tenants/tenant-a/uploads/1-icon.svg`, // never served
+    ]) {
+      expect(storedPublicImagePath(stored)).toBeNull();
+    }
   });
 });
 

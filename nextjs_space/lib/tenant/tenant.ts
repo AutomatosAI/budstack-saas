@@ -42,6 +42,10 @@ export const getTenantWithTemplate = cache(async (tenantId: string) => {
           templates: true,
         },
       },
+      // SEO US-001: the favicon cascade. Included HERE, on the query the layout
+      // already makes, rather than fetched again from `generateMetadata` — the
+      // React cache above is what lets metadata and render share one round trip.
+      tenant_branding: true,
     },
   });
 });

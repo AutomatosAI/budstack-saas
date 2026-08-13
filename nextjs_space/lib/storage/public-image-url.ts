@@ -71,6 +71,63 @@ export function publicImagePath(key: string): string {
   );
 }
 
+/**
+ * A stored reference that already carries an expiring S3 signature. Keyed on the
+ * signature rather than the hostname, for the same reason
+ * `lib/email/email-asset-url.ts` is: an unsigned S3 URL an author pasted in is a
+ * perfectly durable link and must survive untouched.
+ */
+const SIGNED_S3_QUERY = /[?&]X-Amz-/i;
+
+/**
+ * The only key shape `parsePublicImageRequest` above will serve. Matched
+ * loosely (anywhere in the key) because a stored key keeps the bucket folder
+ * prefix — `development/tenants/{id}/uploads/…` — which is configuration this
+ * pure module has no way to know.
+ */
+const TENANT_UPLOAD_SEGMENT = /(?:^|\/)tenants\/[^/]+\/uploads\/.+/;
+
+/**
+ * Durable, origin-relative URL for an image reference as it is actually STORED
+ * — or null when there is no URL we can promise will still resolve.
+ *
+ * Stored references come in four shapes across the schema (the same four
+ * `absoluteEmailImageUrl` documents): a bare S3 key from `uploadFile`, an
+ * origin-relative path, an absolute URL, or a presigned S3 URL left over from
+ * before Email US-005. This is the resolver for the ones that end up in
+ * RENDERED METADATA — `<link rel="icon">`, `og:image` — where a URL that expires
+ * an hour after it was minted is worse than no URL at all: the tag looks correct
+ * and breaks silently. So it fails CLOSED and lets the caller fall back to a
+ * platform default.
+ *
+ * Origin-relative for the reason `publicImagePath` is: a storefront runs under
+ * `img-src 'self'`, so an absolute apex URL is CSP-blocked on the very pages
+ * that need it.
+ */
+export function storedPublicImagePath(
+  stored: string | null | undefined,
+): string | null {
+  const trimmed = stored?.trim();
+  if (!trimmed) return null;
+
+  // Protocol-relative — resolves against the page's scheme, which a crawler
+  // fetching metadata out of band may not have. Dropped rather than guessed at.
+  if (trimmed.startsWith("//")) return null;
+
+  // Already a path on this origin: a /public asset, or this route.
+  if (trimmed.startsWith("/")) return trimmed;
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return SIGNED_S3_QUERY.test(trimmed) ? null : trimmed;
+  }
+
+  // A bare S3 key. Only a tenant upload with a served extension has a route —
+  // a template asset key (`tenants/{id}/templates/…/favicon.png`) or an SVG
+  // would resolve to a guaranteed 404 from the route above.
+  if (!TENANT_UPLOAD_SEGMENT.test(trimmed)) return null;
+  return publicImageContentType(trimmed) ? publicImagePath(trimmed) : null;
+}
+
 export interface PublicImageRequest {
   /** Exact S3 key to fetch — cleaned, but with the bucket prefix preserved. */
   readonly s3Key: string;
