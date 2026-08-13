@@ -46,6 +46,10 @@ const consultationSchema = z.object({
   password: z.string().min(8).max(128),
   confirmPassword: z.string().max(128).optional(),
 
+  // US-023 (POPIA): explicit marketing opt-in from the signup form. Optional
+  // and UNTICKED by default — absent or false records NO consent.
+  marketingConsent: z.boolean().optional(),
+
   // SA ID-upload (idMode): document sent inline with registration so the
   // account + Dr Green client + document are created in one action.
   idDocument: z
@@ -228,6 +232,11 @@ export async function POST(request: NextRequest) {
             firstName: body.firstName,
             lastName: body.lastName,
             phone: [body.phoneCode, body.phoneNumber].filter(Boolean).join(" ").trim() || null,
+            // US-023: a tick at signup grants consent; unticked NEVER clears
+            // an earlier grant — withdrawal is unsubscribe/admin-only.
+            ...(body.marketingConsent === true && {
+              marketingConsentAt: new Date(),
+            }),
             updatedAt: new Date(),
           },
         });
@@ -252,6 +261,8 @@ export async function POST(request: NextRequest) {
             phone: [body.phoneCode, body.phoneNumber].filter(Boolean).join(" ").trim() || null,
             role: "PATIENT",
             tenantId,
+            // US-023: consent only on an explicit tick — never inferred.
+            marketingConsentAt: body.marketingConsent === true ? new Date() : null,
             updatedAt: new Date(),
           },
         });
@@ -268,7 +279,15 @@ export async function POST(request: NextRequest) {
             if (!raceUser.tenantId) {
               await prisma.users.update({
                 where: { id: raceUser.id },
-                data: { tenantId, role: "PATIENT", updatedAt: new Date() },
+                data: {
+                  tenantId,
+                  role: "PATIENT",
+                  // US-023: the webhook race must not lose an explicit tick.
+                  ...(body.marketingConsent === true && {
+                    marketingConsentAt: new Date(),
+                  }),
+                  updatedAt: new Date(),
+                },
               });
             }
             logger.info("[Consultation] user created by webhook race, using existing account", {

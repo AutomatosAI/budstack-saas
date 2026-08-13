@@ -55,6 +55,7 @@ export function IdUploadForm({ tenantSlug }: IdUploadFormProps) {
     gender: "",
     password: "",
     confirmPassword: "",
+    marketingConsent: false,
 
     addressLine1: "",
     addressLine2: "",

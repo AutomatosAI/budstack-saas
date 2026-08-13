@@ -28,6 +28,10 @@ const prismaMock = vi.hoisted(() => ({
   email_suppressions: {
     create: vi.fn(),
   },
+  // US-023: unsubscribing also clears users.marketingConsentAt in-tenant.
+  users: {
+    updateMany: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/tenant/tenant", () => ({ getTenantFromRequest }));
@@ -85,6 +89,7 @@ beforeEach(() => {
   prismaMock.newsletter_subscribers.updateMany.mockResolvedValue({ count: 0 });
   prismaMock.campaign_recipients.findFirst.mockResolvedValue(null);
   prismaMock.email_suppressions.create.mockResolvedValue({ id: "sup_1" });
+  prismaMock.users.updateMany.mockResolvedValue({ count: 1 });
 });
 
 describe("decideUnsubscribeOutcome — what following a token may do", () => {
@@ -144,6 +149,7 @@ describe("GET — the confirmation page", () => {
     expect(prismaMock.newsletter_subscribers.findFirst).not.toHaveBeenCalled();
     expect(prismaMock.newsletter_subscribers.update).not.toHaveBeenCalled();
     expect(prismaMock.email_suppressions.create).not.toHaveBeenCalled();
+    expect(prismaMock.users.updateMany).not.toHaveBeenCalled();
   });
 
   it("is never cached or indexed", async () => {
@@ -267,6 +273,7 @@ describe("POST — the RFC 8058 one-click target", () => {
     expect(html).toContain("no longer valid");
     expect(prismaMock.newsletter_subscribers.update).not.toHaveBeenCalled();
     expect(prismaMock.email_suppressions.create).not.toHaveBeenCalled();
+    expect(prismaMock.users.updateMany).not.toHaveBeenCalled();
   });
 
   it("does not claim success when the write failed", async () => {

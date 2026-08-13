@@ -41,6 +41,10 @@ const orderSubmitSchema = z
       )
       .max(500)
       .optional(),
+    // US-023 (POPIA): explicit marketing opt-in from the checkout checkbox.
+    // Optional so pre-US-023 clients (which omit it) keep validating; absent
+    // or false never records and never clears consent.
+    marketingConsent: z.boolean().optional(),
   })
   .strict();
 
@@ -80,7 +84,7 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       drGreenClientId: dbUser.drGreenClientId || 'NONE',
     });
 
-    const { shippingInfo, cartItems } = await parseJsonBody(
+    const { shippingInfo, cartItems, marketingConsent } = await parseJsonBody(
       request,
       orderSubmitSchema,
     );
@@ -89,6 +93,29 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       cartItemCount: cartItems?.length || 0,
       shippingCountry: shippingInfo?.country,
     });
+
+    // ── US-023: marketing consent (profile write, NOT order logic) ────────
+    // Recorded here, BEFORE any order/payment code runs: ticking the box and
+    // submitting the form is the consent event, independent of whether the
+    // order itself succeeds. Deliberately isolated so it can never fail the
+    // order, and unticked/absent NEVER clears an earlier consent — withdrawal
+    // happens via unsubscribe or the admin toggle, not by ordering again.
+    if (marketingConsent === true) {
+      try {
+        await prisma.users.update({
+          where: { id: dbUser.id },
+          data: { marketingConsentAt: new Date(), updatedAt: new Date() },
+        });
+        log('MARKETING_CONSENT_RECORDED');
+      } catch (consentError) {
+        log('MARKETING_CONSENT_WRITE_FAILED', {
+          error:
+            consentError instanceof Error
+              ? consentError.message
+              : String(consentError),
+        });
+      }
+    }
 
     const tenant = await getCurrentTenant();
     if (!tenant) {

@@ -5,6 +5,7 @@ import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import CustomerEditForm from "./customer-edit-form";
 import CustomerActions from "./customer-actions";
 import CustomerTags from "./customer-tags";
+import MarketingConsentCard from "./marketing-consent-card";
 import { Breadcrumbs } from "@/components/admin/shared";
 
 export default async function CustomerDetailPage({
@@ -180,6 +181,23 @@ export default async function CustomerDetailPage({
               </h2>
             </div>
             <CustomerTags customerId={customer.id} initialTags={tags} />
+          </section>
+
+          <section className="bs-card bs-card-pad">
+            <div className="bs-card-head mb-4">
+              <h2
+                className="text-[22px] text-bs-fg"
+                style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+              >
+                Marketing Consent
+              </h2>
+            </div>
+            <MarketingConsentCard
+              customerId={customer.id}
+              marketingConsentAt={
+                customer.marketingConsentAt?.toISOString() ?? null
+              }
+            />
           </section>
 
           <section className="bs-card bs-card-pad">

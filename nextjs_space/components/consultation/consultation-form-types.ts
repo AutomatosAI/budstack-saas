@@ -12,6 +12,8 @@ export interface ConsultationFormData {
   gender: string;
   password: string;
   confirmPassword: string;
+  // US-023 (POPIA): explicit marketing opt-in — UNTICKED by default.
+  marketingConsent: boolean;
 
   // Shipping Address
   addressLine1: string;

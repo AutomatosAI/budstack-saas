@@ -168,7 +168,9 @@ export async function confirmNewsletterSubscriber(
  * Two writes, and the second is the load-bearing one: flipping the subscriber
  * row only stops NEWSLETTER sends, while the suppression row is what every
  * future marketing send is checked against — campaigns address customers and
- * imported addresses that may have no subscriber row at all.
+ * imported addresses that may have no subscriber row at all. A third write
+ * (US-023) clears users.marketingConsentAt for the matching customer account
+ * in the same tenant, so consent state agrees with the opt-out.
  *
  * The token is deliberately NOT rotated. It is the durable address of this
  * subscriber's opt-out: it lives in the footer of every message already in
@@ -202,6 +204,21 @@ export async function unsubscribeNewsletterSubscriber(
     tenantId: subscriber.tenantId,
     email: subscriber.email,
     reason: "unsubscribed",
+  });
+
+  // US-023: an unsubscribe is also a withdrawal of marketing consent for the
+  // customer account carrying this address IN THIS TENANT — keyed on
+  // (tenantId, email) so the same address on another tenant's users row is
+  // untouched. Runs for already-terminal rows too, mirroring the suppression
+  // re-assert above: a consent flag that survived an earlier partial
+  // unsubscribe is repaired by the next click rather than left mailable.
+  await prisma.users.updateMany({
+    where: {
+      tenantId: subscriber.tenantId,
+      email: subscriber.email,
+      marketingConsentAt: { not: null },
+    },
+    data: { marketingConsentAt: null, updatedAt: now },
   });
 
   return outcome;
