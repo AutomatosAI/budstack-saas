@@ -17,6 +17,7 @@ import type { CSSProperties } from "react";
 import { CartProvider } from "./_contexts/CartContext";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrapper";
+import { FEATURES, getTenantFeatures, hasFeature } from "@/lib/entitlements/features";
 import { sanitizeCss, extractGoogleFontsImports } from "@/lib/security/css-utils";
 import { hexToHsl } from "@/lib/color-utils";
 
@@ -358,8 +359,15 @@ async function renderTenantStore(
           {!skipLayoutChrome && renderFooter()}
           <CookieConsent tenant={tenantWithTemplate} />
 
-          {/* Conditionally render the Tenant's Automatos Widget if configured */}
-          {tenantWithTemplate.automatosApiKey && (
+          {/* Automatos chatbot: key + tenant toggle + pro entitlement, all
+              evaluated server-side — the script never reaches the browser
+              when any of the three is off (US-003). */}
+          {tenantWithTemplate.automatosApiKey &&
+            tenantWithTemplate.automatosChatbotEnabled &&
+            hasFeature(
+              getTenantFeatures({ id: tenantWithTemplate.id }),
+              FEATURES.AUTOMATOS_CHATBOT,
+            ) && (
             <AutomatosWidgetWrapper
               apiKey={tenantWithTemplate.automatosApiKey}
               agentId={tenantWithTemplate.automatosAgentId ?? undefined}

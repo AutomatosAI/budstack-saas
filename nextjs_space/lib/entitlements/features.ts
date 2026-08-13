@@ -16,6 +16,8 @@ export const FEATURES = {
   ANALYTICS_RETENTION: "analytics.retention",
   ANALYTICS_CAMPAIGNS: "analytics.campaigns",
   ANALYTICS_EXPORTS: "analytics.exports",
+  AUTOMATOS_CHATBOT: "automatos.chatbot",
+  AUTOMATOS_WIRE: "automatos.wire",
 } as const;
 
 export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
+import { getTenantFeatures } from "@/lib/entitlements/features";
 import SettingsForm from "./settings-form";
 
 export default async function SettingsPage() {
@@ -43,7 +44,10 @@ export default async function SettingsPage() {
         </p>
       </header>
 
-      <SettingsForm tenant={tenant} />
+      <SettingsForm
+        tenant={tenant}
+        features={Array.from(getTenantFeatures({ id: tenant.id }))}
+      />
     </div>
   );
 }
