@@ -24,6 +24,8 @@ export interface AudienceCount {
 /** A count, and the audience it is an answer to. */
 export interface CountedAudience extends AudienceCount {
   readonly type: CampaignAudienceType;
+  /** US-025: which segment, when the type is one. */
+  readonly segmentId?: string | null;
 }
 
 /**
@@ -35,12 +37,18 @@ export interface CountedAudience extends AudienceCount {
  * frame, reading as an answer to a question nobody asked yet. Tagging the
  * result and comparing is deterministic where clearing state in the effect
  * would still leave that one frame on screen.
+ *
+ * The segment id is part of the comparison (US-025): two segments are two
+ * different questions with the same `type`, and switching between them in the
+ * dropdown must not leave the first one's figure on screen.
  */
 export function settledCount(
   result: CountedAudience | null,
   selected: CampaignAudienceType | null,
+  segmentId: string | null = null,
 ): AudienceCount | null {
-  return result && selected && result.type === selected ? result : null;
+  if (!result || !selected || result.type !== selected) return null;
+  return (result.segmentId ?? null) === segmentId ? result : null;
 }
 
 /** An aborted fetch is the caller's own doing, so it is re-thrown untouched. */
@@ -52,8 +60,15 @@ export async function fetchAudienceCount(
   campaignId: string,
   type: CampaignAudienceType,
   signal?: AbortSignal,
+  segmentId?: string | null,
 ): Promise<AudienceCount> {
-  const url = `${CAMPAIGNS_URL}/${encodeURIComponent(campaignId)}/audience-count?type=${encodeURIComponent(type)}`;
+  // `segmentId` only for `type=segment`; the route's parser drops it for every
+  // other type, so appending it unconditionally would be harmless but noisy.
+  const segmentQuery =
+    type === "segment" && segmentId
+      ? `&segmentId=${encodeURIComponent(segmentId)}`
+      : "";
+  const url = `${CAMPAIGNS_URL}/${encodeURIComponent(campaignId)}/audience-count?type=${encodeURIComponent(type)}${segmentQuery}`;
 
   const res = await fetch(url, { signal }).catch((error: unknown) => {
     if (isAbortError(error)) throw error;
@@ -111,11 +126,17 @@ export const UNCHOSEN_AUDIENCE_MESSAGE = "Choose who this campaign goes to.";
 export const UNSAVED_AUDIENCE_MESSAGE =
   "Save this draft to see how many people it reaches.";
 export const COUNTING_AUDIENCE_MESSAGE = "Counting…";
+export const UNCHOSEN_SEGMENT_MESSAGE = "Choose which segment this goes to.";
 
 export interface AudienceSummaryInput {
   readonly hasSelection: boolean;
   /** False on the new-campaign screen — no row yet, so nothing to count. */
   readonly hasCampaign: boolean;
+  /**
+   * US-025: "segment" is ticked but no segment is named yet. A half-made
+   * selection is not an audience, and there is nothing to count for it.
+   */
+  readonly needsSegment?: boolean;
   readonly isCounting: boolean;
   readonly error: string | null;
   readonly result: AudienceCount | null;
@@ -144,6 +165,12 @@ export function audienceSummaryLine(
 ): AudienceSummaryLine {
   if (!input.hasSelection) {
     return { text: UNCHOSEN_AUDIENCE_MESSAGE, tone: "muted" };
+  }
+  // Before the unsaved-draft line: which segment is a question the author can
+  // answer right now, and "save this draft first" would read as the reason they
+  // cannot.
+  if (input.needsSegment) {
+    return { text: UNCHOSEN_SEGMENT_MESSAGE, tone: "muted" };
   }
   if (!input.hasCampaign) {
     return { text: UNSAVED_AUDIENCE_MESSAGE, tone: "muted" };

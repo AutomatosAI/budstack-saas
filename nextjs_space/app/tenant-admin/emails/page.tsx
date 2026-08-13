@@ -4,6 +4,7 @@ import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TenantTemplateList } from "@/components/admin/email/TenantTemplateList";
 import { TenantCampaignList } from "@/components/admin/email/TenantCampaignList";
+import { TenantSegmentList } from "@/components/admin/email/TenantSegmentList";
 import { TenantEventMapper } from "@/components/admin/email/TenantEventMapper";
 import { EmailActivityLog } from "@/components/admin/email/EmailActivityLog";
 import { Plus } from "lucide-react";
@@ -40,6 +41,7 @@ export default function TenantEmailsPage() {
           <TabsList>
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+            <TabsTrigger value="segments">Segments</TabsTrigger>
             <TabsTrigger value="events">Event Triggers</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
@@ -49,6 +51,9 @@ export default function TenantEmailsPage() {
         </TabsContent>
         <TabsContent value="campaigns" className="mt-0">
           <TenantCampaignList />
+        </TabsContent>
+        <TabsContent value="segments" className="mt-0">
+          <TenantSegmentList />
         </TabsContent>
         <TabsContent value="events" className="mt-0">
           <TenantEventMapper />

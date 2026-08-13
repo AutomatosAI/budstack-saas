@@ -213,6 +213,34 @@ model customer_tags {
   @@index([tenantId, tag])
 }
 
+/// A reusable audience filter (Email Phase 2, US-025) — "customers who have not
+/// ordered in 60 days", written once and pointed at by any number of campaigns.
+///
+/// A segment is a RULE and never a list. It names no addresses, so a campaign
+/// that resolves it in April reaches whoever matches in April — the same
+/// contract `campaigns.audience` keeps, and the reason neither column can hold
+/// a stale set of people.
+///
+/// `filter` is a Json COLUMN but is NOT free-form Json: it holds the criterion
+/// union declared in lib/email/segment-filter.ts, re-parsed on every read. A
+/// rule this version cannot understand resolves to NOBODY rather than to
+/// everybody, so a filter written by a later version can never widen a send.
+///
+/// `@@unique([tenantId, name])` is what stops "Reorder 60d" existing four times
+/// in one store's audience picker.
+model segments {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  filter    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenants   tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId, updatedAt])
+}
+
 model conditions {
   id              String   @id
   slug            String
@@ -767,6 +795,7 @@ model tenants {
   newsletter_subscribers newsletter_subscribers[]
   campaigns              campaigns[]
   customer_tags          customer_tags[]
+  segments               segments[]
   orders                 orders[]
   posts                  posts[]
   products               products[]

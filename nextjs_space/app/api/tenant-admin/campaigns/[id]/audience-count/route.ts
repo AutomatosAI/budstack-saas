@@ -63,11 +63,18 @@ export const GET = requirePermissionParams(
         });
       }
 
-      const requestedType = new URL(req.url).searchParams.get("type");
+      const query = new URL(req.url).searchParams;
+      const requestedType = query.get("type");
       const audience =
         requestedType === null
           ? parseCampaignAudience(campaign.audience)
-          : parseCampaignAudience({ type: requestedType });
+          // US-025: `segmentId` rides along for `type=segment` and is dropped
+          // by the parser for every other type, so the picker can ask about a
+          // segment the campaign has not been saved with yet.
+          : parseCampaignAudience({
+              type: requestedType,
+              segmentId: query.get("segmentId") ?? undefined,
+            });
 
       // An unreadable STORED audience means nobody has chosen one; an
       // unreadable REQUESTED one means the caller asked for something this

@@ -20,19 +20,26 @@ export const CAMPAIGN_AUDIENCE_TYPES = [
   "subscribers",
   "customers",
   "both",
+  "segment",
 ] as const;
 
 export type CampaignAudienceType = (typeof CAMPAIGN_AUDIENCE_TYPES)[number];
 
+/** The three flat sources — the audiences that carry no argument. */
+export type CampaignAudienceSourceType = Exclude<CampaignAudienceType, "segment">;
+
 /**
- * An object rather than a bare string, so a later story can add fields (a
- * segment id in US-025, a tag filter in US-024) without rewriting every row
- * already stored — an unknown extra key narrows away here rather than
- * breaking the read.
+ * An object rather than a bare string, which is what let US-025 add `segment`
+ * without rewriting a single row already stored — an unknown extra key narrows
+ * away here rather than breaking the read.
+ *
+ * A DISCRIMINATED UNION, so "a segment audience naming no segment" cannot be
+ * constructed at all. The picker holds a half-made selection in its own state
+ * and only emits an audience once it is whole.
  */
-export interface CampaignAudience {
-  readonly type: CampaignAudienceType;
-}
+export type CampaignAudience =
+  | { readonly type: CampaignAudienceSourceType }
+  | { readonly type: "segment"; readonly segmentId: string };
 
 export interface CampaignAudienceOption {
   readonly type: CampaignAudienceType;
@@ -60,6 +67,12 @@ export const CAMPAIGN_AUDIENCE_OPTIONS: readonly CampaignAudienceOption[] = [
     description:
       "Confirmed subscribers and consented customers together. Anyone on both lists is counted — and mailed — once.",
   },
+  {
+    type: "segment",
+    label: "Saved segment",
+    description:
+      "One of your saved audience rules (US-025) — customers only, and always narrowed to the ones who opted in to marketing.",
+  },
 ];
 
 export function isCampaignAudienceType(
@@ -79,18 +92,36 @@ export function parseCampaignAudience(value: unknown): CampaignAudience | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;
   }
-  const { type } = value as { type?: unknown };
+  const { type, segmentId } = value as { type?: unknown; segmentId?: unknown };
+  if (!isCampaignAudienceType(type)) return null;
+
   // Rebuilt rather than returned as-is, so keys this version does not know
-  // about cannot ride along into the response or into a later write.
-  return isCampaignAudienceType(type) ? { type } : null;
+  // about cannot ride along into the response or into a later write —
+  // `segmentId` survives only on the one type that means anything by it.
+  if (type !== "segment") return { type };
+  return typeof segmentId === "string" && segmentId !== ""
+    ? { type, segmentId }
+    : null;
 }
 
-/** True when this audience draws from that source. */
+/**
+ * True when this audience draws from that source.
+ *
+ * A segment draws from NEITHER: it is customers narrowed by a saved rule, and
+ * resolving it is a different query (US-025). Returning true for "customers"
+ * here would make a segment audience mail every consented customer in the
+ * store — the widest possible reading of the narrowest possible audience.
+ */
 export function audienceIncludes(
   audience: CampaignAudience,
   source: "subscribers" | "customers",
 ): boolean {
   return audience.type === source || audience.type === "both";
+}
+
+/** The segment this audience names, or null when it names none. */
+export function audienceSegmentId(audience: CampaignAudience): string | null {
+  return audience.type === "segment" ? audience.segmentId : null;
 }
 
 export interface AudienceRecipient {

@@ -57,6 +57,7 @@ const tenantScopedModels = new Set([
   // reachable only through its campaign, which IS scoped here.
   'campaigns',
   'customer_tags',
+  'segments',
   'conditions',
   'consultations',
   'drgreen_carts',

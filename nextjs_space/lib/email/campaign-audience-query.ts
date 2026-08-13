@@ -19,21 +19,31 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { ERASURE_EMAIL_DOMAIN } from "@/lib/gdpr/erasure";
 import {
-  CAMPAIGN_AUDIENCE_TYPES,
   audienceIncludes,
+  audienceSegmentId,
   dedupeAudienceRecipients,
   excludeSuppressedRecipients,
   type AudienceRecipient,
   type AudienceResolution,
   type CampaignAudience,
 } from "@/lib/email/campaign-audience";
+import { resolveSegmentById } from "@/lib/email/segment-query";
 import { normalizeEmail } from "@/lib/email/suppression";
 import { findSuppressedRecipients } from "@/lib/email/suppression-store";
 
-/** The `audience` field as it arrives on a campaign create/update body. */
-export const campaignAudienceBodySchema = z.object({
-  type: z.enum(CAMPAIGN_AUDIENCE_TYPES),
-});
+/**
+ * The `audience` field as it arrives on a campaign create/update body.
+ *
+ * A discriminated union, so `{ type: "segment" }` with no segment is rejected
+ * at the boundary rather than stored as a rule nobody can resolve. The three
+ * flat types keep exactly the shape they had before US-025.
+ */
+export const campaignAudienceBodySchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("subscribers") }).strict(),
+  z.object({ type: z.literal("customers") }).strict(),
+  z.object({ type: z.literal("both") }).strict(),
+  z.object({ type: z.literal("segment"), segmentId: z.string().uuid() }).strict(),
+]);
 
 /**
  * Resolving an audience is two unbounded reads plus a suppression lookup, and
@@ -132,6 +142,15 @@ export async function resolveCampaignAudience(
   audience: CampaignAudience,
   tenantId: string,
 ): Promise<AudienceResolution> {
+  // US-025. A segment is customers narrowed by a saved rule, so it replaces the
+  // two reads below rather than joining them — and it applies consent and
+  // suppression itself. A segment that has been deleted resolves to nobody,
+  // which US-019 turns into a refusal to send rather than a wider send.
+  const segmentId = audienceSegmentId(audience);
+  if (segmentId) {
+    return resolveSegmentById(segmentId, tenantId);
+  }
+
   const [customers, subscribers] = await Promise.all([
     audienceIncludes(audience, "customers")
       ? consentedCustomers(tenantId)

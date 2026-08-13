@@ -38,7 +38,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 ## Workstream D — CRM-lite
 
 - [x] US-024 Customer tags (parallel worktree agent; integrated at cb36836)
-- [ ] US-025 Segments as saved audiences
+- [x] US-025 Segments as saved audiences
 - [ ] US-026 Campaign results page
 - [ ] US-027 Open/click tracking (per-tenant opt-in)
 - [ ] US-028 Reorder-reminder automation (MVP)

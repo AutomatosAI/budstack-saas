@@ -81,15 +81,31 @@ beforeEach(() => {
 });
 
 describe("parseCampaignAudience", () => {
-  it("accepts every shipped audience type", () => {
-    for (const type of CAMPAIGN_AUDIENCE_TYPES) {
+  it("accepts every flat audience type on its own", () => {
+    for (const type of ["subscribers", "customers", "both"] as const) {
       expect(parseCampaignAudience({ type })).toEqual({ type });
     }
   });
 
+  it("accepts a segment audience that names its segment (US-025)", () => {
+    expect(
+      parseCampaignAudience({ type: "segment", segmentId: "seg_1" }),
+    ).toEqual({ type: "segment", segmentId: "seg_1" });
+  });
+
+  it.each([
+    ["no segmentId", { type: "segment" }],
+    ["an empty segmentId", { type: "segment", segmentId: "" }],
+    ["a non-string segmentId", { type: "segment", segmentId: 7 }],
+  ])("reads a segment audience with %s as no audience", (_label, value) => {
+    // Half a rule is not a rule. Answering `{ type: "segment" }` here would
+    // hand the resolver an audience with nothing to resolve.
+    expect(parseCampaignAudience(value)).toBeNull();
+  });
+
   it("rebuilds the object, so unknown keys cannot ride along", () => {
-    // A rule written by a later version (a segment id, a tag filter) must not
-    // be half-honoured by this one.
+    // A rule written by a later version must not be half-honoured by this one,
+    // and `segmentId` means nothing on an audience that is not a segment.
     expect(
       parseCampaignAudience({ type: "both", segmentId: "seg_1", limit: 10 }),
     ).toEqual({ type: "both" });
@@ -121,6 +137,18 @@ describe("parseCampaignAudience", () => {
     expect(
       campaignAudienceBodySchema.safeParse({ type: "everyone" }).success,
     ).toBe(false);
+  });
+
+  it("refuses a segment audience with no segment on the wire too", () => {
+    expect(
+      campaignAudienceBodySchema.safeParse({ type: "segment" }).success,
+    ).toBe(false);
+    expect(
+      campaignAudienceBodySchema.safeParse({
+        type: "segment",
+        segmentId: CAMPAIGN_UUID,
+      }).success,
+    ).toBe(true);
   });
 });
 
