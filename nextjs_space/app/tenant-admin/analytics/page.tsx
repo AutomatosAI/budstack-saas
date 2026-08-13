@@ -46,6 +46,8 @@ import {
 } from "./analytics-helpers";
 import { buildChartConfigs } from "./analytics-charts";
 import { AnalyticsLoadingSkeleton } from "./AnalyticsLoadingSkeleton";
+import { RetentionSection } from "./RetentionSection";
+import { FEATURES, hasFeature } from "@/lib/entitlements/features";
 
 // Dynamic import for Plotly to avoid SSR issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,6 +75,7 @@ const EMPTY_ANALYTICS: AnalyticsData = {
   recentOrdersList: [],
   recentCustomersList: [],
   pendingConsultations: 0,
+  features: [],
 };
 
 export default function TenantAnalyticsPage() {
@@ -560,6 +563,11 @@ export default function TenantAnalyticsPage() {
             </div>
           </div>
         </section>
+
+        {analytics.retention &&
+          hasFeature(analytics.features ?? [], FEATURES.ANALYTICS_RETENTION) && (
+            <RetentionSection retention={analytics.retention} />
+          )}
 
         <section>
           <h2 className={sectionTitleClass} style={sectionTitleStyle}>

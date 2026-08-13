@@ -20,6 +20,23 @@ export interface AnalyticsData {
   recentOrdersList?: RecentOrder[];
   recentCustomersList?: RecentCustomer[];
   pendingConsultations?: number;
+  retention?: RetentionSummary;
+  // Entitlement keys granted to this tenant (lib/entitlements/features).
+  features?: string[];
+}
+
+export interface RetentionSummary {
+  repeatRate: number | null;
+  medianReorderDays: number | null;
+  overdueCustomers: number;
+  overdueCutoffDays: number;
+  newVsReturning: {
+    newRevenue: number;
+    returningRevenue: number;
+    newOrders: number;
+    returningOrders: number;
+    returningShare: number | null;
+  };
 }
 
 export interface RevenueMetric {
