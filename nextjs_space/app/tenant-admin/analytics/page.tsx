@@ -12,6 +12,10 @@ import {
   Package,
   Calendar,
   ShoppingBag,
+  Repeat,
+  Clock,
+  UserCheck,
+  Hourglass,
 } from "lucide-react";
 
 import Link from "next/link";
@@ -46,6 +50,7 @@ import {
 } from "./analytics-helpers";
 import { buildChartConfigs } from "./analytics-charts";
 import { AnalyticsLoadingSkeleton } from "./AnalyticsLoadingSkeleton";
+import { FEATURES, hasFeature } from "@/lib/entitlements/features";
 
 // Dynamic import for Plotly to avoid SSR issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,6 +78,7 @@ const EMPTY_ANALYTICS: AnalyticsData = {
   recentOrdersList: [],
   recentCustomersList: [],
   pendingConsultations: 0,
+  features: [],
 };
 
 export default function TenantAnalyticsPage() {
@@ -560,6 +566,54 @@ export default function TenantAnalyticsPage() {
             </div>
           </div>
         </section>
+
+        {analytics.retention &&
+          hasFeature(analytics.features ?? [], FEATURES.ANALYTICS_RETENTION) && (
+            <section>
+              <h2 className={sectionTitleClass} style={sectionTitleStyle}>
+                <div className="w-1 h-6 bg-bs-green-soft rounded-full" />
+                Customer Retention
+              </h2>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mt-6">
+                <StatCard
+                  label="Repeat Purchase Rate"
+                  value={
+                    analytics.retention.repeatRate === null
+                      ? "—"
+                      : `${analytics.retention.repeatRate}%`
+                  }
+                  icon={Repeat}
+                  hint="customers ordering 2+ times"
+                />
+                <StatCard
+                  label="Reorder Cycle"
+                  value={
+                    analytics.retention.medianReorderDays === null
+                      ? "—"
+                      : `${analytics.retention.medianReorderDays} days`
+                  }
+                  icon={Clock}
+                  hint="median gap between orders"
+                />
+                <StatCard
+                  label="Returning Revenue"
+                  value={
+                    analytics.retention.newVsReturning.returningShare === null
+                      ? "—"
+                      : `${analytics.retention.newVsReturning.returningShare}%`
+                  }
+                  icon={UserCheck}
+                  hint={`${formatCurrency(analytics.retention.newVsReturning.returningRevenue)} this period`}
+                />
+                <StatCard
+                  label="Overdue for Reorder"
+                  value={analytics.retention.overdueCustomers}
+                  icon={Hourglass}
+                  hint={`no order in ${analytics.retention.overdueCutoffDays}+ days`}
+                />
+              </div>
+            </section>
+          )}
 
         <section>
           <h2 className={sectionTitleClass} style={sectionTitleStyle}>

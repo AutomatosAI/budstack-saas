@@ -9,6 +9,13 @@ import {
   percentChange,
   revenuePeriods,
 } from "@/lib/analytics/period-metrics";
+import {
+  reorderCutoffDate,
+  reorderCutoffDays,
+  repeatRate,
+  returningShare,
+} from "@/lib/analytics/retention";
+import { getTenantFeatures } from "@/lib/entitlements/features";
 
 // Revenue basis: every aggregate below excludes CANCELLED orders, except the
 // orders-by-status breakdown (whose whole point is to show cancellations) and
@@ -240,6 +247,113 @@ export const GET = requirePermission("canViewAnalytics", async (req, { user, ten
       value: item._count.id,
     }));
 
+    // ── Retention / reorder block (Grow tier via the entitlement seam) ──
+    // All tenant-scoped, all excluding CANCELLED. Raw SQL for window
+    // functions and FILTER aggregates Prisma cannot express.
+    interface RepeatRow {
+      repeaters: number;
+      buyers: number;
+    }
+    const repeatRows: RepeatRow[] = await prisma.$queryRaw<RepeatRow[]>`
+      SELECT COUNT(*) FILTER (WHERE cnt >= 2)::int AS "repeaters",
+             COUNT(*)::int AS "buyers"
+      FROM (
+        SELECT "userId", COUNT(*) AS cnt
+        FROM "orders"
+        WHERE "tenantId" = ${tenantId} AND "status" <> 'CANCELLED'
+        GROUP BY "userId"
+      ) t
+    `;
+    const repeatRow: RepeatRow = repeatRows[0] ?? { repeaters: 0, buyers: 0 };
+
+    // Median days between consecutive orders across all customers — the
+    // store's typical reorder cycle.
+    interface MedianRow {
+      median: number | null;
+    }
+    const medianRows: MedianRow[] = await prisma.$queryRaw<MedianRow[]>`
+      SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (
+               ORDER BY EXTRACT(EPOCH FROM (next_at - "createdAt")) / 86400.0
+             )::float AS "median"
+      FROM (
+        SELECT "createdAt",
+               LEAD("createdAt") OVER (
+                 PARTITION BY "userId" ORDER BY "createdAt"
+               ) AS next_at
+        FROM "orders"
+        WHERE "tenantId" = ${tenantId} AND "status" <> 'CANCELLED'
+      ) seq
+      WHERE next_at IS NOT NULL
+    `;
+    const rawMedian = medianRows[0]?.median;
+    const medianReorderDays =
+      rawMedian != null && rawMedian > 0
+        ? Math.round(rawMedian * 10) / 10
+        : null;
+
+    const overdueCutoffDays = reorderCutoffDays(medianReorderDays);
+    const cutoffDate = reorderCutoffDate(medianReorderDays, new Date());
+    interface OverdueRow {
+      overdue: number;
+    }
+    const overdueRows: OverdueRow[] = await prisma.$queryRaw<OverdueRow[]>`
+      SELECT COUNT(*)::int AS "overdue"
+      FROM (
+        SELECT "userId", MAX("createdAt") AS last_at
+        FROM "orders"
+        WHERE "tenantId" = ${tenantId} AND "status" <> 'CANCELLED'
+        GROUP BY "userId"
+      ) t
+      WHERE last_at < ${cutoffDate}
+    `;
+
+    // Window-scoped revenue split: is the order the customer's first ever?
+    interface SegmentRow {
+      segment: string;
+      revenue: number;
+      orders: number;
+    }
+    const segmentRows: SegmentRow[] = await prisma.$queryRaw<SegmentRow[]>`
+      WITH firsts AS (
+        SELECT "userId", MIN("createdAt") AS first_at
+        FROM "orders"
+        WHERE "tenantId" = ${tenantId} AND "status" <> 'CANCELLED'
+        GROUP BY "userId"
+      )
+      SELECT CASE WHEN o."createdAt" = f.first_at THEN 'new' ELSE 'returning' END AS "segment",
+             COALESCE(SUM(o."total"), 0)::float AS "revenue",
+             COUNT(*)::int AS "orders"
+      FROM "orders" o
+      JOIN firsts f ON f."userId" = o."userId"
+      WHERE o."tenantId" = ${tenantId}
+        AND o."status" <> 'CANCELLED'
+        AND o."createdAt" >= ${startDate}
+      GROUP BY 1
+    `;
+    const segmentOf = (name: string): SegmentRow | undefined =>
+      segmentRows.find((s: SegmentRow) => s.segment === name);
+    const newRevenue = segmentOf("new")?.revenue ?? 0;
+    const returningRevenue = segmentOf("returning")?.revenue ?? 0;
+
+    const retention = {
+      repeatRate: repeatRate(repeatRow.repeaters, repeatRow.buyers),
+      medianReorderDays,
+      overdueCustomers: overdueRows[0]?.overdue ?? 0,
+      overdueCutoffDays,
+      newVsReturning: {
+        newRevenue,
+        returningRevenue,
+        newOrders: segmentOf("new")?.orders ?? 0,
+        returningOrders: segmentOf("returning")?.orders ?? 0,
+        returningShare: returningShare(
+          returningRevenue,
+          newRevenue + returningRevenue,
+        ),
+      },
+    };
+
+    const features = Array.from(getTenantFeatures({ id: tenantId }));
+
     // Verification mode — drives whether the consultations card renders
     // (ID-upload tenants skip consultations).
     const tenantRow = await prisma.tenants.findUnique({
@@ -310,6 +424,8 @@ export const GET = requirePermission("canViewAnalytics", async (req, { user, ten
       recentOrdersList,
       recentCustomersList,
       pendingConsultations,
+      retention,
+      features,
     });
   } catch (error) {
     console.error("Error fetching analytics:", error);
