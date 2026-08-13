@@ -572,3 +572,140 @@ FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
   posts are the only entity loops). conditionPath(slug) now exists and those URLs
   are REAL, unlike the /products/{slug} ones. It also still lists /faq, which
   redirects.
+
+================================================================================
+[2026-08-14] US-006 PASS — Sitemap correctness + platform sitemap
+================================================================================
+
+WHAT LANDED
+lib/seo/sitemap.ts (new, pure) — the URL set a store publishes plus the XML
+serialisation. Entries are built with the SAME helpers the pages use for their
+canonicals (storeCanonical over productPath / wirePostPath / conditionPath), so
+a sitemap entry and the canonical of the page it points at cannot drift.
+lib/seo/platform-url.ts (new) — platformBaseUrl(), the platform's own origin.
+app/sitemap.ts + app/robots.ts (new) — the platform had NEITHER, and public/ has
+no static copy either.
+app/store/[slug]/sitemap.xml/route.ts — rewritten to three filtered queries and
+the shared builder; 69 lines of inline XML template gone.
+middleware.ts — "/robots.txt" and "/sitemap.xml" added to isPublicRoute.
+lib/team/invite-email.ts — its private appBaseUrl() deleted, now imports
+platformBaseUrl (identical precedence, one origin instead of two).
+
+THE FIVE DEFECTS CLOSED
+1. EVERY product URL was a 404. The route emitted /products/{products.slug};
+   a storefront product page is keyed by the DR GREEN STRAIN ID
+   (product-card.tsx:59 links /products/{product.id}; the API resolves
+   fetchProducts(...).find(p => p.id === productId), products/route.ts:53-55).
+   products.slug is a name-derived key that exists only for the sync upsert's
+   (slug, tenantId) unique. Now: drGreenStrainId, with `{ not: null }` — a row
+   never synced from Dr Green has no page, so it is DROPPED rather than aliased
+   onto /products (which productPath's fallback would have duplicated).
+2. Soft-deleted products were advertised. `deletedAt: null` is now named in the
+   where rather than left to the lib/soft-delete.ts injection — the defect is a
+   sitemap publishing deleted rows, so the filter belongs where a reader of the
+   query sees it.
+3. Condition detail pages were absent entirely (US-005 flagged this). Now
+   published, own-tenant, matching /api/tenant/conditions' filter exactly.
+4. /faq was listed. app/store/[slug]/faq/page.tsx has been a redirect() to
+   /support since before this run; US-002 retired the key. The static list is now
+   DERIVED from STORE_SEO_PAGES, and AUTHORABLE_PAGE_WEIGHTS is typed
+   Record<StoreSeoPageKey, …> — adding a sixth authorable page is a compile
+   error here, not a silently missing sitemap entry.
+5. The XML was unescaped. storeCanonical percent-encodes what `new URL` encodes,
+   and `&` is not on that list — one strain id containing an ampersand produced a
+   document no parser accepts, taking the WHOLE sitemap down rather than one
+   entry. escapeXml now covers & < > " '.
+
+FOUND LIVE, FIXED IN STORY (not in the ACs)
+/robots.txt and /sitemap.xml on the APEX were not in the middleware's
+isPublicRoute allowlist. The matcher deliberately passes .xml/.txt through
+middleware, and the apex carries no tenant hint, so both fell to the auth check
+at middleware.ts:199 and answered a signed-out crawler with
+307 → /auth/login?redirect_url=… . Curl evidence, same dev server:
+  BEFORE  GET /robots.txt  → 307  /auth/login?redirect_url=%2Frobots.txt
+  BEFORE  GET /sitemap.xml → 307  /auth/login?redirect_url=%2Fsitemap.xml
+  AFTER   GET /robots.txt  → 200 text/plain
+  AFTER   GET /sitemap.xml → 200 application/xml (8 marketing URLs)
+Tenant hosts were never affected: their /robots.txt and /sitemap.xml are
+rewritten to /store/{slug}/… and RETURN before that check (middleware.ts:148,
+:202). That early return is also the answer the story's notes asked to be
+documented — the platform files serve only on non-tenant hosts by ROUTE
+PRECEDENCE, not by a host check in the handler. Recorded in both file headers.
+
+DECISIONS
+- Both new files are `force-dynamic`. At build time DATABASE_URL is a dummy and
+  lib/db.ts hands back the mock Proxy that returns [] for every query, so a
+  statically generated sitemap would bake a permanently empty Learning Center
+  section; and neither NEXT_PUBLIC_APP_URL nor NEXT_PUBLIC_BASE_DOMAIN is a
+  Dockerfile build arg, so a static robots.txt could carry a build-time origin.
+- The platform sitemap lists ONLY paths in isPublicRoute. /faq, /aup, /dpa,
+  /regulatory and /legal/* are real marketing pages that are NOT public — a
+  crawler following them gets a sign-in redirect (see FLAGGED).
+- learning_resources is not in tenantScopedModels, so no context binding; the
+  read is wrapped in try/catch and degrades to marketing-only, because a sitemap
+  that 500s teaches a crawler the whole site is broken.
+- The tenant route's three reads are now bound with runWithTenantContextAsync.
+  They were UNBOUND on tenant-scoped models (products, posts, conditions) —
+  warning on security.tenant_context_missing today and throwing under
+  TENANT_CONTEXT_STRICT, which for this route means no sitemap at all.
+- Conditions: own-tenant published only. The DETAIL page falls back to the master
+  tenant's rows (US-005), but the LISTING does not link them, so publishing them
+  would advertise URLs the store itself does not (asymmetry flagged below).
+- lastmod stays YYYY-MM-DD (the shipped format) and is OMITTED, not emitted as
+  "Invalid Date", for an unparseable value — the #229 JSON-string-date class:
+  updatedAt is a Date from prisma but a string through any JSON hop.
+
+VERIFICATION
+  pnpm exec tsc --noEmit                       → exit 0
+  pnpm vitest run tests/unit/sitemap.test.ts   → 20 passed
+  pnpm vitest run --project unit               → 128 files, 1969 tests passed
+  pnpm exec next lint (8 touched files)        → no warnings or errors
+  pnpm check:security                          → both gates pass
+  live curl (pnpm dev, existing .env.local)    → see BEFORE/AFTER above
+No Prisma change in this story, so no migration/validate step. No new runtime
+import chain leaves the Next bundle — everything added is under app/ and lib/,
+both already COPYied by nextjs_space/Dockerfile (the email-p2 #232 lesson): no
+Dockerfile edit needed.
+The local DB is unreachable from this machine (Railway private network), so the
+platform sitemap's /learn section curled EMPTY and the tenant sitemap 404'd on
+getCurrentTenant. That is the degradation path working, and it is exactly what
+the "still serves the marketing pages when the database is down" test asserts;
+the entity loops are covered by unit tests, not by the live curl.
+
+TEST DESIGN
+20 tests in tests/unit/sitemap.test.ts. The tenant ROUTE runs for real with only
+prisma and getCurrentTenant mocked, so the assertions are against the shipped
+query shape and the shipped XML. Named guards for each closed defect: the id
+route is present and /products/{slug} absent; an unsynced product does not
+duplicate /products; /support is listed and /faq is not; the three where-clauses
+are asserted verbatim (deletedAt: null, drGreenStrainId not null, published);
+a custom-domain tenant's every loc is on the custom domain. Serialisation:
+`a&b` becomes `a&amp;b`, an empty urlset is still a valid document, and every
+static entry equals storeCanonical of the same path. Drift: every
+STORE_SEO_PAGES path appears in STORE_SITEMAP_STATIC_PAGES. Platform: the gated
+marketing paths are asserted ABSENT, the DB-down path still yields the marketing
+URLs, and the origin is re-read from env at call time (stubEnv).
+
+FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
+- /faq, /aup, /dpa, /regulatory and /legal/{changelog,subprocessors} are real
+  public-facing marketing/legal pages that are NOT in isPublicRoute, so a
+  signed-out visitor or crawler is redirected to sign-in. Only /robots.txt and
+  /sitemap.xml were added here (they are this story's subject); the rest is a
+  product call about which legal pages must be readable logged-out. Whichever
+  become public should then be added to MARKETING_PATHS in app/sitemap.ts.
+- The 6 platform blog articles are omitted from app/sitemap.ts. They are real,
+  public and fully rendered, but their slugs live in a hardcoded array that is
+  DUPLICATED between app/blog/page.tsx and app/blog/[slug]/page.tsx; adding them
+  to the sitemap would create a third copy. Extracting that array to one module
+  is the fix and is a bigger diff than this story warrants.
+- The conditions asymmetry from US-005 is now load-bearing in two places: the
+  detail page resolves the master tenant's conditions but neither the listing API
+  nor this sitemap publishes them. Same product decision already flagged in
+  US-005 (per-tenant override rows vs copy-on-edit).
+- app/store/[slug]/robots.txt/route.ts does not Disallow /cart, /checkout,
+  /orders, /dashboard or /payment — every store advertises its own checkout funnel
+  to crawlers. Closest home US-022 (indexing controls); left alone here because
+  the story scopes robots to the PLATFORM file.
+- The tenant sitemap has no <urlset> size guard. Harmless at current catalogue
+  sizes; the protocol's limit is 50k URLs / 50MB, and a store that ever
+  approaches it needs a sitemap index, not a bigger document.

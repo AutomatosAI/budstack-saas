@@ -10,7 +10,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 - [x] US-003 The Wire post metadata reads post.seo
 - [x] US-004 Product detail metadata
 - [x] US-005 Conditions SEO wired end-to-end
-- [ ] US-006 Sitemap correctness + platform sitemap
+- [x] US-006 Sitemap correctness + platform sitemap
 - [ ] US-007 Canonicals everywhere
 - [ ] US-008 Fix the www.* black-hole
 - [ ] US-009 Alt-text authoring

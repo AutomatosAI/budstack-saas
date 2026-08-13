@@ -7,6 +7,14 @@ import { applyCsp, buildCsp, generateNonce, variantForServedPath } from "@/lib/s
 // Define public routes
 const isPublicRoute = createRouteMatcher([
   "/",
+  // SEO US-006: the platform's own crawler files (app/robots.ts, app/sitemap.ts).
+  // The matcher below deliberately passes .xml/.txt through middleware, and the
+  // apex has no tenant hint, so without these two a signed-out crawler falls to
+  // the auth check and gets a 307 to /auth/login. (Tenant hosts are unaffected —
+  // their /robots.txt and /sitemap.xml are rewritten to /store/{slug}/… and
+  // returned before that check ever runs.)
+  "/robots.txt",
+  "/sitemap.xml",
   "/auth/login(.*)",
   "/auth/signup(.*)",
   "/store/(.*)", // Storefronts are public
