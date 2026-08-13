@@ -35,7 +35,7 @@ import {
 } from "recharts";
 
 import {
-  getRevenueMetrics,
+  EMPTY_REVENUE_METRICS,
   formatCurrency,
   getStatusTone,
   formatTimeAgo,
@@ -59,10 +59,12 @@ const EMPTY_ANALYTICS: AnalyticsData = {
   totalOrders: 0,
   totalCustomers: 0,
   totalRevenue: 0,
+  paidRevenue: 0,
   recentOrders: 0,
   recentCustomers: 0,
   recentRevenue: 0,
   avgOrderValue: 0,
+  revenueMetrics: EMPTY_REVENUE_METRICS,
   revenueByDay: [],
   ordersByDay: [],
   topProducts: [],
@@ -151,7 +153,11 @@ export default function TenantAnalyticsPage() {
     return null;
   }
 
-  const revenueMetrics = getRevenueMetrics(analytics);
+  // Server-computed real periods; fall back to the blank slate if an older
+  // API response (mid-deploy) lacks the field.
+  const revenueMetrics = analytics.revenueMetrics?.length
+    ? analytics.revenueMetrics
+    : EMPTY_REVENUE_METRICS;
 
   const {
     salesTrendTrace,
@@ -265,18 +271,26 @@ export default function TenantAnalyticsPage() {
                   {formatCurrency(metric.value)}
                 </div>
                 <div className="bs-stat-delta flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1",
-                      metric.change > 0 ? "text-bs-green-soft" : "text-bs-warn",
-                    )}
-                  >
-                    <TrendingUp className="h-3 w-3" aria-hidden="true" />
-                    <span className="font-mono tabular-nums">
-                      {metric.change > 0 ? "+" : ""}
-                      {metric.change}%
+                  {metric.change === null ? (
+                    <span className="text-bs-fg-muted font-mono tabular-nums">
+                      —
                     </span>
-                  </span>
+                  ) : (
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1",
+                        metric.change >= 0
+                          ? "text-bs-green-soft"
+                          : "text-bs-warn",
+                      )}
+                    >
+                      <TrendingUp className="h-3 w-3" aria-hidden="true" />
+                      <span className="font-mono tabular-nums">
+                        {metric.change > 0 ? "+" : ""}
+                        {metric.change}%
+                      </span>
+                    </span>
+                  )}
                   <span className="text-bs-fg-muted">{metric.period}</span>
                 </div>
               </div>
@@ -390,7 +404,7 @@ export default function TenantAnalyticsPage() {
                   Sales Trend
                 </h3>
                 <RowPill tone="emerald" className="ml-auto">
-                  Last 30 days
+                  Last {timeRange === "7d" ? "7" : timeRange === "90d" ? "90" : "30"} days
                 </RowPill>
               </div>
               <div className="h-[280px]">

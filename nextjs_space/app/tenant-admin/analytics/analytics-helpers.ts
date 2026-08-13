@@ -5,10 +5,12 @@ export interface AnalyticsData {
   totalOrders: number;
   totalCustomers: number;
   totalRevenue: number;
+  paidRevenue?: number;
   recentOrders: number;
   recentCustomers: number;
   recentRevenue: number;
   avgOrderValue: number;
+  revenueMetrics: RevenueMetric[];
   revenueByDay: any[];
   ordersByDay: any[];
   topProducts: any[];
@@ -23,16 +25,25 @@ export interface AnalyticsData {
 export interface RevenueMetric {
   label: string;
   value: number;
-  change: number;
+  // Null when there is no prior-period baseline — rendered as "—", never 0%.
+  change: number | null;
   period: string;
 }
+
+// Blank-slate metrics for brand-new tenants and the API-error fallback.
+export const EMPTY_REVENUE_METRICS: RevenueMetric[] = [
+  { label: "Today's Revenue", value: 0, change: null, period: "vs yesterday" },
+  { label: "This Week", value: 0, change: null, period: "vs prior 7 days" },
+  { label: "This Month", value: 0, change: null, period: "vs prior 30 days" },
+];
 
 export interface RecentOrder {
   id: string;
   orderNumber: string;
   customer: string;
   total: number;
-  status: "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED";
+  // OrderStatus enum value; kept as string so new statuses can't break the UI
+  status: string;
   // ISO string over the wire; Date only in code that constructs rows locally
   createdAt: Date | string;
 }
@@ -44,39 +55,6 @@ export interface RecentCustomer {
   createdAt: Date | string;
 }
 
-export const getRevenueMetrics = (
-  analytics: AnalyticsData | null,
-): RevenueMetric[] => {
-  if (!analytics) {
-    return [
-      { label: "Today's Revenue", value: 0, change: 0, period: "vs yesterday" },
-      { label: "This Week", value: 0, change: 0, period: "vs last week" },
-      { label: "This Month", value: 0, change: 0, period: "vs last month" },
-    ];
-  }
-
-  return [
-    {
-      label: "Today's Revenue",
-      value: analytics.recentRevenue * 0.1,
-      change: 12.5,
-      period: "vs yesterday",
-    },
-    {
-      label: "This Week",
-      value: analytics.recentRevenue * 0.7,
-      change: 8.3,
-      period: "vs last week",
-    },
-    {
-      label: "This Month",
-      value: analytics.totalRevenue,
-      change: 15.7,
-      period: "vs last month",
-    },
-  ];
-};
-
 export const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("pt-PT", {
     style: "currency",
@@ -87,8 +65,12 @@ export const formatCurrency = (amount: number) => {
 export const getStatusTone = (status: string): RowPillTone => {
   const map: Record<string, RowPillTone> = {
     COMPLETED: "emerald",
+    DELIVERED: "emerald",
+    SHIPPED: "blue",
+    CONFIRMED: "blue",
     PROCESSING: "blue",
     PENDING: "amber",
+    PENDING_SYNC: "amber",
     CANCELLED: "slate",
   };
   return map[status] || "slate";
