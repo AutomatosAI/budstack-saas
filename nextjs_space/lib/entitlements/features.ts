@@ -30,9 +30,11 @@ export function getTenantFeatures(_tenant: {
   return ALL_FEATURES;
 }
 
-export function hasFeature(
-  features: ReadonlySet<FeatureKey> | FeatureKey[],
-  key: FeatureKey,
-): boolean {
-  return Array.isArray(features) ? features.includes(key) : features.has(key);
+// Accepts any iterable of strings because the client reads keys straight off
+// the JSON response (string[]), while server code holds the typed set.
+export function hasFeature(features: Iterable<string>, key: FeatureKey): boolean {
+  for (const granted of features) {
+    if (granted === key) return true;
+  }
+  return false;
 }
