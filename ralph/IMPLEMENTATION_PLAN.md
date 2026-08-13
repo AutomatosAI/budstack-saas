@@ -27,7 +27,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 ## Workstream C — Newsletters & campaigns
 
 - [x] US-016 Campaign data model
-- [ ] US-017 Campaign CRUD + compose UI
+- [x] US-017 Campaign CRUD + compose UI
 - [ ] US-018 Audience selection v1
 - [ ] US-019 Fan-out send with rate cap
 - [ ] US-020 Compliance headers + enforced footer

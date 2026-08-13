@@ -3,11 +3,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/sonner";
-import { Globe, Zap, Mail, ShieldCheck } from "lucide-react";
+import { Globe, Zap, Mail, ShieldCheck, Info } from "lucide-react";
 import {
   getTenantVerificationMode,
   isSaIdEligibleTenant,
 } from "@/lib/verification-mode";
+
+/**
+ * US-017 — what these SMTP fields have to be for a newsletter to arrive.
+ *
+ * Transactional mail is a trickle and almost any relay carries it; a campaign
+ * is the whole list in one sitting, and the two most common setups here (a
+ * Gmail app password, a hosting provider's shared relay) throttle or cut off
+ * part-way through — which reads as "the platform lost my emails" rather than
+ * as a provider limit. Said where the credentials are entered, because that is
+ * where the choice is actually made.
+ */
+const SMTP_CAMPAIGN_GUIDANCE =
+  "Sending newsletters or campaigns needs a real email provider (Mailgun, SendGrid, Postmark, Amazon SES). A Gmail app password is fine for order confirmations, but Google caps it at roughly 500 recipients a day and will stop a campaign part-way through.";
 
 interface SettingsFormProps {
   tenant: {
@@ -368,6 +381,10 @@ export default function SettingsForm({ tenant }: SettingsFormProps) {
           </div>
         </header>
         <div className="space-y-6">
+          <div className="flex items-start gap-2 rounded-bs-md border border-bs-border-100 bg-bs-card-2 p-3 text-sm text-bs-fg-muted">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <p>{SMTP_CAMPAIGN_GUIDANCE}</p>
+          </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <label htmlFor="smtpHost" className="bs-eyebrow">

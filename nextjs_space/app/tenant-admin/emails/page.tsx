@@ -3,6 +3,7 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TenantTemplateList } from "@/components/admin/email/TenantTemplateList";
+import { TenantCampaignList } from "@/components/admin/email/TenantCampaignList";
 import { TenantEventMapper } from "@/components/admin/email/TenantEventMapper";
 import { EmailActivityLog } from "@/components/admin/email/EmailActivityLog";
 import { Plus } from "lucide-react";
@@ -17,10 +18,11 @@ export default function TenantEmailsPage() {
             className="bs-page-title"
             style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
           >
-            Email Templates
+            Email
           </h1>
           <p className="bs-page-subtitle">
-            Create templates, map them to system events, and review what was sent.
+            Create templates and campaigns, map templates to system events, and
+            review what was sent.
           </p>
         </div>
         <div className="flex justify-start sm:justify-end">
@@ -37,12 +39,16 @@ export default function TenantEmailsPage() {
         <div className="flex justify-start">
           <TabsList>
             <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="events">Event Triggers</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
         </div>
         <TabsContent value="templates" className="mt-0">
           <TenantTemplateList />
+        </TabsContent>
+        <TabsContent value="campaigns" className="mt-0">
+          <TenantCampaignList />
         </TabsContent>
         <TabsContent value="events" className="mt-0">
           <TenantEventMapper />
