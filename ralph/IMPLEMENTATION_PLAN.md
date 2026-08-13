@@ -32,7 +32,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 - [x] US-019 Fan-out send with rate cap
 - [x] US-020 Compliance headers + enforced footer
 - [x] US-021 Campaign scheduling
-- [ ] US-022 Send blog post as newsletter
+- [x] US-022 Send blog post as newsletter
 - [x] US-023 Marketing consent capture (parallel worktree agent; integrated at ae6b12e)
 
 ## Workstream D — CRM-lite

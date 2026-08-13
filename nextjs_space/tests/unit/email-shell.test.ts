@@ -103,6 +103,38 @@ describe("absoluteEmailImageUrl", () => {
       `${BASE_URL}/api/public/images/a.png`,
     );
   });
+
+  // US-022 — every record written before US-005 (posts.coverImage among them)
+  // holds a presigned link that stops resolving an hour after it was minted.
+  it("re-points a presigned S3 link at the durable route by its key", () => {
+    expect(
+      absoluteEmailImageUrl(
+        "https://budstack-uploads.s3.eu-west-1.amazonaws.com/development/tenants/tenant-a/uploads/1712-logo.png" +
+          "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&X-Amz-Signature=deadbeef",
+        BASE_URL,
+      ),
+    ).toBe(
+      `${BASE_URL}/api/public/images/development/tenants/tenant-a/uploads/1712-logo.png`,
+    );
+  });
+
+  it("keys the rewrite on the signature, not the host — an unsigned S3 image still works", () => {
+    expect(
+      absoluteEmailImageUrl(
+        "https://public-bucket.s3.amazonaws.com/brand/logo.png",
+        BASE_URL,
+      ),
+    ).toBe("https://public-bucket.s3.amazonaws.com/brand/logo.png");
+  });
+
+  it("drops a presigned link to something US-005 will not serve", () => {
+    expect(
+      absoluteEmailImageUrl(
+        "https://budstack-uploads.s3.amazonaws.com/development/tenants/t/uploads/deck.pdf?X-Amz-Signature=deadbeef",
+        BASE_URL,
+      ),
+    ).toBeNull();
+  });
 });
 
 describe("resolveBusinessAddress", () => {

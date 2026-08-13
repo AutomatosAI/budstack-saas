@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { getCurrentUserPermissions } from "@/lib/permissions/current-user-permissions";
+import { can } from "@/lib/permissions/resolve";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import PostsList from "./posts-list";
 
@@ -21,6 +23,12 @@ export default async function TheWirePage() {
     orderBy: { createdAt: "desc" },
     include: { users: true },
   });
+
+  // US-022 — the newsletter action writes a campaign, so it is gated on the
+  // permission the endpoint enforces (US-009), not on the blog's own. Fail-closed
+  // by construction: `getCurrentUserPermissions` returns ALL_FALSE for anyone it
+  // cannot resolve, so an unknown subject is offered nothing.
+  const { permissions } = await getCurrentUserPermissions();
 
   return (
     <div className="space-y-8">
@@ -47,7 +55,10 @@ export default async function TheWirePage() {
         </div>
       </div>
 
-      <PostsList initialPosts={posts} />
+      <PostsList
+        initialPosts={posts}
+        canSendAsNewsletter={can(permissions, "canEditEmails")}
+      />
     </div>
   );
 }
