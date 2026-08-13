@@ -33,11 +33,11 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Re
 - [ ] US-020 Compliance headers + enforced footer
 - [ ] US-021 Campaign scheduling
 - [ ] US-022 Send blog post as newsletter
-- [ ] US-023 Marketing consent capture
+- [x] US-023 Marketing consent capture (parallel worktree agent; integrated at ae6b12e)
 
 ## Workstream D — CRM-lite
 
-- [ ] US-024 Customer tags
+- [x] US-024 Customer tags (parallel worktree agent; integrated at cb36836)
 - [ ] US-025 Segments as saved audiences
 - [ ] US-026 Campaign results page
 - [ ] US-027 Open/click tracking (per-tenant opt-in)

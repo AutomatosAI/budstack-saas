@@ -13,6 +13,8 @@ const prismaMock = vi.hoisted(() => ({
   },
   campaign_recipients: { findFirst: vi.fn() },
   email_suppressions: { create: vi.fn() },
+  // US-023: unsubscribeNewsletterSubscriber also clears users.marketingConsentAt
+  users: { updateMany: vi.fn() },
 }));
 
 vi.mock("@/lib/db", () => ({ prisma: prismaMock }));
@@ -28,6 +30,7 @@ beforeEach(() => {
   prismaMock.newsletter_subscribers.findFirst.mockResolvedValue(null);
   prismaMock.newsletter_subscribers.update.mockResolvedValue({ id: "sub_1" });
   prismaMock.newsletter_subscribers.updateMany.mockResolvedValue({ count: 0 });
+  prismaMock.users.updateMany.mockResolvedValue({ count: 0 });
   prismaMock.campaign_recipients.findFirst.mockResolvedValue(null);
   prismaMock.email_suppressions.create.mockResolvedValue({ id: "sup_1" });
 });
