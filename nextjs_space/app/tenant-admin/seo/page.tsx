@@ -14,7 +14,7 @@ export default async function SeoPage() {
 
   const tenantId = active.tenantId;
 
-  const [tenant, products, posts] = await Promise.all([
+  const [tenant, products, posts, conditions] = await Promise.all([
     prisma.tenants.findUnique({
       where: { id: tenantId },
       select: {
@@ -51,6 +51,21 @@ export default async function SeoPage() {
         coverImage: true,
       },
     }),
+    // SEO US-005: the tenant's OWN conditions only. A store also renders the
+    // master tenant's shared conditions (app/store/[slug]/conditions/page.tsx
+    // :24-36), but those belong to another tenant — the write route 404s them,
+    // so listing them here would offer an edit that always fails.
+    prisma.conditions.findMany({
+      where: { tenantId },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        seo: true,
+        image: true,
+      },
+    }),
   ]);
 
   if (!tenant) {
@@ -73,6 +88,7 @@ export default async function SeoPage() {
         baseUrl={baseUrl}
         products={products}
         posts={posts}
+        conditions={conditions}
         pageSeo={
           tenant.pageSeo as Record<
             string,

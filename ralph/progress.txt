@@ -424,3 +424,151 @@ FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
   NULL — a row without one has no page to list.
 - For US-007: storeCanonical + a page-level path helper is now the established
   pattern on four page types; US-007 is the sweep of what is left, not a redesign.
+
+================================================================================
+[2026-08-13] US-005 PASS — Conditions SEO wired end-to-end
+================================================================================
+
+WHAT LANDED
+conditions.seo (prisma/schema.prisma:278) was the most orphaned column in the
+feature: no tab wrote it, no route accepted it, no page read it. Condition pages
+are the content-marketing landing pages — the ones that rank for "medical
+cannabis for <condition>" — and every one of them rendered
+"BudStacks - Medical Cannabis SaaS Platform" from app/layout.tsx.
+
+- app/store/[slug]/conditions/[id]/page.tsx is now a Server Component exporting
+  generateMetadata and rendering <ConditionDetailClient />. The interactive body
+  moved VERBATIM to condition-detail-client.tsx (git mv, one renamed export) —
+  it still reads its own params via useParams(), so the split is a rename, not a
+  props refactor. Same move US-004 made for products.
+- lib/seo/condition-metadata.ts — the pure builder, fifth in the same shape as
+  page/post/product: authored title as { absolute }, default title UNSUFFIXED
+  for the layout template, description OMITTED when empty so the layout's is
+  inherited, openGraph re-declared wholesale, twitter card only.
+- lib/seo/condition-paths.ts — conditionPath(slug), dependency-free, shared by
+  the admin preview and the page canonical so they cannot disagree. Its index
+  path is READ from storeSeoPage("conditions").path rather than restated.
+- app/api/tenant-admin/seo/conditions/[id]/route.ts — GET + PUT cloned from the
+  products route (withTenantAuthParams, same strict zod, ownership findFirst
+  {id, tenantId}, same empty-value clearing).
+- lib/validation/parse-uuid.ts — parseEntityId(), the looser path-param gate.
+- SEO Manager: a Conditions tab (app/tenant-admin/seo/page.tsx fetches the rows,
+  seo-page-client.tsx renders list + modal). TabsList went 3 → 4 columns, with a
+  2-col mobile grid so four triggers do not crush on a phone.
+
+THE ROUTE SEGMENT IS NAMED [id] AND CARRIES A SLUG
+Exactly the trap US-004 found on products, one route over. The listing links
+`conditions/{condition.slug}` (conditions-client.tsx:342) and the detail API
+resolves it against the (tenantId, slug) unique
+(app/api/tenant/conditions/[slug]/route.ts:32-39). conditions.id appears in NO
+url — it is the admin-side key only. So the canonical and the admin preview are
+both built from conditionPath(slug), and the write route is keyed by id.
+
+THE MASTER-TENANT FALLBACK, AND THE BINDING THAT MAKES IT WORK
+A store renders its OWN conditions plus a configured master tenant's shared ones
+(app/store/[slug]/conditions/page.tsx:24-36; the detail API has the same
+fallback). generateMetadata mirrors that resolution or it would title a fully
+rendered page "Condition Not Found".
+
+The load-bearing detail: applyTenantScope spreads the CONTEXT tenantId OVER the
+where clause — `{ ...where, tenantId }` (lib/db.ts:115-118). A master-tenant
+read issued under the visiting tenant's context is therefore silently rewritten
+to the visiting tenant and can NEVER match. So loadCondition binds each read to
+the tenant it is actually reading: runWithTenantContextAsync(tenantId, …) for
+the store's own row, then runWithTenantContextAsync(masterTenantId, …) for the
+shared one. The explicit tenantId in the where is what makes each query correct;
+the binding is what makes it legal (conditions is tenant-scoped, lib/db.ts:61,
+and generateMetadata resolves OUTSIDE the layout's context scope — unbound it
+warns security.tenant_context_missing and would throw under
+TENANT_CONTEXT_STRICT, inside metadata, where a throw is a blank page).
+findFirst with flat fields throughout, never findUnique on the tenantId_slug
+compound (the $extends rewrite rejects a compound key).
+
+parseEntityId, NOT parseUuid
+conditions declares `id String @id` with no database default, so an id is
+whatever the writer supplied — crypto.randomUUID() today
+(scripts/seed-conditions.ts:497), but nothing enforces it, and parseUuid would
+400 a perfectly valid row. parseEntityId is [A-Za-z0-9_-]{1,64}: wide enough for
+a uuid, cuid or nanoid; narrow enough that nothing reaching a where clause can
+carry a wildcard, quote, path separator or whitespace. Added beside the other
+two path-param gates rather than inlined, and named as the looser option so it
+does not become the default.
+
+WHAT THE ADMIN LISTS, AND WHY IT IS NARROWER THAN WHAT THE STORE RENDERS
+The tab lists the tenant's OWN conditions only, and the write route 404s
+anything else. Editing a master-tenant condition would rewrite the metadata of
+that page in EVERY store that inherits it. The empty state says so rather than
+showing a silent gap. Consequence, flagged below: a store that renders only
+inherited conditions has metadata it cannot author.
+
+published IS DELIBERATELY NOT FILTERED
+US-003 moved `published: true` into the Wire query so a draft's title could not
+reach a 404 page. The opposite call here: the detail API the body calls does NOT
+filter published (only the LIST route does), so an unpublished condition renders
+in full at its URL. Metadata that 404s a page the visitor can read would hide
+the defect rather than fix it. Mirrored the body; the visibility gap is flagged.
+
+VERIFIED
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm vitest run --project unit tests/unit/condition-metadata.test.ts → 34 passed.
+- Full suite: pnpm vitest run → 128 files passed, 8 skipped; 1950 passed, 30
+  skipped, 0 failed (1916 + 34 new). No cross-story regression.
+- pnpm check:security → both gates pass. next lint on the 8 touched files → clean.
+- LIVE: pnpm dev + GET /store/healingbuds/conditions/anxiety → HTTP 404 with
+  <title>Store Not Found</title>. The route compiled clean ("Compiled
+  /store/[slug]/conditions/[id] in 4.5s (3415 modules)"), no module error from
+  the server/client split — the thing the split could actually have broken — and
+  no unhandled throw. The TENANT branch stays unrenderable on this machine: 5
+  PrismaClientInitializationError lines in the dev log, DATABASE_URL points at
+  Railway's private network. Platform / still 200. The SEO Manager tab is
+  Clerk-gated → visual: deferred to human review.
+- Docker: no new runtime import chain leaves the Next bundle — everything added
+  is lib/seo/* and lib/validation/* imported from app/, and Dockerfile:74 already
+  COPYs lib/ wholesale. No Dockerfile change needed (email-p2 #232 lesson
+  checked).
+
+TEST DESIGN
+34 tests. The builder is exercised directly (pure by construction), the ROUTE
+through the real zod schema and the real withTenantAuthParams wrapper with only
+getCurrentUser + prisma mocked — so "another tenant's condition 404s WITHOUT
+writing" is asserted against the shipped handler rather than a re-implementation.
+Named guards for the silent regressions: the default title carries no business
+name (the US-001 double suffix), description is ABSENT rather than undefined, an
+authored description is not truncated, a presigned image is dropped, canonical
+and og:url are the same string, conditionPath never yields /conditions/null, and
+CONDITIONS_INDEX_PATH still equals storeSeoPage("conditions").path. Property, not
+example: four wrong-shaped conditions.seo blobs all degrade to the row defaults,
+and parseEntityId is asserted on a traversal string, a quote, a wildcard and an
+over-length id.
+
+FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
+- app/api/tenant/conditions/[slug]/route.ts uses findUnique on the tenantId_slug
+  COMPOUND (lines 32-39 and 50-57). It works today only because that public route
+  runs with NO tenant context bound; the moment anything binds one, the $extends
+  layer rewrites findUnique→findFirst and Prisma rejects the compound key
+  (PrismaClientValidationError). A latent break, not a live one.
+- That same route does not filter `published`, while /api/tenant/conditions does
+  — an unpublished condition is publicly readable at its URL. Content-visibility,
+  closest home US-022.
+- /api/tenant-admin/seo/conditions/[id] has no permission gate
+  (withTenantAuthParams only) — the FOURTH route with this gap after /seo/pages,
+  /seo/posts/[id] and /seo/products/[id]. US-010's sweep; it should take all four
+  together.
+- A store whose conditions all come from the master tenant cannot author any
+  condition metadata. Needs a product decision (per-tenant override rows vs
+  copy-on-edit), not a silent redesign here.
+- condition-detail-client.tsx links `/store/{slug}/…` and a bare `/contact`. On a
+  tenant host the store is served at ROOT, so both 404 in production —
+  getTenantBasePath() is the fix. Same class as the US-003 Wire back-link flag;
+  route-shape debt, US-010's neighbourhood. Left untouched so the git mv stays a
+  pure rename.
+- app/tenant-admin/seo/page.tsx issues three (now four) tenant-scoped prisma
+  reads with no runWithTenantContextAsync binding. Pre-existing on
+  products/posts; the conditions read matches the file rather than introducing a
+  one-off. Would throw under TENANT_CONTEXT_STRICT.
+- The new admin list renders alt={condition.name} on row thumbnails — US-009.
+- For US-006: the sitemap lists /conditions but NO condition detail URLs at all
+  (app/store/[slug]/sitemap.xml/route.ts:35 — staticPages only, products and
+  posts are the only entity loops). conditionPath(slug) now exists and those URLs
+  are REAL, unlike the /products/{slug} ones. It also still lists /faq, which
+  redirects.

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeoEditorModal } from "@/components/admin/seo";
+import { conditionPath } from "@/lib/seo/condition-paths";
 import { productPath } from "@/lib/seo/product-paths";
 import {
   STORE_SEO_PAGES,
@@ -14,6 +15,7 @@ import {
   Package,
   FileText,
   Home,
+  HeartPulse,
   Search,
   CheckCircle,
   AlertCircle,
@@ -51,11 +53,21 @@ interface PostItem {
   coverImage: string | null;
 }
 
+interface ConditionItem {
+  id: string;
+  name: string;
+  /** The storefront route key — condition pages are slug-keyed, not id-keyed. */
+  slug: string;
+  seo: SeoData | null;
+  image: string | null;
+}
+
 interface SeoPageClientProps {
   tenantId: string;
   baseUrl: string;
   products: ProductItem[];
   posts: PostItem[];
+  conditions: ConditionItem[];
   pageSeo: Record<string, SeoData> | null;
 }
 
@@ -64,18 +76,22 @@ export function SeoPageClient({
   baseUrl,
   products,
   posts,
+  conditions,
   pageSeo,
 }: SeoPageClientProps) {
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
     null,
   );
   const [selectedPost, setSelectedPost] = useState<PostItem | null>(null);
+  const [selectedCondition, setSelectedCondition] =
+    useState<ConditionItem | null>(null);
   const [selectedPage, setSelectedPage] = useState<StoreSeoPage | null>(null);
   const [localPageSeo, setLocalPageSeo] = useState<Record<string, SeoData>>(
     pageSeo || {},
   );
   const [localProducts, setLocalProducts] = useState(products);
   const [localPosts, setLocalPosts] = useState(posts);
+  const [localConditions, setLocalConditions] = useState(conditions);
 
   const hasSeo = (seo: SeoData | null | undefined): boolean => {
     return !!(seo && (seo.title || seo.description || seo.ogImage));
@@ -113,6 +129,25 @@ export function SeoPageClient({
 
     setLocalPosts((prev) =>
       prev.map((p) => (p.id === selectedPost.id ? { ...p, seo } : p)),
+    );
+  };
+
+  const handleSaveConditionSeo = async (seo: SeoData) => {
+    if (!selectedCondition) return;
+
+    const res = await fetch(
+      `/api/tenant-admin/seo/conditions/${selectedCondition.id}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(seo),
+      },
+    );
+
+    if (!res.ok) throw new Error("Failed to save");
+
+    setLocalConditions((prev) =>
+      prev.map((c) => (c.id === selectedCondition.id ? { ...c, seo } : c)),
     );
   };
 
@@ -154,7 +189,7 @@ export function SeoPageClient({
   return (
     <>
       <Tabs defaultValue="products" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:w-auto lg:inline-grid">
           <TabsTrigger value="products" className="gap-2">
             <Package className="h-4 w-4 hidden sm:block" aria-hidden="true" />
             Products ({localProducts.length})
@@ -162,6 +197,10 @@ export function SeoPageClient({
           <TabsTrigger value="posts" className="gap-2">
             <FileText className="h-4 w-4 hidden sm:block" aria-hidden="true" />
             Posts ({localPosts.length})
+          </TabsTrigger>
+          <TabsTrigger value="conditions" className="gap-2">
+            <HeartPulse className="h-4 w-4 hidden sm:block" aria-hidden="true" />
+            Conditions ({localConditions.length})
           </TabsTrigger>
           <TabsTrigger value="pages" className="gap-2">
             <Home className="h-4 w-4 hidden sm:block" aria-hidden="true" />
@@ -286,6 +325,67 @@ export function SeoPageClient({
           </section>
         </TabsContent>
 
+        {/* Conditions Tab */}
+        <TabsContent value="conditions">
+          <section className="bs-card bs-card-pad space-y-4">
+            <div>
+              <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
+                Condition SEO
+              </h3>
+              <p className="text-sm text-bs-fg-muted">
+                Condition pages are your content-marketing landing pages — the
+                ones people find by searching a symptom.
+              </p>
+            </div>
+            {localConditions.length === 0 ? (
+              <p className="text-sm text-bs-fg-muted text-center py-8">
+                No conditions yet. Conditions shared by the platform are managed
+                centrally and cannot be edited here.
+              </p>
+            ) : (
+              <div className="divide-y divide-bs-border-100">
+                {localConditions.map((condition) => (
+                  <div
+                    key={condition.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-4"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
+                      {condition.image && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={condition.image}
+                          alt={condition.name}
+                          className="w-10 h-10 rounded object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-bs-fg truncate">
+                          {condition.name}
+                        </p>
+                        <p className="text-xs text-bs-fg-muted truncate font-mono">
+                          {baseUrl}
+                          {conditionPath(condition.slug)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 w-full sm:w-auto pl-14 sm:pl-0">
+                      <SeoStatusBadge hasCustomSeo={hasSeo(condition.seo)} />
+                      <button
+                        type="button"
+                        className="bs-btn bs-btn-ghost bs-btn-sm"
+                        onClick={() => setSelectedCondition(condition)}
+                      >
+                        <Search className="h-4 w-4 mr-1" aria-hidden="true" />
+                        Edit SEO
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </TabsContent>
+
         {/* Static Pages Tab */}
         <TabsContent value="pages">
           <section className="bs-card bs-card-pad space-y-4">
@@ -357,6 +457,21 @@ export function SeoPageClient({
           previewUrl={`${baseUrl}/the-wire/${selectedPost.slug}`}
           initialSeo={selectedPost.seo || undefined}
           onSave={handleSavePostSeo}
+        />
+      )}
+
+      {/* Condition SEO Modal */}
+      {selectedCondition && (
+        <SeoEditorModal
+          isOpen={!!selectedCondition}
+          onClose={() => setSelectedCondition(null)}
+          entityType="condition"
+          entityId={selectedCondition.id}
+          entityName={selectedCondition.name}
+          entitySlug={selectedCondition.slug}
+          previewUrl={`${baseUrl}${conditionPath(selectedCondition.slug)}`}
+          initialSeo={selectedCondition.seo || undefined}
+          onSave={handleSaveConditionSeo}
         />
       )}
 
