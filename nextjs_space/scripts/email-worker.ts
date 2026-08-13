@@ -8,6 +8,11 @@ import { decrypt } from '../lib/security/encryption';
 import { emailQueueName } from '../lib/queue';
 import { registerEmailHelpers, renderEmailTemplate } from '../lib/email/handlebars-helpers';
 import { markEmailLogFailed, markEmailLogSent } from '../lib/email/email-log-linkage';
+import {
+    MISSING_FOOTER_LOG_MESSAGE,
+    listUnsubscribeHeaders,
+    resolveMarketingCompliance,
+} from '../lib/email/marketing-headers';
 import { SUPPRESSED_LOG_MESSAGE } from '../lib/email/suppression';
 import { resolveSuppressionBlock } from '../lib/email/suppression-store';
 import {
@@ -230,6 +235,33 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
         finalSubject = renderEmailTemplate(campaignSource.subject, variables || {});
     }
 
+    // US-020: the enforced footer, checked on the RENDERED body — the last
+    // moment it is still possible to refuse. US-017 asserts the stored HTML
+    // carries `href="{{unsubscribeUrl}}"`; only here is it known whether the
+    // worker actually filled that slot with a link a recipient can follow.
+    //
+    // Every transactional job — and every payload enqueued before this story,
+    // which carries no `category` — resolves to no refusal and no header, so it
+    // takes exactly the path it took before.
+    const compliance = resolveMarketingCompliance({
+        category: job.data.category,
+        variables,
+        html: finalHtml,
+    });
+
+    // Return, don't throw — the same intentional-drop shape as the expiry,
+    // suppression and cancel guards above. Three retries would re-render the
+    // same document and reach the same answer three more times.
+    if (compliance.refuse) {
+        console.warn(`[EmailWorker] Job ${job.id} ${MISSING_FOOTER_LOG_MESSAGE}`);
+        await markLogFailed(MISSING_FOOTER_LOG_MESSAGE);
+        await markRecipient('FAILED', {
+            emailLogId: logId ?? null,
+            error: MISSING_FOOTER_LOG_MESSAGE,
+        });
+        return { success: false, missingFooter: true };
+    }
+
     try {
         let transporter;
         let fromAddress = from;
@@ -298,11 +330,24 @@ const worker = new Worker(emailQueueName, async (job: Job) => {
 
         // Send Email
         console.log(`[EmailWorker] Sending email to ${to}...`);
+        // US-020: RFC 8058 one-click, spread conditionally so a transactional
+        // send's payload is exactly the object it was before this story. The
+        // mailto half is derived from `fromAddress`, which is only resolved
+        // above — the one reason these headers are built here and not with the
+        // footer guard.
         const info = await transporter.sendMail({
             from: fromAddress,
             to,
             subject: finalSubject,
             html: finalHtml,
+            ...(compliance.unsubscribeUrl
+                ? {
+                      headers: listUnsubscribeHeaders(
+                          compliance.unsubscribeUrl,
+                          fromAddress,
+                      ),
+                  }
+                : {}),
         });
 
         console.log(`[EmailWorker] Email sent: ${info.messageId}`);
