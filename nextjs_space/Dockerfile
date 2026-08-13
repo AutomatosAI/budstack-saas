@@ -73,6 +73,11 @@ COPY --from=builder /app/node_modules ./node_modules
 # Copy scripts and lib for maintenance tasks (migrations, seeding, S3 sync)
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/lib ./lib
+# Email Phase 2 (US-028): the worker imports the react-email shell chain at
+# runtime (lib/email/email-shell.ts -> @/emails/email-shell), so the runner
+# needs the JSX sources tsx resolves against — without this the worker
+# crash-loops on MODULE_NOT_FOUND and all email delivery queues unsent.
+COPY --from=builder /app/emails ./emails
 
 # Copy tsconfig.json so `tsx` can resolve the "@/*" path alias at runtime.
 # The email-worker sidecar runs via `tsx scripts/email-worker.ts` and imports
