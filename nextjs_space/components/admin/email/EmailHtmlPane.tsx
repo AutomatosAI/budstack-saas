@@ -4,19 +4,22 @@
  * The raw-HTML editor — Advanced mode.
  *
  * Lifted out of `EmailEditor.tsx` unchanged when US-012 added the Simple tab, so
- * that component could hold the two modes without growing a second job. This is
- * the pre-US-012 experience exactly: an HTML source pane, a live preview of that
- * source, and the merge-tag reference.
+ * that component could hold the two modes without growing a second job.
  *
  * US-013 took the one thing that was NOT presentation out of it. The reference
  * list used to be a literal in this file; it now comes from
  * `lib/email/email-merge-tags.ts`, the same module the visual composer's
  * Personalize menu reads, so the two editors cannot offer different tags for the
  * same template.
+ *
+ * US-015 took the preview out of it. This pane used to `srcDoc` its own textarea
+ * — raw source, un-inlined, unsanitized, merge tags unfilled — which is not the
+ * email anyone receives. `EmailPreviewPane` now shows the server's render for
+ * BOTH modes, so what an author checks is what the save would store.
  */
 
 import React from "react";
-import { Code, Eye, HelpCircle } from "lucide-react";
+import { Code, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -24,11 +27,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
 import {
   EMAIL_TEMPLATE_HELPERS,
   EMAIL_TEMPLATE_HELPERS_CATEGORY,
@@ -110,45 +108,19 @@ export function EmailHtmlPane({
   eventType,
 }: EmailHtmlPaneProps) {
   return (
-    <ResizablePanelGroup direction="horizontal">
-      <ResizablePanel defaultSize={50} minSize={30}>
-        <div className="flex h-full flex-col border-r border-bs-border-100">
-          <div className="flex items-center justify-between border-b border-bs-border-100 bg-bs-card-2 p-2">
-            <span className="flex items-center font-mono text-xs uppercase tracking-wide text-bs-fg-muted">
-              <Code className="mr-1 h-3 w-3" /> HTML Source
-            </span>
-            <VariablesReference eventType={eventType} />
-          </div>
-          <textarea
-            className="bs-input flex-1 resize-none rounded-none border-0 p-4 font-mono text-sm leading-relaxed focus-visible:ring-0"
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            placeholder="<html>...</html>"
-          />
-        </div>
-      </ResizablePanel>
-
-      <ResizableHandle withHandle />
-
-      <ResizablePanel defaultSize={50} minSize={30}>
-        <div className="flex h-full flex-col bg-bs-canvas">
-          <div className="flex items-center justify-between border-b border-bs-border-100 bg-bs-card-2 p-2">
-            <span className="flex items-center font-mono text-xs uppercase tracking-wide text-bs-fg-muted">
-              <Eye className="mr-1 h-3 w-3" /> Live Preview
-            </span>
-          </div>
-          <div className="flex flex-1 items-center justify-center overflow-auto p-4">
-            <div className="mx-auto h-full w-full max-w-[800px] overflow-hidden rounded bg-white shadow-sm">
-              <iframe
-                srcDoc={value}
-                className="h-full w-full border-0"
-                title="Email Preview"
-                sandbox="allow-same-origin"
-              />
-            </div>
-          </div>
-        </div>
-      </ResizablePanel>
-    </ResizablePanelGroup>
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-bs-border-100 bg-bs-card-2 p-2">
+        <span className="flex items-center font-mono text-xs uppercase tracking-wide text-bs-fg-muted">
+          <Code className="mr-1 h-3 w-3" /> HTML Source
+        </span>
+        <VariablesReference eventType={eventType} />
+      </div>
+      <textarea
+        className="bs-input flex-1 resize-none rounded-none border-0 p-4 font-mono text-sm leading-relaxed focus-visible:ring-0"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="<html>...</html>"
+      />
+    </div>
   );
 }

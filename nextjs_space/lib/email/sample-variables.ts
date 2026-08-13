@@ -14,6 +14,8 @@
  * exactly the drift that pairing prevents. Adding a tag means adding both.
  */
 
+import { NEWSLETTER_UNSUBSCRIBE_PATH } from "@/lib/email/newsletter-unsubscribe";
+
 const APP_URL_FALLBACK = "http://localhost:3000";
 
 const SAMPLE_BUSINESS_NAME = "Sample Store";
@@ -53,6 +55,12 @@ function baseSampleVariables(): Record<string, unknown> {
     email: SAMPLE_CUSTOMER_EMAIL,
     resetLink: `${base}/auth/reset-password/sample-token`,
     link: base,
+    // Not an authorable merge tag — US-010's footer emits {{unsubscribeUrl}} on
+    // a marketing template and only fan-out (US-019) mints the real per-recipient
+    // token. Without a sample the preview and the test send would both show that
+    // footer with a dead href, which reads as a broken unsubscribe rather than
+    // one that is not resolved yet.
+    unsubscribeUrl: `${base}${NEWSLETTER_UNSUBSCRIBE_PATH}?token=sample-token`,
     // Order
     orderNumber: SAMPLE_ORDER_NUMBER,
     total: SAMPLE_ORDER_TOTAL,

@@ -10,16 +10,22 @@
  * (lib/security/email-sanitize.ts) and the only values injected here are the
  * canned samples from lib/email/sample-variables.ts.
  */
-import { ApiError } from "@/lib/api-error";
 import { sendEmail } from "@/lib/email/email";
 import {
-  maxBlockDepth,
-  renderEmailTemplate,
-} from "@/lib/email/handlebars-helpers";
+  MAX_TEMPLATE_BLOCK_DEPTH,
+  renderTemplateField,
+} from "@/lib/email/render-template-field";
 import { TEST_SEND_TEMPLATE_NAME } from "@/lib/email/reserved-event-types";
 import { sampleVariablesForEvent } from "@/lib/email/sample-variables";
 
 export { TEST_SEND_TEMPLATE_NAME };
+
+/**
+ * The request-path render bound, re-exported from where it now lives
+ * (`lib/email/render-template-field.ts`) — US-015 gave the preview the same
+ * need, so the guard moved and this stays the name test-send's callers know.
+ */
+export { MAX_TEMPLATE_BLOCK_DEPTH };
 
 /**
  * 5 per minute, per tenant (AC-3). Fails CLOSED: this triggers a real outbound
@@ -31,36 +37,6 @@ export const TEST_SEND_RATE_LIMIT = {
   windowMs: 60_000,
   failMode: "closed",
 } as const;
-
-/**
- * Deeper than any real email layout, shallow enough that the exponential
- * blow-up stays bounded on the request path.
- */
-export const MAX_TEMPLATE_BLOCK_DEPTH = 10;
-
-/**
- * Render one field, refusing pathological or malformed templates as 400s. The
- * caller authored this template, so echoing the Handlebars parse error back is
- * useful rather than a leak — capped, because it quotes their own source.
- */
-function renderField(source: string, variables: Record<string, unknown>): string {
-  if (maxBlockDepth(source) > MAX_TEMPLATE_BLOCK_DEPTH) {
-    throw new ApiError(
-      `This template nests {{#…}} blocks more than ${MAX_TEMPLATE_BLOCK_DEPTH} deep — simplify it before sending a test.`,
-      400,
-    );
-  }
-
-  try {
-    return renderEmailTemplate(source, variables);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : "unknown error";
-    throw new ApiError(
-      `This template could not be rendered — ${detail.slice(0, 200)}`,
-      400,
-    );
-  }
-}
 
 /** Namespaced so a test send never shares a counter with another endpoint. */
 export function testSendRateLimitKey(scope: string): string {
@@ -96,8 +72,8 @@ export async function queueTestSend({
     email: recipient,
   });
 
-  const subject = renderField(template.subject, variables);
-  const html = renderField(template.contentHtml, variables);
+  const subject = renderTemplateField(template.subject, variables);
+  const html = renderTemplateField(template.contentHtml, variables);
 
   await sendEmail({
     to: recipient,

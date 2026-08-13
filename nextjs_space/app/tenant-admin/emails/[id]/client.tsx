@@ -79,6 +79,8 @@ export function TenantEditTemplateClient({
           onSave={handleSave}
           isSaving={isSaving}
           testSendUrl={`/api/tenant-admin/email-templates/${template.id}/test-send`}
+          previewUrl="/api/tenant-admin/email-templates/preview"
+          templateId={template.id}
           eventType={eventType}
           uploadUrl="/api/tenant-admin/upload"
         />

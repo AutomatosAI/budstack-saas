@@ -77,6 +77,13 @@ export interface EmailComposerProps {
    * then offers only a web address.
    */
   readonly uploadUrl?: string;
+  /**
+   * US-015 — test send, surfaced on the toolbar next to the authoring tools.
+   * A callback, not an endpoint: the editor owns the request so this component
+   * stays fetch-free.
+   */
+  readonly onSendTest?: () => void;
+  readonly isSendingTest?: boolean;
 }
 
 /**
@@ -94,6 +101,8 @@ export function EmailComposer({
   editable = true,
   eventType,
   uploadUrl,
+  onSendTest,
+  isSendingTest,
 }: EmailComposerProps) {
   const imageUpload = useEmailImageUpload(uploadUrl);
 
@@ -139,6 +148,8 @@ export function EmailComposer({
           editor={editor}
           eventType={eventType}
           imageUpload={imageUpload}
+          onSendTest={onSendTest}
+          isSendingTest={isSendingTest}
         />
       )}
       <div className="flex-1 overflow-auto bg-bs-canvas p-4">

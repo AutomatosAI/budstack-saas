@@ -89,6 +89,8 @@ export function EditTemplateClient({
         onSave={handleSave}
         isSaving={isSaving}
         testSendUrl={`/api/super-admin/email-templates/${template.id}/test-send`}
+        previewUrl="/api/super-admin/email-templates/preview"
+        templateId={template.id}
         eventType={eventType}
       />
     </div>

@@ -30,6 +30,7 @@ import {
   Minus,
   MousePointerClick,
   Redo,
+  Send,
   Underline,
   Undo,
 } from "lucide-react";
@@ -183,12 +184,21 @@ export interface EmailComposerToolbarProps {
   readonly eventType?: string | null;
   /** US-014 — image uploading, when the screen has an endpoint for it. */
   readonly imageUpload?: EmailImageUpload;
+  /**
+   * US-015 — queue a test send of the SAVED template to the signed-in admin.
+   * Owned by the editor (the composer stays fetch-free); absent on the create
+   * screens, where there is nothing saved to send yet.
+   */
+  readonly onSendTest?: () => void;
+  readonly isSendingTest?: boolean;
 }
 
 export function EmailComposerToolbar({
   editor,
   eventType,
   imageUpload,
+  onSendTest,
+  isSendingTest = false,
 }: EmailComposerToolbarProps) {
   const state = useToolbarState(editor);
   const [dialog, setDialog] = useState<DialogKind | null>(null);
@@ -305,6 +315,22 @@ export function EmailComposerToolbar({
         <Separator orientation="vertical" className="mx-1 h-6" />
 
         <EmailMergeTagMenu editor={editor} eventType={eventType} />
+
+        {onSendTest && (
+          <>
+            <Separator orientation="vertical" className="mx-1 h-6" />
+            <ToolbarButton
+              label={
+                isSendingTest
+                  ? "Sending a test…"
+                  : "Send a test of the saved version to yourself"
+              }
+              icon={Send}
+              disabled={isSendingTest}
+              onClick={onSendTest}
+            />
+          </>
+        )}
 
         <div className="flex-1" />
 

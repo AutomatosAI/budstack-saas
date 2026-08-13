@@ -34,7 +34,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { EmailContentJson } from "@/lib/email/email-content-json";
 
 import { EmailComposer } from "./EmailComposer";
+import { EmailEditorPanes } from "./EmailEditorPanes";
 import { EmailHtmlPane } from "./EmailHtmlPane";
+import { emailPreviewRequest } from "./email-preview-request";
 import {
   asEmailContentJson,
   DEFAULT_TEMPLATE_HTML,
@@ -85,6 +87,17 @@ interface EmailEditorProps {
    * "paste a web address" behaviour rather than offering an upload that 403s.
    */
   uploadUrl?: string;
+  /**
+   * US-015 — POST endpoint that renders the content being edited through the
+   * save pipeline. Omitted leaves the screen without a preview pane.
+   */
+  previewUrl?: string;
+  /**
+   * US-015 — the row being edited, when it exists. The preview reads the stored
+   * category (and, for a super-admin, the owning tenant) off it so the chrome it
+   * shows is the chrome the save would write. Absent on the create screens.
+   */
+  templateId?: string;
 }
 
 const LEGACY_BANNER =
@@ -97,6 +110,8 @@ export const EmailEditor = ({
   testSendUrl,
   eventType,
   uploadUrl,
+  previewUrl,
+  templateId,
 }: EmailEditorProps) => {
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [mode, setMode] = useState<EmailEditorMode>(() =>
@@ -290,20 +305,37 @@ export const EmailEditor = ({
       </Tabs>
 
       <div className="flex-1 overflow-hidden rounded-bs-md border border-bs-border-100 bg-bs-canvas">
-        {mode === "simple" ? (
-          <EmailComposer
-            value={formData.contentJson ?? null}
-            onChange={handleDocumentChange}
-            eventType={eventType}
-            uploadUrl={uploadUrl}
-          />
-        ) : (
-          <EmailHtmlPane
-            value={formData.contentHtml}
-            onChange={handleHtmlChange}
-            eventType={eventType}
-          />
-        )}
+        <EmailEditorPanes
+          previewUrl={previewUrl}
+          // Derived state, rebuilt as the author types; the pane debounces it
+          // and refetches only when the serialised body actually changes.
+          previewRequest={emailPreviewRequest({
+            mode,
+            contentHtml: formData.contentHtml,
+            contentJson: formData.contentJson ?? null,
+            category: formData.category,
+            eventType,
+            templateId,
+          })}
+          editor={
+            mode === "simple" ? (
+              <EmailComposer
+                value={formData.contentJson ?? null}
+                onChange={handleDocumentChange}
+                eventType={eventType}
+                uploadUrl={uploadUrl}
+                onSendTest={testSendUrl ? handleSendTest : undefined}
+                isSendingTest={isSendingTest}
+              />
+            ) : (
+              <EmailHtmlPane
+                value={formData.contentHtml}
+                onChange={handleHtmlChange}
+                eventType={eventType}
+              />
+            )
+          }
+        />
       </div>
 
       <AlertDialog

@@ -49,6 +49,7 @@ export function TenantNewTemplateClient() {
         <EmailEditor
           onSave={handleSave}
           isSaving={isSaving}
+          previewUrl="/api/tenant-admin/email-templates/preview"
           uploadUrl="/api/tenant-admin/upload"
         />
       </div>
