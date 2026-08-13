@@ -32,6 +32,11 @@
 
 import type { Metadata } from "next";
 
+import {
+  STORE_OG_LOCALE,
+  seoText,
+  storeDisplayName,
+} from "@/lib/seo/store-identity";
 import { storedPublicImagePath } from "@/lib/storage/public-image-url";
 import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
@@ -41,18 +46,6 @@ export const PLATFORM_FAVICON = "/favicon.svg";
 
 /** Title for a host that resolves to no tenant; mirrors `page.tsx`'s wording. */
 export const STORE_NOT_FOUND_TITLE = "Store Not Found";
-
-/**
- * og:locale. The platform is English-only today (`<html lang="en">` in
- * app/layout.tsx) and this preserves the value stores already inherited; it
- * becomes per-tenant when the storefront gains real localisation.
- */
-const STORE_OG_LOCALE = "en_US";
-
-/** Trimmed string, or "" for anything that is not one (the caller is any-widened). */
-function text(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
 
 /**
  * The description every store page carries until it declares its own.
@@ -120,13 +113,14 @@ export function buildStoreMetadata(source: StoreMetadataSource): Metadata {
   // A blank businessName would render an empty <title>, which is no better than
   // the platform one; the subdomain is the tenant's other public identity.
   const businessName =
-    text(source.businessName) || text(source.subdomain) || STORE_NOT_FOUND_TITLE;
+    storeDisplayName(source.businessName, source.subdomain) ||
+    STORE_NOT_FOUND_TITLE;
 
   const settings = parseTenantSettings(source.settings, {
     tenantId: source.tenantId,
   });
   const description =
-    text(settings.tagline) || defaultStoreDescription(businessName);
+    seoText(settings.tagline) || defaultStoreDescription(businessName);
 
   const favicon =
     storedPublicImagePath(source.faviconRef) ?? PLATFORM_FAVICON;

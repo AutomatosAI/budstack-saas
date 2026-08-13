@@ -1,7 +1,17 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant/tenant";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
+import { generateStorePageMetadata } from "@/lib/seo/generate-page-metadata";
 import SupportContent from "./support-content";
+
+/**
+ * SEO US-002 — tenants.pageSeo.support, falling back to the retired `faq` entry
+ * (this page is where /faq redirects), shared with the page's own tenant fetch.
+ */
+export function generateMetadata(): Promise<Metadata> {
+  return generateStorePageMetadata("support");
+}
 
 export default async function SupportPage({
   params,

@@ -4,6 +4,12 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeoEditorModal } from "@/components/admin/seo";
 import {
+  STORE_SEO_PAGES,
+  dropLegacyStorePageSeoKeys,
+  readStorePageSeo,
+  type StoreSeoPage,
+} from "@/lib/seo/store-pages";
+import {
   Package,
   FileText,
   Home,
@@ -46,13 +52,6 @@ interface SeoPageClientProps {
   pageSeo: Record<string, SeoData> | null;
 }
 
-const STATIC_PAGES = [
-  { key: "home", name: "Homepage", path: "" },
-  { key: "about", name: "About Us", path: "/about" },
-  { key: "contact", name: "Contact", path: "/contact" },
-  { key: "faq", name: "FAQ", path: "/faq" },
-];
-
 export function SeoPageClient({
   tenantId,
   baseUrl,
@@ -64,11 +63,7 @@ export function SeoPageClient({
     null,
   );
   const [selectedPost, setSelectedPost] = useState<PostItem | null>(null);
-  const [selectedPage, setSelectedPage] = useState<{
-    key: string;
-    name: string;
-    path: string;
-  } | null>(null);
+  const [selectedPage, setSelectedPage] = useState<StoreSeoPage | null>(null);
   const [localPageSeo, setLocalPageSeo] = useState<Record<string, SeoData>>(
     pageSeo || {},
   );
@@ -125,8 +120,10 @@ export function SeoPageClient({
 
     if (!res.ok) throw new Error("Failed to save");
 
+    // Mirrors what the route stores, legacy-key retirement included, so the
+    // badge below cannot claim "Custom" from an entry the server just dropped.
     setLocalPageSeo((prev) => ({
-      ...prev,
+      ...dropLegacyStorePageSeoKeys(prev, selectedPage.key),
       [selectedPage.key]: seo,
     }));
   };
@@ -293,7 +290,7 @@ export function SeoPageClient({
               </p>
             </div>
             <div className="divide-y divide-bs-border-100">
-              {STATIC_PAGES.map((page) => (
+              {STORE_SEO_PAGES.map((page) => (
                 <div
                   key={page.key}
                   className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-4"
@@ -307,7 +304,7 @@ export function SeoPageClient({
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 w-full sm:w-auto">
                     <SeoStatusBadge
-                      hasCustomSeo={hasSeo(localPageSeo[page.key])}
+                      hasCustomSeo={hasSeo(readStorePageSeo(localPageSeo, page.key))}
                     />
                     <button
                       type="button"
@@ -365,7 +362,7 @@ export function SeoPageClient({
           entityName={selectedPage.name}
           entitySlug={selectedPage.path || "/"}
           previewUrl={`${baseUrl}${selectedPage.path || "/"}`}
-          initialSeo={localPageSeo[selectedPage.key] || undefined}
+          initialSeo={readStorePageSeo(localPageSeo, selectedPage.key)}
           onSave={handleSavePageSeo}
         />
       )}

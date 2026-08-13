@@ -83,3 +83,106 @@ contain none of "BudStacks", "Medical Cannabis SaaS Platform", the platform
 description, or "budstacks.io". That encodes the story's actual guarantee — no
 store page can fall through to the platform brand — instead of pinning field
 shapes a refactor would churn.
+
+================================================================================
+[2026-08-13] US-002 PASS — Static store pages consume pageSeo
+
+WHAT LANDED
+- lib/seo/store-pages.ts — the ONE page list. STORE_SEO_PAGE_KEYS (home, about,
+  contact, support, conditions) feeds three consumers that used to disagree:
+  the SEO Manager tab, the write route's zod enum, and the pages that render
+  the result. Dependency-free (no zod/next/prisma) because a client component
+  and generateMetadata both import it.
+- lib/seo/page-metadata.ts — buildStorePageMetadata(): pure, per-page cascade
+  authored -> page default -> businessName, plus canonical + og.
+- lib/seo/canonical.ts — storeCanonical(tenant, path, {override}). Built here
+  per US-002's AC-3; US-007 now just spreads it, US-022's canonicalOverride
+  slots into the options bag without signature churn.
+- lib/seo/generate-page-metadata.ts — the shared generateMetadata body; four
+  pages (about, contact, support, conditions) each export a 3-line delegator.
+- lib/seo/store-identity.ts — seoText / storeDisplayName / STORE_OG_LOCALE
+  extracted from US-001's store-metadata.ts so layout-level and page-level
+  metadata cannot disagree about the store's name (og:site_name would otherwise
+  change as a visitor clicks from /about to the homepage).
+
+ZERO EXTRA QUERIES (the anti-pattern this story could most easily have hit)
+getCurrentTenant() is React-cache()d AND its resolver selects the whole tenants
+row (lib/tenant/tenant-resolver.ts:63 findFirst, no select) — so pageSeo,
+businessName, subdomain and customDomain all ride along on the call each page
+already makes. generateMetadata adds no round trip. NOTE the homepage still
+carries a second prisma.tenants.findUnique for exactly this data
+(app/store/[slug]/page.tsx:368-376) — redundant, FLAGGED not fixed: it works,
+and rewriting the one page whose metadata is already correct is the story's
+headline anti-pattern. Whichever story next touches home should delete it.
+
+THE faq KEY — remapped, not retired-and-forgotten
+/faq has redirected to /support since app/store/[slug]/faq/page.tsx:4-5, so any
+FAQ metadata an owner wrote describes the page a visitor actually lands on.
+Handling: `faq` is out of STORE_SEO_PAGE_KEYS (the enum now 400s it) but lives
+in LEGACY_STORE_SEO_PAGE_KEYS, so readStorePageSeo(pageSeo, "support") falls
+back to it — whole entry, never a field-by-field blend of two records nobody
+authored. dropLegacyStorePageSeoKeys retires the row the first time an owner
+saves /support, on BOTH the route and the client's optimistic state; without
+that, clearing /support would resurrect the old FAQ copy as live metadata while
+the admin badge read "Default".
+
+HOW NEXT MERGES THIS (read from next/dist/lib/metadata/resolve-metadata.js,
+14.2.35 — the US-001 claims re-verified, plus what US-002 needed):
+- collectMetadata pushes an item for EVERY tree node, layout-less ones included
+  (resolve-metadata.js:295-332). /store/[slug]/about is 5 items (root, store,
+  [slug] layout, about, __PAGE__), so the layout sits at i=2 < length-2=3 and
+  its title.template IS stashed → a plain-string page title renders
+  "About Us | Acme". The homepage is 4 items, layout at exactly length-2 → not
+  templated, which is why US-001 could leave page.tsx alone.
+- Therefore an AUTHORED title is emitted as `{absolute}`: the SEO Manager shows
+  the owner a Google preview of the exact string they typed, and suffixing it
+  would make that preview a lie. DEFAULTS are plain strings, so they get the
+  brand suffix.
+- openGraph is REPLACED, never merged (:146), so the page re-declares
+  siteName/type/locale — omitting them would strip og:site_name from exactly
+  the pages this story fixes. og/twitter TITLES are deliberately left unset:
+  postProcessMetadata (:406-445) fills them from the RESOLVED title (after the
+  template), which is the only way og:title and <title> are guaranteed equal.
+- metadataBase is inherited by children (:130 — source.metadataBase ?? target's),
+  so a relative og:image from the public-image route absolutises against the
+  layout's base. og:image dimensions are NOT declared: the value is a URL the
+  owner pasted, and 1200x630 we have not measured makes scrapers crop wrong
+  (US-018's generated images can declare them).
+- og:image reuses storedPublicImagePath, so a presigned S3 URL left over from
+  before Email US-005 is DROPPED rather than rendered as a tag that 403s an
+  hour later.
+
+VERIFICATION
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm vitest run tests/unit/store-page-metadata.test.ts
+  tests/unit/store-metadata.test.ts → 41 passed (26 new + 15 US-001, unchanged
+  by the store-identity extraction).
+- Full unit project: pnpm vitest run --project unit → 124 files, 1863 tests,
+  all passed. No pre-existing failures to flag.
+- pnpm check:security → both gates pass. next lint on the 12 touched files →
+  clean.
+- LIVE: pnpm dev + curl of all four routes → each new generateMetadata executed
+  and emitted <title>Store Not Found</title> (the no-tenant branch). The TENANT
+  branch is still unrenderable on this machine: 39 PrismaClientInitializationError
+  lines in the dev log — DATABASE_URL points at Railway's private network.
+  curl / → 200, platform title intact. visual: deferred to human review.
+- Docker: no new runtime import chain leaves the Next bundle — everything added
+  is lib/seo/* imported from app/, and Dockerfile:74 already COPYs lib/
+  wholesale. No Dockerfile change needed (email-p2 #232 lesson checked).
+
+TEST DESIGN
+The route tests drive the REAL zod schema through the REAL withTenantAuth
+wrapper (only getCurrentUser + prisma mocked), so "the enum is the storefront's
+page list" is asserted end-to-end: every STORE_SEO_PAGES key returns 200, `faq`
+returns 400 with no write, and saving /support persists a blob with the legacy
+key gone. Plus the US-001 serialise-and-scan (no platform string anywhere) and a
+malformed-blob sweep — generateMetadata renders with no error.tsx above it, so a
+throw is a blank page, not a missing tag.
+
+FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
+- /api/tenant-admin/seo/pages has NO permission gate (withTenantAuth only) and
+  its PUT is a whole-blob read-modify-write (last-write-wins). Both are US-010's
+  named scope — my dropLegacyStorePageSeoKeys call sits inside that same block
+  and must survive its per-key rewrite.
+- SEO Manager still previews products at /products/{slug}, a 404 (US-004 AC-4).
+- The sitemap still lists /faq (US-006 AC-2 removes it).

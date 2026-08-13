@@ -6,7 +6,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 ## Workstream A — Basic tier: make SEO real (ungated)
 
 - [x] US-001 Store-layout metadata foundation
-- [ ] US-002 Static store pages consume pageSeo
+- [x] US-002 Static store pages consume pageSeo
 - [ ] US-003 The Wire post metadata reads post.seo
 - [ ] US-004 Product detail metadata
 - [ ] US-005 Conditions SEO wired end-to-end

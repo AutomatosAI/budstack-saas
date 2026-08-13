@@ -4,10 +4,18 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
+import {
+  STORE_SEO_PAGE_KEYS,
+  dropLegacyStorePageSeoKeys,
+} from "@/lib/seo/store-pages";
 
 const seoPagesSchema = z
   .object({
-    pageKey: z.enum(["home", "about", "contact", "faq"]),
+    // SEO US-002: the enum IS the storefront's page list. A key the storefront
+    // does not render (the retired `faq`, which /faq redirects away from) is no
+    // longer writable, so the SEO Manager cannot offer an owner a page whose
+    // metadata nothing would display.
+    pageKey: z.enum(STORE_SEO_PAGE_KEYS),
     seo: z
       .object({
         title: z.string().max(300).optional(),
@@ -54,9 +62,12 @@ export const PUT = withTenantAuth(async (request, { tenantId }) => {
     pageSeoData.description = seo.description.trim();
   if (seo?.ogImage?.trim()) pageSeoData.ogImage = seo.ogImage.trim();
 
-  // Merge with existing data
+  // Merge with existing data. Retiring the keys this one replaced is what keeps
+  // the editor and the storefront honest: without it, clearing /support would
+  // resurrect the old `faq` entry as the rendered metadata (readStorePageSeo
+  // falls back to it) while the SEO Manager showed the page as Default.
   const updatedPageSeo: Record<string, Record<string, string> | null> = {
-    ...currentPageSeo,
+    ...dropLegacyStorePageSeoKeys(currentPageSeo, pageKey),
     [pageKey]: Object.keys(pageSeoData).length > 0 ? pageSeoData : null,
   };
 
