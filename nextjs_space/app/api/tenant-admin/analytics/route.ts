@@ -107,7 +107,7 @@ export const GET = requirePermission("canViewAnalytics", async (req, { user, ten
               },
               _sum: { total: true },
             })
-            .then((r) => r._sum.total || 0),
+            .then((r: { _sum: { total: number | null } }) => r._sum.total || 0),
         ),
       ),
     );
@@ -158,13 +158,14 @@ export const GET = requirePermission("canViewAnalytics", async (req, { user, ten
     // Top selling products. Raw SQL because product revenue is
     // SUM(price * quantity) — Prisma groupBy cannot multiply columns, and the
     // previous _sum.price implementation understated any line with quantity > 1.
-    const topProductsRaw = await prisma.$queryRaw<
-      Array<{
-        productId: string;
-        revenue: number;
-        quantity: number;
-        orders: number;
-      }>
+    interface TopProductRow {
+      productId: string;
+      revenue: number;
+      quantity: number;
+      orders: number;
+    }
+    const topProductsRaw: TopProductRow[] = await prisma.$queryRaw<
+      TopProductRow[]
     >`
       SELECT oi."productId" AS "productId",
              COALESCE(SUM(oi."price" * oi."quantity"), 0)::float AS "revenue",
@@ -181,7 +182,9 @@ export const GET = requirePermission("canViewAnalytics", async (req, { user, ten
     `;
 
     // Batch fetch product details (single query instead of N+1)
-    const productIds = topProductsRaw.map((item) => item.productId).filter(Boolean);
+    const productIds = topProductsRaw
+      .map((item: TopProductRow) => item.productId)
+      .filter(Boolean);
     const products = productIds.length > 0
       ? await prisma.products.findMany({
           where: { id: { in: productIds } },
@@ -190,7 +193,7 @@ export const GET = requirePermission("canViewAnalytics", async (req, { user, ten
       : [];
     const productMap = new Map(products.map((p: { id: string; name: string }) => [p.id, p.name]));
 
-    const topProductsWithDetails = topProductsRaw.map((item) => ({
+    const topProductsWithDetails = topProductsRaw.map((item: TopProductRow) => ({
       id: item.productId,
       name: productMap.get(item.productId) || "Unknown Product",
       quantity: item.quantity,
