@@ -5,7 +5,7 @@ import Redis from 'ioredis';
 import Handlebars from 'handlebars';
 import { prisma as db } from '../lib/db';
 import { decrypt } from '../lib/security/encryption';
-import { emailQueueName } from '../lib/queue';
+import { campaignQueueName, emailQueueName } from '../lib/queue';
 import { registerEmailHelpers, renderEmailTemplate } from '../lib/email/handlebars-helpers';
 import { markEmailLogFailed, markEmailLogSent } from '../lib/email/email-log-linkage';
 import {
@@ -26,6 +26,8 @@ import {
     CAMPAIGN_MISSING_LOG_MESSAGE,
     campaignJobTarget,
 } from '../lib/email/campaign-send';
+import { SCHEDULED_SEND_REASON } from '../lib/email/campaign-schedule';
+import { runScheduledCampaign } from '../lib/email/campaign-scheduled-runner';
 import { bypassTenantScope } from '../lib/tenant/tenant-scope-policy';
 import {
     DEFAULT_MAX_JOB_AGE_MS,
@@ -390,6 +392,50 @@ worker.on('error', err => {
     console.error('[EmailWorker] Worker error:', err);
 });
 
+// US-021 — the delayed triggers that start a SCHEDULED campaign's fan-out.
+//
+// Its own queue and its own worker: one job here becomes thousands of jobs on
+// the email queue, and the PRD-220 expiry guard above would drop a trigger
+// deliberately dated weeks ahead as stale the moment it came due. Concurrency
+// of 1 because each of these is a fan-out — two at once is two fan-outs
+// competing for the same SMTP mailbox.
+//
+// The decision is made inside runScheduledCampaign against the campaign row as
+// it stands right now, which is why a campaign cancelled while it waited never
+// sends. Nothing here decides anything; this is the log.
+const campaignWorker = new Worker(campaignQueueName, async (job: Job) => {
+    const outcome = await runScheduledCampaign(job.data, String(job.id));
+
+    if (outcome.decision === 'UNREADABLE') {
+        console.warn(`[CampaignScheduler] Job ${job.id} carries no campaign target — ignored`);
+    } else if (outcome.decision !== 'SEND') {
+        console.warn(
+            `[CampaignScheduler] Campaign ${outcome.campaignId} not sent: ${SCHEDULED_SEND_REASON[outcome.decision]}`,
+        );
+    } else if (outcome.refusal) {
+        console.warn(
+            `[CampaignScheduler] Campaign ${outcome.campaignId} refused at send time (${outcome.refusal}) — returned to draft`,
+        );
+    } else {
+        console.log(
+            `[CampaignScheduler] Campaign ${outcome.campaignId} sending: ${outcome.queued} message(s) queued`,
+        );
+    }
+
+    return outcome;
+}, {
+    connection: new Redis(REDIS_URL, { maxRetriesPerRequest: null }) as any,
+    concurrency: 1,
+});
+
+campaignWorker.on('failed', (job, err) => {
+    console.error(`[CampaignScheduler] Trigger ${job?.id} failed: ${err.message}`);
+});
+
+campaignWorker.on('error', err => {
+    console.error('[CampaignScheduler] Worker error:', err);
+});
+
 // PRD-220 AC-A2/A3 — liveness heartbeat + stuck-queue alert. The super-admin
 // email-health route reads the heartbeat key; Railway log alerting matches
 // the QUEUED_ALERT_PREFIX line (see docs/runbooks/email-worker.md).
@@ -433,7 +479,9 @@ process.on('SIGTERM', async () => {
     console.log('[EmailWorker] SIGTERM received — closing gracefully...');
     clearInterval(healthTimer);
     await worker.close();
+    await campaignWorker.close();
     process.exit(0);
 });
 
 console.log('[EmailWorker] Worker is now listening for jobs...');
+console.log('[CampaignScheduler] Listening for scheduled campaign triggers...');

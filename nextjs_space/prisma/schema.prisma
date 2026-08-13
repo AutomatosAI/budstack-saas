@@ -143,6 +143,12 @@ model campaigns {
   status      CampaignStatus        @default(DRAFT)
   audience    Json? // null = audience not chosen yet
   scheduledAt DateTime?
+  /// US-021: the BullMQ trigger this campaign is waiting on, or null when it is
+  /// waiting on nothing. Authoritative over the queue — Redis and Postgres are
+  /// not written atomically, so a trigger that fires checks whether it is still
+  /// the one named here before it sends anything. That is what makes
+  /// rescheduling a replacement rather than a second send.
+  scheduledJobId String?
   sentAt      DateTime?
   stats       Json? // null = never sent
   createdAt   DateTime              @default(now())

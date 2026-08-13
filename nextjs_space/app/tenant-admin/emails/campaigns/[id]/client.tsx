@@ -9,6 +9,7 @@ import {
   CampaignEditor,
   type CampaignDraft,
 } from "@/components/admin/email/CampaignEditor";
+import { CampaignSchedulePanel } from "@/components/admin/email/CampaignSchedulePanel";
 import { CampaignSendPanel } from "@/components/admin/email/CampaignSendPanel";
 import { saveCampaign } from "@/components/admin/email/campaign-save";
 import type { CampaignAudience } from "@/lib/email/campaign-audience";
@@ -22,6 +23,7 @@ interface EditCampaignClientProps {
     readonly name: string;
     readonly subject: string;
     readonly status: CampaignStatus;
+    readonly scheduledAt: string | null;
     readonly contentJson: EmailContentJson | null;
     readonly audience: CampaignAudience | null;
   };
@@ -67,13 +69,25 @@ export function EditCampaignClient({
 
       {/* US-019. Shown in BOTH states: before a send it is the control, during
           and after one it is the only place the progress appears. */}
-      <div className="pt-6">
+      <div className="space-y-3 pt-6">
         <CampaignSendPanel
           campaignId={campaign.id}
           status={campaign.status}
           hasAudience={campaign.audience !== null}
           onChanged={() => router.refresh()}
         />
+
+        {/* US-021. Only while the campaign is still the author's — once a
+            fan-out starts, when it goes out is no longer a question. */}
+        {isEditable && (
+          <CampaignSchedulePanel
+            campaignId={campaign.id}
+            status={campaign.status}
+            scheduledAt={campaign.scheduledAt}
+            hasAudience={campaign.audience !== null}
+            onChanged={() => router.refresh()}
+          />
+        )}
       </div>
 
       {isEditable ? (

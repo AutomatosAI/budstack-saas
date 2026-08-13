@@ -21,6 +21,7 @@ interface CampaignDetailRow {
   name: string;
   subject: string;
   status: CampaignStatus;
+  scheduledAt: Date | null;
   contentJson: unknown;
   audience: unknown;
 }
@@ -73,6 +74,10 @@ export default async function EditCampaignPage({
         name: campaign.name,
         subject: campaign.subject,
         status: campaign.status,
+        // US-021. Serialised here because a Date does not survive the boundary
+        // into a client component, and the picker needs a real instant to turn
+        // back into the author's own local time.
+        scheduledAt: campaign.scheduledAt?.toISOString() ?? null,
         // Narrowed here rather than in the client: the Json column is genuinely
         // unknown, and the composer must be handed a document or nothing.
         contentJson: asEmailContentJson(campaign.contentJson),
