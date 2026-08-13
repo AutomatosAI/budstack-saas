@@ -183,6 +183,30 @@ model campaign_recipients {
   @@index([campaignId, status])
 }
 
+/// CRM-lite customer tag (Email Phase 2, US-024): one row per
+/// (tenant, customer, tag). `tag` is stored normalised — trimmed, lowercased —
+/// so "VIP" and " vip " are the same chip everywhere; the compound unique key
+/// makes re-adding a tag idempotent at the database, not just in the route.
+///
+/// Unlike campaign_recipients above, `userId` here IS a relation with Cascade:
+/// a tag is targeting metadata with no life of its own, so it must die with the
+/// user row rather than outlive it. (GDPR erasure anonymises the row in place,
+/// so erased customers keep their tags but are filtered from every surface.)
+/// `@@index([tenantId, tag])` serves the customers-list tag filter and US-025's
+/// "has tag" segment axis.
+model customer_tags {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  tag       String
+  createdAt DateTime @default(now())
+  tenants   tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, tag])
+  @@index([tenantId, tag])
+}
+
 model conditions {
   id              String   @id
   slug            String
@@ -736,6 +760,7 @@ model tenants {
   email_suppressions     email_suppressions[]
   newsletter_subscribers newsletter_subscribers[]
   campaigns              campaigns[]
+  customer_tags          customer_tags[]
   orders                 orders[]
   posts                  posts[]
   products               products[]
@@ -833,6 +858,7 @@ model users {
   isActive            Boolean                   @default(true)
   marketingConsentAt  DateTime? // Email Phase 2 (US-016/US-023): when this customer opted in to marketing. NULL = no consent, never mail them a campaign.
   consultations       consultations[]
+  customer_tags       customer_tags[] // US-024 CRM-lite tags; rows cascade away with the user
   drgreen_carts       drgreen_carts?
   orders              orders[]
   posts               posts[]

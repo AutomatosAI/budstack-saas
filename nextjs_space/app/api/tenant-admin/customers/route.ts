@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTenantAuth } from "@/lib/api-auth";
+import { apiValidationError } from "@/lib/api-error";
 import { prisma } from "@/lib/db";
+import { tagSchema } from "@/lib/customers/tag-format";
 import { ERASURE_EMAIL_DOMAIN } from "@/lib/gdpr/erasure";
+
+const GET_ROUTE = "GET /api/tenant-admin/customers";
 
 /**
  * GET /api/tenant-admin/customers
- * List customers for current tenant
+ * List customers for current tenant.
+ * Optional `tag` param (US-024) narrows to customers carrying that tag —
+ * matched in the tag's canonical form (trimmed, lowercased).
  */
 export const GET = withTenantAuth(async (request: NextRequest, { tenantId }) => {
   const { searchParams } = new URL(request.url);
@@ -13,6 +19,19 @@ export const GET = withTenantAuth(async (request: NextRequest, { tenantId }) => 
   const limit = parseInt(searchParams.get("limit") || "10");
   const search = searchParams.get("search") || "";
   const status = searchParams.get("status");
+  const rawTag = searchParams.get("tag");
+
+  let tag: string | null = null;
+  if (rawTag !== null && rawTag.trim() !== "") {
+    const parsedTag = tagSchema.safeParse(rawTag);
+    if (!parsedTag.success) {
+      return apiValidationError(
+        parsedTag.error.issues[0]?.message ?? "Invalid tag filter",
+        GET_ROUTE,
+      );
+    }
+    tag = parsedTag.data;
+  }
 
   const where: any = {
     role: "PATIENT",
@@ -35,6 +54,13 @@ export const GET = withTenantAuth(async (request: NextRequest, { tenantId }) => 
     where.isActive = true;
   } else if (status === "inactive") {
     where.isActive = false;
+  }
+
+  // US-024: only customers carrying the tag. The relation rows repeat the
+  // tenantId, so the predicate re-asserts it — belt and braces on top of the
+  // users-level tenant scope above.
+  if (tag) {
+    where.customer_tags = { some: { tenantId, tag } };
   }
 
   const [total, customers, failedIdUploads] = await Promise.all([

@@ -56,6 +56,7 @@ const tenantScopedModels = new Set([
   // campaign_recipients is deliberately absent: it carries no tenantId and is
   // reachable only through its campaign, which IS scoped here.
   'campaigns',
+  'customer_tags',
   'conditions',
   'consultations',
   'drgreen_carts',
