@@ -18,6 +18,8 @@ const prismaMock = vi.hoisted(() => ({
   campaigns: { findFirst: vi.fn() },
   campaign_recipients: { groupBy: vi.fn(), count: vi.fn(), findMany: vi.fn() },
   email_logs: { findMany: vi.fn() },
+  // US-027: the results route reads the tracking switch off the tenant row.
+  tenants: { findFirst: vi.fn() },
 }));
 
 vi.mock("@/lib/auth-helper", () => ({ getCurrentUser }));
@@ -113,13 +115,22 @@ beforeEach(() => {
     { status: "SUPPRESSED", _count: { _all: 1 } },
     { status: "QUEUED", _count: { _all: 3 } },
   ]);
-  // count() is used for two different questions. Answered by the WHERE rather
+  // count() is used for four different questions. Answered by the WHERE rather
   // than by call order, so a reordering of the Promise.all cannot silently swap
   // "who unsubscribed" for "who failed".
   prismaMock.campaign_recipients.count.mockImplementation(
-    async ({ where }: { where: Record<string, unknown> }) =>
-      where.unsubscribedAt ? 4 : 2,
+    async ({ where }: { where: Record<string, unknown> }) => {
+      if (where.unsubscribedAt) return 4;
+      if (where.openedAt) return 6;
+      if (where.clickedAt) return 3;
+      return 2;
+    },
   );
+  // US-027: tracking on by default here so the engagement counts are exercised;
+  // the off case has its own test below.
+  prismaMock.tenants.findFirst.mockResolvedValue({
+    settings: { emailTrackingEnabled: true },
+  });
   prismaMock.campaign_recipients.findMany.mockResolvedValue([
     { emailLogId: "log-1" },
     { emailLogId: "log-2" },
@@ -149,6 +160,27 @@ describe("GET /api/tenant-admin/campaigns/[id]/results", () => {
     expect(prismaMock.campaign_recipients.count).toHaveBeenCalledWith({
       where: { campaignId: CAMPAIGN_UUID, unsubscribedAt: { not: null } },
     });
+  });
+
+  it("surfaces the engagement counts and the switch behind them (US-027)", async () => {
+    const body = await (await results()).json();
+
+    expect(body).toMatchObject({ trackingEnabled: true, opened: 6, clicked: 3 });
+    expect(prismaMock.campaign_recipients.count).toHaveBeenCalledWith({
+      where: { campaignId: CAMPAIGN_UUID, openedAt: { not: null } },
+    });
+    expect(prismaMock.campaign_recipients.count).toHaveBeenCalledWith({
+      where: { campaignId: CAMPAIGN_UUID, clickedAt: { not: null } },
+    });
+  });
+
+  it("says tracking is off so the page can hide the counts, not zero them", async () => {
+    // "0 opened" and "we are not measuring opens" are opposite statements that
+    // the same two digits would otherwise make.
+    prismaMock.tenants.findFirst.mockResolvedValue({ settings: {} });
+
+    const body = await (await results()).json();
+    expect(body.trackingEnabled).toBe(false);
   });
 
   it("reads failure reasons through the US-008 log linkage", async () => {

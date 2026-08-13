@@ -86,3 +86,23 @@ export const NEWSLETTER_CONFIRM_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
  */
 export const NEWSLETTER_UNSUBSCRIBE_MAX_REQUESTS = 60;
 export const NEWSLETTER_UNSUBSCRIBE_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * Open/click tracking (US-027) is metered loosest of all, and the cap bounds
+ * only the WRITE — a throttled caller still gets the pixel and still gets the
+ * redirect. Mail providers fetch images and pre-resolve links through shared
+ * proxy infrastructure, so a single address here can stand for thousands of
+ * unrelated recipients; a tight cap would silently stop counting exactly the
+ * inboxes most people use.
+ */
+export const EMAIL_TRACKING_MAX_REQUESTS = 300;
+export const EMAIL_TRACKING_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * How long a tracking route waits for the rate limiter before carrying on
+ * without it. Redis normally answers in single-digit milliseconds; anything
+ * past this is an outage, and the reader waiting on it is following a link out
+ * of an email. See `lib/email/tracking-rate-limit.ts` for why the shared
+ * limiter's own fail-open does not cover this case.
+ */
+export const EMAIL_TRACKING_TIMEOUT_MS = 500;

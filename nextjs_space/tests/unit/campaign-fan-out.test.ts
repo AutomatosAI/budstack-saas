@@ -19,7 +19,9 @@ vi.mock("@/lib/db", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/queue", () => ({ getEmailQueue: () => queueMock }));
 
 import { fanOutCampaign } from "@/lib/email/campaign-fan-out";
+import { TRACKING_TOKEN_VARIABLE } from "@/lib/email/email-tracking";
 import { CAMPAIGN_TEMPLATE_NAME } from "@/lib/email/reserved-event-types";
+import { recipientIdFromToken } from "@/lib/email/tracking-token";
 
 const CAMPAIGN = {
   id: "campaign-1",
@@ -189,5 +191,64 @@ describe("fanOutCampaign", () => {
     expect(
       prismaMock.campaign_recipients.createMany.mock.calls[0][0].skipDuplicates,
     ).toBe(true);
+  });
+
+  // US-027 — the tracking switch is re-read HERE, not inherited from the save.
+  describe("open/click tracking", () => {
+    const TRACKING_TENANT = {
+      ...TENANT,
+      settings: { emailTrackingEnabled: true },
+    };
+
+    it("mints no token for a store that has not turned tracking on", async () => {
+      await fanOutCampaign({
+        campaign: CAMPAIGN,
+        tenant: TENANT,
+        recipients: RECIPIENTS,
+      });
+
+      for (const job of enqueuedJobs()) {
+        expect(job.data.variables).not.toHaveProperty(TRACKING_TOKEN_VARIABLE);
+      }
+    });
+
+    it("gives each recipient their own token, naming their own row", async () => {
+      await fanOutCampaign({
+        campaign: CAMPAIGN,
+        tenant: TRACKING_TENANT,
+        recipients: RECIPIENTS,
+      });
+
+      const rowIds = writtenRows(prismaMock.campaign_recipients.createMany).map(
+        (row) => row.id,
+      );
+      const tokens = enqueuedJobs().map(
+        (job) => job.data.variables[TRACKING_TOKEN_VARIABLE],
+      );
+
+      expect(new Set(tokens).size).toBe(3);
+      // The token names the row the outcome is written to — a shared or
+      // mismatched one would attribute an open to the wrong person.
+      expect(tokens.map((token) => recipientIdFromToken(token))).toEqual(rowIds);
+    });
+
+    it("does not reuse the opt-out credential as the tracking token", async () => {
+      // A pixel URL passes through image proxies and provider logs; an
+      // unsubscribe credential has no business travelling that way.
+      await fanOutCampaign({
+        campaign: CAMPAIGN,
+        tenant: TRACKING_TENANT,
+        recipients: RECIPIENTS,
+      });
+
+      const unsubscribeTokens = writtenRows(
+        prismaMock.campaign_recipients.createMany,
+      ).map((row) => row.unsubscribeToken);
+
+      for (const job of enqueuedJobs()) {
+        const token = job.data.variables[TRACKING_TOKEN_VARIABLE];
+        expect(unsubscribeTokens).not.toContain(token);
+      }
+    });
   });
 });

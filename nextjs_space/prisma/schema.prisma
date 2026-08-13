@@ -188,6 +188,15 @@ model campaign_recipients {
   /// email it left from. First redemption wins: the link stays live in an inbox
   /// forever and following it again must not move the timestamp.
   unsubscribedAt   DateTime?
+  /// US-027: FIRST open and FIRST click, or null. Timestamps rather than
+  /// counters on purpose — "did this person engage, and when" is the whole
+  /// question the results page asks, and a per-open counter would turn an
+  /// inbox that re-fetches images on every scroll into a behavioural log
+  /// nobody consented to. Written only while the tenant's
+  /// `emailTrackingEnabled` setting is on; first write wins, so a link
+  /// followed again months later never restates an old engagement as new.
+  openedAt         DateTime?
+  clickedAt        DateTime?
   createdAt        DateTime                @default(now())
   updatedAt        DateTime                @updatedAt
   campaigns        campaigns               @relation(fields: [campaignId], references: [id], onDelete: Cascade)

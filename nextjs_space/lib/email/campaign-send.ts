@@ -10,6 +10,8 @@
 
 import type { CampaignRecipientStatus } from "@prisma/client";
 
+import { TRACKING_TOKEN_VARIABLE } from "@/lib/email/email-tracking";
+
 /**
  * Messages per minute a single fan-out is spaced to.
  *
@@ -134,6 +136,12 @@ export interface CampaignVariableInput {
   readonly email: string;
   readonly name?: string | null;
   readonly unsubscribeUrl: string;
+  /**
+   * US-027's signed recipient token, or nothing when this store has not turned
+   * tracking on. Minted in `campaign-fan-out.ts` (it needs node crypto; this
+   * module is browser-safe) and passed in as a plain value.
+   */
+  readonly trackingToken?: string | null;
 }
 
 /**
@@ -161,6 +169,14 @@ export function campaignRecipientVariables(
     name: userName,
     email: input.email,
     unsubscribeUrl: input.unsubscribeUrl,
+    // Absent rather than empty when tracking is off, so a payload from an
+    // untracked store is the same object it was before US-027. A body saved
+    // while tracking WAS on still compiles: Handlebars fills a missing key with
+    // an empty string, and both routes treat an unverifiable token as "record
+    // nothing" while still serving the pixel and following the link.
+    ...(input.trackingToken
+      ? { [TRACKING_TOKEN_VARIABLE]: input.trackingToken }
+      : {}),
   };
 }
 

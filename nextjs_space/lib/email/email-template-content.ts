@@ -38,6 +38,13 @@ export interface TemplateContentInput {
   readonly tenantId: string | null;
   /** The row's category column; decides whether the shell gets an unsubscribe line. */
   readonly category?: string | null;
+  /**
+   * US-027 — this is a campaign, so its links MAY be tracked if the tenant has
+   * asked for it. Absent (every template save, every preview) means never: a
+   * transactional receipt has nothing to measure, and a template is rendered
+   * once for many tenants' events.
+   */
+  readonly trackable?: boolean;
 }
 
 /** Prisma `data` fragment — spread into a create/update. */
@@ -65,6 +72,7 @@ export async function resolveTemplateContent({
   contentJson,
   tenantId,
   category,
+  trackable,
 }: TemplateContentInput): Promise<TemplateContentFields> {
   if (contentJson) {
     return {
@@ -72,6 +80,7 @@ export async function resolveTemplateContent({
         contentJson,
         tenant: tenantId ? await requireEmailShellTenant(tenantId) : null,
         category: emailCategoryOfTemplate(category),
+        tracking: trackable && tenantId ? { tenantId } : null,
       }),
       contentJson: toJsonColumnValue(contentJson),
     };

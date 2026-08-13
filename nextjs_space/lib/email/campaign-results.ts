@@ -206,6 +206,16 @@ export interface CampaignResults {
    * message an unsubscribe came from.
    */
   readonly unsubscribed: number;
+  /**
+   * US-027. `trackingEnabled` is the tenant's setting as it stands NOW, not as
+   * it stood when the campaign went out, and the page needs it to tell "nobody
+   * opened this" apart from "we did not look" — two zeros that mean opposite
+   * things. `opened`/`clicked` count recipients, not events: each is stamped
+   * once, the first time it happens.
+   */
+  readonly trackingEnabled: boolean;
+  readonly opened: number;
+  readonly clicked: number;
   readonly failures: readonly CampaignFailureReason[];
   /**
    * Failed recipients the reasons were read from, and how many there are in

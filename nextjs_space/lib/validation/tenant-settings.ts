@@ -111,6 +111,12 @@ const tenantSettingsShape = {
   analyticsEnabled: flag.optional(),
   cookieBannerMessage: z.string().max(2000).nullable().optional(),
 
+  // Email Phase 2 US-027 — per-tenant open/click tracking on marketing
+  // campaigns. Absent means OFF, which is the default and the only safe
+  // interpretation of a settings blob that has never mentioned it: the store's
+  // privacy notice only discloses tracking while this is true.
+  emailTrackingEnabled: flag.optional(),
+
   // Third-party integration credentials / ids (bounded)
   automatosApiKey: z.string().max(500).nullable().optional(),
   automatosAgentId: shortString.optional(),

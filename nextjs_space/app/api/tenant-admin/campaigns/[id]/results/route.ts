@@ -13,6 +13,7 @@ import {
   summariseCampaignStats,
   type CampaignStatusBucket,
 } from "@/lib/email/campaign-send";
+import { tenantWantsTracking } from "@/lib/email/tracking-store";
 import { requirePermissionParams } from "@/lib/permissions/require-permission";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 
@@ -109,8 +110,15 @@ export const GET = requirePermissionParams(
 
       // Everything below is keyed on the id that came out of the tenant-scoped
       // read above — `campaign_recipients` carries no tenantId of its own.
-      const [buckets, unsubscribed, failuresTotal, failures] = await Promise.all(
-        [
+      const [
+        buckets,
+        unsubscribed,
+        failuresTotal,
+        failures,
+        trackingEnabled,
+        opened,
+        clicked,
+      ] = await Promise.all([
           prisma.campaign_recipients.groupBy({
             by: ["status"],
             where: { campaignId: campaign.id },
@@ -126,8 +134,19 @@ export const GET = requirePermissionParams(
             where: { campaignId: campaign.id, status: "FAILED" },
           }) as Promise<number>,
           loadFailureReasons(campaign.id, tenantId),
-        ],
-      );
+          // US-027. The setting as it stands NOW: a store that has since turned
+          // tracking off gets the two stats hidden rather than shown as zero,
+          // and one that turned it on after this campaign went out is told the
+          // same way — the counts below are honest either way, but only the
+          // flag says whether zero means "nobody" or "we didn't look".
+          tenantWantsTracking(tenantId),
+          prisma.campaign_recipients.count({
+            where: { campaignId: campaign.id, openedAt: { not: null } },
+          }) as Promise<number>,
+          prisma.campaign_recipients.count({
+            where: { campaignId: campaign.id, clickedAt: { not: null } },
+          }) as Promise<number>,
+        ]);
 
       const results: CampaignResults = {
         campaign: {
@@ -139,6 +158,9 @@ export const GET = requirePermissionParams(
         },
         counts: summariseCampaignStats(buckets),
         unsubscribed,
+        trackingEnabled,
+        opened,
+        clicked,
         failures: summariseCampaignFailures(failures.sources),
         failuresSampled: failures.sampled,
         failuresTotal,

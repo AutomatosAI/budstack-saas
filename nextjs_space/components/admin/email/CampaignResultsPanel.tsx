@@ -63,6 +63,33 @@ function Stat({
   );
 }
 
+/**
+ * US-027 — shown only while the store has tracking on.
+ *
+ * Hidden rather than zeroed when it is off, because "0 opened" and "we are not
+ * measuring opens" are opposite statements and the same two digits would say
+ * both. The counts are of PEOPLE, not events: each recipient is stamped the
+ * first time only, so these never exceed the number delivered.
+ */
+function EngagementStats({ results }: { readonly results: CampaignResults }) {
+  if (!results.trackingEnabled) return null;
+
+  return (
+    <div className="space-y-2 border-t border-bs-border-100 pt-4">
+      <p className="bs-eyebrow">Engagement</p>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+        <Stat label="Opened" value={results.opened} />
+        <Stat label="Clicked a link" value={results.clicked} />
+      </div>
+      <p className="text-xs text-bs-fg-muted">
+        Counted once per person. Opens are undercounted by design — many mail
+        apps block images unless the reader asks for them, so a click is the
+        firmer signal of the two.
+      </p>
+    </div>
+  );
+}
+
 function FailureList({ results }: { readonly results: CampaignResults }) {
   if (results.failures.length === 0) return null;
 
@@ -168,6 +195,7 @@ export function CampaignResultsPanel({
             left from this campaign&rsquo;s own footer link.
           </p>
 
+          <EngagementStats results={data} />
           <FailureList results={data} />
         </>
       )}

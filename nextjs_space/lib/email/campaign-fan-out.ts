@@ -29,9 +29,11 @@ import {
   campaignRatePerMinute,
   campaignRecipientVariables,
 } from "@/lib/email/campaign-send";
+import { isEmailTrackingEnabled } from "@/lib/email/email-tracking";
 import { generateSubscriberToken } from "@/lib/email/newsletter-subscriptions";
 import { buildNewsletterUnsubscribeUrl } from "@/lib/email/newsletter-unsubscribe";
 import { CAMPAIGN_TEMPLATE_NAME } from "@/lib/email/reserved-event-types";
+import { signRecipientToken } from "@/lib/email/tracking-token";
 import { getEmailQueue } from "@/lib/queue";
 import { getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
 
@@ -48,6 +50,13 @@ export interface FanOutTenant {
   readonly businessName: string;
   readonly subdomain: string;
   readonly customDomain: string | null;
+  /**
+   * Raw `tenants.settings`, read only for US-027's tracking switch. Read at
+   * FAN-OUT time rather than inherited from the save: a store that turned
+   * tracking off after composing the campaign mints no tokens, so its already-
+   * saved pixel and links go out inert.
+   */
+  readonly settings?: unknown;
 }
 
 export interface FanOutInput {
@@ -82,11 +91,16 @@ interface PreparedRecipient {
  */
 function prepareRecipients(input: FanOutInput): PreparedRecipient[] {
   const baseUrl = getTenantBaseUrl(input.tenant);
+  const tracking = isEmailTrackingEnabled(
+    input.tenant.settings,
+    input.campaign.tenantId,
+  );
 
   return input.recipients.map((recipient: AudienceRecipient) => {
     const unsubscribeToken = generateSubscriberToken();
+    const id = randomUUID();
     return {
-      id: randomUUID(),
+      id,
       logId: randomUUID(),
       email: recipient.email,
       userId: recipient.userId,
@@ -101,6 +115,13 @@ function prepareRecipients(input: FanOutInput): PreparedRecipient[] {
           input.tenant,
           unsubscribeToken,
         ),
+        // US-027. SIGNED, not stored: the recipient row's own id is what the
+        // token names, so there is no second credential to keep and nothing in
+        // the URL that identifies a person to anyone who cannot already read
+        // this database. Deliberately NOT the unsubscribe token above — a
+        // pixel URL passes through image proxies and provider logs, and an
+        // opt-out credential has no business travelling that way.
+        trackingToken: tracking ? signRecipientToken(id) : null,
       }),
     };
   });

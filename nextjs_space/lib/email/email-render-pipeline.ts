@@ -36,6 +36,12 @@ import {
   parseEmailContentJson,
 } from "@/lib/email/email-content-json";
 import { renderEmailBody, type EmailShellTenant } from "@/lib/email/email-shell";
+import { isEmailTrackingEnabled } from "@/lib/email/email-tracking";
+import {
+  applyTrackingLinks,
+  trackingPixelHtml,
+  type EmailTrackingContext,
+} from "@/lib/email/email-tracking-render";
 import { logger } from "@/lib/logger";
 import { resolveEmailCategory, type EmailCategory } from "@/lib/email/suppression";
 import {
@@ -92,6 +98,35 @@ export interface RenderEmailTemplateOptions {
   readonly category?: EmailCategory;
   /** A resolved per-recipient unsubscribe link, once fan-out has one. */
   readonly unsubscribeUrl?: string | null;
+  /**
+   * US-027 — the owning tenant, when this render is one whose links MAY be
+   * tracked (a campaign). Absent means never, which is every transactional
+   * template and every preview: an order receipt is not a marketing message and
+   * has nothing to measure.
+   *
+   * Present is still not a yes. The tenant's own `emailTrackingEnabled` setting
+   * decides, and it is read from the same row the shell is rendered from, so a
+   * store that has not asked for tracking saves exactly the HTML it saved
+   * before this story.
+   */
+  readonly tracking?: { readonly tenantId: string } | null;
+}
+
+/**
+ * Whether this render puts tracking in the document, and against which host.
+ *
+ * Null unless the caller offered a tenant, that tenant's settings say yes, and
+ * there is a base URL for the links to resolve on — a SYSTEM template has no
+ * origin, and a tracked link with no host is a broken link.
+ */
+function resolveTrackingContext(
+  tracking: { readonly tenantId: string } | null | undefined,
+  tenant: EmailShellTenant | null,
+  baseUrl: string | null,
+): EmailTrackingContext | null {
+  if (!tracking || !tenant || !baseUrl) return null;
+  if (!isEmailTrackingEnabled(tenant.settings, tracking.tenantId)) return null;
+  return { tenantId: tracking.tenantId, baseUrl };
 }
 
 /**
@@ -134,13 +169,24 @@ export async function renderEmailTemplateHtml({
   tenant,
   category,
   unsubscribeUrl,
+  tracking,
 }: RenderEmailTemplateOptions): Promise<string> {
   const doc = parseEmailContentJson(contentJson);
   const baseUrl = tenant ? getTenantBaseUrl(tenant) : null;
+  const trackingContext = resolveTrackingContext(tracking, tenant, baseUrl);
 
-  const bodyHtml = renderBodyHtml(normaliseEmailContentJson(doc, baseUrl));
+  const normalised = normaliseEmailContentJson(doc, baseUrl);
+  const bodyHtml = renderBodyHtml(
+    trackingContext ? applyTrackingLinks(normalised, trackingContext) : normalised,
+  );
+
+  // The pixel sits beside the authored region rather than inside it — see
+  // `trackingPixelHtml`. Empty string when tracking is off, so a store that
+  // never enabled it gets byte-identical output to the pre-US-027 pipeline.
   const document = await renderEmailBody(
-    `<div class="${EMAIL_BODY_CLASS}">${bodyHtml}</div>`,
+    `<div class="${EMAIL_BODY_CLASS}">${bodyHtml}</div>${
+      trackingContext ? trackingPixelHtml(trackingContext) : ""
+    }`,
     tenant ?? SYSTEM_SHELL_TENANT,
     { category, unsubscribeUrl },
   );

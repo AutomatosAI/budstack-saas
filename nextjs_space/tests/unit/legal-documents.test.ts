@@ -129,6 +129,59 @@ describe("inverted conditionals", () => {
   });
 });
 
+describe("the email-tracking clause (Email Phase 2, US-027)", () => {
+  const HEADING = "Marketing emails and how we measure them";
+
+  it("is absent from a store that has not turned tracking on", () => {
+    // A notice describing tracking a store does not do is inaccurate in the
+    // direction that matters — it tells people they are measured when they are
+    // not, and it makes a real disclosure read as boilerplate.
+    expect(renderDocumentHtml("privacy", FULL)).not.toContain(HEADING);
+    expect(
+      renderDocumentHtml("privacy", FULL, { emailTrackingEnabled: "" }),
+    ).not.toContain(HEADING);
+  });
+
+  it("appears once the store turns tracking on", () => {
+    const html = renderDocumentHtml("privacy", FULL, {
+      emailTrackingEnabled: "yes",
+    });
+    expect(html).toContain(HEADING);
+    // The three things a reader has to be told: what is collected, on what
+    // basis, and how to stop it.
+    expect(html).toContain("invisible image");
+    expect(html).toContain("legitimate interest");
+    expect(html).toContain("unsubscribe link");
+  });
+
+  it("leaves no token behind either way", () => {
+    for (const context of [{}, { emailTrackingEnabled: "yes" }]) {
+      expect(
+        findUnresolvedTokens(renderDocumentHtml("privacy", FULL, context)),
+      ).toEqual([]);
+    }
+  });
+
+  it("cannot be forced on by an operator-supplied value", () => {
+    // The profile wins over the context, never the other way round, so a
+    // free-text legal-profile field can never switch a disclosure on or off.
+    const html = renderDocumentHtml(
+      "privacy",
+      { ...FULL, tradingName: "yes" },
+      {},
+    );
+    expect(html).not.toContain(HEADING);
+  });
+
+  it("is only on the privacy notice", () => {
+    for (const slug of LEGAL_DOCUMENT_SLUGS.filter((s) => s !== "privacy")) {
+      expect(
+        renderDocumentHtml(slug, FULL, { emailTrackingEnabled: "yes" }),
+      ).not.toContain(HEADING);
+    }
+  });
+});
+
 describe("operator input cannot inject markup into any document", () => {
   const PAYLOAD = '<img src=x onerror="alert(1)">';
 

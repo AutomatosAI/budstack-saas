@@ -10,7 +10,9 @@
  */
 
 import { prisma } from "@/lib/db";
+import { isEmailTrackingEnabled } from "@/lib/email/email-tracking";
 import { logger } from "@/lib/logger";
+import { PRIVACY_EMAIL_TRACKING_TOKEN } from "./privacy-template";
 import { renderMarkdown } from "./markdown";
 import { getLegalDocument, type LegalDocumentSlug } from "./documents";
 import { resolveDocumentSource } from "./document-resolution";
@@ -86,15 +88,33 @@ function toTemplateValues(profile: LegalProfileValues): Record<string, string> {
   return values;
 }
 
+/**
+ * Values that come from somewhere other than the legal profile.
+ *
+ * US-027's email-tracking disclosure is the first: the switch it reflects lives
+ * in `tenants.settings` with the email surface that acts on it, not in the
+ * operator's legal profile. Kept as a separate argument rather than widened
+ * into `LegalProfileValues` so the profile type keeps meaning "the columns an
+ * operator filled in", and so a caller that has no tenant (the preview in
+ * `renderableDocuments`) simply passes nothing.
+ */
+export type LegalDocumentContext = Readonly<
+  Record<string, string | null | undefined>
+>;
+
 /** Render one document from a profile without touching the database. */
 export function renderDocumentHtml(
   slug: LegalDocumentSlug,
   profile: LegalProfileValues,
+  context: LegalDocumentContext = {},
 ): string {
   const doc = getLegalDocument(slug);
   const merged = renderTemplate(
+    // The profile wins: a context key can only ever ADD a value, never
+    // overwrite one an operator set. Nothing today collides, and this is what
+    // keeps that true when something does.
     doc.template,
-    toTemplateValues(profile),
+    { ...context, ...toTemplateValues(profile) },
     doc.requiredTokens,
   );
   return renderMarkdown(merged);
@@ -120,6 +140,39 @@ export function renderableDocuments(
   });
 }
 
+/**
+ * Merge values that live outside the legal profile.
+ *
+ * Today that is one flag: US-027's email tracking. Any non-blank string keeps
+ * the conditional block (`render-policy.ts` branches on blankness, not on a
+ * boolean), and the key is OMITTED rather than set to "false" when tracking is
+ * off — a store that does not track must not publish a clause saying it does.
+ *
+ * Failure is silent and reads as OFF. `tenants` is not a tenant-scoped model,
+ * so this is a plain keyed read, but a legal page must render even if it
+ * cannot: a privacy notice missing an optional clause is a smaller wrong than
+ * a 500 on the page an operator is legally required to serve.
+ */
+async function loadDocumentContext(
+  tenantId: string,
+): Promise<LegalDocumentContext> {
+  try {
+    const tenant: { settings: unknown } | null = await prisma.tenants.findFirst({
+      where: { id: tenantId },
+      select: { settings: true },
+    });
+    return isEmailTrackingEnabled(tenant?.settings, tenantId)
+      ? { [PRIVACY_EMAIL_TRACKING_TOKEN]: "yes" }
+      : {};
+  } catch (error) {
+    logger.warn("[Legal] Could not read tenant settings for document context", {
+      tenantId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return {};
+  }
+}
+
 /** The document to serve on a tenant's storefront domain. */
 export async function getTenantLegalDocument(
   tenantId: string,
@@ -130,10 +183,11 @@ export async function getTenantLegalDocument(
   // findFirst with flat fields: the tenant-scoping $extends rewrites findUnique
   // to findFirst without flattening compound keys, which 500s on `Unknown
   // argument`. Flat findFirst is the safe form.
-  const [profile, doc, platform] = await Promise.all([
+  const [profile, doc, platform, context] = await Promise.all([
     prisma.tenant_legal_profiles.findFirst({ where: { tenantId } }),
     prisma.tenant_legal_documents.findFirst({ where: { tenantId, slug } }),
     prisma.platform_legal_templates.findFirst({ where: { slug } }),
+    loadDocumentContext(tenantId),
   ]);
 
   const source = resolveDocumentSource(
@@ -183,7 +237,7 @@ export async function getTenantLegalDocument(
   try {
     const merged = renderTemplate(
       source.template,
-      toTemplateValues(profile as LegalProfileValues),
+      { ...context, ...toTemplateValues(profile as LegalProfileValues) },
       shipped.requiredTokens,
     );
     return {

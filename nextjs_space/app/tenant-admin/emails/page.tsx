@@ -7,6 +7,7 @@ import { TenantCampaignList } from "@/components/admin/email/TenantCampaignList"
 import { TenantSegmentList } from "@/components/admin/email/TenantSegmentList";
 import { TenantEventMapper } from "@/components/admin/email/TenantEventMapper";
 import { EmailActivityLog } from "@/components/admin/email/EmailActivityLog";
+import { EmailTrackingToggle } from "@/components/admin/email/EmailTrackingToggle";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -58,7 +59,10 @@ export default function TenantEmailsPage() {
         <TabsContent value="events" className="mt-0">
           <TenantEventMapper />
         </TabsContent>
-        <TabsContent value="activity" className="mt-0">
+        <TabsContent value="activity" className="mt-0 space-y-4">
+          {/* US-027. Beside the activity log rather than on its own tab: both
+              answer "what is this store recording about the mail it sends". */}
+          <EmailTrackingToggle />
           <EmailActivityLog />
         </TabsContent>
       </Tabs>

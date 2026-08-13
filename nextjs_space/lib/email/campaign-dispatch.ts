@@ -117,7 +117,14 @@ export async function dispatchCampaign(
   // canonical host, so a token minted here can only be redeemed here.
   const tenant = await prisma.tenants.findFirst({
     where: { id: tenantId },
-    select: { businessName: true, subdomain: true, customDomain: true },
+    // `settings` is read for ONE flag (US-027's `emailTrackingEnabled`) and is
+    // never carried past the fan-out — the blob also holds SMTP credentials.
+    select: {
+      businessName: true,
+      subdomain: true,
+      customDomain: true,
+      settings: true,
+    },
   });
   if (!tenant) {
     return refuse("NO_STORE", NO_STORE_MESSAGE);

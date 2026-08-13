@@ -78,10 +78,15 @@ export async function resolveCampaignContent(
   contentJson: EmailContentJson,
   tenantId: string,
 ): Promise<CampaignContentFields> {
+  // `trackable` (US-027) is an OFFER, not a decision: the pipeline reads this
+  // tenant's `emailTrackingEnabled` from the same row it renders the shell from
+  // and does nothing unless it says yes. A campaign is the only content this
+  // codebase offers it for — a transactional receipt has nothing to measure.
   const rendered = await resolveTemplateContent({
     contentJson,
     tenantId,
     category: CAMPAIGN_EMAIL_CATEGORY,
+    trackable: true,
   });
 
   // Narrowed rather than cast. The document branch of `resolveTemplateContent`
