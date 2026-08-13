@@ -1,6 +1,7 @@
 /**
- * SEO Supercharge — the two things every piece of store metadata needs to know:
- * what to call the store, and what locale it publishes in.
+ * SEO Supercharge — the primitives every piece of store metadata shares: how to
+ * read an untrusted string, what to call the store, how long a description may
+ * be, and what locale it publishes in.
  *
  * Extracted from `store-metadata.ts` (US-001) when US-002 gave individual pages
  * their own metadata: the layout-level defaults and the page-level overrides
@@ -39,4 +40,42 @@ export function storeDisplayName(
   subdomain: unknown,
 ): string {
   return seoText(businessName) || seoText(subdomain);
+}
+
+/**
+ * How long a `<meta name="description">` may be before a search result clips it
+ * mid-word. 160 is the width Google has truncated around for years; the point is
+ * not the exact number but that WE choose where the sentence ends rather than
+ * letting the SERP cut it.
+ *
+ * Only DERIVED descriptions are truncated. An owner-authored one is rendered as
+ * typed — the SEO Manager shows them a preview of that exact string, and the
+ * write route already caps it (z.string().max(1000)).
+ */
+export const SEO_DESCRIPTION_MAX_LENGTH = 160;
+
+/**
+ * A description derived from body copy: whitespace collapsed to single spaces
+ * (product and condition text arrives with newlines, which render as literal
+ * gaps inside a meta tag) and clipped to `maxLength` INCLUDING the ellipsis, at
+ * a word boundary where there is one.
+ *
+ * "" for anything that is not a usable string, so callers keep using `||` to
+ * reach their own default.
+ */
+export function truncateSeoText(
+  value: unknown,
+  maxLength: number = SEO_DESCRIPTION_MAX_LENGTH,
+): string {
+  const text = seoText(value).replace(/\s+/g, " ");
+  if (text.length <= maxLength) return text;
+
+  // The ellipsis is inside the budget, so the result never EXCEEDS maxLength.
+  const clipped = text.slice(0, Math.max(maxLength - 1, 0));
+  const lastSpace = clipped.lastIndexOf(" ");
+  // A first word longer than the budget has no space to break on — hard-cut it
+  // rather than return a bare ellipsis.
+  const body = lastSpace > 0 ? clipped.slice(0, lastSpace) : clipped;
+
+  return `${body.trimEnd()}…`;
 }

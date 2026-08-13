@@ -32,6 +32,10 @@ export default async function SeoPage() {
         id: true,
         name: true,
         slug: true,
+        // SEO US-004: the storefront product route is keyed by the Dr Green
+        // strain id, so this — not `slug` — is what the preview URL is built
+        // from. The old `/products/{slug}` preview was a 404 for every product.
+        drGreenStrainId: true,
         seo: true,
         images: true,
       },

@@ -299,3 +299,128 @@ FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
   slug-routed and the query already filters published:true). It is the
   /products/{slug} URLs that are dead — the sitemap fix is narrower than "all
   entity URLs".
+
+================================================================================
+[2026-08-13] US-004 PASS — Product detail metadata
+================================================================================
+
+WHAT LANDED
+The product page was the last and worst write-only surface: the ENTIRE route was
+a `"use client"` module, so it could not export generateMetadata even in
+principle, and every product in every store rendered
+"BudStacks - Medical Cannabis SaaS Platform" from app/layout.tsx. On the most
+linked, most shared, most crawled page type a storefront has.
+
+- app/store/[slug]/products/[id]/page.tsx is now a Server Component that exports
+  generateMetadata and renders <ProductDetailClient />. The interactive body
+  moved VERBATIM to product-detail-client.tsx (git mv, one renamed export) — it
+  still reads its own params via useParams(), so the split is a rename and not a
+  props refactor.
+- lib/seo/product-metadata.ts — the pure builder, the fourth in the same shape as
+  page-metadata/post-metadata: authored title as { absolute } (the SEO Manager
+  previews that exact string), default title UNSUFFIXED for the layout template,
+  description OMITTED when empty so the layout's is inherited, openGraph
+  re-declared wholesale (Next REPLACES it, never merges), twitter card only.
+- lib/seo/product-paths.ts — productPath(drGreenStrainId). ONE helper shared by
+  the canonical and the admin preview so they cannot disagree again.
+- lib/seo/store-identity.ts gains SEO_DESCRIPTION_MAX_LENGTH (160) and
+  truncateSeoText: whitespace collapsed, clipped at a word boundary, ellipsis
+  INSIDE the budget. US-005's conditions copy needs the same thing.
+
+THE TWO SOURCES, AND WHY BOTH
+The page a visitor sees is the LIVE Dr Green strain fetched by id; the SEO
+override is on the LOCAL products row, joined by drGreenStrainId. Neither alone
+is enough — the local row's name goes stale the moment Dr Green renames a strain,
+and the live strain carries no authored SEO. So the cascade is per field:
+products.seo.title -> strain name; products.seo.description -> truncated strain
+description; products.seo.ogImage -> strain image.
+
+WHAT THE NOTES CLAIMED, VERIFIED IN THE CODE
+- Product URLs ARE Dr Green id-keyed: product-card.tsx:59 links
+  /products/{product.id}, resolved by
+  fetchProducts(country, config).find(p => p.id === productId)
+  (app/api/store/[slug]/products/route.ts:53-55). Confirmed.
+- The local join column is drGreenStrainId (sync/route.ts:58 writes dg.id).
+  products.slug is a NAME-DERIVED key that exists only for the sync upsert's
+  (slug, tenantId) unique constraint. It is not a route and never was.
+- So the SEO Manager's `{baseUrl}/products/{product.slug}` (seo-page-client.tsx
+  :201 AND the editor modal's Google preview at :334) was a 404 for EVERY
+  product — the owner authored metadata against a URL that does not exist. Both
+  now build from productPath(drGreenStrainId); page.tsx selects the column.
+  A row with no strain id (never synced, so no page of its own) shows the
+  /products listing rather than a dead /products/null.
+
+DECISIONS
+- generateMetadata calls fetchProduct(id, country, config) — the same lookup the
+  page body reaches through its API route, over the same 60s in-memory list
+  cache, with React cache() deduping per request on top. NOT a second copy of the
+  query: the body is a client component that fetches through /api/store/[slug]/
+  products, so there is no server-side fetch to share; this is the only one.
+- loadLiveProduct is TOTAL. getTenantDrGreenConfig throws on missing/undecryptable
+  credentials and fetchProduct throws on an unknown id or an unreachable upstream
+  — all ordinary storefront states, none of which may take the page down, because
+  generateMetadata has no error.tsx boundary above it. Caught -> logger.warn
+  (tenantId + productId + reason ONLY; the config carries Dr Green credentials
+  and never reaches a log line) -> PRODUCT_NOT_FOUND_TITLE.
+- The local read is bound with runWithTenantContextAsync: products IS in
+  tenantScopedModels (lib/db.ts:68), and generateMetadata resolves OUTSIDE the
+  layout's context scope — unbound, the $extends layer warns
+  security.tenant_context_missing and would throw under TENANT_CONTEXT_STRICT,
+  inside metadata, where a throw is a blank page. Same US-003 pattern. flat-field
+  findFirst, explicit tenantId in the where, ProductSeoRow annotated because the
+  any-widened prisma export collapses runWithTenantContextAsync<T> to {}.
+  The extension also injects deletedAt: null (soft-delete.ts:35), so a
+  soft-deleted row cannot resurrect its metadata onto a live strain.
+- og:type is "website", not "product": Next 14's OpenGraphType union has no
+  product member. The product-shaped signal a shopping crawler reads is Product
+  JSON-LD — US-015, Pro-gated.
+- productPath lives in its OWN dependency-free module, not in product-metadata.ts:
+  the SEO Manager is a client component, and product-metadata imports
+  lib/storage/public-image-url -> s3-tenant-guard -> lib/api-error -> pino. That
+  chain must not cross into a browser bundle. (store-pages.ts is dependency-free
+  for the same reason.)
+- Canonical is built from the RESOLVED product.id, not the raw route param —
+  equal whenever the lookup succeeded, and the one the catalogue agrees with.
+
+VERIFIED
+- pnpm exec tsc --noEmit: exit 0.
+- pnpm vitest run tests/unit/product-metadata.test.ts: 26 passed.
+- pnpm vitest run (full): 127 files passed, 8 skipped; 1916 passed, 30 skipped,
+  0 failed. No cross-story regression.
+- pnpm check:security: both gates pass. next lint on the 7 touched files: clean.
+- Live: dev server up, GET /store/acme/products/{uuid} -> HTTP 404 with
+  <title>Store Not Found</title> — the new export runs, no unhandled throw, no
+  module error from the server/client split (which is the thing the split could
+  have broken). The TENANT branch stays unrenderable on this machine:
+  PrismaClientInitializationError in the dev log, DATABASE_URL points at
+  Railway's private network. visual: deferred to human review.
+- Docker: no new runtime import chain leaves the Next bundle — everything added
+  is lib/seo/* imported from app/, and Dockerfile:74 already COPYs lib/
+  wholesale. No Dockerfile change needed (email-p2 #232 lesson checked).
+
+TEST DESIGN
+26 tests, builders exercised directly (no prisma, no Dr Green) because they are
+pure by construction. Named guards for the silent regressions: the default title
+carries no business name (the US-001 double suffix), description is ABSENT rather
+than undefined, an authored description is NOT truncated (the owner previewed
+that string), a presigned image URL is dropped rather than emitted, the canonical
+and og:url are the same string, and productPath never yields /products/null.
+Property, not example: four wrong-shaped products.seo blobs (a number, a string,
+an array, wrong-typed fields) all degrade to the strain defaults.
+
+FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
+- The product page renders TWICE-fetched product data: generateMetadata resolves
+  the strain server-side, then the client body fetches the same product again
+  through /api/store/[slug]/products. Collapsing that (server-fetch + pass as a
+  prop, or a RSC shell) is a real render-cost win but a body refactor this story
+  has no mandate for.
+- /api/tenant-admin/seo/products/[id] has no permission gate
+  (withTenantAuthParams only) — the third route with this gap, after
+  /seo/pages and /seo/posts/[id]. US-010's sweep.
+- product-detail-client.tsx has 4 console.error calls and alt={product.name} on
+  the gallery images — console debt is the ~31-route sweep, alt text is US-009.
+- For US-006: this confirms the sitemap's /products/{slug} URLs are dead and the
+  fix is productPath(drGreenStrainId) over rows WHERE drGreenStrainId IS NOT
+  NULL — a row without one has no page to list.
+- For US-007: storeCanonical + a page-level path helper is now the established
+  pattern on four page types; US-007 is the sweep of what is left, not a redesign.

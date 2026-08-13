@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeoEditorModal } from "@/components/admin/seo";
+import { productPath } from "@/lib/seo/product-paths";
 import {
   STORE_SEO_PAGES,
   dropLegacyStorePageSeoKeys,
@@ -32,6 +33,12 @@ interface ProductItem {
   id: string;
   name: string;
   slug: string;
+  /**
+   * The Dr Green strain id — what the storefront product route is keyed by, and
+   * so what the preview URL must use. Null for a row that has never been synced,
+   * which has no product page at all (see `productPath`).
+   */
+  drGreenStrainId: string | null;
   seo: SeoData | null;
   images: string[];
 }
@@ -198,7 +205,8 @@ export function SeoPageClient({
                           {product.name}
                         </p>
                         <p className="text-xs text-bs-fg-muted truncate font-mono">
-                          {baseUrl}/products/{product.slug}
+                          {baseUrl}
+                          {productPath(product.drGreenStrainId)}
                         </p>
                       </div>
                     </div>
@@ -331,7 +339,7 @@ export function SeoPageClient({
           entityId={selectedProduct.id}
           entityName={selectedProduct.name}
           entitySlug={selectedProduct.slug}
-          previewUrl={`${baseUrl}/products/${selectedProduct.slug}`}
+          previewUrl={`${baseUrl}${productPath(selectedProduct.drGreenStrainId)}`}
           initialSeo={selectedProduct.seo || undefined}
           onSave={handleSaveProductSeo}
         />
