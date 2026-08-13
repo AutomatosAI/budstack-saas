@@ -1,12 +1,24 @@
 import { NextResponse } from "next/server";
-import { withTenantAuth } from "@/lib/api-auth";
+import { requirePermission } from "@/lib/permissions/require-permission";
 import { prisma } from "@/lib/db";
 import { subDays, startOfDay, format, eachDayOfInterval } from "date-fns";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { apiError } from "@/lib/api-error";
 import { getTenantVerificationMode } from "@/lib/verification-mode";
+import {
+  percentChange,
+  revenuePeriods,
+} from "@/lib/analytics/period-metrics";
 
-export const GET = withTenantAuth(async (req, { user, tenantId }) => {
+// Revenue basis: every aggregate below excludes CANCELLED orders, except the
+// orders-by-status breakdown (whose whole point is to show cancellations) and
+// the recent-orders activity feed (where a cancelled order is still activity).
+const activeOrders = (tenantId: string) => ({
+  tenantId,
+  status: { not: "CANCELLED" as const },
+});
+
+export const GET = requirePermission("canViewAnalytics", async (req, { user, tenantId }) => {
   try {
     // Rate limiting
     const rateLimitResult = await checkRateLimit(user.id);
@@ -27,7 +39,7 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
     });
 
     const totalOrders = await prisma.orders.count({
-      where: { tenantId },
+      where: activeOrders(tenantId),
     });
 
     const totalCustomers = await prisma.users.count({
@@ -36,15 +48,27 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
 
     // Get total revenue
     const totalRevenueResult = await prisma.orders.aggregate({
-      where: { tenantId },
+      where: activeOrders(tenantId),
       _sum: { total: true },
     });
     const totalRevenue = totalRevenueResult._sum.total || 0;
 
+    // Revenue actually collected (PAID/OVERPAID payment status). Exposed for
+    // downstream use; the headline totalRevenue keeps counting non-cancelled
+    // orders because some flows never stamp paymentStatus (known desync).
+    const paidRevenueResult = await prisma.orders.aggregate({
+      where: {
+        ...activeOrders(tenantId),
+        paymentStatus: { in: ["PAID", "OVERPAID"] },
+      },
+      _sum: { total: true },
+    });
+    const paidRevenue = paidRevenueResult._sum.total || 0;
+
     // Get recent stats
     const recentOrders = await prisma.orders.count({
       where: {
-        tenantId,
+        ...activeOrders(tenantId),
         createdAt: { gte: startDate },
       },
     });
@@ -60,7 +84,7 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
     // Get recent revenue
     const recentRevenueResult = await prisma.orders.aggregate({
       where: {
-        tenantId,
+        ...activeOrders(tenantId),
         createdAt: { gte: startDate },
       },
       _sum: { total: true },
@@ -70,12 +94,40 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
     // Get average order value
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
+    // Today / rolling-7d / rolling-30d revenue with real prior-period deltas.
+    const periods = revenuePeriods(new Date());
+    const periodSums = await Promise.all(
+      periods.flatMap((spec) =>
+        [spec.current, spec.previous].map((window) =>
+          prisma.orders
+            .aggregate({
+              where: {
+                ...activeOrders(tenantId),
+                createdAt: { gte: window.start, lt: window.end },
+              },
+              _sum: { total: true },
+            })
+            .then((r: { _sum: { total: number | null } }) => r._sum.total || 0),
+        ),
+      ),
+    );
+    const revenueMetrics = periods.map((spec, i) => {
+      const current = periodSums[i * 2];
+      const previous = periodSums[i * 2 + 1];
+      return {
+        label: spec.label,
+        value: current,
+        change: percentChange(current, previous),
+        period: spec.period,
+      };
+    });
+
     // Get revenue and order counts by day in a single query using raw groupBy
     const dateRange = eachDayOfInterval({ start: startDate, end: new Date() });
     const ordersByDay = await prisma.orders.groupBy({
       by: ["createdAt"],
       where: {
-        tenantId,
+        ...activeOrders(tenantId),
         createdAt: { gte: startDate },
       },
       _sum: { total: true },
@@ -103,32 +155,36 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
       return { date: format(date, "MMM dd"), orders: dayMap.get(key)?.orders || 0 };
     });
 
-    // Get top selling products
-    const topProducts = await prisma.order_items.groupBy({
-      by: ["productId"],
-      where: {
-        orders: {
-          tenantId,
-          createdAt: { gte: startDate },
-        },
-      },
-      _sum: {
-        quantity: true,
-        price: true,
-      },
-      _count: {
-        id: true,
-      },
-      orderBy: {
-        _sum: {
-          quantity: "desc",
-        },
-      },
-      take: 5,
-    });
+    // Top selling products. Raw SQL because product revenue is
+    // SUM(price * quantity) — Prisma groupBy cannot multiply columns, and the
+    // previous _sum.price implementation understated any line with quantity > 1.
+    interface TopProductRow {
+      productId: string;
+      revenue: number;
+      quantity: number;
+      orders: number;
+    }
+    const topProductsRaw: TopProductRow[] = await prisma.$queryRaw<
+      TopProductRow[]
+    >`
+      SELECT oi."productId" AS "productId",
+             COALESCE(SUM(oi."price" * oi."quantity"), 0)::float AS "revenue",
+             COALESCE(SUM(oi."quantity"), 0)::int AS "quantity",
+             COUNT(DISTINCT oi."orderId")::int AS "orders"
+      FROM "order_items" oi
+      JOIN "orders" o ON o."id" = oi."orderId"
+      WHERE o."tenantId" = ${tenantId}
+        AND o."createdAt" >= ${startDate}
+        AND o."status" <> 'CANCELLED'
+      GROUP BY oi."productId"
+      ORDER BY "revenue" DESC
+      LIMIT 5
+    `;
 
     // Batch fetch product details (single query instead of N+1)
-    const productIds = topProducts.map((item: any) => item.productId).filter(Boolean);
+    const productIds = topProductsRaw
+      .map((item: TopProductRow) => item.productId)
+      .filter(Boolean);
     const products = productIds.length > 0
       ? await prisma.products.findMany({
           where: { id: { in: productIds } },
@@ -137,12 +193,12 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
       : [];
     const productMap = new Map(products.map((p: { id: string; name: string }) => [p.id, p.name]));
 
-    const topProductsWithDetails = topProducts.map((item: any) => ({
+    const topProductsWithDetails = topProductsRaw.map((item: TopProductRow) => ({
       id: item.productId,
       name: productMap.get(item.productId) || "Unknown Product",
-      quantity: item._sum.quantity || 0,
-      revenue: item._sum.price || 0,
-      orders: item._count.id,
+      quantity: item.quantity,
+      revenue: item.revenue,
+      orders: item.orders,
     }));
 
     // Get customer growth by day (single groupBy instead of N queries)
@@ -167,7 +223,7 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
       return { date: format(date, "MMM dd"), customers: customerDayMap.get(key) || 0 };
     });
 
-    // Get order status distribution
+    // Get order status distribution — deliberately INCLUDES cancelled orders.
     const orderStatusData = await prisma.orders.groupBy({
       by: ["status"],
       where: {
@@ -192,7 +248,7 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
     });
     const verificationMode = getTenantVerificationMode(tenantRow ?? {});
 
-    // Real, tenant-scoped recent orders — replaces the former client-side mock.
+    // Real, tenant-scoped recent orders — activity feed, includes cancelled.
     const recentOrdersRows = await prisma.orders.findMany({
       where: { tenantId },
       orderBy: { createdAt: "desc" },
@@ -239,10 +295,12 @@ export const GET = withTenantAuth(async (req, { user, tenantId }) => {
       totalOrders,
       totalCustomers,
       totalRevenue,
+      paidRevenue,
       recentOrders,
       recentCustomers,
       recentRevenue,
       avgOrderValue,
+      revenueMetrics,
       revenueByDay: revenueByDayData,
       ordersByDay: ordersByDayData,
       topProducts: topProductsWithDetails,
