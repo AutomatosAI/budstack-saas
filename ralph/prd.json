@@ -381,7 +381,7 @@
       ],
       "priority": 24,
       "passes": false,
-      "notes": "Automatos is a chat widget today (render points app/store/[slug]/layout.tsx:362-372, bundle public/automatos-widget.js) — the widget's network calls reveal the API base + message shape. Provider interface first so a future provider swap is config, not surgery. Secrets: automatosApiKey is a stored credential — never log it, never echo in errors."
+      "notes": "Automatos is a chat widget today (render points app/store/[slug]/layout.tsx:362-372, bundle public/automatos-widget.js) — the widget's network calls reveal the API base + message shape. Provider interface first so a future provider swap is config, not surgery. Secrets: automatosApiKey is a stored credential — never log it, never echo in errors. CROSS-SESSION FINDINGS (Automatos-extras session, PRD #236, 2026-08-13): the Automatos SDK has NO SEO widget — spike the server API directly, not the widget SDK; and the config split-brain is resolved: the tenants COLUMNS (automatosApiKey/automatosAgentId) are canonical, any settings-JSON copies are dead — read only the columns."
     },
     {
       "id": "US-025",
