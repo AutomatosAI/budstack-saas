@@ -20,12 +20,12 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
-import type { Plan } from "./plan";
+import type { Plan, PlanMirrorFailureReason } from "./plan";
 
 export interface PlanMirrorResult {
   mirrored: boolean;
   /** Machine-readable failure cause — for a UI warning, never for a gate. */
-  reason?: "no_clerk_org" | "clerk_write_failed";
+  reason?: PlanMirrorFailureReason;
 }
 
 /**

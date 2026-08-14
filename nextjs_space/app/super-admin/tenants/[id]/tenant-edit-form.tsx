@@ -18,6 +18,7 @@ import {
 import { RowPill } from "@/components/admin/shared";
 import { isApexDomain } from "@/lib/domain-utils";
 import { wwwRedirectHost } from "@/lib/parse-host";
+import TenantPlanControl from "./tenant-plan-control";
 
 const sectionTitleStyle = {
   fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
@@ -32,6 +33,8 @@ interface TenantEditFormProps {
     countryCode: string;
     nftTokenId?: string | null;
     settings?: any;
+    /** Raw `tenants.plan` — the operator-set entitlement tier (SEO US-012). */
+    plan: string;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -230,6 +233,9 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
             </p>
           )}
         </div>
+
+        {/* Entitlement plan — saves on its own, independent of Edit mode */}
+        <TenantPlanControl tenantId={tenant.id} plan={tenant.plan} />
 
         {/* NFT Token ID (read-only) */}
         <div className="space-y-2">

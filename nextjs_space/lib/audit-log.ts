@@ -113,6 +113,10 @@ export const AUDIT_ACTIONS = {
   TENANT_ACTIVATED: "tenant.activated",
   TENANT_DEACTIVATED: "tenant.deactivated",
   TENANT_DELETED: "tenant.deleted",
+  // SEO US-012: super-admin moves a tenant between entitlement plans. Until
+  // billing exists this is the ONLY way a tenant's plan changes, so the row is
+  // the whole provenance trail for what a tenant was entitled to and when.
+  TENANT_PLAN_CHANGED: "tenant.plan_changed",
 
   // Product Management
   PRODUCT_CREATED: "product.created",

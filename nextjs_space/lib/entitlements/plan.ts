@@ -53,3 +53,25 @@ export function parsePlan(value: unknown): Plan {
 export function isPlan(value: unknown): value is Plan {
   return typeof value === "string" && KNOWN_PLANS.has(value);
 }
+
+/**
+ * Why the best-effort Clerk mirror did not happen. Defined here rather than in
+ * `./clerk-plan-mirror` so the super-admin client control can name the cases
+ * without importing a module that pulls Prisma and the Clerk SDK.
+ */
+export type PlanMirrorFailureReason = "no_clerk_org" | "clerk_write_failed";
+
+/**
+ * Response contract of `PATCH /api/super-admin/tenants/[id]/plan` (US-012).
+ *
+ * `changed` is false when the submitted plan already matched the column — the
+ * write and the audit row are skipped, the mirror still re-syncs. `mirrored`
+ * false is a WARNING, never an error: the column committed first and is the
+ * only thing entitlements read.
+ */
+export interface PlanUpdateResponse {
+  plan: Plan;
+  changed: boolean;
+  mirrored: boolean;
+  mirrorReason: PlanMirrorFailureReason | null;
+}

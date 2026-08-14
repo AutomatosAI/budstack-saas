@@ -1370,3 +1370,94 @@ FLAGGED, NOT FIXED (adjacent debt)
 - app/api/tenant-admin/analytics/route.ts still uses findUnique on tenants
   (pre-existing, and safe — `id` is a simple unique, not a compound one). Left
   as found; only its select list changed.
+
+================================================================================
+[2026-08-14] US-012 PASS — Super-admin plan control
+================================================================================
+
+WHAT LANDED
+- NEW ROUTE app/api/super-admin/tenants/[id]/plan/route.ts (PATCH,
+  withSuperAdminParams). The only writer of tenants.plan. Same-origin guard →
+  parseUuid → Zod z.enum(PLANS) → findFirst → conditional update → createAuditLog
+  → best-effort Clerk mirror. Returns the PlanUpdateResponse contract
+  { plan, changed, mirrored, mirrorReason }.
+- NEW COMPONENT app/super-admin/tenants/[id]/tenant-plan-control.tsx — the
+  selector, rendered from tenant-edit-form.tsx (AC-1) as a col-span-2 block above
+  the NFT/domain row. Native <select class="bs-select"> per the repo's admin
+  convention + its own Save button.
+- lib/audit-log.ts: AUDIT_ACTIONS.TENANT_PLAN_CHANGED = "tenant.plan_changed".
+- lib/entitlements/plan.ts: PlanMirrorFailureReason + PlanUpdateResponse — the
+  HTTP contract, in the pure module both sides already import.
+  clerk-plan-mirror.ts now references the shared reason type.
+
+DECISIONS
+- ITS OWN ROUTE, NOT A FIELD ON THE TENANT PATCH. app/api/super-admin/tenants/
+  [id]/route.ts:210-256 provisions Railway domains and Namecheap subdomains as a
+  side effect of saving; a plan change must not be able to fail on a DNS call, and
+  a "recovery provisioning" path must not fire because someone moved a tenant to
+  Pro. toggle-active/route.ts is the precedent for a single-field super-admin
+  write (withSuperAdminParams + createAuditLog) — this follows it exactly.
+- THE CONTROL SAVES ON ITS OWN, outside the form's Edit/Save Changes flow, for
+  the same reason. Labelled "Saved separately" so the operator isn't guessing.
+- ORDER IS THE SAFETY ARGUMENT: column commits, audit row lands, THEN Clerk.
+  Pinned by a test on mock.invocationCallOrder. Clerk failure → 200 with
+  mirrored:false; the write is already durable. Two distinct reasons surface as
+  different operator copy (no_clerk_org is normal for org-less tenants, not an
+  error; clerk_write_failed says "save again when Clerk is healthy").
+- CONDITIONAL WRITE, UNCONDITIONAL MIRROR. Re-submitting the current plan skips
+  the UPDATE and the audit row (no no-op noise in the entitlement provenance
+  trail) but still pushes to Clerk — that is what makes a failed mirror
+  retryable from the UI. changed:false drives "Already on X — Clerk re-synced".
+- THE AUDIT ROW CARRIES THE **RAW** previousPlan, not parsePlan()'s fail-closed
+  view. If the column held 'enterprise' the trail has to say 'enterprise', even
+  though entitlements were treating that tenant as 'basic'. Test pins it.
+  Redaction check: previousPlan/newPlan/subdomain are not in SENSITIVE_FIELDS
+  (lib/security/redact.ts:23), so createAuditLog's sanitizer preserves them.
+- THE SELECT DISPLAYS parsePlan(raw). A garbage column shows as Basic — which is
+  what the tenant actually gets — and saving Basic over it repairs the value and
+  audits the repair.
+- requireSameOrigin ADDED (toggle-active omits it). A forced cross-site plan
+  change is low-impact but free to close, and the util already exists; the four
+  other super-admin state-changers use it.
+- AUDIT ACTION USES THE CONSTANT. AUDIT_ACTIONS values are dotted lowercase
+  ("tenant.activated") while three tenant routes write SCREAMING_CASE literals
+  ("TENANT_UPDATED"). categorizeAuditAction lowercases + substring-matches, so
+  both render in the timeline. New code takes the constant; the divergence is
+  flagged below, not fixed.
+
+VERIFIED
+- pnpm exec tsc --noEmit                       -> exit 0
+- pnpm vitest run super-admin-plan-route + entitlements-plan -> 71 passed
+- pnpm vitest run --project unit -> 134 files, 2152 passed, 0 failed
+  (was 133/2127 at US-011: +1 file, +25 tests, no regressions)
+- pnpm check:security                          -> both gates green
+- pnpm exec next lint (6 touched files)        -> no warnings or errors
+- pnpm exec tsx scripts/check-auth-wrappers.ts -> 160 route files, the new route
+  counted as wrapped. 4 violations, all pre-existing and unrelated
+  (storefront/email/click+open, team/accept-invite, team/invitation).
+- LIVE: pnpm dev on the existing .env.local (never modified). Both surfaces are
+  Clerk-gated at middleware — GET /super-admin/tenants/<uuid> and PATCH the plan
+  API both 307 to /auth/login, so neither reaches a handler unauthenticated.
+  visual: deferred to human review — the console needs a real SUPER_ADMIN session.
+- No Prisma change: the plan column shipped in US-011. No migration in this story.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson): two new modules, both inside the
+Next app tree (app/api/... and app/super-admin/...). Imports are next/server,
+next/navigation, zod, lucide-react, @/lib/{api-auth,db,api-error,audit-log,
+validation,security,entitlements} and @/components/ui/{label,sonner} — every one
+already inside directories the runner COPYies (nextjs_space/Dockerfile:57-95).
+No import edge leaves the bundle. No Dockerfile edit needed.
+
+NO tenantScopedModels CHANGE: no new model. The route reads/writes `tenants`
+itself (the tenant, not a tenant-scoped child) via findFirst on the flat `id`.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- Three tenant routes write SCREAMING_CASE audit actions ("TENANT_UPDATED",
+  "TENANT_ACTIVATED"/"TENANT_DEACTIVATED") that don't match their AUDIT_ACTIONS
+  constants, and the big tenant PATCH still calls prisma.audit_logs.create
+  directly instead of createAuditLog — so those rows skip PII redaction and the
+  PRD-302 impersonation stamp. Out of scope here; worth a sweep.
+- app/super-admin/tenants/page.tsx (the list) does not show plan. US-013 needs
+  the plan admin-side anyway; a column in the list is a cheap follow-on.
+- tenant-edit-form.tsx is 655 lines (repo guidance is ~400). This story added 6
+  lines to it and put the new UI in its own file rather than growing it further.
