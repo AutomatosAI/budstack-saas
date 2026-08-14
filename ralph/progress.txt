@@ -1933,3 +1933,108 @@ FLAGGED, NOT FIXED (adjacent debt)
 - The unit project still cannot render React (US-013's flag, unchanged), so no
   component test asserts the emitted <script> element; the serializer is
   asserted directly instead.
+
+================================================================================
+[2026-08-14] US-017 PASS — FAQPage JSON-LD from conditions
+================================================================================
+
+WHAT WAS ALREADY THERE, undescribed. Every seeded condition carries four
+question/answer pairs (scripts/seed-conditions.ts:57-61) and the storefront
+renders them as an accordion (condition-detail-client.tsx:425-484). To a crawler
+that is a <button> and a collapsed <div> — the answers were prose it had to
+guess at. lib/seo/faq-json-ld.ts states them as FAQPage/Question/acceptedAnswer.
+
+THE STORED SHAPE, VERIFIED NOT ASSUMED (the story's own instruction).
+conditions.faqs is Json? at prisma/schema.prisma:273 — no DB-level shape. Both
+ends of the column were read before writing the parser:
+  - WRITER: scripts/seed-conditions.ts, the only writer in the repo, stores an
+    ARRAY of { question, answer }. No admin route writes it — there is no
+    tenant-admin conditions editor; app/api/tenant-admin/seo/conditions/[id] is
+    the SEO tab and writes `seo` only.
+  - READER: condition-detail-client.tsx:105 does
+    `Array.isArray(condition.faqs) ? … : []` then faq.question / faq.answer.
+So `{question, answer}` it is — not `{q, a}`. Validated anyway: a Json column is
+one psql session away from holding anything, and the legacy short-key shape is
+covered by a test that proves it is SKIPPED rather than silently emitted empty.
+
+FAIL-CLOSED PER ENTRY, NOT PER PAGE. `faqEntrySchema` is a zod object (not
+.strict() — an entry carrying an editor id or an ordering field is still a valid
+pair, and `parse` returns only the two fields regardless, so nothing unvetted
+reaches a node). `.trim()` before `.min(1)`, so an answer of "   " is rejected
+rather than emitted as a blank Answer. readFaqEntries safeParses each element
+and drops the failures; only a non-array `faqs`, or one with no valid pair left,
+yields no node. The render path has no error.tsx boundary above it — the same
+constraint every builder in lib/seo/ is written to.
+
+THE DIRECTION THAT MATTERS. Structured data is policed on matching the visible
+page. Skipping an invalid entry can only make the node describe LESS than the
+accordion renders, which is the safe side; and the entries are the same rows,
+because loadCondition resolves exactly as the body's API does (own tenant, then
+PLATFORM_MASTER_TENANT_SLUG's row) and that API returns the whole row including
+faqs (app/api/tenant/conditions/[slug]/route.ts:69). Verified by reading both,
+not assumed.
+
+NO NEW QUERY. `faqs: true` was added to CONDITION_SEO_SELECT — one more column
+on the SAME cache()d loadCondition that generateMetadata already calls with the
+same arguments. React dedupes it within the request; generateMetadata ignores
+the column.
+
+ONE SCRIPT ELEMENT. The page composes buildBreadcrumbJsonLd (US-016) and
+buildConditionFaqJsonLd into one array; two nodes serialize into a single
+@graph. The FAQPage @id is `${canonical}#faq` — fragment-suffixed so it names
+the entity rather than colliding with #breadcrumb in the same graph, and
+anchored to the US-007 primary host so a custom-domain tenant publishes one
+statement rather than a second copy on {subdomain}.budstacks.io.
+
+WHAT IT ACTUALLY BUYS, stated honestly in the module docstring: Google has
+restricted FAQ rich results to authoritative government and health sites since
+2023, so a storefront should not expect the expandable Q/A block in Google's own
+SERP. The node is still what other engines and the answer-extraction crawlers
+read, and it is the only machine-readable form this content has ever had.
+
+Pro gate: isSeoProUnlocked, degrading — a Basic tenant emits no element and the
+accordion still renders. Storefront never blocks on plan.
+
+VERIFIED
+- pnpm exec tsc --noEmit                                    -> exit 0
+- pnpm vitest run tests/unit/faq-json-ld.test.ts
+    tests/unit/breadcrumb-json-ld.test.ts
+    tests/unit/condition-metadata.test.ts                   -> 63 passed
+- pnpm vitest run (all projects) -> 149 files, 2272 passed, 30 skipped, 0 failed
+  (was 148/2256 at US-016: +1 file, +16 tests, no regressions)
+- pnpm check:security                                       -> both gates green
+- pnpm exec next lint (3 touched files)                     -> clean, 0 warnings
+- pnpm build -> Compiled successfully; /store/[slug]/conditions/[id] still
+  f (Dynamic) at 5.74 kB, unchanged from US-016.
+- LIVE: pnpm dev on the existing .env.local (never modified).
+    GET /store/healingbuds/conditions/chronic-pain -> 404, 0 ld+json blocks.
+  Same cause US-014/US-015/US-016 recorded: "Can't reach database server" in the
+  dev log (Railway private network), so no tenant resolves and no store page can
+  render locally.
+  visual: deferred to human review — asserting the rendered <script> needs a
+  real tenant on a reachable DB. Shape, gate, parser, URL host and escaping are
+  asserted purely (16 tests), including that a question of
+  `</script><script>alert(1)</script>` cannot close the element.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson): one new module, lib/seo/faq-json-ld
+.ts. `lib/` is already COPYied by the runner (nextjs_space/Dockerfile:76), and
+its imports are @/lib/seo/* plus zod — both already in the bundle. No new
+directory, no Dockerfile edit needed.
+
+NO SCHEMA CHANGE, NO MIGRATION, NO NEW MODEL, no tenantScopedModels change, no
+new API route. Storefront-only.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- app/api/tenant/conditions/[slug]/route.ts:32-39 and :50-57 use findUnique on
+  the tenantId_slug COMPOUND unique — the exact pattern CLAUDE.md says breaks
+  under the $extends rewrite (documented at api/tenant-admin/posts/route.ts:56).
+  It is the public route the storefront body calls, and it is pre-existing and
+  currently working; the SEO side deliberately uses findFirst with flat fields.
+  Out of this story's diff, worth a targeted fix.
+- No condition FAQ EDITOR exists anywhere in tenant-admin — faqs is seed-only
+  data an owner cannot author or correct. The FAQPage is therefore as good as
+  the seed. A later story (or the SEO Manager's conditions tab) would need a
+  Q/A editor for this to be a feature an owner controls.
+- conditions.published is still not filtered by either the body's API or the
+  metadata loader (US-005's flag, unchanged) — an unpublished condition renders
+  and now also emits its FAQ.

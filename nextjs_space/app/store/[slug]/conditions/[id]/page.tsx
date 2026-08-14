@@ -11,6 +11,7 @@ import {
   CONDITION_NOT_FOUND_TITLE,
   buildConditionMetadata,
 } from "@/lib/seo/condition-metadata";
+import { buildConditionFaqJsonLd } from "@/lib/seo/faq-json-ld";
 import { STORE_NOT_FOUND_TITLE } from "@/lib/seo/store-metadata";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { runWithTenantContextAsync } from "@/lib/tenant/tenant-context";
@@ -40,6 +41,8 @@ interface ConditionSeoRow {
   readonly description: unknown;
   readonly image: unknown;
   readonly seo: unknown;
+  /** US-017 — the Q/A pairs the accordion renders, parsed by `readFaqEntries`. */
+  readonly faqs: unknown;
 }
 
 const CONDITION_SEO_SELECT = {
@@ -48,6 +51,9 @@ const CONDITION_SEO_SELECT = {
   description: true,
   image: true,
   seo: true,
+  // One more column on the SAME cache()d read the metadata already performs —
+  // not a second query. `generateMetadata` ignores it.
+  faqs: true,
 } as const;
 
 /**
@@ -143,15 +149,21 @@ export async function generateMetadata({
 
 /**
  * SEO US-016 — the breadcrumb trail for a condition page.
+ * SEO US-017 — the FAQPage built from the accordion this page already renders.
  *
  * `loadCondition` is the `cache()`d loader `generateMetadata` above already
  * calls with the SAME arguments, so resolving the row here costs nothing on a
  * normal render: React dedupes it within the request. The body itself stays
- * client-rendered — this only adds the node the crawler reads.
+ * client-rendered — this only adds the nodes the crawler reads.
+ *
+ * Both builders go into ONE `<JsonLd>`: two or more nodes serialize into a
+ * single `@graph`, which is how one block carries several entities for the same
+ * URL, and it keeps the page to one script element.
  *
  * Nothing here can block the page: `buildBreadcrumbJsonLd` returns [] for a
- * Basic tenant and for a row with no usable name, and `<JsonLd>` renders nothing
- * for [].
+ * Basic tenant and for a row with no usable name, `buildConditionFaqJsonLd`
+ * returns [] for a Basic tenant and for a row with no valid Q/A pair, and
+ * `<JsonLd>` renders nothing for [].
  */
 export default async function ConditionDetailPage({
   params,
@@ -159,18 +171,30 @@ export default async function ConditionDetailPage({
   const tenant = await getCurrentTenant();
   const condition = tenant ? await loadCondition(tenant.id, params.id) : null;
 
-  const jsonLdNodes =
+  const planSource =
     tenant && condition
-      ? buildBreadcrumbJsonLd(
-          {
-            tenantId: tenant.id,
-            plan: tenant.plan,
-            subdomain: tenant.subdomain,
-            customDomain: tenant.customDomain,
-          },
-          // The RESOLVED slug, not the raw param — the one the listing links to.
-          conditionBreadcrumbTrail(condition.name, condition.slug),
-        )
+      ? {
+          tenantId: tenant.id,
+          plan: tenant.plan,
+          subdomain: tenant.subdomain,
+          customDomain: tenant.customDomain,
+        }
+      : null;
+
+  const jsonLdNodes =
+    planSource && condition
+      ? [
+          ...buildBreadcrumbJsonLd(
+            planSource,
+            // The RESOLVED slug, not the raw param — the one the listing links to.
+            conditionBreadcrumbTrail(condition.name, condition.slug),
+          ),
+          ...buildConditionFaqJsonLd({
+            ...planSource,
+            slug: condition.slug,
+            faqs: condition.faqs,
+          }),
+        ]
       : [];
 
   return (
