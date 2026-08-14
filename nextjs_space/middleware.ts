@@ -1,12 +1,21 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse, NextRequest, type NextFetchEvent } from "next/server";
-import { parseHostToTenantHint } from "@/lib/parse-host";
+import { parseHostToTenantHint, wwwRedirectHost } from "@/lib/parse-host";
 import { customDomainRewritePath } from "@/lib/custom-domain-rewrite";
+import { resolveStoreRedirect } from "@/lib/seo/redirect-lookup";
 import { applyCsp, buildCsp, generateNonce, variantForServedPath } from "@/lib/security/csp";
 
 // Define public routes
 const isPublicRoute = createRouteMatcher([
   "/",
+  // SEO US-006: the platform's own crawler files (app/robots.ts, app/sitemap.ts).
+  // The matcher below deliberately passes .xml/.txt through middleware, and the
+  // apex has no tenant hint, so without these two a signed-out crawler falls to
+  // the auth check and gets a 307 to /auth/login. (Tenant hosts are unaffected —
+  // their /robots.txt and /sitemap.xml are rewritten to /store/{slug}/… and
+  // returned before that check ever runs.)
+  "/robots.txt",
+  "/sitemap.xml",
   "/auth/login(.*)",
   "/auth/signup(.*)",
   "/store/(.*)", // Storefronts are public
@@ -22,6 +31,14 @@ const isPublicRoute = createRouteMatcher([
   "/api/storefront/email/click", // Signed link-wrapping redirect (US-027)
   "/api/integrations/automatos/posts", // Machine-to-machine draft ingest — per-tenant HMAC IS the auth (US-011)
   "/api/public/images/(.*)", // Durable public image delivery (US-005)
+  // SEO US-018: branded og:image, fetched by link scrapers with no session.
+  // Tenant comes from the host, plan-gated inside the route, IP rate-limited.
+  "/api/public/og",
+  // SEO US-020: the redirect table middleware itself refreshes from. Fetched by
+  // middleware BEFORE the auth check on every request, so it can never present a
+  // session; the tenant comes from the host it is asked about, and the answer is
+  // a list of paths that already redirect in public.
+  "/api/public/seo/redirects",
   "/onboarding", // Customer onboarding wizard
   "/api/onboarding", // Public onboarding validation/submission
   "/api/consultation(.*)", // Public consultation submission
@@ -91,12 +108,62 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
   // response still gets its precise per-variant policy via applyCsp below.
   requestHeaders.set('Content-Security-Policy', buildCsp({ nonce, variant: 'base' }));
 
+  // SEO US-008: www is the apex under another name — 301 it BEFORE any tenant
+  // resolution. www.<customDomain> reaches the tenant's store and
+  // www.<slug>.budstacks.io reaches the subdomain, instead of falling through
+  // with no tenant hint and serving the BudStacks platform page (the black
+  // hole). 301 rather than the 307 used by the admin host redirects below:
+  // this one is permanent and must pass link equity to the apex.
+  // /api and the Clerk proxy are carved out — they are host-agnostic today and
+  // a 301 would break a non-GET call (webhooks) rather than fix anything.
+  // OPS: only reachable when www.<domain> is provisioned in Cloudflare for SaaS
+  // alongside the apex; an unprovisioned www never gets here.
+  const wwwApexHost = wwwRedirectHost(hostname);
+  if (wwwApexHost && !pathname.startsWith('/api/') && !pathname.startsWith('/__clerk')) {
+    const dest = new URL(url);
+    dest.host = wwwApexHost;
+    dest.protocol = 'https:';
+    dest.port = '';
+    return applyCsp(NextResponse.redirect(dest, 301), nonce, 'base');
+  }
+
   // PRD-205 (AC-2a): the host→tenant-hint classification is shared with the canonical
   // resolver via parseHostToTenantHint, so middleware and lib/tenant-resolver.ts cannot
   // drift. The path REWRITES + the API/platform/clerk-proxy carve-outs (and the dev-only
   // .abacusai.app skip below) stay here — they are middleware-specific, not host→tenant
   // mapping. parseHostToTenantHint reads NEXT_PUBLIC_BASE_DOMAIN itself and strips the port.
   const hint = parseHostToTenantHint(hostname);
+
+  // SEO US-020: an owner's redirects fire HERE, before routing, so a moved page
+  // answers 301 instead of 404 — including for paths that match no route at all,
+  // which is most of what a redirect manager is bought for and the reason this
+  // cannot live in a page or a layout.
+  //
+  // The table is an in-memory, per-host, stale-while-revalidate cache; the
+  // database is unreachable from the edge runtime. A warm instance spends one
+  // Map lookup here and a tenant with no redirects holds an empty table, so the
+  // common path costs nothing. Any failure resolves to "no redirect" and the
+  // request carries on exactly as it did before this feature existed. See
+  // lib/seo/redirect-lookup.ts for the full cost model.
+  const storeRedirect = await resolveStoreRedirect({
+    origin: url.origin,
+    host: hostname,
+    pathname,
+    method: req.method,
+    hint,
+  });
+  if (storeRedirect) {
+    const dest = new URL(url);
+    dest.pathname = storeRedirect.location;
+    // The query survives the move: a campaign link's ?utm_source is the reason
+    // the old URL is still being followed, and dropping it here would break the
+    // attribution the redirect exists to preserve.
+    return applyCsp(
+      NextResponse.redirect(dest, storeRedirect.statusCode),
+      nonce,
+      'base',
+    );
+  }
 
   // PRIORITY 1: Subdomain-based routing (REWRITE)
   // Rewrite slug.budstacks.io/foo -> /store/slug/foo

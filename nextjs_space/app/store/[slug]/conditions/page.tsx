@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant/tenant";
 import { prisma } from "@/lib/db";
+import { generateStorePageMetadata } from "@/lib/seo/generate-page-metadata";
 import ConditionsClient from "./conditions-client";
+
+/** SEO US-002 — tenants.pageSeo.conditions (the LIST page; US-005 owns detail). */
+export function generateMetadata(): Promise<Metadata> {
+  return generateStorePageMetadata("conditions");
+}
 
 export default async function ConditionsPage({
   params,

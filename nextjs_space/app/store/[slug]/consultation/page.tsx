@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import { ConsultationForm } from "@/components/consultation/consultation-form";
 import { notFound } from "next/navigation";
+import { generateStoreRouteMetadata } from "@/lib/seo/generate-page-metadata";
 import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant/tenant";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import ConsultationContent from "./consultation-content";
@@ -8,6 +10,30 @@ import {
   getTenantVerificationMode,
   isSaIdUploadEnabled,
 } from "@/lib/verification-mode";
+
+/**
+ * SEO US-007 — nav- and footer-linked (components/navigation.tsx:104,
+ * components/footer.tsx:163) and, until this story, carrying no title,
+ * description or canonical.
+ *
+ * The mode is resolved the same way the body resolves it, from the same
+ * React-`cache()`d tenant and two pure functions — no extra query. An SA
+ * ID-upload tenant renders a registration + ID form rather than a medical
+ * consultation, and titling that page "Consultation" would describe a page the
+ * visitor never sees. Both modes canonicalise to /consultation, which is the
+ * one URL either form is served at.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await getCurrentTenant();
+  const idMode =
+    !!tenant &&
+    isSaIdUploadEnabled() &&
+    getTenantVerificationMode(tenant) === "ID_UPLOAD";
+
+  return generateStoreRouteMetadata(
+    idMode ? "idUploadRegistration" : "consultation",
+  );
+}
 
 export default async function ConsultationPage({
   params,

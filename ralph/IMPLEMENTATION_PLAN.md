@@ -1,44 +1,39 @@
-# Implementation Plan — Email System Phase 2 (ralph/email-authoring-campaigns)
+# Implementation Plan — SEO Supercharge (ralph/seo-supercharge)
 
 Single source of truth for Ralph progress. Flip `- [ ]` → `- [x]` only on real success (never for BLOCKED).
-Stories: `ralph/prd.json` · PRD: `tasks/prd-email-authoring-campaigns.md` · Review: `docs/EMAIL-SYSTEM-REVIEW.md`
+Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `docs/SEO-SYSTEM-REVIEW.md`
 
-## Workstream A — Foundations & fixes
+## Workstream A — Basic tier: make SEO real (ungated)
 
-- [x] US-001 Newsletter subscribers model
-- [x] US-002 Public subscribe endpoint + wire the storefront stubs
-- [x] US-003 Double opt-in confirmation
-- [x] US-004 Unsubscribe route + suppression enforcement
-- [x] US-005 Durable public image URLs
-- [x] US-006 Test-send endpoint + button
-- [x] US-007 Tenant email-log page
-- [x] US-008 Deterministic email-log linkage
-- [x] US-009 Permission enforcement on email routes
+- [x] US-001 Store-layout metadata foundation
+- [x] US-002 Static store pages consume pageSeo
+- [x] US-003 The Wire post metadata reads post.seo
+- [x] US-004 Product detail metadata
+- [x] US-005 Conditions SEO wired end-to-end
+- [x] US-006 Sitemap correctness + platform sitemap
+- [x] US-007 Canonicals everywhere
+- [x] US-008 Fix the www.* black-hole
+- [x] US-009 Alt-text authoring
+- [x] US-010 SEO route hardening
 
-## Workstream B — Non-technical editor
+## Workstream B — Plan plumbing (thin, Clerk-carried)
 
-- [x] US-010 Branded email shell renderer
-- [x] US-011 Save-path render pipeline (JSON → email-safe HTML)
-- [x] US-012 EmailComposer component (TipTap simple mode)
-- [x] US-013 Merge-tag chips
-- [x] US-014 In-editor image upload
-- [x] US-015 Preview modes + test-send integration
+- [x] US-011 Tenant plan resolution + seoPro gate
+- [x] US-012 Super-admin plan control
+- [x] US-013 Upsell UI states
 
-## Workstream C — Newsletters & campaigns
+## Workstream C — Pro tier (every story gated seoPro)
 
-- [x] US-016 Campaign data model
-- [x] US-017 Campaign CRUD + compose UI
-- [x] US-018 Audience selection v1
-- [x] US-019 Fan-out send with rate cap
-- [x] US-020 Compliance headers + enforced footer
-- [x] US-021 Campaign scheduling
-- [x] US-022 Send blog post as newsletter
-- [x] US-023 Marketing consent capture (parallel worktree agent; integrated at ae6b12e)
-
-## Workstream D — CRM-lite
-
-- [x] US-024 Customer tags (parallel worktree agent; integrated at cb36836)
-- [x] US-025 Segments as saved audiences
-- [x] US-026 Campaign results page
-- [x] US-027 Open/click tracking (per-tenant opt-in)
-- [x] US-028 Reorder-reminder automation (MVP)
+- [x] US-014 JSON-LD engine + Organization/LocalBusiness
+- [x] US-015 Product JSON-LD
+- [x] US-016 Article + BreadcrumbList JSON-LD
+- [x] US-017 FAQPage JSON-LD from conditions
+- [x] US-018 OG image studio — branded generation
+- [x] US-019 OG image studio — real upload
+- [x] US-020 Redirects manager
+- [x] US-021 Slug editing + auto-301 on change
+- [x] US-022 Indexing controls
+- [x] US-023 SEO audit panel
+- [x] US-024 Automatos AI assist — spike + service
+- [x] US-025 AI assist UI
+- [x] US-026 Site verification + GA4 fields

@@ -1,8 +1,15 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant/tenant";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
+import { generateStorePageMetadata } from "@/lib/seo/generate-page-metadata";
 import SupportContent from "../support/support-content";
 import ContactClient from "./contact-client";
+
+/** SEO US-002 — tenants.pageSeo.contact, shared with the page's own tenant fetch. */
+export function generateMetadata(): Promise<Metadata> {
+  return generateStorePageMetadata("contact");
+}
 
 export default async function ContactPage({
   params,

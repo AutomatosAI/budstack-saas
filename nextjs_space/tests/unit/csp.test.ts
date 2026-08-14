@@ -91,6 +91,40 @@ describe("buildCsp", () => {
     expect(scriptSrc).toContain("https://challenges.cloudflare.com");
   });
 
+  it("SEO US-026: allows the GA4 hosts on the store variant only", () => {
+    const store = buildCsp({ nonce: NONCE, variant: "store" });
+    expect(directive(store, "script-src")).toContain(
+      "https://www.googletagmanager.com",
+    );
+    // The two that 'strict-dynamic' does NOT cover, and without which the tag
+    // loads but every hit is blocked.
+    expect(directive(store, "connect-src")).toContain(
+      "https://www.google-analytics.com",
+    );
+    expect(directive(store, "connect-src")).toContain(
+      "https://*.google-analytics.com",
+    );
+    expect(directive(store, "img-src")).toContain(
+      "https://www.google-analytics.com",
+    );
+
+    for (const variant of ["base", "admin"] as CspVariant[]) {
+      const csp = buildCsp({ nonce: NONCE, variant });
+      expect(csp).not.toContain("googletagmanager.com");
+      expect(csp).not.toContain("google-analytics.com");
+    }
+  });
+
+  it("SEO US-026: the GA4 hosts do not disturb the directives they were added to", () => {
+    const store = buildCsp({ nonce: NONCE, variant: "store" });
+    expect(directive(store, "connect-src")).toContain("'self'");
+    expect(directive(store, "connect-src")).toContain(
+      "https://*.clerk.accounts.dev",
+    );
+    expect(directive(store, "img-src")).toContain("'self'");
+    expect(directive(store, "img-src")).toContain("https://*.amazonaws.com");
+  });
+
   it("embeds a nonce token recoverable by the framework's 'nonce-...' parser", () => {
     // Next (app-render) + Clerk both extract the nonce by scanning script-src
     // for a 'nonce-XXX' token. Prove the policy we emit is parseable that way

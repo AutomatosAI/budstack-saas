@@ -43,6 +43,8 @@ const PERMISSION_LABELS: Record<PermissionKey, string> = {
   canEditEmails: "Edit emails",
   canViewTemplates: "View templates",
   canEditTemplates: "Edit templates",
+  canViewSeo: "View SEO",
+  canEditSeo: "Edit SEO",
 };
 
 export function RolesClient({ roles }: { roles: RoleData[] }) {

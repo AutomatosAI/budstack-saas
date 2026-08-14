@@ -352,15 +352,22 @@ export const GET = requirePermission("canViewAnalytics", async (req, { user, ten
       },
     };
 
-    const features = Array.from(getTenantFeatures({ id: tenantId }));
-
     // Verification mode — drives whether the consultations card renders
-    // (ID-upload tenants skip consultations).
+    // (ID-upload tenants skip consultations). `plan` rides along on this same
+    // row so entitlement resolution costs no extra round-trip (SEO US-011).
     const tenantRow = await prisma.tenants.findUnique({
       where: { id: tenantId },
-      select: { countryCode: true, settings: true },
+      select: { countryCode: true, settings: true, plan: true },
     });
     const verificationMode = getTenantVerificationMode(tenantRow ?? {});
+
+    // Entitlements resolve from the operator-controlled plan column. Analytics
+    // keys are granted on every plan today, so this response is unchanged; the
+    // real value passed here is what makes that a decision rather than a
+    // fail-closed accident once analytics picks its own basic/pro split.
+    const features = Array.from(
+      getTenantFeatures({ id: tenantId, plan: tenantRow?.plan }),
+    );
 
     // Real, tenant-scoped recent orders — activity feed, includes cancelled.
     const recentOrdersRows = await prisma.orders.findMany({

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseHostToTenantHint } from "@/lib/parse-host";
+import { parseHostToTenantHint, wwwRedirectHost } from "@/lib/parse-host";
 
 // PRD-205 US-001 (AC-2a) — the one host→tenant-hint mapping that middleware.ts
 // and lib/tenant-resolver.ts both consume. Pure function, node-only.
@@ -31,9 +31,24 @@ describe("PRD-205 AC-2a — parseHostToTenantHint", () => {
     });
   });
 
-  it("returns null for www.<base> and any www.* host", () => {
+  // SEO US-008 — this used to assert the black hole (every www.* host → null,
+  // i.e. served the BudStacks platform page). www is now the apex under another
+  // name: middleware 301s it away, and the hint matches the redirect target so
+  // any caller that still sees a www host resolves the same tenant.
+  it("SEO US-008 — maps a www host to the hint of its apex", () => {
+    expect(parseHostToTenantHint("www.example.com", BASE)).toEqual({
+      kind: "customDomain",
+      host: "example.com",
+    });
+    expect(parseHostToTenantHint("www.acme.budstacks.io", BASE)).toEqual({
+      kind: "subdomain",
+      subdomain: "acme",
+    });
+    // `www` is a RESERVED_SUBDOMAIN, so www.<base> can only mean the platform.
     expect(parseHostToTenantHint("www.budstacks.io", BASE)).toBeNull();
-    expect(parseHostToTenantHint("www.example.com", BASE)).toBeNull();
+    // Degenerate www hosts have no routable apex — still no tenant.
+    expect(parseHostToTenantHint("www.", BASE)).toBeNull();
+    expect(parseHostToTenantHint("www.localhost:3000", BASE)).toBeNull();
   });
 
   it("returns null for the base domain itself", () => {
@@ -69,5 +84,54 @@ describe("PRD-205 AC-2a — parseHostToTenantHint", () => {
       kind: "subdomain",
       subdomain: "preview.acme",
     });
+  });
+});
+
+// SEO US-008 — the www redirect contract middleware.ts enforces before tenant
+// resolution. A non-null return means "301 the request to this host"; null
+// means "not a www request, carry on".
+describe("SEO US-008 — wwwRedirectHost", () => {
+  it("strips www from a custom domain (apex and sub)", () => {
+    expect(wwwRedirectHost("www.example.com")).toBe("example.com");
+    expect(wwwRedirectHost("www.shop.example.com")).toBe("shop.example.com");
+    expect(wwwRedirectHost("www.healingbuds.co.za")).toBe("healingbuds.co.za");
+  });
+
+  it("strips www from a tenant subdomain and from the platform apex", () => {
+    expect(wwwRedirectHost("www.acme.budstacks.io")).toBe("acme.budstacks.io");
+    expect(wwwRedirectHost("www.budstacks.io")).toBe("budstacks.io");
+  });
+
+  it("strips a trailing :port before mapping", () => {
+    expect(wwwRedirectHost("www.example.com:3000")).toBe("example.com");
+  });
+
+  it("matches the www prefix case-insensitively and returns the host as sent", () => {
+    expect(wwwRedirectHost("WWW.example.com")).toBe("example.com");
+  });
+
+  it("returns null for a non-www host (nothing to redirect)", () => {
+    expect(wwwRedirectHost("example.com")).toBeNull();
+    expect(wwwRedirectHost("acme.budstacks.io")).toBeNull();
+    expect(wwwRedirectHost("budstacks.io")).toBeNull();
+    // A label that merely starts with "www" is not a www host.
+    expect(wwwRedirectHost("wwwshop.example.com")).toBeNull();
+  });
+
+  it("returns null in local dev — no https redirect off localhost", () => {
+    expect(wwwRedirectHost("www.localhost")).toBeNull();
+    expect(wwwRedirectHost("www.localhost:3000")).toBeNull();
+    expect(wwwRedirectHost("www.127.0.0.1:3000")).toBeNull();
+  });
+
+  it("returns null when there is no routable apex left", () => {
+    expect(wwwRedirectHost("www.")).toBeNull();
+    expect(wwwRedirectHost("www.local")).toBeNull();
+  });
+
+  it("returns null for empty / missing host", () => {
+    expect(wwwRedirectHost("")).toBeNull();
+    expect(wwwRedirectHost(null)).toBeNull();
+    expect(wwwRedirectHost(undefined)).toBeNull();
   });
 });

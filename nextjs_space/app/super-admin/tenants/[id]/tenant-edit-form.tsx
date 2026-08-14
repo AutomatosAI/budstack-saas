@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { RowPill } from "@/components/admin/shared";
 import { isApexDomain } from "@/lib/domain-utils";
+import { wwwRedirectHost } from "@/lib/parse-host";
+import TenantPlanControl from "./tenant-plan-control";
 
 const sectionTitleStyle = {
   fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
@@ -31,6 +33,8 @@ interface TenantEditFormProps {
     countryCode: string;
     nftTokenId?: string | null;
     settings?: any;
+    /** Raw `tenants.plan` — the operator-set entitlement tier (SEO US-012). */
+    plan: string;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -230,6 +234,9 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
           )}
         </div>
 
+        {/* Entitlement plan — saves on its own, independent of Edit mode */}
+        <TenantPlanControl tenantId={tenant.id} plan={tenant.plan} />
+
         {/* NFT Token ID (read-only) */}
         <div className="space-y-2">
           <Label className="text-bs-fg">NFT Token ID</Label>
@@ -377,8 +384,36 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                     (!r.hostlabel || r.hostlabel === "@"),
                 );
 
+                // SEO US-008: middleware 301s every www host to its apex, so a
+                // www custom domain saved here can never resolve to a store.
+                const wwwApexHost = wwwRedirectHost(customDomain);
+
                 return (
                   <div className="space-y-3">
+                    {wwwApexHost && (
+                      <div className="rounded-bs-sm bg-bs-warning/10 border border-bs-warning/30 p-3 text-sm text-bs-fg space-y-2">
+                        <p className="font-medium">
+                          ⚠️ www custom domain — this store will not resolve
+                        </p>
+                        <p className="text-bs-fg-muted">
+                          BudStacks permanently redirects every{" "}
+                          <code>www.</code> host to its apex, so{" "}
+                          <span className="font-mono text-bs-fg">
+                            {customDomain}
+                          </span>{" "}
+                          sends visitors to{" "}
+                          <span className="font-mono text-bs-fg">
+                            {wwwApexHost}
+                          </span>
+                          . Save{" "}
+                          <span className="font-mono text-bs-fg">
+                            {wwwApexHost}
+                          </span>{" "}
+                          as the custom domain instead, and keep www pointing at
+                          the same CNAME so it 301s onto the store.
+                        </p>
+                      </div>
+                    )}
                     {apex && hasApexCname && (
                       <div className="rounded-bs-sm bg-bs-warning/10 border border-bs-warning/30 p-3 text-sm text-bs-fg space-y-2">
                         <p className="font-medium">
@@ -404,11 +439,21 @@ export default function TenantEditForm({ tenant }: TenantEditFormProps) {
                             apex automatically.
                           </li>
                           <li>
-                            Or use a subdomain like{" "}
-                            <code>www.{customDomain}</code> instead and
+                            Or save a <strong>non-www subdomain</strong> here
+                            instead (e.g. <code>shop.{customDomain}</code>) and
                             redirect the apex to it from the registrar.
                           </li>
                         </ul>
+                        <p className="text-bs-fg-muted">
+                          Do <strong>not</strong> save{" "}
+                          <code>www.{customDomain}</code> as the custom domain:
+                          BudStacks permanently redirects every{" "}
+                          <code>www.</code> host to its apex, so a www custom
+                          domain never resolves to a store. Point www at the
+                          CNAME below as well — it 301s visitors to{" "}
+                          <code>{customDomain}</code> and keeps the search
+                          ranking on one URL.
+                        </p>
                       </div>
                     )}
                     <p className="text-sm text-bs-fg-muted">

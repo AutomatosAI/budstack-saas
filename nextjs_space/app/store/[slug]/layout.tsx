@@ -17,9 +17,54 @@ import type { CSSProperties } from "react";
 import { CartProvider } from "./_contexts/CartContext";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrapper";
-import { FEATURES, getTenantFeatures, hasFeature } from "@/lib/entitlements/features";
+import { Ga4Tag } from "@/components/seo/ga4-tag";
+import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { sanitizeCss, extractGoogleFontsImports } from "@/lib/security/css-utils";
 import { hexToHsl } from "@/lib/color-utils";
+import type { Metadata } from "next";
+import {
+  buildStoreMetadata,
+  STORE_NOT_FOUND_TITLE,
+} from "@/lib/seo/store-metadata";
+
+/**
+ * SEO US-001 — the metadata every store page inherits.
+ *
+ * Both reads are React-`cache()`d and are the SAME calls the layout body makes
+ * below, so this adds no query: `getCurrentTenant()` is deduped per request and
+ * `getTenantWithTemplate()` is the layout's own fetch. Neither needs the tenant
+ * context — `tenants` is not in `tenantScopedModels` (lib/db.ts) and the
+ * branding/template rows come back as nested includes on that one query, which
+ * the scope extension does not intercept.
+ *
+ * The favicon cascade prefers `tenant_branding.faviconUrl` (the column the PRD
+ * names) and falls back to `tenant_templates.faviconUrl`, which is where the
+ * branding route actually writes an uploaded favicon today
+ * (app/api/tenant-admin/branding/route.ts:394).
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await getCurrentTenant();
+  if (!tenant) {
+    return { title: STORE_NOT_FOUND_TITLE };
+  }
+
+  const tenantWithTemplate = await getTenantWithTemplate(tenant.id);
+
+  return buildStoreMetadata({
+    tenantId: tenant.id,
+    // SEO US-018 — the plan gate for the branded og:image fallback. Rides on
+    // the row `getCurrentTenant` already returned; no extra query.
+    plan: tenant.plan,
+    businessName: tenant.businessName,
+    subdomain: tenant.subdomain,
+    customDomain: tenant.customDomain,
+    settings: tenant.settings,
+    faviconRef:
+      tenantWithTemplate?.tenant_branding?.faviconUrl ??
+      tenantWithTemplate?.activeTenantTemplate?.faviconUrl ??
+      null,
+  });
+}
 
 // Extract runtime-safe CSS from a template's styles.css on disk
 // Keeps :root vars, class rules, @keyframes — strips @tailwind/@layer/@apply/body/* selectors
@@ -120,6 +165,12 @@ async function renderTenantStore(
 
   // Get logo URL - prioritize active template logoUrl over legacy settings
   const settings = (tenantWithTemplate.settings as any) || {};
+  // SEO US-026 — the same blob read through the fail-closed parser, for the one
+  // consumer whose input reaches a <script>. Adds no query; the row is already
+  // in hand.
+  const parsedSettings = parseTenantSettings(tenantWithTemplate.settings, {
+    tenantId,
+  });
   let logoUrl: string | null = null;
 
   // 1. Try active template first
@@ -359,15 +410,18 @@ async function renderTenantStore(
           {!skipLayoutChrome && renderFooter()}
           <CookieConsent tenant={tenantWithTemplate} />
 
-          {/* Automatos chatbot: key + tenant toggle + pro entitlement, all
-              evaluated server-side — the script never reaches the browser
-              when any of the three is off (US-003). */}
-          {tenantWithTemplate.automatosApiKey &&
-            tenantWithTemplate.automatosChatbotEnabled &&
-            hasFeature(
-              getTenantFeatures({ id: tenantWithTemplate.id }),
-              FEATURES.AUTOMATOS_CHATBOT,
-            ) && (
+          {/* SEO US-026 — the store's own GA4 tag. Renders nothing unless the
+              tenant is on Pro, has a well-formed measurement id stored, has
+              Analytics Cookies switched on, AND the visitor has consented to
+              that category; the last of those is decided in the browser. */}
+          <Ga4Tag
+            tenantId={tenantId}
+            plan={tenantWithTemplate.plan}
+            settings={parsedSettings}
+          />
+
+          {/* Conditionally render the Tenant's Automatos Widget if configured */}
+          {tenantWithTemplate.automatosApiKey && (
             <AutomatosWidgetWrapper
               apiKey={tenantWithTemplate.automatosApiKey}
               agentId={tenantWithTemplate.automatosAgentId ?? undefined}

@@ -1,21 +1,33 @@
 import { NextResponse } from "next/server";
-import { withTenantAuthParams } from "@/lib/api-auth";
+import { Prisma } from "@prisma/client";
+import { requirePermissionParams } from "@/lib/permissions/require-permission";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
+import { FEATURES } from "@/lib/entitlements/features";
+import { featureDenial } from "@/lib/entitlements/require-feature";
+import { entitySeoWrite, isEmptyEntitySeo } from "@/lib/seo/entity-seo";
+import { INDEXING_SEO_FIELDS, hasIndexingFields } from "@/lib/seo/indexing";
 
 const seoUpdateSchema = z
   .object({
     title: z.string().max(300).optional(),
     description: z.string().max(1000).optional(),
     ogImage: z.string().max(2000).optional(),
+    // US-009 — alt text for the product's imagery. Capped well under the
+    // description limit: an alt string is a sentence, not a paragraph, and a
+    // screen reader reads the whole of it before anything else on the page.
+    imageAlt: z.string().max(300).optional(),
+    // US-022 — the Pro indexing controls, gated on the FIELDS below rather than
+    // on the route: everything above is Basic and must never 403.
+    ...INDEXING_SEO_FIELDS,
   })
   .strict();
 
 // GET - Fetch product SEO
-export const GET = withTenantAuthParams(async (_request, { tenantId }, params) => {
+export const GET = requirePermissionParams("canViewSeo", async (_request, { tenantId }, params) => {
   let id: string;
   try {
     id = parseUuid(params.id);
@@ -36,7 +48,7 @@ export const GET = withTenantAuthParams(async (_request, { tenantId }, params) =
 });
 
 // PUT - Update product SEO
-export const PUT = withTenantAuthParams(async (request, { tenantId }, params) => {
+export const PUT = requirePermissionParams("canEditSeo", async (request, { tenantId }, params) => {
   let id: string;
   try {
     id = parseUuid(params.id);
@@ -59,18 +71,30 @@ export const PUT = withTenantAuthParams(async (request, { tenantId }, params) =>
   } catch (error) {
     return apiError(error, { route: "PUT /api/tenant-admin/seo/products/[id]" });
   }
-  const { title, description, ogImage } = parsed;
+  // US-022 — the plan gate, on the request that asks for the feature. One
+  // lookup, and only when an indexing field is actually present, so a Basic
+  // tenant saving a title pays nothing and is never refused.
+  const writesIndexing = hasIndexingFields(parsed);
+  if (writesIndexing) {
+    const denial = await featureDenial(tenantId, FEATURES.SEO_PRO);
+    if (denial) return denial;
+  }
 
-  // Build SEO object, removing empty values
-  const seo: Record<string, string> = {};
-  if (title?.trim()) seo.title = title.trim();
-  if (description?.trim()) seo.description = description.trim();
-  if (ogImage?.trim()) seo.ogImage = ogImage.trim();
+  // Trims, drops empty values, and — when this save may not write indexing
+  // controls — carries the stored ones through untouched rather than erasing
+  // them. See `entitySeoWrite`.
+  const seo = entitySeoWrite(existingProduct.seo, parsed, {
+    preserveIndexing: !writesIndexing,
+  });
 
   const updated = await prisma.products.update({
     where: { id },
     data: {
-      seo: Object.keys(seo).length > 0 ? seo : null,
+      // DbNull, not a bare null: `null` is not a legal value for a nullable
+      // Json column (lib/email/email-template-content.ts:93-94), so emptying
+      // every field threw instead of clearing the record. Reachable in one
+      // click now that US-009 put a fourth field in this editor.
+      seo: isEmptyEntitySeo(seo) ? Prisma.DbNull : seo,
       updatedAt: new Date(),
     },
     select: { id: true, name: true, seo: true },

@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import {
+  BING_SITE_VERIFICATION_MAX_LENGTH,
+  GA4_MEASUREMENT_ID_MAX_LENGTH,
+  GOOGLE_SITE_VERIFICATION_MAX_LENGTH,
+} from "@/lib/seo/site-verification";
+
 /**
  * Tenant `settings` JSON-blob validation (PRD-204 AC-4; consumed by PRD-208).
  *
@@ -132,6 +138,33 @@ const tenantSettingsShape = {
   // bounds undefined at module-init time.
   reorderReminderEnabled: flag.optional(),
   reorderReminderDays: z.number().int().min(1).max(3650).nullable().optional(),
+
+  // SEO US-026 — search-engine verification + the GA4 tag, as three STRUCTURED
+  // fields rather than a block of head HTML (see lib/seo/site-verification.ts
+  // for why that box does not exist).
+  //
+  // Bounded by length here and NOT by charset, deliberately: this schema is what
+  // `parseTenantSettings` runs on every storefront read and it fails as a unit,
+  // so a token that no longer matched its charset would return `{}` and take the
+  // tenant's tagline, colours and cookie banner down with it. The exact charset
+  // is enforced by the write route on the way in and re-applied by
+  // `readSiteVerification` on the way out, which drops a bad value from the
+  // render instead. Same split as `reorderReminderDays` above.
+  googleSiteVerification: z
+    .string()
+    .max(GOOGLE_SITE_VERIFICATION_MAX_LENGTH)
+    .nullable()
+    .optional(),
+  bingSiteVerification: z
+    .string()
+    .max(BING_SITE_VERIFICATION_MAX_LENGTH)
+    .nullable()
+    .optional(),
+  ga4MeasurementId: z
+    .string()
+    .max(GA4_MEASUREMENT_ID_MAX_LENGTH)
+    .nullable()
+    .optional(),
 
   // Third-party integration credentials / ids (bounded)
   smtp: structural.optional(),

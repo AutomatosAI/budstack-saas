@@ -12,7 +12,7 @@ export const NAV_ITEM_PERMISSIONS: Record<string, PermissionKey | undefined> = {
   customers: "canViewCustomers",
   analytics: "canViewAnalytics",
   branding: "canManageBranding",
-  seo: undefined,
+  seo: "canViewSeo",
   templates: "canViewTemplates",
   emails: "canViewEmails",
   "the-wire": undefined,

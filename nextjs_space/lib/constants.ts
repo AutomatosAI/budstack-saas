@@ -99,6 +99,51 @@ export const EMAIL_TRACKING_MAX_REQUESTS = 300;
 export const EMAIL_TRACKING_WINDOW_MS = 60_000; // 1 minute
 
 /**
+ * Branded OG image generation (SEO US-018). Metered because a card is a WASM
+ * rasterise rather than a byte copy, so an un-capped public image generator is
+ * a CPU amplifier on a shared container — the reason this route is limited at
+ * all, since it neither writes nor reads anything private.
+ *
+ * 60/minute per IP is far above real demand: a scraper fetches one image per
+ * shared link and the CDN absorbs repeats for a day (see the route's
+ * Cache-Control), so only a caller cycling the query string ever reaches it.
+ */
+export const OG_IMAGE_MAX_REQUESTS = 60;
+export const OG_IMAGE_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * The redirect-table feed middleware refreshes from (SEO US-020).
+ *
+ * Metered because it is unauthenticated and costs a query, but metered LOOSELY:
+ * the intended caller is this app's own middleware, whose calls all share one
+ * egress IP and one bucket. A warm instance asks once per host per ten minutes,
+ * so 300/minute is orders of magnitude above real use while still capping an
+ * outsider walking hostnames — and a caller that trips the cap gets a 429 the
+ * lookup reads as "no redirects", never as a stalled storefront.
+ */
+export const SEO_REDIRECT_FEED_MAX_REQUESTS = 300;
+export const SEO_REDIRECT_FEED_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * How long the feed waits for the limiter before answering anyway. Lower than
+ * the OG route's: a storefront request is already blocked behind this one, and
+ * `lib/seo/redirect-lookup.ts` abandons the whole fetch at 800ms regardless —
+ * time spent inside the limiter is time the visitor spends staring at nothing.
+ * Same underlying defect as every other abandonable check (see
+ * `lib/security/abandonable-rate-limit.ts`).
+ */
+export const SEO_REDIRECT_FEED_TIMEOUT_MS = 250;
+
+/**
+ * How long the OG route waits for the limiter before rendering anyway. Same
+ * reasoning and same value as `EMAIL_TRACKING_TIMEOUT_MS`, for the same
+ * underlying defect (see `lib/security/abandonable-rate-limit.ts`): with Redis
+ * unreachable the shared limiter never settles, and a scraper that gives up
+ * waiting renders the link with no preview at all.
+ */
+export const OG_IMAGE_TIMEOUT_MS = 500;
+
+/**
  * How long a tracking route waits for the rate limiter before carrying on
  * without it. Redis normally answers in single-digit milliseconds; anything
  * past this is an outage, and the reader waiting on it is following a link out

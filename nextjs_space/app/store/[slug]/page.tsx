@@ -3,6 +3,13 @@ import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/li
 import { getTenantUrl, getTenantBasePath, getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
 import { prisma } from "@/lib/db";
 import { getFileUrl } from "@/lib/storage/s3";
+import { JsonLd } from "@/components/seo/json-ld";
+import { storeCanonical } from "@/lib/seo/canonical";
+import { seoIndexingDirectives } from "@/lib/seo/indexing";
+import { buildStoreJsonLd, type StoreJsonLdSource } from "@/lib/seo/json-ld";
+import { brandedOgImage } from "@/lib/seo/og-image";
+import { readStorePageSeo } from "@/lib/seo/store-pages";
+import { tenantLogoRef } from "@/lib/seo/tenant-logo";
 
 // Revalidate every 60 seconds — template/product data doesn't change frequently
 // This avoids hitting S3 + DB on every single request
@@ -25,7 +32,61 @@ import { TestimonialsSlider } from "@/components/home/testimonials-slider";
 import { CallToAction } from "@/components/home/call-to-action";
 import { logger } from "@/lib/logger";
 
+/**
+ * SEO US-014 — the store home, with the structured data that identifies it.
+ *
+ * Both reads below are React-`cache()`d and are the SAME calls `StoreHomeContent`
+ * and the layout already make, so the JSON-LD costs no extra query. It is
+ * resolved HERE rather than inside the content function because that function
+ * returns from four different template branches, and the identity nodes belong
+ * on the homepage whichever one renders.
+ *
+ * Nothing here can block the store: `buildStoreJsonLd` returns [] for a Basic
+ * tenant (and for a tenant with no name), and `<JsonLd>` renders nothing for [].
+ */
 export default async function TenantStorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string }>;
+}) {
+  const tenant = await getCurrentTenant();
+  const tenantForSeo = tenant ? await getTenantWithTemplate(tenant.id) : null;
+
+  return (
+    <>
+      {tenantForSeo && <JsonLd nodes={buildStoreJsonLd(storeJsonLdSource(tenantForSeo))} />}
+      <StoreHomeContent searchParams={searchParams} />
+    </>
+  );
+}
+
+/**
+ * The tenant row → JSON-LD inputs.
+ *
+ * The logo comes from `tenantLogoRef`, shared with US-016's Article publisher:
+ * both pages state the SAME Organization `@id`, so resolving the logo two ways
+ * would be two contradictory descriptions of one entity.
+ */
+function storeJsonLdSource(
+  row: NonNullable<Awaited<ReturnType<typeof getTenantWithTemplate>>>,
+): StoreJsonLdSource {
+  return {
+    id: row.id,
+    plan: row.plan,
+    businessName: row.businessName,
+    subdomain: row.subdomain,
+    customDomain: row.customDomain,
+    logoRef: tenantLogoRef(row),
+    businessAddress1: row.businessAddress1,
+    businessAddress2: row.businessAddress2,
+    businessCity: row.businessCity,
+    businessState: row.businessState,
+    businessPostalCode: row.businessPostalCode,
+    businessCountry: row.businessCountry,
+  };
+}
+
+async function StoreHomeContent({
   searchParams,
 }: {
   searchParams: Promise<{ preview?: string }>;
@@ -375,11 +436,11 @@ export async function generateMetadata() {
     },
   });
 
-  // Get SEO config with cascade: custom → default
-  const pageSeo = tenantWithSeo?.pageSeo as {
-    home?: { title?: string; description?: string; ogImage?: string };
-  } | null;
-  const homeSeo = pageSeo?.home;
+  // Get SEO config with cascade: custom → default. Parsed through the shared
+  // fail-closed reader (US-022) rather than cast: the same record now carries
+  // indexing controls, and a cast cannot tell a stored `robots` object from a
+  // string somebody hand-edited into the column.
+  const homeSeo = readStorePageSeo(tenantWithSeo?.pageSeo, "home");
 
   const title =
     homeSeo?.title || `${tenant.businessName} - Medical Cannabis Solutions`;
@@ -388,32 +449,61 @@ export async function generateMetadata() {
     `Premium medical cannabis products and consultations from ${tenant.businessName}`;
 
   // Build base URL for OG images
-  const baseUrl = getTenantBaseUrl({
+  const urlData = {
     subdomain: tenantWithSeo?.subdomain || tenant.subdomain,
     customDomain: tenantWithSeo?.customDomain ?? null,
+  };
+  const baseUrl = getTenantBaseUrl(urlData);
+
+  // US-022 — the homepage's own indexing controls, authored under the `home`
+  // page key like its title. `{}` for a Basic tenant, and the canonical falls
+  // back to `baseUrl` untouched when no override is set, so a store with
+  // nothing configured emits precisely the tags it emitted before.
+  const indexing = seoIndexingDirectives({
+    tenantId: tenant.id,
+    plan: tenant.plan,
+    seo: homeSeo,
   });
+  const canonical = indexing.canonicalOverride
+    ? storeCanonical(urlData, "", { override: indexing.canonicalOverride })
+    : baseUrl;
+
+  // SEO US-018 — the branded store card, only when the owner authored no
+  // ogImage of their own and only for a Pro tenant (null otherwise, and then
+  // this homepage emits exactly the tags it emitted before). Origin-relative:
+  // the store layout's metadataBase absolutises it against this same host.
+  const brandedOg = homeSeo?.ogImage
+    ? null
+    : brandedOgImage({ tenantId: tenant.id, plan: tenant.plan, kind: "store" });
 
   return {
     title,
     description,
+    ...(indexing.robots ? { robots: indexing.robots } : {}),
     openGraph: {
       title,
       description,
-      url: baseUrl,
+      url: canonical,
       siteName: tenant.businessName,
       type: "website",
-      ...(homeSeo?.ogImage && {
-        images: [{ url: homeSeo.ogImage, width: 1200, height: 630 }],
-      }),
+      ...(homeSeo?.ogImage
+        ? { images: [{ url: homeSeo.ogImage, width: 1200, height: 630 }] }
+        : brandedOg
+          ? { images: [brandedOg] }
+          : {}),
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      ...(homeSeo?.ogImage && { images: [homeSeo.ogImage] }),
+      ...(homeSeo?.ogImage
+        ? { images: [homeSeo.ogImage] }
+        : brandedOg
+          ? { images: [brandedOg.url] }
+          : {}),
     },
     alternates: {
-      canonical: baseUrl,
+      canonical,
     },
   };
 }

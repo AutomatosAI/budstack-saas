@@ -4,24 +4,20 @@ import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { apiError } from "@/lib/api-error";
+import { withEntityImageAlt } from "@/lib/seo/entity-seo";
+// US-021 — the slug rule, previously copied into this route and the PATCH one
+// character-for-character. One definition, now also read by the editor.
+import { slugifyPostTitle } from "@/lib/seo/post-slug";
 import { parseJsonBody } from "@/lib/validation/body";
-
-// Slugify helper
-function slugify(text: string) {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-") // Replace spaces with -
-    .replace(/[^\w\-]+/g, "") // Remove all non-word chars
-    .replace(/\-\-+/g, "-"); // Replace multiple - with single -
-}
 
 const postSchema = z.object({
   title: z.string().min(1, "Title is required").max(300),
   content: z.string().min(1, "Content is required").max(100_000),
   excerpt: z.string().max(5000).optional(),
   coverImage: z.string().max(2000).optional(),
+  // US-009 — the editor's name for `posts.seo.imageAlt`; there is no column of
+  // its own. Written into the Json blob on create, below.
+  coverImageAlt: z.string().max(300).optional(),
   published: z.boolean().default(false),
 });
 
@@ -50,8 +46,14 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
     });
     const authorId = localAuthor?.id ?? user.id;
 
-    // Generate base slug
-    let slug = slugify(validatedData.title);
+    // US-009 — `coverImageAlt` is the editor's name for `posts.seo.imageAlt`;
+    // there is no column of its own, so it never reaches `data` directly.
+    const coverSeo = withEntityImageAlt(null, validatedData.coverImageAlt);
+
+    // Generate base slug. A new post has no URL to preserve, so the slug is
+    // title-derived here and editable only afterwards (US-021), where a change
+    // can be redirected from.
+    let slug = slugifyPostTitle(validatedData.title);
 
     // Ensure uniqueness within tenant. findFirst (not findUnique w/ the
     // slug_tenantId compound key): the tenant-scope extension rewrites
@@ -79,6 +81,12 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
         content: validatedData.content,
         excerpt: validatedData.excerpt,
         coverImage: validatedData.coverImage,
+        // A new post has nothing else authored, so the merge starts from null.
+        // The key is OMITTED rather than set when no alt was typed: a bare
+        // `null` is not a legal value for a nullable Json column
+        // (lib/email/email-template-content.ts:93-94), and an absent key leaves
+        // the column at its SQL NULL default — the same end state.
+        ...(coverSeo ? { seo: coverSeo } : {}),
         published: validatedData.published,
         tenantId: tenantId,
         authorId,

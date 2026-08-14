@@ -1,0 +1,37 @@
+-- Operator-controlled entitlement plan (SEO Supercharge, US-011).
+--
+-- The column the #235 entitlement seam (lib/entitlements/features.ts) was built
+-- to consume: 'trial' | 'basic' | 'pro' | 'custom'. Business model — a 3-month
+-- all-features trial, then $99 basic / $169 pro / bespoke custom.
+--
+-- THIS COLUMN IS THE SOURCE OF TRUTH. Deliberately NOT `tenants.settings`: that
+-- JSON is tenant-writable through the settings PATCH routes, so a tenant could
+-- grant itself Pro. The Clerk org's publicMetadata.plan is a best-effort MIRROR
+-- written on plan change and never read back (Clerk Billing was evaluated and
+-- rejected — Stripe underneath, cannabis-adjacent).
+--
+-- TEXT, not an enum, ON PURPOSE. Plan values are read through a fail-closed
+-- parser (lib/entitlements/plan.ts) that maps anything unrecognised to 'basic',
+-- so an unknown value degrades a tenant to the paid floor instead of erroring a
+-- request or, worse, granting everything. A CHECK constraint or a Postgres enum
+-- would turn a bad value into a write failure and would drift from the Prisma
+-- datamodel, which models this as a plain String.
+--
+-- DEFAULT 'trial' is fail-OPEN for existing rows, which is correct here and only
+-- here: every tenant on the platform today is inside the launch window that the
+-- seam already grants all features to (features.ts trial policy, 2026-08), so
+-- backfilling them as 'trial' preserves exactly what they can do right now. The
+-- entitlement DENIAL path is the fail-closed one.
+--
+-- Metadata-only change on a live table: one NOT NULL column with a constant
+-- default, which PostgreSQL 11+ applies without rewriting the heap.
+--
+-- Canonical form verified against:
+--   prisma migrate diff --from-schema-datamodel <pre-story schema> \
+--     --to-schema-datamodel prisma/schema.prisma --script
+-- => ALTER TABLE "tenants" ADD COLUMN "plan" TEXT NOT NULL DEFAULT 'trial';
+-- (IF NOT EXISTS added per repo convention — see 20260814000000_add_seo_permissions.)
+--
+-- See tasks/prd-seo-supercharge.md (US-011, FR-5).
+
+ALTER TABLE "tenants" ADD COLUMN IF NOT EXISTS "plan" TEXT NOT NULL DEFAULT 'trial';

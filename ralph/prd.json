@@ -1,451 +1,420 @@
 {
   "project": "BudStack SaaS",
-  "branchName": "ralph/email-authoring-campaigns",
-  "description": "Email System Phase 2 — non-technical authoring (TipTap branded-shell editor), newsletter subscribers with consent/unsubscribe, durable public image URLs, campaigns with rate-capped fan-out, blog-to-newsletter, CRM-lite. Source: tasks/prd-email-authoring-campaigns.md + docs/EMAIL-SYSTEM-REVIEW.md.",
+  "branchName": "ralph/seo-supercharge",
+  "description": "SEO Supercharge — Basic $99 (make the write-only SEO actually render: layout metadata, sitemaps, canonicals, favicon, alt text, www fix) + Pro $169 gated on seoPro (JSON-LD, OG studio, redirects, indexing controls, audit panel, Automatos AI assist, verification/GA4). Thin Clerk-carried plan plumbing, no payments. Source: tasks/prd-seo-supercharge.md + docs/SEO-SYSTEM-REVIEW.md.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Newsletter subscribers model",
-      "description": "As the platform, I need a tenant-scoped subscriber table so storefront signups persist.",
+      "title": "Store-layout metadata foundation",
+      "description": "As a store owner, I want every page of my store to carry my brand in search results instead of the platform's.",
       "acceptanceCriteria": [
-        "Prisma model newsletter_subscribers: id, tenantId (FK tenants, cascade), email, status enum SubscriberStatus (PENDING|CONFIRMED|UNSUBSCRIBED|SUPPRESSED), source, consentAt, confirmedAt, unsubscribedAt, token (unique), createdAt, updatedAt",
-        "@@unique([tenantId, email]) and index on [tenantId, status]",
-        "Migration authored under prisma/migrations following existing pattern (do NOT run migrate dev against the configured DB — see PROMPT validation rules)",
-        "pnpm prisma validate and pnpm prisma generate pass",
-        "Typecheck passes"
+        "app/store/[slug]/layout.tsx gains generateMetadata: title template '%s | {businessName}' with businessName default, tenant description fallback, metadataBase from getTenantBaseUrl(tenant)",
+        "Per-tenant favicon via icons from tenant_branding.faviconUrl with platform /favicon.svg fallback",
+        "openGraph.siteName = businessName at layout level",
+        "Test asserts the layout metadata shape — no store page can fall through to the platform title 'BudStacks - Medical Cannabis SaaS Platform'",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 1,
       "passes": false,
-      "notes": "Schema: nextjs_space/prisma/schema.prisma — follow existing snake_case model style (email_logs L31, email_templates L50). Migrations run on boot in deploy; no manual apply step. Wire the tenants relation like email_logs does."
+      "notes": "THE defect: app/store/[slug]/layout.tsx exports no metadata, so every non-home page falls back to app/layout.tsx:32-49 platform title. faviconUrl written at app/api/tenant-admin/branding/route.ts:394, rendered nowhere. getTenantBaseUrl: lib/tenant/tenant-utils.ts:67-73 (prefers customDomain). metadataBase exists NOWHERE in the app today. Layout already loads the tenant — reuse its fetch (React cache()), do not add a duplicate query."
     },
     {
       "id": "US-002",
-      "title": "Public subscribe endpoint + wire the storefront stubs",
-      "description": "As a storefront visitor, I want my newsletter signup to actually register so the store can email me.",
+      "title": "Static store pages consume pageSeo",
+      "description": "As a store owner, my About/Contact/Support metadata edits must actually render.",
       "acceptanceCriteria": [
-        "POST /api/storefront/newsletter/subscribe: public, tenant resolved from request host, zod-validated email, rate-limited with the existing rate-limit util",
-        "Upserts PENDING row with fresh token; never downgrades CONFIRMED/UNSUBSCRIBED status (unit test)",
-        "Response is generic success regardless of prior state (no subscriber enumeration)",
-        "components/sections/ctas/Newsletter.tsx and components/home/educational-content.tsx POST to the endpoint; failure shows an error state (success copy no longer lies)",
+        "about, contact, support, conditions (list) pages get generateMetadata reading tenants.pageSeo[key] with the cascade custom -> sensible default -> businessName",
+        "SEO Manager page-key list matches reality: faq key retired or remapped to /support (app/store/[slug]/faq/page.tsx:4-5 redirects today); admin list and consuming routes agree end-to-end",
+        "Per-page canonical emitted via the US-007 helper (build the helper here if implementing before US-007, then US-007 just spreads it)",
         "Typecheck passes",
         "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT if dev server unavailable)"
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 2,
       "passes": false,
-      "notes": "Dead stubs: Newsletter.tsx:24-27 (setSubmitted only), educational-content.tsx:25-32 (toast only). Host-based tenant resolution: lib/tenant-resolver.ts / lib/parse-host.ts — same mechanism storefront pages use. Find the existing API rate-limit util (grep lib for rateLimit) before writing one."
+      "notes": "pageSeo grep proves about/contact/faq are write-only today: only app/store/[slug]/page.tsx:379-382 consumes 'home'. Admin key list hardcoded at app/tenant-admin/seo/seo-page-client.tsx:49-54; API enum at app/api/tenant-admin/seo/pages/route.ts:10. Keep enum + admin list + rendered pages in ONE shared constant."
     },
     {
       "id": "US-003",
-      "title": "Double opt-in confirmation",
-      "description": "As a store owner, I want subscribers confirmed so my list is consented and deliverable.",
+      "title": "The Wire post metadata reads post.seo",
+      "description": "As a store owner, the post SEO I write must render — today it is silently discarded.",
       "acceptanceCriteria": [
-        "Subscribe enqueues a confirmation email via sendEmail (templateName newsletterConfirm) containing the signed confirm link",
-        "GET /api/storefront/newsletter/confirm?token= sets CONFIRMED + confirmedAt, invalidates the token for reuse, redirects to the storefront with a notice",
-        "Expired/unknown token renders a friendly error, no state change",
-        "newsletterConfirm added to the tenant event allowlist and TenantEventMapper, with a seeded default template",
+        "app/store/[slug]/the-wire/[postSlug]/page.tsx cascade: post.seo.title || post.title; post.seo.description || post.excerpt; post.seo.ogImage || post.coverImage",
+        "openGraph.type 'article' with publishedTime (createdAt) and author name; twitter summary_large_image; canonical to the post URL on the primary host",
+        "Wire list page (the-wire/page.tsx) gains metadata",
         "Typecheck passes",
-        "Tests pass (targeted vitest run)"
+        "Tests pass (targeted vitest run)",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 3,
       "passes": false,
-      "notes": "Allowlist: app/api/tenant-admin/email-mappings/route.ts:15-23. Mapper UI: components/admin/email/TenantEventMapper.tsx:24-60. Seed pattern: scripts/seed-email-templates.ts (react-email component rendered with {{placeholder}} props). sendEmail: lib/email/email.ts:23."
+      "notes": "Current metadata at the-wire/[postSlug]/page.tsx:16-33 ignores post.seo entirely (no twitter, no canonical, no article type). posts.seo written by app/api/tenant-admin/seo/posts/[id]/route.ts (works, unread). Cover images may be pre-US-005-email presigned URLs — absolutise/pass through as stored; do NOT re-sign."
     },
     {
       "id": "US-004",
-      "title": "Unsubscribe route + suppression enforcement",
-      "description": "As a recipient, I want one-click unsubscribe that is honored on every future marketing send.",
+      "title": "Product detail metadata",
+      "description": "As a store owner, my product SEO must render on product pages — the page is a client component emitting no metadata at all.",
       "acceptanceCriteria": [
-        "Prisma model email_suppressions: tenantId, email, reason (unsubscribed|bounced|manual), createdAt, @@unique([tenantId, email]); migration authored",
-        "GET /api/storefront/newsletter/unsubscribe?token= shows a confirmation page; POST with the same token unsubscribes — POST must work with no cookies/headers (RFC 8058 one-click target)",
-        "Unsubscribe sets subscriber UNSUBSCRIBED + writes a suppression row",
-        "Worker: jobs with category 'marketing' check suppression before sending; suppressed -> email_logs FAILED with reason 'suppressed', no send, no retry (return, don't throw)",
-        "Unit tests: suppression blocks marketing send; transactional sends unaffected; jobs without category default to transactional",
+        "generateMetadata for app/store/[slug]/products/[id]/page.tsx: server-side fetch of the SAME product source the page uses (Dr Green live API by id), cached/deduped per request",
+        "Cascade: local products.seo override (row matched via drGreenStrainId) -> product name + truncated description",
+        "OG image from product image (absolute URL); canonical to /products/{id} on the primary host",
+        "SEO Manager product preview URL fixed to the real id route (seo-page-client.tsx:204 links /products/{slug} which 404s)",
         "Typecheck passes",
-        "Tests pass (targeted vitest run)"
+        "Tests pass (targeted vitest run)",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 4,
       "passes": false,
-      "notes": "Worker: scripts/email-worker.ts — add the check near the PRD-220 expiry guard (L76-81); mirror its return-not-throw pattern. Job payload gains optional 'category'; older in-flight payloads have none — must not break. Worker DB access must stay bypassTenantScope-safe (TENANT_CONTEXT_STRICT landmine, PR #209)."
+      "notes": "Product URLs are Dr Green id-keyed: product-card.tsx:59 links /products/{product.id}; resolution via app/api/store/[slug]/products/route.ts:53-55 fetchProducts(country, config).find(p => p.id === productId). Local rows store the link as drGreenStrainId (app/api/tenant-admin/products/sync/route.ts:58). The page is 'use client' — generateMetadata lives in the server file; wrap the shared fetch in React cache() so page + metadata share one call."
     },
     {
       "id": "US-005",
-      "title": "Durable public image URLs",
-      "description": "As a tenant admin, I want uploaded images to keep working forever so emails and blog covers don't break after an hour.",
+      "title": "Conditions SEO wired end-to-end",
+      "description": "As a store owner, condition pages are my content-marketing landing pages — they need editable, rendering SEO.",
       "acceptanceCriteria": [
-        "GET /api/public/images/[...key] streams from S3, only under the tenants/{tenantId}/uploads/ prefix (reuse s3-tenant-guard assertion; reject path traversal)",
-        "Sets Cache-Control: public, max-age=31536000, immutable and the correct Content-Type",
-        "Non-image keys rejected 404 (extension allowlist + content-type check); unknown key -> 404 without leaking S3 errors",
-        "Upload API responses include the durable URL alongside the presigned one",
-        "The Wire cover-image flow stores/uses the durable URL for new uploads (no backfill of old posts)",
+        "SEO Manager gains a Conditions tab; PUT /api/tenant-admin/seo/conditions/[id] cloned from the products route shape (withTenantAuthParams + ownership findFirst {id, tenantId})",
+        "Condition detail page generateMetadata reads conditions.seo cascade; canonical emitted",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill (image loads; check response headers)"
+        "Tests pass (targeted vitest run)",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 5,
       "passes": false,
-      "notes": "S3 client + presigned getFileUrl: lib/storage/s3.ts:29-130. Guard: lib/storage/s3-tenant-guard.ts. The upload route comment at app/api/tenant-admin/upload/route.ts:50-53 documents this exact follow-up. Wire cover upload: app/tenant-admin/the-wire/post-form.tsx:46-54."
+      "notes": "conditions.seo Json? exists at prisma/schema.prisma:278, fully orphaned (no tab, no route, no metadata). entityType 'condition' already declared in components/admin/seo/SeoEditorModal.tsx:24. Route template: app/api/tenant-admin/seo/products/[id]/route.ts. NOTE: conditions ids are plain strings (model has id String @id, no uuid default) — do not parseUuid; validate charset/length instead."
     },
     {
       "id": "US-006",
-      "title": "Test-send endpoint + button",
-      "description": "As an admin editing a template, I want to send it to myself so I can see it in a real inbox.",
+      "title": "Sitemap correctness + platform sitemap",
+      "description": "As a search engine, every sitemap URL must resolve and reflect reality.",
       "acceptanceCriteria": [
-        "POST /api/tenant-admin/email-templates/[id]/test-send and the super-admin equivalent",
-        "Renders subject+body with the same Handlebars helpers the worker registers, using a canned sample-variable set per event type; queues to the logged-in admin's email with templateName 'test-send'",
-        "Rate-limited (5/min/tenant); tenant route enforces canEditEmails via requirePermission",
-        "'Send test' button in the EmailEditor header with success/failure toast",
+        "Product entries emit the real id route /products/{id} (today: /products/{slug} at app/store/[slug]/sitemap.xml/route.ts:49 — 100% dead)",
+        "deletedAt: null filter on products; conditions detail pages included; retired static entries (faq) removed",
+        "lastmod from updatedAt on dynamic entries",
+        "Platform app/sitemap.ts + app/robots.ts for budstacks.io (marketing + /learn; store hosts continue to use their own routes)",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+        "Tests pass (sitemap XML asserted: URL shape, filters, lastmod)"
       ],
       "priority": 6,
       "passes": false,
-      "notes": "Extract multiply/toFixed helpers from scripts/email-worker.ts:30-35 into a shared module (e.g. lib/email/handlebars-helpers.ts) imported by both worker and route — do not duplicate. Sample variable sets: new shared module; seed values from COMMON_VARIABLES in components/admin/email/EmailEditor.tsx:32-46. requirePermission pattern: see team routes (PRD-301)."
+      "notes": "Tenant sitemap: app/store/[slug]/sitemap.xml/route.ts (7 hardcoded static paths at :29-37; products query :15-18 ignores deletedAt from prisma/schema.prisma:676; posts already filter published :20). robots: app/store/[slug]/robots.txt/route.ts. Platform-level app/ has NO sitemap.ts/robots.ts and public/ has neither. Middleware matcher (middleware.ts:247) already passes .xml/.txt — the new platform files serve only on non-tenant hosts (check host in the handler or rely on route precedence; document which)."
     },
     {
       "id": "US-007",
-      "title": "Tenant email-log page",
-      "description": "As a tenant admin, I want to see what was sent, to whom, and why it failed.",
+      "title": "Canonicals everywhere",
+      "description": "As a store owner with a custom domain, my subdomain twin must not compete with my real domain in search.",
       "acceptanceCriteria": [
-        "GET /api/tenant-admin/email-logs: withTenantAuth + canViewEmails, paginated, filters status + date range, search by recipient",
-        "New 'Activity' tab on app/tenant-admin/emails/page.tsx: table (recipient, subject, template, status, timestamp) + detail drawer showing smtpResponse/errorMessage",
+        "Shared helper storeCanonical(tenant, path) -> primary host (customDomain preferred, matching getTenantBaseUrl), path preserved",
+        "Every store page's metadata emits alternates.canonical via the helper (home already does at app/store/[slug]/page.tsx:416; products list, product detail, wire list/detail, about/contact/support/conditions all gain it through US-001..005 + this story sweeps the remainder)",
+        "Unit test: customDomain preferred when set, subdomain otherwise, path preserved, no trailing-slash drift",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+        "Tests pass (targeted vitest run)"
       ],
       "priority": 7,
       "passes": false,
-      "notes": "email_logs model: prisma/schema.prisma L31-48 (indexed [tenantId, createdAt]). Tabs pattern already on that page (Templates/Events). Reuse bs-table styles per components/admin/email/EmailTemplateList.tsx."
+      "notes": "Duplicate-content today: a tenant with customDomain serves the identical store on {slug}.budstacks.io with canonicals nowhere but home. Helper lives in lib/seo/ (new dir this run owns). US-022 adds canonicalOverride later — build the helper with an options bag so the override slots in without signature churn."
     },
     {
       "id": "US-008",
-      "title": "Deterministic email-log linkage",
-      "description": "As the platform, I need SENT/FAILED to update the right log row — the (recipient, subject) heuristic mis-attributes under concurrency.",
+      "title": "Fix the www.* black-hole",
+      "description": "As a tenant on a custom domain, www. must reach my store or apex — never the BudStacks platform page.",
       "acceptanceCriteria": [
-        "MailerService.send creates the email_logs row FIRST and passes logId in the BullMQ job payload",
-        "Worker updates by logId; falls back to the legacy heuristic only when logId is absent (in-flight jobs during deploy)",
-        "Both markLogFailed and the SENT path migrated",
-        "Unit tests cover logId path and legacy-fallback path",
+        "Middleware: www.{customDomain} 301s to the apex custom domain; www.{slug}.budstacks.io 301s to {slug}.budstacks.io — before tenant resolution",
+        "lib/parse-host.ts:36 behavior updated in concert; tests/unit/parse-host.test.ts:34-37 (which deliberately pins the old black-hole) rewritten to assert the redirect contract",
+        "Super-admin guidance text at app/super-admin/tenants/[id]/tenant-edit-form.tsx:407-409 corrected — it currently RECOMMENDS the broken www configuration",
+        "Journal records the ops dependency: Cloudflare SaaS must have www hostnames provisioned per custom domain for the redirect to be reachable — documented, not assumed",
         "Typecheck passes",
         "Tests pass (targeted vitest run)"
       ],
       "priority": 8,
       "passes": false,
-      "notes": "MailerService: lib/email/mailer.ts:20-66 (currently enqueues THEN logs — reverse the order). Worker log matching: scripts/email-worker.ts:42-70 and 219-251."
+      "notes": "parse-host.ts:36: `if (host.startsWith(\"www.\")) return null;` — any www host falls through to platform routes. Middleware host handling around middleware.ts:124-194 (existing 307 redirect patterns to copy). Use 301 (permanent) for SEO equity. Do not touch the tenant-admin/super-admin host redirects."
     },
     {
       "id": "US-009",
-      "title": "Permission enforcement on email routes",
-      "description": "As a store owner, I want team-member email access governed by the existing permission keys, not just role.",
+      "title": "Alt-text authoring",
+      "description": "As a store owner, I want to write image alt text — for accessibility and image search.",
       "acceptanceCriteria": [
-        "canViewEmails enforced on GET, canEditEmails on POST/PUT/DELETE across app/api/tenant-admin/email-templates*, email-mappings, email-logs, and any email routes added by earlier stories",
-        "Owner-admin unaffected; member without permission gets 403 in the standard error shape",
-        "Integration test: member with canViewEmails only cannot PUT a template",
+        "Product images: alt-text editor surface in the SEO Manager product entry writing product_images.altText (column exists, no editor anywhere); product detail already renders it (app/store/[slug]/products/[id]/page.tsx:291); product-card alt priority corrected to altText || name",
+        "Post cover: alt field in the-wire/post-form.tsx (persist location chosen and documented — posts.seo.coverAlt recommended, no migration); Wire pages render it instead of alt={post.title}",
         "Typecheck passes",
-        "Tests pass (targeted vitest run)"
+        "Tests pass (targeted vitest run)",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 9,
       "passes": false,
-      "notes": "Keys exist: lib/permissions/permission-keys.ts:25-26 (currently nav-only: lib/permissions/nav-permissions.ts:17). Copy the requirePermission usage pattern from the PRD-301 team routes. This is a slice of the known ~31-route sweep — email routes only, do not widen scope."
+      "notes": "Auto-derived alts today: product-card.tsx:77 alt={product.name}; the-wire pages alt={post.title} (:111, :166, :322); post-form.tsx:168 hardcodes 'Cover preview'. product_images model carries altText already — check how product images sync from Dr Green (sync route may overwrite rows; upsert must preserve altText)."
     },
     {
       "id": "US-010",
-      "title": "Branded email shell renderer",
-      "description": "As a tenant admin, I want my logo, colors, and footer applied automatically so I only ever edit the message body.",
+      "title": "SEO route hardening",
+      "description": "As a platform, SEO writes need the same governance email got in Phase 2.",
       "acceptanceCriteria": [
-        "EmailShell react-email component: header (tenant logo via durable URL, primaryColor accents), content slot, footer (businessName, businessAddress, {{unsubscribeUrl}} slot rendered only for category 'marketing')",
-        "Server util renderEmailBody(bodyHtml, tenant, opts) returns the shell-wrapped full document",
-        "businessAddress read from tenant settings; add the settings key if absent (settings is Json)",
-        "Deterministic snapshot test of rendered output for a fixture tenant",
+        "canViewSeo/canEditSeo permission keys added (lib/permissions/permission-keys.ts) and enforced on ALL SEO routes via requirePermission/requirePermissionParams; nav gate set at lib/permissions/nav-permissions.ts:15 (currently undefined = ungated); page gate via requirePagePermission on /tenant-admin/seo",
+        "seo/pages PUT race fixed: per-key update instead of whole-blob read-modify-write (app/api/tenant-admin/seo/pages/route.ts:47-68 is last-write-wins)",
+        "Owner-admin and legacy null-teamRole resolve ALL_TRUE — asserted (email US-009 precedent)",
+        "check-auth-wrappers stays green (requirePermission module already allow-listed)",
         "Typecheck passes",
         "Tests pass (targeted vitest run)"
       ],
       "priority": 10,
       "passes": false,
-      "notes": "Pattern: the 9 react-email components in emails/ and render() usage in lib/email/email.ts:53-151. Shell must survive lib/security/email-sanitize.ts allowlist (tables, inline styles OK; no <button> — buttons are styled <a>). EMAIL-CRITICAL: every asset URL the shell embeds (logo included) must be ABSOLUTE — US-005's publicUrl is origin-relative by design (storefront CSP img-src 'self'), and email clients have no origin; prefix the tenant base URL the way US-003's confirm links do (getTenantBaseUrl)."
+      "notes": "Wrapper conversion pattern: the email run's US-009 (see archived ralph/archive/2026-08-12-email-authoring-campaigns/progress.txt) — drop-in swap, table-driven permission tests with the REAL resolver. Per-key pageSeo update: read-modify-write only the single key inside a targeted update, or use Prisma Json path update; document the choice."
     },
     {
       "id": "US-011",
-      "title": "Save-path render pipeline (JSON -> email-safe HTML)",
-      "description": "As the platform, I need editor output converted to inbox-safe HTML while the worker contract stays untouched.",
+      "title": "Tenant plan column + entitlement matrix (extend the #235 seam)",
+      "description": "As the platform, I need the operator-controlled plan column the entitlement seam was built to consume, plus SEO feature keys in its matrix.",
       "acceptanceCriteria": [
-        "Add juice dependency (pnpm add, lockfile staged by name)",
-        "Pipeline util: TipTap JSON -> HTML (server-side generateHTML) -> EmailShell wrap -> juice inline CSS -> sanitizeEmailHtml -> contentHtml; TipTap JSON persisted to email_templates.contentJson",
-        "Literal {{variable}} text survives the whole pipeline verbatim (unit test) — worker Handlebars.compile keeps working with zero worker changes",
-        "Hostile fixture test: no <script>/on* handler/javascript: URL survives; sanitize is the LAST step",
-        "Pasted data: images larger than 10KB rejected with a clear error; 3-hosted-image fixture output stays under EMAIL_HTML_MAX_LENGTH (200k)",
-        "Template POST/PUT at both admin levels accept contentJson and run the pipeline; raw contentHtml-only path unchanged",
+        "tenants.plan column ('trial'|'basic'|'pro'|'custom', default 'trial') + hand-authored migration (no migrate dev/db push; validate + generate + diff vs prisma migrate diff canonical output)",
+        "lib/entitlements/features.ts FEATURES gains SEO_CORE 'seo.core' + SEO_PRO 'seo.pro'; getTenantFeatures resolves from a plan matrix per its own docstring contract: trial/custom -> ALL features; pro -> ALL; basic -> all analytics.* keys UNCHANGED (their basic/pro split is the analytics module's pending decision — do NOT decide it here) + seo.core, NOT seo.pro",
+        "Plan parsing fails closed: unknown/unreadable column value -> treated as 'basic' (asserted); absent value impossible (column default trial)",
+        "requireFeature(FEATURES.SEO_PRO) server gate composing with requirePermission* — 403 with a distinct 'upgrade_required' error shape; existing analytics call sites (features[] in API responses, hasFeature checks) keep working unchanged (asserted by running their suites)",
+        "Clerk org publicMetadata.plan is a MIRROR only (written best-effort on plan change, NEVER read as source of truth) — the column is authoritative by explicit decision: tenants.settings is tenant-writable, and Clerk Billing was rejected (Stripe-underneath, cannabis-adjacent)",
+        "Unit tests: matrix per plan value, fail-closed parsing, 403 shape, permission+feature composition",
         "Typecheck passes",
         "Tests pass (targeted vitest run)"
       ],
       "priority": 11,
       "passes": false,
-      "notes": "Sanitizer: lib/security/email-sanitize.ts (EMAIL_HTML_MAX_LENGTH L5). Routes: app/api/super-admin/email-templates/route.ts + [id], app/api/tenant-admin/email-templates/route.ts + [id]. TipTap 3 is a dependency — use @tiptap/core generateHTML with the same extension set as US-012's composer (share the extension list in one module). EMAIL-CRITICAL: final contentHtml must contain only ABSOLUTE image src URLs — absolutise any relative /api/public/images/... src with the tenant base URL inside the pipeline (email clients have no origin)."
+      "notes": "The seam SHIPPED in PR #235 (analytics session, 2026-08-13): lib/entitlements/features.ts — read its docstring first; it is the contract ('when the operator-controlled tenants.plan column lands, getTenantFeatures resolves from the plan matrix instead — call sites are already wired and do not change'). Business model (Gerard): 3 months all-features trial -> lock -> $99 basic / $169 pro / custom. tenants model at prisma/schema.prisma:770-830 — add ONLY the column. Gate mechanics mirror lib/permissions/require-permission.ts. REPO TRAP (#235 session): lib/db.ts prisma export is any-widened — annotate every callback param explicitly or TS7006 fails the build."
     },
     {
       "id": "US-012",
-      "title": "EmailComposer component (TipTap simple mode)",
-      "description": "As a non-technical admin, I want to write an email like a document — headings, lists, buttons, dividers, images.",
+      "title": "Super-admin plan control",
+      "description": "As the super admin, I set a tenant's plan until billing exists.",
       "acceptanceCriteria": [
-        "New EmailComposer on TipTap 3: StarterKit + image + link + text-align + a button node (renders styled <a> with editable label/URL) + divider",
-        "EmailEditor gains Simple/Advanced tabs: Simple (composer) is default for new templates and templates with contentJson; Advanced is the existing HTML textarea",
-        "Switching Simple -> Advanced clears contentJson only after an explicit confirm dialog",
-        "Legacy contentHtml-only templates open in Advanced with a banner explaining Simple mode",
-        "Component is fetch-free (data + callbacks in props) and shared by both super-admin and tenant-admin pages",
+        "Plan selector (trial/basic/pro/custom) on app/super-admin/tenants/[id]/tenant-edit-form.tsx; writes tenants.plan and best-effort MIRRORS to Clerk org publicMetadata.plan (sync failure -> warning surfaced, column stays authoritative)",
+        "Audit-log entry on plan change (existing audit util)",
         "Typecheck passes",
+        "Tests pass (targeted vitest run)",
         "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 12,
       "passes": false,
-      "notes": "Reference components/editor/tiptap.tsx (The Wire's editor) for setup — do NOT modify it. Host: components/admin/email/EmailEditor.tsx (textarea at L190-195, preview iframe L210-215). Extension list shared with US-011's server-side generateHTML."
+      "notes": "Clerk org update pattern: app/api/onboarding/route.ts:169-172 (clerkClient organizations.updateOrganization publicMetadata). Audit util: grep lib for createAuditLog (email US-023 used it). Super-admin routes: withSuperAdmin family."
     },
     {
       "id": "US-013",
-      "title": "Merge-tag chips",
-      "description": "As a non-technical admin, I want to insert 'Customer name' from a menu instead of typing {{userName}}.",
+      "title": "Upsell UI states",
+      "description": "As a Basic tenant, I should see what Pro does and how to get it — not a blank space.",
       "acceptanceCriteria": [
-        "Mention-style TipTap node triggered by '{{' or a 'Personalize' toolbar menu; renders as a labeled chip in-editor",
-        "Serializes to literal {{variable}} text; round-trips through the US-011 pipeline (unit test)",
-        "Tag list from a shared module keyed by event type (move COMMON_VARIABLES out of EmailEditor.tsx); free-text custom tag allowed",
+        "Plan surfaced to admin UI server-side (resolved prop through the SEO page loader — no client-side Clerk parsing)",
+        "Locked cards appear ONLY for plan 'basic' (trial and custom tenants have all features — trial is the 3-month launch window and must see pro features working, not locked): feature name, one-line value prop, 'Upgrade to Pro — $169/mo' CTA linking to a static upgrade/contact page (no checkout)",
+        "UI lock is presentation only — the US-011 server gate remains the boundary (asserted: a Basic tenant's direct API call 403s regardless of UI)",
         "Typecheck passes",
+        "Tests pass (targeted vitest run)",
         "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 13,
       "passes": false,
-      "notes": "COMMON_VARIABLES currently at components/admin/email/EmailEditor.tsx:32-46. US-006 also consumes the shared variable-set module — keep one source."
+      "notes": "SEO Manager shell: app/tenant-admin/seo/page.tsx + seo-page-client.tsx (tabs). Locked-card styling per bs-* kit. Later C stories each add their tab/section behind this lock — build the LockedFeatureCard once, reusable, taking {title, value-prop, children-when-unlocked}."
     },
     {
       "id": "US-014",
-      "title": "In-editor image upload",
-      "description": "As a non-technical admin, I want to drag or pick an image and have it just work in the sent email.",
+      "title": "JSON-LD engine + Organization/LocalBusiness",
+      "description": "As a Pro tenant, my store emits Organization + LocalBusiness structured data automatically.",
       "acceptanceCriteria": [
-        "Composer image button opens a file picker and accepts drag-drop; uploads via POST /api/tenant-admin/upload",
-        "Inserts the durable public URL from US-005 (never the presigned URL)",
-        "Client-side max size 2MB with a clear error; server magic-byte validation already exists",
-        "Inserted images width-constrained to the shell content width by default",
+        "lib/seo/json-ld.ts: typed builders + ONE renderer serializing with </script>-safe escaping (< -> \\u003c) — hostile fixture asserted (a businessName containing </script><script> cannot break out)",
+        "Store home renders Organization + LocalBusiness: name, url (primary host), logo (durable public URL), PostalAddress from tenants.businessAddress1..businessCountry — partial address degrades to Organization only, never a half-empty PostalAddress",
+        "Rendered via <script type=\"application/ld+json\"> compatible with the CSP nonce plumbing (lib/security/csp, middleware.ts:83-91)",
+        "Gated: Basic tenants render NO JSON-LD (asserted)",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+        "Tests pass (targeted vitest run)"
       ],
       "priority": 14,
       "passes": false,
-      "notes": "Upload route: app/api/tenant-admin/upload/route.ts (magic-byte validation L33-38, tenant prefix L47). Depends on US-005's durable URL in the upload response."
+      "notes": "ZERO JSON-LD exists today (grep-verified: no ld+json/schema.org anywhere). Business address columns: prisma/schema.prisma:781-787. Logo: tenant_branding — route through the public-image URL helper from the email run (lib/storage/public-image-url.ts) + absolutise with getTenantBaseUrl. JSON-LD script tags may need nonce or CSP allowance for inline JSON — check lib/security/csp for how existing inline scripts are handled; application/ld+json is not executable but strict CSPs still gate it."
     },
     {
       "id": "US-015",
-      "title": "Preview modes + test-send integration",
-      "description": "As an admin, I want to see the email as recipients will, on mobile and desktop, before activating it.",
+      "title": "Product JSON-LD",
+      "description": "As a Pro tenant, product pages emit Product+Offer schema so listings get rich results.",
       "acceptanceCriteria": [
-        "Preview pane renders the FULL pipeline output (shell-wrapped, inlined, sanitized) in the existing sandboxed iframe — not raw editor HTML",
-        "Width toggle: 375px / 800px",
-        "Sample variables substituted in preview (same canned sets as US-006)",
-        "'Send test' (US-006) reachable from the composer toolbar",
+        "Product detail renders Product (name, description, absolute image, brand=businessName) + Offer (price, priceCurrency, availability InStock/OutOfStock from stock)",
+        "THC/CBD content and strainType as additionalProperty when present",
+        "Emitted only for Pro AND only when price exists (no empty Offer objects)",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+        "Tests pass (targeted vitest run)"
       ],
       "priority": 15,
       "passes": false,
-      "notes": "Add a preview endpoint or server action that runs the US-011 pipeline with sample variables (client must not duplicate the pipeline). Iframe: components/admin/email/EmailEditor.tsx:210-215, keep sandbox attrs. CRASH RECOVERY (2026-08-13): a prior US-015 iteration died mid-story (machine sleep) AFTER writing its edits but BEFORE journaling/committing — its uncommitted work for exactly this story is sitting in the working tree (editor pages, EmailComposer*, EmailHtmlPane, EmailEditor, sample-variables, test-send). The dirty-tree rule is waived for THOSE files only, this once: review them as a starting draft, verify/finish/replace on your judgement, then journal and commit normally. Do not treat the dirty tree as an abort condition."
+      "notes": "Product data source = the same Dr Green fetch as US-004's metadata (share the cached fetch). Product fields incl. thcContent/cbdContent/strainType on the local products model. Currency: check what the product payload carries vs tenant config — do not hardcode € (known admin bug class)."
     },
     {
       "id": "US-016",
-      "title": "Campaign data model",
-      "description": "As the platform, I need campaign state with per-recipient delivery tracking.",
+      "title": "Article + BreadcrumbList JSON-LD",
+      "description": "As a Pro tenant, Wire posts emit Article schema and store pages emit breadcrumbs.",
       "acceptanceCriteria": [
-        "Prisma model campaigns: id, tenantId, name, subject, contentHtml, contentJson, status enum CampaignStatus (DRAFT|SCHEDULED|SENDING|SENT|CANCELLED), audience Json, scheduledAt, sentAt, stats Json, timestamps",
-        "Prisma model campaign_recipients: id, campaignId, email, userId nullable, status enum (PENDING|QUEUED|SENT|FAILED|SUPPRESSED), emailLogId nullable, error nullable; @@unique([campaignId, email]), index [campaignId, status]",
-        "users.marketingConsentAt DateTime? added",
-        "Migration authored; pnpm prisma validate + generate pass",
-        "Typecheck passes"
+        "Post pages: Article (headline, image, datePublished/dateModified, author name, publisher = Organization ref)",
+        "BreadcrumbList on posts, product detail, condition detail — Home -> section -> item with primary-host URLs (US-007 helper)",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)"
       ],
       "priority": 16,
       "passes": false,
-      "notes": "Same snake_case model conventions. users model is load-bearing (PRD-208 note around schema L680-718) — only ADD the nullable column, change nothing else on it."
+      "notes": "Builders extend lib/seo/json-ld.ts. posts fields at prisma/schema.prisma:638-654 (createdAt/updatedAt for published/modified; author via users relation — posts-author FK class fixed in PR #226, resolve the local users row name)."
     },
     {
       "id": "US-017",
-      "title": "Campaign CRUD + compose UI",
-      "description": "As a tenant admin, I want to create a campaign using the same composer I use for templates.",
+      "title": "FAQPage JSON-LD from conditions",
+      "description": "As a Pro tenant, condition pages turn their existing FAQ content into rich results.",
       "acceptanceCriteria": [
-        "app/api/tenant-admin/campaigns (+[id]): withTenantAuth + requirePermission(canEditEmails); create/update limited to DRAFT|SCHEDULED",
-        "Campaign content runs the US-011 pipeline with category 'marketing'; save rejects content whose rendered output lacks the unsubscribe slot (shell provides it by default)",
-        "'Campaigns' tab under app/tenant-admin/emails/: list (status, audience size, sent count) + compose page (subject, EmailComposer, audience picker placeholder, save draft)",
-        "SMTP settings surface short guidance copy: newsletters need a real ESP SMTP, Gmail app-password caps ~500/day",
+        "Condition detail renders FAQPage from conditions.faqs Json — shape validated (question+answer strings), malformed entries skipped without breaking the page",
+        "Emitted only when >=1 valid Q/A pair and tenant is Pro",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+        "Tests pass (targeted vitest run)"
       ],
       "priority": 17,
       "passes": false,
-      "notes": "Tab + page patterns from app/tenant-admin/emails/page.tsx. Keep API handlers thin; pipeline util from US-011 does the heavy lifting."
+      "notes": "conditions.faqs Json? at prisma/schema.prisma:270-275 — inspect actual stored shape on a seeded row before assuming ({question, answer} vs {q, a}); parse with a fail-closed Zod schema like the email run's segment-filter pattern."
     },
     {
       "id": "US-018",
-      "title": "Audience selection v1",
-      "description": "As a tenant admin, I want to choose who receives the campaign and see the count before sending.",
+      "title": "OG image studio — branded generation",
+      "description": "As a Pro tenant, every share gets a branded OG image even when I never uploaded one.",
       "acceptanceCriteria": [
-        "Audience options stored as structured Json: subscribers (CONFIRMED), consented customers (marketingConsentAt set), or both deduped by email",
-        "GET /api/tenant-admin/campaigns/[id]/audience-count returns the live count AFTER suppression and status filtering",
-        "Recipients materialized into campaign_recipients at send time, not draft time",
-        "Unit test: dedupe + suppression exclusion",
+        "Dynamic OG route via next/og ImageResponse (1200x630): tenant logo + brand color + entity title, for home/products/posts/conditions",
+        "Wired as the OG fallback in US-001..005 metadata when no explicit ogImage set — Pro only; Basic keeps static fallbacks",
+        "Route is public (tenant from host), registered in BOTH auth gates' allowlists (middleware isPublicRoute + AUTH_PUBLIC_ROUTES) with reason; check-auth-wrappers stays green",
+        "Runtime choice (edge vs nodejs) documented in-code with the reason",
         "Typecheck passes",
-        "Tests pass (targeted vitest run)"
+        "Tests pass (targeted vitest run)",
+        "Verify in browser using dev-browser skill (render the route directly)"
       ],
       "priority": 18,
       "passes": false,
-      "notes": "Customer query pattern: app/api/tenant-admin/customers/route.ts (role PATIENT, tenant scope, GDPR-erased rows excluded at L22 — replicate that exclusion)."
+      "notes": "No ImageResponse/@vercel/og usage exists (grep-verified). next/og ships with Next 14 — no new dependency expected; if one IS needed, lockfile discipline applies. Docker note: this stays inside the Next bundle (no worker import) — no runner-image COPY risk, but state that check in the journal explicitly (email-p2 hotfix lesson)."
     },
     {
       "id": "US-019",
-      "title": "Fan-out send with rate cap",
-      "description": "As the platform, I must send one message per recipient, rate-limited per tenant, with progress and cancel — never a single message exposing all addresses.",
+      "title": "OG image studio — real upload",
+      "description": "As a Pro tenant, I can upload a custom OG image instead of pasting URLs.",
       "acceptanceCriteria": [
-        "POST /api/tenant-admin/campaigns/[id]/send: flips to SENDING, materializes recipients, enqueues ONE BullMQ job per recipient carrying campaignId, recipientId, logId, category 'marketing'",
-        "Per-tenant rate cap via delayed-job spacing from env CAMPAIGN_RATE_PER_MINUTE (default 60)",
-        "Worker: per-recipient variables (name, unsubscribeUrl from recipient token); suppression checked at send time; updates campaign_recipients.status + emailLogId",
-        "Campaign auto-flips to SENT when no PENDING/QUEUED recipients remain; list/compose UI shows sent/failed/suppressed progress",
-        "POST /api/tenant-admin/campaigns/[id]/cancel sets CANCELLED; worker drops jobs whose campaign is cancelled (status check before send)",
-        "Integration test with fake transport: 3 recipients -> 3 discrete messages with distinct To: headers",
+        "The disabled upload button (components/admin/seo/SeoEditorModal.tsx:147-157) becomes real: uploads via /api/tenant-admin/upload, stores the DURABLE public URL — never the presigned URL (email-run rule)",
+        "1200x630 guidance + client size cap + preview in the modal",
+        "Pro-gated; Basic keeps the URL-entry field",
         "Typecheck passes",
-        "Tests pass (targeted vitest run)"
+        "Tests pass (targeted vitest run)",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 19,
       "passes": false,
-      "notes": "NEVER pass string[] to a single sendMail 'to'. Worker payload changes must tolerate legacy shapes (US-008 pattern). Worker stays bypassTenantScope-safe. Queue defaults: lib/queue.ts:21-37."
+      "notes": "Upload endpoint returns {url (presigned), publicUrl (durable)} since email US-005/US-014 — consume publicUrl, throw if absent (email-p2 US-014 pattern in lib/email/email-image-upload.ts). OG URLs in metadata must be ABSOLUTE (metadataBase from US-001 handles relative /api/public/images/... paths — assert the final og:image is absolute)."
     },
     {
       "id": "US-020",
-      "title": "Compliance headers + enforced footer",
-      "description": "As a store owner, I need marketing email to meet Gmail/Yahoo bulk-sender and POPIA/GDPR requirements by default.",
+      "title": "Redirects manager",
+      "description": "As a Pro tenant, I can create 301s so moved content keeps its equity.",
       "acceptanceCriteria": [
-        "Marketing sends set List-Unsubscribe (mailto + https) and List-Unsubscribe-Post: List-Unsubscribe=One-Click via nodemailer headers option",
-        "Worker refuses a marketing send whose HTML lacks the rendered unsubscribe URL: email_logs FAILED reason 'missing-footer', no send, no retry",
-        "Transactional category completely unaffected (test)",
+        "Prisma model seo_redirects: tenantId, fromPath, toPath, statusCode (301|308), createdAt; @@unique([tenantId, fromPath]); hand-authored migration; registered in tenantScopedModels",
+        "Middleware lookup on store hosts: exact normalized-path match -> redirect before render; zero-cost for tenants with no redirects (per-tenant existence cached with TTL or a single indexed query — choice documented with the reasoning)",
+        "CRUD UI in a Pro SEO Manager tab: fromPath normalized (leading slash, no query/hash), self/loop rejection (A->B->A refused at write), reserved paths refused (/api, /tenant-admin, /super-admin, sitemap.xml, robots.txt)",
+        "Writes gated requirePermission(canEditSeo) + requirePlanFeature(seoPro); redirects only FIRE for Pro tenants (Basic tenant's stored rows go dormant, documented)",
         "Typecheck passes",
-        "Tests pass (targeted vitest run)"
+        "Tests pass (targeted vitest run)",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 20,
       "passes": false,
-      "notes": "Worker sendMail call: scripts/email-worker.ts:208-213 — add headers only for category 'marketing'. One-click POST target is US-004's headerless unsubscribe route."
+      "notes": "Middleware is edge-adjacent — check how middleware.ts reaches the DB today (it resolves tenants — follow the same client path; if tenant resolution is fetch-based, redirects may need a lightweight internal API or to piggyback the tenant payload). Do NOT add per-request DB latency for the 99% no-redirect case; the tenant resolution already in middleware can carry a hasRedirects flag."
     },
     {
       "id": "US-021",
-      "title": "Campaign scheduling",
-      "description": "As a tenant admin, I want to schedule a campaign for later.",
+      "title": "Slug editing + auto-301 on change",
+      "description": "As a Pro tenant, renaming a post must not orphan its old URL.",
       "acceptanceCriteria": [
-        "Compose page date-time picker sets SCHEDULED + scheduledAt; a delayed BullMQ job triggers the US-019 send path at time",
-        "Rescheduling replaces the delayed job; cancel works while SCHEDULED",
-        "Send-time guard re-checks status — a cancelled campaign never sends (test)",
+        "Post slug editable in the-wire/post-form.tsx (pattern-validated; uniqueness loop reused from app/api/tenant-admin/posts/route.ts:60-68)",
+        "On slug change for Pro: seo_redirects row (old wire path -> new, 301) written automatically; existing redirects pointing AT the old path re-pointed to the new (no chains); Basic slug edit warns the old URL will 404",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+        "Tests pass (targeted vitest run)"
       ],
       "priority": 21,
       "passes": false,
-      "notes": "Use BullMQ delayed jobs on the existing queue or a small campaign queue in lib/queue.ts; store the jobId on the campaign for replace/cancel."
+      "notes": "Slug currently derived at create only (slugify at posts/route.ts:10-17), no editor. PATCH route: app/api/tenant-admin/posts/[id]/route.ts (mixed withAuth + manual role check — while touching it, note but do NOT widen scope to convert it; that's the sweep). Chain-collapse mirrors email US-021's replace-not-stack scheduler discipline."
     },
     {
       "id": "US-022",
-      "title": "Send blog post as newsletter",
-      "description": "As a tenant admin, I want one click to turn a Wire post into a campaign draft.",
+      "title": "Indexing controls",
+      "description": "As a Pro tenant, I control what gets indexed — noindex, canonical overrides, sitemap exclusion.",
       "acceptanceCriteria": [
-        "'Send as newsletter' action on published Wire posts creates a DRAFT campaign: subject = post title; body = post content as composer doc + cover image (durable URL) + excerpt intro + 'Read more' button linking to the post",
-        "Content passes the US-011 pipeline; opens in campaign compose for review — never auto-sends",
+        "seo Json extended (Zod on every SEO PUT route): robots {noindex, nofollow} booleans, canonicalOverride (validated absolute https URL), sitemapExclude boolean",
+        "Metadata rendering honors them for Pro (robots meta tag; canonicalOverride beats the US-007 helper); sitemap skips excluded entries",
+        "SeoEditorModal grows a Pro 'Indexing' section; Basic sees the locked state; stored values from a downgraded tenant go dormant (never rendered) — asserted",
         "Typecheck passes",
+        "Tests pass (targeted vitest run)",
         "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 22,
       "passes": false,
-      "notes": "Posts API: app/api/tenant-admin/posts (+[id]). Wire UI: app/tenant-admin/the-wire/posts-list.tsx + post-form.tsx. Post HTML -> composer doc via @tiptap/core generateJSON with the shared extension list."
+      "notes": "US-007's helper was built with an options bag for exactly this. Fail-closed parsing per the segment-filter pattern: an unreadable robots value renders nothing rather than a wrong directive. noindex + sitemapExclude interact — audit (US-023) will flag noindexed-but-in-sitemap; keep flags independent here."
     },
     {
       "id": "US-023",
-      "title": "Marketing consent capture",
-      "description": "As a storefront customer, I choose whether to receive marketing, and the store records when I consented.",
+      "title": "SEO audit panel",
+      "description": "As a Pro tenant, I get a Yoast-class score telling me exactly what to fix.",
       "acceptanceCriteria": [
-        "Unticked-by-default checkbox ('Email me offers and updates') on storefront signup and checkout; checked -> users.marketingConsentAt = now, unchecked -> null",
-        "Admin customer detail shows consent state; manual toggle writes/clears the timestamp with an audit-log entry",
-        "Unsubscribe (US-004) also clears marketingConsentAt for a matching customer email in that tenant",
+        "lib/seo/audit.ts checks: missing/short/long titles+descriptions per entity type; missing OG images; missing alt text (product_images.altText, post cover); duplicate titles across the store; sitemap health (entry count, product-URL id-form validity, deletedAt leakage); redirect loops/chains; noindex-on-sitemap-included warnings",
+        "GET /api/tenant-admin/seo/audit (canViewSeo + seoPro), result cached ~15min per tenant (in-process or DB timestamp — documented); each finding carries a deep link to the editor that fixes it",
+        "Audit tab in SEO Manager: weighted score (weights documented in-code), grouped findings, clean-state UI",
         "Typecheck passes",
+        "Tests pass (targeted vitest run)",
         "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 23,
       "passes": false,
-      "notes": "Signup route: app/api/signup/route.ts. Locate the storefront checkout form before editing — touch ONLY the consent checkbox; payment logic is fraud-sensitive and out of scope. Audit-log util exists (grep lib for auditLog)."
+      "notes": "Deep-link pattern: email US-023/026 (findings -> the screen that fixes them). Keep each check a pure function over fetched rows — table-driven tests. Cache must be tenant-scoped and impersonation-safe (keyed on tenantId, not session)."
     },
     {
       "id": "US-024",
-      "title": "Customer tags",
-      "description": "As a tenant admin, I want to tag customers so I can target them.",
+      "title": "Automatos AI assist — spike + service",
+      "description": "As the platform, AI SEO runs on the tenant's own Automatos AI credentials — the cross-sell is the architecture.",
       "acceptanceCriteria": [
-        "Prisma model customer_tags: tenantId, userId, tag; @@unique([tenantId, userId, tag]); migration authored",
-        "Add/remove tags on customer detail page; requires canEditCustomers",
-        "Tag filter on customers list UI + API filter param",
+        "Spike documented IN THE JOURNAL: what the per-tenant Automatos API (tenants.automatosApiKey/automatosAgentId, prisma/schema.prisma:794-795) supports server-side — endpoint shape, auth, latency; sources: public/automatos-widget.js wire calls + docs/PRDS/prd-automatos-ai-integration.md",
+        "lib/seo/ai-assist.ts: provider interface + Automatos implementation; strict output contracts (title <=60 chars, description <=160, alt <=120; JSON-validated; contract violation -> refused, never silently truncated)",
+        "No credentials -> feature reports 'unavailable' with the Connect-Automatos upsell shape; NO platform-key fallback in this PRD",
+        "Per-tenant rate limit (fail-closed for this write-adjacent path); prompts contain ONLY the tenant's own entity content (asserted — no cross-tenant data)",
+        "If the spike concludes the API cannot serve completions: BLOCK this story with the finding documented (RALPH_BLOCKED) — do not improvise another provider",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+        "Tests pass (targeted vitest run)"
       ],
       "priority": 24,
       "passes": false,
-      "notes": "Customers pages: app/tenant-admin/customers/ (+[id], customers-table.tsx). Permission keys at lib/permissions/permission-keys.ts:9-12."
+      "notes": "Automatos is a chat widget today (render points app/store/[slug]/layout.tsx:362-372, bundle public/automatos-widget.js) — the widget's network calls reveal the API base + message shape. Provider interface first so a future provider swap is config, not surgery. Secrets: automatosApiKey is a stored credential — never log it, never echo in errors. CROSS-SESSION FINDINGS (Automatos-extras session, PRD #236, 2026-08-13): the Automatos SDK has NO SEO widget — spike the server API directly, not the widget SDK; and the config split-brain is resolved: the tenants COLUMNS (automatosApiKey/automatosAgentId) are canonical, any settings-JSON copies are dead — read only the columns."
     },
     {
       "id": "US-025",
-      "title": "Segments as saved audiences",
-      "description": "As a tenant admin, I want reusable audience filters — 'hasn't ordered in 60 days' is the reorder play.",
+      "title": "AI assist UI",
+      "description": "As a Pro tenant, one click drafts my meta title, description, or alt text — I review, I save.",
       "acceptanceCriteria": [
-        "Prisma model segments: tenantId, name, filter Json; migration authored",
-        "Filter grammar v1: last-order age (days), order count (>= / = 0), has tag, KYC-approved, marketing consent — always ANDed with consent + suppression",
-        "Segment builder UI with live count preview; campaign audience picker (US-018) accepts a segment",
-        "Unit tests for each filter axis",
+        "'Generate with Automatos AI' buttons in SeoEditorModal (title + description from entity name/description/content) and in the US-009 alt editors",
+        "Generated text lands in the field as an editable draft — NEVER auto-saved; normal save flow applies",
+        "Loading/error/unavailable states (unavailable = Connect-Automatos upsell card); audit-log entry per generation",
+        "Server endpoint gated canEditSeo + seoPro + availability; rate limit surfaced in the UI error",
         "Typecheck passes",
         "Tests pass (targeted vitest run)",
         "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 25,
       "passes": false,
-      "notes": "Implement filters against existing users/orders relations (customers route shows the shapes). Keep the grammar a typed union, not free-form Json."
+      "notes": "Depends on US-024's service; if US-024 BLOCKED, this story is BLOCKED with one journal line pointing at it (do not build UI against a dead service). Draft-not-save mirrors the email composer's review-before-send philosophy."
     },
     {
       "id": "US-026",
-      "title": "Campaign results page",
-      "description": "As a tenant admin, I want to see how a campaign did.",
+      "title": "Site verification + GA4 fields",
+      "description": "As a Pro tenant, I can verify Search Console and wire GA4 without anyone injecting raw HTML.",
       "acceptanceCriteria": [
-        "Campaign detail: delivered/failed/suppressed counts, failure reasons from linked email_logs, unsubscribes attributed via recipient token",
-        "Export recipients CSV gated by canExportCustomers",
+        "Structured tenant-settings fields (lib/validation/tenant-settings.ts): googleSiteVerification + bingSiteVerification (token charset/length pinned), ga4MeasurementId (G-[A-Z0-9]{4,} pattern) — STRUCTURED FIELDS ONLY, raw head HTML is out of scope by design",
+        "Verification tokens render as meta tags in the store layout (Pro); GA4 script renders CSP-nonce-safe (middleware.ts:83-91 nonce plumbing) and only when the cookie-consent analytics flag permits (tenant-settings.ts:111 analyticsEnabled — integration behavior documented in-code)",
+        "Settings UI section (Pro-gated) with the three fields + validation errors",
         "Typecheck passes",
+        "Tests pass (targeted vitest run)",
         "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 26,
       "passes": false,
-      "notes": "campaign_recipients.emailLogId (US-008/US-019) is the join. CSV export: stream, don't buffer the whole list."
-    },
-    {
-      "id": "US-027",
-      "title": "Open/click tracking (per-tenant opt-in)",
-      "description": "As a tenant admin, I may want open/click stats — but tracking is off by default and disclosed.",
-      "acceptanceCriteria": [
-        "Tenant setting emailTrackingEnabled (default false)",
-        "When on: 1px pixel route + link-wrapping redirect route (signed recipient token, no PII in URLs), recorded per campaign_recipients",
-        "Counts surface on the US-026 results page",
-        "Privacy-policy template gains a tracking disclosure clause when enabled",
-        "When off: sent HTML contains no tracking artifacts (test)",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 27,
-      "passes": false,
-      "notes": "Link wrapping happens in the US-011/US-019 render path, gated on the tenant setting. Policy templates: lib/legal/ (render-policy.ts token pattern)."
-    },
-    {
-      "id": "US-028",
-      "title": "Reorder-reminder automation (MVP)",
-      "description": "As a store owner, I want an automatic 'time to reorder?' email — the core BudStacks retention play.",
-      "acceptanceCriteria": [
-        "Tenant-configurable rule: N days (default 60) after a customer's last DELIVERED order, send mapped template reorderReminder — only if consented, not suppressed, and no newer order; once per customer per window",
-        "Daily trigger via BullMQ repeatable job, safe if multiple workers run (single-instance guard)",
-        "reorderReminder added to event allowlists + TenantEventMapper with a seeded default template; per-tenant toggle default OFF",
-        "Unit tests: window logic, consent/suppression gates, idempotency",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 28,
-      "passes": false,
-      "notes": "Record last-reminded-at (new column or Json on the customer/tenant) to enforce once-per-window. Repeatable job registration must be idempotent across worker restarts (BullMQ dedupes by repeat opts — verify)."
+      "notes": "tenantSettingsShape is the one shared read/write schema (email US-010 added businessAddress there — same pattern). GA4 consent posture: PRD assumes STRICT (no script until consent) — Open Question 3; if Gerard flips to Consent Mode, only this story's render condition changes. CSP: the GA script src needs the CSP script-src to allow googletagmanager.com — check lib/security/csp for how domains are added; document the addition."
     }
   ]
 }

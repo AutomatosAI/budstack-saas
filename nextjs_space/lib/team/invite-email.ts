@@ -1,6 +1,7 @@
 import { render } from "@react-email/components";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email/email";
+import { platformBaseUrl } from "@/lib/seo/platform-url";
 import TeamInviteEmail from "@/emails/team-invite";
 
 export interface SendTeamInviteEmailInput {
@@ -10,14 +11,6 @@ export interface SendTeamInviteEmailInput {
   role: string;
   token: string;
   inviterName?: string | null;
-}
-
-function appBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (process.env.NEXT_PUBLIC_BASE_DOMAIN) {
-    return `https://${process.env.NEXT_PUBLIC_BASE_DOMAIN}`;
-  }
-  return "https://budstacks.io";
 }
 
 /**
@@ -32,7 +25,7 @@ export async function sendTeamInviteEmail(input: SendTeamInviteEmailInput): Prom
     .findFirst({ select: { logoUrl: true, primaryColor: true } })
     .catch(() => null);
 
-  const acceptUrl = `${appBaseUrl()}/accept-invite?token=${encodeURIComponent(token)}`;
+  const acceptUrl = `${platformBaseUrl()}/accept-invite?token=${encodeURIComponent(token)}`;
 
   const html = await render(
     TeamInviteEmail({

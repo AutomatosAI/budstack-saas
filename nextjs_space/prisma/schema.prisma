@@ -257,6 +257,26 @@ model segments {
   @@index([tenantId, updatedAt])
 }
 
+/// SEO US-020 — one row per 301, authored by the store owner.
+///
+/// `fromPath` is stored NORMALISED AND LOWER-CASED (lib/seo/redirects.ts) — that
+/// is what makes @@unique([tenantId, fromPath]) a real duplicate guard and what
+/// middleware compares the incoming pathname against. `toPath` keeps its case.
+/// Both are store-relative paths; an absolute URL is refused at the boundary,
+/// because an unvalidated external destination is an open redirect.
+model seo_redirects {
+  id         String   @id @default(uuid())
+  tenantId   String
+  fromPath   String
+  toPath     String
+  statusCode Int      @default(301)
+  createdAt  DateTime @default(now())
+  tenants    tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, fromPath])
+  @@index([tenantId, createdAt])
+}
+
 model conditions {
   id              String   @id
   slug            String
@@ -804,6 +824,7 @@ model tenants {
   // with lib/security/encryption, like settings.smtp.password).
   automatosWireSecret    String?
   pageSeo                Json?
+  plan                   String                    @default("trial") // SEO US-011: operator-set entitlement plan (trial|basic|pro|custom). Source of truth — Clerk org metadata is a write-only mirror.
   deletedAt              DateTime? // PRD-208 soft-delete (recoverable; NULL = live)
   conditions             conditions[]
   consultations          consultations[]
@@ -821,6 +842,7 @@ model tenants {
   campaigns              campaigns[]
   customer_tags          customer_tags[]
   segments               segments[]
+  seo_redirects          seo_redirects[]
   orders                 orders[]
   posts                  posts[]
   products               products[]
@@ -957,6 +979,8 @@ model role_permissions {
   canEditEmails        Boolean  @default(false)
   canViewTemplates     Boolean  @default(false)
   canEditTemplates     Boolean  @default(false)
+  canViewSeo           Boolean  @default(false)
+  canEditSeo           Boolean  @default(false)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   tenants              tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)

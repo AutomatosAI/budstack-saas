@@ -113,6 +113,10 @@ export const AUDIT_ACTIONS = {
   TENANT_ACTIVATED: "tenant.activated",
   TENANT_DEACTIVATED: "tenant.deactivated",
   TENANT_DELETED: "tenant.deleted",
+  // SEO US-012: super-admin moves a tenant between entitlement plans. Until
+  // billing exists this is the ONLY way a tenant's plan changes, so the row is
+  // the whole provenance trail for what a tenant was entitled to and when.
+  TENANT_PLAN_CHANGED: "tenant.plan_changed",
 
   // Product Management
   PRODUCT_CREATED: "product.created",
@@ -129,6 +133,17 @@ export const AUDIT_ACTIONS = {
   // Consultation Management
   CONSULTATION_SUBMITTED: "consultation.submitted",
   CONSULTATION_STATUS_CHANGED: "consultation.status_changed",
+
+  // SEO US-025: an AI draft was generated for one SEO field, on the tenant's
+  // own Automatos account. Records that a machine wrote the sentence a human
+  // then chose to keep — nothing is saved by the generating route itself.
+  SEO_AI_DRAFT_GENERATED: "seo.ai_draft_generated",
+
+  // SEO US-026: the store's Search Console / Bing / GA4 identifiers changed.
+  // Worth a row because these decide what a third party is told about the
+  // storefront's traffic, and because "who turned analytics on" is the first
+  // question asked after a privacy complaint.
+  SEO_VERIFICATION_UPDATED: "seo.verification_updated",
 
   // Branding
   BRANDING_UPDATED: "branding.updated",

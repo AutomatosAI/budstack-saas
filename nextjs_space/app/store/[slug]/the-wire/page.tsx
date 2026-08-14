@@ -5,8 +5,12 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Newspaper } from "lucide-react";
 import { posts } from "@prisma/client";
+import type { Metadata } from "next";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
+import { entityImageAlt } from "@/lib/seo/entity-seo";
+import { buildWireIndexMetadata } from "@/lib/seo/post-metadata";
+import { STORE_NOT_FOUND_TITLE } from "@/lib/seo/store-metadata";
 
 export const revalidate = 60;
 
@@ -28,6 +32,30 @@ function getCategoryStyle(category?: string | null) {
   if (!category) return categoryColors.news;
   const key = category.toLowerCase();
   return categoryColors[key] || categoryColors.news;
+}
+
+/**
+ * SEO US-003 — the index had no metadata at all, so it inherited the layout's
+ * store-wide title and description and carried no canonical. It is not in
+ * `STORE_SEO_PAGE_KEYS` (the SEO Manager does not offer it), so the defaults
+ * below are the whole story; making it authorable is a one-line addition to
+ * lib/seo/store-pages.ts whenever the PRD asks for it.
+ *
+ * `getCurrentTenant()` is React-`cache()`d and is the page body's own call, so
+ * this adds no query.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await getCurrentTenant();
+  if (!tenant) return { title: STORE_NOT_FOUND_TITLE };
+
+  return buildWireIndexMetadata({
+    businessName: tenant.businessName,
+    subdomain: tenant.subdomain,
+    customDomain: tenant.customDomain,
+    // US-018 — the plan gate for the branded og:image fallback.
+    tenantId: tenant.id,
+    plan: tenant.plan,
+  });
 }
 
 export default async function TheWirePage({ params }: TheWirePageProps) {
@@ -163,7 +191,11 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
                         {featuredPost.coverImage ? (
                           <img
                             src={featuredPost.coverImage}
-                            alt={featuredPost.title}
+                            // US-009 — authored alt, title as the floor.
+                            alt={entityImageAlt(
+                              featuredPost.seo,
+                              featuredPost.title,
+                            )}
                             className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                           />
                         ) : (
@@ -319,7 +351,8 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
                               {post.coverImage ? (
                                 <img
                                   src={post.coverImage}
-                                  alt={post.title}
+                                  // US-009 — authored alt, title as the floor.
+                                  alt={entityImageAlt(post.seo, post.title)}
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
                               ) : (
