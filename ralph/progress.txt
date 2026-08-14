@@ -2972,3 +2972,130 @@ FLAGGED, NOT FIXED (adjacent debt)
   modals and the audit deep-link dispatcher in one file. Under the 800 ceiling
   but past the point where the tab bodies should be components of their own —
   the same shape the ~31-route sweep is for, and not this story's to do.
+
+[2026-08-14] US-024 PASS — Automatos AI assist: spike + service
+
+THE SPIKE (the story asked for it in the journal, so here it is in full).
+
+- Sources: `nextjs_space/public/automatos-widget.js` (the shipped browser SDK,
+  minified — the wire calls are readable in it), `docs/PRDS/prd-automatos-ai-
+  integration.md`, and — the find that settled it — the API publishes its own
+  OpenAPI document at `https://api.automatos.app/openapi.json` (749KB, 664
+  paths). Probed live from this machine on 2026-08-14 with an obviously-invalid
+  key; no real credential was used, read or logged at any point.
+- The integration PRD is aspirational and NOT a contract: it is dated 2026-01-12,
+  status "Design Phase", and every code sample in it is an invented
+  `data-automatos-type="seo-analyzer"` attribute that exists nowhere in the SDK
+  or the API. Ignored in favour of the wire.
+- VERDICT: the API CAN serve completions server-side. Not blocked.
+- The endpoints a tenant's `automatosApiKey` opens are `/api/widgets/*` only.
+  There is no SEO endpoint and no completions endpoint; `/api/chat` exists but
+  authenticates as a platform USER, not a widget key. So the completion channel
+  is the chat endpoint, driven server-side.
+- `POST /api/widgets/auth` — body `{api_key}`, response `{session_token,
+  expires_at, permissions, workspace_id}`. Its OpenAPI description is literally
+  "Body sent by a backend server to obtain a browser-safe session token", so
+  server-side use is the documented shape, not a workaround. Keys prefixed
+  `ak_pub_` are public and skip the exchange (the SDK's own branch).
+- `POST /api/widgets/chat` — `{message, conversation_id?, agent_id?, model_id?,
+  page_context?, trigger_reason?}` + `Authorization: Bearer <token>`; replies
+  with an SSE stream: `message` frames carry `data.content` deltas, `done`
+  carries `conversation_id`, `error` carries `message`. No `stream: false`
+  option exists — streaming is the only mode, so the service drains it.
+- MISMATCH FOUND: `agent_id` is a STRING on the wire; `tenants.automatosAgentId`
+  is `Int?`. Converted in the client so no caller has to remember.
+- Errors are FastAPI `{"detail": "..."}`. Invalid key -> 401 from both endpoints,
+  missing header -> 401 "Missing Authorization header", 429 carries `Retry-After`.
+- Latency: rejection round-trip 0.14–0.28s (DNS 0.12s, connect 0.15s). Network is
+  not the cost; model time is. Timeout set at 20s for the whole operation.
+
+WHAT LANDED (three modules, all under 300 lines, all inside `lib/`).
+
+- `lib/seo/ai-assist-contract.ts` — pure, no I/O. Kinds (title/description/
+  imageAlt), limits 60/160/120 with `description` reusing the platform's existing
+  `SEO_DESCRIPTION_MAX_LENGTH` rather than restating 160, the prompt builder, and
+  `parseAiDraft`. Prompt demands `{"text": "..."}` JSON; the parser unwraps a
+  markdown fence (transport, not repair), requires an object with a string
+  `text`, collapses whitespace to one line, then measures length LAST — so a
+  compliant answer with a trailing newline is not refused for a character the
+  model did not mean to send.
+- CONTRACT VIOLATION = REFUSAL, NEVER A TRIM. Over-length returns
+  `{ok:false, reason:"too_long", length}` and deliberately does NOT return the
+  text: a clipped sentence that reached the field would be saved by the next
+  click, in the owner's name, in a search result. Asserted both ways in the
+  tests (exactly-at-limit passes, +1 refuses and carries no text).
+- `lib/seo/automatos-client.ts` — the transport. Session exchange or public-key
+  shortcut, SSE frame parser (handles deltas split mid-frame across chunks,
+  non-JSON `data:` lines as raw content exactly as the SDK does), 4000-char drain
+  ceiling, one AbortController spanning auth + chat + drain. Typed failures
+  (`auth` | `rate_limited` | `timeout` | `upstream`) — never throws for an
+  expected failure, because the caller renders each differently.
+- `lib/seo/ai-assist.ts` — the service. `AiAssistProvider` interface +
+  `automatosProvider`, so a second provider is config not surgery.
+  `generateSeoDraft` = meter -> load credentials -> provider -> contract.
+- Credentials read from the COLUMNS ONLY (`tenants.automatosApiKey`,
+  `automatosAgentId`), per the PRD #236 cross-session finding; nothing reads
+  `tenants.settings`, which is tenant-writable. No platform-key fallback exists
+  in this diff — proven by a test that asserts the provider is never called and
+  `fetch` never fires when the columns are empty.
+- No credentials -> `{status:"unavailable", reason:"not_connected", connect}`
+  where `connect` is the Connect-Automatos shape (headline, body, action label,
+  `/tenant-admin/settings`). Deliberately a DIFFERENT shape from the plan upsell
+  in `lib/entitlements/upgrade.ts` — that one sells Pro, this one points an
+  already-Pro tenant at a field they have not filled in, and conflating them
+  sends someone to a checkout for something they already bought.
+- Rate limit: `checkRateLimit` reused with `failMode:"closed"`, keyed
+  `seo-ai-assist:<tenantId>` — per TENANT, because the spend lands on the
+  tenant's own Automatos account. 30 per 5 minutes: above what authoring looks
+  like (two fields per entity, a human reading each draft), below what a loop
+  looks like. Metered BEFORE the credential lookup so it cannot be sidestepped by
+  a request that would have failed early; a 503 from the limiter maps to
+  `rate_limiter_unavailable`, never to a free pass. Both asserted.
+- Prompt isolation asserted by construction: `AiAssistSource` is a closed shape
+  carrying this entity's name, its own body copy and the tenant's own store name
+  — no tenant id, no cross-tenant read, no shared conversation or cache between
+  tenants. The test checks the built prompt contains the three provided strings
+  and does NOT contain the tenant id or the platform name.
+- A DB failure is NOT reported as "not connected" — it maps to `lookup_failed`.
+  Collapsing the two would show a connected tenant a connect-your-account card,
+  which is a lie the owner would act on.
+
+SECRET HANDLING — one real finding, fixed in this story.
+
+- Writing the "key never reaches a log line" test exposed that our own
+  `logger.warn` echoed the upstream error body, and the live API's 401 body is
+  about the key it rejected — a provider that quotes the key back would have put
+  it in our logs. `lib/security/redact.ts` could not help: it redacts by FIELD
+  NAME and this is a free-text blob. Added `makeScrub`, which removes the api key
+  (and, after the exchange, the minted session token) from anything logged, by
+  exact identity. The test asserts both the absence of the key AND the presence
+  of `[REDACTED]`, so deleting the log line cannot make it pass vacuously.
+- The key appears in exactly two places: the auth body and the Authorization
+  header. It is in no result, no error message and no test fixture beyond the
+  fake `ak_sec_tenant_a_key`.
+
+VERIFIED.
+
+- `pnpm exec tsc --noEmit` exit 0 repo-wide.
+- Targeted `pnpm vitest run tests/unit/seo-ai-assist.test.ts` — 33 tests green.
+  Full unit project 152 files / 2591 tests green (2559 before, +32 net).
+- `pnpm lint` on all three new modules: zero findings. `check:security` both
+  gates pass.
+- Live probe recorded above (HTTP 401 + `{"detail":...}` from both endpoints,
+  OpenAPI 200). No `pnpm dev` run needed — this story ships no route and no UI;
+  US-025 builds those.
+- No migration, no new dependency, no Dockerfile change: all three modules live
+  in `lib/`, which the runner image already COPYies
+  (`nextjs_space/Dockerfile:57-95`). Explicitly checked.
+
+NOTES FOR US-025 (which builds the route + UI on this service).
+
+- The route composes `requirePermission("canEditSeo", requireFeature(
+  FEATURES.SEO_PRO, handler))` and maps `AiAssistResult` to HTTP: `ok` -> 200,
+  `unavailable` -> 200 with the connect card (it is a state, not an error),
+  `rate_limited` -> 429 + Retry-After, `refused` -> 422, `error` -> 502/503.
+- `isAutomatosConfigured` + `loadAutomatosCredentials` are exported so the SEO
+  page can render the connect card server-side without burning a generation or a
+  rate-limit token.
+- `ai-assist-contract.ts` is the client-safe import (pure); `ai-assist.ts` pulls
+  prisma and ioredis and must stay server-only.
