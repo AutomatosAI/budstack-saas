@@ -59,15 +59,29 @@ function str(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+/**
+ * US-004 — a finding's `href` is rendered straight into a link, so only a path
+ * INSIDE this admin survives the parse: one leading slash and no second one.
+ * `//evil.example` is a protocol-relative URL a browser resolves off-site, and
+ * an audit finding is the last place a store owner would expect to leave the
+ * panel. Anything else is dropped and the finding falls back to its tab.
+ */
+function parseHref(value: unknown): string | null {
+  const href = str(value);
+  return href.startsWith("/") && !href.startsWith("//") ? href : null;
+}
+
 function parseTarget(value: unknown): SeoAuditFinding["target"] | null {
   if (!isRecord(value)) return null;
   const tab = str(value.tab);
   if (!SEO_AUDIT_TABS.includes(tab as SeoAuditTab)) return null;
   const entityId = str(value.entityId);
+  const href = parseHref(value.href);
   return {
     tab: tab as SeoAuditTab,
     ...(entityId ? { entityId } : {}),
     label: str(value.label),
+    ...(href ? { href } : {}),
   };
 }
 

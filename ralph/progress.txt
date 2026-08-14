@@ -387,3 +387,158 @@ HOW VERIFIED
   runtime import chain leaves the copied set and no new dependency — no
   Dockerfile change needed.
 - No migration, no schema change, no new model: every field read already exists.
+
+================================================================================
+[2026-08-14] US-004 PASS — LLM-readiness audit section
+================================================================================
+
+WHAT LANDED. A second category inside the existing SEO audit, not a second
+audit: five checks that ask whether a model can READ and QUOTE a store, added
+to the same snapshot, the same weights table, the same score and the same
+Audit tab. An owner has one list of things to fix, not two.
+
+  (a) ai-search-blocked      critical, 20 pts — the heaviest check in the audit
+  (b) qa-missing             info,      1/6   — products and condition guides
+  (c) llms-txt-empty         warning,   6     — the document lists nothing
+  (d) wire-drafts-unpublished warning,  4     — see THE AC (d) SUBSTITUTION
+  (e) heading-duplicate-h1   warning,   2/8
+      heading-level-skip     info,      1/4
+      heading-missing        info,      1/4
+
+New: lib/seo/audit-llm-checks.ts (the checks), lib/seo/audit-llm-types.ts (ids,
+weights, the rationale), lib/seo/heading-structure.ts (the HTML heading parser),
+tests/unit/seo-llm-audit.test.ts (59 tests). Touched: audit-types (7 ids, the
+`ai-crawlers` tab, `target.href`), audit-snapshot (4 new entity facts), audit.ts
+(wire-in), the route (2 selects + 1 count + the settings parse), SeoAuditTab
+(renders an `href` finding as a link), audit-client (parses `href`).
+
+THE AC (d) SUBSTITUTION — READ THIS BEFORE "FIXING" auditWireVisibility.
+The AC specifies "a tenant whose blog surface is the Automatos Shadow-DOM widget
+(wireMode column)". That premise is false against this repo, verified three ways
+on 2026-08-14:
+  * `tenants.wireMode` is MANUAL|ASSISTED and its own schema comment says what
+    it is — "The Wire authoring mode ... (Automatos pushes drafts)"
+    (prisma/schema.prisma:821). It selects who WRITES a post. ASSISTED drafts
+    land as ordinary `posts` rows for review
+    (app/api/integrations/automatos/posts/route.ts:114) and publish through the
+    same path as a hand-written one. ASSISTED is if anything BETTER for
+    crawlability, not worse.
+  * The Wire's storefront surfaces are ordinary server-rendered Next routes
+    (app/store/[slug]/the-wire/page.tsx, [postSlug]/page.tsx, revalidate 60) —
+    the post body is sanitized HTML in the response. Fully crawlable.
+  * The Automatos widget IS Shadow-DOM (`attachShadow({mode:"open"})`,
+    public/automatos-widget.js:5) but it is initialised as `widget: "chat"`
+    (components/admin/AutomatosWidgetWrapper.tsx:28) — a chat FAB. It renders no
+    blog content anywhere. There is no template section that fetches posts
+    client-side either: `BlogFeed` takes them as props.
+So the specified check could never fire on any tenant: it would be dead code
+asserting something false about the platform. What DOES make Wire content
+invisible to every crawler and LLM is the ordinary case ASSISTED mode produces
+at volume — a draft has no page. `published: false` is the real invisibility,
+the mode is why a store accumulates it without noticing (named in the message
+only when it is on, and named as the explanation, never as the fault), and The
+Wire's list is the AC's own deep link. Both the module docstring and the check
+carry this reasoning in-code. NOT SILENT: flagged here for the human review.
+
+WHAT ELSE THE ACs ASKED FOR AND WHAT THE CODE ACTUALLY SUPPORTS.
+  * (c) "presence/staleness" — NEITHER IS CHECKABLE, and the check says why in
+    its docstring. llms.txt is not a stored artefact: the route renders it per
+    request from live rows behind a 1h cache, and it is published for exactly
+    the tenants this audit runs for (both gate on seo.pro). There is no file to
+    be missing and no copy to fall behind. What CAN be wrong is that the
+    document has nothing in it — a store whose whole catalogue is excluded via
+    `sitemapExclude`/`noindex` (llms.txt honours both; the sitemap honours only
+    the first) publishes an identity block and three empty sections. That is
+    the check.
+  * (e) "condition/post content" — only a Wire post has an authored HTML body.
+    `conditions` carry no rich-text column (description is a one-line intro;
+    causes/symptoms/treatments are structured Json), there is no conditions
+    editor in tenant-admin at all, and every heading on a condition page is the
+    template's, correctly nested h1→h2→h3. So `headings` is null for a
+    condition and the check skips it rather than judging a tree it does not own.
+  * (b) conditions — `conditions.faqs` has NO writer in this repo but the seed
+    (the SEO route says so itself at
+    app/api/tenant-admin/seo/conditions/[id]/route.ts:101). The finding is
+    reported anyway and is worded as a statement about the page rather than an
+    instruction: its button lands the owner on the right guide and no closer.
+    Stated in-code. A guide that answers nothing is the largest single GEO gap
+    a store can have and an owner is better served knowing.
+
+REUSE, NOT A SECOND OPINION — the shelf, used as a shelf.
+  * The blocked-bot list is `aiCrawlersInClass("search")` from US-001's registry
+    and the cost sentence is `AI_CRAWLER_CLASS_COPY`'s, so the finding and the
+    settings card cannot come to disagree about what blocking costs.
+  * `inLlmsTxt` is computed with `isLlmsTxtExcluded` — US-003's own filter,
+    which this story EXPORTED rather than copied (llms-txt.ts now calls the
+    exported name itself). A store the audit says publishes an empty llms.txt is
+    a store whose llms.txt route publishes an empty file.
+  * Q&A counts run through `readProductQa` (US-002) and `readFaqEntries`
+    (US-017) — the same parsers the FAQPage builders use, so the audit counts
+    what the page emits, not what is stored.
+  * The plan resolves through `isSeoProUnlocked` / `indexingControlsUnlocked`,
+    once per snapshot, exactly as the sitemap and llms.txt renderers do.
+
+DECISIONS WORTH THE NEXT READER'S TIME.
+  * ONLY THE SEARCH CLASS IS A FINDING. Blocking the TRAINING crawlers is a
+    legitimate informed choice whose cost the settings card already states; an
+    audit that marked it down would be scoring an owner on a decision they made
+    deliberately. Blocking search is the one that is nearly always collateral.
+  * THE LLM WEIGHTS ARE DELIBERATELY LIGHTER than their search equivalents, and
+    the reason is honesty, documented in audit-llm-types.ts: a missing title
+    provably changes what Google renders, while the evidence that Q&A blocks, an
+    llms.txt or a tidy heading tree change citation rates is thin to
+    non-existent. qa-missing costs 1 against a 6 ceiling where title-missing
+    costs 3 against 18. `ai-search-blocked` is the exception (20, above
+    sitemap-empty's 15) because it is not a nudge: the pages are readable by
+    everything except the systems being asked about them.
+  * `target.href` IS A NEW SHAPE, and it is validated on the way back in.
+    `SEO_AUDIT_TABS` cannot name /tenant-admin/the-wire, so the drafts finding
+    carries a path. audit-client.ts is fail-closed by design and DROPPED the new
+    field until it was taught to parse it — caught before it shipped as a Fix
+    button that silently went to the wrong tab. It now keeps only a path inside
+    this admin: `//evil.example`, `https://…` and `javascript:` are all refused
+    and the finding degrades to its tab (7 table-driven cases).
+  * THE DRAFTS READ IS A COUNT, not rows: the finding is one sentence about the
+    queue and the fix is The Wire's own list, so a store with hundreds of agent
+    drafts cannot crowd its live rows out of the audit's memory budget.
+  * `posts.content` is the one large column this route now selects. Posts are
+    the smallest of the four tables and it is the only authored HTML a store
+    publishes; the heading skeleton is extracted and the string discarded.
+  * The duplicate-h1 check fires on ONE body h1, not two: the post page already
+    renders `<h1>{post.title}</h1>` and the Wire's editor offers a Heading 1
+    button (components/editor/tiptap.tsx:52-57), so the platform's own UI is
+    what creates the second one.
+
+FLAGGED, NOT FIXED (adjacent, out of scope):
+  * tests/unit/seo-audit.test.ts trips `max-lines` (1015 > 800) — PRE-EXISTING,
+    proven by linting the file at HEAD (1009 > 800). This story's new parser
+    cases were put in the new file rather than making it worse; splitting the
+    US-023 file is a separate change.
+  * `conditions.faqs` is unreachable from any editor (above). A conditions Q&A
+    field would be the natural home and is not this story's to add.
+  * The audit still has no invalidation from the SEO write routes (US-023's own
+    flagged debt) — a fixed finding survives up to 15 minutes or one Re-run.
+
+HOW VERIFIED
+- `pnpm exec tsc --noEmit`                          -> exit 0 (repo-wide)
+- `pnpm vitest run tests/unit/seo-llm-audit.test.ts` -> 59 passed
+- `pnpm vitest run` (full)                          -> 2930 passed, 30 skipped,
+                                                       165 files, 0 failed
+                                                       (2867 before; +63)
+- `pnpm exec next lint` on all 13 touched files     -> no warnings, no errors
+- `pnpm check:security`                             -> both gates green
+- The route's own tests now assert the new wiring: the drafts `count` is
+  tenant-scoped and `published: false`, `posts.select.content` and
+  `conditions.select.faqs` are requested, a `blocked` policy in the settings
+  blob reaches the finding, and a policy value the settings schema rejects
+  produces NO finding (the log line proves the parser refused it).
+- VISUAL: DEFERRED TO HUMAN REVIEW. The Audit tab is Clerk-gated and the audit
+  needs the Railway DB, unreachable from this machine — the same limit US-001
+  through US-003 recorded. The UI change is a props-only branch (link vs
+  button); its data path is covered by the parser's 7 href cases.
+- Docker runner image: EXPLICITLY CHECKED. Three new modules under `lib/seo/`
+  (COPYied at Dockerfile:74), one modified component and one modified route
+  (compiled into `.next/standalone`, Dockerfile:59). No new dependency and no
+  runtime import chain leaving the copied set — no Dockerfile change needed.
+- No migration, no schema change, no new model: `wireMode`, `settings`,
+  `posts.content`, `posts.published` and `conditions.faqs` all already exist.

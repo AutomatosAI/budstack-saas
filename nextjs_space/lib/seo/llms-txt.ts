@@ -172,8 +172,16 @@ function rowSummary(seo: unknown, body: unknown): string {
   );
 }
 
-/** Is this entity one the owner asked not to be listed or not to be indexed? */
-function isExcluded(seo: unknown, proUnlocked: boolean): boolean {
+/**
+ * Is this entity one the owner asked not to be listed or not to be indexed?
+ *
+ * Exported for US-004's audit, which reports a store whose llms.txt has nothing
+ * left to list. It asks the same question this renderer asks, so it calls this
+ * rather than restating the rule — a second copy could disagree with the file
+ * the store actually publishes, and then the finding would be about a document
+ * that does not exist.
+ */
+export function isLlmsTxtExcluded(seo: unknown, proUnlocked: boolean): boolean {
   return (
     isSitemapExcluded(seo, proUnlocked) || isEntityNoindexed(seo, proUnlocked)
   );
@@ -209,7 +217,7 @@ function renderSection(
     // A blank key would make the path helper fall back to its index, aliasing
     // the row onto a URL this section already lists.
     if (!seoText(row.key)) return false;
-    return !isExcluded(row.seo, proUnlocked);
+    return !isLlmsTxtExcluded(row.seo, proUnlocked);
   });
 
   const budget = section.budget ?? publishable.length;

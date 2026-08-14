@@ -22,7 +22,8 @@ const { resolveUserPermissions } = vi.hoisted(() => ({
 const prismaMock = vi.hoisted(() => ({
   tenants: { findFirst: vi.fn() },
   products: { findMany: vi.fn() },
-  posts: { findMany: vi.fn() },
+  // `count` is US-004's unpublished-drafts read — see the LLM-readiness block.
+  posts: { findMany: vi.fn(), count: vi.fn() },
   conditions: { findMany: vi.fn() },
   seo_redirects: { findMany: vi.fn() },
 }));
@@ -60,13 +61,18 @@ function get(query = "") {
 }
 
 /** The tenant row as both the audit query and `getTenantPlan` read it. */
-function onPlan(plan: string) {
+function onPlan(plan: string, overrides: Record<string, unknown> = {}) {
   prismaMock.tenants.findFirst.mockResolvedValue({
     id: TENANT_A,
     subdomain: "acme",
     customDomain: null,
     plan,
     pageSeo: null,
+    // US-004 reads both: the crawler policy lives in the settings blob, and the
+    // Wire mode explains an unpublished-draft queue.
+    settings: null,
+    wireMode: "MANUAL",
+    ...overrides,
   });
 }
 
@@ -93,6 +99,7 @@ beforeEach(() => {
   onPlan("pro");
   prismaMock.products.findMany.mockResolvedValue([]);
   prismaMock.posts.findMany.mockResolvedValue([]);
+  prismaMock.posts.count.mockResolvedValue(0);
   prismaMock.conditions.findMany.mockResolvedValue([]);
   prismaMock.seo_redirects.findMany.mockResolvedValue([]);
 });
@@ -199,6 +206,52 @@ describe("GET /api/tenant-admin/seo/audit — queries", () => {
     expect(
       prismaMock.conditions.findMany.mock.calls[0][0].where.published,
     ).toBe(true);
+  });
+
+  /**
+   * US-004 — the LLM-readiness category's own inputs. The checks themselves are
+   * covered row-by-row in tests/unit/seo-llm-audit.test.ts; what is asserted
+   * here is the wiring only: the queries that feed them, scoped to the tenant,
+   * and the settings blob reaching the crawler check through the route's parse.
+   */
+  it("counts unpublished drafts in a tenant-scoped query of their own", async () => {
+    await auditRoute(get());
+
+    expect(prismaMock.posts.count).toHaveBeenCalledTimes(1);
+    expect(prismaMock.posts.count.mock.calls[0][0].where).toEqual({
+      tenantId: TENANT_A,
+      published: false,
+    });
+  });
+
+  it("selects the two columns the LLM checks read and nothing more", async () => {
+    await auditRoute(get());
+
+    expect(prismaMock.posts.findMany.mock.calls[0][0].select.content).toBe(true);
+    expect(prismaMock.conditions.findMany.mock.calls[0][0].select.faqs).toBe(
+      true,
+    );
+  });
+
+  it("reads the crawler policy out of the tenant's settings blob", async () => {
+    onPlan("pro", { settings: { aiCrawlerPolicy: "blocked" } });
+
+    const body = await (await auditRoute(get())).json();
+    const blocked = body.audit.checks.find(
+      (check: { check: string }) => check.check === "ai-search-blocked",
+    );
+    expect(blocked.total).toBe(1);
+    expect(blocked.findings[0].target.tab).toBe("ai-crawlers");
+  });
+
+  it("treats a settings blob it cannot parse as no block at all", async () => {
+    onPlan("pro", { settings: { aiCrawlerPolicy: { nope: true } } });
+
+    const body = await (await auditRoute(get())).json();
+    const blocked = body.audit.checks.find(
+      (check: { check: string }) => check.check === "ai-search-blocked",
+    );
+    expect(blocked.total).toBe(0);
   });
 
   it("caps each entity type and says so when the cap is hit", async () => {

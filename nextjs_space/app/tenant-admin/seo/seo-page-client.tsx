@@ -277,7 +277,10 @@ export function SeoPageClient({
    * reopens an editor on stale data. A finding whose row is no longer here — the
    * audit's cached result describing a store that has since changed — still
    * switches the tab: landing on the right list beats a button that does
-   * nothing. "redirects" has no per-row editor; the tab itself is the fix.
+   * nothing. "redirects" has no per-row editor; the tab itself is the fix, and
+   * so is "ai-crawlers" (US-004), which holds the crawler policy and the
+   * llms.txt card. A finding whose fix is outside this panel never reaches here
+   * — it carries `target.href` and the Audit tab renders it as a link.
    */
   const handleAuditFix = (target: SeoAuditTarget) => {
     setActiveTab(target.tab);
