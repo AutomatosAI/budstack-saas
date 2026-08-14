@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { withTenantAuthParams } from "@/lib/api-auth";
+import { requirePermissionParams } from "@/lib/permissions/require-permission";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
@@ -21,7 +21,7 @@ const seoUpdateSchema = z
   .strict();
 
 // GET - Fetch post SEO
-export const GET = withTenantAuthParams(async (_request, { tenantId }, params) => {
+export const GET = requirePermissionParams("canViewSeo", async (_request, { tenantId }, params) => {
   let id: string;
   try {
     id = parseUuid(params.id);
@@ -42,7 +42,7 @@ export const GET = withTenantAuthParams(async (_request, { tenantId }, params) =
 });
 
 // PUT - Update post SEO
-export const PUT = withTenantAuthParams(async (request, { tenantId }, params) => {
+export const PUT = requirePermissionParams("canEditSeo", async (request, { tenantId }, params) => {
   let id: string;
   try {
     id = parseUuid(params.id);

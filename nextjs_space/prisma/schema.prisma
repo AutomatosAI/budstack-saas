@@ -948,6 +948,8 @@ model role_permissions {
   canEditEmails        Boolean  @default(false)
   canViewTemplates     Boolean  @default(false)
   canEditTemplates     Boolean  @default(false)
+  canViewSeo           Boolean  @default(false)
+  canEditSeo           Boolean  @default(false)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   tenants              tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)

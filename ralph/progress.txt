@@ -1118,3 +1118,146 @@ FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
 - SeoEditorModal.tsx is now 250 lines with four near-identical field blocks.
   Still readable; the fifth field should extract a <SeoField> rather than
   copy the block again.
+
+================================================================================
+[2026-08-14] US-010 PASS — SEO route hardening
+
+CRASH RECOVERY: a predecessor iteration died mid-story (machine sleep) leaving
+uncommitted work for exactly this story. Adopted as a draft per protocol, then
+verified every load-bearing claim in it against the real code before keeping any
+of it. Two gaps found and closed (below). The ambient untracked files
+(.mcp.json, CLAUDE.md, graphify-out/, the .gitignore edit) were left alone and
+are NOT in this commit.
+
+WHAT THE DRAFT GOT RIGHT (verified, kept)
+- requirePermission/requirePermissionParams exist and delegate to
+  withTenantAuth/withTenantAuthParams (lib/permissions/require-permission.ts
+  :27-52); requirePagePermission redirects rather than 403s (:15-20).
+- resolvePermissions returns ALL_TRUE for teamRole 'admin' AND for a legacy null
+  teamRole, without reading role_permissions at all (lib/permissions/resolve.ts
+  :46-53). This is what makes the fail-closed migration safe: no owner can be
+  locked out of their own SEO Manager. AC-3 asserted directly in the new tests.
+- The two new keys are deliberately NOT added to any non-admin preset's defaults
+  (lib/permissions/preset-roles.ts:38-71 — confirmed unchanged). A tenant grants
+  them through the roles matrix instead of finding them switched on under a role
+  they already assigned.
+- `tenants.pageSeo` really is JSONB (prisma/migrations/init_complete_schema.sql
+  :33), so jsonb_typeof / `-` / `||` are all legal; `tenants` really is
+  soft-deletable (lib/soft-delete.ts:32-38) and `update` is NOT in
+  softDeleteReadActions (:41-50) — so the statement stating `deletedAt IS NULL`
+  itself is required, not belt-and-braces.
+- check-auth-wrappers already allow-lists both permission wrappers, and only
+  when imported from lib/permissions/require-permission
+  (scripts/check-auth-wrappers.core.ts:50-71) — no scanner change needed.
+
+GAP 1 — THE DRAFT GATED 1 OF 4 SEO ROUTES. The AC says ALL SEO routes and names
+requirePermissionParams; only app/api/tenant-admin/seo/pages/route.ts had been
+converted. Converted the other three (drop-in swap, no handler-body changes):
+    seo/products/[id]  GET canViewSeo / PUT canEditSeo
+    seo/posts/[id]     GET canViewSeo / PUT canEditSeo
+    seo/conditions/[id] GET canViewSeo / PUT canEditSeo
+Before this story every one of them was withTenantAuth-only — ANY member of the
+tenant (support agent, web designer) could rewrite the title Google shows for
+the store. That is the actual hole this story exists to close.
+
+GAP 2 — NO TESTS. The notes call for table-driven permission tests with the REAL
+resolver (the email US-009 precedent). Added two files:
+- tests/unit/seo-route-permissions.test.ts (33 tests) — all 8 handlers in READS/
+  WRITES tables. Mocks only getCurrentUser, prisma and resolveUserPermissions;
+  the real wrapper, real gate and real pure resolver execute. Asserts: a
+  canViewSeo-only member 403s on every mutation AND reaches no database; the
+  denial carries the standard { error } shape with no internals; owner-admin and
+  legacy null-teamRole pass everywhere; no non-admin preset gets either key by
+  default; 401 precedes the permission resolve on every route.
+- tests/unit/page-seo-write.test.ts (14 tests) — the pure merge plan, plus the
+  statement at the driver boundary (tenant id/page key/patch bound as
+  PARAMETERS and absent from the SQL text; deletedAt IS NULL present; exactly
+  one statement).
+
+THE RACE FIX (AC-2). The PUT was SELECT pageSeo -> merge in JS -> UPDATE the
+whole blob. Every authorable page shares that one column, so two owners saving
+two DIFFERENT pages both read the same "before" and the second write erased the
+first — About silently reverted the moment Contact was saved, from a normal
+two-tab session. Replaced with ONE statement (lib/seo/page-seo-write.ts):
+  UPDATE tenants SET pageSeo = NULLIF((<blob> - key - legacyKeys) || patch, '{}')
+Postgres serialises the merge on the row lock, so a concurrent save of a
+different page now composes. Same-page concurrent saves still resolve
+last-writer-wins, which is the only sane answer to two people in one field.
+WHY RAW SQL — documented as the notes require: Prisma has no partial-update
+operator for a Json column, the fluent API can only set the whole value, which
+IS the read-modify-write being removed. $queryRaw is the house idiom
+(app/api/tenant-admin/analytics/route.ts:174, app/tenant-admin/layout.tsx:102)
+and the tagged template parameterises every value. Raw queries bypass the
+$extends layer entirely, which is why the statement carries its own tenant
+predicate (WHERE id = $tenantId) and its own deletedAt filter. The merge PLAN is
+a pure function so the rules are testable with no database.
+Also fail-closed in SQL: a corrupt non-object blob is treated as '{}' rather
+than aborting the statement on the `-` operator and 500ing the save — mirroring
+readStorePageSeo's fail-closed parse.
+
+CROSS-STORY REGRESSIONS — MINE, AND FIXED (not skipped)
+The full unit run initially had 11 failures in 2 files, all caused by this diff:
+- tests/unit/condition-metadata.test.ts (7) — its prismaMock had no `users`, so
+  the now-real permission resolver threw. Fixed by adding users.findFirst and an
+  `email` to the admin fixture (the resolver fails CLOSED without an email, so
+  an emailless admin fixture would 403). Kept the REAL resolver in the path
+  rather than mocking it away — matches the existing image-alt.test.ts
+  precedent, which passes because a null teamRole resolves to ALL_TRUE.
+- tests/unit/store-page-metadata.test.ts (4) — asserted the old read-modify-
+  write (findUnique + update). Rewritten against the new statement: the legacy-
+  retirement test now asserts the instruction the database receives (drop
+  `support` AND `faq`, merge the new entry), and a new test pins that the blob
+  is never read back before writing. The resulting-blob semantics moved to
+  page-seo-write.test.ts.
+
+VERIFICATION
+- pnpm exec tsc --noEmit                 -> exit 0.
+  NOTE: it first failed in lib/permissions/schema-guard.ts — the PRD-301
+  compile-time drift guard doing its job, because PERMISSION_KEYS had the two
+  new keys before the client was regenerated. Real signal, not noise.
+- pnpm prisma validate                   -> valid
+- pnpm prisma generate                   -> ok
+- Migration SQL diffed against canonical output: `pnpm prisma migrate diff
+  --from-empty --to-schema-datamodel prisma/schema.prisma --script` emits
+  "canViewSeo" BOOLEAN NOT NULL DEFAULT false / "canEditSeo" ... — byte-for-byte
+  the column definitions the hand-authored migration adds. Written as ADD COLUMN
+  IF NOT EXISTS with a constant default: metadata-only on PG11+, no heap rewrite
+  on a live table. Never ran migrate dev/deploy/db push.
+- pnpm vitest run (targeted, 5 files)    -> 124 passed
+- pnpm vitest run --project unit (full)  -> 132 files, 2081 passed, 0 failed
+- pnpm check:security                    -> both gates green
+- pnpm exec next lint (10 touched files) -> no warnings or errors
+- scripts/check-auth-wrappers.ts         -> 159 files, 211 handlers, 186 wrapped,
+  21 allow-listed, 4 violations. All 4 are PRE-EXISTING and unrelated to SEO
+  (storefront/email/click, storefront/email/open, team/accept-invite,
+  team/invitation). No SEO route appears — all 8 handlers register as wrapped.
+- pnpm dev with the existing .env.local (never modified): server Ready in 2.1s,
+  /tenant-admin/seo returns 307 to Clerk at the middleware, so the page never
+  compiles or renders for an unauthenticated probe.
+  visual: deferred to human review — the page gate needs a real Clerk session
+  with a non-admin teamRole, which cannot be fabricated locally. The gate itself
+  is covered by route tests; the page guard is one requirePagePermission call.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson): the one new runtime module is
+lib/seo/page-seo-write.ts. Its imports are @prisma/client, @/lib/db and two
+lib/seo siblings — every one inside directories the runner already COPYies
+(nextjs_space/Dockerfile:57-95). No import edge leaves the Next bundle. No
+Dockerfile edit needed.
+
+WHY THE PAGE GUARD AS WELL AS THE ROUTE GUARDS: /tenant-admin/seo is a Server
+Component that reads the tenant's products, posts, conditions and pageSeo itself
+and ships them in the payload. A denied member navigating straight to the URL
+would receive the whole catalogue before any API said no. Nav hides the item,
+routes 403, requirePagePermission stops the render — all three are needed.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- The bare-null Json write in seo/conditions/[id] (`seo: ... : null` where the
+  siblings use Prisma.DbNull) is still there — already flagged in the US-009
+  block. Untouched again: this story changes no field in that editor, only who
+  may call it. One line whenever someone is in there.
+- The 4 pre-existing check-auth-wrappers violations above are outside this
+  feature and outside this run's scope.
+- app/api/tenant-admin/posts/[id]/route.ts still writes `seo.imageAlt` under the
+  posts permissions rather than canEditSeo. Deliberate, not an oversight: that
+  is the Wire editor's own field next to the image, and the SEO Manager's route
+  for the same row is now gated. Worth a decision if the surfaces ever merge.

@@ -122,6 +122,19 @@ export function readStorePageSeo(
 }
 
 /**
+ * The retired keys that `key` took over — the ONE definition of the retirement
+ * rule. Both appliers read it: `dropLegacyStorePageSeoKeys` (in JS, for the
+ * admin's optimistic state) and the write statement (in SQL, for the column).
+ */
+export function legacyStorePageSeoKeysReplacedBy(
+  key: StoreSeoPageKey,
+): readonly string[] {
+  return Object.entries(LEGACY_STORE_SEO_PAGE_KEYS)
+    .filter(([, replacedBy]) => replacedBy === key)
+    .map(([legacyKey]) => legacyKey);
+}
+
+/**
  * The same blob with the legacy keys that `key` replaced removed.
  *
  * Called on write so the editor and the storefront can never disagree: once an
@@ -132,9 +145,7 @@ export function dropLegacyStorePageSeoKeys<T>(
   pageSeo: Readonly<Record<string, T>>,
   key: StoreSeoPageKey,
 ): Record<string, T> {
-  const retired = Object.entries(LEGACY_STORE_SEO_PAGE_KEYS)
-    .filter(([, replacedBy]) => replacedBy === key)
-    .map(([legacyKey]) => legacyKey);
+  const retired = legacyStorePageSeoKeysReplacedBy(key);
 
   return Object.fromEntries(
     Object.entries(pageSeo).filter(([entryKey]) => !retired.includes(entryKey)),

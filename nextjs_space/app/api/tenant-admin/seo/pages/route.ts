@@ -1,13 +1,11 @@
-import { withTenantAuth } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
-import {
-  STORE_SEO_PAGE_KEYS,
-  dropLegacyStorePageSeoKeys,
-} from "@/lib/seo/store-pages";
+import { requirePermission } from "@/lib/permissions/require-permission";
+import { STORE_SEO_PAGE_KEYS } from "@/lib/seo/store-pages";
+import { writeStorePageSeo } from "@/lib/seo/page-seo-write";
 
 const seoPagesSchema = z
   .object({
@@ -27,7 +25,7 @@ const seoPagesSchema = z
   .strict();
 
 // GET - Fetch tenant page SEO
-export const GET = withTenantAuth(async (_request, { tenantId }) => {
+export const GET = requirePermission("canViewSeo", async (_request, { tenantId }) => {
   const tenant = await prisma.tenants.findUnique({
     where: { id: tenantId },
     select: { pageSeo: true },
@@ -37,7 +35,7 @@ export const GET = withTenantAuth(async (_request, { tenantId }) => {
 });
 
 // PUT - Update tenant page SEO
-export const PUT = withTenantAuth(async (request, { tenantId }) => {
+export const PUT = requirePermission("canEditSeo", async (request, { tenantId }) => {
   let parsed;
   try {
     parsed = await parseJsonBody(request, seoPagesSchema);
@@ -46,46 +44,18 @@ export const PUT = withTenantAuth(async (request, { tenantId }) => {
   }
   const { pageKey, seo } = parsed;
 
-  // Get current pageSeo
-  const tenant = await prisma.tenants.findUnique({
-    where: { id: tenantId },
-    select: { pageSeo: true },
-  });
+  // US-010: ONE statement, not read-modify-write. Every authorable page shares
+  // this single `tenants.pageSeo` blob, so the old SELECT-merge-UPDATE lost a
+  // concurrent save of a DIFFERENT page — see lib/seo/page-seo-write.ts.
+  const pageSeo = await writeStorePageSeo(tenantId, pageKey, seo);
 
-  const currentPageSeo =
-    (tenant?.pageSeo as Record<string, Record<string, string> | null>) || {};
+  if (pageSeo === null) {
+    return apiError(new Error("Tenant not found"), {
+      route: "PUT /api/tenant-admin/seo/pages",
+      status: 404,
+      safeMessage: "Store not found",
+    });
+  }
 
-  // Build SEO object for this page, removing empty values
-  const pageSeoData: Record<string, string> = {};
-  if (seo?.title?.trim()) pageSeoData.title = seo.title.trim();
-  if (seo?.description?.trim())
-    pageSeoData.description = seo.description.trim();
-  if (seo?.ogImage?.trim()) pageSeoData.ogImage = seo.ogImage.trim();
-
-  // Merge with existing data. Retiring the keys this one replaced is what keeps
-  // the editor and the storefront honest: without it, clearing /support would
-  // resurrect the old `faq` entry as the rendered metadata (readStorePageSeo
-  // falls back to it) while the SEO Manager showed the page as Default.
-  const updatedPageSeo: Record<string, Record<string, string> | null> = {
-    ...dropLegacyStorePageSeoKeys(currentPageSeo, pageKey),
-    [pageKey]: Object.keys(pageSeoData).length > 0 ? pageSeoData : null,
-  };
-
-  // Clean up null entries
-  Object.keys(updatedPageSeo).forEach((key) => {
-    if (updatedPageSeo[key] === null) {
-      delete updatedPageSeo[key];
-    }
-  });
-
-  const updated = await prisma.tenants.update({
-    where: { id: tenantId },
-    data: {
-      pageSeo: Object.keys(updatedPageSeo).length > 0 ? updatedPageSeo : null,
-      updatedAt: new Date(),
-    },
-    select: { pageSeo: true },
-  });
-
-  return NextResponse.json({ pageSeo: updated.pageSeo || {} });
+  return NextResponse.json({ pageSeo });
 });

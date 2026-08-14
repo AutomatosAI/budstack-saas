@@ -22,6 +22,10 @@ import { NextRequest } from "next/server";
 const { getCurrentUser } = vi.hoisted(() => ({ getCurrentUser: vi.fn() }));
 const prismaMock = vi.hoisted(() => ({
   conditions: { findFirst: vi.fn(), update: vi.fn() },
+  // US-010 put a permission gate in front of this route; the resolver reads the
+  // caller's teamRole. A null one is a legacy pre-teams admin — all permissions.
+  // The gate itself is asserted in tests/unit/seo-route-permissions.test.ts.
+  users: { findFirst: vi.fn() },
 }));
 
 vi.mock("@/lib/auth-helper", () => ({ getCurrentUser }));
@@ -288,10 +292,14 @@ describe("/api/tenant-admin/seo/conditions/[id] — authoring the orphaned colum
     vi.clearAllMocks();
     getCurrentUser.mockResolvedValue({
       id: "admin_1",
+      // The permission resolver looks the caller up by email and fails CLOSED
+      // without one — an admin fixture that omitted it would 403, not 200.
+      email: "admin@store.dev",
       role: "TENANT_ADMIN",
       tenantId: TENANT_A,
       clerkOrgId: null,
     });
+    prismaMock.users.findFirst.mockResolvedValue({ teamRole: null });
   });
 
   function put(id: string, body: unknown) {

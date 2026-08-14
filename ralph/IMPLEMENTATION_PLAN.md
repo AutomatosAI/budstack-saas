@@ -14,7 +14,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 - [x] US-007 Canonicals everywhere
 - [x] US-008 Fix the www.* black-hole
 - [x] US-009 Alt-text authoring
-- [ ] US-010 SEO route hardening
+- [x] US-010 SEO route hardening
 
 ## Workstream B — Plan plumbing (thin, Clerk-carried)
 

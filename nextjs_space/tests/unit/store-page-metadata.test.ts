@@ -9,12 +9,17 @@ import { NextRequest } from "next/server";
 // now one constant. Before this story only `home` was ever read back — About,
 // Contact and FAQ were saveable and invisible.
 //
-// The route is exercised through the REAL zod schema and the REAL auth wrapper;
-// only getCurrentUser and prisma are mocked, so what is asserted is the shipped
-// behaviour rather than a re-implementation of it.
+// The route is exercised through the REAL zod schema, the REAL auth wrapper and
+// (since US-010) the REAL permission gate; only getCurrentUser and prisma are
+// mocked, so what is asserted is the shipped behaviour rather than a
+// re-implementation of it. The mocked `users` row resolves to a null teamRole —
+// a legacy pre-teams admin, which resolvePermissions grants everything.
 const { getCurrentUser } = vi.hoisted(() => ({ getCurrentUser: vi.fn() }));
 const prismaMock = vi.hoisted(() => ({
   tenants: { findUnique: vi.fn(), update: vi.fn() },
+  users: { findFirst: vi.fn() },
+  // US-010 replaced the read-modify-write with ONE statement.
+  $queryRaw: vi.fn(),
 }));
 
 vi.mock("@/lib/auth-helper", () => ({ getCurrentUser }));
@@ -252,10 +257,13 @@ describe("PUT /api/tenant-admin/seo/pages — the enum is the storefront's page 
     vi.clearAllMocks();
     getCurrentUser.mockResolvedValue({
       id: "admin_1",
+      email: "admin@store.dev",
       role: "TENANT_ADMIN",
       tenantId: TENANT_A,
       clerkOrgId: null,
     });
+    prismaMock.users.findFirst.mockResolvedValue({ teamRole: null });
+    prismaMock.$queryRaw.mockResolvedValue([{ pageSeo: {} }]);
   });
 
   function put(body: unknown) {
@@ -268,58 +276,57 @@ describe("PUT /api/tenant-admin/seo/pages — the enum is the storefront's page 
     );
   }
 
+  /** The values US-010's single statement bound as parameters. */
+  function boundValues(): unknown[] {
+    const [sql] = prismaMock.$queryRaw.mock.calls.at(-1) ?? [];
+    return sql?.values ?? [];
+  }
+
   it("accepts every key the admin tab offers", async () => {
     expect(STORE_SEO_PAGES.map((page) => page.key)).toEqual([
       ...STORE_SEO_PAGE_KEYS,
     ]);
 
     for (const key of STORE_SEO_PAGE_KEYS) {
-      prismaMock.tenants.findUnique.mockResolvedValue({ pageSeo: {} });
-      prismaMock.tenants.update.mockResolvedValue({ pageSeo: {} });
-
       const response = await put({ pageKey: key, seo: { title: "T" } });
       expect(response.status).toBe(200);
     }
   });
 
   it("rejects the retired faq key", async () => {
-    prismaMock.tenants.findUnique.mockResolvedValue({ pageSeo: {} });
-
     const response = await put({ pageKey: "faq", seo: { title: "T" } });
 
     expect(response.status).toBe(400);
-    expect(prismaMock.tenants.update).not.toHaveBeenCalled();
+    expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
   });
 
   it("retires the legacy entry when the replacing page is saved", async () => {
-    prismaMock.tenants.findUnique.mockResolvedValue({
-      pageSeo: { faq: { title: "FAQ" }, about: { title: "About" } },
-    });
-    prismaMock.tenants.update.mockResolvedValue({ pageSeo: {} });
-
+    // US-010 moved the merge from JS into the statement, so what is asserted
+    // here is the instruction the database receives: drop `support` AND the
+    // legacy `faq`, then merge the new support entry. The resulting blob is
+    // covered in tests/unit/page-seo-write.test.ts.
     await put({ pageKey: "support", seo: { title: "Support" } });
 
-    expect(prismaMock.tenants.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: TENANT_A },
-        data: expect.objectContaining({
-          pageSeo: {
-            about: { title: "About" },
-            support: { title: "Support" },
-          },
-        }),
-      }),
+    expect(boundValues()).toEqual(
+      expect.arrayContaining([
+        "support",
+        "faq",
+        JSON.stringify({ support: { title: "Support" } }),
+      ]),
     );
   });
 
   it("scopes the write to the caller's tenant", async () => {
-    prismaMock.tenants.findUnique.mockResolvedValue({ pageSeo: {} });
-    prismaMock.tenants.update.mockResolvedValue({ pageSeo: {} });
-
     await put({ pageKey: "about", seo: { title: "About" } });
 
-    expect(prismaMock.tenants.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: TENANT_A } }),
-    );
+    expect(boundValues()).toContain(TENANT_A);
+  });
+
+  it("never reads the blob back before writing it — the lost-update race is gone", async () => {
+    await put({ pageKey: "about", seo: { title: "About" } });
+
+    expect(prismaMock.tenants.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.tenants.update).not.toHaveBeenCalled();
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
   });
 });

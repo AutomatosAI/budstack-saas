@@ -1,11 +1,19 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { requirePagePermission } from "@/lib/permissions/require-page-permission";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
-import { Search } from "lucide-react";
 import { SeoPageClient } from "./seo-page-client";
 
 export default async function SeoPage() {
+  // US-010's gate on the PAGE, not only on the APIs it calls. This is a Server
+  // Component: it reads the tenant's products, posts, conditions and pageSeo
+  // itself and ships them in the payload, so a denied member navigating
+  // straight to the URL would receive the whole catalogue before any API said
+  // no. The nav hides the item (nav-permissions.ts) and the routes 403 — this
+  // is what stops the render.
+  await requirePagePermission("canViewSeo");
+
   // PRD-302: impersonation-aware tenant (matches the banner).
   const active = await getActiveAdminTenant();
   if (!active) {

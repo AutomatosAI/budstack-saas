@@ -26,6 +26,14 @@ export const PERMISSION_KEYS = [
   "canEditEmails",
   "canViewTemplates",
   "canEditTemplates",
+  // SEO Supercharge US-010 — the SEO Manager surface. Split view/edit like
+  // emails, because reading a store's metadata and rewriting the title Google
+  // shows for it are different acts. NOT added to any non-admin preset's
+  // defaults (lib/permissions/preset-roles.ts): PRD-301 AC-2 fixed those five
+  // sets before SEO had keys, so a tenant grants these through the roles matrix
+  // rather than having them appear under a role they already assigned.
+  "canViewSeo",
+  "canEditSeo",
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
