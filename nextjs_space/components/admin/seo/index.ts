@@ -1,4 +1,5 @@
 export { AiAssistButton, AutomatosConnectCard } from './AiAssistButton';
+export { AiCrawlersTab } from './AiCrawlersTab';
 export { GooglePreview } from './GooglePreview';
 export { IndexingFields, type IndexingValue } from './IndexingFields';
 export { LockedFeatureCard } from './LockedFeatureCard';

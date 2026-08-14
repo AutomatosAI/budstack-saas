@@ -145,6 +145,12 @@ export const AUDIT_ACTIONS = {
   // question asked after a privacy complaint.
   SEO_VERIFICATION_UPDATED: "seo.verification_updated",
 
+  // LLM Visibility US-001: the store changed which AI crawlers its robots.txt
+  // welcomes. Worth a row because the 'blocked' setting removes the store from
+  // AI answers, the effect is invisible from inside the admin, and "who turned
+  // this off" is the first question asked when AI referrals stop.
+  SEO_AI_CRAWLERS_UPDATED: "seo.ai_crawlers_updated",
+
   // Branding
   BRANDING_UPDATED: "branding.updated",
   TEMPLATE_CHANGED: "template.changed",

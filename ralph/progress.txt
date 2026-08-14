@@ -3,3 +3,111 @@
 # Branch: ralph/seo-llm-visibility
 # Started: 2026-08-14
 # PRD: tasks/prd-seo-llm-visibility.md · Parent: tasks/prd-seo-supercharge.md
+
+================================================================================
+[2026-08-14] US-001 PASS — AI crawler policy manager
+================================================================================
+
+WHAT LANDED
+`lib/seo/ai-crawlers.ts` is the registry: nine user-agent tokens, each carrying
+its class (search | training), owner and purpose. `lib/seo/robots-txt.ts` renders
+the store's robots.txt from it. `app/store/[slug]/robots.txt/route.ts` now reads
+the plan and the policy off the row `getCurrentTenant` already resolved — no
+extra query — and a Pro-only `PUT /api/tenant-admin/seo/ai-crawlers` writes the
+policy into `tenants.settings`. New "AI Crawlers" tab in the SEO Manager
+(Pro-only), plus an `ai-crawlers` entry in `SEO_PRO_FEATURES` so a Basic tenant
+meets the locked card.
+
+THE ROBOTS.TXT RULE THAT SHAPED THE DESIGN. A crawler that matches its own
+`User-agent` group uses THAT group and ignores the `*` group entirely (RFC 9309
+§2.2.1). So a blocked bot gets its own group with `Disallow: /` (complete on its
+own — the admin paths need no repeating), and an ALLOWED bot gets no group at
+all. Publishing `User-agent: GPTBot` / `Allow: /` to "be explicit" would have
+taken GPTBot out of the wildcard group and handed it `/api/`, `/tenant-admin/`
+and `/auth/`. Hence 'open' renders comments and nothing functional — asserted
+(`userAgents(txt)` is exactly `["*"]` under 'open').
+
+TWO PARSERS, TWO DIRECTIONS, ON PURPOSE. The PLAN fails closed ('basic' — a DB
+blip must not hand out Pro); the POLICY fails open ('open' — an unreadable
+settings blob must never be read as "this store asked to be hidden from AI
+answers"). Both directions are table-tested.
+
+BYTE-IDENTICAL FOR BASIC. The pre-story file is frozen as a literal in the test
+(not derived from the renderer, which would make the assertion tautological) and
+asserted for plan 'basic' AND for every unreadable plan value, including a tenant
+that stored 'blocked' while on Pro and then downgraded — the setting stays in the
+column, dormant. The storefront never blocks on plan.
+
+NO xAI ROW SHIPS — an evidenced deviation from the story's AC, stated here
+rather than papered over. The AC asks for "xAI search UA". xAI publishes no
+crawler user-agent token: x.ai's own robots.txt names other operators' bots and
+not its own (curled 2026-08-14), and Cloudflare's AI Crawl Control bot reference
+lists no xAI crawler. Third-party directories disagree with each other between
+`GrokBot`, `xAI-Grok` and `xAI-Crawler`. Emitting a guessed token would tell an
+owner they had blocked something they had not — the one failure this feature
+cannot have. The registry is data; the row is one line the day xAI documents it.
+Tokens that DID ship were verified against primary sources on 2026-08-14:
+developers.openai.com/api/docs/bots, privacy.claude.com article 8896518,
+docs.perplexity.ai/guides/bots, cross-checked against Cloudflare's bot reference.
+
+COPY IS THE FEATURE, AND IT IS TESTED. Owners arrive believing "AI bots" is one
+thing. Each class states what refusing it COSTS: blocking search = "absent from
+AI answers"; blocking training = "does not remove you from AI answers today".
+The policy note says plainly that robots.txt is "a published request, not a
+lock" and that a crawler ignoring it is not stopped. User-triggered fetchers
+(ChatGPT-User, Claude-User, Perplexity-User) are deliberately ABSENT from the
+registry with a note saying why — their operators publish that robots.txt does
+not apply to a request a person made directly, so listing them under a policy
+switch would offer control this file does not have. No option summary may promise
+a citation — asserted by regex.
+
+SETTINGS KEY BOUNDED BY LENGTH, NOT BY ENUM — the `reorderReminderDays` /
+verification-token split, for the documented reason: `parseTenantSettings` fails
+as a UNIT, so an out-of-enum value hand-edited into the column would return `{}`
+and take the tenant's tagline, colours and cookie banner down with it. The enum
+is enforced by the write route on the way in (`z.enum` + `.strict()`) and
+re-applied by `parseAiCrawlerPolicy` on the way out. Asserted.
+
+GATES. `requirePermission("canEditSeo")` wrapping `requireFeature(SEO_PRO)`, the
+sanctioned order — a member without the permission is refused BEFORE the plan
+read (asserted: `tenants.findFirst` never called). Basic → 403 `upgrade_required`
+and no write. The settings merge is read-modify-write over the RAW blob, so keys
+this platform version has never heard of survive (asserted). Audit row
+`seo.ai_crawlers_updated` records the transition `{from, to}`.
+
+FLAGGED, NOT FIXED (adjacent debt, out of scope):
+- The platform apex robots.txt (`app/robots.ts`) has no AI-crawler policy at all.
+  Deliberate: it is not tenant-owned and no story asks for it.
+- The store robots.txt still emits `Disallow:` lines under a comment separated by
+  a blank line from `User-agent: *`. Blank lines are ignored by the major
+  parsers so it works, but it reads oddly; left byte-identical because the AC
+  demands exactly that for Basic tenants.
+- `parseTenantSettings` logs a whole-blob parse failure to `console.error` when
+  any single key is malformed. Pre-existing (PRD-208), untouched.
+
+HOW VERIFIED
+- `pnpm exec tsc --noEmit`                         -> exit 0 (repo-wide)
+- `pnpm vitest run tests/unit/seo-ai-crawlers.test.ts` -> 37 passed
+- `pnpm vitest run` (full)                         -> 2741 passed, 30 skipped,
+                                                      161 files, 0 failed
+                                                      (2704 before; +37 new)
+- `pnpm exec next lint` on all 12 touched files    -> no warnings, no errors
+- `pnpm check:security`                            -> both gates green
+- LIVE, on `pnpm dev` with the existing `.env.local` (never modified):
+    * `GET /robots.txt` (apex) -> 200, platform file UNCHANGED (still the
+      app/robots.ts output, no AI section) — the store handler is not on this path
+    * `GET /store/healingbuds/robots.txt` -> 404 "Tenant not found", which is
+      THIS handler's own output: the route is publicly reachable and executes;
+      the 200 path needs a DB, which is not reachable locally
+    * `PUT /api/tenant-admin/seo/ai-crawlers` unauthenticated -> 307 /auth/login
+      (behind the Clerk wall, not publicly reachable)
+    * the SEO Manager tab is Clerk-gated -> VISUAL: DEFERRED TO HUMAN REVIEW.
+      The rendered Pro robots output is covered by unit tests that run the real
+      route.
+- Docker runner image: EXPLICITLY CHECKED. Two new modules under `lib/`
+  (COPYied at Dockerfile:74), one admin component under `components/` and two
+  routes under `app/` (compiled into `.next/standalone`, Dockerfile:59). No new
+  runtime import chain leaves the copied set and no new dependency — no
+  Dockerfile change needed.
+- No migration, no schema change: `aiCrawlerPolicy` is a key in the existing
+  `tenants.settings` Json blob.

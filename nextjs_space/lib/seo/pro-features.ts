@@ -85,6 +85,12 @@ export const SEO_PRO_FEATURES: readonly SeoProFeature[] = [
       "Automatos AI drafts titles and descriptions from your own product and post content — you review before anything saves.",
   },
   {
+    id: "ai-crawlers",
+    title: "AI crawler controls",
+    valueProp:
+      "Choose which AI bots may read your store — the search crawlers that cite you in AI answers, and the training crawlers, separately.",
+  },
+  {
     id: "verification",
     title: "Site verification & analytics tags",
     valueProp:

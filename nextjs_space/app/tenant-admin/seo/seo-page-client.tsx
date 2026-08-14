@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  AiCrawlersTab,
   RedirectsTab,
   SeoAuditTab,
   SeoEditorModal,
@@ -11,6 +12,7 @@ import {
   type RedirectRow,
   type VerificationValues,
 } from "@/components/admin/seo";
+import type { AiCrawlerPolicy } from "@/lib/seo/ai-crawlers";
 import type { SeoAuditTarget } from "@/lib/seo/audit-types";
 import { conditionPath } from "@/lib/seo/condition-paths";
 import {
@@ -37,6 +39,7 @@ import {
   Signpost,
   Gauge,
   BadgeCheck,
+  Bot,
 } from "lucide-react";
 
 const sectionTitleStyle = {
@@ -112,6 +115,12 @@ interface SeoPageClientProps {
    * out of.
    */
   verification: VerificationValues;
+  /**
+   * LLM Visibility US-001 — the store's AI crawler policy, resolved server-side
+   * through `parseAiCrawlerPolicy`, so an absent or unreadable stored value
+   * arrives here as 'open' (maximum visibility) rather than as undefined.
+   */
+  aiCrawlerPolicy: AiCrawlerPolicy;
   /** `settings.analyticsEnabled` — whether the GA4 tag is allowed to load. */
   analyticsCookiesEnabled: boolean;
 }
@@ -127,6 +136,7 @@ export function SeoPageClient({
   seoProUnlocked,
   aiAssistConnected,
   verification,
+  aiCrawlerPolicy,
   analyticsCookiesEnabled,
 }: SeoPageClientProps) {
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
@@ -316,7 +326,7 @@ export function SeoPageClient({
           which arm it belongs in.
         */}
         <TabsList
-          className={`grid w-full grid-cols-2 ${seoProUnlocked ? "sm:grid-cols-7" : "sm:grid-cols-5"} lg:w-auto lg:inline-grid`}
+          className={`grid w-full grid-cols-2 ${seoProUnlocked ? "sm:grid-cols-8" : "sm:grid-cols-5"} lg:w-auto lg:inline-grid`}
         >
           <TabsTrigger value="products" className="gap-2">
             <Package className="h-4 w-4 hidden sm:block" aria-hidden="true" />
@@ -354,6 +364,17 @@ export function SeoPageClient({
             <TabsTrigger value="verification" className="gap-2">
               <BadgeCheck className="h-4 w-4 hidden sm:block" aria-hidden="true" />
               Verification
+            </TabsTrigger>
+          )}
+          {/*
+            LLM Visibility US-001 — which AI bots may read the store. Pro only,
+            configuration rather than authoring, so it sits with Verification
+            rather than among the four content tabs.
+          */}
+          {seoProUnlocked && (
+            <TabsTrigger value="ai-crawlers" className="gap-2">
+              <Bot className="h-4 w-4 hidden sm:block" aria-hidden="true" />
+              AI Crawlers
             </TabsTrigger>
           )}
           {/*
@@ -615,6 +636,16 @@ export function SeoPageClient({
             <VerificationTab
               initialValues={verification}
               analyticsCookiesEnabled={analyticsCookiesEnabled}
+            />
+          </TabsContent>
+        )}
+
+        {/* AI Crawlers Tab — Pro only (LLM Visibility US-001) */}
+        {seoProUnlocked && (
+          <TabsContent value="ai-crawlers">
+            <AiCrawlersTab
+              initialPolicy={aiCrawlerPolicy}
+              robotsUrl={`${baseUrl}/robots.txt`}
             />
           </TabsContent>
         )}

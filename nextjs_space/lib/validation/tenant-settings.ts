@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { AI_CRAWLER_POLICY_MAX_LENGTH } from "@/lib/seo/ai-crawlers";
 import {
   BING_SITE_VERIFICATION_MAX_LENGTH,
   GA4_MEASUREMENT_ID_MAX_LENGTH,
@@ -163,6 +164,24 @@ const tenantSettingsShape = {
   ga4MeasurementId: z
     .string()
     .max(GA4_MEASUREMENT_ID_MAX_LENGTH)
+    .nullable()
+    .optional(),
+
+  // LLM Visibility US-001 — which classes of AI crawler the storefront's
+  // robots.txt welcomes ('open' | 'search-only' | 'blocked'). Absent means
+  // 'open', the maximum-visibility default.
+  //
+  // Bounded by LENGTH here and not pinned to the enum, the same split as the
+  // three verification keys above and for the identical reason: this schema is
+  // what `parseTenantSettings` runs on every storefront read and it fails as a
+  // unit, so an out-of-enum value would return `{}` and take the tenant's
+  // tagline, colours and cookie banner down with it. The enum is enforced by
+  // the write route on the way in (`isAiCrawlerPolicy`) and re-applied by
+  // `parseAiCrawlerPolicy` on the way out, which falls back to 'open' rather
+  // than rendering a directive nobody chose.
+  aiCrawlerPolicy: z
+    .string()
+    .max(AI_CRAWLER_POLICY_MAX_LENGTH)
     .nullable()
     .optional(),
 

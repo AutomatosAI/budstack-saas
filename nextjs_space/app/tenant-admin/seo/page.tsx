@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
 import { isAiAssistConnected } from "@/lib/seo/ai-assist";
+import { parseAiCrawlerPolicy } from "@/lib/seo/ai-crawlers";
 import { isSeoProUnlocked } from "@/lib/seo/pro-features";
 import { readSiteVerification } from "@/lib/seo/site-verification";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
@@ -145,6 +146,11 @@ export default async function SeoPage() {
   const settings = parseTenantSettings(tenant.settings, { tenantId });
   const verification = readSiteVerification(settings);
 
+  // LLM Visibility US-001 — read off the SAME parsed blob, through the same
+  // fail-open parser the storefront's robots.txt uses, so the control shows the
+  // policy that is actually being published rather than a second reading of it.
+  const aiCrawlerPolicy = parseAiCrawlerPolicy(settings.aiCrawlerPolicy);
+
   return (
     <div>
       <div className="bs-page-header-centered">
@@ -167,6 +173,7 @@ export default async function SeoPage() {
         seoProUnlocked={seoProUnlocked}
         aiAssistConnected={aiAssistConnected}
         verification={verification}
+        aiCrawlerPolicy={aiCrawlerPolicy}
         analyticsCookiesEnabled={settings.analyticsEnabled === true}
         pageSeo={
           tenant.pageSeo as Record<
