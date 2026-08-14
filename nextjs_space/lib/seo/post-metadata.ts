@@ -46,13 +46,13 @@ import {
   storeDisplayName,
 } from "@/lib/seo/store-identity";
 import { storedPublicImagePath } from "@/lib/storage/public-image-url";
+import { WIRE_INDEX_PATH, wirePostPath } from "@/lib/seo/wire-paths";
 
-/** The Wire's store-relative paths — also its canonical paths. */
-export const WIRE_INDEX_PATH = "/the-wire";
-
-export function wirePostPath(slug: string): string {
-  return `${WIRE_INDEX_PATH}/${slug}`;
-}
+// The Wire's store-relative paths — also its canonical paths. They live in a
+// dependency-free module of their own (US-021: the post editor is a client
+// component and this file reaches pino) and are re-exported here so every
+// existing importer keeps its import.
+export { WIRE_INDEX_PATH, wirePostPath };
 
 /** Title for a post slug that resolves to nothing; the shipped wording. */
 export const POST_NOT_FOUND_TITLE = "Not Found";

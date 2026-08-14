@@ -339,15 +339,14 @@ describe("resolveStoreRedirect", () => {
   });
 
   it("collapses a burst of cold requests into ONE fetch", async () => {
-    let resolveFeed: ((value: Response) => void) | null = null;
-    stubFeed(
-      vi.fn(
-        () =>
-          new Promise<Response>((resolve) => {
-            resolveFeed = resolve;
-          }),
-      ),
-    );
+    // Definite assignment, not `| null`: the executor runs synchronously, and a
+    // nullable `let` narrows to `null` at the call site below — `resolveFeed?.()`
+    // then types as `never` and fails the build (TS2349).
+    let resolveFeed!: (value: Response) => void;
+    const pending = new Promise<Response>((resolve) => {
+      resolveFeed = resolve;
+    });
+    stubFeed(vi.fn(() => pending));
 
     const input = {
       origin: ORIGIN,
@@ -364,7 +363,7 @@ describe("resolveStoreRedirect", () => {
 
     // Let the three calls reach the shared in-flight promise before answering.
     await Promise.resolve();
-    resolveFeed?.(
+    resolveFeed(
       new Response(
         JSON.stringify({
           redirects: [{ fromPath: "/old", toPath: "/new", statusCode: 301 }],

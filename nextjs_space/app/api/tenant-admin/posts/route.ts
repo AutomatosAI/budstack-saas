@@ -5,18 +5,10 @@ import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { apiError } from "@/lib/api-error";
 import { withEntityImageAlt } from "@/lib/seo/entity-seo";
+// US-021 — the slug rule, previously copied into this route and the PATCH one
+// character-for-character. One definition, now also read by the editor.
+import { slugifyPostTitle } from "@/lib/seo/post-slug";
 import { parseJsonBody } from "@/lib/validation/body";
-
-// Slugify helper
-function slugify(text: string) {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-") // Replace spaces with -
-    .replace(/[^\w\-]+/g, "") // Remove all non-word chars
-    .replace(/\-\-+/g, "-"); // Replace multiple - with single -
-}
 
 const postSchema = z.object({
   title: z.string().min(1, "Title is required").max(300),
@@ -58,8 +50,10 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
     // there is no column of its own, so it never reaches `data` directly.
     const coverSeo = withEntityImageAlt(null, validatedData.coverImageAlt);
 
-    // Generate base slug
-    let slug = slugify(validatedData.title);
+    // Generate base slug. A new post has no URL to preserve, so the slug is
+    // title-derived here and editable only afterwards (US-021), where a change
+    // can be redirected from.
+    let slug = slugifyPostTitle(validatedData.title);
 
     // Ensure uniqueness within tenant. findFirst (not findUnique w/ the
     // slug_tenantId compound key): the tenant-scope extension rewrites

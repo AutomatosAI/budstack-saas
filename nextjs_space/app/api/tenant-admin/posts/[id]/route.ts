@@ -4,19 +4,23 @@ import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { apiError } from "@/lib/api-error";
+import { getTenantPlan } from "@/lib/entitlements/require-feature";
 import { withEntityImageAlt } from "@/lib/seo/entity-seo";
+import {
+  normalizePostSlug,
+  POST_SLUG_HINT,
+  POST_SLUG_MAX_LENGTH,
+  slugifyPostTitle,
+} from "@/lib/seo/post-slug";
+import { isSeoProUnlocked } from "@/lib/seo/pro-features";
+import {
+  applySlugRenameRedirect,
+  skippedSlugRedirect,
+  type SlugRedirectOutcome,
+} from "@/lib/seo/slug-redirects";
+import { wirePostPath } from "@/lib/seo/wire-paths";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
-
-function slugify(text: string) {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w\-]+/g, "")
-    .replace(/\-\-+/g, "-");
-}
 
 const postSchema = z.object({
   title: z.string().min(1, "Title is required").max(300),
@@ -27,8 +31,43 @@ const postSchema = z.object({
   // translated below. It must never reach `data` or Prisma throws on an unknown
   // field.
   coverImageAlt: z.string().max(300).optional(),
+  // US-021 — the post's URL, editable at last. Shape only: the value rules live
+  // in `normalizePostSlug` so the editor and this route cannot disagree about
+  // what a slug is.
+  slug: z.string().min(1).max(POST_SLUG_MAX_LENGTH).optional(),
   published: z.boolean().default(false),
 });
+
+/**
+ * US-021 — the 301 a rename earns, or the reason it did not.
+ *
+ * The PLAN GATE IS HERE rather than around the route, and that is the whole
+ * design: editing a post is Basic functionality and must never 403, so the
+ * feature being gated is the redirect itself. A Basic rename succeeds and
+ * reports `not_entitled`, which is what the editor warned about before the
+ * owner saved. Gating the route would lock the wrong thing; gating nothing
+ * would hand Pro away in the UI's blind spot.
+ *
+ * `getTenantPlan` reads the authoritative `tenants.plan` column and fails
+ * closed to Basic, so a database blip skips the redirect rather than writing
+ * one for a tenant who is not paying for it.
+ */
+async function redirectRename(
+  tenantId: string,
+  fromSlug: string,
+  toSlug: string,
+): Promise<SlugRedirectOutcome> {
+  const plan = await getTenantPlan(tenantId);
+  if (!isSeoProUnlocked({ id: tenantId, plan })) {
+    return skippedSlugRedirect("not_entitled");
+  }
+
+  return applySlugRenameRedirect({
+    tenantId,
+    oldPath: wirePostPath(fromSlug),
+    newPath: wirePostPath(toSlug),
+  });
+}
 
 export const GET = withAuth(async (_req, { user }, { id: rawId }) => {
   try {
@@ -102,7 +141,10 @@ export const PATCH = withAuth(async (req, { user }, { id: rawId }) => {
     // is what keeps the SEO Manager's title/description/ogImage for this post
     // alive — it writes the same column through a different route. Absent from
     // the body (any caller that predates this field) means "leave seo alone".
-    const { coverImageAlt, ...columnData } = validatedData;
+    // `slug` is lifted out with `coverImageAlt`: both need work before they can
+    // become column values, and spreading the raw body would write an
+    // un-normalised slug straight into the URL.
+    const { coverImageAlt, slug: requestedSlug, ...columnData } = validatedData;
     const dataToUpdate: Record<string, unknown> = { ...columnData };
 
     if (coverImageAlt !== undefined) {
@@ -114,8 +156,26 @@ export const PATCH = withAuth(async (req, { user }, { id: rawId }) => {
         withEntityImageAlt(existingPost.seo, coverImageAlt) ?? Prisma.DbNull;
     }
 
-    if (validatedData.title && validatedData.title !== existingPost.title) {
-      const baseSlug = slugify(validatedData.title);
+    // US-021 — an AUTHORED slug wins over the title-derived one. Once someone
+    // has chosen a URL, retitling the article must not silently move it; that
+    // was the old behaviour and it is exactly what a redirect manager exists to
+    // undo. The derivation stays for callers that send no slug — the editor
+    // before this story, and anything else PATCHing a title.
+    const baseSlug =
+      requestedSlug !== undefined
+        ? normalizePostSlug(requestedSlug)
+        : validatedData.title && validatedData.title !== existingPost.title
+          ? slugifyPostTitle(validatedData.title)
+          : null;
+
+    if (requestedSlug !== undefined && !baseSlug) {
+      return NextResponse.json({ error: POST_SLUG_HINT }, { status: 400 });
+    }
+
+    let renamedFrom: string | null = null;
+    let renamedTo: string | null = null;
+
+    if (baseSlug && baseSlug !== existingPost.slug) {
       let uniqueSlug = baseSlug;
       let counter = 1;
       while (
@@ -134,6 +194,17 @@ export const PATCH = withAuth(async (req, { user }, { id: rawId }) => {
         counter += 1;
       }
       dataToUpdate.slug = uniqueSlug;
+
+      // The rename is only worth a redirect if there was a real URL to leave
+      // behind AND the uniqueness loop did not land back on it.
+      if (
+        typeof existingPost.slug === "string" &&
+        existingPost.slug &&
+        existingPost.slug !== uniqueSlug
+      ) {
+        renamedFrom = existingPost.slug;
+        renamedTo = uniqueSlug;
+      }
     }
 
     const updatedPost = await prisma.posts.update({
@@ -141,7 +212,16 @@ export const PATCH = withAuth(async (req, { user }, { id: rawId }) => {
       data: dataToUpdate,
     });
 
-    return NextResponse.json(updatedPost);
+    // AFTER the rename lands, never before: a redirect to a URL that failed to
+    // exist is worse than no redirect at all.
+    const slugRedirect =
+      renamedFrom && renamedTo
+        ? await redirectRename(existingPost.tenantId, renamedFrom, renamedTo)
+        : null;
+
+    return NextResponse.json(
+      slugRedirect ? { ...updatedPost, slugRedirect } : updatedPost,
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });

@@ -2494,3 +2494,169 @@ FLAGGED, NOT FIXED (adjacent debt)
   rather than inserting directly.
 - The SEO Manager page now runs five parallel queries in one Promise.all. Fine
   today; it is the obvious thing to split when a sixth arrives.
+
+================================================================================
+[2026-08-14] US-021 PASS — Slug editing + auto-301 on change
+
+WHAT LANDED
+- The Wire's post editor can finally change an article's URL, and on Pro the old
+  URL keeps working. Before this story the slug was write-once (derived from the
+  title at create, app/api/tenant-admin/posts/route.ts) with one silent
+  exception: PATCHing a CHANGED TITLE re-derived the slug and moved the article,
+  orphaning every link to it. That exception is now gone — see BEHAVIOUR CHANGE.
+- lib/seo/post-slug.ts (new, pure) — the slug rule, de-duplicated. `slugify` was
+  copied character-for-character into both post write routes; this story adds a
+  third caller (the editor's own validation), and three copies of a URL rule is
+  three URLs. Exports slugifyPostTitle (moved verbatim), normalizePostSlug,
+  POST_SLUG_PATTERN and POST_SLUG_HINT.
+  * The editor REJECTS what does not match the pattern; the server CANONICALISES
+    with the same transformation. A URL box that rewrites what you typed is how
+    a link ends up somewhere nobody chose — but an API caller is not looking at
+    the form, and a refused save is worse than a canonicalised one.
+  * normalizePostSlug is a NO-OP on every shape slugifyPostTitle has ever
+    produced (underscores survive `\w`; a leading hyphen survives a title that
+    started with punctuation). That is load-bearing, not tidiness: the editor
+    posts the slug back on EVERY save, so a normaliser that "cleaned up" legacy
+    slugs would rename the post — and write a 301 — for someone who only fixed a
+    typo in the body. Asserted directly (post-slug-redirects.test.ts).
+- lib/seo/wire-paths.ts (new, pure) — WIRE_INDEX_PATH + wirePostPath split out
+  of post-metadata.ts, which re-exports them so every existing importer
+  (sitemap, article-json-ld, breadcrumb-json-ld, the wire metadata tests) is
+  untouched. The split exists because post-form.tsx is a CLIENT component and
+  post-metadata reaches pino through lib/storage/public-image-url -> lib/api-error.
+  Same shape and same reason as product-paths.ts / condition-paths.ts.
+- lib/seo/slug-redirects.ts (new, server) — what a rename does to the redirect
+  table, as a PURE PLANNER plus a thin applier:
+    1. DELETE any rule that CLAIMS the new path. Middleware redirects before
+       routing, so a rule sitting on the post's new URL makes the renamed post
+       unreachable at the address it was just given. This is the rename-back
+       case (/a -> /b leaves "/a redirects to /b"; renaming /b back to /a must
+       clear it) and it is the one that silently breaks a store.
+    2. RE-AIM every rule that POINTS AT the old path at the new one. No chains —
+       /old -> /middle -> /new is two hops, a diluted signal and one more thing
+       to break. Replace, never stack.
+    3. WRITE old -> new, or RETARGET the rule already on the old path rather
+       than stacking a second row (the unique index would refuse it anyway).
+  * ORDER 1->3 IS WHAT MAKES A LOOP IMPOSSIBLE rather than unlikely: after (1)
+    nothing maps FROM the new path (@@unique([tenantId, fromPath]) allows one
+    rule per path and it has just been deleted), so the new rule's destination
+    ends its chain. findRedirectChainProblem STILL runs over the planned
+    end-state before anything is written — a constructive argument is not a
+    guarantee, and the failure it prevents is ERR_TOO_MANY_REDIRECTS on the
+    owner's own storefront.
+- PATCH /api/tenant-admin/posts/[id] — `slug` accepted (shape-checked by zod,
+  value-checked by normalizePostSlug), an AUTHORED slug beats the title-derived
+  one, the existing uniqueness loop is reused unchanged (still scoped to
+  existingPost.tenantId — the PR #115 super-admin finding), and the redirect is
+  written AFTER the rename lands. Response carries `slugRedirect` so the editor
+  can say what actually happened instead of guessing.
+- The editor: an "Article URL" field under the title (edit only — a brand-new
+  article has no URL to defend), a live /the-wire/... preview, and a warning
+  the moment the slug differs from what the post is published at. Pro: "saving
+  points /the-wire/old at the new URL with a 301". Basic: "/the-wire/old will
+  stop working — anyone following an existing link gets a 404", with the
+  UPGRADE_CTA_LABEL link. The toast on save reports the server's own outcome.
+
+THE GATE, AND WHY IT IS NOT requireFeature ON THE ROUTE
+- Editing a post is BASIC functionality and must never 403. The Pro feature here
+  is the REDIRECT, so the plan gate sits inside the handler
+  (`redirectRename` -> getTenantPlan -> isSeoProUnlocked) and decides whether a
+  row is written — degrading, never blocking. Wrapping the route in
+  requireFeature would lock the wrong thing; gating only in the UI would hand
+  Pro away in the API's blind spot. A Basic rename returns 200 with
+  slugRedirect.reason === "not_entitled", which is exactly what the editor
+  warned about before the owner saved. Asserted both ways, plus the fail-closed
+  path: an unrecognised plan string resolves to Basic and writes nothing.
+- seoProUnlocked reaches the form as a decided boolean from the server page
+  (getTenantPlan on the edit page, alongside the post query in one Promise.all).
+  The client never parses a plan.
+
+WHY NOT checkRedirectWrite (US-020's flagged seam)
+- US-020's journal flagged checkRedirectWrite as the seam for this story. It is
+  the wrong shape: it validates ONE candidate against the table as it stands,
+  and a rename is a four-part transaction on the table (delete shadowers,
+  re-aim chains, retarget-or-insert). What matters is that the two paths cannot
+  disagree about the RULES, and they do not — the planner reuses the same pure
+  functions checkRedirectWrite does: normalizeRedirectPath, redirectMatchKey,
+  findRedirectChainProblem and SEO_REDIRECT_MAX_PER_TENANT.
+- isReservedRedirectPath is NOT re-checked: the paths handed to the planner are
+  always /the-wire/{slug} (wirePostPath), a constant prefix, not user input.
+  Documented in the module docstring rather than left to be rediscovered.
+
+NOT ATOMIC, ON PURPOSE
+- This repo has no $transaction call site anywhere in app/ or lib/ (grepped).
+  Introducing interactive transactions under the $extends tenant-scope rewrite
+  is a larger change than the failure justifies: the writes run AFTER the post
+  is already renamed, each is idempotent, and re-running the same rename is a
+  no-op (asserted). A write that throws is logged and reported as
+  `write_failed`; it never fails the edit, because a post the owner successfully
+  renamed must not 500 on its way back. Asserted with a rejecting create: 200,
+  new slug persisted, honest reason in the body.
+
+BEHAVIOUR CHANGE WORTH KNOWING
+- Retitling an article no longer moves its URL. The editor now always sends the
+  slug, and an authored slug wins, so the old auto-rename-on-title-change path
+  only fires for callers that send NO slug (unchanged, still covered by
+  tests/unit/posts-slug-scope.test.ts). This is the point of the story: a URL
+  changes when someone decides it changes, and then it gets a 301.
+
+VERIFICATION
+- pnpm exec tsc --noEmit -> EXIT 0.
+  * It did NOT start clean. tests/unit/seo-redirect-lookup.test.ts:367 failed
+    TS2349 ("Type 'never' has no call signatures") BEFORE this story's diff —
+    confirmed by stashing the diff and re-running. US-020 shipped it: a
+    `let resolveFeed: ((v: Response) => void) | null = null` assigned inside a
+    promise executor narrows to `null` at the call site. Fixed in place with a
+    definite-assignment declaration and a single shared pending promise; the
+    test's meaning (one fetch for a burst of cold requests) is unchanged and it
+    still passes. Repo tsc is a hard gate for every story, so this was fixed,
+    not flagged.
+- Targeted: 2 new files, 27 tests, all passing —
+    tests/unit/post-slug-redirects.test.ts (14) the slug rule + the pure planner
+    tests/unit/posts-slug-rename.test.ts   (13) the route: authored-slug-wins,
+      coercion, the 400, the no-op save, title-derivation preserved, the
+      uniqueness suffix redirecting to where the post ACTUALLY landed, the
+      delete/re-aim/retarget writes, write_failed, Basic, fail-closed, trial.
+- Full unit project: 149 files, 2437 tests, ALL PASS. No pre-existing failures.
+- pnpm build -> SUCCEEDED, which is the real check on this story's client
+  boundary: /tenant-admin/the-wire/[id] compiles with post-form importing
+  lib/seo/post-slug, lib/seo/wire-paths and lib/entitlements/upgrade, so no
+  server-only module (Prisma, pino) reached the browser bundle. tsc cannot see
+  that class of error.
+- pnpm check:security -> both gates pass. next lint on the 8 touched files ->
+  zero warnings or errors.
+- Path shape verified against middleware rather than assumed: the storefront
+  post route resolves by `slug` (app/store/[slug]/the-wire/[postSlug]/page.tsx
+  :66-69), and storeRedirectScope peels dev's /store/{slug} prefix, so the
+  stored /the-wire/{slug} matches on BOTH a tenant host and dev path routing.
+  visual: deferred to human review — the editor is behind Clerk and needs a real
+  tenant session plus a reachable DB.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson) — no change needed, checked not
+assumed. All three new modules are under lib/, which the runner COPYies in its
+own right (Dockerfile:75), and the route/page/form changes ship inside
+.next/standalone. No new runtime import chain reaches a directory outside the
+existing COPY set.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- CREATING a post can still be shadowed: if a redirect already claims
+  /the-wire/{new post's slug}, the new article is unreachable the moment it
+  publishes. The rename path now clears exactly that (step 1); the CREATE path
+  (POST /api/tenant-admin/posts) does not, and it is out of this story's scope.
+  Same fix, same planner, one call.
+- The posts routes' mixed auth is untouched as instructed: POST uses
+  withTenantAuth, GET/PATCH/DELETE use withAuth + a hand-rolled role check and
+  a users-by-email lookup. That is the ~31-route sweep's problem.
+- withAuth binds tenant context from getTenantFromRequest(req), which is null on
+  the admin host, so the explicit `where: { tenantId }` in every redirect write
+  is what scopes them (create also stamps data.tenantId explicitly). A
+  SUPER_ADMIN calling this API from a TENANT host would have the extension
+  overwrite that where with the host's tenant — the writes would find nothing
+  and the rename would report no redirect. Fail-safe, ambient to every
+  tenant-admin route, and not introduced here.
+- app/super-admin/tenants/[id]/tenant-plan-control.tsx uses `bg-bs-surface-50`,
+  which is not a token in tailwind.config.ts (the real ones are bs-card /
+  bs-card-2 / bs-input, and bs-warn for warnings). Dead class, no visual effect.
+  Spotted while styling this story's warning box, which uses the real tokens.
+- No audit-log entry on the automatic redirect, consistent with US-020's manual
+  ones. Still nobody's story.
