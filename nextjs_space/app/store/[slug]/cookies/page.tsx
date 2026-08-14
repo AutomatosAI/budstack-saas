@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { getCurrentTenant } from "@/lib/tenant/tenant";
 import LegalDocumentPage from "../_components/LegalDocumentPage";
+import { generateLegalDocumentMetadata } from "@/lib/seo/generate-page-metadata";
 
 /**
  * Cookie Notice — the OPERATOR's, served on the operator's own domain.
@@ -11,11 +11,9 @@ import LegalDocumentPage from "../_components/LegalDocumentPage";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const tenant = await getCurrentTenant();
-  return {
-    title: tenant ? `Cookie Notice | ${tenant.businessName}` : "Cookie Notice",
-  };
+// SEO US-007 — title, description and canonical, shared by all four documents.
+export function generateMetadata(): Promise<Metadata> {
+  return generateLegalDocumentMetadata("cookies");
 }
 
 export default function StoreCookiesPage() {

@@ -709,3 +709,135 @@ FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
 - The tenant sitemap has no <urlset> size guard. Harmless at current catalogue
   sizes; the protocol's limit is 50k URLs / 50MB, and a store that ever
   approaches it needs a sitemap index, not a bigger document.
+
+================================================================================
+[2026-08-14] US-007 PASS — Canonicals everywhere
+================================================================================
+
+WHAT THE STORY ACTUALLY NEEDED
+ACs 1 and 3 were ALREADY SHIPPED. `storeCanonical(tenant, path, options)` landed
+in US-002 (lib/seo/canonical.ts) with the US-022 options bag the notes asked
+for, and tests/unit/store-page-metadata.test.ts:196-247 already asserts every
+clause of AC-3 verbatim — customDomain preferred, subdomain otherwise, path
+preserved, no trailing-slash drift, plus query/fragment stripping and the
+absolute/relative override cases. Nothing was re-implemented and nothing was
+re-tested for its own sake. The whole story was AC-2: the sweep.
+
+THE REMAINDER, AND WHY THAT SET
+Public store pages with NO canonical before this story (8):
+  /products  /how-it-works  /consultation  /blockchain
+  /privacy   /terms         /cookies       /regulatory
+All eight are reachable by a crawler — `/store/(.*)` is in isPublicRoute
+(middleware.ts:20) — and all eight are linked from the storefront's own nav or
+footer except /blockchain (grep: nothing outside its own directory references
+it; it is covered anyway rather than made an exception).
+Three of them (/products, /how-it-works, /blockchain) were CLIENT components,
+which cannot export generateMetadata at all. Each is now a server page rendering
+its extracted client body — the pattern the sibling detail route already uses
+(products/[id]/page.tsx → ProductDetailClient), so the store tree has ONE
+convention rather than a metadata-only layout.tsx as a second one. A layout
+would also have been wrong for /products specifically: `alternates` is not
+deep-merged (mergeMetadata iterates SOURCE keys, so an absent key leaves the
+parent's value in place), so a canonical on products/layout.tsx would have
+leaked "/products" onto product-detail's two early returns.
+
+A SECOND DEFECT FOUND AND CLOSED (not in the ACs)
+The four legal routes each hardcoded `title: \`Privacy Policy | ${businessName}\``.
+Next applies a stashed parent template to any child STRING title
+(resolve-title.js:14-18 `resolveTitleTemplate(stashedTemplate, title)`), and
+US-001 gave the store layout `template: "%s | {businessName}"`, which IS stashed
+for these pages: the loader tree for /store/[slug]/cookies is
+[root, store, [slug], cookies, __PAGE__], the store layout sits at i=2 and the
+guard is `i < length - 2` = `2 < 3` (resolve-metadata.js:556). So since US-001
+every custom-domain store has served "Privacy Policy | Acme | Acme". The four
+titles now come from LEGAL_DOCUMENTS[slug].title — the same registry the page
+renders as its <h1> — with the suffix applied exactly once, by the template.
+
+CONSULTATION IS TWO PAGES AT ONE URL
+An SA tenant with SA_ID_UPLOAD_ENABLED and verificationMode=ID_UPLOAD gets a
+registration + ID-upload form, not a medical consultation (consultation/page.tsx
+:29-30). Titling that "Consultation" describes a page the visitor never sees, so
+STORE_ROUTES carries both `consultation` and `idUploadRegistration` at the SAME
+path — different copy, identical canonical. The mode is recomputed in
+generateMetadata from the same React-cache()d tenant and the same two pure
+functions the body uses: no extra query, no chance of the two disagreeing.
+
+REUSE OVER NEW SEAMS
+First cut added app/store/[slug]/_components/legal-document-metadata.ts. Deleted
+before commit: US-002 already established lib/seo/generate-page-metadata.ts as
+"the generateMetadata body every store page shares", so the two new variants
+(generateStoreRouteMetadata, generateLegalDocumentMetadata) went there beside
+generateStorePageMetadata. Every one of the 8 page files is now a 3-line
+delegation, and the no-tenant answer is one constant instead of nine literals.
+
+THE DRIFT GUARD (the part that keeps "everywhere" true)
+tests/unit/store-route-metadata.test.ts walks app/store/[slug] on disk, finds
+all 28 page.tsx files, and asserts each one either references a
+canonical-emitting builder or is named in a NO_CANONICAL table WITH A REASON.
+17 routes are asserted to emit; 11 are excluded on the record:
+  faq                       redirect() to /support — renders nothing to index
+  cart, checkout,
+  payment/return/[orderId]  checkout funnel — noindex is the tag it needs, and
+                            that is US-022's AC, not this story's. Also the
+                            PROMPT's anti-pattern list forbids touching
+                            payment/checkout code.
+  dashboard, settings,
+  orders, orders/[orderId]  signed-in account pages
+  consultation/success      post-submission, reached only by redirect
+  login, register           auth entry points
+The table is checked BOTH ways: a new store page with no canonical fails, and a
+stale exemption for a deleted route fails. It also asserts every path the
+sitemap advertises (STORE_SEO_PAGES) is a route that emits a canonical, and that
+no STORE_ROUTES entry shadows a page the SEO Manager can author (which would
+silently outrank an owner's saved title with a module constant).
+
+VERIFICATION
+  pnpm exec tsc --noEmit                              -> exit 0
+  pnpm vitest run tests/unit/store-route-metadata.ts  -> 40 passed
+  pnpm vitest run --project unit                      -> 129 files, 2009 passed
+      (US-006 baseline was 128 files / 1969 — +1 file, +40 tests, 0 regressions)
+  pnpm exec next lint (14 touched files)              -> no warnings or errors
+  pnpm check:security                                 -> both gates pass
+No Prisma change, so no migration/validate step.
+DOCKERFILE CHECK (the email-p2 #232 lesson): the one new module is
+lib/seo/route-metadata.ts and its only new import edge is
+lib/seo/ -> lib/legal/documents (already imported by these same pages' bodies via
+LegalDocumentPage). Everything added lives under app/ and lib/, both already
+COPYied by nextjs_space/Dockerfile:57-95. No Dockerfile edit needed.
+
+LIVE CURL (pnpm dev, existing .env.local, unmodified)
+All 8 swept routes answered 200-path-not-taken: 404 with <title>Store Not
+Found</title> and NO canonical, because this machine cannot reach the Railway
+private-network DB (`Can't reach database server at
+postgres-budstack-development.up.railway.app:5432`, same limitation US-006
+recorded). That is the !tenant branch working exactly as designed — no throw
+inside generateMetadata (which has no error.tsx boundary), no bogus canonical
+minted for a host that resolves to nothing. The canonical STRINGS are asserted
+against the shipped builders by the 40 unit tests, not by the curl.
+visual: deferred to human review — a real tenant row is needed to see the tags.
+
+NO REGRESSION TO THE HOMEPAGE
+app/store/[slug]/page.tsx is untouched; its canonical at :415 and its
+un-suffixed title (the layout template is NOT stashed at length-2) still stand.
+The drift guard asserts the "" route emits a canonical, so a future edit that
+drops it fails here.
+
+FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
+- /products, /how-it-works and /blockchain each still fetch their own tenant
+  from /api/tenant/current or /api/store/... on the CLIENT while the server
+  already has it React-cache()d one component up. The split done here is the
+  precondition for passing it down as a prop; doing it now would have been a
+  rendering change inside an SEO story.
+- The metadata in lib/seo/ is English-only while the storefront renders
+  translated copy (lib/i18n locales en/pt). og:locale has been a hardcoded
+  "en_US" since US-001. Real localisation needs hreflang alternates, which is a
+  story nobody has written yet.
+- /products' <h1> comes from the template's pageContent.heroTitle ("Premium
+  Cultivars" by default) while its <title> is the constant "Products". Making it
+  match means reading the tenant template in generateMetadata; making /products
+  authorable in the SEO Manager (one line in STORE_SEO_PAGE_KEYS + swapping it
+  onto buildStorePageMetadata) is the better answer and is a product call.
+- The checkout funnel and account pages still advertise themselves to crawlers:
+  no noindex, and store robots.txt has no Disallow (already flagged in US-006,
+  homed at US-022). The NO_CANONICAL table above is now the written record of
+  which routes are waiting on it.
