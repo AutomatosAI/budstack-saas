@@ -55,6 +55,7 @@ function source(
     subdomain: "acme",
     customDomain: CUSTOM_DOMAIN,
     logoRef: LOGO_KEY,
+    socialLinks: [],
     slug: POST_SLUG,
     title: POST_TITLE,
     excerpt: "What the evidence says, and what it does not.",

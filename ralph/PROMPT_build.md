@@ -1,21 +1,21 @@
-# Ralph Build Prompt — SEO Supercharge (Basic $99 / Pro $169)
+# Ralph Build Prompt — LLM Visibility (GEO, Pro)
 
 You are an autonomous build agent. Each invocation, you implement **ONE** unchecked user story from the plan, then exit. The outer loop re-invokes you on the next story.
 
 ## Hard branch lock
 
-Your repo is **`/Users/gkavanagh/Development/Dr-Green-Cannexis/budstack-saas`** on branch **`ralph/seo-supercharge`**. The Next.js app lives in **`nextjs_space/`** (pnpm).
+Your repo is **`/Users/gkavanagh/Development/Dr-Green-Cannexis/budstack-saas`** on branch **`ralph/seo-llm-visibility`**. The Next.js app lives in **`nextjs_space/`** (pnpm).
 
-- Stay on `ralph/seo-supercharge` the whole time.
+- Stay on `ralph/seo-llm-visibility` the whole time.
 - NEVER check out a different branch. NEVER `git push`. NEVER touch `main`/`origin/main`. **This repo auto-deploys on merge to main — pushing/merging is a human decision only.**
-- First action of Phase 1: `git branch --show-current`. If it is not `ralph/seo-supercharge`, emit `RALPH_ABORT: wrong branch` and stop.
+- First action of Phase 1: `git branch --show-current`. If it is not `ralph/seo-llm-visibility`, emit `RALPH_ABORT: wrong branch` and stop.
 
 ## The plan
 
 - `ralph/prd.json` — 26 stories (US-001..US-026). `acceptanceCriteria` AND `notes` are binding; notes carry exact file:line anchors — read every named file before asserting anything.
 - `ralph/IMPLEMENTATION_PLAN.md` — checkbox list; single source of truth.
 - `ralph/progress.txt` — journal; one block per finished story with verification evidence.
-- `tasks/prd-seo-supercharge.md` — full PRD (FRs, non-goals, open questions).
+- `tasks/prd-seo-llm-visibility.md` — full PRD (FRs, non-goals, open questions).
 - `docs/SEO-SYSTEM-REVIEW.md` — the as-built audit this PRD is grounded in.
 - The email-p2 run's journal at `ralph/archive/2026-08-12-email-authoring-campaigns/progress.txt` is a pattern library — permission conversion (its US-009), fail-closed Json parsing (US-025), upsell/deep-link UI, conditional-write idempotency.
 
@@ -38,7 +38,7 @@ If Phase 1 finds uncommitted tracked changes that clearly belong to the story yo
 ## 4-phase loop
 
 ### Phase 1 — Orient
-1. `git branch --show-current` → must be `ralph/seo-supercharge` (else `RALPH_ABORT`).
+1. `git branch --show-current` → must be `ralph/seo-llm-visibility` (else `RALPH_ABORT`).
 2. Read `ralph/IMPLEMENTATION_PLAN.md`; find the **first unchecked** `- [ ] US-XXX`.
 3. If every story is checked or BLOCKED, emit `RALPH_COMPLETE`.
 4. Read the story's `acceptanceCriteria` + `notes` in `ralph/prd.json`, then every file the notes name.
@@ -72,7 +72,7 @@ If validation fails: obvious fix → apply. Otherwise revert your files, journal
    <2-4 line body: what landed, ACs satisfied, verification>
 
    Story: ralph/prd.json US-XXX
-   PRD: tasks/prd-seo-supercharge.md
+   PRD: tasks/prd-seo-llm-visibility.md
    ```
 5. Last executable story → append `RALPH_COMPLETE` in the body and emit it. Exit; the loop re-invokes you.
 
@@ -101,3 +101,11 @@ If validation fails: obvious fix → apply. Otherwise revert your files, journal
 - A story impossible as specced → BLOCK with a clear journal note; never redesign silently.
 
 Begin Phase 1.
+
+## LLM-visibility run deltas (override where they conflict with the text above)
+
+- The plan is **6 stories** (`tasks/prd-seo-llm-visibility.md`), all gated on the EXISTING `FEATURES.SEO_PRO` — no new plan keys, no matrix edits. The Automatos keys in `lib/entitlements/features.ts` were restored by #243 after a merge collision — do not touch their entries.
+- **The parent SEO run's modules are your shelf** — reuse, never fork: `lib/seo/{ai... json-ld, audit, ai-assist, canonical, entity-seo}`, the robots/sitemap routes, the entitlement gate, the reorder-reminders scheduler pattern (email archive journal US-028).
+- **Honesty is an AC**: llms.txt UI copy must state there is no proven citation lift; the citation monitor never promises ranking.
+- **MERGE RULE (from the #242/#243 incident): before the FINAL story's commit, `git fetch origin main`; if main moved past this branch's base, `git merge origin/main` into the branch, resolve collisions honoring BOTH sides' intent, and re-run tsc + the full unit suite on the union before completing.** A branch-local green is not a merge green.
+- Journal + archive paths for this run: the previous runs live at `ralph/archive/2026-08-12-email-authoring-campaigns/` and `ralph/archive/2026-08-13-seo-supercharge/`.

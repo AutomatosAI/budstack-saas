@@ -23,6 +23,7 @@ import {
 } from "@/lib/seo/post-metadata";
 import { STORE_NOT_FOUND_TITLE } from "@/lib/seo/store-metadata";
 import { tenantLogoRef } from "@/lib/seo/tenant-logo";
+import { tenantSocialLinks } from "@/lib/seo/tenant-social-links";
 
 interface ArticlePageProps {
   params: {
@@ -103,10 +104,11 @@ export async function generateMetadata({
  * SEO US-016 — the Article and its breadcrumb trail, built from the SAME post
  * the body renders.
  *
- * The logo comes off `getTenantWithTemplate`, which the store layout already
- * fetches through the same React `cache()`, so the publisher node costs no extra
- * query. Nothing here can block the page: both builders return [] for a Basic
- * tenant, and `<JsonLd>` renders nothing for [].
+ * The logo and the store's profiles (US-006) both come off
+ * `getTenantWithTemplate`, which the store layout already fetches through the
+ * same React `cache()`, so the publisher node costs no extra query. Nothing here
+ * can block the page: both builders return [] for a Basic tenant, and `<JsonLd>`
+ * renders nothing for [].
  */
 async function articleJsonLdNodes(
   tenant: NonNullable<Awaited<ReturnType<typeof getCurrentTenant>>>,
@@ -126,6 +128,9 @@ async function articleJsonLdNodes(
       ...identity,
       businessName: tenant.businessName,
       logoRef: tenantForSeo ? tenantLogoRef(tenantForSeo) : null,
+      // Same row, same cascade the homepage uses — the two pages state one
+      // Organization under one `@id` and must not describe it differently.
+      socialLinks: tenantForSeo ? tenantSocialLinks(tenantForSeo) : [],
       slug: post.slug,
       title: post.title,
       excerpt: post.excerpt,

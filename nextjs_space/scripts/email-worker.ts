@@ -5,7 +5,14 @@ import Redis from 'ioredis';
 import Handlebars from 'handlebars';
 import { prisma as db } from '../lib/db';
 import { decrypt } from '../lib/security/encryption';
-import { campaignQueueName, emailQueueName, getReorderQueue, reorderQueueName } from '../lib/queue';
+import {
+    campaignQueueName,
+    emailQueueName,
+    getLlmCitationQueue,
+    getReorderQueue,
+    llmCitationQueueName,
+    reorderQueueName,
+} from '../lib/queue';
 import { registerEmailHelpers, renderEmailTemplate } from '../lib/email/handlebars-helpers';
 import { markEmailLogFailed, markEmailLogSent } from '../lib/email/email-log-linkage';
 import {
@@ -34,6 +41,12 @@ import {
     REORDER_REMINDER_SCHEDULER_ID,
 } from '../lib/email/reorder-reminder';
 import { runReorderReminderSweep } from '../lib/email/reorder-reminder-runner';
+import {
+    LLM_CITATION_CRON,
+    LLM_CITATION_JOB,
+    LLM_CITATION_SCHEDULER_ID,
+} from '../lib/seo/citation-monitor';
+import { runCitationSweep } from '../lib/seo/citation-monitor-runner';
 import { bypassTenantScope } from '../lib/tenant/tenant-scope-policy';
 import {
     DEFAULT_MAX_JOB_AGE_MS,
@@ -517,6 +530,78 @@ getReorderQueue()
         console.error('[ReorderReminder] Failed to schedule daily sweep:', err);
     });
 
+// LLM Visibility US-005 — the weekly AI citation sweep.
+//
+// SINGLE-INSTANCE BY CONSTRUCTION, the same way the reorder sweep is:
+// registration is an UPSERT on a fixed scheduler id, so N booted workers
+// converge on ONE scheduler and produce one sweep a week rather than N. There
+// is no second guard here as there is for reminders — the rows this writes are
+// append-only observations, so a duplicated run would cost money and clutter,
+// not a second email to a customer. `attempts: 1` on the queue is what keeps
+// that cost bounded.
+//
+// Concurrency of 1 because a sweep walks every connected store serially, each
+// holding a connection while a model thinks.
+const citationWorker = new Worker(llmCitationQueueName, async (job: Job) => {
+    const outcome = await runCitationSweep();
+
+    console.log(
+        `[CitationMonitor] Sweep ${job.id}: ${outcome.recorded} check(s) recorded across ${outcome.tenants} store(s)`,
+    );
+    for (const tenant of outcome.perTenant) {
+        // A store that threw recorded nothing, exactly like a store nobody
+        // cites. This is the only line that tells them apart, so it comes first.
+        if (tenant.error) {
+            console.error(
+                `[CitationMonitor]   ${tenant.tenantId}: pass failed, other stores unaffected — ${tenant.error}`,
+            );
+            continue;
+        }
+        console.log(
+            `[CitationMonitor]   ${tenant.tenantId}: ${tenant.recorded} check(s) on ${tenant.engines.join(', ') || 'no engine'}, ${tenant.cited} cited`,
+        );
+        // Never a silent stop: a pass that ended early spent less than it was
+        // budgeted and left questions unasked, and the reason is the difference
+        // between "nobody cites this store" and "this store's key was rejected".
+        if (tenant.stopped) {
+            console.warn(
+                `[CitationMonitor]   ${tenant.tenantId}: pass stopped early (${tenant.stopped}) after ${tenant.attempted} of ${tenant.prompts * Math.max(tenant.engines.length, 1)} planned check(s)`,
+            );
+        }
+    }
+
+    return outcome;
+}, {
+    connection: new Redis(REDIS_URL, { maxRetriesPerRequest: null }) as any,
+    concurrency: 1,
+});
+
+citationWorker.on('failed', (job, err) => {
+    console.error(`[CitationMonitor] Sweep ${job?.id} failed: ${err.message}`);
+});
+
+citationWorker.on('error', err => {
+    console.error('[CitationMonitor] Worker error:', err);
+});
+
+// Idempotent across restarts and across replicas — see the note above. Failing
+// this must not take the worker down: the email queue is what actually delivers
+// mail, and a missing scheduler costs a diagnostic, not a receipt.
+getLlmCitationQueue()
+    .upsertJobScheduler(
+        LLM_CITATION_SCHEDULER_ID,
+        { pattern: LLM_CITATION_CRON, tz: 'UTC' },
+        { name: LLM_CITATION_JOB },
+    )
+    .then(() => {
+        console.log(
+            `[CitationMonitor] Weekly sweep scheduled (${LLM_CITATION_CRON} UTC)`,
+        );
+    })
+    .catch(err => {
+        console.error('[CitationMonitor] Failed to schedule weekly sweep:', err);
+    });
+
 // PRD-220 AC-A2/A3 — liveness heartbeat + stuck-queue alert. The super-admin
 // email-health route reads the heartbeat key; Railway log alerting matches
 // the QUEUED_ALERT_PREFIX line (see docs/runbooks/email-worker.md).
@@ -562,6 +647,7 @@ process.on('SIGTERM', async () => {
     await worker.close();
     await campaignWorker.close();
     await reorderWorker.close();
+    await citationWorker.close();
     process.exit(0);
 });
 

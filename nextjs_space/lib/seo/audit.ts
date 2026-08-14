@@ -21,6 +21,12 @@
  * `audit-types.ts` for why a store with 400 missing titles must not have every
  * other fault hidden behind them.
  *
+ * TWO CATEGORIES OF CHECK, ONE SCORE. `audit-checks.ts` asks whether a page can
+ * be found and is described well enough to rank; `audit-llm-checks.ts`
+ * (LLM Visibility US-004) asks whether a model is allowed to read it and can
+ * extract an answer from it. They share the snapshot, the weights table and the
+ * result, because an owner has one list of things to fix, not two.
+ *
  * PRO ONLY, at the route (`requireFeature(FEATURES.SEO_PRO)`). Nothing in this
  * module gates: it is fed rows and it judges them. That split is deliberate —
  * the audit is a read over data a Basic tenant already owns, so the only thing
@@ -35,6 +41,13 @@ import {
   auditRedirectTable,
   auditSitemapHealth,
 } from "@/lib/seo/audit-checks";
+import {
+  auditAiCrawlerAccess,
+  auditHeadingStructure,
+  auditLlmsTxtContent,
+  auditQaCoverage,
+  auditWireVisibility,
+} from "@/lib/seo/audit-llm-checks";
 import {
   buildAuditSitemap,
   collectAuditEntities,
@@ -157,6 +170,15 @@ export function runSeoAudit(
     ...auditNoindexInSitemap(entities),
     ...auditSitemapHealth(input, entities, sitemap),
     ...auditRedirectTable(input.redirects),
+    // LLM Visibility US-004 — the same rows, asked whether a model can read
+    // them. A second module rather than more of `audit-checks.ts`: the
+    // questions are different (readable and quotable, not discoverable and
+    // described) and each file stays a length worth reading.
+    ...auditAiCrawlerAccess(input),
+    ...auditQaCoverage(entities),
+    ...auditLlmsTxtContent(entities),
+    ...auditWireVisibility(input),
+    ...auditHeadingStructure(entities),
   ];
 
   return scoreSeoAudit(findings, {

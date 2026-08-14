@@ -86,6 +86,12 @@ export const PUT = requirePermissionParams("canEditSeo", async (request, { tenan
   // them. See `entitySeoWrite`.
   const seo = entitySeoWrite(existingPost.seo, parsed, {
     preserveIndexing: !writesIndexing,
+    // US-002 — this editor is not Q&A's editor: the schema above has no `qa`,
+    // so a save from here must carry any stored pairs through rather than
+    // rebuild the record without them. Stated rather than left to the default,
+    // for the reason `withEntityImageAlt` documents: one column, several
+    // editors, and a blind write from any of them drops another's work.
+    preserveQa: true,
   });
 
   const updated = await prisma.posts.update({

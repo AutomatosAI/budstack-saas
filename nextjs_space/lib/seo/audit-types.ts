@@ -14,6 +14,10 @@
  * result is allowed to be an observation with no next step.
  */
 
+import {
+  SEO_AUDIT_LLM_CHECKS,
+  SEO_AUDIT_LLM_WEIGHTS,
+} from "@/lib/seo/audit-llm-types";
 import { SEO_DESCRIPTION_MAX_LENGTH } from "@/lib/seo/store-identity";
 
 /**
@@ -33,8 +37,18 @@ export const SEO_AUDIT_SEVERITY_ORDER: Readonly<
   Record<SeoAuditSeverity, number>
 > = { critical: 0, warning: 1, info: 2 };
 
-/** Every check the audit runs. The result reports one group per entry. */
+/**
+ * Every check the audit runs. The result reports one group per entry.
+ *
+ * DECLARED ORDER IS THE TIE-BREAK, not the ranking: `checkRank` sorts on
+ * failing-first, then severity, and only then on position here — so this list
+ * decides which of two equally severe checks an owner reads first.
+ * `ai-search-blocked` (US-004) therefore leads, above `sitemap-empty`: a store
+ * that cannot be discovered is behind a store that cannot be cited, and both
+ * are behind neither.
+ */
 export const SEO_AUDIT_CHECKS = [
+  "ai-search-blocked",
   "sitemap-empty",
   "sitemap-url-form",
   "sitemap-deleted-leak",
@@ -42,11 +56,17 @@ export const SEO_AUDIT_CHECKS = [
   "title-duplicate",
   "title-missing",
   "description-missing",
+  "llms-txt-empty",
+  "wire-drafts-unpublished",
+  "heading-duplicate-h1",
   "title-long",
   "description-long",
   "image-alt-missing",
   "noindex-in-sitemap",
   "product-no-page",
+  "qa-missing",
+  "heading-level-skip",
+  "heading-missing",
   "title-short",
   "description-short",
   "og-image-missing",
@@ -55,13 +75,33 @@ export const SEO_AUDIT_CHECKS = [
 
 export type SeoAuditCheckId = (typeof SEO_AUDIT_CHECKS)[number];
 
-/** The SEO Manager tabs a finding can send an owner to. */
+/**
+ * The LLM-readiness ids, as core check ids.
+ *
+ * The annotation is the point: `SEO_AUDIT_LLM_WEIGHTS` is keyed by its own
+ * union, so an id declared there and forgotten HERE would carry a weight the
+ * scorer never reaches — the scorer iterates {@link SEO_AUDIT_CHECKS} and
+ * nothing else. This line fails to compile in exactly that case.
+ */
+export const SEO_AUDIT_LLM_CHECK_IDS: readonly SeoAuditCheckId[] =
+  SEO_AUDIT_LLM_CHECKS;
+
+/**
+ * The SEO Manager tabs a finding can send an owner to.
+ *
+ * `ai-crawlers` is US-004's addition: the tab that holds both the crawler
+ * policy card and the llms.txt card, which is where its two store-level
+ * findings are fixed. A destination OUTSIDE this panel travels as
+ * {@link SeoAuditTarget.href} instead — a tab name it does not have cannot be
+ * switched to.
+ */
 export const SEO_AUDIT_TABS = [
   "products",
   "posts",
   "conditions",
   "pages",
   "redirects",
+  "ai-crawlers",
 ] as const;
 
 export type SeoAuditTab = (typeof SEO_AUDIT_TABS)[number];
@@ -77,6 +117,14 @@ export interface SeoAuditTarget {
   readonly entityId?: string;
   /** What to call the thing in the finding — the product name, the page name. */
   readonly label: string;
+  /**
+   * US-004 — an admin path OUTSIDE the SEO Manager, for the one finding whose
+   * fix does not live in this panel (unpublished Wire drafts, fixed in The
+   * Wire). When present the UI renders a link to it rather than a button that
+   * switches tabs; `tab` still names the nearest tab, so a client that only
+   * understands tabs lands somewhere related instead of nowhere.
+   */
+  readonly href?: string;
 }
 
 export interface SeoAuditFinding {
@@ -212,6 +260,9 @@ export const SEO_AUDIT_WEIGHTS: Readonly<
     perFinding: 1,
     cap: 5,
   },
+  // US-004's LLM-readiness category. Spread rather than restated so there is one
+  // scoring model; the rationale for each number lives beside it.
+  ...SEO_AUDIT_LLM_WEIGHTS,
 };
 
 /**

@@ -277,6 +277,28 @@ model seo_redirects {
   @@index([tenantId, createdAt])
 }
 
+/// LLM Visibility US-005 — one row per (model, question) the weekly citation
+/// sweep asked on the tenant's own Automatos account. Append-only evidence: a
+/// row is never updated, because it records what one model answered at one
+/// instant.
+model llm_citation_checks {
+  id          String   @id @default(uuid())
+  tenantId    String
+  /// The model id the workspace returned, or 'workspace-default'. Never a
+  /// vendor name this platform invented.
+  engine      String
+  prompt      String
+  cited       Boolean  @default(false)
+  /// The store URL the answer linked to, as the model wrote it.
+  citedUrl    String?
+  /// The window of the answer around that link — the evidence an owner reads.
+  mentionText String?
+  checkedAt   DateTime @default(now())
+  tenants     tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, checkedAt])
+}
+
 model conditions {
   id              String   @id
   slug            String
@@ -843,6 +865,7 @@ model tenants {
   customer_tags          customer_tags[]
   segments               segments[]
   seo_redirects          seo_redirects[]
+  llm_citation_checks    llm_citation_checks[]
   orders                 orders[]
   posts                  posts[]
   products               products[]

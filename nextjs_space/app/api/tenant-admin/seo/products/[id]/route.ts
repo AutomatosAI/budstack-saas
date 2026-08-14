@@ -10,6 +10,7 @@ import { FEATURES } from "@/lib/entitlements/features";
 import { featureDenial } from "@/lib/entitlements/require-feature";
 import { entitySeoWrite, isEmptyEntitySeo } from "@/lib/seo/entity-seo";
 import { INDEXING_SEO_FIELDS, hasIndexingFields } from "@/lib/seo/indexing";
+import { PRODUCT_QA_LIMITS, hasQaField } from "@/lib/seo/product-qa";
 
 const seoUpdateSchema = z
   .object({
@@ -23,6 +24,30 @@ const seoUpdateSchema = z
     // US-022 — the Pro indexing controls, gated on the FIELDS below rather than
     // on the route: everything above is Basic and must never 403.
     ...INDEXING_SEO_FIELDS,
+    /**
+     * LLM Visibility US-002 — the product's Q&A, Pro and product-only. Declared
+     * here rather than in a shared field set because no other SEO PUT route
+     * accepts it: theirs are `.strict()` and list no `qa`, so a `qa` sent to the
+     * posts, conditions or pages editor is a 400 rather than a key that lands in
+     * a column nothing renders.
+     *
+     * The limits are `PRODUCT_QA_LIMITS`, the same numbers the storage parser,
+     * the editor's counters and the AI draft contract read, so a draft that was
+     * accepted cannot be rejected on the way to the column. `.strict()` on the
+     * entry keeps an editor's local `id` out of the stored blob; the entries are
+     * re-parsed by `readEntitySeo` regardless.
+     */
+    qa: z
+      .array(
+        z
+          .object({
+            question: z.string().trim().min(1).max(PRODUCT_QA_LIMITS.maxQuestionLength),
+            answer: z.string().trim().min(1).max(PRODUCT_QA_LIMITS.maxAnswerLength),
+          })
+          .strict(),
+      )
+      .max(PRODUCT_QA_LIMITS.maxPairs)
+      .optional(),
   })
   .strict();
 
@@ -71,20 +96,24 @@ export const PUT = requirePermissionParams("canEditSeo", async (request, { tenan
   } catch (error) {
     return apiError(error, { route: "PUT /api/tenant-admin/seo/products/[id]" });
   }
-  // US-022 — the plan gate, on the request that asks for the feature. One
-  // lookup, and only when an indexing field is actually present, so a Basic
-  // tenant saving a title pays nothing and is never refused.
+  // US-022 / US-002 — the plan gate, on the request that asks for a Pro field.
+  // ONE lookup covering both groups, and only when one of them is actually
+  // present, so a Basic tenant saving a title pays nothing and is never refused.
   const writesIndexing = hasIndexingFields(parsed);
-  if (writesIndexing) {
+  const writesQa = hasQaField(parsed);
+  if (writesIndexing || writesQa) {
     const denial = await featureDenial(tenantId, FEATURES.SEO_PRO);
     if (denial) return denial;
   }
 
-  // Trims, drops empty values, and — when this save may not write indexing
-  // controls — carries the stored ones through untouched rather than erasing
-  // them. See `entitySeoWrite`.
+  // Trims, drops empty values, and — for each group of Pro fields this save may
+  // not write — carries the stored ones through untouched rather than erasing
+  // them. The two flags are independent: a Pro tenant editing only Q&A must not
+  // have their indexing rules rewritten from a body that never mentioned them.
+  // See `entitySeoWrite`.
   const seo = entitySeoWrite(existingProduct.seo, parsed, {
     preserveIndexing: !writesIndexing,
+    preserveQa: !writesQa,
   });
 
   const updated = await prisma.products.update({

@@ -1,39 +1,11 @@
-# Implementation Plan — SEO Supercharge (ralph/seo-supercharge)
+# Implementation Plan — LLM Visibility (ralph/seo-llm-visibility)
 
 Single source of truth for Ralph progress. Flip `- [ ]` → `- [x]` only on real success (never for BLOCKED).
-Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `docs/SEO-SYSTEM-REVIEW.md`
+Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-llm-visibility.md` · Parent: `tasks/prd-seo-supercharge.md`
 
-## Workstream A — Basic tier: make SEO real (ungated)
-
-- [x] US-001 Store-layout metadata foundation
-- [x] US-002 Static store pages consume pageSeo
-- [x] US-003 The Wire post metadata reads post.seo
-- [x] US-004 Product detail metadata
-- [x] US-005 Conditions SEO wired end-to-end
-- [x] US-006 Sitemap correctness + platform sitemap
-- [x] US-007 Canonicals everywhere
-- [x] US-008 Fix the www.* black-hole
-- [x] US-009 Alt-text authoring
-- [x] US-010 SEO route hardening
-
-## Workstream B — Plan plumbing (thin, Clerk-carried)
-
-- [x] US-011 Tenant plan resolution + seoPro gate
-- [x] US-012 Super-admin plan control
-- [x] US-013 Upsell UI states
-
-## Workstream C — Pro tier (every story gated seoPro)
-
-- [x] US-014 JSON-LD engine + Organization/LocalBusiness
-- [x] US-015 Product JSON-LD
-- [x] US-016 Article + BreadcrumbList JSON-LD
-- [x] US-017 FAQPage JSON-LD from conditions
-- [x] US-018 OG image studio — branded generation
-- [x] US-019 OG image studio — real upload
-- [x] US-020 Redirects manager
-- [x] US-021 Slug editing + auto-301 on change
-- [x] US-022 Indexing controls
-- [x] US-023 SEO audit panel
-- [x] US-024 Automatos AI assist — spike + service
-- [x] US-025 AI assist UI
-- [x] US-026 Site verification + GA4 fields
+- [x] US-001 AI crawler policy manager
+- [x] US-002 Product Q&A blocks
+- [x] US-003 llms.txt generator
+- [x] US-004 LLM-readiness audit section
+- [x] US-005 AI citation monitor v1
+- [x] US-006 Entity grounding

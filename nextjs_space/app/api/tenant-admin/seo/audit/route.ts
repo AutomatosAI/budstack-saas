@@ -16,6 +16,7 @@ import {
   type SeoAuditRedirectRow,
   type SeoAuditResult,
 } from "@/lib/seo/audit";
+import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 
 /**
  * SEO Supercharge US-023 — the store's SEO audit.
@@ -61,6 +62,10 @@ interface TenantRow {
   customDomain: string | null;
   plan: string | null;
   pageSeo: unknown;
+  /** US-004 — carries `aiCrawlerPolicy`; parsed below, never trusted raw. */
+  settings: unknown;
+  /** US-004 — `MANUAL` | `ASSISTED`, for the unpublished-drafts finding. */
+  wireMode: string | null;
 }
 
 /** Trim to the ceiling and report whether it was hit. */
@@ -77,13 +82,22 @@ async function auditTenant(tenantId: string): Promise<SeoAuditResult | null> {
   // Row shapes are annotated rather than inferred throughout: the `prisma`
   // export in lib/db.ts is any-widened by its build-time mock Proxy, so an
   // inferred row would collapse to `any` and take the audit's types with it.
-  const [tenant, products, deletedProducts, posts, conditions, redirects]: [
+  const [
+    tenant,
+    products,
+    deletedProducts,
+    posts,
+    conditions,
+    redirects,
+    unpublishedPostCount,
+  ]: [
     TenantRow | null,
     SeoAuditProductRow[],
     SeoAuditDeletedProductRow[],
     SeoAuditPostRow[],
     SeoAuditConditionRow[],
     SeoAuditRedirectRow[],
+    number,
   ] = await Promise.all([
     prisma.tenants.findFirst({
       where: { id: tenantId },
@@ -93,6 +107,8 @@ async function auditTenant(tenantId: string): Promise<SeoAuditResult | null> {
         customDomain: true,
         plan: true,
         pageSeo: true,
+        settings: true,
+        wireMode: true,
       },
     }),
     // Live products: the soft-delete extension injects `deletedAt: null`, the
@@ -137,6 +153,10 @@ async function auditTenant(tenantId: string): Promise<SeoAuditResult | null> {
         coverImage: true,
         seo: true,
         updatedAt: true,
+        // US-004 — read for its heading skeleton and discarded. The only large
+        // column this route selects; posts are the smallest of the four tables
+        // and the one authored HTML body a store publishes.
+        content: true,
       },
     }),
     prisma.conditions.findMany({
@@ -151,6 +171,8 @@ async function auditTenant(tenantId: string): Promise<SeoAuditResult | null> {
         image: true,
         seo: true,
         updatedAt: true,
+        // US-004 — the seeded Q&A pairs, for the coverage check.
+        faqs: true,
       },
     }),
     prisma.seo_redirects.findMany({
@@ -158,6 +180,11 @@ async function auditTenant(tenantId: string): Promise<SeoAuditResult | null> {
       orderBy: { createdAt: "desc" },
       select: { id: true, fromPath: true, toPath: true },
     }),
+    // US-004 — drafts, as a COUNT. The finding is one sentence about the queue
+    // and the fix is The Wire's own list, so the rows themselves are never
+    // needed here; a count also keeps a store with hundreds of agent drafts
+    // from costing this route the memory its live rows are budgeted.
+    prisma.posts.count({ where: { tenantId, published: false } }),
   ]);
 
   if (!tenant) return null;
@@ -177,6 +204,14 @@ async function auditTenant(tenantId: string): Promise<SeoAuditResult | null> {
       posts: cappedPosts.rows,
       conditions: cappedConditions.rows,
       redirects,
+      // US-004. The settings blob is parsed HERE rather than in the engine:
+      // `parseTenantSettings` logs on a malformed blob, and the audit modules
+      // are pure by contract. The policy value itself stays `unknown` from the
+      // engine's point of view and is parsed fail-open by the check.
+      aiCrawlerPolicy: parseTenantSettings(tenant.settings, { tenantId })
+        .aiCrawlerPolicy,
+      wireMode: tenant.wireMode,
+      unpublishedPostCount,
     },
     [
       cappedProducts.truncated,

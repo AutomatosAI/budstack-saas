@@ -73,6 +73,12 @@ function entity(overrides: Partial<SeoAuditEntity> = {}): SeoAuditEntity {
     expectsOwnImage: false,
     path: "/products/strain-1",
     inSitemap: true,
+    // US-004's fields, defaulted to "nothing to report" so every case above
+    // still describes exactly the fault it was written for.
+    qaPairs: 1,
+    expectsQa: false,
+    headings: null,
+    inLlmsTxt: true,
     ...overrides,
   };
 }

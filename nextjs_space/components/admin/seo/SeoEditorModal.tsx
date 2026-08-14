@@ -16,9 +16,11 @@ import {
   type IndexingValue,
 } from "./IndexingFields";
 import { OgImageField } from "./OgImageField";
+import { QaEditor } from "./QaEditor";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import type { EntitySeo } from "@/lib/seo/entity-seo";
+import { readProductQa, type ProductQaPair } from "@/lib/seo/product-qa";
 
 /**
  * The authored record as it crosses the wire. Structurally the parsed
@@ -62,6 +64,31 @@ function indexingPayload(value: IndexingValue): Partial<SeoData> {
  */
 const ALT_TEXT_ENTITY_TYPES = ["product", "post"] as const;
 
+/**
+ * US-002 — Q&A is a PRODUCT field. `products.seo.qa` is the only place it is
+ * stored and the product page the only page that renders it; every other SEO PUT
+ * schema is `.strict()` with no `qa`, so offering the editor elsewhere would
+ * 400 the save.
+ */
+const QA_ENTITY_TYPES = ["product"] as const;
+
+/**
+ * The pairs worth sending: both halves filled in, trimmed.
+ *
+ * A half-typed row is not an error to report — it is a question the owner
+ * started and abandoned, and the write route's `min(1)` would reject the whole
+ * save for it. Dropping it here is the same rule the title and description
+ * follow (an empty field is stored as absent, not as "").
+ */
+function filledQaPairs(pairs: readonly ProductQaPair[]): ProductQaPair[] {
+  return pairs
+    .map((pair) => ({
+      question: pair.question.trim(),
+      answer: pair.answer.trim(),
+    }))
+    .filter((pair) => pair.question.length > 0 && pair.answer.length > 0);
+}
+
 /** Per-type wording; the field describes a different picture in each tab. */
 const ALT_TEXT_HINTS: Record<string, string> = {
   product: "Describe the strain photo — e.g. \"Dried Blue Dream flower in a glass jar\".",
@@ -98,6 +125,13 @@ interface SeoEditorModalProps {
    */
   canUseAiAssist?: boolean;
   /**
+   * LLM Visibility US-002 — the same `seoProUnlocked`, for the product Q&A
+   * editor. Backed by a server gate like the indexing controls: the product SEO
+   * PUT 403s a Basic tenant that sends `qa`, which is why the save below omits
+   * the key entirely when this is false.
+   */
+  canEditQa?: boolean;
+  /**
    * US-025 — does this tenant have Automatos credentials stored? Resolved
    * server-side (page.tsx) so an unconnected tenant sees the connect card
    * immediately, instead of a button whose only possible answer is "connect an
@@ -119,6 +153,7 @@ export function SeoEditorModal({
   canUploadOgImage = false,
   canEditIndexing = false,
   canUseAiAssist = false,
+  canEditQa = false,
   aiAssistConnected = false,
 }: SeoEditorModalProps) {
   const [title, setTitle] = useState(initialSeo?.title || "");
@@ -127,6 +162,12 @@ export function SeoEditorModal({
   const [imageAlt, setImageAlt] = useState(initialSeo?.imageAlt || "");
   const [indexing, setIndexing] = useState<IndexingValue>(() =>
     readIndexingValue(initialSeo),
+  );
+  // Through the storage reader, so the editor starts from exactly the pairs the
+  // storefront would publish — a hand-edited blob does not become editable rows
+  // the save would then reject.
+  const [qa, setQa] = useState<readonly ProductQaPair[]>(() =>
+    readProductQa(initialSeo?.qa),
   );
   const [isSaving, setIsSaving] = useState(false);
   /**
@@ -140,6 +181,7 @@ export function SeoEditorModal({
   const showAltText = (ALT_TEXT_ENTITY_TYPES as readonly string[]).includes(
     entityType,
   );
+  const showQa = (QA_ENTITY_TYPES as readonly string[]).includes(entityType);
   const showAiAssist = canUseAiAssist && aiConnected;
 
   useEffect(() => {
@@ -148,6 +190,7 @@ export function SeoEditorModal({
     setOgImage(initialSeo?.ogImage || "");
     setImageAlt(initialSeo?.imageAlt || "");
     setIndexing(readIndexingValue(initialSeo));
+    setQa(readProductQa(initialSeo?.qa));
   }, [initialSeo, isOpen]);
 
   // The prop is authoritative again whenever the editor is reopened: a tenant
@@ -176,6 +219,13 @@ export function SeoEditorModal({
         ogImage,
         ...(showAltText ? { imageAlt } : {}),
         ...(canEditIndexing ? indexingPayload(indexing) : {}),
+        // US-002 — sent only by a Pro tenant on a product, for both reasons the
+        // indexing keys are: the route 403s a Basic tenant that sends `qa`, and
+        // an absent key is what preserves whatever pairs are already stored.
+        // Blank rows are dropped here rather than refused — an owner who added a
+        // row and did not fill it in meant to leave it out, and the route's
+        // `min(1)` would otherwise fail the whole save on an empty box.
+        ...(showQa && canEditQa ? { qa: filledQaPairs(qa) } : {}),
       });
       toast.success("SEO settings saved successfully");
       onClose();
@@ -325,6 +375,20 @@ export function SeoEditorModal({
             onChange={setOgImage}
             canUpload={canUploadOgImage}
           />
+
+          {/* US-002 — products only; the locked card is what a Basic tenant
+              meets, and it says their stored pairs are dormant, not deleted. */}
+          {showQa && (
+            <QaEditor
+              value={qa}
+              onChange={setQa}
+              canEdit={canEditQa}
+              entityId={entityId}
+              showDraftButton={showAiAssist}
+              onUnavailable={() => setAiConnected(false)}
+              disabled={isSaving}
+            />
+          )}
 
           <IndexingFields
             value={indexing}

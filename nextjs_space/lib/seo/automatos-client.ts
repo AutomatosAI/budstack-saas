@@ -86,6 +86,17 @@ export interface AutomatosCompletionRequest {
   readonly credentials: AutomatosCredentials;
   /** The fully-built prompt. This module never composes one. */
   readonly prompt: string;
+  /**
+   * LLM Visibility US-005 — `model_id` on the widget chat wire, confirmed in
+   * the published OpenAPI document (`WidgetChatRequest.model_id`, optional
+   * string) and in what the shipped browser SDK sends. Omitted entirely when
+   * absent, so the workspace's own default answers — which is what every caller
+   * before US-005 relied on.
+   *
+   * The value is a model id the WORKSPACE returned, never a vendor name this
+   * platform invented: see `requestAutomatosWidgetModels`.
+   */
+  readonly modelId?: string | null;
   readonly baseUrl?: string;
   readonly timeoutMs?: number;
 }
@@ -335,6 +346,7 @@ export async function requestAutomatosCompletion(
       body: JSON.stringify({
         message: request.prompt,
         ...(typeof agentId === "number" ? { agent_id: String(agentId) } : {}),
+        ...(request.modelId ? { model_id: request.modelId } : {}),
       }),
       cache: "no-store",
       signal: controller.signal,
@@ -353,4 +365,124 @@ export async function requestAutomatosCompletion(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * An ordinary JSON round trip, not a model completion — sized accordingly.
+ */
+export const AUTOMATOS_CONFIG_TIMEOUT_MS = 5_000;
+
+/** Enough to choose from; the caller asks at most two of them. */
+const MAX_ADVERTISED_MODELS = 12;
+
+export type AutomatosWidgetModels =
+  | { readonly ok: true; readonly models: readonly string[] }
+  | { readonly ok: false; readonly reason: AutomatosFailureReason };
+
+/**
+ * WHAT THE SPEC SAYS AND WHAT IT DOES NOT (verified 2026-08-14 against the
+ * published OpenAPI document, 664 paths):
+ *
+ *  - `GET /api/widgets/config` is documented as "Return the public widget
+ *    config for the authenticated workspace. Works for both public keys (raw
+ *    API key) and server-key JWTs since both route through `widget_auth`" — so
+ *    it is reachable with exactly the credentials this tenant already stored,
+ *    and it is the ONLY workspace-scoped discovery surface a widget key opens.
+ *    (`/api/models/` exists but authenticates as a platform USER, like
+ *    `/api/chat` — outside what a tenant's key can reach.)
+ *  - Its response is `{workspace_id, config}` where `config` is declared
+ *    `additionalProperties: true` WITH NO DECLARED KEYS. The spec therefore does
+ *    not promise a model list, and no live key exists on this machine to
+ *    discover one.
+ *
+ * So this reads OPTIMISTICALLY AND FAILS TO NOTHING: the three key names below
+ * are the plausible ones, each accepted as strings or as objects carrying an
+ * id, and ANY other shape — including the likely one, a config with no models
+ * in it at all — returns an empty list. An empty list is not an error: the
+ * caller then asks the workspace's default model as a single engine, which is
+ * US-005's specified fallback. Nothing about this call can make a run fail.
+ */
+export async function requestAutomatosWidgetModels(request: {
+  readonly credentials: AutomatosCredentials;
+  readonly baseUrl?: string;
+  readonly timeoutMs?: number;
+}): Promise<AutomatosWidgetModels> {
+  const baseUrl = (request.baseUrl || AUTOMATOS_API_BASE_URL).replace(/\/$/, "");
+  const { apiKey } = request.credentials;
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(),
+    request.timeoutMs ?? AUTOMATOS_CONFIG_TIMEOUT_MS,
+  );
+  let scrub = makeScrub(apiKey);
+
+  try {
+    const auth = await resolveAuthorization(baseUrl, apiKey, controller.signal, scrub);
+    if (!("header" in auth)) {
+      return { ok: false, reason: auth.ok ? "upstream" : auth.reason };
+    }
+
+    scrub = makeScrub(apiKey, auth.header.slice("Bearer ".length));
+
+    const response = await fetch(`${baseUrl}/api/widgets/config`, {
+      headers: { Accept: "application/json", Authorization: auth.header },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const failure = await failureFrom(response, "auth", scrub);
+      return { ok: false, reason: failure.ok ? "upstream" : failure.reason };
+    }
+
+    const body: unknown = await response.json().catch(() => null);
+    return { ok: true, models: readModelIds(body) };
+  } catch (error) {
+    if (controller.signal.aborted) return { ok: false, reason: "timeout" };
+    logger.error("[seo/ai-assist] automatos config request threw", {
+      message: scrub(error instanceof Error ? error.message : String(error)),
+    });
+    return { ok: false, reason: "upstream" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+/** A model id from a string entry or from an object that carries one. */
+function modelIdFrom(entry: unknown): string | null {
+  if (typeof entry === "string") return entry.trim() || null;
+
+  const record = asRecord(entry);
+  if (!record) return null;
+
+  for (const key of ["model_id", "id", "model", "name"]) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+/** Model ids advertised by the workspace config, or none. See the caller. */
+function readModelIds(body: unknown): readonly string[] {
+  const config = asRecord(asRecord(body)?.config);
+  if (!config) return [];
+
+  const list = ["models", "enabled_models", "available_models"]
+    .map((key) => config[key])
+    .find((value): value is unknown[] => Array.isArray(value));
+  if (!list) return [];
+
+  const seen = new Set<string>();
+  for (const entry of list) {
+    const id = modelIdFrom(entry);
+    if (id) seen.add(id);
+    if (seen.size >= MAX_ADVERTISED_MODELS) break;
+  }
+  return [...seen];
 }

@@ -52,6 +52,7 @@ import {
   AI_ASSIST_RATE_LIMIT,
   AUTOMATOS_CONNECT,
   automatosProvider,
+  generateQaDraft,
   generateSeoDraft,
   loadAutomatosCredentials,
   type AiAssistProvider,
@@ -581,5 +582,149 @@ describe("US-024 service", () => {
   it("exposes the automatos provider under a stable id", () => {
     expect(automatosProvider.id).toBe("automatos");
     expect(automatosProvider.label).toBe("Automatos AI");
+  });
+});
+
+/**
+ * LLM Visibility US-002 — the Q&A contract runs on the SAME pipeline.
+ *
+ * These assert the wiring the refactor created: one meter, one credential rule,
+ * one provider call, two output contracts. What a Q&A draft looks like when it
+ * is valid or refused is `tests/unit/seo-product-qa.test.ts`' business
+ * (`parseQaDraft`); what is asserted here is that a Q&A call cannot skip the
+ * meter, cannot reach a provider without the tenant's own credentials, and
+ * cannot return pairs the parser rejected.
+ */
+describe("generateQaDraft — the same pipeline, a different answer", () => {
+  const QA_PAIRS = [
+    { question: "Is it strong?", answer: "THC is on the label." },
+    { question: "How is it stored?", answer: "Cool and dark." },
+  ];
+
+  const QA_SOURCE = {
+    name: "Bois Pacifique",
+    body: "An indica-dominant hybrid grown in Portugal.",
+    storeName: "Acme Cannabis Co",
+  };
+
+  function fakeProvider(text: string): AiAssistProvider & {
+    complete: ReturnType<typeof vi.fn>;
+  } {
+    return {
+      id: "spy",
+      label: "Spy",
+      complete: vi.fn().mockResolvedValue({ ok: true, text }),
+    };
+  }
+
+  function connected() {
+    prismaMock.tenants.findFirst.mockResolvedValue({
+      automatosApiKey: SECRET_KEY,
+      automatosAgentId: 7,
+    });
+  }
+
+  it("returns the pairs the model answered with", async () => {
+    connected();
+    const provider = fakeProvider(JSON.stringify(QA_PAIRS));
+
+    const result = await generateQaDraft({
+      tenantId: TENANT_A,
+      source: QA_SOURCE,
+      provider,
+    });
+
+    expect(result).toEqual({ status: "ok", pairs: QA_PAIRS, provider: "spy" });
+    // The prompt is the Q&A contract's, built from the source and nothing else.
+    const prompt = provider.complete.mock.calls[0][0].prompt;
+    expect(prompt).toContain("Bois Pacifique");
+    expect(prompt).not.toContain(TENANT_A);
+    expect(prompt).not.toContain(SECRET_KEY);
+  });
+
+  it("refuses a list that broke the contract, and returns no pairs", async () => {
+    connected();
+    const provider = fakeProvider('{"qa": []}');
+
+    const result = await generateQaDraft({
+      tenantId: TENANT_A,
+      source: QA_SOURCE,
+      provider,
+    });
+
+    expect(result).toEqual({ status: "refused", reason: "not_array" });
+    expect(JSON.stringify(result)).not.toContain("question");
+  });
+
+  it("meters per tenant, fail-closed, BEFORE the credential lookup", async () => {
+    checkRateLimit.mockResolvedValue({
+      success: false,
+      response: new Response(null, { status: 429, headers: { "retry-after": "90" } }),
+    });
+    const provider = fakeProvider("[]");
+
+    const result = await generateQaDraft({
+      tenantId: TENANT_A,
+      source: QA_SOURCE,
+      provider,
+    });
+
+    expect(result).toEqual({ status: "rate_limited", retryAfterSeconds: 90 });
+    expect(prismaMock.tenants.findFirst).not.toHaveBeenCalled();
+    expect(provider.complete).not.toHaveBeenCalled();
+
+    // The limiter key is the tenant's, and it is the SAME budget the field
+    // assistant spends: one AI account, one meter.
+    const [key, options] = checkRateLimit.mock.calls[0];
+    expect(key).toBe(`seo-ai-assist:${TENANT_A}`);
+    expect(options).toMatchObject({ ...AI_ASSIST_RATE_LIMIT, failMode: "closed" });
+  });
+
+  it("returns the connect prompt — and calls no provider — when nothing is stored", async () => {
+    prismaMock.tenants.findFirst.mockResolvedValue({
+      automatosApiKey: null,
+      automatosAgentId: null,
+    });
+    const provider = fakeProvider("[]");
+
+    const result = await generateQaDraft({
+      tenantId: TENANT_A,
+      source: QA_SOURCE,
+      provider,
+    });
+
+    expect(result).toEqual({
+      status: "unavailable",
+      reason: "not_connected",
+      connect: AUTOMATOS_CONNECT,
+    });
+    expect(provider.complete).not.toHaveBeenCalled();
+  });
+
+  it("keeps a credential lookup failure distinct from 'not connected'", async () => {
+    prismaMock.tenants.findFirst.mockRejectedValue(new Error("db down"));
+    const provider = fakeProvider("[]");
+
+    const result = await generateQaDraft({
+      tenantId: TENANT_A,
+      source: QA_SOURCE,
+      provider,
+    });
+
+    expect(result).toEqual({ status: "error", reason: "lookup_failed" });
+    expect(provider.complete).not.toHaveBeenCalled();
+  });
+
+  it("passes a provider failure straight through", async () => {
+    connected();
+    const provider: AiAssistProvider = {
+      id: "spy",
+      label: "Spy",
+      complete: vi.fn().mockResolvedValue({ ok: false, reason: "auth" }),
+    };
+
+    expect(
+      await generateQaDraft({ tenantId: TENANT_A, source: QA_SOURCE, provider }),
+    ).toEqual({ status: "error", reason: "auth" });
   });
 });

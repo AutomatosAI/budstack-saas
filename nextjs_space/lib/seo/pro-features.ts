@@ -85,6 +85,30 @@ export const SEO_PRO_FEATURES: readonly SeoProFeature[] = [
       "Automatos AI drafts titles and descriptions from your own product and post content — you review before anything saves.",
   },
   {
+    id: "product-qa",
+    title: "Product Q&A",
+    valueProp:
+      "Answer the questions buyers ask on the product page itself, published as FAQ structured data — the form search and AI answer engines read answers from.",
+  },
+  {
+    id: "ai-crawlers",
+    title: "AI crawler controls",
+    valueProp:
+      "Choose which AI bots may read your store — the search crawlers that cite you in AI answers, and the training crawlers, separately.",
+  },
+  {
+    id: "citation-monitor",
+    title: "AI citation monitor",
+    valueProp:
+      "Each week your own Automatos model is asked your market's questions, and we record whether its answer linked to your store.",
+  },
+  {
+    id: "entity-grounding",
+    title: "Brand entity grounding",
+    valueProp:
+      "Publish the profiles you already run as part of your store's structured data, so an engine can tell those accounts and this store are one business.",
+  },
+  {
     id: "verification",
     title: "Site verification & analytics tags",
     valueProp:

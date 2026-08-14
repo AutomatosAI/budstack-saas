@@ -145,6 +145,20 @@ export const AUDIT_ACTIONS = {
   // question asked after a privacy complaint.
   SEO_VERIFICATION_UPDATED: "seo.verification_updated",
 
+  // LLM Visibility US-001: the store changed which AI crawlers its robots.txt
+  // welcomes. Worth a row because the 'blocked' setting removes the store from
+  // AI answers, the effect is invisible from inside the admin, and "who turned
+  // this off" is the first question asked when AI referrals stop.
+  SEO_AI_CRAWLERS_UPDATED: "seo.ai_crawlers_updated",
+
+  // LLM Visibility US-006: the store changed the profiles it publishes as its
+  // own (`sameAs`). Worth a row because it is an assertion of IDENTITY made in
+  // the store's name — "this account is us" — and the first question after a
+  // wrong or hostile link appears in the store's structured data is who put it
+  // there. The URLs are recorded, not just the count: they are public profile
+  // links, and a count would not answer that question.
+  SEO_SOCIAL_LINKS_UPDATED: "seo.social_links_updated",
+
   // Branding
   BRANDING_UPDATED: "branding.updated",
   TEMPLATE_CHANGED: "template.changed",

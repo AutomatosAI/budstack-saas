@@ -33,6 +33,7 @@
 
 import { storeCanonical } from "@/lib/seo/canonical";
 import { isSeoProUnlocked } from "@/lib/seo/pro-features";
+import { normalizeSocialLinks } from "@/lib/seo/social-links";
 import { seoText, storeDisplayName } from "@/lib/seo/store-identity";
 import { storedPublicImagePath } from "@/lib/storage/public-image-url";
 
@@ -127,6 +128,12 @@ export interface StoreJsonLdSource extends StoreAddressSource {
    * rather than a `logo` property that 403s a month from now.
    */
   readonly logoRef: string | null;
+  /**
+   * US-006 — the store's profiles elsewhere, already resolved by the caller
+   * through `tenantSocialLinks`. Re-normalised inside the builder; see
+   * {@link buildOrganizationNode} for why it is not optional.
+   */
+  readonly socialLinks: readonly string[];
 }
 
 /**
@@ -216,13 +223,25 @@ export function organizationJsonLdId(storeUrl: string): string {
  * wrote down for Product `brand`). Restating it here is what makes the reference
  * resolve, and routing every caller through this function is what stops the two
  * statements of the same `@id` from disagreeing.
+ *
+ * `socialLinks` is REQUIRED rather than defaulted for exactly that reason
+ * (LLM Visibility US-006): a caller that could omit it would publish an
+ * Organization asserting this store has no profiles anywhere, on a page whose
+ * `@id` the homepage states WITH them. Both call sites resolve the list through
+ * `lib/seo/tenant-social-links.ts`, the same way both resolve the logo through
+ * `lib/seo/tenant-logo.ts`.
  */
 export function buildOrganizationNode(
   storeUrl: string,
   name: string,
   logoRef: string | null,
+  socialLinks: readonly string[],
 ): JsonLdNode {
   const logo = absoluteAssetUrl(storeUrl, logoRef);
+  // Re-normalised here rather than trusted: this is the last point before a
+  // string becomes a published claim about who the store is, and the builder is
+  // reachable from any caller that assembles a list some other way.
+  const sameAs = normalizeSocialLinks(socialLinks);
 
   return {
     "@type": "Organization",
@@ -230,6 +249,11 @@ export function buildOrganizationNode(
     name,
     url: storeUrl,
     ...(logo ? { logo } : {}),
+    // Omitted entirely when there is nothing to say. An empty `sameAs: []` is
+    // not "we have not told you yet", it is a positive assertion that this
+    // entity has no other presence at all — worse than silence, and free to
+    // avoid.
+    ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 }
 
@@ -258,7 +282,12 @@ export function buildStoreJsonLd(
     "",
   );
   const logo = absoluteAssetUrl(url, source.logoRef);
-  const organization = buildOrganizationNode(url, name, source.logoRef);
+  const organization = buildOrganizationNode(
+    url,
+    name,
+    source.logoRef,
+    source.socialLinks,
+  );
 
   const address = buildPostalAddress(source);
   if (!address) return [organization];

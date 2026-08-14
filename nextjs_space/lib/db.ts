@@ -59,6 +59,7 @@ const tenantScopedModels = new Set([
   'customer_tags',
   'segments',
   'seo_redirects',
+  'llm_citation_checks',
   'conditions',
   'consultations',
   'drgreen_carts',

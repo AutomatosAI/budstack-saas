@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
@@ -125,14 +126,30 @@ function CheckGroup({
             className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2"
           >
             <p className="text-sm text-bs-fg-body min-w-0">{item.message}</p>
-            <button
-              type="button"
-              className="bs-btn bs-btn-ghost bs-btn-sm flex-shrink-0 self-start sm:self-auto"
-              onClick={() => onFix(item.target)}
-            >
-              Fix
-              <ArrowRight className="h-4 w-4 ml-1" aria-hidden="true" />
-            </button>
+            {/*
+              US-004 — a finding whose fix is not in this panel travels with an
+              `href` (The Wire's own list) and renders as a link. Switching to a
+              tab that does not hold the fix would be the button that does
+              nothing this feature was built to avoid.
+            */}
+            {item.target.href ? (
+              <Link
+                href={item.target.href}
+                className="bs-btn bs-btn-ghost bs-btn-sm flex-shrink-0 self-start sm:self-auto"
+              >
+                Open {item.target.label}
+                <ArrowRight className="h-4 w-4 ml-1" aria-hidden="true" />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="bs-btn bs-btn-ghost bs-btn-sm flex-shrink-0 self-start sm:self-auto"
+                onClick={() => onFix(item.target)}
+              >
+                Fix
+                <ArrowRight className="h-4 w-4 ml-1" aria-hidden="true" />
+              </button>
+            )}
           </li>
         ))}
       </ul>
@@ -302,7 +319,8 @@ export function SeoAuditTab({ onFix }: SeoAuditTabProps) {
           <h4 className="font-medium text-bs-fg">Nothing to fix</h4>
           <p className="text-sm text-bs-fg-muted">
             All {passed} checks passed. Titles, descriptions, images, your
-            sitemap and your redirects are all in order.
+            sitemap, your redirects and what the AI crawlers can read are all in
+            order.
           </p>
         </section>
       ) : (

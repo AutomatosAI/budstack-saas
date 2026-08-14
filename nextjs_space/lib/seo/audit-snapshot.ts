@@ -30,7 +30,15 @@
 import { storeCanonical } from "@/lib/seo/canonical";
 import { conditionPath } from "@/lib/seo/condition-paths";
 import { readEntitySeo, type EntitySeo } from "@/lib/seo/entity-seo";
+import { readFaqEntries } from "@/lib/seo/faq-json-ld";
+import {
+  readHeadingStructure,
+  type HeadingStructure,
+} from "@/lib/seo/heading-structure";
+import { indexingControlsUnlocked } from "@/lib/seo/indexing";
+import { isLlmsTxtExcluded } from "@/lib/seo/llms-txt";
 import { productPath } from "@/lib/seo/product-paths";
+import { readProductQa } from "@/lib/seo/product-qa";
 import {
   buildStoreSitemapEntries,
   type SitemapEntry,
@@ -65,6 +73,14 @@ export interface SeoAuditPostRow {
   readonly coverImage: unknown;
   readonly seo: unknown;
   readonly updatedAt: unknown;
+  /**
+   * US-004 — the authored HTML body, read for its heading skeleton only. The
+   * one large column the audit selects: a post body is the only authored HTML
+   * a store publishes (`conditions` carry no rich-text field, and their page's
+   * headings are the template's). Posts are the smallest of the four tables, so
+   * the row ceiling this costs against is the one with room to spare.
+   */
+  readonly content?: unknown;
 }
 
 export interface SeoAuditConditionRow {
@@ -75,6 +91,8 @@ export interface SeoAuditConditionRow {
   readonly image: unknown;
   readonly seo: unknown;
   readonly updatedAt: unknown;
+  /** US-004 — the seeded question/answer pairs this guide publishes. */
+  readonly faqs?: unknown;
 }
 
 export interface SeoAuditRedirectRow {
@@ -99,6 +117,19 @@ export interface SeoAuditInput {
   /** Published conditions belonging to this tenant. */
   readonly conditions: readonly SeoAuditConditionRow[];
   readonly redirects: readonly SeoAuditRedirectRow[];
+  /**
+   * US-004 — raw `tenants.settings.aiCrawlerPolicy`. Parsed by the check, which
+   * fails OPEN: a value we cannot read must never be reported as "this store is
+   * blocking AI search", because that is the finding an owner acts on.
+   */
+  readonly aiCrawlerPolicy?: unknown;
+  /** US-004 — raw `tenants.wireMode` (`MANUAL` | `ASSISTED`). */
+  readonly wireMode?: unknown;
+  /**
+   * US-004 — how many of this store's Wire posts are unpublished. A COUNT, not
+   * rows: the finding is one sentence about the list, and the fix is the list.
+   */
+  readonly unpublishedPostCount?: number;
 }
 
 /**
@@ -131,6 +162,29 @@ export interface SeoAuditEntity {
   readonly path: string | null;
   /** Is that path in the sitemap the store publishes right now? */
   readonly inSitemap: boolean;
+  /**
+   * US-004 — how many question/answer pairs this entity PUBLISHES in a
+   * machine-readable form: `products.seo.qa` for a product (US-002),
+   * `conditions.faqs` for a guide (US-017). Both are read through the same
+   * parsers the `FAQPage` builders use, so the audit counts what the page
+   * actually emits rather than what is stored.
+   */
+  readonly qaPairs: number;
+  /** Is Q&A a thing this entity type can carry at all? Posts and pages cannot. */
+  readonly expectsQa: boolean;
+  /**
+   * US-004 — the heading skeleton of the entity's authored HTML body, or null
+   * when it has none. Only a Wire post has one; a condition page's headings are
+   * rendered by the template, correctly nested, and are not the owner's to get
+   * wrong.
+   */
+  readonly headings: HeadingStructure | null;
+  /**
+   * US-004 — would this entity's URL appear in the store's llms.txt? False for
+   * the static pages, which the document does not list, and for anything the
+   * owner excluded.
+   */
+  readonly inLlmsTxt: boolean;
 }
 
 export interface AuditSitemap {
@@ -190,6 +244,20 @@ export function collectAuditEntities(
 ): SeoAuditEntity[] {
   const { tenant } = input;
 
+  // Resolved ONCE for the whole snapshot, exactly as the sitemap and llms.txt
+  // renderers resolve it per document: the plan cannot change between two rows
+  // of one audit, and the exclusion rules go dormant on Basic.
+  const proUnlocked = indexingControlsUnlocked({
+    tenantId: input.tenantId,
+    plan: input.plan,
+  });
+
+  /** Would llms.txt list this row? Same predicate the document itself filters
+   * on, imported rather than restated — a second copy could disagree with the
+   * file the store publishes. */
+  const listedInLlmsTxt = (path: string | null, seo: unknown): boolean =>
+    path !== null && !isLlmsTxtExcluded(seo, proUnlocked);
+
   const pages: SeoAuditEntity[] = STORE_SEO_PAGES.map((page) => ({
     tab: "pages" as const,
     entityId: page.key,
@@ -202,6 +270,12 @@ export function collectAuditEntities(
     expectsOwnImage: false,
     path: page.path,
     inSitemap: inSitemap(tenant, locs, page.path),
+    qaPairs: 0,
+    expectsQa: false,
+    headings: null,
+    // The document lists conditions, products and posts; the static pages reach
+    // a model through the sitemap it names, not through a line of their own.
+    inLlmsTxt: false,
   }));
 
   const products: SeoAuditEntity[] = input.products.flatMap((row) => {
@@ -230,6 +304,12 @@ export function collectAuditEntities(
         expectsOwnImage: true,
         path,
         inSitemap: inSitemap(tenant, locs, path),
+        // `readEntitySeo` has already dropped every malformed pair, so this is
+        // the count the page's accordion and its `FAQPage` node both render.
+        qaPairs: readProductQa(readEntitySeo(row.seo).qa).length,
+        expectsQa: true,
+        headings: null,
+        inLlmsTxt: listedInLlmsTxt(path, row.seo),
       },
     ];
   });
@@ -251,6 +331,12 @@ export function collectAuditEntities(
         expectsOwnImage: true,
         path: slug ? wirePostPath(slug) : null,
         inSitemap: inSitemap(tenant, locs, slug ? wirePostPath(slug) : null),
+        // No Q&A field: the product editor is the only one that offers it, and
+        // an article answers its questions in its prose.
+        qaPairs: 0,
+        expectsQa: false,
+        headings: readHeadingStructure(row.content),
+        inLlmsTxt: listedInLlmsTxt(slug ? wirePostPath(slug) : null, row.seo),
       },
     ];
   });
@@ -275,6 +361,14 @@ export function collectAuditEntities(
         expectsOwnImage: true,
         path,
         inSitemap: inSitemap(tenant, locs, path),
+        // The seeded pairs, read through the same parser US-017's `FAQPage`
+        // node is built from, so the count is what the page publishes.
+        qaPairs: readFaqEntries(row.faqs).length,
+        expectsQa: true,
+        // A condition page has no authored HTML body — `description` is a
+        // one-line intro and every heading on the page is the template's.
+        headings: null,
+        inLlmsTxt: listedInLlmsTxt(path, row.seo),
       },
     ];
   });

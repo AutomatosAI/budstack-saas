@@ -38,6 +38,13 @@ import {
   requestAutomatosCompletion,
   type AutomatosCredentials,
 } from "@/lib/seo/automatos-client";
+import type { ProductQaPair } from "@/lib/seo/product-qa";
+import {
+  buildQaDraftPrompt,
+  parseQaDraft,
+  type QaDraftRefusal,
+  type QaDraftSource,
+} from "@/lib/seo/qa-draft";
 
 export { isAutomatosConfigured, AUTOMATOS_CONNECT };
 export type { AutomatosCredentials, AutomatosConnectPrompt };
@@ -65,17 +72,38 @@ export type AiAssistErrorReason =
   | "lookup_failed"
   | "rate_limiter_unavailable";
 
-export type AiAssistResult =
-  | { readonly status: "ok"; readonly kind: AiAssistKind; readonly text: string; readonly provider: string }
+/**
+ * The outcomes that are not a draft, named once because US-002's Q&A drafting
+ * shares every one of them: the same credentials, the same meter, the same
+ * provider, the same two ways for it to fail. Only the OK arm and the refusal
+ * reason differ between the two contracts, which is exactly what the split says.
+ */
+export type AiAssistNoDraft =
   | { readonly status: "unavailable"; readonly reason: "not_connected"; readonly connect: AutomatosConnectPrompt }
   | { readonly status: "rate_limited"; readonly retryAfterSeconds?: number }
-  | { readonly status: "refused"; readonly reason: AiDraftRefusal; readonly maxLength: number; readonly length?: number }
   | { readonly status: "error"; readonly reason: AiAssistErrorReason };
+
+export type AiAssistResult =
+  | { readonly status: "ok"; readonly kind: AiAssistKind; readonly text: string; readonly provider: string }
+  | { readonly status: "refused"; readonly reason: AiDraftRefusal; readonly maxLength: number; readonly length?: number }
+  | AiAssistNoDraft;
+
+/** US-002 — the same union for a Q&A draft: a list of pairs, or one of the above. */
+export type QaDraftResult =
+  | { readonly status: "ok"; readonly pairs: readonly ProductQaPair[]; readonly provider: string }
+  | { readonly status: "refused"; readonly reason: QaDraftRefusal }
+  | AiAssistNoDraft;
 
 /** One provider's completion call, stripped of everything provider-specific. */
 export interface AiAssistProviderRequest {
   readonly credentials: AutomatosCredentials;
   readonly prompt: string;
+  /**
+   * LLM Visibility US-005 — which of the workspace's models should answer.
+   * Absent means "whatever the tenant's agent defaults to", which is what every
+   * caller before US-005 asked for and still asks for.
+   */
+  readonly modelId?: string | null;
 }
 
 export type AiAssistProviderResult =
@@ -97,6 +125,7 @@ export const automatosProvider: AiAssistProvider = {
     const completion = await requestAutomatosCompletion({
       credentials: request.credentials,
       prompt: request.prompt,
+      modelId: request.modelId ?? null,
     });
     return completion.ok
       ? { ok: true, text: completion.text }
@@ -159,7 +188,7 @@ export interface GenerateSeoDraftRequest {
   readonly provider?: AiAssistProvider;
 }
 
-function unavailable(): AiAssistResult {
+function unavailable(): AiAssistNoDraft {
   return { status: "unavailable", reason: "not_connected", connect: AUTOMATOS_CONNECT };
 }
 
@@ -173,7 +202,7 @@ function unavailable(): AiAssistResult {
  * it: an unmetered flood against the tenant's paid AI account is the worse of
  * the two failures.
  */
-async function checkAssistRateLimit(tenantId: string): Promise<AiAssistResult | null> {
+async function checkAssistRateLimit(tenantId: string): Promise<AiAssistNoDraft | null> {
   const limit = await checkRateLimit(`${RATE_LIMIT_PREFIX}:${tenantId}`, {
     ...AI_ASSIST_RATE_LIMIT,
     failMode: "closed",
@@ -194,6 +223,65 @@ async function checkAssistRateLimit(tenantId: string): Promise<AiAssistResult | 
 }
 
 /**
+ * Meter, resolve the tenant's credentials, ask the provider — everything both
+ * contracts do identically, in the order they have to do it in.
+ *
+ * Returns the completion's raw text, or the outcome that stopped it. Factored so
+ * that adding the Q&A contract (US-002) added an OUTPUT PARSER and nothing else:
+ * one place still decides how a tenant's AI quota is spent, and a change to the
+ * metering or the credential rule cannot apply to one caller and miss the other.
+ *
+ * EXPORTED FOR US-005's citation monitor, which is the first caller that is not
+ * a draft: it needs this exact sequence — one meter, one credential rule, one
+ * provider — and a completion the contract parsers must not touch, because the
+ * answer being judged is prose from a search-grounded model rather than a field
+ * being written. A parallel client would have been a second place deciding how
+ * the tenant's account is spent; this is the one place, with one more caller.
+ *
+ * `modelId` is optional and defaults to the workspace's own default model.
+ */
+export async function runAiAssistCompletion(
+  tenantId: string,
+  provider: AiAssistProvider,
+  prompt: string,
+  modelId?: string | null,
+): Promise<{ readonly ok: true; readonly text: string } | { readonly ok: false; readonly result: AiAssistNoDraft }> {
+  const limited = await checkAssistRateLimit(tenantId);
+  if (limited) return { ok: false, result: limited };
+
+  let credentials: AutomatosCredentials | null;
+  try {
+    credentials = await loadAutomatosCredentials(tenantId);
+  } catch (error) {
+    logger.error("[seo/ai-assist] credential lookup failed", {
+      tenantId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return { ok: false, result: { status: "error", reason: "lookup_failed" } };
+  }
+
+  if (!isAutomatosConfigured(credentials)) {
+    return { ok: false, result: unavailable() };
+  }
+
+  const completion = await provider.complete({ credentials, prompt, modelId });
+  if (completion.ok) return { ok: true, text: completion.text };
+
+  return {
+    ok: false,
+    result:
+      completion.reason === "rate_limited"
+        ? {
+            status: "rate_limited",
+            ...(completion.retryAfterSeconds !== undefined
+              ? { retryAfterSeconds: completion.retryAfterSeconds }
+              : {}),
+          }
+        : { status: "error", reason: completion.reason },
+  };
+}
+
+/**
  * Draft one SEO field from one entity's own content.
  *
  * The prompt is built from `source` alone — a closed shape carrying this
@@ -210,37 +298,12 @@ export async function generateSeoDraft(
 ): Promise<AiAssistResult> {
   const provider = request.provider ?? automatosProvider;
 
-  const limited = await checkAssistRateLimit(request.tenantId);
-  if (limited) return limited;
-
-  let credentials: AutomatosCredentials | null;
-  try {
-    credentials = await loadAutomatosCredentials(request.tenantId);
-  } catch (error) {
-    logger.error("[seo/ai-assist] credential lookup failed", {
-      tenantId: request.tenantId,
-      message: error instanceof Error ? error.message : String(error),
-    });
-    return { status: "error", reason: "lookup_failed" };
-  }
-
-  if (!isAutomatosConfigured(credentials)) return unavailable();
-
-  const completion = await provider.complete({
-    credentials,
-    prompt: buildAiAssistPrompt(request.kind, request.source),
-  });
-
-  if (!completion.ok) {
-    return completion.reason === "rate_limited"
-      ? {
-          status: "rate_limited",
-          ...(completion.retryAfterSeconds !== undefined
-            ? { retryAfterSeconds: completion.retryAfterSeconds }
-            : {}),
-        }
-      : { status: "error", reason: completion.reason };
-  }
+  const completion = await runAiAssistCompletion(
+    request.tenantId,
+    provider,
+    buildAiAssistPrompt(request.kind, request.source),
+  );
+  if (!completion.ok) return completion.result;
 
   const draft = parseAiDraft(request.kind, completion.text);
   const maxLength = AI_ASSIST_MAX_LENGTH[request.kind];
@@ -259,4 +322,50 @@ export async function generateSeoDraft(
   }
 
   return { status: "ok", kind: request.kind, text: draft.text, provider: provider.id };
+}
+
+export interface GenerateQaDraftRequest {
+  readonly tenantId: string;
+  /** The product's own copy, read server-side from the tenant's own row. */
+  readonly source: QaDraftSource;
+  /** Injectable for tests and for a future second provider. */
+  readonly provider?: AiAssistProvider;
+}
+
+/**
+ * LLM Visibility US-002 — draft a product's Q&A from that product's own copy.
+ *
+ * Everything that decides whether a call happens is `generateSeoDraft`'s: the
+ * same per-tenant meter (so twenty Q&A drafts and twenty title drafts share one
+ * budget — it is one AI account being spent either way), the same
+ * tenant-owned-credentials rule, the same provider. What is different is the
+ * answer we will accept, and that lives entirely in `./qa-draft`.
+ *
+ * The returned pairs are the model's, normalised but never edited: a list that
+ * broke the contract comes back `refused` with no pairs at all, because a
+ * partially-repaired list is one the owner would save believing a human wrote
+ * every line of it.
+ */
+export async function generateQaDraft(
+  request: GenerateQaDraftRequest,
+): Promise<QaDraftResult> {
+  const provider = request.provider ?? automatosProvider;
+
+  const completion = await runAiAssistCompletion(
+    request.tenantId,
+    provider,
+    buildQaDraftPrompt(request.source),
+  );
+  if (!completion.ok) return completion.result;
+
+  const draft = parseQaDraft(completion.text);
+  if (!draft.ok) {
+    logger.info("[seo/ai-assist] qa draft refused", {
+      tenantId: request.tenantId,
+      reason: draft.reason,
+    });
+    return { status: "refused", reason: draft.reason };
+  }
+
+  return { status: "ok", pairs: draft.pairs, provider: provider.id };
 }

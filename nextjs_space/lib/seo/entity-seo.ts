@@ -17,6 +17,10 @@
  * imports it through `store-pages.ts` for the admin list.
  */
 
+import {
+  readProductQa,
+  type ProductQaPair,
+} from "@/lib/seo/product-qa";
 import { seoText } from "@/lib/seo/store-identity";
 
 /** The fields an owner can author for any SEO-bearing entity. */
@@ -56,6 +60,18 @@ export interface EntitySeo {
   readonly canonicalOverride?: string;
   /** US-022 — keep this entity's URL out of the store's sitemap. */
   readonly sitemapExclude?: boolean;
+  /**
+   * LLM Visibility US-002 — the questions this entity answers, in the order the
+   * owner arranged them. Absent unless at least one valid pair is stored, so
+   * "no qa key" and "an empty list" are the same state.
+   *
+   * PRODUCTS ONLY TODAY. The key lives on the shared record because there is one
+   * parser, one write path and one editor for an authored `seo` blob; only the
+   * product write route accepts it (every other SEO PUT schema is `.strict()`
+   * and lists no `qa`), and only the product page renders it. Adding an entity
+   * later is a schema field and a render, not a second storage shape.
+   */
+  readonly qa?: readonly ProductQaPair[];
 }
 
 /** US-022 — `<meta name="robots">` for one entity. Only `true` is ever stored. */
@@ -151,6 +167,10 @@ export function readEntitySeo(value: unknown): EntitySeo {
   const robots = readEntityRobots(value.robots);
   const canonicalOverride = seoText(value.canonicalOverride);
   const sitemapExclude = value.sitemapExclude === true;
+  // An empty list is dropped rather than stored: `isEmptyEntitySeo` decides
+  // whether the whole record becomes SQL NULL, and a `qa: []` left behind would
+  // keep an otherwise-empty record alive as `{"qa":[]}`.
+  const qa = readProductQa(value.qa);
 
   return {
     ...(title ? { title } : {}),
@@ -160,6 +180,7 @@ export function readEntitySeo(value: unknown): EntitySeo {
     ...(robots ? { robots } : {}),
     ...(isCanonicalOverrideUrl(canonicalOverride) ? { canonicalOverride } : {}),
     ...(sitemapExclude ? { sitemapExclude: true } : {}),
+    ...(qa.length > 0 ? { qa } : {}),
   };
 }
 
@@ -172,7 +193,8 @@ export function isEmptyEntitySeo(seo: EntitySeo): boolean {
     !seo.imageAlt &&
     !seo.robots &&
     !seo.canonicalOverride &&
-    !seo.sitemapExclude
+    !seo.sitemapExclude &&
+    !seo.qa
   );
 }
 
@@ -197,12 +219,31 @@ export function entitySeoIndexing(seo: EntitySeo): EntitySeo {
   };
 }
 
+/**
+ * US-002 — the Q&A, which is a third half: authored for a reader like the
+ * content fields, but Pro-gated like the crawler fields.
+ *
+ * It gets its own selector, and its own flag on {@link entitySeoWrite}, rather
+ * than joining either group, because the two decisions are made independently: a
+ * Pro tenant editing Q&A on a save that carries no indexing controls must still
+ * have their pairs written, and a Basic tenant saving a title must have their
+ * dormant pairs preserved whatever the indexing flag says.
+ */
+export function entitySeoQa(seo: EntitySeo): EntitySeo {
+  return seo.qa ? { qa: seo.qa } : {};
+}
+
 export interface EntitySeoWriteOptions {
   /**
    * True when this save is NOT allowed to write indexing controls — a Basic
    * tenant, or any caller that sent none of those fields.
    */
   readonly preserveIndexing?: boolean;
+  /**
+   * True when this save is NOT allowed to write Q&A — a Basic tenant, or a
+   * caller (every non-product editor) that sent no `qa` key.
+   */
+  readonly preserveQa?: boolean;
 }
 
 /**
@@ -226,11 +267,16 @@ export function entitySeoWrite(
   options: EntitySeoWriteOptions = {},
 ): EntitySeo {
   const submitted = readEntitySeo(authored);
-  if (!options.preserveIndexing) return submitted;
+  const current = readEntitySeo(stored);
 
+  // Composed from three explicit halves rather than "submitted, unless…": with
+  // two independent preserve flags there is no single record that is right for
+  // both, and a shortcut return would carry one group's submission into a save
+  // that was refused it. Each half names where it comes from.
   return {
     ...entitySeoContent(submitted),
-    ...entitySeoIndexing(readEntitySeo(stored)),
+    ...entitySeoIndexing(options.preserveIndexing ? current : submitted),
+    ...entitySeoQa(options.preserveQa ? current : submitted),
   };
 }
 
@@ -269,13 +315,14 @@ export function withEntityImageAlt(
   const imageAlt = seoText(alt);
 
   // Everything that is not `imageAlt` is carried through unread, US-022's
-  // indexing controls included: the Wire's editor knows nothing about them and
-  // must not delete a noindex by saving a cover image's alt text. The two
-  // halves are rebuilt rather than spread, so an empty alt CLEARS the stored one
-  // instead of leaving it behind.
+  // indexing controls and US-002's Q&A included: the Wire's editor knows nothing
+  // about either and must not delete a noindex by saving a cover image's alt
+  // text. The halves are rebuilt rather than spread, so an empty alt CLEARS the
+  // stored one instead of leaving it behind.
   const merged: EntitySeo = {
     ...entitySeoContent({ ...current, imageAlt: imageAlt || undefined }),
     ...entitySeoIndexing(current),
+    ...entitySeoQa(current),
   };
 
   return isEmptyEntitySeo(merged) ? null : merged;

@@ -1,5 +1,7 @@
 /**
- * SEO Supercharge US-017 — FAQPage structured data for a condition page.
+ * SEO Supercharge US-017 — FAQPage structured data for a condition page, and
+ * (LLM Visibility US-002) for a product page's authored Q&A. Two columns, two
+ * gates, ONE node builder: see {@link buildFaqPageNode}.
  *
  * THE CONTENT IS ALREADY THERE. Every seeded condition carries four questions
  * and answers (scripts/seed-conditions.ts), and the page renders them as an
@@ -44,7 +46,10 @@ import { z } from "zod";
 
 import { storeCanonical } from "@/lib/seo/canonical";
 import { conditionPath } from "@/lib/seo/condition-paths";
+import { readEntitySeo } from "@/lib/seo/entity-seo";
 import type { JsonLdNode } from "@/lib/seo/json-ld";
+import { productPath } from "@/lib/seo/product-paths";
+import { readProductQa } from "@/lib/seo/product-qa";
 import { isSeoProUnlocked } from "@/lib/seo/pro-features";
 
 /** One question and the answer to it, both trimmed and known non-empty. */
@@ -119,10 +124,37 @@ export function buildConditionFaqJsonLd(
 ): readonly JsonLdNode[] {
   if (!isSeoProUnlocked({ id: source.tenantId, plan: source.plan })) return [];
 
-  const entries = readFaqEntries(source.faqs);
-  if (entries.length === 0) return [];
+  return buildFaqPageNode(
+    storeCanonical(source, conditionPath(source.slug)),
+    readFaqEntries(source.faqs),
+  );
+}
 
-  const url = storeCanonical(source, conditionPath(source.slug));
+/**
+ * The `FAQPage` node for one page's question/answer pairs, or an empty array.
+ *
+ * ONE builder for both callers — the seeded condition FAQ above and US-002's
+ * authored product Q&A below — because the node is the same statement about a
+ * different page, and two copies of it would drift on the day a consumer wants
+ * a property neither had. The gate and the entries are the CALLER's business:
+ * each reads its own column, and each has already decided whether the tenant is
+ * entitled to be described this way.
+ *
+ * Empty for a page with no valid pair. A `FAQPage` with an empty `mainEntity` is
+ * not a smaller truth than a full one — it is a page claiming to answer
+ * questions it does not answer.
+ *
+ * The `@id` is anchored to the page's canonical (US-007's primary host, so a
+ * tenant on a custom domain publishes one statement rather than a second copy on
+ * `{subdomain}.budstacks.io`) and fragment-suffixed, so it names the FAQ entity
+ * rather than colliding with the `#product` or `#breadcrumb` node in the same
+ * graph.
+ */
+export function buildFaqPageNode(
+  url: string,
+  entries: readonly FaqEntry[],
+): readonly JsonLdNode[] {
+  if (entries.length === 0) return [];
 
   return [
     {
@@ -136,4 +168,46 @@ export function buildConditionFaqJsonLd(
       })),
     },
   ];
+}
+
+export interface ProductQaJsonLdSource {
+  /** `tenants.id` — the plan gate's subject. */
+  readonly tenantId: string;
+  /** Raw `tenants.plan`; parsed fail-closed by the gate. */
+  readonly plan: unknown;
+  readonly subdomain: string;
+  readonly customDomain: string | null;
+  /** The Dr Green strain id this URL names — the canonical path segment. */
+  readonly productId: unknown;
+  /** Raw `products.seo` Json from the LOCAL row — parsed here, never trusted. */
+  readonly seo: unknown;
+}
+
+/**
+ * LLM Visibility US-002 — the Q&A pairs this product page may PUBLISH: the
+ * authored ones for a Pro tenant, none for anybody else.
+ *
+ * THE ONE GATED READ, called by both consumers — the accordion the shopper sees
+ * (`product-qa-section.tsx`) and the `FAQPage` node below. Structured data is
+ * policed on matching the visible content, so the two must not be able to
+ * disagree about either the plan or the parse; routing both through here is what
+ * makes that structural rather than a convention. A Basic tenant renders neither,
+ * and their stored pairs stay in the column, dormant, exactly like US-022's
+ * indexing rules.
+ */
+export function productQaEntries(
+  source: Pick<ProductQaJsonLdSource, "tenantId" | "plan" | "seo">,
+): readonly FaqEntry[] {
+  if (!isSeoProUnlocked({ id: source.tenantId, plan: source.plan })) return [];
+  return readProductQa(readEntitySeo(source.seo).qa);
+}
+
+/** The `FAQPage` node for a product page's authored Q&A, or an empty array. */
+export function buildProductQaJsonLd(
+  source: ProductQaJsonLdSource,
+): readonly JsonLdNode[] {
+  return buildFaqPageNode(
+    storeCanonical(source, productPath(source.productId)),
+    productQaEntries(source),
+  );
 }

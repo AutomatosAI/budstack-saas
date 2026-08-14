@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  AiCrawlersTab,
+  BrandProfilesCard,
+  CitationsTab,
+  LlmsTxtCard,
   RedirectsTab,
   SeoAuditTab,
   SeoEditorModal,
@@ -11,6 +15,7 @@ import {
   type RedirectRow,
   type VerificationValues,
 } from "@/components/admin/seo";
+import type { AiCrawlerPolicy } from "@/lib/seo/ai-crawlers";
 import type { SeoAuditTarget } from "@/lib/seo/audit-types";
 import { conditionPath } from "@/lib/seo/condition-paths";
 import {
@@ -18,6 +23,7 @@ import {
   readEntitySeo,
   type EntitySeo,
 } from "@/lib/seo/entity-seo";
+import { LLMS_TXT_PATH } from "@/lib/seo/llms-txt-copy";
 import { productPath } from "@/lib/seo/product-paths";
 import {
   STORE_SEO_PAGES,
@@ -37,6 +43,8 @@ import {
   Signpost,
   Gauge,
   BadgeCheck,
+  Bot,
+  MessageSquareQuote,
 } from "lucide-react";
 
 const sectionTitleStyle = {
@@ -112,6 +120,18 @@ interface SeoPageClientProps {
    * out of.
    */
   verification: VerificationValues;
+  /**
+   * LLM Visibility US-001 — the store's AI crawler policy, resolved server-side
+   * through `parseAiCrawlerPolicy`, so an absent or unreadable stored value
+   * arrives here as 'open' (maximum visibility) rather than as undefined.
+   */
+  aiCrawlerPolicy: AiCrawlerPolicy;
+  /**
+   * LLM Visibility US-006 — the profiles this store publishes as `sameAs`,
+   * resolved server-side through `readSocialLinks`, so an unreadable stored
+   * value arrives here as an empty list rather than as junk in a textarea.
+   */
+  socialLinks: readonly string[];
   /** `settings.analyticsEnabled` — whether the GA4 tag is allowed to load. */
   analyticsCookiesEnabled: boolean;
 }
@@ -127,6 +147,8 @@ export function SeoPageClient({
   seoProUnlocked,
   aiAssistConnected,
   verification,
+  aiCrawlerPolicy,
+  socialLinks,
   analyticsCookiesEnabled,
 }: SeoPageClientProps) {
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
@@ -265,7 +287,10 @@ export function SeoPageClient({
    * reopens an editor on stale data. A finding whose row is no longer here — the
    * audit's cached result describing a store that has since changed — still
    * switches the tab: landing on the right list beats a button that does
-   * nothing. "redirects" has no per-row editor; the tab itself is the fix.
+   * nothing. "redirects" has no per-row editor; the tab itself is the fix, and
+   * so is "ai-crawlers" (US-004), which holds the crawler policy and the
+   * llms.txt card. A finding whose fix is outside this panel never reaches here
+   * — it carries `target.href` and the Audit tab renders it as a link.
    */
   const handleAuditFix = (target: SeoAuditTarget) => {
     setActiveTab(target.tab);
@@ -316,7 +341,7 @@ export function SeoPageClient({
           which arm it belongs in.
         */}
         <TabsList
-          className={`grid w-full grid-cols-2 ${seoProUnlocked ? "sm:grid-cols-7" : "sm:grid-cols-5"} lg:w-auto lg:inline-grid`}
+          className={`grid w-full grid-cols-2 ${seoProUnlocked ? "sm:grid-cols-9" : "sm:grid-cols-5"} lg:w-auto lg:inline-grid`}
         >
           <TabsTrigger value="products" className="gap-2">
             <Package className="h-4 w-4 hidden sm:block" aria-hidden="true" />
@@ -354,6 +379,32 @@ export function SeoPageClient({
             <TabsTrigger value="verification" className="gap-2">
               <BadgeCheck className="h-4 w-4 hidden sm:block" aria-hidden="true" />
               Verification
+            </TabsTrigger>
+          )}
+          {/*
+            LLM Visibility US-001 — which AI bots may read the store. Pro only,
+            configuration rather than authoring, so it sits with Verification
+            rather than among the four content tabs.
+          */}
+          {seoProUnlocked && (
+            <TabsTrigger value="ai-crawlers" className="gap-2">
+              <Bot className="h-4 w-4 hidden sm:block" aria-hidden="true" />
+              AI Crawlers
+            </TabsTrigger>
+          )}
+          {/*
+            LLM Visibility US-005 — what the store's own AI model answers when
+            asked its market's questions. Pro only, and next to AI Crawlers
+            because the two are the same subject read from opposite ends: one
+            sets what an engine may read, the other records what it said.
+          */}
+          {seoProUnlocked && (
+            <TabsTrigger value="citations" className="gap-2">
+              <MessageSquareQuote
+                className="h-4 w-4 hidden sm:block"
+                aria-hidden="true"
+              />
+              AI Citations
             </TabsTrigger>
           )}
           {/*
@@ -609,13 +660,42 @@ export function SeoPageClient({
           </TabsContent>
         )}
 
-        {/* Verification Tab — Pro only (US-026) */}
+        {/* Verification Tab — Pro only (US-026, US-006) */}
         {seoProUnlocked && (
-          <TabsContent value="verification">
+          <TabsContent value="verification" className="space-y-6">
             <VerificationTab
               initialValues={verification}
               analyticsCookiesEnabled={analyticsCookiesEnabled}
             />
+            {/* LLM Visibility US-006 — the store's profiles elsewhere. It sits
+                in this tab rather than a tenth one because the tab is already
+                where a store states WHO IT IS to a search engine: the tokens
+                above prove the site is yours, these links say which other
+                records are also yours. Nothing here is configuration of a
+                crawler, so it does not belong beside the AI Crawlers policy. */}
+            <BrandProfilesCard initialLinks={socialLinks} />
+          </TabsContent>
+        )}
+
+        {/* AI Crawlers Tab — Pro only (LLM Visibility US-001, US-003) */}
+        {seoProUnlocked && (
+          <TabsContent value="ai-crawlers" className="space-y-6">
+            <AiCrawlersTab
+              initialPolicy={aiCrawlerPolicy}
+              robotsUrl={`${baseUrl}/robots.txt`}
+            />
+            {/* US-003 — the other machine-readable file this store publishes.
+                It sits here rather than in a tab of its own because there is
+                nothing to configure: the card exists to say what the file is and
+                what the evidence for it actually shows. */}
+            <LlmsTxtCard llmsUrl={`${baseUrl}${LLMS_TXT_PATH}`} />
+          </TabsContent>
+        )}
+
+        {/* AI Citations Tab — Pro only (LLM Visibility US-005) */}
+        {seoProUnlocked && (
+          <TabsContent value="citations">
+            <CitationsTab />
           </TabsContent>
         )}
 
@@ -649,6 +729,8 @@ export function SeoPageClient({
           canUploadOgImage={seoProUnlocked}
           canEditIndexing={seoProUnlocked}
           canUseAiAssist={seoProUnlocked}
+          // LLM Visibility US-002 — products only; no other modal passes it.
+          canEditQa={seoProUnlocked}
           aiAssistConnected={aiAssistConnected}
         />
       )}

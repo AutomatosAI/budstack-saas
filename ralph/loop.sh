@@ -2,7 +2,7 @@
 
 # Ralph Wiggum Build Loop (Claude) — SEO Supercharge (Basic $99 / Pro $169)
 # Run from the repo root: /Users/gkavanagh/Development/Dr-Green-Cannexis/budstack-saas
-# Branch: ralph/seo-supercharge (the prompt enforces a hard branch lock)
+# Branch: ralph/seo-llm-visibility (the prompt enforces a hard branch lock)
 # Usage:
 #   caffeinate -i ./ralph/loop.sh    # Build mode (caffeinate prevents the overnight-sleep crash from the email run)
 #   ./ralph/loop.sh 3         # Max 3 iterations
@@ -39,8 +39,8 @@ if [[ ! -f "$PROMPT_FILE" ]]; then
 fi
 
 CURRENT_BRANCH=$(git branch --show-current)
-if [[ "$CURRENT_BRANCH" != "ralph/seo-supercharge" ]]; then
-  echo -e "${RED}Error: on branch '$CURRENT_BRANCH', expected 'ralph/seo-supercharge'. Checkout the ralph branch first.${NC}"
+if [[ "$CURRENT_BRANCH" != "ralph/seo-llm-visibility" ]]; then
+  echo -e "${RED}Error: on branch '$CURRENT_BRANCH', expected 'ralph/seo-llm-visibility'. Checkout the ralph branch first.${NC}"
   exit 1
 fi
 
@@ -153,8 +153,8 @@ handle_usage_limit() {
 }
 
 echo -e "${GREEN}Ralph loop: BUILD mode — SEO Supercharge (Basic $99 / Pro $169)${NC}"
-echo -e "${CYAN}26 stories (US-001..US-026): A make-SEO-real, B plan plumbing, C pro features.${NC}"
-echo -e "${CYAN}Model: ${RALPH_MODEL} (override with RALPH_MODEL=...). Branch: ralph/seo-supercharge. Never pushes.${NC}"
+echo -e "${CYAN}6 stories (US-001..US-006): LLM visibility module, all Pro-gated.${NC}"
+echo -e "${CYAN}Model: ${RALPH_MODEL} (override with RALPH_MODEL=...). Branch: ralph/seo-llm-visibility. Never pushes.${NC}"
 [[ $MAX_ITERATIONS -gt 0 ]] && echo "Max iterations: $MAX_ITERATIONS"
 echo "Press Ctrl+C to stop"
 echo "---"
@@ -230,7 +230,7 @@ while true; do
   if [[ "$RESULT_MSG" =~ RALPH_COMPLETE ]]; then
     echo ""
     echo -e "${GREEN}=== Ralph Complete ===${NC}"
-    echo -e "${GREEN}SEO Supercharge: all executable stories finished. Review the branch, then push + PR per workstream (human decision — merge deploys).${NC}"
+    echo -e "${GREEN}LLM Visibility: all executable stories finished. Review the branch, then push + PR per workstream (human decision — merge deploys).${NC}"
     break
   fi
 
