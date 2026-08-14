@@ -178,6 +178,28 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       data: dataToUpdate,
     });
 
+    // US-009: the Automatos public key is origin-allowlisted, so a custom-
+    // domain change must follow to the orchestrator or the widget 403s on the
+    // new host. Fire-and-forget — a sync failure is logged, never blocks the
+    // settings save (re-provisioning later heals it: idempotent, no rotation).
+    const newCustomDomain = (dataToUpdate.customDomain ?? null) as string | null;
+    if (tenant.automatosApiKey && newCustomDomain !== tenant.customDomain) {
+      const { buildTenantDomains, partnerKey, syncTenantDomains } = await import(
+        "@/lib/integrations/automatos-provision"
+      );
+      if (partnerKey()) {
+        void syncTenantDomains({
+          tenantId: tenant.id,
+          domains: buildTenantDomains(tenant.subdomain, newCustomDomain),
+        }).catch((e: unknown) => {
+          logger.warn("Automatos domains re-sync failed (non-blocking)", {
+            tenantId: tenant.id,
+            error: e instanceof Error ? e.message : String(e),
+          });
+        });
+      }
+    }
+
     const { ipAddress, userAgent } = getClientInfo(req.headers);
     await createAuditLog({
       action: AUDIT_ACTIONS.SETTINGS_UPDATED,

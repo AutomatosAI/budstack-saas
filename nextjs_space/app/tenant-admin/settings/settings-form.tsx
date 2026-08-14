@@ -48,6 +48,30 @@ export default function SettingsForm({ tenant, features }: SettingsFormProps) {
   const chatbotEntitled = hasFeature(features, FEATURES.AUTOMATOS_CHATBOT);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isProvisioning, setIsProvisioning] = useState(false);
+
+  const handleProvision = async () => {
+    setIsProvisioning(true);
+    try {
+      const res = await fetch(`/api/tenant-admin/automatos/provision`, {
+        method: "POST",
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(payload?.error || "Automatic provisioning failed");
+      }
+      toast.success(
+        payload.keyMinted
+          ? "Chatbot provisioned — your key is saved and the widget is on."
+          : "Workspace already provisioned — existing key kept.",
+      );
+      router.refresh();
+    } catch (error: any) {
+      toast.error(error?.message || "Automatic provisioning failed");
+    } finally {
+      setIsProvisioning(false);
+    }
+  };
   const hasApiKey = Boolean(tenant.drGreenApiKey);
   const saEligible = isSaIdEligibleTenant(tenant);
   const [formData, setFormData] = useState({
@@ -364,6 +388,22 @@ export default function SettingsForm({ tenant, features }: SettingsFormProps) {
               aria-label="Enable storefront chatbot"
             />
           </div>
+          {chatbotEntitled && !formData.automatosApiKey && (
+            <div className="flex items-center justify-between rounded-bs-md border border-dashed border-bs-border-100 p-4">
+              <p className="text-sm text-bs-fg-muted">
+                No API key yet — provision your Automatos workspace and key in
+                one click, or paste a key below.
+              </p>
+              <button
+                type="button"
+                className="bs-btn bs-btn-green bs-btn-sm"
+                disabled={isProvisioning}
+                onClick={handleProvision}
+              >
+                {isProvisioning ? "Provisioning…" : "Provision automatically"}
+              </button>
+            </div>
+          )}
           <div className="space-y-2">
             <label htmlFor="automatosApiKey" className="bs-eyebrow">
               Automatos API Key (Public)
