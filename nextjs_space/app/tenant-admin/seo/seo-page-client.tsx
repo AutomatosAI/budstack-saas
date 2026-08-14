@@ -9,6 +9,11 @@ import {
   type RedirectRow,
 } from "@/components/admin/seo";
 import { conditionPath } from "@/lib/seo/condition-paths";
+import {
+  isEmptyEntitySeo,
+  readEntitySeo,
+  type EntitySeo,
+} from "@/lib/seo/entity-seo";
 import { productPath } from "@/lib/seo/product-paths";
 import {
   STORE_SEO_PAGES,
@@ -32,13 +37,12 @@ const sectionTitleStyle = {
   fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)",
 };
 
-interface SeoData {
-  title?: string;
-  description?: string;
-  ogImage?: string;
-  /** US-009 — alt text for the entity's image; products and posts only. */
-  imageAlt?: string;
-}
+/**
+ * The authored record for one entity — the same shape the storefront parses, so
+ * a field added there (US-009's `imageAlt`, US-022's indexing keys) reaches this
+ * editor without a second definition to keep in step.
+ */
+type SeoData = EntitySeo;
 
 interface ProductItem {
   id: string;
@@ -115,11 +119,23 @@ export function SeoPageClient({
   const [localPosts, setLocalPosts] = useState(posts);
   const [localConditions, setLocalConditions] = useState(conditions);
 
-  const hasSeo = (seo: SeoData | null | undefined): boolean => {
-    return !!(
-      seo &&
-      (seo.title || seo.description || seo.ogImage || seo.imageAlt)
-    );
+  // The same emptiness rule the write routes and the storefront apply, so the
+  // badge cannot say "Default" for an entity whose only authored field is one
+  // this list does not enumerate (US-022's indexing controls, most recently).
+  const hasSeo = (seo: SeoData | null | undefined): boolean =>
+    !isEmptyEntitySeo(readEntitySeo(seo));
+
+  /**
+   * The record the server says it stored, falling back to what was submitted.
+   *
+   * US-022 made the two able to differ: a save that omits the indexing controls
+   * (every Basic save) preserves whatever is already stored, so echoing the
+   * SUBMITTED record back into this list would show a downgraded tenant their
+   * dormant rules as deleted — the one thing the write path exists not to do.
+   */
+  const savedSeo = async (res: Response, submitted: SeoData): Promise<SeoData> => {
+    const body: { seo?: SeoData } | null = await res.json().catch(() => null);
+    return body?.seo ?? submitted;
   };
 
   const handleSaveProductSeo = async (seo: SeoData) => {
@@ -135,9 +151,12 @@ export function SeoPageClient({
     );
 
     if (!res.ok) throw new Error("Failed to save");
+    const stored = await savedSeo(res, seo);
 
     setLocalProducts((prev) =>
-      prev.map((p) => (p.id === selectedProduct.id ? { ...p, seo } : p)),
+      prev.map((p) =>
+        p.id === selectedProduct.id ? { ...p, seo: stored } : p,
+      ),
     );
   };
 
@@ -151,9 +170,10 @@ export function SeoPageClient({
     });
 
     if (!res.ok) throw new Error("Failed to save");
+    const stored = await savedSeo(res, seo);
 
     setLocalPosts((prev) =>
-      prev.map((p) => (p.id === selectedPost.id ? { ...p, seo } : p)),
+      prev.map((p) => (p.id === selectedPost.id ? { ...p, seo: stored } : p)),
     );
   };
 
@@ -170,9 +190,12 @@ export function SeoPageClient({
     );
 
     if (!res.ok) throw new Error("Failed to save");
+    const stored = await savedSeo(res, seo);
 
     setLocalConditions((prev) =>
-      prev.map((c) => (c.id === selectedCondition.id ? { ...c, seo } : c)),
+      prev.map((c) =>
+        c.id === selectedCondition.id ? { ...c, seo: stored } : c,
+      ),
     );
   };
 
@@ -187,12 +210,20 @@ export function SeoPageClient({
 
     if (!res.ok) throw new Error("Failed to save");
 
-    // Mirrors what the route stores, legacy-key retirement included, so the
-    // badge below cannot claim "Custom" from an entry the server just dropped.
-    setLocalPageSeo((prev) => ({
-      ...dropLegacyStorePageSeoKeys(prev, selectedPage.key),
-      [selectedPage.key]: seo,
-    }));
+    // This route returns the WHOLE recomputed blob, so the list is set from it
+    // rather than mirrored. The optimistic merge below (legacy-key retirement
+    // included, so the badge cannot claim "Custom" from an entry the server just
+    // dropped) is the fallback for a response that did not parse.
+    const body: { pageSeo?: Record<string, SeoData> } | null = await res
+      .json()
+      .catch(() => null);
+
+    setLocalPageSeo((prev) =>
+      body?.pageSeo ?? {
+        ...dropLegacyStorePageSeoKeys(prev, selectedPage.key),
+        [selectedPage.key]: seo,
+      },
+    );
   };
 
   const SeoStatusBadge = ({ hasCustomSeo }: { hasCustomSeo: boolean }) => (
@@ -511,6 +542,7 @@ export function SeoPageClient({
           initialSeo={selectedProduct.seo || undefined}
           onSave={handleSaveProductSeo}
           canUploadOgImage={seoProUnlocked}
+          canEditIndexing={seoProUnlocked}
         />
       )}
 
@@ -527,6 +559,7 @@ export function SeoPageClient({
           initialSeo={selectedPost.seo || undefined}
           onSave={handleSavePostSeo}
           canUploadOgImage={seoProUnlocked}
+          canEditIndexing={seoProUnlocked}
         />
       )}
 
@@ -543,6 +576,7 @@ export function SeoPageClient({
           initialSeo={selectedCondition.seo || undefined}
           onSave={handleSaveConditionSeo}
           canUploadOgImage={seoProUnlocked}
+          canEditIndexing={seoProUnlocked}
         />
       )}
 
@@ -559,6 +593,7 @@ export function SeoPageClient({
           initialSeo={readStorePageSeo(localPageSeo, selectedPage.key)}
           onSave={handleSavePageSeo}
           canUploadOgImage={seoProUnlocked}
+          canEditIndexing={seoProUnlocked}
         />
       )}
     </>

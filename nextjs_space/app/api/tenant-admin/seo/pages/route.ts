@@ -6,6 +6,9 @@ import { parseJsonBody } from "@/lib/validation/body";
 import { requirePermission } from "@/lib/permissions/require-permission";
 import { STORE_SEO_PAGE_KEYS } from "@/lib/seo/store-pages";
 import { writeStorePageSeo } from "@/lib/seo/page-seo-write";
+import { FEATURES } from "@/lib/entitlements/features";
+import { featureDenial } from "@/lib/entitlements/require-feature";
+import { INDEXING_SEO_FIELDS, hasIndexingFields } from "@/lib/seo/indexing";
 
 const seoPagesSchema = z
   .object({
@@ -19,6 +22,9 @@ const seoPagesSchema = z
         title: z.string().max(300).optional(),
         description: z.string().max(1000).optional(),
         ogImage: z.string().max(2000).optional(),
+        // US-022 — the Pro indexing controls, gated on the FIELDS below rather
+        // than on the route: everything above is Basic and must never 403.
+        ...INDEXING_SEO_FIELDS,
       })
       .optional(),
   })
@@ -44,10 +50,21 @@ export const PUT = requirePermission("canEditSeo", async (request, { tenantId })
   }
   const { pageKey, seo } = parsed;
 
+  // US-022 — the plan gate, on the request that asks for the feature. One
+  // lookup, and only when an indexing field is actually present, so a Basic
+  // tenant saving a title pays nothing and is never refused.
+  const writesIndexing = hasIndexingFields(seo ?? {});
+  if (writesIndexing) {
+    const denial = await featureDenial(tenantId, FEATURES.SEO_PRO);
+    if (denial) return denial;
+  }
+
   // US-010: ONE statement, not read-modify-write. Every authorable page shares
   // this single `tenants.pageSeo` blob, so the old SELECT-merge-UPDATE lost a
   // concurrent save of a DIFFERENT page — see lib/seo/page-seo-write.ts.
-  const pageSeo = await writeStorePageSeo(tenantId, pageKey, seo);
+  const pageSeo = await writeStorePageSeo(tenantId, pageKey, seo, {
+    preserveIndexing: !writesIndexing,
+  });
 
   if (pageSeo === null) {
     return apiError(new Error("Tenant not found"), {

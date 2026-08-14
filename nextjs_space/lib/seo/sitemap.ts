@@ -18,16 +18,27 @@
  * again. The static list is derived from `STORE_SEO_PAGES`, which makes
  * `AUTHORABLE_PAGE_WEIGHTS` a compile error the day a page is added there.
  *
+ * US-022 added the one exception to "every URL a store has": an entity whose
+ * authored record carries `sitemapExclude`, for a tenant on Pro, is left out.
+ *
  * Pure and total: no prisma, no next, no env. Everything arrives as `unknown`
  * because the rows come through the any-widened `prisma` export (lib/db.ts).
  */
 
 import { storeCanonical } from "@/lib/seo/canonical";
 import { conditionPath } from "@/lib/seo/condition-paths";
+import {
+  indexingControlsUnlocked,
+  isSitemapExcluded,
+} from "@/lib/seo/indexing";
 import { WIRE_INDEX_PATH, wirePostPath } from "@/lib/seo/post-metadata";
 import { PRODUCTS_INDEX_PATH, productPath } from "@/lib/seo/product-paths";
 import { seoText } from "@/lib/seo/store-identity";
-import { STORE_SEO_PAGES, type StoreSeoPageKey } from "@/lib/seo/store-pages";
+import {
+  readStorePageSeo,
+  STORE_SEO_PAGES,
+  type StoreSeoPageKey,
+} from "@/lib/seo/store-pages";
 import type { TenantUrlData } from "@/lib/tenant/tenant-utils";
 
 export interface SitemapEntry {
@@ -46,6 +57,12 @@ interface SitemapWeight {
 export interface SitemapStaticPage extends SitemapWeight {
   /** Store-relative path, "" for the homepage. */
   readonly path: string;
+  /**
+   * The `tenants.pageSeo` key this page is authored under, when it has one.
+   * Absent for /products and /the-wire, which carry no authored record — and so
+   * can never be excluded from the sitemap (US-022).
+   */
+  readonly pageKey?: StoreSeoPageKey;
 }
 
 /**
@@ -73,6 +90,7 @@ const AUTHORABLE_PAGE_WEIGHTS: Readonly<Record<StoreSeoPageKey, SitemapWeight>> 
 export const STORE_SITEMAP_STATIC_PAGES: readonly SitemapStaticPage[] = [
   ...STORE_SEO_PAGES.map((page) => ({
     path: page.path,
+    pageKey: page.key,
     ...AUTHORABLE_PAGE_WEIGHTS[page.key],
   })),
   { path: PRODUCTS_INDEX_PATH, priority: "0.9", changefreq: "daily" },
@@ -120,11 +138,15 @@ export function sitemapLastmod(value: unknown): string | undefined {
 export interface StoreSitemapProductRow {
   readonly drGreenStrainId: unknown;
   readonly updatedAt: unknown;
+  /** Raw `products.seo` Json — read for US-022's `sitemapExclude` only. */
+  readonly seo?: unknown;
 }
 
 export interface StoreSitemapSlugRow {
   readonly slug: unknown;
   readonly updatedAt: unknown;
+  /** Raw `posts.seo` / `conditions.seo` Json — US-022's `sitemapExclude`. */
+  readonly seo?: unknown;
 }
 
 export interface StoreSitemapInput {
@@ -135,13 +157,24 @@ export interface StoreSitemapInput {
   readonly posts: readonly StoreSitemapSlugRow[];
   /** Published conditions belonging to this tenant. */
   readonly conditions: readonly StoreSitemapSlugRow[];
+  /** `tenants.id` — US-022's plan gate subject. */
+  readonly tenantId?: string;
+  /** Raw `tenants.plan`; fail-closed to Basic, which excludes nothing. */
+  readonly plan?: unknown;
+  /** Raw `tenants.pageSeo` — where a static page's `sitemapExclude` lives. */
+  readonly pageSeo?: unknown;
 }
 
 function entriesFor(
   tenant: TenantUrlData,
-  rows: readonly { readonly key: unknown; readonly updatedAt: unknown }[],
+  rows: readonly {
+    readonly key: unknown;
+    readonly updatedAt: unknown;
+    readonly seo?: unknown;
+  }[],
   toPath: (key: string) => string,
   weight: SitemapWeight,
+  proUnlocked: boolean,
 ): SitemapEntry[] {
   return rows.flatMap((row) => {
     // A blank key would make `productPath` / `wirePostPath` / `conditionPath`
@@ -149,6 +182,9 @@ function entriesFor(
     // carries. Such a row has no page of its own — it is dropped, not aliased.
     const key = seoText(row.key);
     if (!key) return [];
+    // US-022 — the owner asked for this URL not to be advertised. Pro only: a
+    // Basic tenant's stored flag is dormant, never a silently shrinking sitemap.
+    if (isSitemapExcluded(row.seo, proUnlocked)) return [];
     return [
       {
         loc: storeCanonical(tenant, toPath(key)),
@@ -169,32 +205,60 @@ export function buildStoreSitemapEntries(
 ): SitemapEntry[] {
   const { tenant, products, posts, conditions } = input;
 
+  // US-022 — resolved ONCE for the whole document: the plan cannot change
+  // between two rows of one render, and the per-entity flag is the only thing
+  // that varies.
+  const proUnlocked = indexingControlsUnlocked({
+    tenantId: input.tenantId,
+    plan: input.plan,
+  });
+
   return [
-    ...STORE_SITEMAP_STATIC_PAGES.map((page) => ({
-      loc: storeCanonical(tenant, page.path),
-      changefreq: page.changefreq,
-      priority: page.priority,
-    })),
+    ...STORE_SITEMAP_STATIC_PAGES.flatMap((page) => {
+      const seo = page.pageKey
+        ? readStorePageSeo(input.pageSeo, page.pageKey)
+        : undefined;
+      if (isSitemapExcluded(seo, proUnlocked)) return [];
+      return [
+        {
+          loc: storeCanonical(tenant, page.path),
+          changefreq: page.changefreq,
+          priority: page.priority,
+        },
+      ];
+    }),
     ...entriesFor(
       tenant,
       products.map((row) => ({
         key: row.drGreenStrainId,
         updatedAt: row.updatedAt,
+        seo: row.seo,
       })),
       productPath,
       { priority: "0.8", changefreq: "weekly" },
+      proUnlocked,
     ),
     ...entriesFor(
       tenant,
-      posts.map((row) => ({ key: row.slug, updatedAt: row.updatedAt })),
+      posts.map((row) => ({
+        key: row.slug,
+        updatedAt: row.updatedAt,
+        seo: row.seo,
+      })),
       wirePostPath,
       { priority: "0.6", changefreq: "weekly" },
+      proUnlocked,
     ),
     ...entriesFor(
       tenant,
-      conditions.map((row) => ({ key: row.slug, updatedAt: row.updatedAt })),
+      conditions.map((row) => ({
+        key: row.slug,
+        updatedAt: row.updatedAt,
+        seo: row.seo,
+      })),
       conditionPath,
       { priority: "0.6", changefreq: "monthly" },
+      proUnlocked,
     ),
   ];
 }

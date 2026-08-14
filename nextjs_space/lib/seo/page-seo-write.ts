@@ -26,6 +26,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
+  ENTITY_SEO_CONTENT_KEYS,
+  entitySeoContent,
   isEmptyEntitySeo,
   readEntitySeo,
   type EntitySeo,
@@ -75,6 +77,17 @@ export function planPageSeoWrite(
 /** The stored blob, `{}` when the tenant has authored nothing. */
 export type StoredPageSeo = Record<string, unknown>;
 
+export interface StorePageSeoWriteOptions {
+  /**
+   * US-022 — true when this save may NOT write indexing controls (a Basic
+   * tenant, or any caller that sent none). The stored `robots`,
+   * `canonicalOverride` and `sitemapExclude` for this page are carried through
+   * instead of being replaced, so a downgrade leaves the rules dormant rather
+   * than deleting them the next time an owner edits a title.
+   */
+  readonly preserveIndexing?: boolean;
+}
+
 /**
  * Apply one page's SEO to `tenants.pageSeo` atomically and return the new blob.
  *
@@ -85,6 +98,7 @@ export async function writeStorePageSeo(
   tenantId: string,
   pageKey: StoreSeoPageKey,
   seo: unknown,
+  options: StorePageSeoWriteOptions = {},
 ): Promise<StoredPageSeo | null> {
   const { removeKeys, patch } = planPageSeoWrite(pageKey, seo);
 
@@ -96,6 +110,49 @@ export async function writeStorePageSeo(
     removeKeys.map((key) => Prisma.sql`- ${key}::text`),
     " ",
   );
+
+  // The entry to merge back in, as ONE term either way — which is what keeps
+  // this a single statement in both arms.
+  //
+  // The preserve arm rebuilds the page's own entry in SQL: the stored record
+  // minus every CONTENT key (so only US-022's indexing keys survive), with the
+  // submitted content merged on top. The content keys are the same tuple the JS
+  // splitter uses, so the two cannot drift. `NULLIF(..., '{}')` plus
+  // `jsonb_strip_nulls` is how an entry that ends up empty is DELETED rather
+  // than left behind as `{"about": {}}`.
+  //
+  // It reads the page's OWN key and never a legacy one: a retired entry (`faq`)
+  // predates the indexing controls by definition, so there is nothing there to
+  // carry, and it is still dropped by `${removals}` exactly as before.
+  const entry = options.preserveIndexing
+    ? Prisma.sql`
+        jsonb_strip_nulls(
+          jsonb_build_object(
+            ${pageKey}::text,
+            NULLIF(
+              (
+                -- Nested CASE, not an AND: Postgres does not promise to
+                -- short-circuit a boolean, and '->' on a non-object blob must
+                -- not be evaluated at all.
+                CASE WHEN jsonb_typeof("pageSeo") = 'object'
+                     THEN CASE WHEN jsonb_typeof("pageSeo" -> ${pageKey}::text) = 'object'
+                               THEN "pageSeo" -> ${pageKey}::text
+                               ELSE '{}'::jsonb
+                          END
+                     ELSE '{}'::jsonb
+                END
+                ${Prisma.join(
+                  ENTITY_SEO_CONTENT_KEYS.map(
+                    (key) => Prisma.sql`- ${key}::text`,
+                  ),
+                  " ",
+                )}
+              ) || ${JSON.stringify(entitySeoContent(readEntitySeo(seo)))}::jsonb,
+              '{}'::jsonb
+            )
+          )
+        )`
+    : Prisma.sql`${JSON.stringify(patch)}::jsonb`;
 
   const rows: Array<{ pageSeo: StoredPageSeo | null }> = await prisma.$queryRaw(
     Prisma.sql`
@@ -111,7 +168,7 @@ export async function writeStorePageSeo(
                    ELSE '{}'::jsonb
               END
               ${removals}
-            ) || ${JSON.stringify(patch)}::jsonb,
+            ) || ${entry},
             '{}'::jsonb
           ),
           "updatedAt" = NOW()

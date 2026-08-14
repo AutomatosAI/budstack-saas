@@ -141,7 +141,9 @@ describe("store sitemap — filters", () => {
         deletedAt: null,
         drGreenStrainId: { not: null },
       },
-      select: { drGreenStrainId: true, updatedAt: true },
+      // `seo` rides on the SAME query for US-022's sitemapExclude — one more
+      // column, never a second read per row.
+      select: { drGreenStrainId: true, updatedAt: true, seo: true },
     });
   });
 
@@ -150,11 +152,11 @@ describe("store sitemap — filters", () => {
 
     expect(prismaMock.posts.findMany).toHaveBeenCalledWith({
       where: { tenantId: TENANT_ID, published: true },
-      select: { slug: true, updatedAt: true },
+      select: { slug: true, updatedAt: true, seo: true },
     });
     expect(prismaMock.conditions.findMany).toHaveBeenCalledWith({
       where: { tenantId: TENANT_ID, published: true },
-      select: { slug: true, updatedAt: true },
+      select: { slug: true, updatedAt: true, seo: true },
     });
   });
 

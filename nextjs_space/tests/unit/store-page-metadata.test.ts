@@ -305,13 +305,17 @@ describe("PUT /api/tenant-admin/seo/pages — the enum is the storefront's page 
     // here is the instruction the database receives: drop `support` AND the
     // legacy `faq`, then merge the new support entry. The resulting blob is
     // covered in tests/unit/page-seo-write.test.ts.
+    //
+    // US-022: a body carrying no indexing field takes the PRESERVE arm, which
+    // rebuilds the entry in SQL — so the authored record is bound on its own
+    // rather than pre-wrapped under its page key.
     await put({ pageKey: "support", seo: { title: "Support" } });
 
     expect(boundValues()).toEqual(
       expect.arrayContaining([
         "support",
         "faq",
-        JSON.stringify({ support: { title: "Support" } }),
+        JSON.stringify({ title: "Support" }),
       ]),
     );
   });

@@ -1,4 +1,5 @@
 export { GooglePreview } from './GooglePreview';
+export { IndexingFields, type IndexingValue } from './IndexingFields';
 export { LockedFeatureCard } from './LockedFeatureCard';
 export { OgImageField } from './OgImageField';
 export { RedirectRowItem, type RedirectRow } from './RedirectRowItem';

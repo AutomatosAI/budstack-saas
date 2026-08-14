@@ -4,8 +4,11 @@ import { getTenantUrl, getTenantBasePath, getTenantBaseUrl } from "@/lib/tenant/
 import { prisma } from "@/lib/db";
 import { getFileUrl } from "@/lib/storage/s3";
 import { JsonLd } from "@/components/seo/json-ld";
+import { storeCanonical } from "@/lib/seo/canonical";
+import { seoIndexingDirectives } from "@/lib/seo/indexing";
 import { buildStoreJsonLd, type StoreJsonLdSource } from "@/lib/seo/json-ld";
 import { brandedOgImage } from "@/lib/seo/og-image";
+import { readStorePageSeo } from "@/lib/seo/store-pages";
 import { tenantLogoRef } from "@/lib/seo/tenant-logo";
 
 // Revalidate every 60 seconds — template/product data doesn't change frequently
@@ -433,11 +436,11 @@ export async function generateMetadata() {
     },
   });
 
-  // Get SEO config with cascade: custom → default
-  const pageSeo = tenantWithSeo?.pageSeo as {
-    home?: { title?: string; description?: string; ogImage?: string };
-  } | null;
-  const homeSeo = pageSeo?.home;
+  // Get SEO config with cascade: custom → default. Parsed through the shared
+  // fail-closed reader (US-022) rather than cast: the same record now carries
+  // indexing controls, and a cast cannot tell a stored `robots` object from a
+  // string somebody hand-edited into the column.
+  const homeSeo = readStorePageSeo(tenantWithSeo?.pageSeo, "home");
 
   const title =
     homeSeo?.title || `${tenant.businessName} - Medical Cannabis Solutions`;
@@ -446,10 +449,24 @@ export async function generateMetadata() {
     `Premium medical cannabis products and consultations from ${tenant.businessName}`;
 
   // Build base URL for OG images
-  const baseUrl = getTenantBaseUrl({
+  const urlData = {
     subdomain: tenantWithSeo?.subdomain || tenant.subdomain,
     customDomain: tenantWithSeo?.customDomain ?? null,
+  };
+  const baseUrl = getTenantBaseUrl(urlData);
+
+  // US-022 — the homepage's own indexing controls, authored under the `home`
+  // page key like its title. `{}` for a Basic tenant, and the canonical falls
+  // back to `baseUrl` untouched when no override is set, so a store with
+  // nothing configured emits precisely the tags it emitted before.
+  const indexing = seoIndexingDirectives({
+    tenantId: tenant.id,
+    plan: tenant.plan,
+    seo: homeSeo,
   });
+  const canonical = indexing.canonicalOverride
+    ? storeCanonical(urlData, "", { override: indexing.canonicalOverride })
+    : baseUrl;
 
   // SEO US-018 — the branded store card, only when the owner authored no
   // ogImage of their own and only for a Pro tenant (null otherwise, and then
@@ -462,10 +479,11 @@ export async function generateMetadata() {
   return {
     title,
     description,
+    ...(indexing.robots ? { robots: indexing.robots } : {}),
     openGraph: {
       title,
       description,
-      url: baseUrl,
+      url: canonical,
       siteName: tenant.businessName,
       type: "website",
       ...(homeSeo?.ogImage
@@ -485,7 +503,7 @@ export async function generateMetadata() {
           : {}),
     },
     alternates: {
-      canonical: baseUrl,
+      canonical,
     },
   };
 }

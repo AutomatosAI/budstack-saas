@@ -39,6 +39,7 @@ import type { Metadata } from "next";
 
 import { storeCanonical } from "@/lib/seo/canonical";
 import { readEntitySeo } from "@/lib/seo/entity-seo";
+import { seoIndexingDirectives } from "@/lib/seo/indexing";
 import { brandedOgImage } from "@/lib/seo/og-image";
 import {
   STORE_OG_LOCALE,
@@ -169,7 +170,17 @@ export function buildPostMetadata(source: PostMetadataSource): Metadata {
   // which is a UI placeholder and not a name.
   const authorName = seoText(source.authorName) || businessName;
 
-  const canonical = storeCanonical(source, wirePostPath(source.slug));
+  // US-022 — Pro indexing controls; `{}` for a Basic tenant, which leaves this
+  // article's canonical and robots exactly as they were.
+  const indexing = seoIndexingDirectives({
+    tenantId: source.tenantId,
+    plan: source.plan,
+    seo,
+  });
+
+  const canonical = storeCanonical(source, wirePostPath(source.slug), {
+    override: indexing.canonicalOverride,
+  });
 
   // Fails closed on a presigned S3 URL left over from before Email US-005: a
   // tag that 403s an hour after it is minted looks correct and breaks silently.
@@ -197,6 +208,7 @@ export function buildPostMetadata(source: PostMetadataSource): Metadata {
     title,
     // Omitted rather than undefined — see the merge note in the module header.
     ...(description ? { description } : {}),
+    ...(indexing.robots ? { robots: indexing.robots } : {}),
     authors: [{ name: authorName }],
     alternates: { canonical },
     openGraph: {

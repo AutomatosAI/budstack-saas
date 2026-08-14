@@ -46,17 +46,19 @@ export async function GET() {
                 // of this query can see it. `drGreenStrainId` NOT NULL is the same
                 // rule as `productPath` — a row that was never synced from Dr Green
                 // has no storefront page to point at.
+                // `seo` rides on each query for US-022's `sitemapExclude` — one
+                // more column on a query that already runs, never a second read.
                 prisma.products.findMany({
                     where: {
                         tenantId: tenant.id,
                         deletedAt: null,
                         drGreenStrainId: { not: null },
                     },
-                    select: { drGreenStrainId: true, updatedAt: true },
+                    select: { drGreenStrainId: true, updatedAt: true, seo: true },
                 }),
                 prisma.posts.findMany({
                     where: { tenantId: tenant.id, published: true },
-                    select: { slug: true, updatedAt: true },
+                    select: { slug: true, updatedAt: true, seo: true },
                 }),
                 // The same filter the storefront listing uses
                 // (app/api/tenant/conditions/route.ts:26-30): this tenant's own
@@ -66,7 +68,7 @@ export async function GET() {
                 // store itself does not.
                 prisma.conditions.findMany({
                     where: { tenantId: tenant.id, published: true },
-                    select: { slug: true, updatedAt: true },
+                    select: { slug: true, updatedAt: true, seo: true },
                 }),
             ]);
             return { products, posts, conditions };
@@ -74,7 +76,16 @@ export async function GET() {
     );
 
     const xml = renderSitemapXml(
-        buildStoreSitemapEntries({ tenant, ...rows }),
+        buildStoreSitemapEntries({
+            tenant,
+            ...rows,
+            // US-022 — both ride on the row `getCurrentTenant` already resolved,
+            // so the exclusion gate costs no query. A Basic tenant's stored
+            // flags are dormant and every URL stays published.
+            tenantId: tenant.id,
+            plan: tenant.plan,
+            pageSeo: tenant.pageSeo,
+        }),
     );
 
     return new NextResponse(xml, {

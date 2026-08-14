@@ -2660,3 +2660,194 @@ FLAGGED, NOT FIXED (adjacent debt)
   Spotted while styling this story's warning box, which uses the real tokens.
 - No audit-log entry on the automatic redirect, consistent with US-020's manual
   ones. Still nobody's story.
+
+================================================================================
+[2026-08-14] US-022 PASS — Indexing controls
+================================================================================
+
+WHAT THE STORY IS ABOUT
+Three directives a Pro tenant can set per entity — noindex/nofollow, a canonical
+override, and "keep this URL out of the sitemap" — landing in the SAME authored
+`seo` record as the title and description, read back by every metadata builder
+and by the sitemap. US-007 built `storeCanonical` with an options bag for
+exactly this; that bag finally has a caller.
+
+WHAT LANDED
+- lib/seo/entity-seo.ts — the record grew `robots {noindex,nofollow}`,
+  `canonicalOverride` and `sitemapExclude`, parsed with the same fail-closed
+  rules as everything else in this workstream:
+  * A flag is kept only when it is EXACTLY `true`. "true", 1, {} and a nested
+    object are dropped, and a robots object with both flags off is dropped
+    whole. A directive we cannot READ must render NOTHING: guessing either
+    de-indexes a page the owner wanted found or publishes one they wanted
+    hidden, and only one of those is recoverable by editing a field.
+  * `canonicalOverride` must be an ABSOLUTE https URL (isCanonicalOverrideUrl,
+    shared by the Zod schema on every PUT route and by the reader, so a value
+    that was legal when written stays legal when read). https-only is
+    deliberate: a canonical pointing at http on a store served over https tells
+    a crawler to prefer the insecure copy. A relative value would only be the
+    path the page already has.
+  * `isEmptyEntitySeo` now counts them, so an indexing-only record is "authored"
+    — otherwise the SEO Manager badge said "Default" for a page the owner had
+    deliberately hidden AND the write routes cleared the column on the next save.
+- lib/seo/indexing.ts (new, pure) — the render gate. `seoIndexingDirectives`
+  returns `{}` for a Basic tenant and the Metadata fragments for a Pro one;
+  `isSitemapExcluded` takes the plan as an already-resolved boolean because one
+  sitemap asks the question once per row and the plan cannot change between two
+  rows of one document. Also holds `INDEXING_SEO_FIELDS` (the Zod fragment the
+  four routes spread) and `hasIndexingFields`.
+- The robots tag emits BOTH directives whenever either flag is set
+  ({ index: !noindex, follow: !nofollow }), and NO `robots` key at all when
+  neither is. Verified against next/dist/lib/metadata/resolve-metadata.js
+  (14.2.35): mergeMetadata iterates `for (const key in source)`, so an absent
+  key inherits app/layout.tsx's `index, follow` + googleBot block, and a present
+  one REPLACES it wholesale (:171-174). Two consequences, both chosen:
+  * A bare `{ follow: false }` would publish "nofollow" and leave indexing to
+    the crawler's default — so both are always named.
+  * The platform's googleBot block is deliberately NOT re-declared. A googlebot
+    tag saying `index` beside a robots tag saying `noindex` is resolved by
+    Google in favour of googlebot, which would make every noindex here a no-op.
+    The cost is that a page with a directive of its own loses
+    max-image-preview:large; for a page the owner is hiding, that is not a loss.
+- All four builders (page/post/product/condition) + the homepage's own
+  hand-rolled generateMetadata now pass `{ override }` into `storeCanonical` and
+  spread `robots` conditionally. The homepage keeps `baseUrl` byte-for-byte when
+  no override is set (`indexing.canonicalOverride ? storeCanonical(...) :
+  baseUrl`), and its `pageSeo.home` cast was replaced with `readStorePageSeo` —
+  a cast cannot tell a stored `robots` object from a string somebody hand-edited
+  into the column.
+- The sitemap skips excluded entries: `seo` rides on the three findMany selects
+  that already run (one more column, never a second read), `pageSeo` and `plan`
+  ride on the tenant row getCurrentTenant already returned. /products and
+  /the-wire carry no authored record, so they can never be excluded — stated in
+  the type (`pageKey?`) rather than left implicit.
+
+THE GATE, AND WHY IT IS ON THE FIELDS RATHER THAN THE ROUTE
+- Wrapping the SEO PUTs in `requireFeature` would lock the title and description
+  a Basic tenant PAYS FOR. So each route asks `hasIndexingFields(body)` and only
+  then runs the plan check — one query, and only on requests that reach for the
+  feature. A Basic tenant saving a title makes no plan lookup at all (asserted).
+- `hasIndexingFields` tests PRESENCE, not truthiness. Lifting a noindex
+  (`{noindex:false}`) and clearing an override (`""`) are Pro writes too; a gate
+  that only noticed truthy values would let a Basic tenant undo a Pro setup.
+  JSON has no `undefined`, so an absent key is exactly a key the caller did not
+  send.
+- `featureDenial(tenantId, feature)` was added to lib/entitlements/
+  require-feature.ts and `requireFeature` re-implemented on top of it, so there
+  is still ONE 403 body shape (`upgrade_required` + feature + plan) and one plan
+  lookup path. Asserted on all four routes by CODE, not just status — the
+  permission wrapper also answers 403, and a status-only test would keep passing
+  if the plan gate were deleted.
+
+REFUSED IS NOT ERASED (the part that took the design)
+- A downgraded tenant's rules must go dormant, not die. The Basic editor sends
+  no indexing keys, and the routes replace the `seo` column wholesale — so
+  without this the first Basic save after a downgrade would delete rules the
+  owner could not even see, let alone re-enter.
+- `entitySeoWrite(stored, authored, { preserveIndexing })` is the rule: content
+  always comes from the submission, indexing comes from the submission when the
+  caller was entitled to send it and from the stored row otherwise. Same
+  principle as US-009's withEntityImageAlt — two writers, one column — and
+  withEntityImageAlt was rebuilt on the same split so the WIRE's editor cannot
+  delete a noindex by saving a cover image's alt text (it previously rebuilt the
+  record field-by-field and would have dropped all three new keys).
+- tenants.pageSeo has no row to read: US-010 deliberately removed the
+  read-modify-write. So the preserve arm does the split IN SQL — the stored
+  entry minus every CONTENT key, with the submitted content merged on top,
+  wrapped in NULLIF/jsonb_strip_nulls so an entry that ends up empty is DELETED
+  rather than left as {"about": {}}. It is still ONE statement in both arms
+  (asserted), the content keys come from the same ENTITY_SEO_CONTENT_KEYS tuple
+  the JS splitter uses, and it enumerates the CONTENT half on purpose: a crawler
+  directive added later is then preserved by default rather than silently
+  dropped by a writer that never heard of it. Nested CASE, not an AND, because
+  Postgres does not promise to short-circuit a boolean and `->` must not run on
+  a non-object blob. The legacy `faq` key is not consulted: a retired entry
+  predates these controls by definition, and it is still dropped by ${removals}.
+
+UI
+- components/admin/seo/IndexingFields.tsx (new) — three toggles and the
+  canonical field for Pro; for Basic the shared LockedFeatureCard carrying
+  SEO_PRO_FEATURES' own "indexing" copy, so the card and the upgrade page cannot
+  describe the feature differently. When a Basic tenant HAS stored rules the
+  card is followed by a line saying they are stored, not applied, and that
+  saving will not delete them — which is the dormancy claim stated to the person
+  it affects.
+- The modal omits the three keys entirely unless entitled (the `imageAlt`
+  precedent), which is both what avoids the 403 and what triggers preservation.
+  Save is blocked client-side on an invalid canonical using the SAME predicate
+  the route enforces, so the owner is told which field is wrong instead of
+  meeting a generic failure toast.
+- seo-page-client now sets its local state from the SERVER's returned record
+  rather than echoing the submitted one. US-022 made the two able to differ, and
+  echoing would show a downgraded tenant their dormant rules as deleted — the
+  one thing the write path exists not to do. `hasSeo` was collapsed onto
+  `isEmptyEntitySeo(readEntitySeo(...))`, so the badge cannot go stale the next
+  time a field is added.
+
+VERIFICATION
+- pnpm exec tsc --noEmit -> EXIT 0 (clean before and after).
+- Targeted: tests/unit/seo-indexing.test.ts — 39 tests, all passing. Parser
+  fail-closed cases, the directive shapes, all four builders' override, the
+  sitemap for pro/basic/trial/custom/unreadable plans, presence-not-truthiness,
+  entitySeoWrite both arms, withEntityImageAlt carrying the rules, the four
+  routes' 403 (by code and feature), the Basic title save with NO plan lookup,
+  the Pro store, the Pro clear, the downgraded-save preservation, the 400 on a
+  relative canonical, and both arms of the pages statement.
+- Existing suites updated where the diff legitimately changed the observed
+  shape, not the meaning: sitemap.test.ts (the three selects now carry `seo`)
+  and store-page-metadata.test.ts (a body with no indexing field takes the
+  preserve arm, so the authored record is bound on its own rather than
+  pre-wrapped under its page key).
+- Full unit project: 150 files, 2476 tests, ALL PASS. No pre-existing failures.
+- pnpm build -> EXIT 0, "Compiled successfully". This is the real check on the
+  client boundary: /tenant-admin/seo compiles with IndexingFields importing
+  lib/seo/entity-seo and lib/seo/pro-features, so no server-only module (Prisma,
+  pino, next/server) reached the browser bundle. tsc cannot see that class of
+  error. lib/seo/indexing.ts pulls zod and is imported only by the builders, the
+  sitemap and the API routes — never by a client component.
+- pnpm check:security -> both gates pass. next lint on the touched files -> zero
+  warnings or errors.
+- LIVE: `pnpm dev` + curl of /store/healingbuds/sitemap.xml returned HTTP 404
+  "Tenant not found" — the local box cannot reach Railway's private Postgres
+  (prisma.tenants.findFirst fails, ioredis ECONNRESET), so tenant resolution
+  legitimately 404s. Recorded rather than skipped. Instead the SHIPPED
+  serialiser and the SHIPPED builder were executed directly (tsx, real modules,
+  no mocks) for a tenant with /about, one product and one condition excluded:
+  * plan=pro   -> 8 URLs; /about, /products/strain-hidden and
+                  /conditions/anxiety absent, everything else published.
+  * plan=basic -> 11 URLs; all three back, flags dormant.
+  * /about metadata, plan=pro   -> robots {index:false, follow:true},
+                  canonical AND og:url = https://acme.example/about-us.
+  * /about metadata, plan=basic -> no robots key at all, canonical
+                  https://acme.budstacks.io/about.
+  visual: deferred to human review — the editor is behind Clerk and needs a real
+  tenant session plus a reachable DB. The repo has no component-test harness
+  (no @testing-library/react), so the modal itself is asserted only through the
+  route behaviour its two arms produce.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson) — no change needed, checked not
+assumed. The one new lib module is under lib/ (COPYied in its own right,
+Dockerfile:75) and the one new component ships inside .next/standalone. No new
+runtime import chain reaches a directory outside the existing COPY set.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- A noindexed product still emits US-015's Product JSON-LD, and a noindexed
+  article still emits Article + BreadcrumbList. Harmless (a crawler that is told
+  not to index has no use for the structured data) but arguably noise. US-023's
+  audit is the right place to decide whether that combination is a finding.
+- noindex and sitemapExclude are kept INDEPENDENT per the story's notes. A store
+  can legitimately want one without the other, and "noindexed but still in the
+  sitemap" is precisely the state US-023 exists to report — coupling them here
+  would hide it.
+- The homepage still builds its metadata by hand (app/store/[slug]/page.tsx)
+  instead of going through buildStorePageMetadata, and still pays a second
+  prisma.tenants.findUnique that getCurrentTenant already covered. Untouched
+  beyond the lines this story needed; moving it is a story of its own and the
+  risk is the homepage's og/twitter blocks, which differ from the shared
+  builder's on purpose.
+- The four SEO PUT routes remain three near-copies plus one. They now share the
+  Zod fragment, the gate call and the write helper, which is most of what used
+  to be duplicated, but the ownership check and the apiError wiring are still
+  written out four times. Part of the ~31-route sweep.
+- No audit-log entry when an owner noindexes a page — consistent with US-020's
+  redirects and US-021's renames. Still nobody's story.

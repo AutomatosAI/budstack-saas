@@ -89,6 +89,35 @@ export async function getTenantPlan(tenantId: string): Promise<Plan> {
   }
 }
 
+/**
+ * The 403 this tenant would get for `feature`, or null when they are entitled.
+ *
+ * For a route where only PART of the body is Pro — SEO US-022's indexing
+ * controls sit in the same PUT that saves a Basic tenant's title, so wrapping
+ * the whole route in {@link requireFeature} would lock a feature Basic pays for.
+ * The gate is still the API boundary and still returns the identical body; it
+ * just runs after the handler has decided the request is asking for something
+ * Pro:
+ *
+ * ```ts
+ * if (hasIndexingFields(parsed)) {
+ *   const denial = await featureDenial(tenantId, FEATURES.SEO_PRO);
+ *   if (denial) return denial;
+ * }
+ * ```
+ *
+ * Costs one query, and only on the requests that actually reach for the
+ * feature.
+ */
+export async function featureDenial(
+  tenantId: string,
+  feature: FeatureKey,
+): Promise<NextResponse | null> {
+  const plan = await getTenantPlan(tenantId);
+  if (getTenantFeatures({ id: tenantId, plan }).has(feature)) return null;
+  return upgradeRequired(feature, plan);
+}
+
 type FeatureGatedHandler<Ctx, Rest extends unknown[]> = (
   req: NextRequest,
   ctx: Ctx,
@@ -108,11 +137,7 @@ export function requireFeature<
   feature: FeatureKey,
   handler: FeatureGatedHandler<Ctx, Rest>,
 ): FeatureGatedHandler<Ctx, Rest> {
-  return async (req, ctx, ...rest) => {
-    const plan = await getTenantPlan(ctx.tenantId);
-    if (!getTenantFeatures({ id: ctx.tenantId, plan }).has(feature)) {
-      return upgradeRequired(feature, plan);
-    }
-    return handler(req, ctx, ...rest);
-  };
+  return async (req, ctx, ...rest) =>
+    (await featureDenial(ctx.tenantId, feature)) ??
+    handler(req, ctx, ...rest);
 }

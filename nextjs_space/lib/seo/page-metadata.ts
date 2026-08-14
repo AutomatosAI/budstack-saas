@@ -31,6 +31,7 @@
 import type { Metadata } from "next";
 
 import { storeCanonical } from "@/lib/seo/canonical";
+import { seoIndexingDirectives } from "@/lib/seo/indexing";
 import { brandedOgImage } from "@/lib/seo/og-image";
 import { STORE_OG_LOCALE, seoText, storeDisplayName } from "@/lib/seo/store-identity";
 import {
@@ -103,9 +104,18 @@ export function buildStorePageMetadata(
     seoText(seo.description) ||
     DEFAULT_DESCRIPTIONS[source.pageKey](businessName);
 
+  // US-022 — Pro indexing controls. `{}` for a Basic tenant, so the canonical
+  // and the (absent) robots tag are exactly what they were before this story.
+  const indexing = seoIndexingDirectives({
+    tenantId: source.tenantId,
+    plan: source.plan,
+    seo,
+  });
+
   const canonical = storeCanonical(
     { subdomain: source.subdomain, customDomain: source.customDomain },
     page.path,
+    { override: indexing.canonicalOverride },
   );
 
   // Fails closed: a presigned S3 URL an owner pasted before Email US-005 is
@@ -130,6 +140,9 @@ export function buildStorePageMetadata(
   return {
     title,
     description,
+    // Omitted unless the owner set a flag — see `robotsDirective` for why the
+    // key's absence, not a `{ index: true }`, is what inherits the default.
+    ...(indexing.robots ? { robots: indexing.robots } : {}),
     alternates: { canonical },
     openGraph: {
       siteName: businessName,

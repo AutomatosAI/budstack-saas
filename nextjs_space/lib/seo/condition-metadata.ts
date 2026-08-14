@@ -49,6 +49,7 @@ import type { Metadata } from "next";
 import { storeCanonical } from "@/lib/seo/canonical";
 import { conditionPath } from "@/lib/seo/condition-paths";
 import { readEntitySeo } from "@/lib/seo/entity-seo";
+import { seoIndexingDirectives } from "@/lib/seo/indexing";
 import { brandedOgImage } from "@/lib/seo/og-image";
 import {
   STORE_OG_LOCALE,
@@ -104,7 +105,18 @@ export function buildConditionMetadata(
   const description =
     seoText(seo.description) || truncateSeoText(source.description);
 
-  const canonical = storeCanonical(source, conditionPath(source.slug));
+  // US-022 — Pro indexing controls. Condition pages are the ones most likely to
+  // duplicate a page the store already ranks with, which is what the canonical
+  // override answers. `{}` for a Basic tenant.
+  const indexing = seoIndexingDirectives({
+    tenantId: source.tenantId,
+    plan: source.plan,
+    seo,
+  });
+
+  const canonical = storeCanonical(source, conditionPath(source.slug), {
+    override: indexing.canonicalOverride,
+  });
 
   // Fails closed on a presigned S3 URL (an owner paste, or a seeded image ref
   // that arrives signed): a tag that 403s an hour after it is minted looks
@@ -131,6 +143,7 @@ export function buildConditionMetadata(
     title,
     // Omitted rather than undefined — see the merge note in the module header.
     ...(description ? { description } : {}),
+    ...(indexing.robots ? { robots: indexing.robots } : {}),
     alternates: { canonical },
     openGraph: {
       siteName: businessName,

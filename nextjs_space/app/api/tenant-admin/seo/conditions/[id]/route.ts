@@ -5,6 +5,10 @@ import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { parseEntityId } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
+import { FEATURES } from "@/lib/entitlements/features";
+import { featureDenial } from "@/lib/entitlements/require-feature";
+import { entitySeoWrite, isEmptyEntitySeo } from "@/lib/seo/entity-seo";
+import { INDEXING_SEO_FIELDS, hasIndexingFields } from "@/lib/seo/indexing";
 
 /**
  * SEO Supercharge US-005 — authoring for `conditions.seo`.
@@ -24,6 +28,9 @@ const seoUpdateSchema = z
     title: z.string().max(300).optional(),
     description: z.string().max(1000).optional(),
     ogImage: z.string().max(2000).optional(),
+    // US-022 — the Pro indexing controls, gated on the FIELDS below rather than
+    // on the route: everything above is Basic and must never 403.
+    ...INDEXING_SEO_FIELDS,
   })
   .strict();
 
@@ -75,18 +82,26 @@ export const PUT = requirePermissionParams("canEditSeo", async (request, { tenan
   } catch (error) {
     return apiError(error, { route: "PUT /api/tenant-admin/seo/conditions/[id]" });
   }
-  const { title, description, ogImage } = parsed;
+  // US-022 — the plan gate, on the request that asks for the feature. One
+  // lookup, and only when an indexing field is actually present, so a Basic
+  // tenant saving a title pays nothing and is never refused.
+  const writesIndexing = hasIndexingFields(parsed);
+  if (writesIndexing) {
+    const denial = await featureDenial(tenantId, FEATURES.SEO_PRO);
+    if (denial) return denial;
+  }
 
-  // Build SEO object, removing empty values
-  const seo: Record<string, string> = {};
-  if (title?.trim()) seo.title = title.trim();
-  if (description?.trim()) seo.description = description.trim();
-  if (ogImage?.trim()) seo.ogImage = ogImage.trim();
+  // Trims, drops empty values, and — when this save may not write indexing
+  // controls — carries the stored ones through untouched rather than erasing
+  // them. See `entitySeoWrite`.
+  const seo = entitySeoWrite(existingCondition.seo, parsed, {
+    preserveIndexing: !writesIndexing,
+  });
 
   const updated = await prisma.conditions.update({
     where: { id },
     data: {
-      seo: Object.keys(seo).length > 0 ? seo : null,
+      seo: isEmptyEntitySeo(seo) ? null : seo,
       updatedAt: new Date(),
     },
     select: { id: true, name: true, seo: true },

@@ -9,16 +9,46 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { GooglePreview } from "./GooglePreview";
+import {
+  IndexingFields,
+  canonicalOverrideError,
+  type IndexingValue,
+} from "./IndexingFields";
 import { OgImageField } from "./OgImageField";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
+import type { EntitySeo } from "@/lib/seo/entity-seo";
 
-interface SeoData {
-  title?: string;
-  description?: string;
-  ogImage?: string;
-  /** US-009 — alt text for the entity's own image (see `ALT_TEXT_ENTITY_TYPES`). */
-  imageAlt?: string;
+/**
+ * The authored record as it crosses the wire. Structurally the parsed
+ * `EntitySeo`, so the editor and the storefront cannot disagree about the shape
+ * — US-022's indexing keys included.
+ */
+type SeoData = EntitySeo;
+
+/** The three indexing controls, unpacked from a stored record for the form. */
+function readIndexingValue(seo: SeoData | undefined): IndexingValue {
+  return {
+    noindex: seo?.robots?.noindex === true,
+    nofollow: seo?.robots?.nofollow === true,
+    canonicalOverride: seo?.canonicalOverride ?? "",
+    sitemapExclude: seo?.sitemapExclude === true,
+  };
+}
+
+/**
+ * The same three controls as the keys a PUT route accepts.
+ *
+ * Sent ONLY by an entitled tenant (see the save handler): the routes 403 a
+ * Basic tenant that includes them, and omitting them is also what makes a Basic
+ * save preserve whatever rules are already stored.
+ */
+function indexingPayload(value: IndexingValue): Partial<SeoData> {
+  return {
+    robots: { noindex: value.noindex, nofollow: value.nofollow },
+    canonicalOverride: value.canonicalOverride.trim(),
+    sitemapExclude: value.sitemapExclude,
+  };
 }
 
 /**
@@ -54,6 +84,13 @@ interface SeoEditorModalProps {
    * Pro line has no server gate behind it.
    */
   canUploadOgImage?: boolean;
+  /**
+   * US-022 — the same `seoProUnlocked`, for the indexing controls. Unlike the
+   * OG upload above, this one IS backed by a server gate: a Basic tenant that
+   * sends `robots`, `canonicalOverride` or `sitemapExclude` is 403'd by the
+   * route, which is why the save below omits them entirely when this is false.
+   */
+  canEditIndexing?: boolean;
 }
 
 export function SeoEditorModal({
@@ -67,11 +104,15 @@ export function SeoEditorModal({
   initialSeo,
   onSave,
   canUploadOgImage = false,
+  canEditIndexing = false,
 }: SeoEditorModalProps) {
   const [title, setTitle] = useState(initialSeo?.title || "");
   const [description, setDescription] = useState(initialSeo?.description || "");
   const [ogImage, setOgImage] = useState(initialSeo?.ogImage || "");
   const [imageAlt, setImageAlt] = useState(initialSeo?.imageAlt || "");
+  const [indexing, setIndexing] = useState<IndexingValue>(() =>
+    readIndexingValue(initialSeo),
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const showAltText = (ALT_TEXT_ENTITY_TYPES as readonly string[]).includes(
@@ -83,19 +124,29 @@ export function SeoEditorModal({
     setDescription(initialSeo?.description || "");
     setOgImage(initialSeo?.ogImage || "");
     setImageAlt(initialSeo?.imageAlt || "");
+    setIndexing(readIndexingValue(initialSeo));
   }, [initialSeo, isOpen]);
+
+  // A canonical the route would reject: the save is blocked here so the owner
+  // sees WHICH field is wrong rather than a generic failure toast.
+  const blockedByCanonical =
+    canEditIndexing && canonicalOverrideError(indexing.canonicalOverride) !== null;
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       // The key is omitted entirely for the types that do not offer the field:
       // their write routes parse `.strict()` and have no `imageAlt` in the
-      // schema, so sending one would 400 the save.
+      // schema, so sending one would 400 the save. The indexing keys are
+      // omitted for the same reason a Basic tenant must not send them — the
+      // route 403s that request, and an absent key is what preserves whatever
+      // rules are already stored.
       await onSave({
         title,
         description,
         ogImage,
         ...(showAltText ? { imageAlt } : {}),
+        ...(canEditIndexing ? indexingPayload(indexing) : {}),
       });
       toast.success("SEO settings saved successfully");
       onClose();
@@ -202,6 +253,13 @@ export function SeoEditorModal({
             onChange={setOgImage}
             canUpload={canUploadOgImage}
           />
+
+          <IndexingFields
+            value={indexing}
+            onChange={setIndexing}
+            canEdit={canEditIndexing}
+            entityType={entityType}
+          />
         </div>
 
         <DialogFooter>
@@ -216,8 +274,8 @@ export function SeoEditorModal({
           <button
             type="button"
             onClick={handleSave}
-            disabled={isSaving}
-            className="bs-btn bs-btn-green"
+            disabled={isSaving || blockedByCanonical}
+            className="bs-btn bs-btn-green disabled:opacity-50"
           >
             {isSaving ? (
               <>

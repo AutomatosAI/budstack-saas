@@ -32,7 +32,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 - [x] US-019 OG image studio — real upload
 - [x] US-020 Redirects manager
 - [x] US-021 Slug editing + auto-301 on change
-- [ ] US-022 Indexing controls
+- [x] US-022 Indexing controls
 - [ ] US-023 SEO audit panel
 - [ ] US-024 Automatos AI assist — spike + service
 - [ ] US-025 AI assist UI

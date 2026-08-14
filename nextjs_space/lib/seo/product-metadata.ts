@@ -44,6 +44,7 @@ import type { Metadata } from "next";
 
 import { storeCanonical } from "@/lib/seo/canonical";
 import { readEntitySeo } from "@/lib/seo/entity-seo";
+import { seoIndexingDirectives } from "@/lib/seo/indexing";
 import { brandedOgImage } from "@/lib/seo/og-image";
 import { productPath } from "@/lib/seo/product-paths";
 import {
@@ -103,7 +104,17 @@ export function buildProductMetadata(
   const description =
     seoText(seo.description) || truncateSeoText(source.description);
 
-  const canonical = storeCanonical(source, productPath(source.productId));
+  // US-022 — Pro indexing controls. A store with two ids serving one strain is
+  // exactly what `canonicalOverride` is for; `{}` for a Basic tenant.
+  const indexing = seoIndexingDirectives({
+    tenantId: source.tenantId,
+    plan: source.plan,
+    seo,
+  });
+
+  const canonical = storeCanonical(source, productPath(source.productId), {
+    override: indexing.canonicalOverride,
+  });
 
   // Fails closed on a presigned S3 URL (an owner paste, or an upstream image
   // that arrives signed): a tag that 403s an hour after it is minted looks
@@ -130,6 +141,7 @@ export function buildProductMetadata(
     title,
     // Omitted rather than undefined — see the merge note in the module header.
     ...(description ? { description } : {}),
+    ...(indexing.robots ? { robots: indexing.robots } : {}),
     alternates: { canonical },
     openGraph: {
       siteName: businessName,
