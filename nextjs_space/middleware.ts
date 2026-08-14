@@ -1,6 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse, NextRequest, type NextFetchEvent } from "next/server";
-import { parseHostToTenantHint } from "@/lib/parse-host";
+import { parseHostToTenantHint, wwwRedirectHost } from "@/lib/parse-host";
 import { customDomainRewritePath } from "@/lib/custom-domain-rewrite";
 import { applyCsp, buildCsp, generateNonce, variantForServedPath } from "@/lib/security/csp";
 
@@ -97,6 +97,25 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
   // 'nonce-…' token is parsed and the browser never sees this header); each
   // response still gets its precise per-variant policy via applyCsp below.
   requestHeaders.set('Content-Security-Policy', buildCsp({ nonce, variant: 'base' }));
+
+  // SEO US-008: www is the apex under another name — 301 it BEFORE any tenant
+  // resolution. www.<customDomain> reaches the tenant's store and
+  // www.<slug>.budstacks.io reaches the subdomain, instead of falling through
+  // with no tenant hint and serving the BudStacks platform page (the black
+  // hole). 301 rather than the 307 used by the admin host redirects below:
+  // this one is permanent and must pass link equity to the apex.
+  // /api and the Clerk proxy are carved out — they are host-agnostic today and
+  // a 301 would break a non-GET call (webhooks) rather than fix anything.
+  // OPS: only reachable when www.<domain> is provisioned in Cloudflare for SaaS
+  // alongside the apex; an unprovisioned www never gets here.
+  const wwwApexHost = wwwRedirectHost(hostname);
+  if (wwwApexHost && !pathname.startsWith('/api/') && !pathname.startsWith('/__clerk')) {
+    const dest = new URL(url);
+    dest.host = wwwApexHost;
+    dest.protocol = 'https:';
+    dest.port = '';
+    return applyCsp(NextResponse.redirect(dest, 301), nonce, 'base');
+  }
 
   // PRD-205 (AC-2a): the host→tenant-hint classification is shared with the canonical
   // resolver via parseHostToTenantHint, so middleware and lib/tenant-resolver.ts cannot

@@ -39,7 +39,9 @@ const tenant = {
 };
 const subdomainOnly = { ...tenant, customDomain: null };
 
-function canonicalOf(metadata: { alternates?: { canonical?: unknown } }) {
+// `alternates` is `AlternateURLs | null | undefined` on next's Metadata, so the
+// `| null` is load-bearing — without it every call below is a TS2345.
+function canonicalOf(metadata: { alternates?: { canonical?: unknown } | null }) {
   return metadata.alternates?.canonical;
 }
 

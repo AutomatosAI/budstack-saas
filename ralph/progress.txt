@@ -841,3 +841,147 @@ FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
   no noindex, and store robots.txt has no Disallow (already flagged in US-006,
   homed at US-022). The NO_CANONICAL table above is now the written record of
   which routes are waiting on it.
+
+================================================================================
+[2026-08-14] US-008 PASS — Fix the www.* black-hole
+================================================================================
+
+WHAT WAS BROKEN
+lib/parse-host.ts:36 was `if (host.startsWith("www.")) return null;` — every www
+host produced NO tenant hint, so middleware fell straight through to the
+platform's own routes. www.<a-tenant-custom-domain> served the BudStacks
+marketing/platform page to that tenant's visitors and to crawlers, and
+tests/unit/parse-host.test.ts:34-37 pinned that behaviour as if it were intended
+("returns null for www.<base> and any www.* host").
+
+WHAT LANDED
+1. lib/parse-host.ts — new pure `wwwRedirectHost(rawHost)`: the www→apex
+   contract, exported so middleware and the tests share ONE definition.
+   Returns the apex to 301 to, or null when there is nothing to redirect
+   (non-www host, local dev `www.localhost:3000`, or no routable remainder like
+   "www." / "www.local"). Prefix test is case-insensitive; :port is stripped
+   first. Shared `withoutPort` / `isLocalHost` helpers replace the inline
+   duplicates so the two exports cannot disagree.
+2. lib/parse-host.ts — `parseHostToTenantHint` now classifies `www.<x>` as
+   whatever `<x>` classifies as, instead of null. Not strictly needed for the
+   redirect (middleware returns before the hint is computed) but it removes the
+   black hole from the OTHER two callers — lib/tenant/tenant-resolver.ts byHost
+   and lib/storefront-url.ts both consume this and both silently mis-answered
+   for a www host. www.<baseDomain> still resolves to null, and now for the
+   right reason: it strips to the base domain, which is the platform. `www` is
+   in RESERVED_SUBDOMAINS (lib/reserved-subdomains.ts:16) so it can never be a
+   tenant — the mapping is unambiguous.
+3. middleware.ts — 301 inserted after the CSP-nonce block and BEFORE
+   `parseHostToTenantHint` (AC: "before tenant resolution"). Destination is
+   built with the existing admin-redirect pattern (`new URL(url)` + host/
+   protocol/port override) so it works behind the CF-for-SaaS proxy, where
+   req.nextUrl carries the Railway origin and the real host comes from
+   resolveTenantHost(). 301, not the 307 the admin redirects use: permanent, and
+   it must pass link equity to the apex.
+4. middleware.ts — carve-out for `/api/` and `/__clerk`. Those paths are
+   host-agnostic today; a 301 there would break a non-GET call (a webhook POST
+   configured against a www URL) rather than fix anything, and no page can
+   originate an XHR from a www host now that no page renders there.
+5. app/super-admin/tenants/[id]/tenant-edit-form.tsx — the guidance at :406-410
+   RECOMMENDED the configuration this story makes permanently broken ("use a
+   subdomain like www.{customDomain} instead and redirect the apex to it").
+   Replaced with "save a non-www subdomain (shop.example.com) and redirect the
+   apex to it", plus an explicit do-not: a www custom domain now 301s to its
+   apex and can never resolve to a store. Added a second warning banner keyed on
+   `wwwRedirectHost(customDomain)` — the apex-CNAME box only renders when
+   isApexDomain() is true, so a tenant that ALREADY took the old advice
+   (customDomain = "www.example.com") would never have seen the correction.
+   That banner names the exact host to save instead.
+
+OPS DEPENDENCY (AC-4) — DOCUMENTED, NOT ASSUMED
+The redirect is only reachable if `www.<domain>` is itself provisioned as a
+custom hostname in Cloudflare for SaaS, alongside the apex. An unprovisioned www
+has no certificate at the edge and the request never reaches this app — the
+browser fails the TLS handshake instead of getting the 301. So per custom
+domain the ops steps are BOTH: (a) provision `example.com` AND `www.example.com`
+as CF custom hostnames, (b) registrar CNAME for the www label pointing at the
+same target as the apex. There is no code path in this repo that provisions CF
+custom hostnames — verify-domain/route.ts only does DNS resolution checks
+against RAILWAY_CNAME_TARGET, and lib/integrations/ has railway-api.ts +
+namecheap-api.ts, no Cloudflare client. Provisioning is the manual runbook in
+the workspace handoff HANDOFF-cloudflare-saas-domains.md. Recorded here so the
+"why doesn't my www redirect work" question resolves to ops, not to code.
+
+WHY UNCONDITIONAL 301 CANNOT REGRESS A WORKING TENANT
+A tenant whose customDomain is stored as "www.example.com" is ALREADY dead
+today: parse-host returned null for it, so it never resolved to a store under
+any code path. There is no working www configuration to break. The fix for such
+a row is a data change (save the apex) — which the new super-admin banner now
+tells the operator to make.
+
+VERIFICATION
+  pnpm exec tsc --noEmit                     -> exit 0
+  pnpm vitest run tests/unit/parse-host.test.ts
+                  tests/unit/store-route-metadata.test.ts
+                                             -> 57 passed
+  pnpm vitest run --project unit             -> 129 files, 2017 passed
+      (US-007 baseline was 129 files / 2009 — +8 tests, 0 regressions)
+  pnpm exec next lint (5 touched files)      -> no warnings or errors
+  pnpm check:security                        -> both gates pass
+No Prisma change, so no migration/validate step.
+
+PRE-EXISTING TSC FAILURE FIXED (not silently — flagged here)
+tsc was ALREADY red at HEAD (1cef92a, US-007): 8x TS2345 in
+tests/unit/store-route-metadata.test.ts, because its local `canonicalOf` helper
+typed `alternates?: { canonical?: unknown }` while next's Metadata declares
+`AlternateURLs | null | undefined` — null is not assignable. Confirmed
+pre-existing by stashing this story's four files and re-running: identical 8
+errors, exit 2. One-token fix (`| null` on the helper's param) with a comment
+saying why it is load-bearing, because the PROMPT makes tsc exit 0 a hard gate
+for every story and it would have blocked US-009 onward too. No production code
+involved; the 40 tests in that file still pass unchanged.
+
+LIVE CURL (pnpm dev, existing .env.local, unmodified)
+The redirect fires before tenant resolution, so it needs NO database — the whole
+AC is curl-verifiable locally by setting Host:
+  Host: www.acme-cannabis.example  GET /products
+    -> 301, location: https://acme-cannabis.example/products     (AC-1, custom domain)
+  Host: www.acme.budstacks.io      GET /products
+    -> 301, location: https://acme.budstacks.io/products         (AC-1, subdomain)
+  Host: www.budstacks.io           GET /products
+    -> 301, location: https://budstacks.io/products              (platform apex)
+  Host: www.acme-cannabis.example  GET /products?strain=og&page=2
+    -> 301, location: https://acme-cannabis.example/products?strain=og&page=2
+                                                                 (path + query preserved)
+  Host: www.acme-cannabis.example  GET /
+    -> 301, location: https://acme-cannabis.example/
+  Host: www.acme-cannabis.example  GET /api/store/acme/products
+    -> 404, no location                                          (API carve-out holds)
+  Host: acme.budstacks.io          GET /products
+    -> 404, no location            (non-www path unchanged; 404 because this
+                                    machine cannot reach the Railway private-network
+                                    DB — same limitation US-006/US-007 recorded)
+  no Host override (localhost)     GET /
+    -> 200                                                       (dev unaffected)
+Every 301 still carries the per-request CSP with a fresh nonce (applyCsp on the
+redirect response), so PRD-218's "no response without a policy" holds.
+visual: super-admin banner deferred to human review — the page is Clerk-gated
+and needs a real tenant row with a www customDomain to render.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson): no new module and no new import
+edge outside the Next bundle. lib/parse-host.ts already existed and was already
+imported by middleware.ts; the one new import is
+app/super-admin/.../tenant-edit-form.tsx -> lib/parse-host, and both app/ and
+lib/ are already COPYied by nextjs_space/Dockerfile:57-95. No Dockerfile edit
+needed.
+
+FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
+- getTenantBaseUrl (lib/tenant/tenant-utils.ts:67) returns
+  `https://{customDomain}` verbatim. For a tenant row still holding a www
+  customDomain it would mint www canonicals that 301 away — self-inflicted
+  redirect chains in every canonical, sitemap URL and email link. The banner
+  added here is the operator-facing fix; a validation rule rejecting a www
+  customDomain on save (app/api/super-admin/tenants/[id]/route.ts) is the code
+  fix and belongs with US-020/US-021's redirect + slug work, not here.
+- The apex-CNAME warning box only renders when railwayDnsRecords is already
+  provisioned AND contains an apex CNAME, so the corrected guidance is invisible
+  to a super-admin who has not clicked Save yet. Pre-existing render condition,
+  untouched.
+- middleware.ts is now 279 lines with five host-shaped branches (www, subdomain,
+  custom domain, admin-apex, path-based). Still readable, but the next host rule
+  should push the branch table into lib/ rather than adding a sixth `if`.

@@ -12,7 +12,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 - [x] US-005 Conditions SEO wired end-to-end
 - [x] US-006 Sitemap correctness + platform sitemap
 - [x] US-007 Canonicals everywhere
-- [ ] US-008 Fix the www.* black-hole
+- [x] US-008 Fix the www.* black-hole
 - [ ] US-009 Alt-text authoring
 - [ ] US-010 SEO route hardening
 
