@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AiCrawlersTab,
+  CitationsTab,
   LlmsTxtCard,
   RedirectsTab,
   SeoAuditTab,
@@ -42,6 +43,7 @@ import {
   Gauge,
   BadgeCheck,
   Bot,
+  MessageSquareQuote,
 } from "lucide-react";
 
 const sectionTitleStyle = {
@@ -331,7 +333,7 @@ export function SeoPageClient({
           which arm it belongs in.
         */}
         <TabsList
-          className={`grid w-full grid-cols-2 ${seoProUnlocked ? "sm:grid-cols-8" : "sm:grid-cols-5"} lg:w-auto lg:inline-grid`}
+          className={`grid w-full grid-cols-2 ${seoProUnlocked ? "sm:grid-cols-9" : "sm:grid-cols-5"} lg:w-auto lg:inline-grid`}
         >
           <TabsTrigger value="products" className="gap-2">
             <Package className="h-4 w-4 hidden sm:block" aria-hidden="true" />
@@ -380,6 +382,21 @@ export function SeoPageClient({
             <TabsTrigger value="ai-crawlers" className="gap-2">
               <Bot className="h-4 w-4 hidden sm:block" aria-hidden="true" />
               AI Crawlers
+            </TabsTrigger>
+          )}
+          {/*
+            LLM Visibility US-005 — what the store's own AI model answers when
+            asked its market's questions. Pro only, and next to AI Crawlers
+            because the two are the same subject read from opposite ends: one
+            sets what an engine may read, the other records what it said.
+          */}
+          {seoProUnlocked && (
+            <TabsTrigger value="citations" className="gap-2">
+              <MessageSquareQuote
+                className="h-4 w-4 hidden sm:block"
+                aria-hidden="true"
+              />
+              AI Citations
             </TabsTrigger>
           )}
           {/*
@@ -657,6 +674,13 @@ export function SeoPageClient({
                 nothing to configure: the card exists to say what the file is and
                 what the evidence for it actually shows. */}
             <LlmsTxtCard llmsUrl={`${baseUrl}${LLMS_TXT_PATH}`} />
+          </TabsContent>
+        )}
+
+        {/* AI Citations Tab — Pro only (LLM Visibility US-005) */}
+        {seoProUnlocked && (
+          <TabsContent value="citations">
+            <CitationsTab />
           </TabsContent>
         )}
 

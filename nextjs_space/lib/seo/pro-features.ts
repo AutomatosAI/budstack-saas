@@ -97,6 +97,12 @@ export const SEO_PRO_FEATURES: readonly SeoProFeature[] = [
       "Choose which AI bots may read your store — the search crawlers that cite you in AI answers, and the training crawlers, separately.",
   },
   {
+    id: "citation-monitor",
+    title: "AI citation monitor",
+    valueProp:
+      "Each week your own Automatos model is asked your market's questions, and we record whether its answer linked to your store.",
+  },
+  {
     id: "verification",
     title: "Site verification & analytics tags",
     valueProp:

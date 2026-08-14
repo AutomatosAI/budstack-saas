@@ -98,6 +98,12 @@ export type QaDraftResult =
 export interface AiAssistProviderRequest {
   readonly credentials: AutomatosCredentials;
   readonly prompt: string;
+  /**
+   * LLM Visibility US-005 — which of the workspace's models should answer.
+   * Absent means "whatever the tenant's agent defaults to", which is what every
+   * caller before US-005 asked for and still asks for.
+   */
+  readonly modelId?: string | null;
 }
 
 export type AiAssistProviderResult =
@@ -119,6 +125,7 @@ export const automatosProvider: AiAssistProvider = {
     const completion = await requestAutomatosCompletion({
       credentials: request.credentials,
       prompt: request.prompt,
+      modelId: request.modelId ?? null,
     });
     return completion.ok
       ? { ok: true, text: completion.text }
@@ -223,11 +230,21 @@ async function checkAssistRateLimit(tenantId: string): Promise<AiAssistNoDraft |
  * that adding the Q&A contract (US-002) added an OUTPUT PARSER and nothing else:
  * one place still decides how a tenant's AI quota is spent, and a change to the
  * metering or the credential rule cannot apply to one caller and miss the other.
+ *
+ * EXPORTED FOR US-005's citation monitor, which is the first caller that is not
+ * a draft: it needs this exact sequence — one meter, one credential rule, one
+ * provider — and a completion the contract parsers must not touch, because the
+ * answer being judged is prose from a search-grounded model rather than a field
+ * being written. A parallel client would have been a second place deciding how
+ * the tenant's account is spent; this is the one place, with one more caller.
+ *
+ * `modelId` is optional and defaults to the workspace's own default model.
  */
-async function runCompletion(
+export async function runAiAssistCompletion(
   tenantId: string,
   provider: AiAssistProvider,
   prompt: string,
+  modelId?: string | null,
 ): Promise<{ readonly ok: true; readonly text: string } | { readonly ok: false; readonly result: AiAssistNoDraft }> {
   const limited = await checkAssistRateLimit(tenantId);
   if (limited) return { ok: false, result: limited };
@@ -247,7 +264,7 @@ async function runCompletion(
     return { ok: false, result: unavailable() };
   }
 
-  const completion = await provider.complete({ credentials, prompt });
+  const completion = await provider.complete({ credentials, prompt, modelId });
   if (completion.ok) return { ok: true, text: completion.text };
 
   return {
@@ -281,7 +298,7 @@ export async function generateSeoDraft(
 ): Promise<AiAssistResult> {
   const provider = request.provider ?? automatosProvider;
 
-  const completion = await runCompletion(
+  const completion = await runAiAssistCompletion(
     request.tenantId,
     provider,
     buildAiAssistPrompt(request.kind, request.source),
@@ -334,7 +351,7 @@ export async function generateQaDraft(
 ): Promise<QaDraftResult> {
   const provider = request.provider ?? automatosProvider;
 
-  const completion = await runCompletion(
+  const completion = await runAiAssistCompletion(
     request.tenantId,
     provider,
     buildQaDraftPrompt(request.source),

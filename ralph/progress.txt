@@ -542,3 +542,170 @@ HOW VERIFIED
   runtime import chain leaving the copied set — no Dockerfile change needed.
 - No migration, no schema change, no new model: `wireMode`, `settings`,
   `posts.content`, `posts.published` and `conditions.faqs` all already exist.
+
+================================================================================
+[2026-08-14] US-005 PASS — AI citation monitor v1
+================================================================================
+
+WHAT LANDED. A weekly job that asks the TENANT'S OWN configured model the
+questions their market asks, and records whether the answer linked to their
+store. New table `llm_citation_checks`, new queue `llm-citation`, a worker
+registration beside the reorder sweep, a Pro-gated GET, and an AI Citations tab
+in the SEO Manager.
+
+THE SPIKE, BECAUSE AC 4 TURNS ON IT. Re-fetched the published OpenAPI document
+(api.automatos.app/openapi.json, HTTP 200, 664 paths) rather than trusting the
+parent story's summary, and the two facts that decided the design are:
+  * `WidgetChatRequest.model_id` IS on the wire — optional string, exactly as
+    the shipped browser SDK sends it (`public/automatos-widget.js` passes
+    `model_id: this.config.modelId`). So per-model rows are POSSIBLE.
+  * There is NO model-listing endpoint under `/api/widgets/*`. `/api/models/`
+    exists but authenticates as a platform USER, which the parent spike already
+    established a tenant's widget key cannot reach. The ONLY workspace-scoped
+    discovery surface a widget key opens is `GET /api/widgets/config`, whose
+    documented response is `{workspace_id, config}` with `config` declared
+    `additionalProperties: true` AND NO DECLARED KEYS.
+  So the spec permits variation but does not promise a list to vary across, and
+  no live key exists on this machine to discover one. `requestAutomatosWidgetModels`
+  therefore reads OPTIMISTICALLY AND FAILS TO NOTHING: three plausible key names
+  (`models` / `enabled_models` / `available_models`), entries as strings or as
+  objects carrying an id, and ANY other shape — including the likely one, a
+  config with no models in it — returns []. An empty list is not an error; it is
+  AC 4's specified fallback, and the run asks the agent's default model as a
+  single engine labelled `workspace-default`. That label is not a vendor name,
+  which is the rule: every other label is a model id the workspace itself
+  returned.
+
+REUSE, NOT A SECOND CLIENT (the AC's hard line, and the notes' "extension of the
+existing service is reuse; a parallel client is not").
+  * `runCompletion` in lib/seo/ai-assist.ts was RENAMED and EXPORTED as
+    `runAiAssistCompletion` rather than copied. The monitor gets the same meter,
+    the same tenant-owned-credentials rule, the same provider and the same
+    `unavailable` state as the Generate buttons. One place still decides how a
+    tenant's AI account is spent; it now has three callers instead of two.
+  * `AiAssistProviderRequest` gained `modelId?`, and `automatosProvider` passes
+    it through to `model_id`. Absent means "the workspace's default", which is
+    what both existing callers asked for and still ask for — the two Q&A/draft
+    contracts are byte-identical on the wire to before this story.
+  * `AUTOMATOS_CONNECT` / `AutomatosConnectCard` are the monitor's not-connected
+    state verbatim, so "no Automatos account" is the same cross-sell on this tab
+    as in the editors, not an error screen (AC 5).
+  * The plan gate is `isSeoProUnlocked` in the sweep and
+    `requireFeature(FEATURES.SEO_PRO)` on the route — no new entitlement key.
+
+DECISIONS WORTH THE NEXT READER'S TIME.
+  * THE MATCH IS A HOST MATCH, AND ONLY A HOST MATCH. A model that says "Green
+    Leaf Clinic is a good option" has not cited anybody — half the stores in a
+    market share words — so a name mention scores nothing. A URL whose host is
+    the store's is checkable by clicking, which is the only claim this feature
+    makes. Both hosts count (platform subdomain AND custom domain): a model that
+    found budstacks.io has still found the store. 10 table-driven cases pin the
+    forms, including the two that must NOT match:
+    `greenleaf.budstacks.io.evil.test` and a competitor page whose PATH contains
+    the store's host.
+  * `cited: false` IS WRITTEN, DELIBERATELY. It is the baseline the tally is read
+    against; a table of hits only would make "3 citations" unreadable. But
+    NOTHING is written for a check that never produced an answer — "the key was
+    rejected" and "the model did not mention you" are opposite facts and one row
+    type cannot carry both. Skips go to the outcome, which the worker prints.
+  * THE CAP IS A BILL, not a load limit: 6 prompts x 2 engines = 12 completions
+    per store per week, on the STORE'S OWN account, enforced by a counter rather
+    than by the product of two list lengths — a store that adds forty conditions
+    must not become a bigger invoice. The tab says so in plain sight
+    (`CITATION_MONITOR_COPY.spendNote`).
+  * A TERMINAL REFUSAL STOPS THAT STORE'S PASS at the first check rather than
+    paying eleven more times to be told the same thing. `unavailable`,
+    `rate_limited`, `auth`, `lookup_failed` and `rate_limiter_unavailable` are
+    facts about the ACCOUNT and cannot change inside one run; `timeout` and
+    `upstream` might be about this one call, so they get one more go and stop at
+    two consecutive.
+  * MEDICAL-INFORMATION FRAMING IS A CONTENT-POLICY DECISION, documented in
+    `buildCitationPrompts`. Every major model applies a restricted-goods policy
+    to cannabis: "where can I buy cannabis in Portugal" is the shape most likely
+    to be refused or answered with a safety notice and no links, which would
+    make every row a false negative ABOUT THE STORE rather than a fact about it.
+    The prompts ask what a patient asks — legal access, treatment for a
+    condition, what a category is for. A test asserts no prompt contains "buy".
+  * THE SHARED METER IS A STATED TRADE. A weekly run draws up to 12 of the same
+    30-per-5-minutes budget the Generate buttons use, so an owner drafting during
+    the few minutes their sweep runs could be told to wait. A second meter would
+    have been a second place deciding how one account is spent — the exact thing
+    ai-assist.ts was factored to prevent. Documented at the top of
+    citation-engine.ts, not buried.
+  * NO MANUAL RUN, ON PURPOSE. The route is a GET with no siblings, so there is
+    no path by which a click spends the tenant's AI account. The cost of that is
+    real and named: a store sees an empty tab until the first Monday sweep.
+  * THE HONESTY COPY IS AN ACCEPTANCE CRITERION AND IS TESTED. The caveat renders
+    in the tab header, not behind a tooltip, and a test asserts the copy contains
+    "not a ranking" and "your own Automatos" and contains neither "guarantee" nor
+    "improve your ranking". The answering model id is on every row.
+  * `citedUrl` RENDERS AS TEXT, NOT AS A LINK. It is a string a model wrote; an
+    admin panel should not offer it as a one-click destination.
+
+WORKER LESSONS APPLIED (AC 9), each one stated rather than assumed.
+  * OWN QUEUE, `llm-citation`, NOT the email queue — the same incompatibility the
+    reorder sweep documents: the email worker expires any job older than
+    EMAIL_MAX_JOB_AGE_MS (PRD-220), which is right for a send and fatal for a
+    repeatable sweep BullMQ may promote late after a restart.
+  * `attempts: 1`, and here the reason is money: a retried sweep would re-bill
+    every store that already succeeded before the one that failed.
+  * `bypassTenantScope` binds an EXPLICIT null context, under which lib/db.ts's
+    scope extension adds nothing — so every query in citation-monitor-store.ts
+    names its own tenantId, and a test asserts it for the conditions, products
+    and write paths.
+  * THE CREDENTIAL ANSWERS A PRESENCE QUESTION IN SQL: the tenant list filters
+    `automatosApiKey: { not: null }` and never SELECTS it, so no key is loaded
+    into worker memory to answer "is this store connected". The key itself is
+    read only by `loadAutomatosCredentials`. A test asserts the select omits it.
+  * DOCKER RUNNER IMAGE: EXPLICITLY CHECKED. Five new modules under `lib/seo/`
+    (COPYied at Dockerfile:74) and the worker under `scripts/` (Dockerfile:73);
+    the route and components compile into `.next/standalone` (Dockerfile:59). No
+    new dependency, and no runtime import chain leaving the copied set —
+    citation-match reaches lib/tenant/tenant-utils, the store reaches
+    lib/entitlements, both already inside `lib/`. NO Dockerfile change needed.
+  * THE WORKER WAS TYPECHECKED via a throwaway tsconfig (`scripts/` is excluded
+    from repo tsc) — created, run, deleted; nothing left in the tree.
+
+MIGRATION. Hand-authored, never `migrate dev`/`deploy`/`db push`. The CREATE
+TABLE, the index and the FK were diffed against
+`prisma migrate diff --from-empty --to-schema-datamodel --script` and match it
+statement for statement. New table, so no lock on anything live. Registered in
+`tenantScopedModels` (lib/db.ts) — no exemption claimed.
+
+FLAGGED, NOT FIXED (adjacent, out of scope):
+  * No retention policy on `llm_citation_checks`. At 12 rows/store/week it is
+    ~625 rows a year per connected store, which is nothing — but the table only
+    grows, and a prune job belongs to whoever adds the second one of these.
+  * The monitor has no audit-log row on write. The sweep is a system actor with
+    no member behind it, and every other automation here (reorder) is the same;
+    worth revisiting if operators ever need to answer "who ran this".
+  * The tab has no pagination: `CITATION_HISTORY_LIMIT` (120 rows) is the whole
+    of what it can show, and a store two years in will silently see only its
+    recent runs. Bounded, not truncated-and-silent — the cap is a constant a
+    later story can raise with a cursor.
+
+HOW VERIFIED
+- `pnpm exec tsc --noEmit`                             -> exit 0 (repo-wide)
+- worker via throwaway tsconfig (scripts/ + lib/)      -> exit 0, no output
+- `pnpm prisma validate`                               -> schema valid
+- `pnpm prisma generate`                               -> client generated
+- `prisma migrate diff --from-empty --script`          -> hand-authored SQL
+                                                          matches canonical
+- `pnpm vitest run tests/unit/seo-citation-monitor.test.ts` -> 46 passed
+- `pnpm vitest run tests/unit/seo-citation-route.test.ts`   ->  9 passed
+- `pnpm vitest run` (full)                             -> 2985 passed, 30
+                                                          skipped, 167 files,
+                                                          0 failed
+                                                          (2930 before; +55)
+- `pnpm exec next lint` on all 17 touched TS/TSX files  -> no warnings, errors
+- `pnpm check:security`                                -> both gates green
+- VISUAL: DEFERRED TO HUMAN REVIEW. The SEO Manager is Clerk-gated and the tab
+  needs the Railway DB, unreachable from this machine — the same limit US-001
+  through US-004 recorded. The data path is covered instead: the route's two
+  gates (Basic 403 `upgrade_required`, `canViewSeo` refused BEFORE the plan
+  lookup), the tenant-scoped bounded read, the not-connected 200, and the
+  client parser's fail-closed cases including "cited" arriving as the STRING
+  "true" (reads as not cited — over-reporting a citation is the one error this
+  feature must not make).
+- NO LIVE API CALL WAS MADE WITH ANY TENANT CREDENTIAL. The only network request
+  in this story was an unauthenticated GET of the public OpenAPI document.

@@ -32,10 +32,24 @@ export const campaignQueueName = "campaign-scheduling";
  */
 export const reorderQueueName = "reorder-reminders";
 
+/**
+ * LLM Visibility US-005 — the weekly AI citation sweep.
+ *
+ * Its own queue, for the same two reasons the reorder sweep has one. One job
+ * here becomes up to a dozen model completions per connected store, so it is
+ * nothing like a send and must not share a concurrency budget with one. And
+ * this queue's jobs come from a REPEATABLE scheduler: the email worker expires
+ * any job older than EMAIL_MAX_JOB_AGE_MS (PRD-220), which is right for a send
+ * and wrong for a weekly sweep BullMQ may promote late after a restart — it
+ * would be dropped as stale and that week's checks would simply not happen.
+ */
+export const llmCitationQueueName = "llm-citation";
+
 let emailQueueInstance: Queue | undefined;
 let emailQueueEventsInstance: QueueEvents | undefined;
 let campaignQueueInstance: Queue | undefined;
 let reorderQueueInstance: Queue | undefined;
+let llmCitationQueueInstance: Queue | undefined;
 
 const getRedisConnection = () => {
   return new Redis(REDIS_URL, {
@@ -137,6 +151,40 @@ export const getReorderQueue = () => {
     });
   }
   return reorderQueueInstance;
+};
+
+/**
+ * The AI citation queue.
+ *
+ * `attempts: 1` — no retries, and here the reason is a bill rather than a
+ * mailbox. Every check is a paid completion on the STORE'S own AI account, and
+ * a retried sweep would re-ask every store that already succeeded before it
+ * reached the one that failed. The rows a partial run wrote are still true, the
+ * outcome says where it stopped, and the next run is a week away — which is the
+ * cadence this measurement moves at anyway.
+ *
+ * Completed sweeps are kept a fortnight, like the reorder queue's: long enough
+ * to answer "did last week's run happen" after a two-week absence, and there is
+ * at most one of these a week.
+ */
+export const getLlmCitationQueue = () => {
+  if (!llmCitationQueueInstance) {
+    const connection = getRedisConnection();
+    llmCitationQueueInstance = new Queue(llmCitationQueueName, {
+      connection: connection as any,
+      defaultJobOptions: {
+        attempts: 1,
+        removeOnComplete: {
+          age: 14 * 24 * 3600,
+          count: 100,
+        },
+        removeOnFail: {
+          age: 14 * 24 * 3600,
+        },
+      },
+    });
+  }
+  return llmCitationQueueInstance;
 };
 
 export const getEmailQueueEvents = () => {
