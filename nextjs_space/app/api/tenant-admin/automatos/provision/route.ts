@@ -4,7 +4,8 @@ import { requirePermission } from "@/lib/permissions/require-permission";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { AUDIT_ACTIONS, createAuditLog, getClientInfo } from "@/lib/audit-log";
-import { FEATURES, getTenantFeatures, hasFeature } from "@/lib/entitlements/features";
+import { FEATURES } from "@/lib/entitlements/features";
+import { featureDenial } from "@/lib/entitlements/require-feature";
 import {
   buildTenantDomains,
   partnerKey,
@@ -19,12 +20,11 @@ import {
  */
 export const POST = requirePermission("canEditSettings", async (req, { user, tenantId }) => {
   try {
-    if (!hasFeature(getTenantFeatures({ id: tenantId }), FEATURES.AUTOMATOS_CHATBOT)) {
-      return NextResponse.json(
-        { error: "The storefront chatbot is a Pro feature. Upgrade to enable it." },
-        { status: 403 },
-      );
-    }
+    // The id-only getTenantFeatures shape resolves fail-closed to 'basic' now
+    // that the plan matrix exists — featureDenial loads the tenant's real plan
+    // (its documented usage) so trial/pro tenants keep their entitlement.
+    const denial = await featureDenial(tenantId, FEATURES.AUTOMATOS_CHATBOT);
+    if (denial) return denial;
 
     if (!partnerKey()) {
       return NextResponse.json(
