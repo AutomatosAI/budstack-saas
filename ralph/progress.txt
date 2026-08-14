@@ -1811,3 +1811,125 @@ FLAGGED, NOT FIXED (adjacent debt)
 - The unit project still cannot render React (US-013's flag, unchanged), so no
   component test asserts the <script> element itself; the serializer is asserted
   directly instead.
+
+================================================================================
+[2026-08-14] US-016 PASS — Article + BreadcrumbList JSON-LD
+================================================================================
+
+WHAT LANDED
+Two new pure builders plus the wiring that puts them on the three storefront
+detail page types. Both Pro-gated by DEGRADING (empty array -> <JsonLd> renders
+no element); nothing on the storefront can block on plan.
+
+- lib/seo/article-json-ld.ts — buildArticleJsonLd. Emits TWO nodes: the store's
+  Organization and the Article that references it. headline / url / @id /
+  description / image / datePublished / dateModified / author / publisher.
+- lib/seo/breadcrumb-json-ld.ts — buildBreadcrumbJsonLd + the three trails
+  (wirePostBreadcrumbTrail, productBreadcrumbTrail, conditionBreadcrumbTrail).
+  Home -> section -> item, positions 1..n, every `item` through storeCanonical.
+- lib/seo/json-ld.ts — extracted organizationJsonLdId() and
+  buildOrganizationNode(); buildStoreJsonLd now calls them. Behaviour identical
+  (store-json-ld.test.ts unchanged and green).
+- lib/seo/tenant-logo.ts — tenantLogoRef(), the branding -> activeTemplate ->
+  settings.logoPath cascade, lifted out of app/store/[slug]/page.tsx.
+- lib/seo/product-paths.ts — PRODUCTS_INDEX_TITLE, now the source for
+  STORE_ROUTES.products.title as well as the breadcrumb crumb.
+- lib/seo/post-metadata.ts — isoTimestamp exported (was private).
+- Pages: the-wire/[postSlug] (Article + breadcrumb), products/[id] (breadcrumb
+  appended to US-015's Product graph), conditions/[id] (breadcrumb; the body
+  became async to read the cache()d condition the metadata already loads).
+
+THE DECISION THAT MATTERED: publisher = an @id reference, so the Organization
+node is RESTATED on the article page.
+US-014's docstring invited later stories to reference the store Organization by
+@id. US-015 then refused exactly that for Product `brand`, because structured
+data is parsed PER PAGE — an @id pointing at a node declared on the homepage
+hands a consumer reading the article a publisher with no name, and no validator
+reports it. Both are satisfied by putting the Organization IN the article's own
+@graph under the same store-wide @id: the reference resolves locally, and the id
+still joins the two pages' statements about one entity. That is why the logo
+cascade had to become shared (lib/seo/tenant-logo.ts) — two pages emitting the
+same @id with different logos would be two contradictory descriptions of one
+organisation. The homepage now reads its logo through the same function.
+
+OTHER CALLS
+- headline = the post's OWN title, never posts.seo.title. The authored one is
+  the SERP title; the headline must match the <h1> the page renders, because
+  structured data that contradicts the visible page is what Google penalises.
+  Clipped at 110 chars (Google's documented Article limit) via truncateSeoText,
+  which keeps the ellipsis inside the budget.
+- author: a Person when posts.users.name resolves, else an @id reference to the
+  publisher. NOT a Person named after the business — US-003 substitutes the
+  store for og:author because that tag can only carry a string; a Person node
+  would assert a company is a human being.
+- datePublished/dateModified come from createdAt/updatedAt through the SAME
+  isoTimestamp parser og:published_time uses, so the two cannot disagree. It
+  already accepted a string as well as a Date (the #229 class: Invalid Date ->
+  toISOString() is a RangeError inside a render path with no error.tsx above it).
+- Breadcrumbs are ALL OR NOTHING: a ListItem with no name is invalid rather than
+  partial, so an entity with no usable name emits no trail at all. Confirmed
+  against the path helpers' own degrade (productPath("") -> /products), which
+  keeps the last crumb pointing at a page that exists.
+- Section labels are READ from the modules that own those sections' URLs
+  (WIRE_INDEX_TITLE, PRODUCTS_INDEX_TITLE, storeSeoPage("conditions").name), so
+  a crumb can never name a section differently from that section's own <title>.
+
+NO NEW QUERIES. The wire page's getTenantWithTemplate is the layout's own
+cache()d fetch; the condition page's loadCondition is the cache()d loader
+generateMetadata already calls with the same arguments; the product page reuses
+the strain it had. Verified by reading the call sites, not assumed.
+
+VERIFIED
+- pnpm exec tsc --noEmit                                    -> exit 0
+- pnpm vitest run tests/unit/article-json-ld.test.ts
+    tests/unit/breadcrumb-json-ld.test.ts                   -> 28 passed
+- pnpm vitest run (all projects) -> 148 files, 2256 passed, 30 skipped, 0 failed
+  (was 140/2228 at US-015: +2 files, +28 tests, no regressions — store-json-ld
+  and product-json-ld still green after json-ld.ts was refactored)
+- pnpm check:security                                       -> both gates green
+- pnpm exec next lint (11 touched files) -> clean except the PRE-EXISTING
+  @next/next/no-img-element warning on the article cover <img> (line moved by
+  this diff, not introduced by it)
+- pnpm build -> Compiled successfully. All three changed routes still
+  f (Dynamic), unchanged sizes: the-wire/[postSlug] 196 B,
+  products/[id] 10.2 kB, conditions/[id] 5.74 kB. This is the check that
+  matters — conditions/[id] gained a server-only import chain (next/headers via
+  <JsonLd>) and its default export went sync -> async, neither of which tsc sees.
+- LIVE: pnpm dev on the existing .env.local (never modified).
+    GET /store/healingbuds/the-wire/test-post      -> 404
+    GET /store/healingbuds/conditions/chronic-pain -> 404
+    GET /store/healingbuds/products/test-id        -> 404
+  Same cause US-014/US-015 recorded: 18x "Can't reach database server" in the
+  dev log (Railway private network), so no tenant resolves and no store page can
+  render locally.
+    GET / -> 200 with `content-security-policy: default-src 'self'; script-src
+    'self' 'nonce-8B71ToRnCKWLPfbn21tT9A==' 'strict-dynamic'` — the nonce
+    plumbing <JsonLd> attaches to.
+  visual: deferred to human review — asserting the rendered <script> needs a
+  real tenant on a reachable DB. Node shape, gate, URL host, escaping and the
+  publisher-reference join are asserted purely.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson): three new modules, all under
+lib/seo/. `lib/` is already COPYied by the runner (nextjs_space/Dockerfile:76).
+Imports are @/lib/{seo,storage,tenant} only — tenant-logo.ts reaches
+lib/tenant/tenant-settings, which is already in the bundle. No new directory, no
+Dockerfile edit needed.
+
+NO SCHEMA CHANGE, NO MIGRATION, NO NEW MODEL, no tenantScopedModels change, no
+new API route. Storefront-only.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- app/store/[slug]/page.tsx:328 still does `(tenantWithTemplate.settings as any)`
+  for the hero/logo image URLs further down the file — the PRD-208 "only
+  sanctioned reader" rule says parseTenantSettings. Untouched: it is in the
+  legacy template branch, not this story's path. (The import this story removed
+  was the one the JSON-LD source used; the `as any` read is separate and
+  pre-existing.)
+- No BreadcrumbList on the LISTING pages (/products, /conditions, /the-wire) or
+  the static pages — only the three detail types the story names. A one-line
+  trail each if a later story wants them.
+- Article carries no `articleSection` / `keywords`: posts have no category or
+  tag column in the schema to derive either from honestly.
+- The unit project still cannot render React (US-013's flag, unchanged), so no
+  component test asserts the emitted <script> element; the serializer is
+  asserted directly instead.

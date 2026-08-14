@@ -191,6 +191,49 @@ export function absoluteAssetUrl(
 }
 
 /**
+ * The store's Organization `@id`.
+ *
+ * ONE function, because the value is a JOIN KEY: US-016's Article references
+ * `{ "@id": … }` for its publisher, and a reference that does not match the node
+ * it points at is a publisher with no name rather than a resolution failure a
+ * validator reports.
+ *
+ * Anchored to the store's own origin (not the platform's) so two tenants can
+ * never share an identity, and fragment-suffixed so it names the ENTITY rather
+ * than the page — the homepage document is `${url}`, the organization it
+ * describes is `${url}/#organization`.
+ */
+export function organizationJsonLdId(storeUrl: string): string {
+  return `${storeUrl}/#organization`;
+}
+
+/**
+ * The store as an Organization.
+ *
+ * Emitted on every page that references it, NOT only on the homepage: structured
+ * data is parsed per URL, so an `@id` pointing at a node defined on a different
+ * page hands the consumer an entity with no properties at all (the rule US-015
+ * wrote down for Product `brand`). Restating it here is what makes the reference
+ * resolve, and routing every caller through this function is what stops the two
+ * statements of the same `@id` from disagreeing.
+ */
+export function buildOrganizationNode(
+  storeUrl: string,
+  name: string,
+  logoRef: string | null,
+): JsonLdNode {
+  const logo = absoluteAssetUrl(storeUrl, logoRef);
+
+  return {
+    "@type": "Organization",
+    "@id": organizationJsonLdId(storeUrl),
+    name,
+    url: storeUrl,
+    ...(logo ? { logo } : {}),
+  };
+}
+
+/**
  * The store's identity nodes: Organization always, LocalBusiness when there is
  * a complete address to anchor it to.
  *
@@ -215,14 +258,7 @@ export function buildStoreJsonLd(
     "",
   );
   const logo = absoluteAssetUrl(url, source.logoRef);
-
-  const organization: JsonLdNode = {
-    "@type": "Organization",
-    "@id": `${url}/#organization`,
-    name,
-    url,
-    ...(logo ? { logo } : {}),
-  };
+  const organization = buildOrganizationNode(url, name, source.logoRef);
 
   const address = buildPostalAddress(source);
   if (!address) return [organization];

@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 
+import { JsonLd } from "@/components/seo/json-ld";
 import { prisma } from "@/lib/db";
+import {
+  buildBreadcrumbJsonLd,
+  conditionBreadcrumbTrail,
+} from "@/lib/seo/breadcrumb-json-ld";
 import {
   CONDITION_NOT_FOUND_TITLE,
   buildConditionMetadata,
@@ -136,6 +141,42 @@ export async function generateMetadata({
   });
 }
 
-export default function ConditionDetailPage() {
-  return <ConditionDetailClient />;
+/**
+ * SEO US-016 — the breadcrumb trail for a condition page.
+ *
+ * `loadCondition` is the `cache()`d loader `generateMetadata` above already
+ * calls with the SAME arguments, so resolving the row here costs nothing on a
+ * normal render: React dedupes it within the request. The body itself stays
+ * client-rendered — this only adds the node the crawler reads.
+ *
+ * Nothing here can block the page: `buildBreadcrumbJsonLd` returns [] for a
+ * Basic tenant and for a row with no usable name, and `<JsonLd>` renders nothing
+ * for [].
+ */
+export default async function ConditionDetailPage({
+  params,
+}: ConditionDetailPageProps) {
+  const tenant = await getCurrentTenant();
+  const condition = tenant ? await loadCondition(tenant.id, params.id) : null;
+
+  const jsonLdNodes =
+    tenant && condition
+      ? buildBreadcrumbJsonLd(
+          {
+            tenantId: tenant.id,
+            plan: tenant.plan,
+            subdomain: tenant.subdomain,
+            customDomain: tenant.customDomain,
+          },
+          // The RESOLVED slug, not the raw param — the one the listing links to.
+          conditionBreadcrumbTrail(condition.name, condition.slug),
+        )
+      : [];
+
+  return (
+    <>
+      <JsonLd nodes={jsonLdNodes} />
+      <ConditionDetailClient />
+    </>
+  );
 }

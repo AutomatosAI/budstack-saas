@@ -26,7 +26,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 
 - [x] US-014 JSON-LD engine + Organization/LocalBusiness
 - [x] US-015 Product JSON-LD
-- [ ] US-016 Article + BreadcrumbList JSON-LD
+- [x] US-016 Article + BreadcrumbList JSON-LD
 - [ ] US-017 FAQPage JSON-LD from conditions
 - [ ] US-018 OG image studio — branded generation
 - [ ] US-019 OG image studio — real upload

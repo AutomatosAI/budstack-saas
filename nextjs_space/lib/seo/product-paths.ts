@@ -27,6 +27,17 @@ import { seoText } from "@/lib/seo/store-identity";
 export const PRODUCTS_INDEX_PATH = "/products";
 
 /**
+ * What the listing is CALLED — its `<title>` (through `STORE_ROUTES.products`,
+ * lib/seo/route-metadata.ts) and its breadcrumb crumb (US-016), which must be
+ * the same string. Mirrors the storefront's navigation label, `nav.products`.
+ *
+ * It lives beside the path for the same reason `store-pages.ts` keeps a page's
+ * name and path in one record: the two are read together and drift apart when
+ * they are stated apart.
+ */
+export const PRODUCTS_INDEX_TITLE = "Products";
+
+/**
  * Store-relative path for a product, or the listing when the row has never been
  * synced from Dr Green and therefore has no page of its own.
  *

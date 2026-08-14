@@ -4,6 +4,10 @@ import { cache } from "react";
 import { JsonLd } from "@/components/seo/json-ld";
 import { prisma } from "@/lib/db";
 import {
+  buildBreadcrumbJsonLd,
+  productBreadcrumbTrail,
+} from "@/lib/seo/breadcrumb-json-ld";
+import {
   fetchProduct,
   type DoctorGreenProduct,
 } from "@/lib/drgreen/doctor-green-api";
@@ -219,9 +223,23 @@ export default async function ProductDetailPage({
     : { product: null, seo: null };
 
   const imageAlt = readEntitySeo(seo).imageAlt ?? "";
+  // US-015's Product/Offer and US-016's breadcrumb in ONE block: they describe
+  // the same page, and `serializeJsonLd` puts several nodes in one `@graph`.
   const jsonLdNodes =
     tenant && product
-      ? buildProductJsonLd(productJsonLdSource(tenant, product, seo))
+      ? [
+          ...buildProductJsonLd(productJsonLdSource(tenant, product, seo)),
+          ...buildBreadcrumbJsonLd(
+            {
+              tenantId: tenant.id,
+              plan: tenant.plan,
+              subdomain: tenant.subdomain,
+              customDomain: tenant.customDomain,
+            },
+            // The RESOLVED strain id, which is the one the URL is keyed by.
+            productBreadcrumbTrail(product.name, product.id),
+          ),
+        ]
       : [];
 
   return (

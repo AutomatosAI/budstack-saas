@@ -7,14 +7,22 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, User } from "lucide-react";
 import sanitizeHtml from "sanitize-html";
 import type { posts, users } from "@prisma/client";
-import { getCurrentTenant } from "@/lib/tenant/tenant";
+import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant/tenant";
 import { runWithTenantContextAsync } from "@/lib/tenant/tenant-context";
+import { JsonLd } from "@/components/seo/json-ld";
+import { buildArticleJsonLd } from "@/lib/seo/article-json-ld";
+import {
+  buildBreadcrumbJsonLd,
+  wirePostBreadcrumbTrail,
+} from "@/lib/seo/breadcrumb-json-ld";
 import { entityImageAlt } from "@/lib/seo/entity-seo";
+import type { JsonLdNode } from "@/lib/seo/json-ld";
 import {
   POST_NOT_FOUND_TITLE,
   buildPostMetadata,
 } from "@/lib/seo/post-metadata";
 import { STORE_NOT_FOUND_TITLE } from "@/lib/seo/store-metadata";
+import { tenantLogoRef } from "@/lib/seo/tenant-logo";
 
 interface ArticlePageProps {
   params: {
@@ -88,6 +96,49 @@ export async function generateMetadata({
   });
 }
 
+/**
+ * SEO US-016 — the Article and its breadcrumb trail, built from the SAME post
+ * the body renders.
+ *
+ * The logo comes off `getTenantWithTemplate`, which the store layout already
+ * fetches through the same React `cache()`, so the publisher node costs no extra
+ * query. Nothing here can block the page: both builders return [] for a Basic
+ * tenant, and `<JsonLd>` renders nothing for [].
+ */
+async function articleJsonLdNodes(
+  tenant: NonNullable<Awaited<ReturnType<typeof getCurrentTenant>>>,
+  post: WirePost,
+): Promise<readonly JsonLdNode[]> {
+  const tenantForSeo = await getTenantWithTemplate(tenant.id);
+
+  const identity = {
+    tenantId: tenant.id,
+    plan: tenant.plan,
+    subdomain: tenant.subdomain,
+    customDomain: tenant.customDomain,
+  };
+
+  return [
+    ...buildArticleJsonLd({
+      ...identity,
+      businessName: tenant.businessName,
+      logoRef: tenantForSeo ? tenantLogoRef(tenantForSeo) : null,
+      slug: post.slug,
+      title: post.title,
+      excerpt: post.excerpt,
+      coverImage: post.coverImage,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      seo: post.seo,
+      authorName: post.users?.name,
+    }),
+    ...buildBreadcrumbJsonLd(
+      identity,
+      wirePostBreadcrumbTrail(post.title, post.slug),
+    ),
+  ];
+}
+
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { postSlug } = params;
 
@@ -97,6 +148,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const post = await loadPublishedPost(tenant.id, postSlug);
 
   if (!post) notFound();
+
+  const jsonLdNodes = await articleJsonLdNodes(tenant, post);
 
   // Server-side HTML sanitization for XSS protection
   // Using sanitize-html (Node.js compatible) instead of isomorphic-dompurify (ESM issues)
@@ -131,6 +184,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   return (
     <div className="min-h-screen bg-background text-foreground pt-36 pb-12">
+      <JsonLd nodes={jsonLdNodes} />
       <div className="container px-4 mx-auto max-w-4xl">
         <Link
           href={`/store/${tenant.subdomain}/the-wire`}

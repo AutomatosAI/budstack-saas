@@ -29,6 +29,10 @@ import type { Metadata } from "next";
 
 import { getLegalDocument, type LegalDocumentSlug } from "@/lib/legal/documents";
 import { storeCanonical } from "@/lib/seo/canonical";
+import {
+  PRODUCTS_INDEX_PATH,
+  PRODUCTS_INDEX_TITLE,
+} from "@/lib/seo/product-paths";
 import { STORE_OG_LOCALE, storeDisplayName } from "@/lib/seo/store-identity";
 
 /** The tenant fields every builder here needs — the shape `getCurrentTenant` returns. */
@@ -77,8 +81,10 @@ export const STORE_ROUTES: Readonly<
   Record<StoreRouteKey, StoreRouteDefinition>
 > = {
   products: {
-    path: "/products",
-    title: "Products",
+    // Read from the module that owns the products URL, so the page title and
+    // US-016's breadcrumb crumb for the same section cannot drift.
+    path: PRODUCTS_INDEX_PATH,
+    title: PRODUCTS_INDEX_TITLE,
     description: (name) =>
       `Browse the medical cannabis products available from ${name}.`,
   },

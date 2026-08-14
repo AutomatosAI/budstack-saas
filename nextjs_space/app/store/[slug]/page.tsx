@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { getFileUrl } from "@/lib/storage/s3";
 import { JsonLd } from "@/components/seo/json-ld";
 import { buildStoreJsonLd, type StoreJsonLdSource } from "@/lib/seo/json-ld";
-import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
+import { tenantLogoRef } from "@/lib/seo/tenant-logo";
 
 // Revalidate every 60 seconds — template/product data doesn't change frequently
 // This avoids hitting S3 + DB on every single request
@@ -57,32 +57,22 @@ export default async function TenantStorePage({
 }
 
 /**
- * The tenant row → JSON-LD inputs. The logo cascade mirrors US-001's favicon
- * cascade (branding row first, active template second) and then the legacy
- * `settings.logoPath` the layout still falls back to, so a store that has never
- * opened the branding form still gets its logo into the Organization node.
+ * The tenant row → JSON-LD inputs.
  *
- * Deliberately NOT `getFileUrl` — that mints a presigned S3 URL that dies in an
- * hour. `storedPublicImagePath` (inside the builder) turns an upload key into
- * the durable `/api/public/images/…` route instead, and returns nothing at all
- * for a reference it cannot promise will still resolve.
+ * The logo comes from `tenantLogoRef`, shared with US-016's Article publisher:
+ * both pages state the SAME Organization `@id`, so resolving the logo two ways
+ * would be two contradictory descriptions of one entity.
  */
 function storeJsonLdSource(
   row: NonNullable<Awaited<ReturnType<typeof getTenantWithTemplate>>>,
 ): StoreJsonLdSource {
-  const settings = parseTenantSettings(row.settings, { tenantId: row.id });
-
   return {
     id: row.id,
     plan: row.plan,
     businessName: row.businessName,
     subdomain: row.subdomain,
     customDomain: row.customDomain,
-    logoRef:
-      row.tenant_branding?.logoUrl ??
-      row.activeTenantTemplate?.logoUrl ??
-      settings.logoPath ??
-      null,
+    logoRef: tenantLogoRef(row),
     businessAddress1: row.businessAddress1,
     businessAddress2: row.businessAddress2,
     businessCity: row.businessCity,

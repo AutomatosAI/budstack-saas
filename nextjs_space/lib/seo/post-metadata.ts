@@ -100,8 +100,12 @@ export interface PostMetadataSource extends WireTenantSource {
  * Accepts a string as well as a Date: a JSON round trip turns one into the
  * other, and an `Invalid Date` reaching `toISOString()` throws a RangeError —
  * the failure mode that takes render routes down elsewhere in this repo.
+ *
+ * Exported for US-016's `datePublished`/`dateModified`: the Article node and the
+ * `article:published_time` tag on the same page must agree, and one parser is
+ * how they do.
  */
-function isoTimestamp(value: unknown): string | undefined {
+export function isoTimestamp(value: unknown): string | undefined {
   if (typeof value !== "string" && !(value instanceof Date)) return undefined;
 
   const date = value instanceof Date ? value : new Date(value);
