@@ -85,6 +85,12 @@ export const SEO_PRO_FEATURES: readonly SeoProFeature[] = [
       "Automatos AI drafts titles and descriptions from your own product and post content — you review before anything saves.",
   },
   {
+    id: "product-qa",
+    title: "Product Q&A",
+    valueProp:
+      "Answer the questions buyers ask on the product page itself, published as FAQ structured data — the form search and AI answer engines read answers from.",
+  },
+  {
     id: "ai-crawlers",
     title: "AI crawler controls",
     valueProp:

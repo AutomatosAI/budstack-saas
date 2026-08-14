@@ -14,6 +14,10 @@ import {
 import { logger } from "@/lib/logger";
 import { readEntitySeo } from "@/lib/seo/entity-seo";
 import {
+  buildProductQaJsonLd,
+  productQaEntries,
+} from "@/lib/seo/faq-json-ld";
+import {
   buildProductJsonLd,
   type ProductJsonLdSource,
 } from "@/lib/seo/product-json-ld";
@@ -27,6 +31,7 @@ import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { runWithTenantContextAsync } from "@/lib/tenant/tenant-context";
 
 import { ProductDetailClient } from "./product-detail-client";
+import { ProductQaSection } from "./product-qa-section";
 
 interface ProductDetailPageProps {
   params: {
@@ -226,8 +231,26 @@ export default async function ProductDetailPage({
     : { product: null, seo: null };
 
   const imageAlt = readEntitySeo(seo).imageAlt ?? "";
-  // US-015's Product/Offer and US-016's breadcrumb in ONE block: they describe
-  // the same page, and `serializeJsonLd` puts several nodes in one `@graph`.
+
+  /**
+   * LLM Visibility US-002 — the authored Q&A for the accordion below.
+   *
+   * `productQaEntries` is the ONE gated read: it applies the plan gate and the
+   * fail-closed parse, and `buildProductQaJsonLd` calls it too, so the block a
+   * shopper sees and the `FAQPage` node a crawler reads cannot describe
+   * different content — a Basic tenant gets [] and renders neither, and a pair
+   * the parser drops is dropped from both. Structured data is policed on
+   * matching the visible content; this is what makes that structural rather than
+   * a convention two call sites happen to follow.
+   */
+  const qaPairs =
+    tenant && product
+      ? productQaEntries({ tenantId: tenant.id, plan: tenant.plan, seo })
+      : [];
+
+  // US-015's Product/Offer, US-016's breadcrumb and US-002's FAQPage in ONE
+  // block: they describe the same page, and `serializeJsonLd` puts several nodes
+  // in one `@graph`.
   const jsonLdNodes =
     tenant && product
       ? [
@@ -242,6 +265,16 @@ export default async function ProductDetailPage({
             // The RESOLVED strain id, which is the one the URL is keyed by.
             productBreadcrumbTrail(product.name, product.id),
           ),
+          // The same gated read as `qaPairs` above, anchored to the same
+          // canonical the Product node uses (US-007's primary host).
+          ...buildProductQaJsonLd({
+            tenantId: tenant.id,
+            plan: tenant.plan,
+            subdomain: tenant.subdomain,
+            customDomain: tenant.customDomain,
+            productId: product.id,
+            seo,
+          }),
         ]
       : [];
 
@@ -249,6 +282,7 @@ export default async function ProductDetailPage({
     <>
       <JsonLd nodes={jsonLdNodes} />
       <ProductDetailClient imageAlt={imageAlt} />
+      <ProductQaSection pairs={qaPairs} />
     </>
   );
 }

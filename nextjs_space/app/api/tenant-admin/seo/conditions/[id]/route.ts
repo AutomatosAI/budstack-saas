@@ -96,6 +96,10 @@ export const PUT = requirePermissionParams("canEditSeo", async (request, { tenan
   // them. See `entitySeoWrite`.
   const seo = entitySeoWrite(existingCondition.seo, parsed, {
     preserveIndexing: !writesIndexing,
+    // US-002 — see the posts route: this editor has no `qa` field, so it
+    // preserves rather than rebuilds. A condition's seeded FAQ is a different
+    // column (`conditions.faqs`) and is not touched by this route at all.
+    preserveQa: true,
   });
 
   const updated = await prisma.conditions.update({

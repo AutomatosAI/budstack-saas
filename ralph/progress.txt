@@ -111,3 +111,147 @@ HOW VERIFIED
   Dockerfile change needed.
 - No migration, no schema change: `aiCrawlerPolicy` is a key in the existing
   `tenants.settings` Json blob.
+
+================================================================================
+[2026-08-14] US-002 PASS — Product Q&A blocks
+================================================================================
+
+WHAT LANDED
+`products.seo.qa` — a key in the authored Json record every other SEO field
+already shares, so no migration. `lib/seo/product-qa.ts` is the storage contract
+(limits + the fail-closed reader + `hasQaField`); `entity-seo.ts` gained the
+key and a THIRD write half; the product SEO PUT validates it with Zod and gates
+it with `featureDenial`; the product page renders it twice — a `<details>`
+accordion for a person and a `FAQPage` node for a machine — from ONE gated read.
+Drafting is a sibling route, `POST /api/tenant-admin/seo/ai-assist/qa`, on the
+same service, the same meter and the same credentials as US-025's field
+assistant, with a NEW output contract in `lib/seo/qa-draft.ts`.
+
+THE ACCORDION IS A SERVER COMPONENT, AND THAT IS THE WHOLE STORY. `ProductDetail
+Client` fetches the strain in the BROWSER, so its first render — the one that is
+server-rendered into the initial HTML — is the loading spinner (product-detail-
+client.tsx:129-152). Anything placed inside it does not exist for a reader that
+does not execute JavaScript, which is most of the answer engines this PRD is
+aimed at, and the FAQPage node would then be describing content no crawler could
+verify. So the block is a sibling of the client component, rendered by the route
+from the `seo` the page ALREADY resolved (`loadProductForRender`, the cache()d
+loaders `generateMetadata` shares) — no extra query. `<details>`/`<summary>`
+rather than a button and a state hook: collapsible, keyboard-operable, screen-
+reader-announced with no client JS, and the answer stays in the DOM while
+collapsed, which is what makes it extractable. Asserted: the element tree
+carries every question and every answer.
+
+ONE GATED READ, TWO CONSUMERS. `productQaEntries(source)` applies the plan gate
+and the parse; `buildProductQaJsonLd` calls it, and the page passes its result to
+the section. Structured data is policed on MATCHING the visible content, so the
+two must not be able to disagree about the plan, the parse, or which pairs
+survived — routing both through one function makes that structural. Asserted:
+with junk mixed into the stored list, the node's questions equal
+`productQaEntries`' questions exactly.
+
+DEVIATION FROM THE AC, STATED: the accordion is NOT `bs-*`. Those component
+classes are the ADMIN design system — dark card/gold/green tokens, applied under
+the `[data-surface="admin"]` gate (app/globals.css:1262-1268, 1377+) — and
+`grep -r "bs-card\|bs-btn\|bs-chip" app/store` returns NOTHING: no storefront
+page uses one. The section is themed the way every other block on the product
+page is, through the tenant's own `--tenant-color-*` variables, so a store's Q&A
+looks like the store rather than like the admin panel dropped into it.
+
+A THIRD WRITE HALF, NOT A THIRD MEANING FOR THE EXISTING FLAG. Q&A is authored
+for a READER (like title/description) but Pro-gated (like the crawler
+directives), and the two preserve decisions are genuinely independent: a Pro
+tenant editing only Q&A must not have their indexing rules rewritten from a body
+that never mentioned them, and vice versa. `entitySeoWrite` now composes
+content + indexing + qa from explicitly-named sources instead of "submitted,
+unless…" — the old shortcut return would have carried one group's submission
+into a save that was refused it. All four flag combinations are asserted, plus
+the no-options call, which behaves exactly as it did before.
+
+FAQPage HAS ONE BUILDER NOW. US-017's condition FAQ and this both emit the same
+node about a different page, so `buildFaqPageNode(url, entries)` was extracted
+from `buildConditionFaqJsonLd` and both call it. The gate and the column stay
+the caller's business. `readFaqEntries` was deliberately NOT reused for the
+product parse: it is zod-based, and `entity-seo.ts` states in its own docstring
+that it carries no zod because a client component imports it — so
+`lib/seo/product-qa.ts` is hand-rolled and dependency-free, and the SHAPE is
+asserted in both directions instead (the route's zod schema in, the parser out),
+which is the arrangement `isCanonicalOverrideUrl` already has.
+
+THE AI CONTRACT REFUSES A LIST THE WAY US-024 REFUSES A SENTENCE. `{"text": …}`
+cannot express a list, so `parseQaDraft` demands a JSON array of pairs and
+judges one: shape, then content, then the limits, measured after whitespace
+normalisation. A violation refuses the WHOLE draft rather than dropping the two
+bad pairs of eleven — a quietly shortened list is one the owner saves believing
+a human wrote every line. Refusal reasons are their own union (`too_many`,
+`question_too_long`, …) because the parent's "74 characters, over the 60 limit"
+wording says nothing useful about a list. The prompt bans invented medical,
+potency, price and availability claims and tells the model to LEAVE A QUESTION
+OUT rather than fill it in — a Q&A block is read as the store answering, and an
+invented claim would be published in the owner's name and quoted back as theirs.
+
+THE PIPELINE WAS FACTORED, NOT COPIED. `runCompletion` (meter -> credentials ->
+provider) is now shared by `generateSeoDraft` and `generateQaDraft`, so adding
+this contract added an output PARSER and nothing else: one place still decides
+how a tenant's AI quota is spent. The two share ONE rate-limit budget on purpose
+— it is one AI account either way (asserted on the limiter key). The non-draft
+HTTP shapes moved to `lib/seo/ai-assist-http.ts` because a Next route file may
+only export handlers, so the second route could not import the first's mapping;
+two copies would have drifted on a status code clients branch on.
+
+GATES. `requirePermission("canEditSeo")` wrapping `requireFeature(SEO_PRO)` on
+the draft route; permission-then-plan on the PUT, so a member without the
+permission is refused BEFORE the plan read (asserted: `tenants.findFirst` never
+called). A Basic tenant sending `qa` gets 403 `upgrade_required` and no write —
+INCLUDING `qa: []`, because clearing the last question is a Pro write and a gate
+that only noticed non-empty lists would let Basic undo a Pro configuration. One
+plan lookup covers both Pro groups, and a Basic tenant saving only a title still
+pays none. Storefront never blocks: Basic renders no accordion and no node, and
+their pairs stay in the column, dormant.
+
+COPY IS HONEST, AS THE RUN REQUIRES. The editor says the pairs render on the
+page and as FAQ structured data, "the form search and AI answer engines read" —
+and then, in the same paragraph, "it is not a guarantee of being cited". No
+string in this story promises a citation or a ranking.
+
+FLAGGED, NOT FIXED (adjacent debt, out of scope):
+- `conditions.faqs` (the seeded condition FAQ) has no editor at all — it is
+  seed-only data. Unchanged here; only its JSON-LD builder was refactored.
+- The condition FAQ accordion is still a framer-motion client component behind
+  the same client-fetch curtain this story worked around for products. Same
+  invisibility to a non-JS reader; no story asks for it.
+- `product-detail-client.tsx:186` still reads `product.currency || "EUR"` (the
+  display SYMBOL, hardcoding euros) — the live bug US-015's docstring recorded.
+  Untouched.
+
+HOW VERIFIED
+- `pnpm exec tsc --noEmit`                              -> exit 0 (repo-wide)
+- `pnpm vitest run tests/unit/seo-product-qa.test.ts`   -> 51 passed
+- `pnpm vitest run tests/unit/seo-product-qa-routes.test.ts` -> 27 passed
+- `pnpm vitest run tests/unit/seo-ai-assist.test.ts`    -> 39 passed (33 before;
+                                                           +6 for generateQaDraft)
+- `pnpm vitest run` (full)                              -> 2825 passed,
+                                                           30 skipped, 163 files,
+                                                           0 failed
+                                                           (2741 before; +84)
+- `pnpm exec next lint` on all 19 touched source files  -> no warnings, no errors
+- `pnpm check:security`                                 -> both gates green
+- LIVE, on `pnpm dev` with the existing `.env.local` (never modified):
+    * `POST /api/tenant-admin/seo/ai-assist/qa` unauthenticated -> 307
+      /auth/login (behind the Clerk wall, not publicly reachable)
+    * `PUT /api/tenant-admin/seo/products/{id}` with a `qa` body, unauthenticated
+      -> 307 /auth/login
+    * `GET /store/healingbuds/products/strain-123` -> the route COMPILED clean
+      (3511 modules, the new server component and JSON-LD included) and answered
+      404: the tenant lookup needs the Railway DB, which is not reachable from
+      this machine. Same local limit as US-001.
+    * the SEO Manager modal is Clerk-gated -> VISUAL: DEFERRED TO HUMAN REVIEW.
+      The rendered accordion is covered by a test that calls the component and
+      asserts every question and answer is in the element tree.
+- Docker runner image: EXPLICITLY CHECKED. Three new modules under `lib/`
+  (COPYied at Dockerfile:74), two new components under `components/` and two
+  new files under `app/` (compiled into `.next/standalone`, Dockerfile:59). No
+  new runtime import chain leaves the copied set and no new dependency — no
+  Dockerfile change needed.
+- No migration, no schema change: `qa` is a key in the existing `products.seo`
+  Json blob, and `products/sync` never writes that column, so authored pairs
+  survive every catalogue re-sync.

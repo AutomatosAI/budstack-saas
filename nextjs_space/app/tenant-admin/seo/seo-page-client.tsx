@@ -680,6 +680,8 @@ export function SeoPageClient({
           canUploadOgImage={seoProUnlocked}
           canEditIndexing={seoProUnlocked}
           canUseAiAssist={seoProUnlocked}
+          // LLM Visibility US-002 — products only; no other modal passes it.
+          canEditQa={seoProUnlocked}
           aiAssistConnected={aiAssistConnected}
         />
       )}
