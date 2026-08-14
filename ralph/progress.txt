@@ -709,3 +709,161 @@ HOW VERIFIED
   feature must not make).
 - NO LIVE API CALL WAS MADE WITH ANY TENANT CREDENTIAL. The only network request
   in this story was an unauthenticated GET of the public OpenAPI document.
+
+================================================================================
+[2026-08-14] US-006 PASS — Entity grounding
+================================================================================
+
+WHAT LANDED. A store can now name the profiles it runs elsewhere, and those
+URLs are published as `sameAs` on its Organization node — the property that
+lets a knowledge graph work out that the Instagram account, the LinkedIn page
+and this storefront are one business rather than three records with a similar
+name. Five new files, eight edited, no migration, no dependency.
+
+  lib/seo/social-links.ts          the rules, pure: https-only, cap 8, dedupe
+  lib/seo/tenant-social-links.ts   the ONE tenant-row -> list cascade
+  app/api/tenant-admin/seo/social-links/route.ts   the Pro write
+  components/admin/seo/BrandProfilesCard.tsx       the field
+  tests/unit/seo-social-links.test.ts              41 tests
+
+DECISIONS WORTH THE WORDS.
+
+  * `sameAs` IS OMITTED, NEVER EMPTY. `sameAs: []` is not "nothing to say yet",
+    it is a positive assertion that this business has no presence anywhere else
+    — a worse statement than silence and free to avoid. The builder emits the
+    key only when the normalised list is non-empty, and a test asserts the
+    string "sameAs" does not appear in the serialized node at all.
+
+  * BOTH PAGES THAT STATE THE ORGANIZATION NOW STATE THE SAME ONE. The homepage
+    and every Wire article emit the Organization under one `@id`
+    (json-ld.ts:206). If only the homepage carried the profiles, the two pages
+    would be two contradictory descriptions of one entity — the exact failure a
+    stable `@id` exists to prevent, already written down in tenant-logo.ts for
+    the logo. So `socialLinks` is a REQUIRED field on both source interfaces and
+    a REQUIRED 4th parameter of `buildOrganizationNode`: a caller that could
+    omit it would publish "this store has no profiles" on the article page. A
+    test builds both nodes and asserts the `@id` and the `sameAs` match.
+
+  * ONE CASCADE, ITS OWN MODULE. `tenantSocialLinks(row)` mirrors
+    `tenantLogoRef(row)` exactly, and for the identical reason. It could not
+    live in social-links.ts: the settings schema imports the size caps from
+    that module, so importing `parseTenantSettings` there would close a cycle
+    (social-links -> tenant-settings -> validation/tenant-settings ->
+    social-links). site-verification.ts documents the same constraint.
+
+  * SIZE IN THE SCHEMA, SCHEME IN THE ROUTE — the split US-026 and US-001 both
+    made, applied to an array. `lib/validation/tenant-settings.ts` bounds the
+    element COUNT and the element LENGTH and says nothing about https, because
+    that schema is what `parseTenantSettings` runs on every storefront read and
+    it fails as a UNIT: one hand-edited http entry would return `{}` and take
+    the tenant's tagline, colours and cookie banner down with it. Size is safe
+    to pin there because the write route is the only writer of the key and
+    cannot produce a violation. `readSocialLinks` re-applies the scheme on the
+    way out. A test proves it: a blob with a tagline and an http profile keeps
+    the tagline and publishes one link.
+
+  * THE WRITE REFUSES; THE READ FILTERS. `checkSocialLinks` (route + card) names
+    the offending line rather than dropping it, because a save that silently
+    returned a shorter list leaves an owner to work out which line went missing
+    and why. `normalizeSocialLinks` (read + builder) drops silently, because a
+    render path with no error.tsx boundary above it must publish less rather
+    than throw. Same rules, two dispositions, one module.
+
+  * THE AUDIT ROW RECORDS WHAT WAS PUBLISHED, NOT WHAT WAS STORED. `from` is the
+    previous list read through `readSocialLinks`, so a hand-edited http entry
+    that never reached anyone's structured data does not appear as something
+    the member just removed. The URLs go in the metadata, not a count: this is
+    an assertion of IDENTITY made in the store's name, and "who put that link
+    in our schema" is the question the row exists to answer.
+
+  * THE FIELD IS ONE TEXTAREA, ONE URL PER LINE. Named platform fields decide in
+    advance which platforms count; the list a store actually needs is whichever
+    of Instagram, a company register entry, a Trustpilot page and a parent
+    company's site it can stand behind. `sameAs` treats them identically, so the
+    field does.
+
+  * IT SITS IN THE VERIFICATION TAB, NOT A TENTH ONE. That tab is already where
+    a store states WHO IT IS to a search engine — the tokens prove the site is
+    yours, these links say which other records are also yours. Nothing here
+    configures a crawler, so it does not belong beside the AI Crawlers policy,
+    and the Pro tab strip stays at nine.
+
+  * THE COPY DOES NOT PROMISE A RANKING. The card says in as many words that
+    this is not a ranking lever and will not get the store cited — it removes an
+    ambiguity for an engine that has already found both records. It also warns
+    that listing an account you do not control teaches the engine the opposite
+    of what you meant.
+
+  * ESCAPE DISCIPLINE HELD WITHOUT A NEW RULE. A URL is a string an owner types,
+    and `new URL()` accepts `<` and `>` in a path — so `https://store/</script>`
+    is a VALID profile URL by the scheme rule. It reaches the DOM through
+    `serializeJsonLd` like every other value; a test smuggles that exact payload
+    in and asserts the output contains no literal `</script>`, contains the
+    escape `<`, and still parses back to the original string.
+
+FLAGGED, NOT FIXED (adjacent, out of scope):
+  * THREE PLACES NOW HOLD SOCIAL URLS. `settings.socialMedia` (an object of four
+    named platforms, rendered by components/footer.tsx),
+    `activeTemplate.layout.footerConfig.socialLinks` (an array, edited in
+    Branding -> Content, rendered by the FooterBrand/Full/Simple sections) and
+    now `settings.socialLinks`. They are genuinely different things — the first
+    two are template-scoped footer decoration that moves when a template is
+    swapped or cloned, this one is an entity fact about the business — but an
+    owner types their Instagram URL twice and nobody told them why. A later
+    story could seed this field from the footer list on first open; seeding is a
+    write path with its own hazards and was not in scope here.
+  * THE LocalBusiness NODE HAS NO `sameAs`. Google's LocalBusiness documentation
+    reads the property, and the node is a separate `@id` describing the same
+    business. Not a contradiction, just less said on one node — the AC named
+    Organization and the diff stops there.
+  * NO AUDIT CHECK FOR AN UNGROUNDED ENTITY. US-004's LLM-readiness section has
+    no "your store names no profiles" finding; it would be a natural addition to
+    audit-llm-checks.ts and is a story of its own.
+
+DOCKER RUNNER IMAGE: EXPLICITLY CHECKED. Two new modules under `lib/` (COPYied
+at Dockerfile:74); the route and the card compile into `.next/standalone`
+(Dockerfile:59). No new dependency and no runtime import chain leaving the
+copied set — social-links.ts imports nothing at all, tenant-social-links.ts
+reaches lib/tenant/tenant-settings, both already inside `lib/`. NO Dockerfile
+change needed.
+
+MERGE RULE (the #242/#243 incident): `git fetch origin main` run before this
+commit. `git merge-base HEAD origin/main` == `origin/main` (ce8a2d3) — main has
+not moved past this branch's base, so there was nothing to merge and the
+branch-local green IS the merge green. Recorded rather than assumed.
+
+HOW VERIFIED
+- `pnpm exec tsc --noEmit`                              -> exit 0 (repo-wide)
+- `pnpm vitest run tests/unit/seo-social-links.test.ts` -> 41 passed
+- adjacent suites (store-json-ld, article-json-ld,
+  tenant-settings, seo-upsell, seo-ai-crawlers,
+  seo-route-permissions)                                -> 145 passed
+- `pnpm vitest run` (full)                              -> 3026 passed, 30
+                                                           skipped, 168 files,
+                                                           0 failed
+                                                           (2985 before; +41)
+- `pnpm exec next lint` on all 17 touched TS/TSX files  -> 0 errors; one
+                                                           PRE-EXISTING warning
+                                                           (no-img-element at
+                                                           the-wire/[postSlug]/
+                                                           page.tsx:223, in the
+                                                           article body, not my
+                                                           diff)
+- `pnpm check:security`                                 -> both gates green
+- `tsx scripts/check-auth-wrappers.ts`                  -> 174 route files, the
+                                                           new route classified
+                                                           `wrapped`; the 5
+                                                           violations reported
+                                                           are all pre-existing
+                                                           and untouched here
+- VISUAL: DEFERRED TO HUMAN REVIEW. The SEO Manager is Clerk-gated and the
+  Verification tab needs the Railway DB, unreachable from this machine — the
+  same limit US-001 through US-005 recorded. No public route was added, so
+  there was nothing to live-curl either. The data path is covered instead: the
+  route's two gates (Basic 403 `upgrade_required`, `canEditSeo` refused BEFORE
+  the plan lookup, 401 before permissions resolve), the tenant-scoped
+  read-modify-write that preserves unknown settings keys, the 400 matrix
+  (non-array, non-string entry, over-long entry, over-long list, extra key,
+  http entry), and the empty-list save that clears the field.
+
+RALPH_COMPLETE — all six LLM Visibility stories are done.

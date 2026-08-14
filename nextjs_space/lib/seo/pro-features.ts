@@ -103,6 +103,12 @@ export const SEO_PRO_FEATURES: readonly SeoProFeature[] = [
       "Each week your own Automatos model is asked your market's questions, and we record whether its answer linked to your store.",
   },
   {
+    id: "entity-grounding",
+    title: "Brand entity grounding",
+    valueProp:
+      "Publish the profiles you already run as part of your store's structured data, so an engine can tell those accounts and this store are one business.",
+  },
+  {
     id: "verification",
     title: "Site verification & analytics tags",
     valueProp:

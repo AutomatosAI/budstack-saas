@@ -37,6 +37,7 @@ function source(overrides: Partial<StoreJsonLdSource> = {}): StoreJsonLdSource {
     subdomain: "acme",
     customDomain: CUSTOM_DOMAIN,
     logoRef: null,
+    socialLinks: [],
     businessAddress1: null,
     businessAddress2: null,
     businessCity: null,

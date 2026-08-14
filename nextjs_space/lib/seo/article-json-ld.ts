@@ -64,6 +64,13 @@ export interface ArticleJsonLdSource {
   readonly customDomain: string | null;
   /** Stored logo reference for the publisher — see `lib/seo/tenant-logo.ts`. */
   readonly logoRef: string | null;
+  /**
+   * US-006 — the publisher's profiles elsewhere, resolved through
+   * `lib/seo/tenant-social-links.ts`. Carried for the same reason `logoRef` is:
+   * this page states the Organization under the homepage's `@id`, so it must
+   * state the SAME entity, not a thinner copy of it.
+   */
+  readonly socialLinks: readonly string[];
   readonly slug: string;
   readonly title: unknown;
   readonly excerpt: unknown;
@@ -130,7 +137,12 @@ export function buildArticleJsonLd(
   const authorName = seoText(source.authorName);
 
   return [
-    buildOrganizationNode(storeUrl, publisherName, source.logoRef),
+    buildOrganizationNode(
+      storeUrl,
+      publisherName,
+      source.logoRef,
+      source.socialLinks,
+    ),
     {
       "@type": "Article",
       "@id": `${url}#article`,

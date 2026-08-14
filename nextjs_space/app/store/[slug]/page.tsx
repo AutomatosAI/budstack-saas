@@ -10,6 +10,7 @@ import { buildStoreJsonLd, type StoreJsonLdSource } from "@/lib/seo/json-ld";
 import { brandedOgImage } from "@/lib/seo/og-image";
 import { readStorePageSeo } from "@/lib/seo/store-pages";
 import { tenantLogoRef } from "@/lib/seo/tenant-logo";
+import { tenantSocialLinks } from "@/lib/seo/tenant-social-links";
 
 // Revalidate every 60 seconds — template/product data doesn't change frequently
 // This avoids hitting S3 + DB on every single request
@@ -63,9 +64,10 @@ export default async function TenantStorePage({
 /**
  * The tenant row → JSON-LD inputs.
  *
- * The logo comes from `tenantLogoRef`, shared with US-016's Article publisher:
- * both pages state the SAME Organization `@id`, so resolving the logo two ways
- * would be two contradictory descriptions of one entity.
+ * The logo comes from `tenantLogoRef` and the profiles from `tenantSocialLinks`,
+ * both shared with US-016's Article publisher: the two pages state the SAME
+ * Organization `@id`, so resolving either one two ways would be two
+ * contradictory descriptions of one entity.
  */
 function storeJsonLdSource(
   row: NonNullable<Awaited<ReturnType<typeof getTenantWithTemplate>>>,
@@ -77,6 +79,7 @@ function storeJsonLdSource(
     subdomain: row.subdomain,
     customDomain: row.customDomain,
     logoRef: tenantLogoRef(row),
+    socialLinks: tenantSocialLinks(row),
     businessAddress1: row.businessAddress1,
     businessAddress2: row.businessAddress2,
     businessCity: row.businessCity,

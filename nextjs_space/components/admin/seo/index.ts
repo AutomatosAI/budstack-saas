@@ -1,5 +1,6 @@
 export { AiAssistButton, AutomatosConnectCard } from './AiAssistButton';
 export { AiCrawlersTab } from './AiCrawlersTab';
+export { BrandProfilesCard } from './BrandProfilesCard';
 export { CitationsTab } from './CitationsTab';
 export { GooglePreview } from './GooglePreview';
 export { IndexingFields, type IndexingValue } from './IndexingFields';

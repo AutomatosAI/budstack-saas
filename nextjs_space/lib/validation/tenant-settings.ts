@@ -6,6 +6,10 @@ import {
   GA4_MEASUREMENT_ID_MAX_LENGTH,
   GOOGLE_SITE_VERIFICATION_MAX_LENGTH,
 } from "@/lib/seo/site-verification";
+import {
+  SOCIAL_LINKS_MAX,
+  SOCIAL_LINK_MAX_LENGTH,
+} from "@/lib/seo/social-links";
 
 /**
  * Tenant `settings` JSON-blob validation (PRD-204 AC-4; consumed by PRD-208).
@@ -182,6 +186,26 @@ const tenantSettingsShape = {
   aiCrawlerPolicy: z
     .string()
     .max(AI_CRAWLER_POLICY_MAX_LENGTH)
+    .nullable()
+    .optional(),
+
+  // LLM Visibility US-006 — the profiles this store publishes as `sameAs` on
+  // its Organization node (see lib/seo/social-links.ts).
+  //
+  // SIZE is pinned here, the https rule is NOT, and the split is the same one
+  // the four keys above make: this schema is what `parseTenantSettings` runs on
+  // every storefront read and it fails as a unit, so an http entry that reached
+  // the column by hand would return `{}` and take the tenant's tagline, colours
+  // and cookie banner down with it. `readSocialLinks` re-applies the scheme on
+  // the way out and drops what fails it.
+  //
+  // Size IS safe to pin because the write route is the only writer of this key
+  // and enforces both bounds before it stores anything — a violation can only
+  // arrive from outside the app, and a settings blob carrying a hundred URLs is
+  // a blob worth failing rather than round-tripping.
+  socialLinks: z
+    .array(z.string().max(SOCIAL_LINK_MAX_LENGTH))
+    .max(SOCIAL_LINKS_MAX)
     .nullable()
     .optional(),
 

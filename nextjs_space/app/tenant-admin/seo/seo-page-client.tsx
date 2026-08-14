@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AiCrawlersTab,
+  BrandProfilesCard,
   CitationsTab,
   LlmsTxtCard,
   RedirectsTab,
@@ -125,6 +126,12 @@ interface SeoPageClientProps {
    * arrives here as 'open' (maximum visibility) rather than as undefined.
    */
   aiCrawlerPolicy: AiCrawlerPolicy;
+  /**
+   * LLM Visibility US-006 — the profiles this store publishes as `sameAs`,
+   * resolved server-side through `readSocialLinks`, so an unreadable stored
+   * value arrives here as an empty list rather than as junk in a textarea.
+   */
+  socialLinks: readonly string[];
   /** `settings.analyticsEnabled` — whether the GA4 tag is allowed to load. */
   analyticsCookiesEnabled: boolean;
 }
@@ -141,6 +148,7 @@ export function SeoPageClient({
   aiAssistConnected,
   verification,
   aiCrawlerPolicy,
+  socialLinks,
   analyticsCookiesEnabled,
 }: SeoPageClientProps) {
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
@@ -652,13 +660,20 @@ export function SeoPageClient({
           </TabsContent>
         )}
 
-        {/* Verification Tab — Pro only (US-026) */}
+        {/* Verification Tab — Pro only (US-026, US-006) */}
         {seoProUnlocked && (
-          <TabsContent value="verification">
+          <TabsContent value="verification" className="space-y-6">
             <VerificationTab
               initialValues={verification}
               analyticsCookiesEnabled={analyticsCookiesEnabled}
             />
+            {/* LLM Visibility US-006 — the store's profiles elsewhere. It sits
+                in this tab rather than a tenth one because the tab is already
+                where a store states WHO IT IS to a search engine: the tokens
+                above prove the site is yours, these links say which other
+                records are also yours. Nothing here is configuration of a
+                crawler, so it does not belong beside the AI Crawlers policy. */}
+            <BrandProfilesCard initialLinks={socialLinks} />
           </TabsContent>
         )}
 
