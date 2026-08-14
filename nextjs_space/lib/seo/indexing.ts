@@ -124,6 +124,22 @@ export function isSitemapExcluded(seo: unknown, proUnlocked: boolean): boolean {
 }
 
 /**
+ * Has the owner told crawlers not to index this entity's page?
+ *
+ * The same question `seoIndexingDirectives` answers for a `<meta>` tag, asked
+ * by a caller that is deciding whether to LIST a URL rather than how to tag a
+ * page — LLM Visibility US-003's llms.txt, which cannot advertise a URL its own
+ * page asks not to be read. Takes the plan decision as a resolved boolean, like
+ * {@link isSitemapExcluded}, because one document asks it once per row.
+ *
+ * `nofollow` is deliberately not consulted: it is a statement about the links
+ * ON the page, not about the page itself.
+ */
+export function isEntityNoindexed(seo: unknown, proUnlocked: boolean): boolean {
+  return proUnlocked && readEntitySeo(seo).robots?.noindex === true;
+}
+
+/**
  * The Zod fields every SEO PUT route adds to its own schema.
  *
  * Spread into an existing `z.object({...}).strict()` rather than composed with

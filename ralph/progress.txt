@@ -255,3 +255,135 @@ HOW VERIFIED
 - No migration, no schema change: `qa` is a key in the existing `products.seo`
   Json blob, and `products/sync` never writes that column, so authored pairs
   survive every catalogue re-sync.
+
+
+================================================================================
+[2026-08-14] US-003 PASS — llms.txt generator
+================================================================================
+
+WHAT LANDED. `GET /llms.txt` on a store's own host: one markdown document naming
+the business, its address, every published condition guide, the catalogue and
+the Wire — links only, all absolute, all on the primary host. Five files:
+`lib/seo/llms-txt.ts` (the builder), `lib/seo/llms-txt-copy.ts` (the path + the
+UI copy), `app/store/[slug]/llms.txt/route.ts`, `components/admin/seo/
+LlmsTxtCard.tsx`, and a 42-case test. `lib/seo/indexing.ts` gained ONE exported
+predicate; nothing else in the parent run was touched.
+
+THIS ONE 404s, WHICH IS THE OPPOSITE OF EVERY OTHER STOREFRONT SURFACE. The
+run's contract is that the storefront DEGRADES on plan and never blocks — a
+shopper must not meet a paywall. Nothing shops here. The file is a Pro
+deliverable addressed to a machine, and a Basic store does not publish one; an
+empty 200 would be a CLAIM ("this store has nothing to show you") and the claim
+is false. So the route reads the plan through the same `isSeoProUnlocked` the
+robots.txt beside it uses, and 404s before it runs a single query — asserted:
+all three `findMany` mocks uncalled on a Basic request. Fail-closed on an
+unreadable plan for the recoverable reason: a store that should publish gets it
+back next request; a file a crawler has already read cannot be taken back.
+
+IT HONOURS BOTH EXCLUSIONS, WHICH THE SITEMAP DELIBERATELY DOES NOT. The parent
+kept `sitemapExclude` and `robots.noindex` independent on purpose (US-023's
+audit exists to REPORT the disagreement, so forcing them together would hide the
+state it looks for). llms.txt honours both, because a document whose entire
+purpose is "here is my store, please read it" cannot advertise a URL whose own
+page asks not to be read. That needed one new predicate — `isEntityNoindexed` in
+`lib/seo/indexing.ts`, mirroring `isSitemapExcluded`'s signature (plan as a
+resolved boolean: one document asks the question once per row, and the plan
+cannot change between two rows of one render). `nofollow` is NOT consulted — it
+is a statement about the links on a page, not about the page. The sitemap is
+unchanged.
+
+NO SILENT TRUNCATION. Products and posts render a BUDGET (100 / 50) so a store
+with thousands of rows publishes something a model will actually read. The
+budget is applied at RENDER, never as a `take` — a query-level cap would hide
+the count from the builder, and a shortened inventory that cannot say it was
+shortened reads as a complete one. Every section therefore opens with its own
+index URL, the identity block names the sitemap (which stays exhaustive), and an
+over-budget section prints "100 of 137 listed above. The complete list is at …".
+The count is of PUBLISHABLE rows, not fetched ones: an excluded row was never
+going to be listed, and counting it would report a number the owner cannot
+reconcile with their catalogue.
+
+MARKDOWN IS AN INJECTION SURFACE TOO. Not a script one — the file is served as
+text/plain — but a correctness one: a product called `Blue Dream [Reserve]`
+closes its own link and renders the rest as prose, and a condition slug
+containing a parenthesis terminates the URL early (`storeCanonical`
+percent-encodes what `new URL` does, and parentheses are not on that list). Both
+values are owner-typed. `escapeMarkdownText` escapes `\ [ ]` and collapses
+whitespace (body copy pasted into a title field would otherwise split the list
+item in two); `escapeMarkdownUrl` percent-encodes parentheses, which resolves to
+the identical URL.
+
+REUSE, NOT A SECOND OPINION. Every URL comes from `storeCanonical` over
+`productPath` / `conditionPath` / `wirePostPath` — the same builders the pages'
+canonicals and the sitemap use, so a link here and the canonical of the page it
+points at cannot disagree. Row descriptions use the precedence the metadata
+builders already apply (`seo.description` -> truncated body copy), so the
+sentence a model reads is the sentence the page publishes. The address goes
+through `buildPostalAddress`: its completeness floor (street + locality +
+country) decides whether a line is emitted at all, so this file cannot assert an
+address the JSON-LD refuses to state. The store summary is authored-home-
+description -> tagline -> the homepage's own fallback sentence, all off the row
+`getCurrentTenant` already resolved — no extra query, and the query shape
+mirrors the sitemap route beside it (tenantId named in every `where`, bound in
+`runWithTenantContextAsync`, `deletedAt: null` and `drGreenStrainId NOT NULL`
+stated where a reader can see them).
+
+"TOP" AND "RECENT" ARE THE STORE'S OWN ORDERS, NOT INVENTED ONES. Products sort
+by `displayOrder` then `name` (the owner's arrangement, with the column's
+`@default(0)` ties broken stably, so the budget cuts a stable list). Posts sort
+`createdAt: desc` — the exact order the Wire index renders — so "recent posts"
+means the posts a visitor sees at the top of that page. Conditions are NOT
+budgeted: a store's guides are the whole GEO wedge this PRD is built on.
+
+THE COPY IS THE ACCEPTANCE CRITERION. The card states, in the same breath as the
+feature: llms.txt is a proposed standard no AI company has committed to reading,
+~10% of sites publish one, the largest study of it (SE Ranking, 300,000 domains)
+found no measurable change in AI citations, and the actual case for shipping is
+that it costs nothing. The copy lives in constants so the four claims are
+assertable, and a test asserts the ABSENCE of the words an overselling edit
+would reach for ("guarantee", "boost", "rank higher", "more traffic"). The card
+carries the sentence "Nobody can honestly tell you this will get your store
+cited more often, and this page will not."
+
+FLAGGED, NOT FIXED (adjacent, out of scope):
+- The apex `/llms.txt` (budstacks.io itself) 307s to /auth/login, because
+  `isPublicRoute` lists `/robots.txt` and `/sitemap.xml` and there is no
+  platform llms.txt route to add. Tenant hosts are unaffected — they are
+  rewritten and returned before the auth check runs. No story asks for a
+  platform llms.txt; adding the allowlist entry without a route would only
+  change one 307 into one 404.
+- The file lists no static pages (/about, /contact, /support). The AC enumerates
+  identity, conditions, products and posts; the sitemap carries the rest and is
+  linked from the identity block.
+
+HOW VERIFIED
+- `pnpm exec tsc --noEmit`                          -> exit 0 (repo-wide)
+- `pnpm vitest run tests/unit/seo-llms-txt.test.ts` -> 42 passed
+- `pnpm vitest run` (full)                          -> 2867 passed, 30 skipped,
+                                                       164 files, 0 failed
+                                                       (2825 before; +42)
+- `pnpm exec next lint` on all 8 touched files      -> no warnings, no errors
+- `pnpm check:security`                             -> both gates green
+- LIVE, on `pnpm dev` with the existing `.env.local` (never modified):
+    * `GET /llms.txt` with `Host: healingbuds.budstacks.io` -> the ROUTE's own
+      plain-text body, byte-identical in behaviour to `/robots.txt` on the same
+      host. THE MATCHER PASSES `.txt` AND THE REWRITE FORWARDS IT — proven, not
+      read off the regex: had middleware skipped the request it would have hit
+      the platform 404 HTML instead.
+    * `GET /llms.txt` with `Host: shop.example.com` -> same. The custom-domain
+      branch forwards `pathname` verbatim through `customDomainRewritePath`, so
+      the AC's custom-domain requirement is covered on both host shapes.
+    * both answered 404 `Tenant not found`: the tenant lookup needs the Railway
+      DB, unreachable from this machine (the dev log shows the route executing
+      at `app/store/[slug]/llms.txt/route.ts:24` and Prisma failing to connect).
+      Same local limit US-001 and US-002 recorded. The document itself, the plan
+      gate and the exclusions are covered by the 42 tests, which run the real
+      route with only prisma and tenant resolution mocked.
+    * the SEO Manager is Clerk-gated -> VISUAL: DEFERRED TO HUMAN REVIEW. The
+      card is a props-only component; its copy is asserted from constants.
+- Docker runner image: EXPLICITLY CHECKED. Two new modules under `lib/`
+  (COPYied at Dockerfile:74), one new component under `components/` and one new
+  route under `app/` (compiled into `.next/standalone`, Dockerfile:59). No new
+  runtime import chain leaves the copied set and no new dependency — no
+  Dockerfile change needed.
+- No migration, no schema change, no new model: every field read already exists.

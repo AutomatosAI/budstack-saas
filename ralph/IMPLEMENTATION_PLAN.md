@@ -5,7 +5,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-llm-visibility.md` · Parent: `
 
 - [x] US-001 AI crawler policy manager
 - [x] US-002 Product Q&A blocks
-- [ ] US-003 llms.txt generator
+- [x] US-003 llms.txt generator
 - [ ] US-004 LLM-readiness audit section
 - [ ] US-005 AI citation monitor v1
 - [ ] US-006 Entity grounding

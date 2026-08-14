@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AiCrawlersTab,
+  LlmsTxtCard,
   RedirectsTab,
   SeoAuditTab,
   SeoEditorModal,
@@ -20,6 +21,7 @@ import {
   readEntitySeo,
   type EntitySeo,
 } from "@/lib/seo/entity-seo";
+import { LLMS_TXT_PATH } from "@/lib/seo/llms-txt-copy";
 import { productPath } from "@/lib/seo/product-paths";
 import {
   STORE_SEO_PAGES,
@@ -640,13 +642,18 @@ export function SeoPageClient({
           </TabsContent>
         )}
 
-        {/* AI Crawlers Tab — Pro only (LLM Visibility US-001) */}
+        {/* AI Crawlers Tab — Pro only (LLM Visibility US-001, US-003) */}
         {seoProUnlocked && (
-          <TabsContent value="ai-crawlers">
+          <TabsContent value="ai-crawlers" className="space-y-6">
             <AiCrawlersTab
               initialPolicy={aiCrawlerPolicy}
               robotsUrl={`${baseUrl}/robots.txt`}
             />
+            {/* US-003 — the other machine-readable file this store publishes.
+                It sits here rather than in a tab of its own because there is
+                nothing to configure: the card exists to say what the file is and
+                what the evidence for it actually shows. */}
+            <LlmsTxtCard llmsUrl={`${baseUrl}${LLMS_TXT_PATH}`} />
           </TabsContent>
         )}
 
