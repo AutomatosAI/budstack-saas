@@ -17,6 +17,8 @@ import type { CSSProperties } from "react";
 import { CartProvider } from "./_contexts/CartContext";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrapper";
+import { Ga4Tag } from "@/components/seo/ga4-tag";
+import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { sanitizeCss, extractGoogleFontsImports } from "@/lib/security/css-utils";
 import { hexToHsl } from "@/lib/color-utils";
 import type { Metadata } from "next";
@@ -163,6 +165,12 @@ async function renderTenantStore(
 
   // Get logo URL - prioritize active template logoUrl over legacy settings
   const settings = (tenantWithTemplate.settings as any) || {};
+  // SEO US-026 — the same blob read through the fail-closed parser, for the one
+  // consumer whose input reaches a <script>. Adds no query; the row is already
+  // in hand.
+  const parsedSettings = parseTenantSettings(tenantWithTemplate.settings, {
+    tenantId,
+  });
   let logoUrl: string | null = null;
 
   // 1. Try active template first
@@ -401,6 +409,16 @@ async function renderTenantStore(
           <main>{children}</main>
           {!skipLayoutChrome && renderFooter()}
           <CookieConsent tenant={tenantWithTemplate} />
+
+          {/* SEO US-026 — the store's own GA4 tag. Renders nothing unless the
+              tenant is on Pro, has a well-formed measurement id stored, has
+              Analytics Cookies switched on, AND the visitor has consented to
+              that category; the last of those is decided in the browser. */}
+          <Ga4Tag
+            tenantId={tenantId}
+            plan={tenantWithTemplate.plan}
+            settings={parsedSettings}
+          />
 
           {/* Conditionally render the Tenant's Automatos Widget if configured */}
           {tenantWithTemplate.automatosApiKey && (

@@ -139,6 +139,12 @@ export const AUDIT_ACTIONS = {
   // then chose to keep — nothing is saved by the generating route itself.
   SEO_AI_DRAFT_GENERATED: "seo.ai_draft_generated",
 
+  // SEO US-026: the store's Search Console / Bing / GA4 identifiers changed.
+  // Worth a row because these decide what a third party is told about the
+  // storefront's traffic, and because "who turned analytics on" is the first
+  // question asked after a privacy complaint.
+  SEO_VERIFICATION_UPDATED: "seo.verification_updated",
+
   // Branding
   BRANDING_UPDATED: "branding.updated",
   TEMPLATE_CHANGED: "template.changed",

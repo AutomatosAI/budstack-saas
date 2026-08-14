@@ -36,4 +36,4 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 - [x] US-023 SEO audit panel
 - [x] US-024 Automatos AI assist — spike + service
 - [x] US-025 AI assist UI
-- [ ] US-026 Site verification + GA4 fields
+- [x] US-026 Site verification + GA4 fields

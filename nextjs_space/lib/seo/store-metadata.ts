@@ -33,6 +33,7 @@
 import type { Metadata } from "next";
 
 import { brandedOgImage } from "@/lib/seo/og-image";
+import { storeVerificationMetadata } from "@/lib/seo/site-verification";
 import {
   STORE_OG_LOCALE,
   seoText,
@@ -139,6 +140,17 @@ export function buildStoreMetadata(source: StoreMetadataSource): Metadata {
     kind: "store",
   });
 
+  // US-026 — the Search Console / Bing tokens, declared on the LAYOUT so every
+  // page of the store carries them. Unlike `openGraph` above, `verification` is
+  // merged field-by-field by Next, and no store page declares one of its own, so
+  // this reaches all of them. Undefined for a Basic tenant, and for a Pro tenant
+  // who has verified nothing — and then no tag is emitted at all.
+  const verification = storeVerificationMetadata({
+    tenantId: source.tenantId,
+    plan: source.plan,
+    settings,
+  });
+
   return {
     metadataBase: storeMetadataBase(source.subdomain, source.customDomain),
     title: {
@@ -159,5 +171,6 @@ export function buildStoreMetadata(source: StoreMetadataSource): Metadata {
     // survive into a tenant page; Next refills both from this page's own
     // resolved title and description.
     twitter: { card: "summary_large_image" },
+    ...(verification ? { verification } : {}),
   };
 }

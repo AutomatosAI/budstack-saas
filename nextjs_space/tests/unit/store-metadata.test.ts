@@ -194,3 +194,45 @@ describe("buildStoreMetadata — favicon cascade", () => {
     }
   });
 });
+
+describe("buildStoreMetadata — site verification (US-026)", () => {
+  const GOOGLE_TOKEN = "AbCdEf0123456789_-AbCdEf0123456789_-AbCdEfg";
+
+  it("declares the tokens on the layout, so every store page carries them", () => {
+    const metadata = buildStoreMetadata(
+      source({
+        plan: "pro",
+        settings: {
+          googleSiteVerification: GOOGLE_TOKEN,
+          bingSiteVerification: "0123456789ABCDEF0123456789ABCDEF",
+        },
+      }),
+    );
+
+    expect(metadata.verification).toEqual({
+      google: GOOGLE_TOKEN,
+      other: { "msvalidate.01": "0123456789ABCDEF0123456789ABCDEF" },
+    });
+  });
+
+  it("omits the key entirely for a Basic tenant and for a store with nothing verified", () => {
+    expect(
+      buildStoreMetadata(
+        source({ plan: "basic", settings: { googleSiteVerification: GOOGLE_TOKEN } }),
+      ).verification,
+    ).toBeUndefined();
+    expect(buildStoreMetadata(source({ plan: "pro" })).verification).toBeUndefined();
+  });
+
+  it("does not disturb the rest of the metadata", () => {
+    const metadata = buildStoreMetadata(
+      source({ plan: "pro", settings: { googleSiteVerification: GOOGLE_TOKEN } }),
+    );
+
+    expect(metadata.title).toEqual({
+      template: `%s | ${BUSINESS_NAME}`,
+      default: BUSINESS_NAME,
+    });
+    expect(metadata.openGraph?.siteName).toBe(BUSINESS_NAME);
+  });
+});

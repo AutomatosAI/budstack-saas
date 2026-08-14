@@ -3222,3 +3222,146 @@ NOTES FOR US-026 (the last story)
 - The CSP nonce (middleware.ts:83-91) is untouched here — this story renders no
   script. US-026's GA4 tag is the first one that will need it, plus a
   `googletagmanager.com` entry in `lib/security/csp`.
+
+================================================================================
+[2026-08-14] US-026 PASS — Site verification + GA4 fields
+================================================================================
+
+WHAT LANDED: three fields, and the box this story refused to build.
+
+- The section an owner expects here on other platforms is a textarea that gets
+  injected into `<head>`. That is a persistent XSS with a settings form in front
+  of it, rendered under the tenant's own domain and cookies. What a store
+  actually needs out of that box is three values, so it is three fields —
+  `googleSiteVerification`, `bingSiteVerification`, `ga4MeasurementId` — each
+  pinned to a charset, and the route `.strict()`s everything else. Asserted from
+  the attacker's side: a hand-posted `{headHtml: "<script src=…>"}` is a 400, and
+  `<script>alert(1)</script>` in the Google field is a 400 naming that field.
+- PASTING THE WHOLE META TAG WORKS, and is the reason the fields can stay
+  structured. Search Console and Bing hand out `<meta … content="…">`;
+  `normalizeVerificationToken` takes the content out and the charset check then
+  refuses whatever is left over. It can only ever NARROW an input — a tag with no
+  readable content falls through unchanged and is rejected.
+
+WHERE THE CHARSET IS ENFORCED, AND WHY NOT WHERE THE AC SAID.
+The AC put "token charset/length pinned" in `lib/validation/tenant-settings.ts`.
+Length is pinned there; charset is NOT, deliberately. That schema is what
+`parseTenantSettings` runs on EVERY storefront read and it fails as a UNIT — one
+value that stopped matching would return `{}` and take the tenant's tagline,
+colours, logo and cookie banner down with it. So the split is the one
+`reorderReminderDays` already documents two fields above: bounded loosely in the
+shared blob, exact rule applied by the write route on the way IN and re-applied
+by `readSiteVerification` on the way OUT, which drops a bad value from the render
+instead of emitting a tag nobody authored. Both halves are asserted (a stored
+`'"><script>…` reads back as "").
+
+THE GA4 GATE IS FOUR CONDITIONS, and the two middle ones are the interesting
+ones:
+  1. tenant holds `seo.pro`                    -> server, `isSeoProUnlocked`
+  2. a well-formed id is stored                -> server, re-checked on read
+  3. the STORE's Analytics Cookies switch is on -> server, `settings
+     .analyticsEnabled` (tenant-settings.ts:111 — the flag the PRD named, which
+     until now had no storefront consumer at all)
+  4. the VISITOR consented to analytics        -> browser, per request
+(3) is a precondition, not a nicety: that switch is what the store's own cookie
+banner and cookie policy describe. Loading an analytics tag while the store's
+published position is "we do not use analytics cookies" makes the policy false.
+It defaults OFF, so the field says so beside the input and links to Cookie
+Settings — a silently dormant tag is a support ticket, not a security posture.
+(4) is STRICT, per PRD Open Question 3: no cookie means no, in every region,
+including opt-out ones (the same reading `useCookieConsent` already applies).
+Moving to Consent Mode changes `Ga4ConsentScripts` + `analyticsConsentGranted`
+and nothing else.
+
+WHY THE CONSENT CHECK IS IN THE BROWSER. `app/store/[slug]/page.tsx` declares
+`revalidate = 60`. A consent decision read server-side would be one visitor's
+cookie baked into the HTML the next visitor gets. What crosses from the server is
+store CONFIGURATION only (an id and a nonce); the per-visitor decision is read
+from `document.cookie`, re-read on every navigation because the component is
+mounted by the LAYOUT, which survives client-side navigation — without that, a
+visitor who accepts the banner is never counted until a full page load.
+
+CSP. `middleware.ts` nonce plumbing untouched. `lib/security/csp.ts` gains the
+GA hosts on the STORE variant ONLY — script-src `googletagmanager.com`,
+connect-src `google-analytics.com` + `*.google-analytics.com` (region1..14) +
+`*.analytics.google.com`, img-src for the beacon fallback. script-src is the
+CSP2 fallback and is the least load-bearing of the three: a CSP3 browser ignores
+host allowlists under 'strict-dynamic', and the tag is injected client-side by
+next/script (`document.createElement`, not the parser) so it inherits trust
+anyway, plus it carries the per-request nonce. connect-src and img-src are the
+ones that decide whether GA can REPORT — 'strict-dynamic' does not apply to
+them, and without them the tag loads and every hit is blocked, which looks
+exactly like "your analytics is broken". No SRI on gtag.js and that is not an
+oversight: it is generated per measurement id and rebuilt continuously, Google
+publishes no hash, and a pinned one would take the tag down on their next deploy
+(stated in the component).
+
+INJECTION, closed twice. The id is interpolated into a script body, so
+`isGa4MeasurementId` re-validates immediately before that line rather than
+trusting the prop — `^G-[A-Z0-9]{4,22}$` admits no quote, backslash or angle
+bracket. Asserted with `G-AB12'+alert(1)+'`, `G-AB12</script>` and friends.
+
+VERIFICATION TAGS ride the US-001 layout metadata: `verification.google` and
+`verification.other["msvalidate.01"]` on `buildStoreMetadata`, so every store
+page carries them and no page overrides them (Next merges `verification`
+field-by-field, unlike openGraph/twitter). Undefined for Basic and for a Pro
+store that has verified nothing — then no tag is emitted at all. The homepage's
+existing metadata is untouched and re-asserted.
+
+ADMIN SURFACE. A Verification tab in the SEO Manager beside Redirects and Audit,
+Pro-only, with the `verification` entry that has been sitting in
+`SEO_PRO_FEATURES` since US-013 as the Basic tenant's locked card. NOT on
+`/tenant-admin/settings`: that route is `withTenantAuth` and saves the Dr Green
+secret keys and SMTP, and bolting a plan gate onto it to add three SEO fields is
+how a payments-adjacent route acquires an unrelated failure mode. The page reads
+`settings` server-side and ships FOUR resolved values to the client — never the
+blob, which carries SMTP config and the Dr Green keys.
+
+Client-side validation runs against the same `SITE_VERIFICATION_FIELDS` contract
+the route enforces, so a mistyped token is named before the round trip; the
+server's own message still wins when one comes back, and a 400 that names a
+field pins the error to that input while a 403 (plan/permission) shows above the
+button.
+
+AUDIT: `seo.verification_updated` records WHICH fields changed and which were
+cleared, never the values — the tokens are published as meta tags and are not
+secrets, but an audit row is not the place to reprint them (asserted).
+
+FLAGGED, NOT FIXED (adjacent debt, out of scope):
+- The store layout still reads `settings as any` for logo/contact/social; this
+  story parses the blob properly for its own consumer and leaves that alone.
+- `analyticsEnabled` is written by `/api/tenant-admin/cookie-settings`
+  (`withTenantAuth`, no permission wrapper) — the mixed-auth debt already flagged
+  on the posts routes. Untouched.
+- Nothing pushes GA4 pageviews on client-side navigation; gtag's default
+  `send_page_view` fires on load only. Out of scope (the AC is "renders
+  CSP-nonce-safe and only when consent permits"), and worth a story of its own.
+
+HOW VERIFIED
+- `pnpm exec tsc --noEmit`                        -> exit 0 (repo-wide)
+- `pnpm vitest run` (full)                        -> 2685 passed, 30 skipped,
+                                                     165 files, 0 failed
+  (2635 before; +50 across two new files and two extended, 29 pure-module +
+  16 route + 2 CSP + 3 store-metadata)
+- `pnpm exec next lint` on all 14 touched files   -> no warnings, no errors
+- `pnpm check:security`                           -> both gates green
+- LIVE, on `pnpm dev` with the existing `.env.local` (never modified):
+    * `PUT /api/tenant-admin/seo/verification` unauthenticated -> 307
+      /auth/login (behind the Clerk wall, not publicly reachable)
+    * `GET /store/{slug}` response header carries the store CSP WITH
+      googletagmanager on script-src and google-analytics on connect-src and
+      img-src, alongside a fresh per-request nonce
+    * `GET /` (base variant) carries ZERO GA hosts — grep count 0
+    * the storefront itself 404s "Store Not Found" locally (no reachable DB), so
+      the rendered meta tags and the GA4 tag are covered by unit tests and
+      VISUAL: DEFERRED TO HUMAN REVIEW, as are the Clerk-gated admin pages.
+- Docker runner image: EXPLICITLY CHECKED. One new module under `lib/`
+  (COPYied at Dockerfile:74), two components + one admin component + one route
+  under `components/`/`app/` (compiled into `.next/standalone`, Dockerfile:59).
+  No new runtime import chain leaves the copied set and no new dependency — no
+  Dockerfile change needed.
+- No migration, no schema change: the three fields are keys in the existing
+  `tenants.settings` Json blob.
+
+RALPH_COMPLETE — US-026 was the last story. All 26 stories in
+ralph/IMPLEMENTATION_PLAN.md are checked; none is BLOCKED.

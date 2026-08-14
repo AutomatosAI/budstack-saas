@@ -3,7 +3,9 @@ import { prisma } from "@/lib/db";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
 import { isAiAssistConnected } from "@/lib/seo/ai-assist";
 import { isSeoProUnlocked } from "@/lib/seo/pro-features";
+import { readSiteVerification } from "@/lib/seo/site-verification";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
+import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
 import { SeoPageClient } from "./seo-page-client";
 
@@ -33,6 +35,11 @@ export default async function SeoPage() {
         customDomain: true,
         businessName: true,
         pageSeo: true,
+        // US-026: the verification tokens, the GA4 id and the store's Analytics
+        // Cookies switch all live in the settings blob. It is read here and
+        // PARSED here — only the four resolved values cross to the client, never
+        // the blob itself (it also carries SMTP config and the Dr Green keys).
+        settings: true,
         // US-013: the entitlement plan, read off the query this page already
         // runs rather than a second round trip through getTenantPlan(). The
         // column is the source of truth (lib/entitlements/plan.ts) and its
@@ -133,6 +140,11 @@ export default async function SeoPage() {
     plan: tenant.plan,
   });
 
+  // US-026 — through the fail-closed settings parser, so a malformed blob shows
+  // empty fields rather than taking the whole SEO Manager down.
+  const settings = parseTenantSettings(tenant.settings, { tenantId });
+  const verification = readSiteVerification(settings);
+
   return (
     <div>
       <div className="bs-page-header-centered">
@@ -154,6 +166,8 @@ export default async function SeoPage() {
         }))}
         seoProUnlocked={seoProUnlocked}
         aiAssistConnected={aiAssistConnected}
+        verification={verification}
+        analyticsCookiesEnabled={settings.analyticsEnabled === true}
         pageSeo={
           tenant.pageSeo as Record<
             string,

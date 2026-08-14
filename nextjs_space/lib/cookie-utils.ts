@@ -182,6 +182,29 @@ export function parseConsentCategories(
 }
 
 /**
+ * Has this visitor consented to analytics cookies?
+ *
+ * SEO US-026 — the per-visitor half of the GA4 gate (the store-level half is
+ * `settings.analyticsEnabled`, see `lib/seo/site-verification.ts`). Takes the
+ * raw `document.cookie` string so the rule is testable without a DOM.
+ *
+ * NO COOKIE MEANS NO, in every region. `getDefaultCategories('opt-out')` would
+ * say analytics is on by default for a US visitor, but that describes what the
+ * banner PRE-TICKS, not a decision the visitor has made — and this is the same
+ * reading `useCookieConsent` already applies (`categories?.analytics ?? false`).
+ * The strict posture the PRD assumes; a move to Consent Mode changes it here.
+ */
+export function analyticsConsentGranted(
+  cookieString: string | null | undefined,
+): boolean {
+  if (!cookieString) return false;
+  const match = new RegExp(
+    `(?:^|; )${CONSENT_CATEGORIES_COOKIE_NAME}=([^;]*)`,
+  ).exec(cookieString);
+  return parseConsentCategories(match?.[1])?.analytics === true;
+}
+
+/**
  * Stringify consent categories for cookie storage
  */
 export function stringifyConsentCategories(

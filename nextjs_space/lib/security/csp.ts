@@ -12,6 +12,23 @@
 export type CspVariant = "base" | "admin" | "store";
 
 /**
+ * SEO US-026 — the Google Analytics 4 hosts, added to the STORE variant only so
+ * the admin app and the platform pages keep the narrower policy. `region1.` …
+ * `region14.google-analytics.com` is why the collect host is a wildcard.
+ */
+const GA4_SCRIPT_HOSTS = ["https://www.googletagmanager.com"] as const;
+const GA4_CONNECT_HOSTS = [
+  "https://www.google-analytics.com",
+  "https://*.google-analytics.com",
+  "https://*.analytics.google.com",
+  "https://www.googletagmanager.com",
+] as const;
+const GA4_IMG_HOSTS = [
+  "https://www.google-analytics.com",
+  "https://www.googletagmanager.com",
+] as const;
+
+/**
  * Fresh per-request nonce: 16 random bytes (128-bit) base64-encoded. Never
  * reused across requests; generated once per request in middleware.
  */
@@ -43,6 +60,8 @@ export function buildCsp({
   nonce: string;
   variant?: CspVariant;
 }): string {
+  const store = variant === "store";
+
   const scriptSrc = [
     "'self'",
     `'nonce-${nonce}'`,
@@ -50,9 +69,16 @@ export function buildCsp({
     ...(variant === "admin" ? ["'unsafe-eval'"] : []),
     "https://*.clerk.accounts.dev",
     "https://challenges.cloudflare.com",
+    // SEO US-026: gtag.js, on the storefront only (nothing in the admin app
+    // loads GA4). CSP3 browsers ignore this under 'strict-dynamic' — the tag is
+    // injected client-side by next/script and inherits trust that way, and it
+    // carries the per-request nonce besides — so this entry is the CSP2
+    // fallback. The three directives below are the ones that actually decide
+    // whether GA4 can report: 'strict-dynamic' does not apply to them.
+    ...(store ? GA4_SCRIPT_HOSTS : []),
   ].join(" ");
 
-  const frameAncestors = variant === "store" ? "'self'" : "'none'";
+  const frameAncestors = store ? "'self'" : "'none'";
 
   const directives = [
     "default-src 'self'",
@@ -61,9 +87,12 @@ export function buildCsp({
     // it; nonce-ing every Tailwind/inline style is impractical and low-value.
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
-    "img-src 'self' data: blob: https://*.amazonaws.com https://img.clerk.com https://stage-api.drgreennft.com https://api.drgreennft.com https://cdn.abacus.ai",
+    // GA4 falls back to an image beacon when fetch/sendBeacon is unavailable.
+    `img-src 'self' data: blob: https://*.amazonaws.com https://img.clerk.com https://stage-api.drgreennft.com https://api.drgreennft.com https://cdn.abacus.ai${store ? ` ${GA4_IMG_HOSTS.join(" ")}` : ""}`,
     "media-src 'self' blob: https://*.amazonaws.com",
-    "connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.com https://*.drgreennft.com https://*.amazonaws.com wss://*.clerk.accounts.dev",
+    // Where the measurement protocol actually posts. Without these the tag loads
+    // and every hit is blocked, which looks exactly like "analytics is broken".
+    `connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.com https://*.drgreennft.com https://*.amazonaws.com wss://*.clerk.accounts.dev${store ? ` ${GA4_CONNECT_HOSTS.join(" ")}` : ""}`,
     "frame-src 'self' https://challenges.cloudflare.com https://*.clerk.accounts.dev",
     `frame-ancestors ${frameAncestors}`,
     "object-src 'none'",

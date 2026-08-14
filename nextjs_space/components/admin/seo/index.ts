@@ -8,3 +8,4 @@ export { RedirectsTab } from './RedirectsTab';
 export { SeoAuditTab } from './SeoAuditTab';
 export { SeoEditorModal } from './SeoEditorModal';
 export { SeoProUpsell } from './SeoProUpsell';
+export { VerificationTab, type VerificationValues } from './VerificationTab';

@@ -7,7 +7,9 @@ import {
   SeoAuditTab,
   SeoEditorModal,
   SeoProUpsell,
+  VerificationTab,
   type RedirectRow,
+  type VerificationValues,
 } from "@/components/admin/seo";
 import type { SeoAuditTarget } from "@/lib/seo/audit-types";
 import { conditionPath } from "@/lib/seo/condition-paths";
@@ -34,6 +36,7 @@ import {
   Sparkles,
   Signpost,
   Gauge,
+  BadgeCheck,
 } from "lucide-react";
 
 const sectionTitleStyle = {
@@ -103,6 +106,14 @@ interface SeoPageClientProps {
    * either way.
    */
   aiAssistConnected: boolean;
+  /**
+   * US-026 — the store's Search Console / Bing / GA4 values, read and re-checked
+   * server-side in page.tsx. Three strings, never the settings blob they came
+   * out of.
+   */
+  verification: VerificationValues;
+  /** `settings.analyticsEnabled` — whether the GA4 tag is allowed to load. */
+  analyticsCookiesEnabled: boolean;
 }
 
 export function SeoPageClient({
@@ -115,6 +126,8 @@ export function SeoPageClient({
   redirects,
   seoProUnlocked,
   aiAssistConnected,
+  verification,
+  analyticsCookiesEnabled,
 }: SeoPageClientProps) {
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
     null,
@@ -303,7 +316,7 @@ export function SeoPageClient({
           which arm it belongs in.
         */}
         <TabsList
-          className={`grid w-full grid-cols-2 ${seoProUnlocked ? "sm:grid-cols-6" : "sm:grid-cols-5"} lg:w-auto lg:inline-grid`}
+          className={`grid w-full grid-cols-2 ${seoProUnlocked ? "sm:grid-cols-7" : "sm:grid-cols-5"} lg:w-auto lg:inline-grid`}
         >
           <TabsTrigger value="products" className="gap-2">
             <Package className="h-4 w-4 hidden sm:block" aria-hidden="true" />
@@ -330,6 +343,17 @@ export function SeoPageClient({
             <TabsTrigger value="redirects" className="gap-2">
               <Signpost className="h-4 w-4 hidden sm:block" aria-hidden="true" />
               Redirects ({redirects.length})
+            </TabsTrigger>
+          )}
+          {/*
+            US-026 — the store's identity to Google, Bing and GA4. Pro only, and
+            configuration rather than authoring, so it sits after the four
+            content tabs and before the audit.
+          */}
+          {seoProUnlocked && (
+            <TabsTrigger value="verification" className="gap-2">
+              <BadgeCheck className="h-4 w-4 hidden sm:block" aria-hidden="true" />
+              Verification
             </TabsTrigger>
           )}
           {/*
@@ -582,6 +606,16 @@ export function SeoPageClient({
         {seoProUnlocked && (
           <TabsContent value="redirects">
             <RedirectsTab baseUrl={baseUrl} initialRedirects={redirects} />
+          </TabsContent>
+        )}
+
+        {/* Verification Tab — Pro only (US-026) */}
+        {seoProUnlocked && (
+          <TabsContent value="verification">
+            <VerificationTab
+              initialValues={verification}
+              analyticsCookiesEnabled={analyticsCookiesEnabled}
+            />
           </TabsContent>
         )}
 
