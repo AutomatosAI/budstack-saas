@@ -9,7 +9,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { GooglePreview } from "./GooglePreview";
-import { ImageIcon, Loader2, Save } from "lucide-react";
+import { OgImageField } from "./OgImageField";
+import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
 interface SeoData {
@@ -46,6 +47,13 @@ interface SeoEditorModalProps {
   previewUrl: string;
   initialSeo?: SeoData;
   onSave: (seo: SeoData) => Promise<void>;
+  /**
+   * US-019 — US-013's `seoProUnlocked`, resolved server-side from
+   * `tenants.plan`. Shows the OG image upload control; the URL field beside it
+   * belongs to Basic and is never hidden. See `OgImageField` for why this one
+   * Pro line has no server gate behind it.
+   */
+  canUploadOgImage?: boolean;
 }
 
 export function SeoEditorModal({
@@ -58,6 +66,7 @@ export function SeoEditorModal({
   previewUrl,
   initialSeo,
   onSave,
+  canUploadOgImage = false,
 }: SeoEditorModalProps) {
   const [title, setTitle] = useState(initialSeo?.title || "");
   const [description, setDescription] = useState(initialSeo?.description || "");
@@ -188,46 +197,11 @@ export function SeoEditorModal({
             </div>
           )}
 
-          <div className="space-y-2">
-            <label htmlFor="seo-og-image" className="bs-eyebrow flex items-center gap-2">
-              <span>Open Graph Image</span>
-              <span className="text-[10px] normal-case tracking-normal text-bs-fg-muted">
-                (1200x630 recommended)
-              </span>
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="seo-og-image"
-                value={ogImage}
-                onChange={(e) => setOgImage(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-                className="bs-input flex-1"
-              />
-              <button
-                type="button"
-                disabled
-                className="bs-btn bs-btn-ghost h-10 w-10 px-0"
-              >
-                <ImageIcon className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="text-xs text-bs-fg-muted">
-              Enter image URL or upload (upload coming soon)
-            </p>
-            {ogImage && (
-              <div className="mt-2 overflow-hidden rounded-bs-md border border-bs-border-100">
-                <img
-                  src={ogImage}
-                  alt="OG Preview"
-                  className="h-32 w-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><text x="10" y="30" fill="gray">Invalid Image</text></svg>';
-                  }}
-                />
-              </div>
-            )}
-          </div>
+          <OgImageField
+            value={ogImage}
+            onChange={setOgImage}
+            canUpload={canUploadOgImage}
+          />
         </div>
 
         <DialogFooter>

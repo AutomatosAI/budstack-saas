@@ -2211,3 +2211,136 @@ FLAGGED, NOT FIXED (adjacent debt)
 - No test covers RENDERABLE_LOGO_TYPES or tenantLogoDataUri: both live inside
   the route file and would need S3 mocking. The webp/avif finding is recorded in
   the docstring with its measurement.
+
+================================================================================
+[2026-08-14] US-019 PASS — OG image studio, real upload
+================================================================================
+
+THE DEAD BUTTON IS ALIVE. components/admin/seo/SeoEditorModal.tsx:147-157 was a
+permanently `disabled` ImageIcon under the caption "upload coming soon". It now
+posts to /api/tenant-admin/upload, takes the DURABLE publicUrl back, and drops
+it into the ogImage field — for all four entity types the editor serves
+(product, post, condition, static page), because they share one modal.
+
+THE PRESIGNED URL IS REFUSED, NOT PREFERRED-AGAINST. The route answers with two
+addresses for one object: `url` (presigned, dead in ~1h) and `publicUrl` (Email
+US-005's /api/public/images/<key>). uploadOgImage takes publicUrl and THROWS
+when it is absent — the email-p2 US-014 rule, and here it is not a style choice:
+storedPublicImagePath DROPS a signed URL, so an ogImage holding one renders no
+og:image at all. A fallback would store a value the storefront silently
+discards. That is asserted, not asserted-about: the test runs PRESIGNED_URL
+through buildStorePageMetadata and proves openGraph.images comes back undefined.
+(the-wire/post-form.tsx:61 still falls back to `url` — deliberately, per its own
+comment: a blog page re-renders and can be fixed in place. Left alone.)
+
+THE TAG A SCRAPER READS IS ABSOLUTE — the story note's assertion, composed the
+way Next composes it. What gets STORED is origin-relative (/api/public/images/…)
+because the storefront runs under img-src 'self'. The absolute half comes from
+US-001's metadataBase on the store layout, so the test resolves the page
+builder's relative image against the layout builder's metadataBase and pins
+https://shop.example/api/public/images/… — and the no-custom-domain case against
+the subdomain origin.
+
+1200x630 GUIDANCE THAT KNOWS WHAT YOU PICKED. "1200x630 recommended" under a
+field tells an owner nothing about the file in their hand. The preview <img>'s
+own onLoad reports naturalWidth/naturalHeight (no second probe, no extra
+fetch) and ogImageSizeWarning — a pure function, 8 tests — answers with one of:
+nothing (at or near the ratio), "under 600x315 it is shown as a small thumbnail"
+(X's documented floor for summary_large_image), or "cropped to 1200x630, so the
+edges will be cut off" (>10% off 1.91:1). Both name the measured size. It is a
+WARNING, never a rejection: the image is the owner's.
+
+THE CLIENT CAP IS 5MB, HALF THE SERVER'S 10MB, and the reason is not ours — X
+and LinkedIn stop fetching an og:image above 5MB, so a 9MB card the upload route
+happily accepts is a card that never renders where it matters. Pinned by a test
+that shows validateUpload accepting the same 8MB file this module refuses.
+
+PRO GATE — AND AN HONEST STATEMENT OF WHAT IT IS. The upload control renders
+only when US-013's seoProUnlocked is true; Basic keeps the URL field (the AC),
+plus a one-line upsell link. THERE IS NO SERVER GATE BEHIND THIS ONE, which is
+stated in the component docstring rather than implied, because every other
+Workstream C capability has one:
+  - /api/tenant-admin/upload is the SHARED endpoint behind blog covers and
+    branding logos. Plan-gating it would break those for every Basic tenant.
+  - A parallel Pro-only upload route would gate nothing: the same tenant can
+    already upload a file in the Wire editor and paste the durable URL into the
+    field beside this button. That is theatre, not a boundary.
+  - So the button is a CONVENIENCE, not a privilege, and hiding it removes no
+    access a Basic tenant had. The anti-pattern the PROMPT bans — a Pro feature
+    reachable by DOM-poking — does not arise, because there is no privilege to
+    escalate to. Flagged here for review rather than papered over.
+
+WHY UPLOADING BEATS PASTING (in the copy, and true): both admin and storefront
+run under img-src 'self' data: blob: https://*.amazonaws.com (lib/security/csp
+.ts:64), so an image on any other host cannot even be PREVIEWED in the editor.
+The old code answered that by swapping the <img> src for a grey "Invalid Image"
+data-URI — which would now re-fire onLoad and report the placeholder's 100x50 as
+the owner's image. Replaced with an explicit failed-preview line that says what
+is actually true: a scraper fetches the card directly, so an off-host image may
+still work; an uploaded one always will.
+
+FILES
+  NEW components/admin/seo/og-image-upload.ts   (~190 lines, pure + fetch)
+  NEW components/admin/seo/OgImageField.tsx     (~200 lines, the field)
+  NEW tests/unit/og-image-upload.test.ts        (32 tests)
+  MOD components/admin/seo/SeoEditorModal.tsx   (-56/+22 — the OG block moved out
+      whole; the modal shrank from 264 to 230 lines)
+  MOD app/tenant-admin/seo/seo-page-client.tsx  (canUploadOgImage on all four)
+  MOD components/admin/seo/index.ts             (export)
+
+RESTATED, NOT IMPORTED — and pinned. The four offered types could not be
+imported from the server modules (@/lib/api-error and file-type in a browser
+bundle), so the test walks each one through BOTH server rules that could refuse
+it: validateUpload and isServablePublicImageType. Same guard the email module
+carries. SVG is absent for the usual reason and is asserted absent.
+
+VERIFIED
+- pnpm exec tsc --noEmit                                      -> exit 0
+- pnpm vitest run tests/unit/og-image-upload.test.ts          -> 32 passed
+- pnpm vitest run (all projects) -> 151 files, 2346 passed, 30 skipped, 0 failed
+  (was 150/2314 at US-018: +1 file, +32 tests, no regressions)
+- pnpm check:security                                         -> both gates green
+- pnpm exec next lint (6 touched files) -> "No ESLint warnings or errors". The
+  preview <img> carries the @next/next/no-img-element disable the file it came
+  from already had — next/image cannot take an arbitrary owner-pasted host.
+- pnpm build -> exit 0, Compiled successfully. /tenant-admin/seo is 13.1 kB
+  route / 150 kB First Load — the upload module adds no heavyweight import
+  (it deliberately does NOT reach the email one, which drags @tiptap/core).
+- LIVE (pnpm dev on the existing .env.local, never modified), :3001:
+    GET /tenant-admin/seo            -> 307 /auth/login?redirect_url=…  (0.23s)
+    POST /api/tenant-admin/upload    -> 307 /auth/login?redirect_url=…
+  Both Clerk-gated at the middleware, so there is no unauthenticated path to the
+  studio or to the endpoint behind it.
+  visual: deferred to human review — the modal is behind Clerk and needs a real
+  tenant session plus a reachable DB (Railway private network). What can be
+  asserted purely is: the URL that gets stored, the refusal to fall back, the
+  type/size gate, the guidance thresholds, and the absolute tag that comes out.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson) — no change needed, and checked
+rather than assumed. Both new modules live under components/ and are reached
+ONLY through the client bundle (SeoEditorModal -> seo-page-client -> the page),
+which Next compiles into .next/standalone + .next/static, both already COPYied
+(Dockerfile:59-60). grep confirms nothing under scripts/ imports components/, so
+no tsx-resolved runtime path reaches outside the bundle.
+
+NO SCHEMA CHANGE, NO MIGRATION, NO NEW ROUTE, no tenantScopedModels change, no
+new allow-list entry in either auth gate. The write routes already accept the
+value: ogImage is z.string().max(2000) on all four SEO routes, not .url(), so a
+relative durable path saves as-is.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- app/store/[slug]/page.tsx:462 STILL passes homeSeo.ogImage into the tag
+  without storedPublicImagePath — so on the HOMEPAGE only, a presigned URL
+  pasted before Email US-005 still reaches og:image. US-018 flagged it; US-019
+  now makes it sharper, because the studio can only ever write durable paths
+  while that one path can still render an expiring one. One-line fix, but it
+  changes homepage behaviour, which the PROMPT protects.
+- The homepage still builds metadata inline with its own second
+  prisma.tenants.findUnique instead of buildStorePageMetadata (US-002's flag).
+- No test covers OgImageField's render (unit project is environment: "node", no
+  jsdom). Everything decidable was pushed into pure functions for that reason;
+  what is left untested is JSX wiring and the onLoad measurement.
+- The upload button has no progress announcement for a screen reader — the
+  spinner sits in an aria-hidden decorative button and only the sonner toast
+  announces the outcome. Same shape as the Wire post form; a fix belongs in
+  both, not in an SEO story.

@@ -481,6 +481,7 @@ export function SeoPageClient({
           previewUrl={`${baseUrl}${productPath(selectedProduct.drGreenStrainId)}`}
           initialSeo={selectedProduct.seo || undefined}
           onSave={handleSaveProductSeo}
+          canUploadOgImage={seoProUnlocked}
         />
       )}
 
@@ -496,6 +497,7 @@ export function SeoPageClient({
           previewUrl={`${baseUrl}/the-wire/${selectedPost.slug}`}
           initialSeo={selectedPost.seo || undefined}
           onSave={handleSavePostSeo}
+          canUploadOgImage={seoProUnlocked}
         />
       )}
 
@@ -511,6 +513,7 @@ export function SeoPageClient({
           previewUrl={`${baseUrl}${conditionPath(selectedCondition.slug)}`}
           initialSeo={selectedCondition.seo || undefined}
           onSave={handleSaveConditionSeo}
+          canUploadOgImage={seoProUnlocked}
         />
       )}
 
@@ -526,6 +529,7 @@ export function SeoPageClient({
           previewUrl={`${baseUrl}${selectedPage.path || "/"}`}
           initialSeo={readStorePageSeo(localPageSeo, selectedPage.key)}
           onSave={handleSavePageSeo}
+          canUploadOgImage={seoProUnlocked}
         />
       )}
     </>
