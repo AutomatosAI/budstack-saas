@@ -1261,3 +1261,112 @@ FLAGGED, NOT FIXED (adjacent debt)
   posts permissions rather than canEditSeo. Deliberate, not an oversight: that
   is the Wire editor's own field next to the image, and the SEO Manager's route
   for the same row is now gated. Worth a decision if the surfaces ever merge.
+
+================================================================================
+[2026-08-14] US-011 PASS — Tenant plan column + entitlement matrix (extends #235)
+
+WHAT LANDED
+- prisma/schema.prisma: tenants.plan String @default("trial"). One column, no
+  other schema change (the story says "add ONLY the column").
+- prisma/migrations/20260814010000_add_tenant_plan/migration.sql — hand-authored.
+- lib/entitlements/plan.ts (new, pure): PLANS, Plan, DEFAULT_PLAN='trial',
+  FAIL_CLOSED_PLAN='basic', parsePlan(), isPlan().
+- lib/entitlements/features.ts (extended): FEATURES gains SEO_CORE 'seo.core' +
+  SEO_PRO 'seo.pro'; PLAN_FEATURES matrix; getTenantFeatures now resolves from
+  the column; featuresForPlan() added for callers already holding a Plan.
+- lib/entitlements/require-feature.ts (new): getTenantPlan() (the DB read) +
+  requireFeature() route gate + the upgrade_required 403 body.
+- lib/entitlements/clerk-plan-mirror.ts (new): mirrorPlanToClerkOrg() —
+  write-only, never throws, returns {mirrored, reason} for US-012 to warn on.
+- app/api/tenant-admin/analytics/route.ts: the one existing call site now passes
+  the real plan.
+- tests/unit/entitlements-plan.test.ts (new, 46 tests).
+
+DECISIONS
+- TEXT COLUMN, NOT A PRISMA ENUM. An enum would make "unknown column value"
+  impossible at the DB and turn a bad value into a write error — which
+  contradicts the fail-closed AC and would drift from the datamodel. Parsing is
+  the boundary instead: exact-match, no trim, no case-fold.
+- FAIL-CLOSED LANDS ON 'basic', NEVER 'trial'. trial grants everything, so a
+  parse failure resolving there is a free upgrade for anyone who can corrupt a
+  row. Every unhappy path — unknown value, missing row, query throws, call site
+  omits plan — resolves to the paid floor. Pinned by 10 parametrised cases plus
+  three getTenantPlan cases.
+- DEFAULT 'trial' on the column is fail-OPEN, and only here. Every existing
+  tenant is inside the launch window the seam already grants all features to, so
+  backfilling as 'trial' preserves exactly today's behaviour. The DENIAL path is
+  the fail-closed one. Reasoned in the migration header so it reads as a
+  decision, not an oversight.
+- ANALYTICS KEYS UNTOUCHED ON EVERY PLAN. AC-2 is explicit that the analytics
+  basic/pro split is the analytics module's pending decision. BASIC_FEATURES
+  carries all four analytics.* keys, and an it.each over PLANS asserts it, so a
+  drive-by edit has to argue with a red test.
+- requireFeature WRAPS THE HANDLER, NOT THE ROUTE. That is what lets one
+  function serve both requirePermission (2-arg) and requirePermissionParams
+  (3-arg) — generic over the trailing args, params forwarded untouched. The
+  sanctioned order is requirePermission(key, requireFeature(feature, handler)):
+  auth and permission deny FIRST, so an unauthorised caller never costs a plan
+  query and never learns the tenant's plan. Asserted both ways (findFirst not
+  called on 401 and on permission-403).
+- 403 SHAPES ARE DISTINGUISHABLE. Permission denial keeps the bare {error}; plan
+  denial adds code:'upgrade_required' + feature + plan. Without that the client
+  cannot tell "upgrade" from "ask your admin". Test asserts the permission
+  denial has NO code field, so the two can't converge later.
+- CLERK MIRROR IS WRITE-ONLY AND LIVES HERE, WIRED IN US-012. AC-5 sets the
+  policy, US-012's AC owns the call on plan change — so this story ships the
+  helper and the guarantees, not the caller. tenants.id is a UUID, NOT the org
+  id: the org id is settings.clerkOrgId, read through parseTenantSettings (so a
+  malformed blob degrades to "no org" rather than throwing).
+  updateOrganizationMetadata merges, so onboarding's nftTokenId/countryCode
+  survive.
+- THE ANALYTICS CALL SITE CHANGE IS FREE. `plan` rides along on the tenants row
+  the route ALREADY fetches for verificationMode — no second query. Response is
+  byte-identical today (analytics keys are granted on every plan); passing the
+  real value makes that a decision rather than a fail-closed accident the day
+  analytics picks its split. getTenantFeatures kept `plan` optional, so the
+  pre-column #235 call shape still compiles and degrades to basic.
+- FR-5 in the PRD says "Clerk claim > tenants.plan column > basic". Superseded
+  by the explicit decision in US-011 AC-5 and the run brief: the column is the
+  only source, Clerk is never read. A stale or failed Clerk sync must not be
+  able to lock a paying tenant out or unlock a Basic one.
+
+VERIFIED
+- pnpm prisma validate               -> schema valid
+- pnpm prisma generate               -> client generated (v6.7.0)
+- MIGRATION SQL diffed against the canonical output. Snapshotted the pre-story
+  schema, then:
+    prisma migrate diff --from-schema-datamodel <pre> \
+      --to-schema-datamodel prisma/schema.prisma --script
+    => ALTER TABLE "tenants" ADD COLUMN "plan" TEXT NOT NULL DEFAULT 'trial';
+  Shipped SQL is that statement with IF NOT EXISTS per repo convention
+  (20260814000000_add_seo_permissions). Metadata-only on PG11+, no heap rewrite.
+  Never ran migrate dev/deploy/db push.
+- pnpm exec tsc --noEmit             -> exit 0
+- pnpm vitest run tests/unit/entitlements-plan.test.ts -> 46 passed
+- pnpm vitest run --project unit     -> 133 files, 2127 passed, 0 failed
+  (was 132/2081 at US-010: +1 file, +46 tests, no regressions)
+- pnpm check:security                -> both gates green
+- pnpm exec next lint (6 touched)    -> no warnings or errors
+  visual: n/a — no UI in this story. US-012/US-013 carry the surfaces.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson): three new runtime modules, all
+under lib/entitlements/. Imports are @clerk/nextjs/server, next/server,
+@/lib/db, @/lib/logger and @/lib/tenant/tenant-settings — every one inside
+directories the runner already COPYies (nextjs_space/Dockerfile:57-95). No
+import edge leaves the Next bundle. No Dockerfile edit needed.
+
+NO tenantScopedModels CHANGE: `tenants` is the tenant, not a tenant-scoped
+child, so it is correctly absent from that set in lib/db.ts. Both new queries
+use findFirst on the flat `id` field per repo convention.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- No route consumes requireFeature yet — the C stories (US-014+) attach it. The
+  gate is proven by tests against the real wrappers rather than by a live route,
+  which is the correct order: the boundary exists before the features it guards.
+- lib/entitlements/features.ts docstring said "call sites do not change". They
+  now pass `plan` alongside `id`. Docstring updated to match; the behavioural
+  promise it was making (responses and membership checks keep working) holds —
+  asserted by the full unit run.
+- app/api/tenant-admin/analytics/route.ts still uses findUnique on tenants
+  (pre-existing, and safe — `id` is a simple unique, not a compound one). Left
+  as found; only its select list changed.

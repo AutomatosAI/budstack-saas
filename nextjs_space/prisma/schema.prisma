@@ -795,6 +795,7 @@ model tenants {
   automatosApiKey        String?
   automatosAgentId       Int?
   pageSeo                Json?
+  plan                   String                    @default("trial") // SEO US-011: operator-set entitlement plan (trial|basic|pro|custom). Source of truth — Clerk org metadata is a write-only mirror.
   deletedAt              DateTime? // PRD-208 soft-delete (recoverable; NULL = live)
   conditions             conditions[]
   consultations          consultations[]

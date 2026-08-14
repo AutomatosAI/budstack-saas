@@ -18,7 +18,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 
 ## Workstream B — Plan plumbing (thin, Clerk-carried)
 
-- [ ] US-011 Tenant plan resolution + seoPro gate
+- [x] US-011 Tenant plan resolution + seoPro gate
 - [ ] US-012 Super-admin plan control
 - [ ] US-013 Upsell UI states
 
