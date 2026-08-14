@@ -2,6 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse, NextRequest, type NextFetchEvent } from "next/server";
 import { parseHostToTenantHint, wwwRedirectHost } from "@/lib/parse-host";
 import { customDomainRewritePath } from "@/lib/custom-domain-rewrite";
+import { resolveStoreRedirect } from "@/lib/seo/redirect-lookup";
 import { applyCsp, buildCsp, generateNonce, variantForServedPath } from "@/lib/security/csp";
 
 // Define public routes
@@ -32,6 +33,11 @@ const isPublicRoute = createRouteMatcher([
   // SEO US-018: branded og:image, fetched by link scrapers with no session.
   // Tenant comes from the host, plan-gated inside the route, IP rate-limited.
   "/api/public/og",
+  // SEO US-020: the redirect table middleware itself refreshes from. Fetched by
+  // middleware BEFORE the auth check on every request, so it can never present a
+  // session; the tenant comes from the host it is asked about, and the answer is
+  // a list of paths that already redirect in public.
+  "/api/public/seo/redirects",
   "/onboarding", // Customer onboarding wizard
   "/api/onboarding", // Public onboarding validation/submission
   "/api/consultation(.*)", // Public consultation submission
@@ -126,6 +132,37 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
   // .abacusai.app skip below) stay here — they are middleware-specific, not host→tenant
   // mapping. parseHostToTenantHint reads NEXT_PUBLIC_BASE_DOMAIN itself and strips the port.
   const hint = parseHostToTenantHint(hostname);
+
+  // SEO US-020: an owner's redirects fire HERE, before routing, so a moved page
+  // answers 301 instead of 404 — including for paths that match no route at all,
+  // which is most of what a redirect manager is bought for and the reason this
+  // cannot live in a page or a layout.
+  //
+  // The table is an in-memory, per-host, stale-while-revalidate cache; the
+  // database is unreachable from the edge runtime. A warm instance spends one
+  // Map lookup here and a tenant with no redirects holds an empty table, so the
+  // common path costs nothing. Any failure resolves to "no redirect" and the
+  // request carries on exactly as it did before this feature existed. See
+  // lib/seo/redirect-lookup.ts for the full cost model.
+  const storeRedirect = await resolveStoreRedirect({
+    origin: url.origin,
+    host: hostname,
+    pathname,
+    method: req.method,
+    hint,
+  });
+  if (storeRedirect) {
+    const dest = new URL(url);
+    dest.pathname = storeRedirect.location;
+    // The query survives the move: a campaign link's ?utm_source is the reason
+    // the old URL is still being followed, and dropping it here would break the
+    // attribution the redirect exists to preserve.
+    return applyCsp(
+      NextResponse.redirect(dest, storeRedirect.statusCode),
+      nonce,
+      'base',
+    );
+  }
 
   // PRIORITY 1: Subdomain-based routing (REWRITE)
   // Rewrite slug.budstacks.io/foo -> /store/slug/foo

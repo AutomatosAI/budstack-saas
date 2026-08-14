@@ -2344,3 +2344,153 @@ FLAGGED, NOT FIXED (adjacent debt)
   spinner sits in an aria-hidden decorative button and only the sonner toast
   announces the outcome. Same shape as the Wire post form; a fix belongs in
   both, not in an SEO story.
+
+================================================================================
+[2026-08-14] US-020 PASS — Redirects manager
+================================================================================
+
+WHAT LANDED
+- prisma model seo_redirects (tenantId, fromPath, toPath, statusCode, createdAt),
+  @@unique([tenantId, fromPath]) + @@index([tenantId, createdAt]), CASCADE on the
+  tenant FK. Hand-authored migration 20260814020000_add_seo_redirects; registered
+  in tenantScopedModels (lib/db.ts:62).
+- lib/seo/redirects.ts — the pure rules all three callers share (write routes,
+  public feed, edge middleware): normalisation, reserved paths, status-code
+  narrowing, chain/loop detection, exact matching.
+- lib/seo/redirect-lookup.ts — the edge-safe per-host table cache middleware
+  reads. lib/seo/redirect-write.ts — the DB-aware half of validation.
+- app/api/public/seo/redirects (Node) — the feed the cache refreshes from.
+- app/api/tenant-admin/seo/redirects{,/[id]} — list / create / retarget / delete.
+- components/admin/seo/RedirectsTab + RedirectRowItem, wired as a fifth tab in
+  the SEO Manager for Pro tenants; page.tsx loads the rows for EVERY plan.
+
+THE ARCHITECTURAL DECISION, AND WHY (this is the story's whole difficulty)
+Next 14 runs middleware in the EDGE runtime. It cannot reach Prisma, and it does
+not today — middleware.ts imports three pure modules and never queries. The
+story's note guessed tenant resolution in middleware might be fetch-based and
+could carry a hasRedirects flag; it is NOT. Middleware does pure host parsing
+(parseHostToTenantHint) and resolves nothing. So there is no payload to piggyback
+and no query to add. The note's own fallback — "a lightweight internal API" — is
+what shipped:
+
+  middleware  --(cold/hard-expired only)-->  GET /api/public/seo/redirects
+              <-- whole table for that host, cached per host in module scope
+
+Cost model, which is the part the AC grades:
+  - warm (effectively every request): one Map lookup, then a scan of an array
+    that is EMPTY for a tenant with no redirects. No fetch, no query, no await
+    that resolves late.
+  - soft-stale (>60s): the cached table is used AS IS and a refresh runs behind
+    the request. The visitor waits for nothing.
+  - cold / >10min: ONE fetch, hard-capped at 800ms, in-flight-deduped so a burst
+    costs one call. Timeout or error resolves to an EMPTY table for 15s and the
+    request proceeds untouched.
+A tenant with no redirects therefore pays one fetch per instance per ten minutes
+and nothing else. Rejected alternatives: a per-request query (impossible from
+edge, and the note forbids the latency anyway); a catch-all store route (zero
+cost, but it can only see paths that match NO route — it would miss /about and
+every /the-wire/[slug], which is most of what US-021 will need); next.config
+redirects (needs a deploy).
+
+WHY THE HOST IS A QUERY PARAM on the feed, breaking the usual "tenant from the
+HOST" convention: behind Cloudflare for SaaS the real host arrives in
+x-original-host and is only trusted paired with CF_PROXY_SECRET, which middleware
+deliberately strips before anything downstream sees it — a loopback fetch cannot
+replay the pair — and setting a Host header on fetch() is forbidden by the Fetch
+spec. The tenant still comes from a HOST STRING through the canonical resolver,
+never from a caller-chosen tenant id, and the response is public information
+either way (these paths already redirect in public).
+
+GATES
+- Writes: requirePermission("canEditSeo", requireFeature(FEATURES.SEO_PRO, …)) on
+  POST, PUT and DELETE. Permission first, so an unauthorised member is refused
+  BEFORE the plan lookup and never learns the tenant's plan. Verified by test:
+  the editless member's 403 happens with tenants.findFirst never called.
+- The LIST is permission-gated but NOT plan-gated, deliberately. A tenant who
+  drops to Basic keeps their rules — dormant, still listed, still deletable — so
+  a downgrade never looks like data loss. Dormancy is enforced in the feed: a
+  non-Pro tenant gets `{redirects: []}`, the same answer as an unknown host, so
+  the endpoint cannot be walked to learn which stores are on which plan.
+- Storefront never blocks. Every failure path (no tenant, not Pro, feed down,
+  feed slow, malformed body, unknown status code) resolves to "no redirect" and
+  the page renders exactly as it did before this feature existed.
+
+SECURITY DECISIONS WORTH THE INK
+- toPath must be a store-relative path. Absolute URLs are refused outright:
+  an unvalidated external destination is an open redirect authored through a
+  text box. //evil.com is defused by slash collapsing (it is protocol-relative,
+  and a redirect to it leaves the store) — pinned by a test.
+- Scheme-bearing, whitespace-bearing, control-character-bearing and ..-bearing
+  input is refused, not coerced.
+- fromPath is stored LOWER-CASED, which is what makes the unique index a real
+  duplicate guard: without the fold, /Sale and /sale are two rows that both claim
+  one request. toPath keeps its case — it is a destination, not a key.
+- Reserved: /api, /tenant-admin, /super-admin, /sitemap.xml, /robots.txt (the AC
+  list) plus /_next and /__clerk. The same list is applied a second time to the
+  INCOMING pathname in middleware, so a row predating a reserved-path addition
+  still cannot fire.
+- Loops refused at write time. Middleware follows exactly ONE hop, so a loop does
+  not hang a request — it hands the browser ERR_TOO_MANY_REDIRECTS on the owner's
+  own storefront and makes a crawler drop the page.
+- Non-GET/HEAD is never redirected: a 301 on a POST silently drops the body.
+- The host cache is size-capped (1000). *.budstacks.io is a Cloudflare WILDCARD,
+  so walking random subdomains would otherwise be a memory-growth attack on the
+  edge runtime.
+- Duplicate creates are caught by the unique index (P2002 -> 409), not by a
+  read-then-write two concurrent saves would both pass. The constraint name is
+  not echoed — asserted in a test.
+
+VERIFICATION
+- pnpm exec tsc --noEmit -> exit 0.
+- pnpm prisma validate -> valid. pnpm prisma generate -> ok.
+- Migration SQL diffed against `prisma migrate diff --from-empty
+  --to-schema-datamodel --script`: BYTE-IDENTICAL for the table body, both
+  indexes and the FK.
+- Targeted: 4 new files, 64 tests, all passing —
+    tests/unit/seo-redirects.test.ts        (20) pure rules
+    tests/unit/seo-redirect-lookup.test.ts  (20) the cache + fail-open contract
+    tests/unit/seo-redirect-routes.test.ts  (16) both gates + write rules
+    tests/unit/seo-redirect-feed.test.ts     (8) dormancy + enumeration-proofing
+- Full unit project: 146 files, 2409 tests, ALL PASS. No pre-existing failures.
+- pnpm check:security -> both gates pass. pnpm lint -> zero findings on touched
+  files (only pre-existing warnings elsewhere).
+- LIVE (pnpm dev on the existing .env.local, never modified), :3001. The DB is on
+  Railway's private network and unreachable from this machine, so this proves the
+  WIRING and the FAIL-OPEN, not a real redirect:
+    GET /                                        -> 200, and NO feed call at all
+                                                    (apex host, zero-cost path)
+    GET /api/public/seo/redirects                -> 200 {"redirects":[]}
+                                                    (missing host, no resolver hit)
+    GET /api/public/seo/redirects?host=nobody.example
+                                                 -> 500 after the Prisma connect
+                                                    timeout (DB down, expected)
+    GET /store/demo/some-old-page                -> 404 in 5.46s, and the dev log
+       shows middleware issued exactly ONE feed call with the right question:
+       /api/public/seo/redirects?host=localhost%3A3001&path=%2Fstore%2Fdemo%2Fsome-old-page
+       It abandoned at the 800ms cap and the request completed normally. No
+       recursion (the feed's own /api/ path is skipped by isRedirectablePath).
+  visual: deferred to human review — the Redirects tab sits behind Clerk and
+  needs a real tenant session plus a reachable DB.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson) — no change needed, and checked
+rather than assumed. Every new module is under lib/, app/ or components/, all of
+which Next compiles into .next/standalone + .next/static (Dockerfile:59-60), and
+lib/ is COPYied in its own right. No new runtime import chain reaches a directory
+outside the existing COPY set; nothing under scripts/ imports any of it.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- A redirect only fires on a TENANT HOST (subdomain / custom domain) or under
+  dev's /store/{slug} path routing. Both are covered; there is no third shape.
+- The feed takes ~5-6s to fail when Postgres is unreachable while middleware
+  abandons at 800ms, so an abandoned handler keeps running. The 15s negative
+  cache bounds it to one per host per 15s. A commandTimeout on the shared Prisma
+  client is the real fix and is nobody's story (same shape as the ioredis hang
+  documented in lib/security/abandonable-rate-limit.ts).
+- No audit-log entry on redirect writes. None of the four existing SEO routes
+  writes one either; adding it here alone would be inconsistent.
+- US-021 (slug editing + auto-301) will want to CREATE rows from a non-request
+  context. checkRedirectWrite is the seam for that — it takes a tenantId, not a
+  request — but the cap and the loop check both need it to pass through there
+  rather than inserting directly.
+- The SEO Manager page now runs five parallel queries in one Promise.all. Fine
+  today; it is the obvious thing to split when a sixth arrives.

@@ -23,7 +23,7 @@ export default async function SeoPage() {
 
   const tenantId = active.tenantId;
 
-  const [tenant, products, posts, conditions] = await Promise.all([
+  const [tenant, products, posts, conditions, redirects] = await Promise.all([
     prisma.tenants.findUnique({
       where: { id: tenantId },
       select: {
@@ -81,6 +81,21 @@ export default async function SeoPage() {
         image: true,
       },
     }),
+    // SEO US-020: loaded for EVERY plan, not only Pro. A tenant who drops to
+    // Basic keeps their rules — dormant on the storefront, still listed and
+    // still deletable here — so a downgrade never looks like data loss. The tab
+    // that renders them is Pro-only; the read is not gated (see the route).
+    prisma.seo_redirects.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        fromPath: true,
+        toPath: true,
+        statusCode: true,
+        createdAt: true,
+      },
+    }),
   ]);
 
   if (!tenant) {
@@ -88,6 +103,19 @@ export default async function SeoPage() {
   }
 
   const baseUrl = getTenantBaseUrl(tenant);
+
+  // `createdAt` crosses the server/client boundary as a STRING, and the client
+  // prop type says so rather than declaring a Date that is not one by the time
+  // it arrives — the #229 class of render crash. The annotation is also what
+  // keeps the `.map` callback typed: lib/db.ts's `prisma` export is any-widened
+  // by the build-time mock Proxy, so an inferred `row` would trip TS7006.
+  const redirectRows: Array<{
+    id: string;
+    fromPath: string;
+    toPath: string;
+    statusCode: number;
+    createdAt: Date;
+  }> = redirects;
 
   // US-013: the plan is resolved HERE, server-side, and shipped as a decided
   // boolean. The client never parses a Clerk claim and never re-derives the
@@ -113,6 +141,10 @@ export default async function SeoPage() {
         products={products}
         posts={posts}
         conditions={conditions}
+        redirects={redirectRows.map((row) => ({
+          ...row,
+          createdAt: row.createdAt.toISOString(),
+        }))}
         seoProUnlocked={seoProUnlocked}
         pageSeo={
           tenant.pageSeo as Record<

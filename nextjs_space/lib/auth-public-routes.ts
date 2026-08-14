@@ -146,6 +146,20 @@ export const AUTH_PUBLIC_ROUTES: readonly PublicRoute[] = [
       "used to enumerate which tenants are on which plan.",
   },
   {
+    pattern: "/api/public/seo/redirects",
+    reason:
+      "SEO US-020 redirect-table feed. The caller is this app's own edge " +
+      "middleware, which runs BEFORE auth on every request and has no session " +
+      "to present — and no database either, which is why the table has to " +
+      "arrive over HTTP. It reads nothing private: the answer is a list of " +
+      "paths that already redirect in public. The tenant is resolved from the " +
+      "supplied host through the canonical resolver (the Host header itself is " +
+      "unusable on a loopback fetch behind Cloudflare for SaaS — see the " +
+      "route docstring), the rows are read inside that tenant's context, it is " +
+      "IP rate-limited, and it is gated on seo.pro with the same empty answer " +
+      "as an unknown host so plans cannot be enumerated.",
+  },
+  {
     pattern: "/api/store/[slug]/products",
     reason: "Public storefront read: product list by tenant slug.",
   },

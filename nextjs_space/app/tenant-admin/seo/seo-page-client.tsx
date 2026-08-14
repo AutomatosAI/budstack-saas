@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SeoEditorModal, SeoProUpsell } from "@/components/admin/seo";
+import {
+  RedirectsTab,
+  SeoEditorModal,
+  SeoProUpsell,
+  type RedirectRow,
+} from "@/components/admin/seo";
 import { conditionPath } from "@/lib/seo/condition-paths";
 import { productPath } from "@/lib/seo/product-paths";
 import {
@@ -20,6 +25,7 @@ import {
   CheckCircle,
   AlertCircle,
   Sparkles,
+  Signpost,
 } from "lucide-react";
 
 const sectionTitleStyle = {
@@ -73,6 +79,11 @@ interface SeoPageClientProps {
   conditions: ConditionItem[];
   pageSeo: Record<string, SeoData> | null;
   /**
+   * US-020 — the store's 301s. Loaded for every plan (a downgraded tenant keeps
+   * their rules, dormant) but only rendered when `seoProUnlocked`.
+   */
+  redirects: RedirectRow[];
+  /**
    * US-013 — resolved server-side in page.tsx from the `tenants.plan` column.
    * False for plan 'basic' only; trial, pro and custom all hold `seo.pro`.
    * Presentation only: the server gate on each Pro route is the boundary.
@@ -87,6 +98,7 @@ export function SeoPageClient({
   posts,
   conditions,
   pageSeo,
+  redirects,
   seoProUnlocked,
 }: SeoPageClientProps) {
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
@@ -202,13 +214,12 @@ export function SeoPageClient({
   return (
     <>
       <Tabs defaultValue="products" className="space-y-6">
-        <TabsList
-          className={
-            seoProUnlocked
-              ? "grid w-full grid-cols-2 sm:grid-cols-4 lg:w-auto lg:inline-grid"
-              : "grid w-full grid-cols-2 sm:grid-cols-5 lg:w-auto lg:inline-grid"
-          }
-        >
+        {/*
+          Five tabs either way: an entitled tenant gets Redirects where the
+          upsell tab sits for everyone else. Both arms stay explicit so the next
+          C story that adds a tab has to decide which arm it belongs in.
+        */}
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 lg:w-auto lg:inline-grid">
           <TabsTrigger value="products" className="gap-2">
             <Package className="h-4 w-4 hidden sm:block" aria-hidden="true" />
             Products ({localProducts.length})
@@ -225,6 +236,17 @@ export function SeoPageClient({
             <Home className="h-4 w-4 hidden sm:block" aria-hidden="true" />
             Static Pages
           </TabsTrigger>
+          {/*
+            US-020 — the first Workstream C story with an admin surface of its
+            own. Pro only: a Basic tenant still meets it as a locked card in the
+            Pro tab below, which is where the upsell belongs.
+          */}
+          {seoProUnlocked && (
+            <TabsTrigger value="redirects" className="gap-2">
+              <Signpost className="h-4 w-4 hidden sm:block" aria-hidden="true" />
+              Redirects ({redirects.length})
+            </TabsTrigger>
+          )}
           {/*
             US-013 — the upsell tab exists ONLY while `seo.pro` is missing. An
             entitled tenant (trial, pro, custom) must never see a tab selling
@@ -460,6 +482,13 @@ export function SeoPageClient({
             </div>
           </section>
         </TabsContent>
+
+        {/* Redirects Tab — Pro only (US-020) */}
+        {seoProUnlocked && (
+          <TabsContent value="redirects">
+            <RedirectsTab baseUrl={baseUrl} initialRedirects={redirects} />
+          </TabsContent>
+        )}
 
         {/* Pro Tab — locked cards, Basic only */}
         {!seoProUnlocked && (

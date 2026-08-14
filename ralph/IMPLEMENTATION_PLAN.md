@@ -30,7 +30,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 - [x] US-017 FAQPage JSON-LD from conditions
 - [x] US-018 OG image studio — branded generation
 - [x] US-019 OG image studio — real upload
-- [ ] US-020 Redirects manager
+- [x] US-020 Redirects manager
 - [ ] US-021 Slug editing + auto-301 on change
 - [ ] US-022 Indexing controls
 - [ ] US-023 SEO audit panel
