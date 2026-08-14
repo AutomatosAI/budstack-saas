@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
+import { isSeoProUnlocked } from "@/lib/seo/pro-features";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
 import { SeoPageClient } from "./seo-page-client";
@@ -31,6 +32,12 @@ export default async function SeoPage() {
         customDomain: true,
         businessName: true,
         pageSeo: true,
+        // US-013: the entitlement plan, read off the query this page already
+        // runs rather than a second round trip through getTenantPlan(). The
+        // column is the source of truth (lib/entitlements/plan.ts) and its
+        // value is parsed fail-closed downstream, so an unrecognised string
+        // locks the tenant out of Pro instead of granting it.
+        plan: true,
       },
     }),
     prisma.products.findMany({
@@ -82,6 +89,15 @@ export default async function SeoPage() {
 
   const baseUrl = getTenantBaseUrl(tenant);
 
+  // US-013: the plan is resolved HERE, server-side, and shipped as a decided
+  // boolean. The client never parses a Clerk claim and never re-derives the
+  // matrix. This drives presentation only — the boundary for every Pro write is
+  // `requireFeature(FEATURES.SEO_PRO)` on the route.
+  const seoProUnlocked = isSeoProUnlocked({
+    id: tenantId,
+    plan: tenant.plan,
+  });
+
   return (
     <div>
       <div className="bs-page-header-centered">
@@ -97,6 +113,7 @@ export default async function SeoPage() {
         products={products}
         posts={posts}
         conditions={conditions}
+        seoProUnlocked={seoProUnlocked}
         pageSeo={
           tenant.pageSeo as Record<
             string,

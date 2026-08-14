@@ -1461,3 +1461,117 @@ FLAGGED, NOT FIXED (adjacent debt)
   the plan admin-side anyway; a column in the list is a cheap follow-on.
 - tenant-edit-form.tsx is 655 lines (repo guidance is ~400). This story added 6
   lines to it and put the new UI in its own file rather than growing it further.
+
+================================================================================
+[2026-08-14] US-013 PASS — Upsell UI states
+================================================================================
+
+WHAT LANDED
+- lib/seo/pro-features.ts (new, pure): SEO_PRO_FEATURES — one entry per
+  Workstream C capability (structured data, social preview images, redirects,
+  indexing controls, audit, AI assist, verification/GA4), each a title plus one
+  concrete line — AND isSeoProUnlocked({id, plan}), the single predicate every
+  locked surface asks. It delegates to getTenantFeatures, which is precisely why
+  the UI lock and the route gate cannot answer differently.
+- lib/entitlements/upgrade.ts (new, pure): the CTA copy and destination in ONE
+  place — BASIC_PLAN_PRICE_LABEL "$99/mo", PRO_PLAN_PRICE_LABEL "$169/mo",
+  UPGRADE_CTA_LABEL "Upgrade to Pro — $169/mo" (built from the price constant,
+  not a third literal), UPGRADE_PATH "/tenant-admin/upgrade", and
+  UPGRADE_CONTACT_PATH "/contact". A price change is now one edit.
+- components/admin/seo/LockedFeatureCard.tsx (new): the reusable lock the story
+  notes asked for — {locked, title, valueProp, children}. Unlocked renders the
+  children and nothing of its own; locked renders the upsell INSTEAD of the
+  children, so a Pro control never reaches the DOM of a tenant who cannot use
+  it. C stories wrap their section in it without touching lock logic.
+- components/admin/seo/SeoProUpsell.tsx (new): the Pro tab as a Basic tenant
+  sees it — a locked card per catalogue entry.
+- app/tenant-admin/seo/page.tsx: `plan: true` added to the tenants select the
+  page ALREADY runs (no second round trip, no getTenantPlan call), resolved
+  through isSeoProUnlocked and shipped to the client as a decided boolean.
+- seo-page-client.tsx: a fifth "Pro" tab, rendered ONLY when seo.pro is absent,
+  plus the grid-cols-4/5 swap that goes with it.
+- app/tenant-admin/upgrade/page.tsx (new): the static landing page every CTA
+  points at. What Pro adds, what Basic already covers, and a "Talk to us about
+  Pro" link to the existing public /contact form. No plan lookup, no checkout,
+  no payment code — PRD-303 replaces the contact CTA and nothing else.
+
+DECISIONS
+- The lock is BASIC-ONLY, by construction rather than by an if-chain: it asks
+  the plan matrix, and trial/pro/custom all hold seo.pro. Trial is the 3-month
+  launch window — a trial tenant seeing locked cards would be sold features
+  they already have. Since the column defaults to 'trial', the lock is dormant
+  in production until an operator sets a tenant to Basic in the US-012 selector.
+- The Pro TAB itself is conditional, not just its contents. An entitled tenant
+  must not see a tab advertising what they pay for. As C stories land, their
+  sections take that slot for everyone and this whole-tab fallback shrinks to
+  whatever is still unbuilt.
+- Plan resolved server-side into a boolean, not a plan string. The client never
+  parses a Clerk claim (AC-1) and never re-derives the matrix — one resolver,
+  one answer.
+- No sidebar nav entry for /tenant-admin/upgrade. It is a CTA destination, not
+  a destination in its own right; adding nav for it is a product call, not this
+  story's.
+- No page-level permission gate on the upgrade page: it holds no tenant data.
+  Access is the tenant-admin layout's Clerk session + role check.
+
+VERIFIED
+- pnpm exec tsc --noEmit                        -> exit 0
+- pnpm vitest run seo-upsell + entitlements-plan -> 73 passed (27 new)
+- pnpm vitest run --project unit -> 135 files, 2179 passed, 0 failed
+  (was 134/2152 at US-012: +1 file, +27 tests, no regressions)
+- pnpm check:security                           -> both gates green
+- pnpm exec next lint (8 touched files)         -> no warnings or errors
+- pnpm exec tsx scripts/check-auth-wrappers.ts  -> 160 files, 4 violations, all
+  pre-existing and byte-identical to US-012's run (storefront email click/open,
+  team accept-invite/invitation). This story adds no API route.
+- pnpm build -> exit 0. /tenant-admin/upgrade registered (196 B), /tenant-admin
+  /seo recompiled at 12 kB. This is the check that matters for the new modules:
+  a "use client" shell now imports pro-features -> features -> plan, and a build
+  is what would have caught an RSC boundary violation that tsc cannot see.
+- LIVE: pnpm dev on the existing .env.local (never modified).
+  GET /tenant-admin/upgrade -> 307 /auth/login?redirect_url=...  (Clerk-gated)
+  GET /tenant-admin/seo     -> 307 /auth/login?redirect_url=...  (Clerk-gated)
+  GET /contact              -> 200  (the CTA target resolves, and is allow-listed
+                                     public in middleware.ts:40, so a signed-in
+                                     admin is not bounced)
+  visual: deferred to human review — both admin surfaces need a real tenant
+  session, and the locked state additionally needs a tenant set to plan 'basic'.
+- No Prisma change: the plan column shipped in US-011. Confirmed the generated
+  client carries `plan?: boolean` on the tenants select, so `plan: true` is
+  valid at runtime and not just past the any-widened `prisma` export.
+
+AC-3 — THE UI LOCK IS NOT THE BOUNDARY (asserted, not asserted-by-comment)
+tests/unit/seo-upsell.test.ts drives the real permission wrapper and the real
+plan gate over the same fixture the UI predicate sees, for every plan value
+INCLUDING junk ('', 'PRO', 'enterprise'), and asserts
+  isSeoProUnlocked(...) === (status !== 403)
+every time. It also pins the 403 body shape (upgrade_required + feature + plan)
+and that the gate's only lookup is `tenants.findFirst({where:{id: caller}})` —
+the plan is never read from anything the tenant controls. Fail-closed is pinned
+separately: undefined/null/''/'PRO'/169/{} and a select that lost the column all
+resolve to LOCKED, never to unlocked.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson): four new modules — two in lib/,
+two in components/admin/seo/ — plus one new app/ page. Imports are next/link,
+lucide-react, and @/lib/{entitlements,seo}. Every one is inside a directory the
+runner already COPYies (nextjs_space/Dockerfile:57-95) or is bundled into
+.next/standalone. No import edge leaves the bundle. No Dockerfile edit needed.
+
+NO tenantScopedModels CHANGE: no new model, no new query. The one DB touch is
+an extra column on a select the page already ran.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- The unit project cannot render React at all: environment "node", no jsdom, no
+  @testing-library, and esbuild's classic JSX transform (probed — a
+  renderToStaticMarkup of LockedFeatureCard dies on "React is not defined").
+  135 test files, zero component tests. So LockedFeatureCard's markup is
+  asserted only through its pure inputs (the copy constants and the catalogue).
+  Enabling automatic JSX in vitest.workspace.ts is a repo-wide call, not a
+  US-013 side effect — flagged for a human.
+- seo-page-client.tsx is now 533 lines, up from 499 (repo guidance ~400). This
+  story added 34 and put the new UI in its own two files rather than growing it
+  further; the four tab bodies are the obvious extraction when someone has a
+  reason to.
+- app/super-admin/tenants/page.tsx still does not show plan (carried over from
+  US-012's flag) — now more visible, since an operator has to know which tenants
+  are on Basic to know who is seeing these cards.

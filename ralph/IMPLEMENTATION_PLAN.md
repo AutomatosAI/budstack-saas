@@ -20,7 +20,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 
 - [x] US-011 Tenant plan resolution + seoPro gate
 - [x] US-012 Super-admin plan control
-- [ ] US-013 Upsell UI states
+- [x] US-013 Upsell UI states
 
 ## Workstream C — Pro tier (every story gated seoPro)
 

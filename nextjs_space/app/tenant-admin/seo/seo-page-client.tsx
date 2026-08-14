@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SeoEditorModal } from "@/components/admin/seo";
+import { SeoEditorModal, SeoProUpsell } from "@/components/admin/seo";
 import { conditionPath } from "@/lib/seo/condition-paths";
 import { productPath } from "@/lib/seo/product-paths";
 import {
@@ -19,6 +19,7 @@ import {
   Search,
   CheckCircle,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 
 const sectionTitleStyle = {
@@ -71,6 +72,12 @@ interface SeoPageClientProps {
   posts: PostItem[];
   conditions: ConditionItem[];
   pageSeo: Record<string, SeoData> | null;
+  /**
+   * US-013 — resolved server-side in page.tsx from the `tenants.plan` column.
+   * False for plan 'basic' only; trial, pro and custom all hold `seo.pro`.
+   * Presentation only: the server gate on each Pro route is the boundary.
+   */
+  seoProUnlocked: boolean;
 }
 
 export function SeoPageClient({
@@ -80,6 +87,7 @@ export function SeoPageClient({
   posts,
   conditions,
   pageSeo,
+  seoProUnlocked,
 }: SeoPageClientProps) {
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
     null,
@@ -194,7 +202,13 @@ export function SeoPageClient({
   return (
     <>
       <Tabs defaultValue="products" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList
+          className={
+            seoProUnlocked
+              ? "grid w-full grid-cols-2 sm:grid-cols-4 lg:w-auto lg:inline-grid"
+              : "grid w-full grid-cols-2 sm:grid-cols-5 lg:w-auto lg:inline-grid"
+          }
+        >
           <TabsTrigger value="products" className="gap-2">
             <Package className="h-4 w-4 hidden sm:block" aria-hidden="true" />
             Products ({localProducts.length})
@@ -211,6 +225,19 @@ export function SeoPageClient({
             <Home className="h-4 w-4 hidden sm:block" aria-hidden="true" />
             Static Pages
           </TabsTrigger>
+          {/*
+            US-013 — the upsell tab exists ONLY while `seo.pro` is missing. An
+            entitled tenant (trial, pro, custom) must never see a tab selling
+            them what they already have; as Workstream C lands, its sections
+            take this slot for everyone and the locked cards shrink to whatever
+            is still unbuilt.
+          */}
+          {!seoProUnlocked && (
+            <TabsTrigger value="pro" className="gap-2">
+              <Sparkles className="h-4 w-4 hidden sm:block" aria-hidden="true" />
+              Pro
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Products Tab */}
@@ -433,6 +460,13 @@ export function SeoPageClient({
             </div>
           </section>
         </TabsContent>
+
+        {/* Pro Tab — locked cards, Basic only */}
+        {!seoProUnlocked && (
+          <TabsContent value="pro">
+            <SeoProUpsell />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Product SEO Modal */}
