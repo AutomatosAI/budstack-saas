@@ -16,6 +16,10 @@ const postSchema = z.object({
   content: z.string().min(1, "Content is required"),
   excerpt: z.string().optional(),
   coverImage: z.string().optional(),
+  // US-009 — alt text for the cover, authored next to the image it describes.
+  // Persisted to `posts.seo.imageAlt` by the write routes (posts has no column
+  // for it and needs none); the SEO Manager edits the same key.
+  coverImageAlt: z.string().max(300).optional(),
   published: z.boolean().default(false),
 });
 
@@ -71,6 +75,7 @@ export default function PostForm({
       content: "",
       excerpt: "",
       coverImage: "",
+      coverImageAlt: "",
       published: false,
     },
   });
@@ -165,7 +170,14 @@ export default function PostForm({
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={form.watch("coverImage")}
-                        alt="Cover preview"
+                        alt={
+                          // The alt being authored, so the preview reads the way
+                          // the published article will. "Cover preview" was a
+                          // description of the widget, not of the picture.
+                          form.watch("coverImageAlt") ||
+                          form.watch("title") ||
+                          "Cover preview"
+                        }
                         className="object-cover w-full h-full"
                       />
                       <button
@@ -212,6 +224,25 @@ export default function PostForm({
                   </p>
                 </div>
               </div>
+
+              {/* US-009 — alt text, shown only once there is an image to describe. */}
+              {form.watch("coverImage") && (
+                <div className="space-y-2">
+                  <label htmlFor="coverImageAlt" className="bs-eyebrow">
+                    Cover Image Alt Text
+                  </label>
+                  <input
+                    id="coverImageAlt"
+                    {...form.register("coverImageAlt")}
+                    placeholder="Describe the image for screen readers and image search"
+                    maxLength={300}
+                    className="bs-input w-full"
+                  />
+                  <p className="text-xs text-bs-fg-muted">
+                    Leave empty to fall back to the article title.
+                  </p>
+                </div>
+              )}
             </section>
 
             <section className="bs-card bs-card-pad">

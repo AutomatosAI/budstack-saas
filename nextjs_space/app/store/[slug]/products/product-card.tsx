@@ -25,6 +25,16 @@ export function ProductCard({
   const feelings = parseToArray(product.feelings);
   const flavours = parseToArray(product.flavour);
   const imageUrl = product.image_url || product.imageUrl;
+  // US-009 — the card hard-coded `alt={product.name}` and ignored the alt text
+  // Dr Green already ships. `imageUrl` and `strainImages` are INDEPENDENT
+  // upstream fields (both resolved through the same resolveImageUrl —
+  // lib/drgreen/doctor-green-api.ts:241,289), so the alt is only borrowed from
+  // the strain image that IS the one being rendered; anything else would
+  // describe a different photograph. Falls back to the product name.
+  const imageAlt =
+    product.strainImages?.find(
+      (img: { strainImageUrl?: string }) => img.strainImageUrl === imageUrl,
+    )?.altText || product.name;
   const pricePerGram = product.price || product.retailPrice || 0;
   const currency = product.currency || "R";
   const isAvailable = product.isAvailable !== false && product.in_stock !== false;
@@ -74,7 +84,7 @@ export function ProductCard({
             {imageUrl ? (
               <Image
                 src={imageUrl}
-                alt={product.name}
+                alt={imageAlt}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-500"
               />

@@ -8,6 +8,7 @@ import { posts } from "@prisma/client";
 import type { Metadata } from "next";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
+import { entityImageAlt } from "@/lib/seo/entity-seo";
 import { buildWireIndexMetadata } from "@/lib/seo/post-metadata";
 import { STORE_NOT_FOUND_TITLE } from "@/lib/seo/store-metadata";
 
@@ -187,7 +188,11 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
                         {featuredPost.coverImage ? (
                           <img
                             src={featuredPost.coverImage}
-                            alt={featuredPost.title}
+                            // US-009 — authored alt, title as the floor.
+                            alt={entityImageAlt(
+                              featuredPost.seo,
+                              featuredPost.title,
+                            )}
                             className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                           />
                         ) : (
@@ -343,7 +348,8 @@ export default async function TheWirePage({ params }: TheWirePageProps) {
                               {post.coverImage ? (
                                 <img
                                   src={post.coverImage}
-                                  alt={post.title}
+                                  // US-009 — authored alt, title as the floor.
+                                  alt={entityImageAlt(post.seo, post.title)}
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
                               ) : (

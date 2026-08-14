@@ -4,6 +4,7 @@ import { withTenantAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { apiError } from "@/lib/api-error";
+import { withEntityImageAlt } from "@/lib/seo/entity-seo";
 import { parseJsonBody } from "@/lib/validation/body";
 
 // Slugify helper
@@ -22,6 +23,9 @@ const postSchema = z.object({
   content: z.string().min(1, "Content is required").max(100_000),
   excerpt: z.string().max(5000).optional(),
   coverImage: z.string().max(2000).optional(),
+  // US-009 — the editor's name for `posts.seo.imageAlt`; there is no column of
+  // its own. Written into the Json blob on create, below.
+  coverImageAlt: z.string().max(300).optional(),
   published: z.boolean().default(false),
 });
 
@@ -49,6 +53,10 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       select: { id: true },
     });
     const authorId = localAuthor?.id ?? user.id;
+
+    // US-009 — `coverImageAlt` is the editor's name for `posts.seo.imageAlt`;
+    // there is no column of its own, so it never reaches `data` directly.
+    const coverSeo = withEntityImageAlt(null, validatedData.coverImageAlt);
 
     // Generate base slug
     let slug = slugify(validatedData.title);
@@ -79,6 +87,12 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
         content: validatedData.content,
         excerpt: validatedData.excerpt,
         coverImage: validatedData.coverImage,
+        // A new post has nothing else authored, so the merge starts from null.
+        // The key is OMITTED rather than set when no alt was typed: a bare
+        // `null` is not a legal value for a nullable Json column
+        // (lib/email/email-template-content.ts:93-94), and an absent key leaves
+        // the column at its SQL NULL default — the same end state.
+        ...(coverSeo ? { seo: coverSeo } : {}),
         published: validatedData.published,
         tenantId: tenantId,
         authorId,

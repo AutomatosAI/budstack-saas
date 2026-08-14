@@ -985,3 +985,136 @@ FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
 - middleware.ts is now 279 lines with five host-shaped branches (www, subdomain,
   custom domain, admin-apex, path-based). Still readable, but the next host rule
   should push the branch table into lib/ rather than adding a sixth `if`.
+
+================================================================================
+[2026-08-14] US-009 PASS — Alt-text authoring
+================================================================================
+
+TWO PREMISES IN THE STORY NOTES ARE WRONG AGAINST THE LIVE SCHEMA. Both were
+checked before a line was written, and the story was implemented against what
+is actually there rather than what it described.
+
+ 1. "product_images.altText (column exists, no editor anywhere)" — there is NO
+    `product_images` model in prisma/schema.prisma. `products.images` is a
+    `String[]` of URLs and nothing else. The `altText` the detail gallery
+    renders (product-detail-client.tsx:300, the line the story points at)
+    arrives on the DR GREEN payload — `DoctorGreenProduct.strainImages[].altText`
+    (lib/drgreen/doctor-green-api.ts:166-169, resolved at :289) — which is
+    upstream catalogue data no store owner can edit. Inventing the table was
+    not on: the story asks for an EDITOR over a column that does not exist.
+ 2. "product detail already renders it" — it renders the VENDOR's alt. Writing
+    an authored value with nothing reading it would have shipped another
+    write-only field, which is the exact defect this workstream exists to close.
+
+WHERE THE AUTHORED ALT LIVES (the "persist location chosen and documented" the
+story requires): `seo.imageAlt`, one key on the existing per-entity Json column,
+shared by posts and products. No migration.
+  - `seo` is the only per-entity authored column that exists on both models.
+  - products/sync NEVER writes `seo` (verified: the upsert payload at
+    app/api/tenant-admin/products/sync/route.ts:55-102 lists 11 columns and
+    `seo` is not among them), so an authored alt survives every catalogue
+    re-sync — the risk the story's notes asked to check.
+  - ONE key rather than the suggested `posts.seo.coverAlt`: the SEO editor
+    modal is shared across four entity types, so a per-entity name would mean
+    branching a shared component to write a differently-spelled key for the
+    same concept. Deviation from the note is deliberate and commented at
+    lib/seo/entity-seo.ts.
+
+WHAT LANDED
+- lib/seo/entity-seo.ts: `imageAlt` added to `EntitySeo` / `readEntitySeo` /
+  `isEmptyEntitySeo`, plus two helpers — `entityImageAlt(seo, fallback)` (the
+  render-side resolve; never returns undefined, because a missing alt makes a
+  screen reader read the file name aloud) and `withEntityImageAlt(existing,
+  alt)` (the write-side merge). Still dependency-free: a client component
+  imports this module through store-pages.ts.
+- TWO AUTHORING SURFACES, ONE COLUMN, NOTHING LOST. The Wire's post editor
+  writes the cover alt next to the image; the SEO Manager writes
+  title/description/ogImage for the same row through a different route and
+  REPLACES the blob wholesale. Both directions are now safe: the post routes
+  merge through `withEntityImageAlt` (preserving the SEO Manager's fields), and
+  the modal carries `imageAlt` so its replace cannot erase the writer's alt.
+  `coverImageAlt` absent from a PATCH body means "leave seo alone" — an
+  ordinary content edit from any older caller cannot null the record.
+- Storefront reads (all zero-new-query):
+    the-wire/[postSlug]/page.tsx:162   authored -> post.title
+    the-wire/page.tsx:190, :346        authored -> post.title  (featured + grid)
+    products/product-card.tsx:87       Dr Green altText -> product.name
+    products/[id]/product-detail-client.tsx main image  authored -> Dr Green
+                                            altText -> product.name
+                                       thumbnails  Dr Green altText -> authored
+                                            -> "View N"
+  Priority differs by surface ON PURPOSE: one authored string cannot tell four
+  thumbnails apart, so the per-image vendor text leads there; the main image is
+  the one the owner is describing, so the authored string leads.
+- The product card joins Dr Green's alt to the image BY URL, not by index:
+  `imageUrl` and `strainImages` are independent upstream fields (:241, :289),
+  so `strainImages[0].altText` is only borrowed when that entry IS the image
+  being rendered. Anything looser would caption a different photograph.
+- products/[id]/page.tsx became an async server component that resolves the
+  authored alt and passes it as a prop. It calls the SAME two `cache()`d
+  loaders `generateMetadata` already calls with the same arguments, so it adds
+  NO query and NO fetch — React dedupes them within the request, and the
+  request was already blocked on that Dr Green fetch since US-004 (metadata
+  goes in <head>, so it resolves before any HTML ships). This is the seam that
+  keeps a DB read off /api/store/[slug]/products, which is force-dynamic and
+  serves the catalogue verbatim to every card on every products page.
+
+FIXED IN PASSING — A LATENT 500 MY OWN FIELD MADE REACHABLE
+`prisma`'s nullable Json columns reject a bare `null` (documented in this repo
+at lib/email/email-template-content.ts:93-94 — DbNull writes SQL NULL, JsonNull
+writes the JSON literal). Both SEO Manager write routes stored
+`Object.keys(seo).length > 0 ? seo : null`, so emptying every field threw
+instead of clearing the record. Nobody hit it with three fields; with a fourth
+it is one click (type an alt on an otherwise-default product, delete it). Fixed
+to `Prisma.DbNull` in the two routes this story already edits. The same shape
+would have broken POST /posts outright — the create path omits the key entirely
+instead, leaving the column at its SQL NULL default.
+
+HOW VERIFIED
+- pnpm exec tsc --noEmit                     -> exit 0
+- pnpm vitest run tests/unit/image-alt.test.ts -> 16/16
+- pnpm vitest run (full)                     -> 2034 passed, 30 skipped,
+                                                131 files, 0 failed
+- pnpm check:security                        -> both gates green
+- pnpm exec next lint (14 touched files)     -> no errors; the only warnings
+  are the pre-existing @next/next/no-img-element ones on <img> tags whose
+  `alt` I changed and whose element I did not.
+- Prisma-null claim not taken on faith: probed the generated client
+  (`seo?: NullableJsonNullValueInput | InputJsonValue` in postsUncheckedCreate-
+  Input) and confirmed the repo's own precedent before changing the write.
+- pnpm dev with the existing .env.local (never modified): every touched route
+  COMPILES —
+    ✓ Compiled /store/[slug]/the-wire      (3422 modules)
+    ✓ Compiled /store/[slug]/products      (3448 modules)
+    ✓ Compiled /store/[slug]/products/[id] (3480 modules)
+  Those routes then 404 because this machine cannot reach the Railway
+  private-network DB (`Can't reach database server at
+  postgres-budstack-development.up.railway.app:5432`) — the same limitation
+  US-006/US-007/US-008 recorded. /tenant-admin/seo and /tenant-admin/the-wire/new
+  return 307 to Clerk.
+  visual: deferred to human review — both authoring surfaces are Clerk-gated,
+  and both storefront reads need a real tenant row.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson): no new module and no new import
+edge outside the Next bundle. lib/seo/entity-seo.ts already existed and was
+already imported by lib/seo/*; the new imports are app/ -> lib/seo and
+app/ -> @prisma/client, and app/, lib/ and prisma/ are all already COPYied by
+nextjs_space/Dockerfile:57-95. No Dockerfile edit needed.
+
+FLAGGED, NOT FIXED (adjacent debt, owned elsewhere)
+- The SAME bare-null bug remains in the conditions and static-pages SEO write
+  routes (app/api/tenant-admin/seo/conditions/[id]/route.ts,
+  .../seo/pages/route.ts). Left alone because this story adds no field to those
+  editors, so the three-field path that has never triggered it is unchanged.
+  One line each whenever someone is in there.
+- The products LIST card cannot show an authored alt — only Dr Green's. Doing
+  so means merging local rows into /api/store/[slug]/products, which is
+  force-dynamic and would add a findMany to every catalogue render. The AC asks
+  for `altText || name` on the card and that is what shipped; the authoring
+  surface reaches the detail page, which is the page that ranks.
+- app/api/tenant-admin/posts/[id]/route.ts still uses `withAuth` + a hand-rolled
+  role/tenant check while its sibling create route uses `withTenantAuth` — the
+  mixed-auth-on-posts-routes debt the PROMPT already names. Untouched.
+- SeoEditorModal.tsx is now 250 lines with four near-identical field blocks.
+  Still readable; the fifth field should extract a <SeoField> rather than
+  copy the block again.

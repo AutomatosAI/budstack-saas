@@ -9,6 +9,7 @@ import sanitizeHtml from "sanitize-html";
 import type { posts, users } from "@prisma/client";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { runWithTenantContextAsync } from "@/lib/tenant/tenant-context";
+import { entityImageAlt } from "@/lib/seo/entity-seo";
 import {
   POST_NOT_FOUND_TITLE,
   buildPostMetadata,
@@ -159,7 +160,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             <div className="aspect-video relative rounded-lg overflow-hidden mb-8 not-prose">
               <img
                 src={post.coverImage}
-                alt={post.title}
+                // US-009 — the authored alt, falling back to the title (the
+                // string this used to hard-code, which describes the article
+                // rather than the picture).
+                alt={entityImageAlt(post.seo, post.title)}
                 className="object-cover w-full h-full"
               />
             </div>

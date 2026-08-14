@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { apiError } from "@/lib/api-error";
+import { withEntityImageAlt } from "@/lib/seo/entity-seo";
 import { parseUuid } from "@/lib/validation/parse-uuid";
 import { parseJsonBody } from "@/lib/validation/body";
 
@@ -21,6 +23,10 @@ const postSchema = z.object({
   content: z.string().min(1, "Content is required").max(100_000),
   excerpt: z.string().max(5000).optional(),
   coverImage: z.string().max(2000).optional(),
+  // US-009 — NOT a column: this is the editor's name for `posts.seo.imageAlt`,
+  // translated below. It must never reach `data` or Prisma throws on an unknown
+  // field.
+  coverImageAlt: z.string().max(300).optional(),
   published: z.boolean().default(false),
 });
 
@@ -91,7 +97,22 @@ export const PATCH = withAuth(async (req, { user }, { id: rawId }) => {
       return apiError(new Error("Post not found or unauthorized"), { route: "PATCH /api/tenant-admin/posts/[id]", status: 404, safeMessage: "Post not found or unauthorized" });
     }
 
-    const dataToUpdate: Record<string, unknown> = { ...validatedData };
+    // US-009: `coverImageAlt` is an alias for `posts.seo.imageAlt`, so it is
+    // lifted OUT of the column payload and merged into the Json blob. The merge
+    // is what keeps the SEO Manager's title/description/ogImage for this post
+    // alive — it writes the same column through a different route. Absent from
+    // the body (any caller that predates this field) means "leave seo alone".
+    const { coverImageAlt, ...columnData } = validatedData;
+    const dataToUpdate: Record<string, unknown> = { ...columnData };
+
+    if (coverImageAlt !== undefined) {
+      // DbNull, not a bare null: `null` is not a legal value for a nullable
+      // Json column (lib/email/email-template-content.ts:93-94), and JsonNull
+      // would store the JSON literal `null` — which `readEntitySeo` treats as
+      // authored-nothing anyway, but leaves a non-NULL row behind.
+      dataToUpdate.seo =
+        withEntityImageAlt(existingPost.seo, coverImageAlt) ?? Prisma.DbNull;
+    }
 
     if (validatedData.title && validatedData.title !== existingPost.title) {
       const baseSlug = slugify(validatedData.title);

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -11,6 +12,10 @@ const seoUpdateSchema = z
     title: z.string().max(300).optional(),
     description: z.string().max(1000).optional(),
     ogImage: z.string().max(2000).optional(),
+    // US-009 — alt text for the product's imagery. Capped well under the
+    // description limit: an alt string is a sentence, not a paragraph, and a
+    // screen reader reads the whole of it before anything else on the page.
+    imageAlt: z.string().max(300).optional(),
   })
   .strict();
 
@@ -59,18 +64,23 @@ export const PUT = withTenantAuthParams(async (request, { tenantId }, params) =>
   } catch (error) {
     return apiError(error, { route: "PUT /api/tenant-admin/seo/products/[id]" });
   }
-  const { title, description, ogImage } = parsed;
+  const { title, description, ogImage, imageAlt } = parsed;
 
   // Build SEO object, removing empty values
   const seo: Record<string, string> = {};
   if (title?.trim()) seo.title = title.trim();
   if (description?.trim()) seo.description = description.trim();
   if (ogImage?.trim()) seo.ogImage = ogImage.trim();
+  if (imageAlt?.trim()) seo.imageAlt = imageAlt.trim();
 
   const updated = await prisma.products.update({
     where: { id },
     data: {
-      seo: Object.keys(seo).length > 0 ? seo : null,
+      // DbNull, not a bare null: `null` is not a legal value for a nullable
+      // Json column (lib/email/email-template-content.ts:93-94), so emptying
+      // every field threw instead of clearing the record. Reachable in one
+      // click now that US-009 put a fourth field in this editor.
+      seo: Object.keys(seo).length > 0 ? seo : Prisma.DbNull,
       updatedAt: new Date(),
     },
     select: { id: true, name: true, seo: true },

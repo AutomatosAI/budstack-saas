@@ -7,6 +7,7 @@ import {
   type DoctorGreenProduct,
 } from "@/lib/drgreen/doctor-green-api";
 import { logger } from "@/lib/logger";
+import { readEntitySeo } from "@/lib/seo/entity-seo";
 import {
   PRODUCT_NOT_FOUND_TITLE,
   buildProductMetadata,
@@ -134,6 +135,45 @@ export async function generateMetadata({
   });
 }
 
-export default function ProductDetailPage() {
-  return <ProductDetailClient />;
+/**
+ * SEO US-009 — the alt text the owner authored for this strain's imagery, or ""
+ * when there is none.
+ *
+ * BOTH loaders below are the `cache()`d ones `generateMetadata` already calls
+ * with the same arguments, so on a normal render this costs NOTHING: React
+ * dedupes them within the request. It resolves the live strain first for the
+ * same reason metadata does — the row is matched on `drGreenStrainId`, and the
+ * resolved id is the one the catalogue agrees with.
+ *
+ * The storefront product API serves the Dr Green payload verbatim
+ * (app/api/store/[slug]/products/route.ts:68-79) and no local row, so this is
+ * the seam where an authored value reaches the client without adding a DB read
+ * to a force-dynamic commerce route.
+ */
+async function loadAuthoredImageAlt(
+  tenantId: string,
+  countryCode: string,
+  productId: string,
+): Promise<string> {
+  const product = await loadLiveProduct(tenantId, countryCode, productId);
+  if (!product) return "";
+
+  const local = await loadProductSeoRow(tenantId, product.id);
+  return readEntitySeo(local?.seo).imageAlt ?? "";
+}
+
+export default async function ProductDetailPage({
+  params,
+}: ProductDetailPageProps) {
+  const tenant = await getCurrentTenant();
+
+  const imageAlt = tenant
+    ? await loadAuthoredImageAlt(
+        tenant.id,
+        tenant.countryCode || DEFAULT_COUNTRY_CODE,
+        params.id,
+      )
+    : "";
+
+  return <ProductDetailClient imageAlt={imageAlt} />;
 }

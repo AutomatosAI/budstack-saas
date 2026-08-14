@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
+import { readEntitySeo } from "@/lib/seo/entity-seo";
 import PostForm from "../post-form";
 
 export const metadata = {
@@ -42,6 +43,9 @@ export default async function EditPostPage({
         content: post.content,
         excerpt: post.excerpt || "",
         coverImage: post.coverImage || "",
+        // US-009 — `posts.seo.imageAlt`, read through the fail-closed parser
+        // because the column is untyped Json.
+        coverImageAlt: readEntitySeo(post.seo).imageAlt || "",
         published: post.published,
       }}
     />

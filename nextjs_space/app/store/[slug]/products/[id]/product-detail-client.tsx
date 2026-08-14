@@ -32,7 +32,16 @@ import type { Product, ApiResponse } from "./product-detail-types";
  * reads its own params through `useParams()` rather than taking props, keeping
  * the split to a rename.
  */
-export function ProductDetailClient() {
+export function ProductDetailClient({
+  /**
+   * US-009 — `products.seo.imageAlt`, resolved on the server (the client only
+   * ever sees the Dr Green payload, which carries no authored value). "" when
+   * the owner has authored nothing.
+   */
+  imageAlt = "",
+}: {
+  imageAlt?: string;
+}) {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug as string;
@@ -233,7 +242,15 @@ export function ProductDetailClient() {
                           ? (product.strainImages[selectedImage]?.strainImageUrl || "")
                           : (imageUrl || "")
                       }
-                      alt={product.name}
+                      // US-009 — the owner's authored alt wins for the primary
+                      // image: it is the one deliberate description of this
+                      // product. Dr Green's per-image text is the next tier
+                      // (it names THIS shot), the product name the floor.
+                      alt={
+                        imageAlt ||
+                        product.strainImages?.[selectedImage]?.altText ||
+                        product.name
+                      }
                       fill
                       className="object-contain drop-shadow-2xl"
                       sizes="(max-width: 768px) 100vw, 50vw"
@@ -297,7 +314,10 @@ export function ProductDetailClient() {
                   >
                     <Image
                       src={img.strainImageUrl || ""}
-                      alt={img.altText || `View ${idx + 1}`}
+                      // Per-image text first here: these thumbnails differ from
+                      // each other, and one authored string cannot tell them
+                      // apart. "View N" remains the last resort.
+                      alt={img.altText || imageAlt || `View ${idx + 1}`}
                       fill
                       className="object-cover"
                     />

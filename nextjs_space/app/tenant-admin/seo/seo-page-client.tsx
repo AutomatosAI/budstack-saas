@@ -29,6 +29,8 @@ interface SeoData {
   title?: string;
   description?: string;
   ogImage?: string;
+  /** US-009 — alt text for the entity's image; products and posts only. */
+  imageAlt?: string;
 }
 
 interface ProductItem {
@@ -94,7 +96,10 @@ export function SeoPageClient({
   const [localConditions, setLocalConditions] = useState(conditions);
 
   const hasSeo = (seo: SeoData | null | undefined): boolean => {
-    return !!(seo && (seo.title || seo.description || seo.ogImage));
+    return !!(
+      seo &&
+      (seo.title || seo.description || seo.ogImage || seo.imageAlt)
+    );
   };
 
   const handleSaveProductSeo = async (seo: SeoData) => {

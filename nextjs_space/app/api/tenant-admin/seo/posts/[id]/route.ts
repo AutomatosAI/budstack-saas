@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { withTenantAuthParams } from "@/lib/api-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -11,6 +12,11 @@ const seoUpdateSchema = z
     title: z.string().max(300).optional(),
     description: z.string().max(1000).optional(),
     ogImage: z.string().max(2000).optional(),
+    // US-009 — cover-image alt text. The Wire's post editor writes the same key
+    // (app/api/tenant-admin/posts/[id]/route.ts), and this route REPLACES the
+    // column wholesale, so it has to carry the field or a save from the SEO
+    // Manager would erase the alt the author wrote next to the image.
+    imageAlt: z.string().max(300).optional(),
   })
   .strict();
 
@@ -59,18 +65,23 @@ export const PUT = withTenantAuthParams(async (request, { tenantId }, params) =>
   } catch (error) {
     return apiError(error, { route: "PUT /api/tenant-admin/seo/posts/[id]" });
   }
-  const { title, description, ogImage } = parsed;
+  const { title, description, ogImage, imageAlt } = parsed;
 
   // Build SEO object, removing empty values
   const seo: Record<string, string> = {};
   if (title?.trim()) seo.title = title.trim();
   if (description?.trim()) seo.description = description.trim();
   if (ogImage?.trim()) seo.ogImage = ogImage.trim();
+  if (imageAlt?.trim()) seo.imageAlt = imageAlt.trim();
 
   const updated = await prisma.posts.update({
     where: { id },
     data: {
-      seo: Object.keys(seo).length > 0 ? seo : null,
+      // DbNull, not a bare null: `null` is not a legal value for a nullable
+      // Json column (lib/email/email-template-content.ts:93-94), so emptying
+      // every field threw instead of clearing the record. Reachable in one
+      // click now that US-009 put a fourth field in this editor.
+      seo: Object.keys(seo).length > 0 ? seo : Prisma.DbNull,
       updatedAt: new Date(),
     },
     select: { id: true, title: true, seo: true },
