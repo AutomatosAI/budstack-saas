@@ -54,7 +54,7 @@
 
 **Acceptance Criteria:**
 - [ ] Model `llm_citation_checks` (tenantId, engine, prompt, cited boolean, citedUrl?, mentionText?, checkedAt; tenant-scoped, hand-authored migration) + weekly repeatable job on its **own queue** following the reorder-reminders pattern (scheduler upsert idempotent; per-tenant fault isolation; sweep cap)
-- [ ] **Provider-agnostic gateway, no vendor lock**: one adapter speaking the OpenAI-compatible chat API, pointed at **OpenRouter** by default (`OPENROUTER_API_KEY` + configurable base URL). "Engines" are configurable web-search-enabled model routes (defaults spanning GPT/Grok/Claude/sonar via OpenRouter) — vendor names are data and UI labels, never code. Absent key/route = "not configured", never an error. Responses scanned for the tenant's domains in citations/URLs; dashboard copy frames results as model-with-retrieval citations, a proxy for the consumer apps
+- [ ] **The tenant's own configured AI — nothing new**: the monitor calls through the same tenant Automatos service the AI drafting uses (their chosen LLM provider is DB-backed and settings-page-set on their Automatos side). No platform keys, no gateway adapter. Multi-model rows via the chat wire's `model_id` where the tenant's workspace permits, else the agent's default model; the answering model id is shown on every row. No Automatos connection = the Connect-Automatos upsell state. Spend rides the tenant's own account (stated in UI copy)
 - [ ] Prompts generated from tenant market data (country, conditions content, product categories) with **medical-information framing** (documented rationale: engine content policies around cannabis commerce); prompt set capped per tenant per run
 - [ ] Dashboard tab: per-engine cited/not-cited over time, latest mention text; empty states for unconfigured engines
 - [ ] Worker-side code follows every worker lesson: own queue (expiry guard incompatibility), `bypassTenantScope` with tenantId in queries, Docker runner COPY check journaled, throwaway-tsconfig typecheck of touched worker files
@@ -77,5 +77,5 @@ Everything gates on `FEATURES.SEO_PRO`. Reuse: robots route, audit engine, JSON-
 Policy flips change robots output without deploy; a seeded product's Q&A renders visibly + validates as FAQPage; audit flags a Shadow-DOM-blog tenant; citation monitor produces a dashboard row for a configured engine against a live prompt; zero regressions in the parent PRD's suites.
 
 ## Open Questions
-1. OpenRouter key provisioning + which web-search model routes to default (monitor ships env-gated regardless).
+1. Which Automatos workspace models typically permit model_id variation + support retrieval — determines how many engine rows a typical tenant sees (monitor ships regardless; single-model fallback).
 2. Citation-check cadence and prompt cap per tenant (cost control) — defaults: weekly, 6 prompts, 2 engines.
