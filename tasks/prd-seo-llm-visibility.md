@@ -77,5 +77,5 @@ Everything gates on `FEATURES.SEO_PRO`. Reuse: robots route, audit engine, JSON-
 Policy flips change robots output without deploy; a seeded product's Q&A renders visibly + validates as FAQPage; audit flags a Shadow-DOM-blog tenant; citation monitor produces a dashboard row for a configured engine against a live prompt; zero regressions in the parent PRD's suites.
 
 ## Open Questions
-1. Which platform API keys will be provisioned first (OpenAI / Perplexity / xAI / Anthropic)? Monitor ships env-gated regardless.
+1. OpenRouter key provisioning + which web-search model routes to default (monitor ships env-gated regardless).
 2. Citation-check cadence and prompt cap per tenant (cost control) — defaults: weekly, 6 prompts, 2 engines.
