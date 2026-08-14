@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getFileUrl } from "@/lib/storage/s3";
 import { JsonLd } from "@/components/seo/json-ld";
 import { buildStoreJsonLd, type StoreJsonLdSource } from "@/lib/seo/json-ld";
+import { brandedOgImage } from "@/lib/seo/og-image";
 import { tenantLogoRef } from "@/lib/seo/tenant-logo";
 
 // Revalidate every 60 seconds — template/product data doesn't change frequently
@@ -450,6 +451,14 @@ export async function generateMetadata() {
     customDomain: tenantWithSeo?.customDomain ?? null,
   });
 
+  // SEO US-018 — the branded store card, only when the owner authored no
+  // ogImage of their own and only for a Pro tenant (null otherwise, and then
+  // this homepage emits exactly the tags it emitted before). Origin-relative:
+  // the store layout's metadataBase absolutises it against this same host.
+  const brandedOg = homeSeo?.ogImage
+    ? null
+    : brandedOgImage({ tenantId: tenant.id, plan: tenant.plan, kind: "store" });
+
   return {
     title,
     description,
@@ -459,15 +468,21 @@ export async function generateMetadata() {
       url: baseUrl,
       siteName: tenant.businessName,
       type: "website",
-      ...(homeSeo?.ogImage && {
-        images: [{ url: homeSeo.ogImage, width: 1200, height: 630 }],
-      }),
+      ...(homeSeo?.ogImage
+        ? { images: [{ url: homeSeo.ogImage, width: 1200, height: 630 }] }
+        : brandedOg
+          ? { images: [brandedOg] }
+          : {}),
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      ...(homeSeo?.ogImage && { images: [homeSeo.ogImage] }),
+      ...(homeSeo?.ogImage
+        ? { images: [homeSeo.ogImage] }
+        : brandedOg
+          ? { images: [brandedOg.url] }
+          : {}),
     },
     alternates: {
       canonical: baseUrl,

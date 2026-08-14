@@ -49,6 +49,7 @@ import type { Metadata } from "next";
 import { storeCanonical } from "@/lib/seo/canonical";
 import { conditionPath } from "@/lib/seo/condition-paths";
 import { readEntitySeo } from "@/lib/seo/entity-seo";
+import { brandedOgImage } from "@/lib/seo/og-image";
 import {
   STORE_OG_LOCALE,
   seoText,
@@ -69,6 +70,10 @@ export interface ConditionMetadataSource {
   readonly businessName: string;
   readonly subdomain: string;
   readonly customDomain: string | null;
+  /** `tenants.id` — the US-018 plan gate's subject. */
+  readonly tenantId?: string;
+  /** Raw `tenants.plan`; fail-closed to Basic, which emits no branded card. */
+  readonly plan?: unknown;
   /** `conditions.slug` — the segment the storefront route is keyed by. */
   readonly slug: unknown;
   /** `conditions.name`. `unknown`: it arrives through the any-widened prisma export. */
@@ -88,9 +93,9 @@ export function buildConditionMetadata(
   const seo = readEntitySeo(source.seo);
 
   const authoredTitle = seoText(seo.title);
-  const title = authoredTitle
-    ? { absolute: authoredTitle }
-    : seoText(source.name) || CONDITION_NOT_FOUND_TITLE;
+  const headline =
+    authoredTitle || seoText(source.name) || CONDITION_NOT_FOUND_TITLE;
+  const title = authoredTitle ? { absolute: authoredTitle } : headline;
 
   // No third tier: with neither an authored description nor condition copy, the
   // layout's own description is inherited — a truthful sentence about the store.
@@ -110,6 +115,18 @@ export function buildConditionMetadata(
     storedPublicImagePath(seo.ogImage) ??
     storedPublicImagePath(seoText(source.image) || null);
 
+  // US-018 — LAST in the cascade, behind the condition's own image. Condition
+  // pages are the store's ranking landing pages and most seeded rows carry no
+  // image at all, so this is where the branded card earns the most. Pro only.
+  const brandedOg = ogImage
+    ? null
+    : brandedOgImage({
+        tenantId: source.tenantId,
+        plan: source.plan,
+        kind: "condition",
+        title: headline,
+      });
+
   return {
     title,
     // Omitted rather than undefined — see the merge note in the module header.
@@ -120,10 +137,14 @@ export function buildConditionMetadata(
       type: "website",
       locale: STORE_OG_LOCALE,
       url: canonical,
-      // No width/height: the image is whatever the row carries or the owner
-      // uploaded, and dimensions we have not measured make scrapers crop wrong.
-      // US-018's generated images are a known 1200x630 and can declare them.
-      ...(ogImage ? { images: [ogImage] } : {}),
+      // No width/height on the row/authored image: it is whatever the row
+      // carries or the owner uploaded, and dimensions we have not measured make
+      // scrapers crop wrong. The branded card declares its own.
+      ...(ogImage
+        ? { images: [ogImage] }
+        : brandedOg
+          ? { images: [brandedOg] }
+          : {}),
     },
     twitter: { card: "summary_large_image" },
   };

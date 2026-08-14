@@ -29,6 +29,7 @@ import type { Metadata } from "next";
 
 import { getLegalDocument, type LegalDocumentSlug } from "@/lib/legal/documents";
 import { storeCanonical } from "@/lib/seo/canonical";
+import { brandedOgImage } from "@/lib/seo/og-image";
 import {
   PRODUCTS_INDEX_PATH,
   PRODUCTS_INDEX_TITLE,
@@ -40,6 +41,10 @@ export interface StoreRouteTenant {
   readonly businessName: string;
   readonly subdomain: string;
   readonly customDomain: string | null;
+  /** `tenants.id` — the US-018 plan gate's subject. */
+  readonly tenantId?: string;
+  /** Raw `tenants.plan`; fail-closed to Basic, which emits no branded card. */
+  readonly plan?: unknown;
 }
 
 /**
@@ -159,6 +164,16 @@ function routeMetadata(
   );
   const canonical = storeCanonical(tenant, path);
 
+  // US-018 — these routes carry no authorable image at all, so for a Pro tenant
+  // the branded card is the only preview /products, /how-it-works and the four
+  // legal documents will ever have. Null for a Basic tenant.
+  const brandedOg = brandedOgImage({
+    tenantId: tenant.tenantId,
+    plan: tenant.plan,
+    kind: "page",
+    title,
+  });
+
   return {
     title,
     description,
@@ -168,6 +183,7 @@ function routeMetadata(
       type: "website",
       locale: STORE_OG_LOCALE,
       url: canonical,
+      ...(brandedOg ? { images: [brandedOg] } : {}),
     },
   };
 }

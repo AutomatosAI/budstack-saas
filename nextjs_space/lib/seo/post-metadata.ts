@@ -39,6 +39,7 @@ import type { Metadata } from "next";
 
 import { storeCanonical } from "@/lib/seo/canonical";
 import { readEntitySeo } from "@/lib/seo/entity-seo";
+import { brandedOgImage } from "@/lib/seo/og-image";
 import {
   STORE_OG_LOCALE,
   seoText,
@@ -72,6 +73,10 @@ export interface WireTenantSource {
   readonly businessName: string;
   readonly subdomain: string;
   readonly customDomain: string | null;
+  /** `tenants.id` — the US-018 plan gate's subject. */
+  readonly tenantId?: string;
+  /** Raw `tenants.plan`; fail-closed to Basic, which emits no branded card. */
+  readonly plan?: unknown;
 }
 
 /**
@@ -117,6 +122,15 @@ export function buildWireIndexMetadata(source: WireTenantSource): Metadata {
   const businessName = storeDisplayName(source.businessName, source.subdomain);
   const canonical = storeCanonical(source, WIRE_INDEX_PATH);
 
+  // US-018 — the index has no authorable image, so the branded card is its only
+  // preview. Null for a Basic tenant.
+  const brandedOg = brandedOgImage({
+    tenantId: source.tenantId,
+    plan: source.plan,
+    kind: "page",
+    title: WIRE_INDEX_TITLE,
+  });
+
   return {
     title: WIRE_INDEX_TITLE,
     description: wireIndexDescription(businessName),
@@ -126,6 +140,7 @@ export function buildWireIndexMetadata(source: WireTenantSource): Metadata {
       type: "website",
       locale: STORE_OG_LOCALE,
       url: canonical,
+      ...(brandedOg ? { images: [brandedOg] } : {}),
     },
   };
 }
@@ -136,9 +151,9 @@ export function buildPostMetadata(source: PostMetadataSource): Metadata {
   const seo = readEntitySeo(source.seo);
 
   const authoredTitle = seoText(seo.title);
-  const title = authoredTitle
-    ? { absolute: authoredTitle }
-    : seoText(source.title) || POST_NOT_FOUND_TITLE;
+  const headline =
+    authoredTitle || seoText(source.title) || POST_NOT_FOUND_TITLE;
+  const title = authoredTitle ? { absolute: authoredTitle } : headline;
 
   // No third tier: with neither an authored description nor an excerpt the
   // layout's own description is inherited, which is a truthful sentence about
@@ -164,6 +179,18 @@ export function buildPostMetadata(source: PostMetadataSource): Metadata {
     storedPublicImagePath(seo.ogImage) ??
     storedPublicImagePath(source.coverImage);
 
+  // US-018 — LAST in the cascade, behind the cover image: a photograph the
+  // author chose for this article previews better than any generated card, and
+  // an article with a cover is the common case. Pro only; null otherwise.
+  const brandedOg = ogImage
+    ? null
+    : brandedOgImage({
+        tenantId: source.tenantId,
+        plan: source.plan,
+        kind: "article",
+        title: headline,
+      });
+
   const publishedTime = isoTimestamp(source.createdAt);
 
   return {
@@ -179,9 +206,15 @@ export function buildPostMetadata(source: PostMetadataSource): Metadata {
       url: canonical,
       ...(publishedTime ? { publishedTime } : {}),
       authors: [authorName],
-      // No width/height: the image is whatever the owner uploaded or pasted,
-      // and dimensions we have not measured make scrapers crop it wrong.
-      ...(ogImage ? { images: [ogImage] } : {}),
+      // No width/height on the authored/cover image: it is whatever the owner
+      // uploaded or pasted, and dimensions we have not measured make scrapers
+      // crop it wrong. The branded card carries its own, because that size is
+      // one we control exactly.
+      ...(ogImage
+        ? { images: [ogImage] }
+        : brandedOg
+          ? { images: [brandedOg] }
+          : {}),
     },
     twitter: { card: "summary_large_image" },
   };

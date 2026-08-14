@@ -99,6 +99,28 @@ export const EMAIL_TRACKING_MAX_REQUESTS = 300;
 export const EMAIL_TRACKING_WINDOW_MS = 60_000; // 1 minute
 
 /**
+ * Branded OG image generation (SEO US-018). Metered because a card is a WASM
+ * rasterise rather than a byte copy, so an un-capped public image generator is
+ * a CPU amplifier on a shared container — the reason this route is limited at
+ * all, since it neither writes nor reads anything private.
+ *
+ * 60/minute per IP is far above real demand: a scraper fetches one image per
+ * shared link and the CDN absorbs repeats for a day (see the route's
+ * Cache-Control), so only a caller cycling the query string ever reaches it.
+ */
+export const OG_IMAGE_MAX_REQUESTS = 60;
+export const OG_IMAGE_WINDOW_MS = 60_000; // 1 minute
+
+/**
+ * How long the OG route waits for the limiter before rendering anyway. Same
+ * reasoning and same value as `EMAIL_TRACKING_TIMEOUT_MS`, for the same
+ * underlying defect (see `lib/security/abandonable-rate-limit.ts`): with Redis
+ * unreachable the shared limiter never settles, and a scraper that gives up
+ * waiting renders the link with no preview at all.
+ */
+export const OG_IMAGE_TIMEOUT_MS = 500;
+
+/**
  * How long a tracking route waits for the rate limiter before carrying on
  * without it. Redis normally answers in single-digit milliseconds; anything
  * past this is an outage, and the reader waiting on it is following a link out

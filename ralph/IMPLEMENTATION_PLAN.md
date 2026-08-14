@@ -28,7 +28,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-seo-supercharge.md` · Review: `doc
 - [x] US-015 Product JSON-LD
 - [x] US-016 Article + BreadcrumbList JSON-LD
 - [x] US-017 FAQPage JSON-LD from conditions
-- [ ] US-018 OG image studio — branded generation
+- [x] US-018 OG image studio — branded generation
 - [ ] US-019 OG image studio — real upload
 - [ ] US-020 Redirects manager
 - [ ] US-021 Slug editing + auto-301 on change

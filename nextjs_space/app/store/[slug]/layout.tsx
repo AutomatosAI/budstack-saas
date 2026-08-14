@@ -50,6 +50,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return buildStoreMetadata({
     tenantId: tenant.id,
+    // SEO US-018 — the plan gate for the branded og:image fallback. Rides on
+    // the row `getCurrentTenant` already returned; no extra query.
+    plan: tenant.plan,
     businessName: tenant.businessName,
     subdomain: tenant.subdomain,
     customDomain: tenant.customDomain,

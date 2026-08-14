@@ -32,6 +32,7 @@
 
 import type { Metadata } from "next";
 
+import { brandedOgImage } from "@/lib/seo/og-image";
 import {
   STORE_OG_LOCALE,
   seoText,
@@ -59,8 +60,10 @@ function defaultStoreDescription(businessName: string): string {
 }
 
 export interface StoreMetadataSource {
-  /** `tenants.id` — used only to label a settings parse failure in the log. */
+  /** `tenants.id` — labels a settings parse failure, and the plan gate's subject. */
   readonly tenantId?: string;
+  /** Raw `tenants.plan` (US-018's branded og:image); fail-closed to Basic. */
+  readonly plan?: unknown;
   readonly businessName: string;
   readonly subdomain: string;
   readonly customDomain: string | null;
@@ -125,6 +128,17 @@ export function buildStoreMetadata(source: StoreMetadataSource): Metadata {
   const favicon =
     storedPublicImagePath(source.faviconRef) ?? PLATFORM_FAVICON;
 
+  // US-018 — the store card, for any page that declares no openGraph of its
+  // own. That is a shrinking set (US-002..007 gave the rest their own, and a
+  // deeper segment REPLACES this block wholesale rather than merging into it),
+  // so each of those builders carries the same fallback for itself. Null for a
+  // Basic tenant, and then nothing is emitted at all.
+  const brandedOg = brandedOgImage({
+    tenantId: source.tenantId,
+    plan: source.plan,
+    kind: "store",
+  });
+
   return {
     metadataBase: storeMetadataBase(source.subdomain, source.customDomain),
     title: {
@@ -139,6 +153,7 @@ export function buildStoreMetadata(source: StoreMetadataSource): Metadata {
       siteName: businessName,
       type: "website",
       locale: STORE_OG_LOCALE,
+      ...(brandedOg ? { images: [brandedOg] } : {}),
     },
     // Declared so the platform's twitter:title / twitter:description cannot
     // survive into a tenant page; Next refills both from this page's own

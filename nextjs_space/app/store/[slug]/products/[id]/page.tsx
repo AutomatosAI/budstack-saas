@@ -134,6 +134,9 @@ export async function generateMetadata({
     businessName: tenant.businessName,
     subdomain: tenant.subdomain,
     customDomain: tenant.customDomain,
+    // US-018 — the plan gate for the branded og:image fallback.
+    tenantId: tenant.id,
+    plan: tenant.plan,
     // The RESOLVED id, not the raw param: they are equal whenever the lookup
     // succeeded, and this is the one the catalogue agrees with.
     productId: product.id,

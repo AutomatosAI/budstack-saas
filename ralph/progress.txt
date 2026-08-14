@@ -2038,3 +2038,176 @@ FLAGGED, NOT FIXED (adjacent debt)
 - conditions.published is still not filtered by either the body's API or the
   metadata loader (US-005's flag, unchanged) — an unpublished condition renders
   and now also emits its FAQ.
+
+================================================================================
+[2026-08-14] US-018 PASS — OG image studio: branded generation
+================================================================================
+
+WHAT WAS ACTUALLY MISSING. Every builder Workstream A built ends its image
+cascade with "or nothing" — an owner who never pasted an ogImage got no
+og:image, which is the grey row Slack/WhatsApp/LinkedIn render for a link they
+could not preview. app/api/public/og/route.tsx now mints a 1200x630 card from
+the tenant's own logo, brand colour, business name and page title, and
+lib/seo/og-image.ts wires it in as the LAST entry of that cascade.
+
+LAST, not first — deliberate. An authored seo.ogImage wins, then the entity's
+own picture (post cover, Dr Green strain photo, condition image), and only then
+the generated card. A photograph the author chose previews better than anything
+we can draw. Where the card actually earns its keep is the pages that never had
+an image to lose: /products, /how-it-works, the four legal documents, The Wire
+index, and most seeded conditions.
+
+WHAT GOES IN THE URL, AND WHY SO LITTLE. Two params: `kind` (a closed enum) and
+`title` (capped at 90 chars, truncated by the builder AND re-checked by a Zod
+schema in the route). Everything that makes the card the TENANT's — logo,
+colour, name, printed host — is resolved from the request HOST, never the query,
+so a crafted URL cannot dress one store's card in another store's branding. The
+headline is the single caller-controlled pixel. That is a deliberate, stated
+acceptance rather than an oversight: signing the params would need a new secret
+and a new deploy variable, and a fail-closed signature check means no OG images
+at all on a misconfigured deploy. FLAGGED for review below.
+
+FOUR DEFECTS FOUND BY RENDERING RATHER THAN REASONING. The PNG path cannot be
+unit-tested (WASM rasterise), so it was driven directly through next/og in a
+scratch harness and the output images were looked at:
+
+  1. CACHE HEADER SILENTLY DOUBLED. ImageResponse builds its headers as
+     `{ "content-type": …, "cache-control": …, ...options.headers }` — a plain
+     object spread, so "Cache-Control" and "cache-control" are DIFFERENT keys
+     and both reach the Headers constructor, which comma-joins them. The
+     response carried `public, immutable, no-transform, max-age=31536000,
+     public, max-age=3600` and a browser takes the FIRST max-age: a year of
+     immutable caching on an image that must change when an owner rebrands.
+     Fixed by using the lowercase key so the spread actually overrides. Now
+     emits exactly `public, max-age=3600, s-maxage=86400,
+     stale-while-revalidate=604800`.
+
+  2. LONG UNBROKEN TITLES RAN OFF THE CANVAS. Satori will not split a run with
+     no break opportunity, so a 90-char product name with no spaces (a SKU, a
+     compound word) was clipped at the right edge. `wordBreak: "break-word"` on
+     the headline; re-rendered the cap-length worst case both ways to confirm.
+
+  3. WEBP AND AVIF LOGOS THROW, they do not degrade. Measured: the same 64x64
+     square as png/jpeg/gif each rendered an identical 845-byte card; webp and
+     avif threw "a is not iterable" — and they throw from INSIDE the
+     ReadableStream, which is consumed after the handler has returned, so the
+     route's try/catch cannot catch it and the caller gets a 200 whose body
+     dies mid-flight. /api/public/images DOES serve webp, so this was reachable
+     for any tenant with a .webp logo: every card on their store, broken.
+     RENDERABLE_LOGO_TYPES is the only defence and is now documented as such.
+     Extension-derived Content-Type is trustworthy because validateUploadBuffer
+     magic-byte checks every upload at write time.
+
+  4. THE RATE LIMITER HUNG THE ROUTE FOR 140 SECONDS. Measured on the dev
+     server with no local Redis: `GET /api/public/og` returned 200 after
+     140,218ms, all of it inside checkRateLimit. lib/security/rate-limit.ts
+     documents failMode "open", but that branch is a `catch` and the shared
+     client is built with `maxRetriesPerRequest: null`, which tells ioredis to
+     QUEUE commands forever while disconnected rather than error them.
+     lib/email/tracking-rate-limit.ts had already recorded this for the email
+     routes; this story generalises the fix into
+     lib/security/abandonable-rate-limit.ts (race the meter against a 500ms
+     deadline, carry on if it does not answer) and uses it here. A scraper that
+     times out renders the link with no preview — the exact outcome the card
+     exists to prevent. The email module predates it and should collapse onto
+     it when something else touches that file.
+
+SSRF, CONSIDERED AND CLOSED. tenant_branding.logoUrl is TENANT-WRITABLE. A
+renderer that fetched it server-side would be an SSRF with the tenant steering
+(169.254.169.254 and friends). The logo is therefore read from S3 directly —
+through storedPublicImagePath, which only returns a path for a key under
+tenants/{id}/uploads/, then through parsePublicImageRequest, the same
+s3-tenant-guard that gates /api/public/images. An absolute URL, a presigned
+link or a template asset is SKIPPED rather than fetched, and the card falls back
+to a monogram chip. Reading S3 directly also avoids the container HTTP-fetching
+its own public hostname out through Cloudflare and back on every uncached card.
+
+RUNTIME = NODEJS, stated in-code with the reason (an AC). The card needs the
+tenant row (Prisma) and the logo bytes (AWS SDK); neither runs on edge without a
+Data Proxy this deployment does not have. next/og supports both — image-response
+.js picks index.node.js when NEXT_RUNTIME is not "edge" — and reads its font and
+both WASM blobs off disk with readFileSync, so the render makes no network call.
+
+PLAN GATE. brandedOgImage returns null for anything that is not seo.pro, so a
+Basic tenant's head is byte-identical to what it was before this story — the
+storefront degrades, it never blocks. A direct hit on the route from a Basic
+tenant answers the SAME 404 as an unknown host, so it cannot be used to
+enumerate which stores are on which plan. Trial tenants get it, per the matrix.
+
+VERIFIED
+- pnpm exec tsc --noEmit                                    -> exit 0
+- pnpm vitest run tests/unit/og-image.test.ts               -> 42 passed
+- pnpm vitest run (all projects) -> 150 files, 2314 passed, 30 skipped, 0 failed
+  (was 149/2272 at US-017: +1 file, +42 tests, no regressions)
+- pnpm check:security                                       -> both gates green
+- check-auth-wrappers -> 161 files, 213 handlers, 22 allow-listed, 0 new
+  violations. The 4 advisory violations (email click/open, team accept-invite,
+  team invitation) are pre-existing and untouched by this diff.
+- pnpm exec next lint (17 touched files) -> clean except one @next/next/
+  no-img-element WARNING on the satori <img>. Not suppressed: next/image cannot
+  render inside satori (different renderer entirely), the rule does not apply,
+  and 38 files in this repo already carry it. jsx-a11y/alt-text was fixed
+  honestly with alt="" — the output is a flat PNG with no text layer.
+- pnpm build -> Compiled successfully; /api/public/og listed as f (Dynamic).
+- RENDER (the part tests cannot reach): drove next/og directly and inspected
+  the PNGs. 1200x630, valid PNG magic, 18-54kB, 25-117ms per card. Checked a
+  dark brand with white text, a pale brand with dark text and a logo, a
+  realistic 90-char title (3 lines, room to spare) and the 90-char unbroken
+  worst case (wraps, stays inside the canvas).
+- LIVE (pnpm dev on the existing .env.local, never modified):
+    GET /api/public/og?kind=article&title=Test+Card, Host healingbuds.
+      budstacks.io, no session -> 404 "Host resolves to no tenant" FROM INSIDE
+      THE HANDLER (Prisma cannot reach the Railway private-network DB — the
+      same constraint US-014..017 recorded).
+    CONTROL, same unauthenticated request to a NON-allow-listed sibling
+      (/api/tenant-admin/seo/pages) -> 401 in 15ms, rejected by middleware
+      before any handler ran.
+    That contrast is the AC-3 proof: the route is genuinely public in BOTH
+    gates. Apex with no tenant hint -> 404 in 0.5s. Bad kind -> 404 (fail-closed
+    parse, never a 500).
+    One earlier request DID return 200 through the real route before the DB
+    went unreachable again, so the full path has been observed end to end once.
+  visual: card composition deferred to human review — asserting the rendered
+  card for a REAL tenant needs a reachable DB. Colour, contrast, headline
+  cascade, host, monogram, the plan gate and the URL/parser round trip are
+  asserted purely (42 tests).
+
+DOCKERFILE CHECK (the email-p2 #232 lesson) — PROVEN, not assumed. next/og
+loads noto-sans-v27-latin-regular.ttf, resvg.wasm and yoga.wasm off disk, so the
+question was whether Next's tracing carries them into the standalone output.
+After the build, .next/standalone/node_modules/next/dist/compiled/@vercel/og/
+contains index.node.js, the .ttf and both .wasm files. Dockerfile:60 already
+COPYies .next/standalone (and :71 node_modules), so NO Dockerfile change is
+needed. Every other new module lives under lib/, already COPYied at :76.
+
+NO SCHEMA CHANGE, NO MIGRATION, no new model, no tenantScopedModels change.
+ONE new API route, allow-listed in both gates with a reason.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- THE HEADLINE IS UNSIGNED FREE TEXT. Someone can request
+  https://{tenant}/api/public/og?kind=product&title=<anything> and get a PNG in
+  that tenant's branding, on that tenant's domain, saying whatever they typed.
+  Bounded (90 chars, text only, no branding control) and it does not by itself
+  produce an OG card anywhere — a card only renders for an HTML page whose
+  og:image points at it. Industry-standard acceptance (Vercel's own OG service
+  is the same). The closed alternative is an HMAC over the params, which needs a
+  new deploy secret; worth a decision before this ships to a real Pro tenant.
+- app/store/[slug]/page.tsx:462 passes homeSeo.ogImage into the tag WITHOUT
+  storedPublicImagePath, so a presigned S3 URL an owner pasted before Email
+  US-005 still reaches og:image on the HOMEPAGE only — the exact defect US-002
+  fixed for every other page. Pre-existing; this story only added the branded
+  fallback beside it. One-line fix, but it changes homepage behaviour and the
+  PROMPT forbids regressing that page casually.
+- The homepage still builds its metadata inline with its own second
+  prisma.tenants.findUnique rather than buildStorePageMetadata + the cache()d
+  tenant (US-002's flag, unchanged).
+- lib/email/tracking-rate-limit.ts now duplicates
+  lib/security/abandonable-rate-limit.ts. Deliberately left alone — collapsing
+  it means editing email code in an SEO story.
+- The real repair for the limiter hang is a `commandTimeout` on the shared
+  ioredis client, which would also fix newsletter subscribe/confirm/unsubscribe,
+  password reset and consultation submit. It changes behaviour for auth and
+  payment routes, so it needs its own story.
+- No test covers RENDERABLE_LOGO_TYPES or tenantLogoDataUri: both live inside
+  the route file and would need S3 mocking. The webp/avif finding is recorded in
+  the docstring with its measurement.

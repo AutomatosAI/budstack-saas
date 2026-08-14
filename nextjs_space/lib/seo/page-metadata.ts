@@ -31,6 +31,7 @@
 import type { Metadata } from "next";
 
 import { storeCanonical } from "@/lib/seo/canonical";
+import { brandedOgImage } from "@/lib/seo/og-image";
 import { STORE_OG_LOCALE, seoText, storeDisplayName } from "@/lib/seo/store-identity";
 import {
   readStorePageSeo,
@@ -81,6 +82,10 @@ export interface StorePageMetadataSource {
   readonly customDomain: string | null;
   /** Raw `tenants.pageSeo` Json — parsed here, never trusted. */
   readonly pageSeo: unknown;
+  /** `tenants.id` — the US-018 plan gate's subject. */
+  readonly tenantId?: string;
+  /** Raw `tenants.plan`; fail-closed to Basic, which emits no branded card. */
+  readonly plan?: unknown;
 }
 
 export function buildStorePageMetadata(
@@ -91,9 +96,8 @@ export function buildStorePageMetadata(
   const seo = readStorePageSeo(source.pageSeo, source.pageKey);
 
   const authoredTitle = seoText(seo.title);
-  const title = authoredTitle
-    ? { absolute: authoredTitle }
-    : DEFAULT_TITLES[source.pageKey](businessName);
+  const headline = authoredTitle || DEFAULT_TITLES[source.pageKey](businessName);
+  const title = authoredTitle ? { absolute: authoredTitle } : headline;
 
   const description =
     seoText(seo.description) ||
@@ -111,6 +115,18 @@ export function buildStorePageMetadata(
   // child's URLs resolve against — resolve-metadata.js:130).
   const ogImage = storedPublicImagePath(seo.ogImage);
 
+  // US-018 — the branded card, only when the owner authored no image of their
+  // own, and only for a Pro tenant. Its 1200x630 IS declared: unlike a pasted
+  // URL, this one is a size we control exactly.
+  const brandedOg = ogImage
+    ? null
+    : brandedOgImage({
+        tenantId: source.tenantId,
+        plan: source.plan,
+        kind: "page",
+        title: headline,
+      });
+
   return {
     title,
     description,
@@ -120,10 +136,14 @@ export function buildStorePageMetadata(
       type: "website",
       locale: STORE_OG_LOCALE,
       url: canonical,
-      // No width/height: the image is a URL the owner pasted, and declaring
-      // dimensions we have not measured makes scrapers crop it wrong. The
-      // generated images in US-018 are a known 1200x630 and can declare them.
-      ...(ogImage ? { images: [ogImage] } : {}),
+      // No width/height on the AUTHORED image: it is a URL the owner pasted,
+      // and declaring dimensions we have not measured makes scrapers crop it
+      // wrong.
+      ...(ogImage
+        ? { images: [ogImage] }
+        : brandedOg
+          ? { images: [brandedOg] }
+          : {}),
     },
   };
 }

@@ -86,6 +86,9 @@ export async function generateMetadata({
     businessName: tenant.businessName,
     subdomain: tenant.subdomain,
     customDomain: tenant.customDomain,
+    // US-018 — the plan gate for the branded og:image fallback.
+    tenantId: tenant.id,
+    plan: tenant.plan,
     slug: post.slug,
     title: post.title,
     excerpt: post.excerpt,

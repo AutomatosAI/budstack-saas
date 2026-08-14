@@ -44,6 +44,10 @@ export async function generateStorePageMetadata(
     subdomain: tenant.subdomain,
     customDomain: tenant.customDomain,
     pageSeo: tenant.pageSeo,
+    // US-018 — the branded og:image fallback. Both fields ride on the tenant
+    // row `getCurrentTenant` already returned, so the gate costs no query.
+    tenantId: tenant.id,
+    plan: tenant.plan,
   });
 }
 
@@ -61,6 +65,8 @@ export async function generateStoreRouteMetadata(
     businessName: tenant.businessName,
     subdomain: tenant.subdomain,
     customDomain: tenant.customDomain,
+    tenantId: tenant.id,
+    plan: tenant.plan,
   });
 }
 
@@ -84,5 +90,7 @@ export async function generateLegalDocumentMetadata(
     businessName: tenant.businessName,
     subdomain: tenant.subdomain,
     customDomain: tenant.customDomain,
+    tenantId: tenant.id,
+    plan: tenant.plan,
   });
 }

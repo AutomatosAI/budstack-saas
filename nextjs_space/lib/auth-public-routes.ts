@@ -132,6 +132,20 @@ export const AUTH_PUBLIC_ROUTES: readonly PublicRoute[] = [
       "the bucket cannot be probed.",
   },
   {
+    pattern: "/api/public/og",
+    reason:
+      "SEO US-018 branded social preview image. The callers are Slack, X, " +
+      "Facebook and every other scraper fetching an og:image out of band, none " +
+      "of which has a session. It reads nothing private and writes nothing: the " +
+      "tenant is resolved from the request HOST (never the query), the only " +
+      "caller-controlled input is a Zod-capped headline rendered as text, the " +
+      "logo is read through the same s3-tenant-guard as /api/public/images and " +
+      "only for a key in this platform's own bucket, and it is IP rate-limited " +
+      "because a WASM rasterise costs more than a byte copy. Gated on the " +
+      "seo.pro plan, answering the same 404 as an unknown host so it cannot be " +
+      "used to enumerate which tenants are on which plan.",
+  },
+  {
     pattern: "/api/store/[slug]/products",
     reason: "Public storefront read: product list by tenant slug.",
   },

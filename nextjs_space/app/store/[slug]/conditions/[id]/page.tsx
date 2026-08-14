@@ -137,6 +137,9 @@ export async function generateMetadata({
     businessName: tenant.businessName,
     subdomain: tenant.subdomain,
     customDomain: tenant.customDomain,
+    // US-018 — the plan gate for the branded og:image fallback.
+    tenantId: tenant.id,
+    plan: tenant.plan,
     // The RESOLVED slug, not the raw param: equal whenever the lookup succeeded,
     // and the one the listing links to.
     slug: condition.slug,
