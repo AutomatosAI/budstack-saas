@@ -794,6 +794,8 @@ model tenants {
   drGreenSecretKey       String?
   automatosApiKey        String?
   automatosAgentId       Int?
+  // On/off is independent of key presence; pro-gated via lib/entitlements.
+  automatosChatbotEnabled Boolean                  @default(false)
   pageSeo                Json?
   deletedAt              DateTime? // PRD-208 soft-delete (recoverable; NULL = live)
   conditions             conditions[]
