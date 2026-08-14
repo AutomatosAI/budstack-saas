@@ -25,11 +25,13 @@ import { logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import {
   AI_ASSIST_MAX_LENGTH,
+  AUTOMATOS_CONNECT,
   buildAiAssistPrompt,
   parseAiDraft,
   type AiAssistKind,
   type AiAssistSource,
   type AiDraftRefusal,
+  type AutomatosConnectPrompt,
 } from "@/lib/seo/ai-assist-contract";
 import {
   isAutomatosConfigured,
@@ -37,33 +39,8 @@ import {
   type AutomatosCredentials,
 } from "@/lib/seo/automatos-client";
 
-export { isAutomatosConfigured };
-export type { AutomatosCredentials };
-
-/**
- * What a tenant without credentials is shown instead of a generate button.
- *
- * Distinct from the PLAN upsell (`lib/entitlements/upgrade.ts`): that one sells
- * Pro, this one points an already-Pro tenant at the field they have not filled
- * in. Confusing the two sends someone to a checkout page for something they have
- * already bought, so the shapes are deliberately separate.
- */
-export interface AutomatosConnectPrompt {
-  readonly provider: string;
-  readonly headline: string;
-  readonly body: string;
-  readonly actionLabel: string;
-  /** In-app, relative — the settings page that owns the two columns. */
-  readonly settingsPath: string;
-}
-
-export const AUTOMATOS_CONNECT: AutomatosConnectPrompt = {
-  provider: "Automatos AI",
-  headline: "Connect Automatos AI",
-  body: "AI drafting runs on your own Automatos AI account, so your product copy stays in your workspace. Add your API key to switch it on.",
-  actionLabel: "Add your Automatos API key",
-  settingsPath: "/tenant-admin/settings",
-} as const;
+export { isAutomatosConfigured, AUTOMATOS_CONNECT };
+export type { AutomatosCredentials, AutomatosConnectPrompt };
 
 /**
  * Per-TENANT metering, and fail-closed, because every call spends the tenant's
@@ -152,6 +129,26 @@ export async function loadAutomatosCredentials(
   if (!apiKey) return null;
 
   return { apiKey, agentId: row?.automatosAgentId ?? null };
+}
+
+/**
+ * Has this tenant connected an Automatos account? For SERVER-RENDERED pages
+ * (US-025), so the editor shows either generate buttons or the connect card,
+ * without spending a generation or a rate-limit token to find out which.
+ *
+ * A LOOKUP FAILURE ANSWERS `true`, on purpose. This decides presentation only —
+ * the route re-checks — and the two wrong answers are not equal: showing the
+ * button costs a click that reports the real error, while showing the connect
+ * card tells a tenant who HAS connected to go and connect, which is a lie they
+ * would act on. Same reasoning as `loadAutomatosCredentials` refusing to collapse
+ * "the database is down" into "not connected".
+ */
+export async function isAiAssistConnected(tenantId: string): Promise<boolean> {
+  try {
+    return isAutomatosConfigured(await loadAutomatosCredentials(tenantId));
+  } catch {
+    return true;
+  }
 }
 
 export interface GenerateSeoDraftRequest {

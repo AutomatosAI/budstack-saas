@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import { getTenantPlan } from "@/lib/entitlements/require-feature";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
+import { isAiAssistConnected } from "@/lib/seo/ai-assist";
 import { readEntitySeo } from "@/lib/seo/entity-seo";
 import { isSeoProUnlocked } from "@/lib/seo/pro-features";
 import PostForm from "../post-form";
@@ -28,9 +29,12 @@ export default async function EditPostPage({
   // after it; `getTenantPlan` fails closed to Basic, so a lookup that throws
   // shows the honest "the old URL will 404" warning rather than promising a
   // redirect the PATCH route will not write.
-  const [post, plan] = await Promise.all([
+  const [post, plan, aiAssistConnected] = await Promise.all([
     prisma.posts.findUnique({ where: { id } }),
     getTenantPlan(active.tenantId),
+    // US-025: whether the alt-text field offers a Generate button. Only the
+    // boolean reaches the client — the credential stays server-side.
+    isAiAssistConnected(active.tenantId),
   ]);
 
   if (!post) {
@@ -46,6 +50,7 @@ export default async function EditPostPage({
     <PostForm
       isEditing
       seoProUnlocked={isSeoProUnlocked({ id: active.tenantId, plan })}
+      aiAssistConnected={aiAssistConnected}
       initialData={{
         id: post.id,
         title: post.title,

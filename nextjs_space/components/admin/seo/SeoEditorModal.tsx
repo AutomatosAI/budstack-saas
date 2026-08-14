@@ -8,6 +8,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { AiAssistButton, AutomatosConnectCard } from "./AiAssistButton";
 import { GooglePreview } from "./GooglePreview";
 import {
   IndexingFields,
@@ -91,6 +92,18 @@ interface SeoEditorModalProps {
    * route, which is why the save below omits them entirely when this is false.
    */
   canEditIndexing?: boolean;
+  /**
+   * US-025 — `seoProUnlocked` again, for the AI drafting buttons. Backed by
+   * `requireFeature(SEO_PRO)` on `/api/tenant-admin/seo/ai-assist`.
+   */
+  canUseAiAssist?: boolean;
+  /**
+   * US-025 — does this tenant have Automatos credentials stored? Resolved
+   * server-side (page.tsx) so an unconnected tenant sees the connect card
+   * immediately, instead of a button whose only possible answer is "connect an
+   * account". A click that discovers otherwise flips the same state locally.
+   */
+  aiAssistConnected?: boolean;
 }
 
 export function SeoEditorModal({
@@ -105,6 +118,8 @@ export function SeoEditorModal({
   onSave,
   canUploadOgImage = false,
   canEditIndexing = false,
+  canUseAiAssist = false,
+  aiAssistConnected = false,
 }: SeoEditorModalProps) {
   const [title, setTitle] = useState(initialSeo?.title || "");
   const [description, setDescription] = useState(initialSeo?.description || "");
@@ -114,10 +129,18 @@ export function SeoEditorModal({
     readIndexingValue(initialSeo),
   );
   const [isSaving, setIsSaving] = useState(false);
+  /**
+   * US-025 — starts from what the server resolved, and is flipped by a click
+   * that comes back `unavailable` (the credentials were removed since this page
+   * rendered). One piece of state for all three buttons, so the connect card
+   * appears once rather than under every field.
+   */
+  const [aiConnected, setAiConnected] = useState(aiAssistConnected);
 
   const showAltText = (ALT_TEXT_ENTITY_TYPES as readonly string[]).includes(
     entityType,
   );
+  const showAiAssist = canUseAiAssist && aiConnected;
 
   useEffect(() => {
     setTitle(initialSeo?.title || "");
@@ -126,6 +149,12 @@ export function SeoEditorModal({
     setImageAlt(initialSeo?.imageAlt || "");
     setIndexing(readIndexingValue(initialSeo));
   }, [initialSeo, isOpen]);
+
+  // The prop is authoritative again whenever the editor is reopened: a tenant
+  // who adds a key in Settings and comes back sees the buttons without a reload.
+  useEffect(() => {
+    setAiConnected(aiAssistConnected);
+  }, [aiAssistConnected, isOpen]);
 
   // A canonical the route would reject: the save is blocked here so the owner
   // sees WHICH field is wrong rather than a generic failure toast.
@@ -182,13 +211,32 @@ export function SeoEditorModal({
             url={previewUrl}
           />
 
+          {/* US-025 — one card for the whole editor, not one per field. Shown
+              to a Pro tenant with no Automatos credentials stored; it points at
+              Settings, NOT at the upgrade page (they already bought Pro). */}
+          {canUseAiAssist && !aiConnected && <AutomatosConnectCard />}
+
           <div className="space-y-2">
-            <label htmlFor="seo-title" className="bs-eyebrow flex items-center gap-2">
-              <span>Meta Title</span>
-              <span className="text-[10px] normal-case tracking-normal text-bs-fg-muted">
-                ({title.length}/60 recommended)
-              </span>
-            </label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor="seo-title" className="bs-eyebrow flex items-center gap-2">
+                <span>Meta Title</span>
+                <span className="text-[10px] normal-case tracking-normal text-bs-fg-muted">
+                  ({title.length}/60 recommended)
+                </span>
+              </label>
+              {/* Sibling of the label, never inside it: a <label> wrapping a
+                  button swallows the click into the input it labels. */}
+              {showAiAssist && (
+                <AiAssistButton
+                  kind="title"
+                  entityType={entityType}
+                  entityId={entityId}
+                  onDraft={setTitle}
+                  onUnavailable={() => setAiConnected(false)}
+                  disabled={isSaving}
+                />
+              )}
+            </div>
             <input
               id="seo-title"
               value={title}
@@ -202,15 +250,27 @@ export function SeoEditorModal({
           </div>
 
           <div className="space-y-2">
-            <label
-              htmlFor="seo-description"
-              className="bs-eyebrow flex items-center gap-2"
-            >
-              <span>Meta Description</span>
-              <span className="text-[10px] normal-case tracking-normal text-bs-fg-muted">
-                ({description.length}/160 recommended)
-              </span>
-            </label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label
+                htmlFor="seo-description"
+                className="bs-eyebrow flex items-center gap-2"
+              >
+                <span>Meta Description</span>
+                <span className="text-[10px] normal-case tracking-normal text-bs-fg-muted">
+                  ({description.length}/160 recommended)
+                </span>
+              </label>
+              {showAiAssist && (
+                <AiAssistButton
+                  kind="description"
+                  entityType={entityType}
+                  entityId={entityId}
+                  onDraft={setDescription}
+                  onUnavailable={() => setAiConnected(false)}
+                  disabled={isSaving}
+                />
+              )}
+            </div>
             <textarea
               id="seo-description"
               value={description}
@@ -223,15 +283,27 @@ export function SeoEditorModal({
 
           {showAltText && (
             <div className="space-y-2">
-              <label
-                htmlFor="seo-image-alt"
-                className="bs-eyebrow flex items-center gap-2"
-              >
-                <span>Image Alt Text</span>
-                <span className="text-[10px] normal-case tracking-normal text-bs-fg-muted">
-                  ({imageAlt.length}/125 recommended)
-                </span>
-              </label>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label
+                  htmlFor="seo-image-alt"
+                  className="bs-eyebrow flex items-center gap-2"
+                >
+                  <span>Image Alt Text</span>
+                  <span className="text-[10px] normal-case tracking-normal text-bs-fg-muted">
+                    ({imageAlt.length}/125 recommended)
+                  </span>
+                </label>
+                {showAiAssist && (
+                  <AiAssistButton
+                    kind="imageAlt"
+                    entityType={entityType}
+                    entityId={entityId}
+                    onDraft={setImageAlt}
+                    onUnavailable={() => setAiConnected(false)}
+                    disabled={isSaving}
+                  />
+                )}
+              </div>
               <input
                 id="seo-image-alt"
                 value={imageAlt}

@@ -133,6 +133,37 @@ export function buildAiAssistPrompt(
   ].join("\n");
 }
 
+/**
+ * What a tenant without credentials is shown instead of a generate button.
+ *
+ * Distinct from the PLAN upsell (`lib/entitlements/upgrade.ts`): that one sells
+ * Pro, this one points an already-Pro tenant at the field they have not filled
+ * in. Confusing the two sends someone to a checkout page for something they have
+ * already bought, so the shapes are deliberately separate.
+ *
+ * LIVES HERE, NOT IN THE SERVICE (US-025). The editor renders this card without
+ * calling the API at all — the SEO page resolves "connected" server-side, so an
+ * unconnected tenant is never shown a button that can only fail. A client
+ * component cannot import `./ai-assist`, which pulls prisma and ioredis, so the
+ * constant belongs in the pure half. `./ai-assist` re-exports it unchanged.
+ */
+export interface AutomatosConnectPrompt {
+  readonly provider: string;
+  readonly headline: string;
+  readonly body: string;
+  readonly actionLabel: string;
+  /** In-app, relative — the settings page that owns the two columns. */
+  readonly settingsPath: string;
+}
+
+export const AUTOMATOS_CONNECT: AutomatosConnectPrompt = {
+  provider: "Automatos AI",
+  headline: "Connect Automatos AI",
+  body: "AI drafting runs on your own Automatos AI account, so your product copy stays in your workspace. Add your API key to switch it on.",
+  actionLabel: "Add your Automatos API key",
+  settingsPath: "/tenant-admin/settings",
+} as const;
+
 /** Why a draft was refused. Each maps to a distinct message in the editor. */
 export type AiDraftRefusal =
   | "not_json"

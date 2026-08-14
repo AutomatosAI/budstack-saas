@@ -134,6 +134,11 @@ export const AUDIT_ACTIONS = {
   CONSULTATION_SUBMITTED: "consultation.submitted",
   CONSULTATION_STATUS_CHANGED: "consultation.status_changed",
 
+  // SEO US-025: an AI draft was generated for one SEO field, on the tenant's
+  // own Automatos account. Records that a machine wrote the sentence a human
+  // then chose to keep — nothing is saved by the generating route itself.
+  SEO_AI_DRAFT_GENERATED: "seo.ai_draft_generated",
+
   // Branding
   BRANDING_UPDATED: "branding.updated",
   TEMPLATE_CHANGED: "template.changed",

@@ -3099,3 +3099,126 @@ NOTES FOR US-025 (which builds the route + UI on this service).
   rate-limit token.
 - `ai-assist-contract.ts` is the client-safe import (pure); `ai-assist.ts` pulls
   prisma and ioredis and must stay server-only.
+
+================================================================================
+[2026-08-14] US-025 PASS — AI assist UI
+================================================================================
+
+WHAT LANDED: a route, a button, and one decision that shaped both — THE BROWSER
+NAMES AN ENTITY, IT NEVER SENDS A PROMPT.
+
+- `POST /api/tenant-admin/seo/ai-assist` takes `{kind, entityType, entityId}`
+  and NOTHING else (`.strict()`, asserted with a test that posts a `body` key and
+  gets a 400). The copy the model is given is read HERE, off the tenant's own
+  row, by `lib/seo/ai-assist-source.ts`. Three consequences, all of them the
+  reason it is built this way: there is no field on the wire a caller could put
+  arbitrary text into and have billed to the tenant's Automatos account; an id
+  belonging to another tenant simply does not resolve (every select names
+  `tenantId`, 404 with the service never called); and the draft is grounded in
+  what the STOREFRONT renders rather than in unsaved form state — the copy being
+  optimised is the copy visitors actually read.
+- Gates composed in the sanctioned order: `requirePermission("canEditSeo",
+  requireFeature(FEATURES.SEO_PRO, …))`. A Basic tenant POSTing by hand gets 403
+  `upgrade_required`; a member without `canEditSeo` is refused BEFORE the plan
+  lookup runs and never learns the store's plan (asserted:
+  `tenants.findFirst` is not called on that path). Trial is unlocked, as
+  everywhere else.
+- HTTP shape per outcome, and two of them are deliberately not errors:
+    ok           -> 200 draft
+    unavailable  -> 200 + connect card   (a STATE — "you have not connected an
+                                          account" is not a failed request)
+    rate_limited -> 429 + Retry-After    (US-024's per-tenant fail-closed meter)
+    refused      -> 422, carrying maxLength/length and NO TEXT (asserted: an
+                                          over-long draft must not travel, since
+                                          anything in the response is one click
+                                          from being saved)
+    error        -> 502 theirs (auth/timeout/upstream), 503 ours
+                                          (lookup_failed/rate_limiter_unavailable)
+
+NOTHING IS SAVED — the whole point of the story. `onDraft` puts the text in the
+field as an ordinary editable string; the existing Save button is still the only
+writer, with its own validation. Asserted from the other side too: a generation
+calls no `update` on products/posts/conditions.
+
+UI, AND WHERE EACH STATE WENT.
+- Buttons in `SeoEditorModal` beside Meta Title, Meta Description and (US-009's)
+  Image Alt Text, plus the Wire post editor's Cover Image Alt Text — the two
+  US-009 alt surfaces the story names. Each label row became a flex row with the
+  button as a SIBLING of the `<label>`, never inside it: a label wrapping a
+  button swallows the click into the input it labels.
+- Loading is the button (spinner + disabled, so a second click cannot spend
+  another generation). Errors are a toast, as every other async failure in these
+  two editors already is — a message pinned under one of three fields in a
+  scrolling dialog is a message nobody reads. Unavailable is neither: it is
+  hoisted to the parent (`onUnavailable`) so ONE connect card replaces all three
+  buttons instead of the same card appearing three times.
+- THE CONNECT CARD IS NOT THE UPGRADE CARD. `LockedFeatureCard` sells Pro; this
+  one links to `/tenant-admin/settings`. Whoever sees it has already bought the
+  plan, and sending them to a checkout for it is exactly the mistake US-024 split
+  the two shapes to prevent.
+- No pre-flight generation is burned to discover which to show:
+  `isAiAssistConnected(tenantId)` (added to `lib/seo/ai-assist.ts`, using
+  US-024's exported `loadAutomatosCredentials`) resolves it server-side in the
+  SEO page and the Wire edit page. A BOOLEAN and only a boolean crosses to the
+  client — the key stays in the module that reads it. A lookup failure answers
+  TRUE on purpose: showing the button costs a click that reports the real error,
+  while showing the connect card tells a connected tenant to go and connect,
+  which is a lie they would act on.
+- `AUTOMATOS_CONNECT` moved from `ai-assist.ts` to `ai-assist-contract.ts`
+  (re-exported, so US-024's call sites and its 33 tests are untouched). It had to
+  move: a client component cannot import the service, which pulls prisma and
+  ioredis. The contract module is pure and was already the client-safe half.
+
+THE NEW-POST CASE, STATED RATHER THAN HIDDEN. The Wire editor offers the button
+only for a SAVED article (`initialData?.id`). Server-side source resolution means
+there is no row to draft from until the first save, and the alternative — letting
+the browser post its unsaved copy — is the design this story rejected. Journalled
+rather than worked around; the field itself is unaffected.
+
+AUDIT TRAIL. `seo.ai_draft_generated` (new in `AUDIT_ACTIONS`), one row per
+generation, where "a generation" means the model was asked and answered — so `ok`
+and `refused` both write a row and the outcomes that never reached it (no
+credentials, rate limited, our own lookup failing) write none. Metadata carries
+field/outcome/provider/length; the drafted TEXT is deliberately absent (asserted)
+— it is not saved by this route, and what gets published is already recorded by
+the write route that saves it.
+
+SECRETS. The api key appears nowhere in this diff: not in a request, a response,
+a log line, a message or a test fixture. The one error message that is ABOUT the
+key ("Automatos AI rejected the API key saved in your settings") names the field
+to fix and quotes nothing — asserted with a test that greps the string.
+
+FLAGGED, NOT FIXED (adjacent debt, out of scope):
+- `imageAlt` is accepted by the route for all four entity types, but only
+  products and posts have an `imageAlt` in their write schema — asking for alt
+  text on a condition returns a draft that cannot be saved. Not reachable from
+  the UI (the button only renders next to a field that exists), returns no data
+  and writes nothing, so it is a nicety rather than a boundary.
+- `htmlToPromptText` is a stripper, not a sanitiser, and says so: its output goes
+  into a prompt, never into the DOM.
+
+HOW VERIFIED
+- `pnpm exec tsc --noEmit`                        -> exit 0 (repo-wide)
+- `pnpm vitest run` (full)                        -> 2635 passed, 30 skipped,
+                                                     163 files, 0 failed
+  (2591 before; +43 across the two new files, 19 route + 24 client/source)
+- `pnpm exec next lint` on all 13 touched files   -> no warnings, no errors
+- `pnpm check:security`                           -> both gates green
+- `pnpm dev` on the existing `.env.local` (never modified): the route and the SEO
+  Manager page both answer 307 -> /auth/login unauthenticated, i.e. the endpoint
+  is behind the Clerk wall and not publicly reachable. The pages themselves are
+  Clerk-gated, so per the run prompt: VISUAL: DEFERRED TO HUMAN REVIEW — covered
+  instead by the route tests and by splitting the fetch/parse/message mapping out
+  of the component into `ai-assist-client.ts`, which is asserted directly.
+- Docker runner image: EXPLICITLY CHECKED. Three new modules under `lib/`
+  (COPYied at Dockerfile:75), two under `components/` and one route under `app/`
+  (compiled into `.next/standalone`, Dockerfile:60). No new runtime import chain
+  leaves the copied set and no new dependency — no Dockerfile change needed.
+- No migration, no schema change.
+
+NOTES FOR US-026 (the last story)
+- `tenants.settings` is the shared read/write schema for the verification/GA4
+  fields; this story did not touch it. The Automatos columns stay columns.
+- The CSP nonce (middleware.ts:83-91) is untouched here — this story renders no
+  script. US-026's GA4 tag is the first one that will need it, plus a
+  `googletagmanager.com` entry in `lib/security/csp`.

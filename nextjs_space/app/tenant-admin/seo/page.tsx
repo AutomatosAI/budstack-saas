@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
+import { isAiAssistConnected } from "@/lib/seo/ai-assist";
 import { isSeoProUnlocked } from "@/lib/seo/pro-features";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
@@ -23,7 +24,7 @@ export default async function SeoPage() {
 
   const tenantId = active.tenantId;
 
-  const [tenant, products, posts, conditions, redirects] = await Promise.all([
+  const [tenant, products, posts, conditions, redirects, aiAssistConnected] = await Promise.all([
     prisma.tenants.findUnique({
       where: { id: tenantId },
       select: {
@@ -96,6 +97,12 @@ export default async function SeoPage() {
         createdAt: true,
       },
     }),
+    // SEO US-025: does this tenant have Automatos credentials stored? A boolean
+    // and only a boolean crosses to the client — the key itself is read inside
+    // `lib/seo/ai-assist.ts` and never leaves the server. Resolving it here is
+    // what lets the editor show the connect card immediately rather than after a
+    // click that spends a rate-limit token to learn the same thing.
+    isAiAssistConnected(tenantId),
   ]);
 
   if (!tenant) {
@@ -146,6 +153,7 @@ export default async function SeoPage() {
           createdAt: row.createdAt.toISOString(),
         }))}
         seoProUnlocked={seoProUnlocked}
+        aiAssistConnected={aiAssistConnected}
         pageSeo={
           tenant.pageSeo as Record<
             string,

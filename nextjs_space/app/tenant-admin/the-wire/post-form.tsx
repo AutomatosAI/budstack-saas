@@ -10,6 +10,10 @@ import Tiptap from "@/components/editor/tiptap";
 import { toast } from "@/components/ui/sonner";
 import Link from "next/link";
 import { Upload, X, Loader2, AlertTriangle } from "lucide-react";
+// Straight from the file rather than through `@/components/admin/seo`: the
+// barrel also re-exports the redirects tab and the audit panel, and the Wire
+// editor has no reason to pull the whole SEO Manager into its bundle.
+import { AiAssistButton } from "@/components/admin/seo/AiAssistButton";
 import { UPGRADE_CTA_LABEL, UPGRADE_PATH } from "@/lib/entitlements/upgrade";
 import {
   POST_SLUG_HINT,
@@ -50,16 +54,28 @@ interface PostFormProps {
    * written is decided server-side in the PATCH route, from the plan column.
    */
   seoProUnlocked?: boolean;
+  /**
+   * US-025 — does this tenant have Automatos credentials stored? Resolved
+   * server-side (a boolean, never the credential) so the alt-text field offers a
+   * Generate button only when one can actually work. The route is the boundary:
+   * it re-checks the plan, the permission and the credentials on every call.
+   */
+  aiAssistConnected?: boolean;
 }
 
 export default function PostForm({
   initialData,
   isEditing = false,
   seoProUnlocked = false,
+  aiAssistConnected = false,
 }: PostFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  // Flipped by a click that comes back `unavailable` — the key was removed
+  // between this page rendering and the click.
+  const [aiConnected, setAiConnected] = useState(aiAssistConnected);
+  const showAiAssist = seoProUnlocked && aiConnected;
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -356,9 +372,30 @@ export default function PostForm({
               {/* US-009 — alt text, shown only once there is an image to describe. */}
               {form.watch("coverImage") && (
                 <div className="space-y-2">
-                  <label htmlFor="coverImageAlt" className="bs-eyebrow">
-                    Cover Image Alt Text
-                  </label>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label htmlFor="coverImageAlt" className="bs-eyebrow">
+                      Cover Image Alt Text
+                    </label>
+                    {/* US-025 — only for a SAVED article: the draft is written
+                        from the stored row (the route reads it itself and never
+                        takes copy off the wire), so an unsaved post has nothing
+                        to describe yet. */}
+                    {showAiAssist && initialData?.id && (
+                      <AiAssistButton
+                        kind="imageAlt"
+                        entityType="post"
+                        entityId={initialData.id}
+                        onDraft={(text) =>
+                          form.setValue("coverImageAlt", text, {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          })
+                        }
+                        onUnavailable={() => setAiConnected(false)}
+                        disabled={isLoading}
+                      />
+                    )}
+                  </div>
                   <input
                     id="coverImageAlt"
                     {...form.register("coverImageAlt")}

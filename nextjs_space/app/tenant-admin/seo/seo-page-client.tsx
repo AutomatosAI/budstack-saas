@@ -96,6 +96,13 @@ interface SeoPageClientProps {
    * Presentation only: the server gate on each Pro route is the boundary.
    */
   seoProUnlocked: boolean;
+  /**
+   * US-025 — whether this tenant has Automatos credentials stored, resolved
+   * server-side in page.tsx. A boolean, never the credential. Decides whether
+   * the editors offer a Generate button or the connect card; the route re-checks
+   * either way.
+   */
+  aiAssistConnected: boolean;
 }
 
 export function SeoPageClient({
@@ -107,6 +114,7 @@ export function SeoPageClient({
   pageSeo,
   redirects,
   seoProUnlocked,
+  aiAssistConnected,
 }: SeoPageClientProps) {
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
     null,
@@ -606,6 +614,8 @@ export function SeoPageClient({
           onSave={handleSaveProductSeo}
           canUploadOgImage={seoProUnlocked}
           canEditIndexing={seoProUnlocked}
+          canUseAiAssist={seoProUnlocked}
+          aiAssistConnected={aiAssistConnected}
         />
       )}
 
@@ -623,6 +633,8 @@ export function SeoPageClient({
           onSave={handleSavePostSeo}
           canUploadOgImage={seoProUnlocked}
           canEditIndexing={seoProUnlocked}
+          canUseAiAssist={seoProUnlocked}
+          aiAssistConnected={aiAssistConnected}
         />
       )}
 
@@ -640,6 +652,8 @@ export function SeoPageClient({
           onSave={handleSaveConditionSeo}
           canUploadOgImage={seoProUnlocked}
           canEditIndexing={seoProUnlocked}
+          canUseAiAssist={seoProUnlocked}
+          aiAssistConnected={aiAssistConnected}
         />
       )}
 
@@ -657,6 +671,8 @@ export function SeoPageClient({
           onSave={handleSavePageSeo}
           canUploadOgImage={seoProUnlocked}
           canEditIndexing={seoProUnlocked}
+          canUseAiAssist={seoProUnlocked}
+          aiAssistConnected={aiAssistConnected}
         />
       )}
     </>
