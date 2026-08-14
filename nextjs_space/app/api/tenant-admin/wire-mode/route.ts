@@ -6,7 +6,8 @@ import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-error";
 import { parseJsonBody } from "@/lib/validation/body";
 import { AUDIT_ACTIONS, createAuditLog, getClientInfo } from "@/lib/audit-log";
-import { FEATURES, getTenantFeatures, hasFeature } from "@/lib/entitlements/features";
+import { FEATURES } from "@/lib/entitlements/features";
+import { featureDenial } from "@/lib/entitlements/require-feature";
 
 const wireModeSchema = z.object({
   wireMode: z.enum(["MANUAL", "ASSISTED"]),
@@ -21,14 +22,11 @@ export const PATCH = requirePermission("canEditSettings", async (req, { user, te
   try {
     const body = await parseJsonBody(req, wireModeSchema);
 
-    if (
-      body.wireMode === "ASSISTED" &&
-      !hasFeature(getTenantFeatures({ id: tenantId }), FEATURES.AUTOMATOS_WIRE)
-    ) {
-      return NextResponse.json(
-        { error: "Assisted Wire is a Pro feature. Upgrade to enable it." },
-        { status: 403 },
-      );
+    // The id-only getTenantFeatures shape fail-closes to 'basic' now that the
+    // plan matrix exists — featureDenial loads the real plan (#243 pattern).
+    if (body.wireMode === "ASSISTED") {
+      const denial = await featureDenial(tenantId, FEATURES.AUTOMATOS_WIRE);
+      if (denial) return denial;
     }
 
     await prisma.tenants.update({

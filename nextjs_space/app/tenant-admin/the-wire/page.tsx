@@ -28,10 +28,10 @@ export default async function TheWirePage() {
 
   const tenantRow = await prisma.tenants.findUnique({
     where: { id: active.tenantId },
-    select: { wireMode: true },
+    select: { wireMode: true, plan: true },
   });
   const wireEntitled = hasFeature(
-    getTenantFeatures({ id: active.tenantId }),
+    getTenantFeatures({ id: active.tenantId, plan: tenantRow?.plan }),
     FEATURES.AUTOMATOS_WIRE,
   );
 
