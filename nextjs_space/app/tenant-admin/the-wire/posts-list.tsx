@@ -155,6 +155,9 @@ export default function PostsList({
                   <RowPill tone={post.published ? "emerald" : "slate"}>
                     {post.published ? "Published" : "Draft"}
                   </RowPill>
+                  {post.source === "AUTOMATOS" && (
+                    <RowPill tone="blue">Automatos</RowPill>
+                  )}
                 </td>
                 <td className="hidden sm:table-cell text-bs-fg-muted">
                   {post.users?.name || "Unknown"}

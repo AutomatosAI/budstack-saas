@@ -9,6 +9,8 @@ import { apiError, apiValidationError } from '@/lib/api-error';
 import { parseJsonBody } from '@/lib/validation/body';
 import { SA_TENANT_COUNTRY_CODE } from '@/lib/verification-mode';
 import { logger } from '@/lib/logger';
+import { getTenantFeatures } from '@/lib/entitlements/features';
+import { chatbotEnableForbidden } from '@/lib/entitlements/toggle-guards';
 
 const settingsUpdateSchema = z.object({
   customDomain: z.string().max(255).optional().nullable(),
@@ -17,6 +19,7 @@ const settingsUpdateSchema = z.object({
   drGreenSecretKey: z.string().max(10000).optional().nullable(),
   automatosApiKey: z.string().max(2000).optional().nullable(),
   automatosAgentId: z.union([z.string(), z.number()]).optional().nullable(),
+  automatosChatbotEnabled: z.boolean().optional(),
   smtpHost: z.string().max(255).optional().nullable(),
   smtpPort: z.union([z.string(), z.number()]).optional().nullable(),
   smtpUser: z.string().max(255).optional().nullable(),
@@ -62,6 +65,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       drGreenSecretKey,
       automatosApiKey,
       automatosAgentId,
+      automatosChatbotEnabled,
       // SMTP fields
       smtpHost,
       smtpPort,
@@ -71,12 +75,30 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       smtpFromName,
     } = body;
 
+    // US-005: turning the chatbot ON is entitlement-gated server-side —
+    // the client toggle is presentation, this is the enforcement.
+    if (
+      chatbotEnableForbidden(
+        automatosChatbotEnabled,
+        tenant.automatosChatbotEnabled,
+        getTenantFeatures({ id: tenantId }),
+      )
+    ) {
+      return NextResponse.json(
+        { error: "The storefront chatbot is a Pro feature. Upgrade to enable it." },
+        { status: 403 },
+      );
+    }
+
     const dataToUpdate: any = {
       customDomain: customDomain || null,
       drGreenApiUrl: drGreenApiUrl || null,
       automatosApiKey: automatosApiKey || null,
       automatosAgentId: automatosAgentId ? parseInt(String(automatosAgentId), 10) : null,
     };
+    if (typeof automatosChatbotEnabled === "boolean") {
+      dataToUpdate.automatosChatbotEnabled = automatosChatbotEnabled;
+    }
 
     // Update settings JSON for SMTP
     const currentSettings = (tenant.settings as any) || {};
@@ -155,6 +177,28 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       where: { id: tenant.id },
       data: dataToUpdate,
     });
+
+    // US-009: the Automatos public key is origin-allowlisted, so a custom-
+    // domain change must follow to the orchestrator or the widget 403s on the
+    // new host. Fire-and-forget — a sync failure is logged, never blocks the
+    // settings save (re-provisioning later heals it: idempotent, no rotation).
+    const newCustomDomain = (dataToUpdate.customDomain ?? null) as string | null;
+    if (tenant.automatosApiKey && newCustomDomain !== tenant.customDomain) {
+      const { buildTenantDomains, partnerKey, syncTenantDomains } = await import(
+        "@/lib/integrations/automatos-provision"
+      );
+      if (partnerKey()) {
+        void syncTenantDomains({
+          tenantId: tenant.id,
+          domains: buildTenantDomains(tenant.subdomain, newCustomDomain),
+        }).catch((e: unknown) => {
+          logger.warn("Automatos domains re-sync failed (non-blocking)", {
+            tenantId: tenant.id,
+            error: e instanceof Error ? e.message : String(e),
+          });
+        });
+      }
+    }
 
     const { ipAddress, userAgent } = getClientInfo(req.headers);
     await createAuditLog({

@@ -29,6 +29,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/storefront/newsletter/unsubscribe", // Public unsubscribe + RFC 8058 one-click POST (US-004)
   "/api/storefront/email/open", // Open pixel, fetched by a mail client (US-027)
   "/api/storefront/email/click", // Signed link-wrapping redirect (US-027)
+  "/api/integrations/automatos/posts", // Machine-to-machine draft ingest — per-tenant HMAC IS the auth (US-011)
   "/api/public/images/(.*)", // Durable public image delivery (US-005)
   // SEO US-018: branded og:image, fetched by link scrapers with no session.
   // Tenant comes from the host, plan-gated inside the route, IP rate-limited.

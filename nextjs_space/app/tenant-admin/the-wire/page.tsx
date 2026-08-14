@@ -5,7 +5,9 @@ import { Plus } from "lucide-react";
 import { getCurrentUserPermissions } from "@/lib/permissions/current-user-permissions";
 import { can } from "@/lib/permissions/resolve";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
+import { FEATURES, getTenantFeatures, hasFeature } from "@/lib/entitlements/features";
 import PostsList from "./posts-list";
+import { WireModeToggle } from "./WireModeToggle";
 
 export const metadata = {
   title: "The Wire Management",
@@ -23,6 +25,15 @@ export default async function TheWirePage() {
     orderBy: { createdAt: "desc" },
     include: { users: true },
   });
+
+  const tenantRow = await prisma.tenants.findUnique({
+    where: { id: active.tenantId },
+    select: { wireMode: true },
+  });
+  const wireEntitled = hasFeature(
+    getTenantFeatures({ id: active.tenantId }),
+    FEATURES.AUTOMATOS_WIRE,
+  );
 
   // US-022 — the newsletter action writes a campaign, so it is gated on the
   // permission the endpoint enforces (US-009), not on the blog's own. Fail-closed
@@ -44,7 +55,11 @@ export default async function TheWirePage() {
             Manage your news and articles.
           </p>
         </div>
-        <div className="flex justify-start sm:justify-end">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-start sm:justify-end">
+          <WireModeToggle
+            mode={tenantRow?.wireMode ?? "MANUAL"}
+            entitled={wireEntitled}
+          />
           <Link
             href="/tenant-admin/the-wire/new"
             className="bs-btn bs-btn-green"

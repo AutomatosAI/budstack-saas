@@ -659,6 +659,8 @@ model posts {
   id         String   @id
   title      String
   slug       String
+  // MANUAL (Tiptap editor) | AUTOMATOS (assisted-Wire agent draft)
+  source     String   @default("MANUAL")
   content    String
   excerpt    String?
   coverImage String?
@@ -814,6 +816,13 @@ model tenants {
   drGreenSecretKey       String?
   automatosApiKey        String?
   automatosAgentId       Int?
+  // On/off is independent of key presence; pro-gated via lib/entitlements.
+  automatosChatbotEnabled Boolean                  @default(false)
+  // The Wire authoring mode: MANUAL | ASSISTED (Automatos pushes drafts).
+  wireMode               String                    @default("MANUAL")
+  // HMAC secret for the assisted-Wire inbound endpoint (encrypted at rest
+  // with lib/security/encryption, like settings.smtp.password).
+  automatosWireSecret    String?
   pageSeo                Json?
   plan                   String                    @default("trial") // SEO US-011: operator-set entitlement plan (trial|basic|pro|custom). Source of truth — Clerk org metadata is a write-only mirror.
   deletedAt              DateTime? // PRD-208 soft-delete (recoverable; NULL = live)

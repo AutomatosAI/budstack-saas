@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/sonner";
-import Script from "next/script";
 import {
   Layout,
   FileText,
@@ -17,12 +16,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TenantSettings } from "@/lib/types";
 import { tenant_templates } from "@prisma/client";
 import { hexToHsl } from "@/lib/color-utils";
 import { TemplateRenderer } from "@/components/template-renderer";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
-import { StoreEditorHelperBot } from "@/components/admin/StoreEditorHelperBot";
 
 // Tab components
 import { BrandTab } from "./tabs/brand-tab";
@@ -105,40 +102,9 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
     }
   }, [previewDevice]);
 
-  const settings = (tenant.settings as TenantSettings) || {};
-  const automatosApiKey = settings?.automatosApiKey;
-  const automatosHelperAgentId = settings?.automatosHelperAgentId;
-
   const [formData, setFormData] = useState<EditorFormData>(() =>
     buildInitialFormData(tenant, activeTemplate),
   );
-
-  // --- AI Co-Pilot ---
-  const handleAutomatosAction = useCallback((actionName: string, payload: any) => {
-    try {
-      if (actionName === "UPDATE_SECTION_CONFIG") {
-        const { sectionId, key, value } = payload;
-        if (!sectionId || !key || value === undefined) return;
-        setFormData((prev) => ({
-          ...prev,
-          sectionConfigs: {
-            ...prev.sectionConfigs,
-            [sectionId]: { ...prev.sectionConfigs[sectionId], [key]: value },
-          },
-        }));
-        toast.success(`AI Co-Pilot updated ${key} in ${sectionId}`);
-      }
-    } catch (e) {
-      console.error("[Automatos] Failed to apply action.", e);
-    }
-  }, []);
-
-  const aiContext = useMemo(() => ({
-    template: formData.template,
-    businessName: formData.businessName,
-    activeSections: formData.layoutSections.map((s: any) => ({ id: s.id, type: s.type })),
-    currentConfigs: formData.sectionConfigs,
-  }), [formData.template, formData.businessName, formData.layoutSections, formData.sectionConfigs]);
 
   // --- Submit ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -576,17 +542,6 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
             className="w-full h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-bs-canvas relative"
             style={{ transform: "scale(1)" }}
           >
-            {automatosApiKey && (
-              <div className="absolute top-4 right-4 z-50">
-                <StoreEditorHelperBot
-                  apiKey={automatosApiKey}
-                  agentId={automatosHelperAgentId ? Number(automatosHelperAgentId) : undefined}
-                  editorContext={aiContext}
-                  onAction={handleAutomatosAction}
-                />
-              </div>
-            )}
-
             {liveLayout ? (
               <TenantThemeProvider
                 tenant={tenant as any}
@@ -648,12 +603,6 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         })()}
       </div>
 
-      {/* 🚀 PageAgent Demo Integration */}
-      <Script
-        src="https://cdn.jsdelivr.net/npm/page-agent@1.5.7/dist/iife/page-agent.demo.js"
-        strategy="lazyOnload"
-        crossOrigin="anonymous"
-      />
     </div>
   );
 }

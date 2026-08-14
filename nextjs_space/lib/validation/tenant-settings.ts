@@ -11,7 +11,7 @@ import {
  *
  * The settings blob is a large, open-ended theming + configuration object
  * written from many routes (branding, cookie-settings, select-template,
- * onboarding, smtp, automatos, domain provisioning, ...). Two schemas are
+ * onboarding, smtp, domain provisioning, ...). Two schemas are
  * exported because the live clients and the target end-state differ:
  *
  * - `tenantSettingsSchema` (.strict()) — the canonical contract. Unknown
@@ -167,9 +167,6 @@ const tenantSettingsShape = {
     .optional(),
 
   // Third-party integration credentials / ids (bounded)
-  automatosApiKey: z.string().max(500).nullable().optional(),
-  automatosAgentId: shortString.optional(),
-  automatosHelperAgentId: shortString.optional(),
   smtp: structural.optional(),
 
   // Server-managed keys — included so the full-blob round-trip is accepted.
