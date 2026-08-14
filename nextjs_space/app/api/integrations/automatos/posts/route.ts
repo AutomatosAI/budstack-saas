@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
       where: { id: tenantId },
       select: {
         id: true,
+        plan: true,
         wireMode: true,
         automatosWireSecret: true,
         deletedAt: true,
@@ -111,7 +112,7 @@ export async function POST(req: NextRequest) {
 
     const rejection = wireDraftRejection(
       tenant.wireMode,
-      getTenantFeatures({ id: tenant.id }),
+      getTenantFeatures({ id: tenant.id, plan: tenant.plan }),
     );
     if (rejection) {
       return NextResponse.json(

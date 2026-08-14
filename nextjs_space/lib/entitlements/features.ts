@@ -25,6 +25,13 @@ export const FEATURES = {
   ANALYTICS_EXPORTS: "analytics.exports",
   SEO_CORE: "seo.core",
   SEO_PRO: "seo.pro",
+  // Automatos module (PRs #237-#241). These keys shipped in a parallel branch
+  // while the plan matrix was being built; the #242 merge kept this file's
+  // version and dropped them — restored here. Both are Pro-tier: the chatbot
+  // 403 copy and PRD-303's tier table say so, and BASIC_FEATURES below
+  // excludes them on purpose (trial/pro/custom resolve to ALL_FEATURES).
+  AUTOMATOS_CHATBOT: "automatos.chatbot",
+  AUTOMATOS_WIRE: "automatos.wire",
 } as const;
 
 export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];

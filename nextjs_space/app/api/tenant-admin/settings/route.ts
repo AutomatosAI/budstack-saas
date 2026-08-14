@@ -81,7 +81,7 @@ export const POST = withTenantAuth(async (req, { user, tenantId }) => {
       chatbotEnableForbidden(
         automatosChatbotEnabled,
         tenant.automatosChatbotEnabled,
-        getTenantFeatures({ id: tenantId }),
+        getTenantFeatures({ id: tenantId, plan: tenant.plan }),
       )
     ) {
       return NextResponse.json(
