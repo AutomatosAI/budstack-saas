@@ -3,6 +3,9 @@ import { getCurrentTenant, getTenantWithTemplate, getTemplateAssets } from "@/li
 import { getTenantUrl, getTenantBasePath, getTenantBaseUrl } from "@/lib/tenant/tenant-utils";
 import { prisma } from "@/lib/db";
 import { getFileUrl } from "@/lib/storage/s3";
+import { JsonLd } from "@/components/seo/json-ld";
+import { buildStoreJsonLd, type StoreJsonLdSource } from "@/lib/seo/json-ld";
+import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 
 // Revalidate every 60 seconds — template/product data doesn't change frequently
 // This avoids hitting S3 + DB on every single request
@@ -25,7 +28,71 @@ import { TestimonialsSlider } from "@/components/home/testimonials-slider";
 import { CallToAction } from "@/components/home/call-to-action";
 import { logger } from "@/lib/logger";
 
+/**
+ * SEO US-014 — the store home, with the structured data that identifies it.
+ *
+ * Both reads below are React-`cache()`d and are the SAME calls `StoreHomeContent`
+ * and the layout already make, so the JSON-LD costs no extra query. It is
+ * resolved HERE rather than inside the content function because that function
+ * returns from four different template branches, and the identity nodes belong
+ * on the homepage whichever one renders.
+ *
+ * Nothing here can block the store: `buildStoreJsonLd` returns [] for a Basic
+ * tenant (and for a tenant with no name), and `<JsonLd>` renders nothing for [].
+ */
 export default async function TenantStorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string }>;
+}) {
+  const tenant = await getCurrentTenant();
+  const tenantForSeo = tenant ? await getTenantWithTemplate(tenant.id) : null;
+
+  return (
+    <>
+      {tenantForSeo && <JsonLd nodes={buildStoreJsonLd(storeJsonLdSource(tenantForSeo))} />}
+      <StoreHomeContent searchParams={searchParams} />
+    </>
+  );
+}
+
+/**
+ * The tenant row → JSON-LD inputs. The logo cascade mirrors US-001's favicon
+ * cascade (branding row first, active template second) and then the legacy
+ * `settings.logoPath` the layout still falls back to, so a store that has never
+ * opened the branding form still gets its logo into the Organization node.
+ *
+ * Deliberately NOT `getFileUrl` — that mints a presigned S3 URL that dies in an
+ * hour. `storedPublicImagePath` (inside the builder) turns an upload key into
+ * the durable `/api/public/images/…` route instead, and returns nothing at all
+ * for a reference it cannot promise will still resolve.
+ */
+function storeJsonLdSource(
+  row: NonNullable<Awaited<ReturnType<typeof getTenantWithTemplate>>>,
+): StoreJsonLdSource {
+  const settings = parseTenantSettings(row.settings, { tenantId: row.id });
+
+  return {
+    id: row.id,
+    plan: row.plan,
+    businessName: row.businessName,
+    subdomain: row.subdomain,
+    customDomain: row.customDomain,
+    logoRef:
+      row.tenant_branding?.logoUrl ??
+      row.activeTenantTemplate?.logoUrl ??
+      settings.logoPath ??
+      null,
+    businessAddress1: row.businessAddress1,
+    businessAddress2: row.businessAddress2,
+    businessCity: row.businessCity,
+    businessState: row.businessState,
+    businessPostalCode: row.businessPostalCode,
+    businessCountry: row.businessCountry,
+  };
+}
+
+async function StoreHomeContent({
   searchParams,
 }: {
   searchParams: Promise<{ preview?: string }>;

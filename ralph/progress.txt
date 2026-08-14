@@ -1575,3 +1575,115 @@ FLAGGED, NOT FIXED (adjacent debt)
 - app/super-admin/tenants/page.tsx still does not show plan (carried over from
   US-012's flag) — now more visible, since an operator has to know which tenants
   are on Basic to know who is seeing these cards.
+
+================================================================================
+[2026-08-14] US-014 PASS — JSON-LD engine + Organization/LocalBusiness
+================================================================================
+
+WHAT LANDED
+- lib/seo/json-ld.ts (new, 236 lines): the engine. `escapeJsonLd` +
+  `serializeJsonLd` (THE one serializer), `buildPostalAddress`,
+  `buildStoreJsonLd`. Pure — no Prisma, no headers, no React.
+- components/seo/json-ld.tsx (new): `<JsonLd nodes>` — the only element that
+  puts structured data in the document. Reads the per-request nonce from the
+  x-nonce request header and renders
+  `<script type="application/ld+json" nonce=…>`. US-015/016/017 render THIS.
+- app/store/[slug]/page.tsx: the default export is now a 6-line wrapper that
+  emits the JSON-LD and delegates to `StoreHomeContent` (the old body, renamed,
+  otherwise untouched). The four template branches inside it return from four
+  different places, so wrapping is what puts one node set on the homepage
+  whichever branch renders.
+- tests/unit/store-json-ld.test.ts (new): 22 tests.
+
+DECISIONS
+- ONE SERIALIZER, and the escape is `<` -> `\u003c` (plus >, &, U+2028/9). This is
+  the whole reason the module exists: `JSON.stringify` into a <script> is a
+  stored-XSS sink, and the CSP nonce does NOT save us — an injected tag inherits
+  nothing, it is simply a new inline script that 'strict-dynamic' refuses,
+  leaving a broken page and a proven sink. `\u003c` is a valid JSON escape that
+  parses straight back to `<`, so this is neutralisation, not mangling (asserted
+  both ways: no `<` in the output AND JSON.parse returns the exact input).
+- The plan gate lives in the BUILDER, not the component. `buildStoreJsonLd`
+  returns [] for a tenant without seo.pro; [] serializes to null; null renders
+  no element. That makes AC-4 a pure assertion rather than a render assertion —
+  which matters, because the unit project still cannot render React (US-013's
+  flag). It is also the storefront contract from require-feature.ts: Pro absence
+  DEGRADES rendering, it never 403s a shopper.
+- Gate goes through `isSeoProUnlocked` (US-013), not a fresh matrix read — one
+  predicate, so the storefront and the SEO Manager lock cannot disagree.
+- `@id` on both nodes (`{origin}/#organization`, `{origin}/#localbusiness`) so
+  US-015's Product `brand` and US-016's Article `publisher` can reference the
+  entity instead of restating it on every page.
+- Single node renders inline with @context; 2+ go under @graph.
+- Logo: `tenant_branding.logoUrl -> activeTenantTemplate.logoUrl ->
+  settings.logoPath`, resolved by `storedPublicImagePath` and absolutised
+  against the primary origin. Deliberately NOT `getFileUrl` — that is what
+  layout.tsx uses for RENDER and it mints a presigned URL that dies in an hour.
+  A presigned reference resolves to NO logo property rather than a tag that
+  404s a month later (asserted, including that no X-Amz- string can reach the
+  output).
+- `url` is `storeCanonical(tenant, "")` — the same primary-host resolution
+  US-007's canonicals use, so the two can never name different hosts.
+
+THE DEFECT THE TESTS CAUGHT (mid-story, fixed)
+First cut built streetAddress as `[address1, address2].filter(Boolean)` — so a
+tenant with only line 2 filled in emitted a LocalBusiness whose street address
+was "Unit 4". That is exactly the half-empty PostalAddress AC-2 forbids. Now
+line 1 is required specifically; line 2 only ever appends to it.
+Address floor: street(line1) + city + country. Below it -> Organization only,
+no LocalBusiness at all. Region and postcode ride along when set.
+
+VERIFIED
+- pnpm exec tsc --noEmit                      -> exit 0
+- pnpm vitest run --project unit tests/unit/store-json-ld.test.ts -> 22 passed
+- pnpm vitest run --project unit -> 136 files, 2201 passed, 0 failed
+  (was 135/2179 at US-013: +1 file, +22 tests, no regressions)
+- pnpm check:security                         -> both gates green
+- pnpm exec next lint (4 touched files)       -> no warnings or errors
+- pnpm build -> exit 0. /store/[slug] still ƒ (dynamic, server-rendered on
+  demand) at 14.9 kB — unchanged classification, it was already dynamic via
+  header-based tenant resolution, so the `headers()` read in <JsonLd> costs
+  nothing. The build is the check that matters here: a server-only component
+  (next/headers) is now imported from the store page, and an RSC boundary
+  violation is invisible to tsc.
+- grep: `ld+json` appears in exactly two files, both mine. There is no second
+  path from a node to the DOM.
+- LIVE: pnpm dev on the existing .env.local (never modified).
+  GET /                    -> 200, response carries
+                              `content-security-policy: … 'nonce-9WMccbzp4nd0u2j…'`
+                              (the nonce plumbing AC-3 depends on is live)
+  GET /store/healingbuds   -> 404. The local dev server cannot reach the DB
+                              ("Can't reach database server at
+                              postgres-budstack-development.up.railway.app:5432"
+                              — Railway private network, per the repo's own
+                              notes), so no tenant resolves and no storefront
+                              renders locally.
+  visual: deferred to human review — asserting the rendered <script> needs a
+  real tenant on a reachable DB. Everything BELOW the render (node shape,
+  escaping, gate, address floor, logo durability) is asserted purely.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson): two new modules — lib/seo/json-ld.ts
+and components/seo/json-ld.tsx. `lib/` is already COPYied by the runner
+(nextjs_space/Dockerfile:76) and `components/` is bundled into .next/standalone.
+Imports are next/headers and @/lib/{seo,storage,entitlements,tenant}. No import
+edge leaves the bundle. No Dockerfile edit needed.
+
+NO SCHEMA CHANGE, NO NEW MODEL, NO NEW QUERY. The wrapper's two reads
+(getCurrentTenant, getTenantWithTemplate) are the React-cache()d calls the
+layout and StoreHomeContent already make — same request, same round trip. No
+tenantScopedModels change (`tenants` is not in it).
+
+FLAGGED, NOT FIXED (adjacent debt)
+- Organization/LocalBusiness is HOMEPAGE ONLY, which is what AC-2 asks for and
+  matches Google's "put Organization on one page" guidance. If a later story
+  wants Product/Article nodes to resolve their `@id` references, the referenced
+  entity has to be reachable — either restate a minimal Organization stub on
+  those pages or accept the reference is unresolved. Worth a decision in US-015.
+- The store layout still signs the logo with `getFileUrl` (a presigned URL) for
+  RENDER. That is correct for an <img> and wrong for anything indexed; this
+  story routes SEO around it rather than changing the render path.
+- app/store/[slug]/page.tsx is now 486 lines (was 419), over the ~400 guidance.
+  67 of those are this story's; the four template branches inside
+  StoreHomeContent are the obvious extraction when someone has a reason to.
+- The unit project still cannot render React (US-013's flag, unchanged), so no
+  component test asserts the <script> element itself.
