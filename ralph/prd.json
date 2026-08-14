@@ -1,420 +1,100 @@
 {
   "project": "BudStack SaaS",
-  "branchName": "ralph/seo-supercharge",
-  "description": "SEO Supercharge — Basic $99 (make the write-only SEO actually render: layout metadata, sitemaps, canonicals, favicon, alt text, www fix) + Pro $169 gated on seoPro (JSON-LD, OG studio, redirects, indexing controls, audit panel, Automatos AI assist, verification/GA4). Thin Clerk-carried plan plumbing, no payments. Source: tasks/prd-seo-supercharge.md + docs/SEO-SYSTEM-REVIEW.md.",
+  "branchName": "ralph/seo-llm-visibility",
+  "description": "LLM Visibility (GEO) — SEO Pro addendum: AI crawler policy, product Q&A blocks, llms.txt, LLM-readiness audit, AI citation monitor, entity grounding. All gated on existing FEATURES.SEO_PRO. Source: tasks/prd-seo-llm-visibility.md.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Store-layout metadata foundation",
-      "description": "As a store owner, I want every page of my store to carry my brand in search results instead of the platform's.",
+      "title": "AI crawler policy manager",
+      "description": "As a Pro tenant, I control which AI bots read my store — search crawlers for visibility, training crawlers by choice.",
       "acceptanceCriteria": [
-        "app/store/[slug]/layout.tsx gains generateMetadata: title template '%s | {businessName}' with businessName default, tenant description fallback, metadataBase from getTenantBaseUrl(tenant)",
-        "Per-tenant favicon via icons from tenant_branding.faviconUrl with platform /favicon.svg fallback",
-        "openGraph.siteName = businessName at layout level",
-        "Test asserts the layout metadata shape — no store page can fall through to the platform title 'BudStacks - Medical Cannabis SaaS Platform'",
+        "lib/seo/ai-crawlers.ts: bot registry as data — search class (OAI-SearchBot, Claude-SearchBot, PerplexityBot, xAI search UA) and training class (GPTBot, ClaudeBot, anthropic-ai, Google-Extended, CCBot, meta-externalagent) with owner labels; ONE source for robots rendering and the audit",
+        "Tenant setting aiCrawlerPolicy ('open'|'search-only'|'blocked', default 'open') in the validated tenant-settings shape",
+        "app/store/[slug]/robots.txt renders per-bot directives from the policy for Pro tenants; Basic tenants render today's output byte-identical (asserted)",
+        "Pro-gated UI card in the SEO Manager: policy radio + per-class copy stating plainly what each choice costs (search-blocked = absent from AI answers; training-blocked = absent from future model knowledge)",
         "Typecheck passes",
-        "Tests pass (targeted vitest run)",
+        "Tests pass (targeted vitest run — robots output matrix per policy x plan)",
         "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 1,
       "passes": false,
-      "notes": "THE defect: app/store/[slug]/layout.tsx exports no metadata, so every non-home page falls back to app/layout.tsx:32-49 platform title. faviconUrl written at app/api/tenant-admin/branding/route.ts:394, rendered nowhere. getTenantBaseUrl: lib/tenant/tenant-utils.ts:67-73 (prefers customDomain). metadataBase exists NOWHERE in the app today. Layout already loads the tenant — reuse its fetch (React cache()), do not add a duplicate query."
+      "notes": "Robots route from the parent run: app/store/[slug]/robots.txt/route.ts (custom-domain aware, cached). Tenant settings shape: lib/validation/tenant-settings.ts (the parent run added businessAddress + socialLinks pattern precedent). Plan resolution: the route must read the tenant row's plan and gate via FEATURES.SEO_PRO membership (lib/entitlements — do NOT touch the Automatos keys in features.ts; #243 restored them after a merge collision). 2026 fact the copy must reflect: search and training bots are SEPARATE per provider — blocking GPTBot does not remove you from ChatGPT Search (OAI-SearchBot does)."
     },
     {
       "id": "US-002",
-      "title": "Static store pages consume pageSeo",
-      "description": "As a store owner, my About/Contact/Support metadata edits must actually render.",
+      "title": "Product Q&A blocks",
+      "description": "As a Pro tenant, my products answer the questions buyers ask — visibly, and in the schema answer engines cite.",
       "acceptanceCriteria": [
-        "about, contact, support, conditions (list) pages get generateMetadata reading tenants.pageSeo[key] with the cascade custom -> sensible default -> businessName",
-        "SEO Manager page-key list matches reality: faq key retired or remapped to /support (app/store/[slug]/faq/page.tsx:4-5 redirects today); admin list and consuming routes agree end-to-end",
-        "Per-page canonical emitted via the US-007 helper (build the helper here if implementing before US-007, then US-007 just spreads it)",
+        "Q&A stored in products.seo.qa ({question, answer}[] — Zod on all SEO PUT routes; max 10 pairs; question <=200 chars, answer <=1000; no migration)",
+        "SEO Manager product modal gains a Q&A editor (add/remove/reorder); 'Draft Q&A with Automatos AI' reuses lib/seo/ai-assist.ts with a NEW output contract (JSON array of pairs, validated, refused on violation, lands as editable draft — never auto-saved)",
+        "Product detail renders the Q&A visibly (bs-* accordion) AND as FAQPage JSON-LD through the existing lib/seo/json-ld.ts builders — both Pro-gated; Basic renders neither (asserted)",
         "Typecheck passes",
         "Tests pass (targeted vitest run)",
         "Verify in browser using dev-browser skill (fallback per PROMPT)"
       ],
       "priority": 2,
       "passes": false,
-      "notes": "pageSeo grep proves about/contact/faq are write-only today: only app/store/[slug]/page.tsx:379-382 consumes 'home'. Admin key list hardcoded at app/tenant-admin/seo/seo-page-client.tsx:49-54; API enum at app/api/tenant-admin/seo/pages/route.ts:10. Keep enum + admin list + rendered pages in ONE shared constant."
+      "notes": "entity-seo parsing: lib/seo/entity-seo.ts (fail-closed reader from parent US-003) — extend, don't fork. FAQPage builder exists (parent US-017, conditions). ai-assist provider interface: lib/seo/ai-assist.ts (parent US-024 — Automatos backend token exchange + SSE chat; tenant columns are the canonical credential store). Product detail page + its cached fetch: parent US-004's shape. Q&A prompts feed ONLY the tenant's own product content (no cross-tenant data — parent rule)."
     },
     {
       "id": "US-003",
-      "title": "The Wire post metadata reads post.seo",
-      "description": "As a store owner, the post SEO I write must render — today it is silently discarded.",
+      "title": "llms.txt generator",
+      "description": "As a Pro tenant, my store publishes a clean machine-readable inventory — cheap insurance, honestly framed.",
       "acceptanceCriteria": [
-        "app/store/[slug]/the-wire/[postSlug]/page.tsx cascade: post.seo.title || post.title; post.seo.description || post.excerpt; post.seo.ogImage || post.coverImage",
-        "openGraph.type 'article' with publishedTime (createdAt) and author name; twitter summary_large_image; canonical to the post URL on the primary host",
-        "Wire list page (the-wire/page.tsx) gains metadata",
+        "app/store/[slug]/llms.txt route: generated markdown — business identity + address, condition guides (title/summary/URL), top products, recent published Wire posts; primary-host URLs via storeCanonical; respects sitemapExclude/noindex from parent US-022; Cache-Control like the sitemap; works on custom domains (middleware rewrite matcher must pass .txt — it already does for robots.txt, verify llms.txt path)",
+        "Basic tenants: 404 (Pro gate); SEO Manager card copy states plainly: standards-track, ~10% adoption, no proven citation lift, zero cost",
         "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+        "Tests pass (content shape, exclusion honoring, plan gating, host awareness)"
       ],
       "priority": 3,
       "passes": false,
-      "notes": "Current metadata at the-wire/[postSlug]/page.tsx:16-33 ignores post.seo entirely (no twitter, no canonical, no article type). posts.seo written by app/api/tenant-admin/seo/posts/[id]/route.ts (works, unread). Cover images may be pre-US-005-email presigned URLs — absolutise/pass through as stored; do NOT re-sign."
+      "notes": "Sitemap route is the template: app/store/[slug]/sitemap.xml/route.ts (parent US-006 — filters, lastmod, caching). Middleware matcher: middleware.ts:247 region. The honesty copy is an AC, not decoration — the SE Ranking 300k-domain study found no measurable lift; the UI must not oversell."
     },
     {
       "id": "US-004",
-      "title": "Product detail metadata",
-      "description": "As a store owner, my product SEO must render on product pages — the page is a client component emitting no metadata at all.",
+      "title": "LLM-readiness audit section",
+      "description": "As a Pro tenant, the audit tells me what an LLM can and cannot see of my store.",
       "acceptanceCriteria": [
-        "generateMetadata for app/store/[slug]/products/[id]/page.tsx: server-side fetch of the SAME product source the page uses (Dr Green live API by id), cached/deduped per request",
-        "Cascade: local products.seo override (row matched via drGreenStrainId) -> product name + truncated description",
-        "OG image from product image (absolute URL); canonical to /products/{id} on the primary host",
-        "SEO Manager product preview URL fixed to the real id route (seo-page-client.tsx:204 links /products/{slug} which 404s)",
+        "New category in lib/seo/audit.ts: (a) search-crawler access per aiCrawlerPolicy — blocked search bots is the top-weight finding; (b) Q&A coverage across products/conditions; (c) llms.txt presence/staleness; (d) crawler-invisible blog detection: a tenant whose blog surface is the Automatos Shadow-DOM widget (wireMode column) gets a finding explaining the content is invisible to every crawler and LLM, deep-linking the Wire mode selector; (e) heading-structure quality on condition/post content",
+        "Findings carry deep links per the parent pattern; category weights documented in-code",
         "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+        "Tests pass (each check table-driven over fixture rows)"
       ],
       "priority": 4,
       "passes": false,
-      "notes": "Product URLs are Dr Green id-keyed: product-card.tsx:59 links /products/{product.id}; resolution via app/api/store/[slug]/products/route.ts:53-55 fetchProducts(country, config).find(p => p.id === productId). Local rows store the link as drGreenStrainId (app/api/tenant-admin/products/sync/route.ts:58). The page is 'use client' — generateMetadata lives in the server file; wrap the shared fetch in React cache() so page + metadata share one call."
+      "notes": "Audit engine: lib/seo/audit.ts (parent US-023 — pure checks over fetched rows, 15min cache, deep-link shape). wireMode column + the Shadow-DOM finding come from the Automatos session (their memory: 'blog widget Shadow-DOM = non-crawlable'); the mode selector UI shipped in their #240. Bot registry from US-001 is the source for check (a)."
     },
     {
       "id": "US-005",
-      "title": "Conditions SEO wired end-to-end",
-      "description": "As a store owner, condition pages are my content-marketing landing pages — they need editable, rendering SEO.",
+      "title": "AI citation monitor v1",
+      "description": "As a Pro tenant, I can see whether AI engines cite my store when my market asks relevant questions.",
       "acceptanceCriteria": [
-        "SEO Manager gains a Conditions tab; PUT /api/tenant-admin/seo/conditions/[id] cloned from the products route shape (withTenantAuthParams + ownership findFirst {id, tenantId})",
-        "Condition detail page generateMetadata reads conditions.seo cascade; canonical emitted",
+        "Model llm_citation_checks (tenantId, engine, prompt, cited Boolean, citedUrl?, mentionText?, checkedAt; @@index([tenantId, checkedAt]); tenant-scoped registration; hand-authored migration, no migrate dev)",
+        "Weekly repeatable job on its OWN queue ('llm-citation') following the reorder-reminders pattern exactly: idempotent scheduler upsert, per-tenant fault isolation (one store's failure never starves the rest), per-run cap (default 6 prompts x 2 engines per tenant), attempts: 1",
+        "Engine adapters behind ONE interface, env-key-gated: OpenAI + Perplexity first; an engine whose platform key is absent is SKIPPED and surfaced as 'not configured' in the UI — never an error. Adapters call web-search-enabled endpoints; responses scanned for the tenant's hosts (subdomain + customDomain) in cited URLs; token/cost logged per run",
+        "Prompts generated from tenant market data (country, condition topics, product categories) with medical-information framing — the rationale (engine content policies around cannabis commerce) documented in-code",
+        "Dashboard tab in the SEO Manager: per-engine cited/not-cited trend + latest mention text; empty state for unconfigured engines; Pro-gated",
+        "Worker lessons applied and journaled: own queue (email-queue expiry guard incompatibility), bypassTenantScope with tenantId in every query, Docker runner COPY check stated explicitly, touched worker files typechecked via throwaway tsconfig (scripts/ excluded from repo tsc)",
         "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+        "Tests pass (adapter contract with mocked engines, host-match extraction incl. www/subpath forms, scheduler idempotency, key-gating, cap enforcement)"
       ],
       "priority": 5,
       "passes": false,
-      "notes": "conditions.seo Json? exists at prisma/schema.prisma:278, fully orphaned (no tab, no route, no metadata). entityType 'condition' already declared in components/admin/seo/SeoEditorModal.tsx:24. Route template: app/api/tenant-admin/seo/products/[id]/route.ts. NOTE: conditions ids are plain strings (model has id String @id, no uuid default) — do not parseUuid; validate charset/length instead."
+      "notes": "The reorder-reminders pattern is the template: email run US-028 (see ralph/archive/2026-08-12-email-authoring-campaigns/progress.txt) — upsertJobScheduler fixed id, own queue, conditional-write idempotency, 5k cap, per-tenant try/catch. NEVER log or echo API keys; secrets are env names only. API spend is real: cap hard, log cost. Engine SDKs: prefer plain fetch against documented REST endpoints over adding SDK dependencies (zero-dep precedent from the parent run). If NO platform keys exist in env at build time that is FINE — everything ships key-gated with the not-configured state; do not block on missing keys."
     },
     {
       "id": "US-006",
-      "title": "Sitemap correctness + platform sitemap",
-      "description": "As a search engine, every sitemap URL must resolve and reflect reality.",
+      "title": "Entity grounding",
+      "description": "As a Pro tenant, engines connect my brand entity across the web.",
       "acceptanceCriteria": [
-        "Product entries emit the real id route /products/{id} (today: /products/{slug} at app/store/[slug]/sitemap.xml/route.ts:49 — 100% dead)",
-        "deletedAt: null filter on products; conditions detail pages included; retired static entries (faq) removed",
-        "lastmod from updatedAt on dynamic entries",
-        "Platform app/sitemap.ts + app/robots.ts for budstacks.io (marketing + /learn; store hosts continue to use their own routes)",
+        "socialLinks in the validated tenant-settings shape (https URLs only, max 8, capped length) + settings UI field",
+        "Organization JSON-LD gains sameAs from socialLinks (Pro tenants; omitted when empty — never an empty array)",
         "Typecheck passes",
-        "Tests pass (sitemap XML asserted: URL shape, filters, lastmod)"
+        "Tests pass (validation matrix, sameAs rendering/omission)"
       ],
       "priority": 6,
       "passes": false,
-      "notes": "Tenant sitemap: app/store/[slug]/sitemap.xml/route.ts (7 hardcoded static paths at :29-37; products query :15-18 ignores deletedAt from prisma/schema.prisma:676; posts already filter published :20). robots: app/store/[slug]/robots.txt/route.ts. Platform-level app/ has NO sitemap.ts/robots.ts and public/ has neither. Middleware matcher (middleware.ts:247) already passes .xml/.txt — the new platform files serve only on non-tenant hosts (check host in the handler or rely on route precedence; document which)."
-    },
-    {
-      "id": "US-007",
-      "title": "Canonicals everywhere",
-      "description": "As a store owner with a custom domain, my subdomain twin must not compete with my real domain in search.",
-      "acceptanceCriteria": [
-        "Shared helper storeCanonical(tenant, path) -> primary host (customDomain preferred, matching getTenantBaseUrl), path preserved",
-        "Every store page's metadata emits alternates.canonical via the helper (home already does at app/store/[slug]/page.tsx:416; products list, product detail, wire list/detail, about/contact/support/conditions all gain it through US-001..005 + this story sweeps the remainder)",
-        "Unit test: customDomain preferred when set, subdomain otherwise, path preserved, no trailing-slash drift",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 7,
-      "passes": false,
-      "notes": "Duplicate-content today: a tenant with customDomain serves the identical store on {slug}.budstacks.io with canonicals nowhere but home. Helper lives in lib/seo/ (new dir this run owns). US-022 adds canonicalOverride later — build the helper with an options bag so the override slots in without signature churn."
-    },
-    {
-      "id": "US-008",
-      "title": "Fix the www.* black-hole",
-      "description": "As a tenant on a custom domain, www. must reach my store or apex — never the BudStacks platform page.",
-      "acceptanceCriteria": [
-        "Middleware: www.{customDomain} 301s to the apex custom domain; www.{slug}.budstacks.io 301s to {slug}.budstacks.io — before tenant resolution",
-        "lib/parse-host.ts:36 behavior updated in concert; tests/unit/parse-host.test.ts:34-37 (which deliberately pins the old black-hole) rewritten to assert the redirect contract",
-        "Super-admin guidance text at app/super-admin/tenants/[id]/tenant-edit-form.tsx:407-409 corrected — it currently RECOMMENDS the broken www configuration",
-        "Journal records the ops dependency: Cloudflare SaaS must have www hostnames provisioned per custom domain for the redirect to be reachable — documented, not assumed",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 8,
-      "passes": false,
-      "notes": "parse-host.ts:36: `if (host.startsWith(\"www.\")) return null;` — any www host falls through to platform routes. Middleware host handling around middleware.ts:124-194 (existing 307 redirect patterns to copy). Use 301 (permanent) for SEO equity. Do not touch the tenant-admin/super-admin host redirects."
-    },
-    {
-      "id": "US-009",
-      "title": "Alt-text authoring",
-      "description": "As a store owner, I want to write image alt text — for accessibility and image search.",
-      "acceptanceCriteria": [
-        "Product images: alt-text editor surface in the SEO Manager product entry writing product_images.altText (column exists, no editor anywhere); product detail already renders it (app/store/[slug]/products/[id]/page.tsx:291); product-card alt priority corrected to altText || name",
-        "Post cover: alt field in the-wire/post-form.tsx (persist location chosen and documented — posts.seo.coverAlt recommended, no migration); Wire pages render it instead of alt={post.title}",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
-      ],
-      "priority": 9,
-      "passes": false,
-      "notes": "Auto-derived alts today: product-card.tsx:77 alt={product.name}; the-wire pages alt={post.title} (:111, :166, :322); post-form.tsx:168 hardcodes 'Cover preview'. product_images model carries altText already — check how product images sync from Dr Green (sync route may overwrite rows; upsert must preserve altText)."
-    },
-    {
-      "id": "US-010",
-      "title": "SEO route hardening",
-      "description": "As a platform, SEO writes need the same governance email got in Phase 2.",
-      "acceptanceCriteria": [
-        "canViewSeo/canEditSeo permission keys added (lib/permissions/permission-keys.ts) and enforced on ALL SEO routes via requirePermission/requirePermissionParams; nav gate set at lib/permissions/nav-permissions.ts:15 (currently undefined = ungated); page gate via requirePagePermission on /tenant-admin/seo",
-        "seo/pages PUT race fixed: per-key update instead of whole-blob read-modify-write (app/api/tenant-admin/seo/pages/route.ts:47-68 is last-write-wins)",
-        "Owner-admin and legacy null-teamRole resolve ALL_TRUE — asserted (email US-009 precedent)",
-        "check-auth-wrappers stays green (requirePermission module already allow-listed)",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 10,
-      "passes": false,
-      "notes": "Wrapper conversion pattern: the email run's US-009 (see archived ralph/archive/2026-08-12-email-authoring-campaigns/progress.txt) — drop-in swap, table-driven permission tests with the REAL resolver. Per-key pageSeo update: read-modify-write only the single key inside a targeted update, or use Prisma Json path update; document the choice."
-    },
-    {
-      "id": "US-011",
-      "title": "Tenant plan column + entitlement matrix (extend the #235 seam)",
-      "description": "As the platform, I need the operator-controlled plan column the entitlement seam was built to consume, plus SEO feature keys in its matrix.",
-      "acceptanceCriteria": [
-        "tenants.plan column ('trial'|'basic'|'pro'|'custom', default 'trial') + hand-authored migration (no migrate dev/db push; validate + generate + diff vs prisma migrate diff canonical output)",
-        "lib/entitlements/features.ts FEATURES gains SEO_CORE 'seo.core' + SEO_PRO 'seo.pro'; getTenantFeatures resolves from a plan matrix per its own docstring contract: trial/custom -> ALL features; pro -> ALL; basic -> all analytics.* keys UNCHANGED (their basic/pro split is the analytics module's pending decision — do NOT decide it here) + seo.core, NOT seo.pro",
-        "Plan parsing fails closed: unknown/unreadable column value -> treated as 'basic' (asserted); absent value impossible (column default trial)",
-        "requireFeature(FEATURES.SEO_PRO) server gate composing with requirePermission* — 403 with a distinct 'upgrade_required' error shape; existing analytics call sites (features[] in API responses, hasFeature checks) keep working unchanged (asserted by running their suites)",
-        "Clerk org publicMetadata.plan is a MIRROR only (written best-effort on plan change, NEVER read as source of truth) — the column is authoritative by explicit decision: tenants.settings is tenant-writable, and Clerk Billing was rejected (Stripe-underneath, cannabis-adjacent)",
-        "Unit tests: matrix per plan value, fail-closed parsing, 403 shape, permission+feature composition",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 11,
-      "passes": false,
-      "notes": "The seam SHIPPED in PR #235 (analytics session, 2026-08-13): lib/entitlements/features.ts — read its docstring first; it is the contract ('when the operator-controlled tenants.plan column lands, getTenantFeatures resolves from the plan matrix instead — call sites are already wired and do not change'). Business model (Gerard): 3 months all-features trial -> lock -> $99 basic / $169 pro / custom. tenants model at prisma/schema.prisma:770-830 — add ONLY the column. Gate mechanics mirror lib/permissions/require-permission.ts. REPO TRAP (#235 session): lib/db.ts prisma export is any-widened — annotate every callback param explicitly or TS7006 fails the build."
-    },
-    {
-      "id": "US-012",
-      "title": "Super-admin plan control",
-      "description": "As the super admin, I set a tenant's plan until billing exists.",
-      "acceptanceCriteria": [
-        "Plan selector (trial/basic/pro/custom) on app/super-admin/tenants/[id]/tenant-edit-form.tsx; writes tenants.plan and best-effort MIRRORS to Clerk org publicMetadata.plan (sync failure -> warning surfaced, column stays authoritative)",
-        "Audit-log entry on plan change (existing audit util)",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
-      ],
-      "priority": 12,
-      "passes": false,
-      "notes": "Clerk org update pattern: app/api/onboarding/route.ts:169-172 (clerkClient organizations.updateOrganization publicMetadata). Audit util: grep lib for createAuditLog (email US-023 used it). Super-admin routes: withSuperAdmin family."
-    },
-    {
-      "id": "US-013",
-      "title": "Upsell UI states",
-      "description": "As a Basic tenant, I should see what Pro does and how to get it — not a blank space.",
-      "acceptanceCriteria": [
-        "Plan surfaced to admin UI server-side (resolved prop through the SEO page loader — no client-side Clerk parsing)",
-        "Locked cards appear ONLY for plan 'basic' (trial and custom tenants have all features — trial is the 3-month launch window and must see pro features working, not locked): feature name, one-line value prop, 'Upgrade to Pro — $169/mo' CTA linking to a static upgrade/contact page (no checkout)",
-        "UI lock is presentation only — the US-011 server gate remains the boundary (asserted: a Basic tenant's direct API call 403s regardless of UI)",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
-      ],
-      "priority": 13,
-      "passes": false,
-      "notes": "SEO Manager shell: app/tenant-admin/seo/page.tsx + seo-page-client.tsx (tabs). Locked-card styling per bs-* kit. Later C stories each add their tab/section behind this lock — build the LockedFeatureCard once, reusable, taking {title, value-prop, children-when-unlocked}."
-    },
-    {
-      "id": "US-014",
-      "title": "JSON-LD engine + Organization/LocalBusiness",
-      "description": "As a Pro tenant, my store emits Organization + LocalBusiness structured data automatically.",
-      "acceptanceCriteria": [
-        "lib/seo/json-ld.ts: typed builders + ONE renderer serializing with </script>-safe escaping (< -> \\u003c) — hostile fixture asserted (a businessName containing </script><script> cannot break out)",
-        "Store home renders Organization + LocalBusiness: name, url (primary host), logo (durable public URL), PostalAddress from tenants.businessAddress1..businessCountry — partial address degrades to Organization only, never a half-empty PostalAddress",
-        "Rendered via <script type=\"application/ld+json\"> compatible with the CSP nonce plumbing (lib/security/csp, middleware.ts:83-91)",
-        "Gated: Basic tenants render NO JSON-LD (asserted)",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 14,
-      "passes": false,
-      "notes": "ZERO JSON-LD exists today (grep-verified: no ld+json/schema.org anywhere). Business address columns: prisma/schema.prisma:781-787. Logo: tenant_branding — route through the public-image URL helper from the email run (lib/storage/public-image-url.ts) + absolutise with getTenantBaseUrl. JSON-LD script tags may need nonce or CSP allowance for inline JSON — check lib/security/csp for how existing inline scripts are handled; application/ld+json is not executable but strict CSPs still gate it."
-    },
-    {
-      "id": "US-015",
-      "title": "Product JSON-LD",
-      "description": "As a Pro tenant, product pages emit Product+Offer schema so listings get rich results.",
-      "acceptanceCriteria": [
-        "Product detail renders Product (name, description, absolute image, brand=businessName) + Offer (price, priceCurrency, availability InStock/OutOfStock from stock)",
-        "THC/CBD content and strainType as additionalProperty when present",
-        "Emitted only for Pro AND only when price exists (no empty Offer objects)",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 15,
-      "passes": false,
-      "notes": "Product data source = the same Dr Green fetch as US-004's metadata (share the cached fetch). Product fields incl. thcContent/cbdContent/strainType on the local products model. Currency: check what the product payload carries vs tenant config — do not hardcode € (known admin bug class)."
-    },
-    {
-      "id": "US-016",
-      "title": "Article + BreadcrumbList JSON-LD",
-      "description": "As a Pro tenant, Wire posts emit Article schema and store pages emit breadcrumbs.",
-      "acceptanceCriteria": [
-        "Post pages: Article (headline, image, datePublished/dateModified, author name, publisher = Organization ref)",
-        "BreadcrumbList on posts, product detail, condition detail — Home -> section -> item with primary-host URLs (US-007 helper)",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 16,
-      "passes": false,
-      "notes": "Builders extend lib/seo/json-ld.ts. posts fields at prisma/schema.prisma:638-654 (createdAt/updatedAt for published/modified; author via users relation — posts-author FK class fixed in PR #226, resolve the local users row name)."
-    },
-    {
-      "id": "US-017",
-      "title": "FAQPage JSON-LD from conditions",
-      "description": "As a Pro tenant, condition pages turn their existing FAQ content into rich results.",
-      "acceptanceCriteria": [
-        "Condition detail renders FAQPage from conditions.faqs Json — shape validated (question+answer strings), malformed entries skipped without breaking the page",
-        "Emitted only when >=1 valid Q/A pair and tenant is Pro",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 17,
-      "passes": false,
-      "notes": "conditions.faqs Json? at prisma/schema.prisma:270-275 — inspect actual stored shape on a seeded row before assuming ({question, answer} vs {q, a}); parse with a fail-closed Zod schema like the email run's segment-filter pattern."
-    },
-    {
-      "id": "US-018",
-      "title": "OG image studio — branded generation",
-      "description": "As a Pro tenant, every share gets a branded OG image even when I never uploaded one.",
-      "acceptanceCriteria": [
-        "Dynamic OG route via next/og ImageResponse (1200x630): tenant logo + brand color + entity title, for home/products/posts/conditions",
-        "Wired as the OG fallback in US-001..005 metadata when no explicit ogImage set — Pro only; Basic keeps static fallbacks",
-        "Route is public (tenant from host), registered in BOTH auth gates' allowlists (middleware isPublicRoute + AUTH_PUBLIC_ROUTES) with reason; check-auth-wrappers stays green",
-        "Runtime choice (edge vs nodejs) documented in-code with the reason",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (render the route directly)"
-      ],
-      "priority": 18,
-      "passes": false,
-      "notes": "No ImageResponse/@vercel/og usage exists (grep-verified). next/og ships with Next 14 — no new dependency expected; if one IS needed, lockfile discipline applies. Docker note: this stays inside the Next bundle (no worker import) — no runner-image COPY risk, but state that check in the journal explicitly (email-p2 hotfix lesson)."
-    },
-    {
-      "id": "US-019",
-      "title": "OG image studio — real upload",
-      "description": "As a Pro tenant, I can upload a custom OG image instead of pasting URLs.",
-      "acceptanceCriteria": [
-        "The disabled upload button (components/admin/seo/SeoEditorModal.tsx:147-157) becomes real: uploads via /api/tenant-admin/upload, stores the DURABLE public URL — never the presigned URL (email-run rule)",
-        "1200x630 guidance + client size cap + preview in the modal",
-        "Pro-gated; Basic keeps the URL-entry field",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
-      ],
-      "priority": 19,
-      "passes": false,
-      "notes": "Upload endpoint returns {url (presigned), publicUrl (durable)} since email US-005/US-014 — consume publicUrl, throw if absent (email-p2 US-014 pattern in lib/email/email-image-upload.ts). OG URLs in metadata must be ABSOLUTE (metadataBase from US-001 handles relative /api/public/images/... paths — assert the final og:image is absolute)."
-    },
-    {
-      "id": "US-020",
-      "title": "Redirects manager",
-      "description": "As a Pro tenant, I can create 301s so moved content keeps its equity.",
-      "acceptanceCriteria": [
-        "Prisma model seo_redirects: tenantId, fromPath, toPath, statusCode (301|308), createdAt; @@unique([tenantId, fromPath]); hand-authored migration; registered in tenantScopedModels",
-        "Middleware lookup on store hosts: exact normalized-path match -> redirect before render; zero-cost for tenants with no redirects (per-tenant existence cached with TTL or a single indexed query — choice documented with the reasoning)",
-        "CRUD UI in a Pro SEO Manager tab: fromPath normalized (leading slash, no query/hash), self/loop rejection (A->B->A refused at write), reserved paths refused (/api, /tenant-admin, /super-admin, sitemap.xml, robots.txt)",
-        "Writes gated requirePermission(canEditSeo) + requirePlanFeature(seoPro); redirects only FIRE for Pro tenants (Basic tenant's stored rows go dormant, documented)",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
-      ],
-      "priority": 20,
-      "passes": false,
-      "notes": "Middleware is edge-adjacent — check how middleware.ts reaches the DB today (it resolves tenants — follow the same client path; if tenant resolution is fetch-based, redirects may need a lightweight internal API or to piggyback the tenant payload). Do NOT add per-request DB latency for the 99% no-redirect case; the tenant resolution already in middleware can carry a hasRedirects flag."
-    },
-    {
-      "id": "US-021",
-      "title": "Slug editing + auto-301 on change",
-      "description": "As a Pro tenant, renaming a post must not orphan its old URL.",
-      "acceptanceCriteria": [
-        "Post slug editable in the-wire/post-form.tsx (pattern-validated; uniqueness loop reused from app/api/tenant-admin/posts/route.ts:60-68)",
-        "On slug change for Pro: seo_redirects row (old wire path -> new, 301) written automatically; existing redirects pointing AT the old path re-pointed to the new (no chains); Basic slug edit warns the old URL will 404",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 21,
-      "passes": false,
-      "notes": "Slug currently derived at create only (slugify at posts/route.ts:10-17), no editor. PATCH route: app/api/tenant-admin/posts/[id]/route.ts (mixed withAuth + manual role check — while touching it, note but do NOT widen scope to convert it; that's the sweep). Chain-collapse mirrors email US-021's replace-not-stack scheduler discipline."
-    },
-    {
-      "id": "US-022",
-      "title": "Indexing controls",
-      "description": "As a Pro tenant, I control what gets indexed — noindex, canonical overrides, sitemap exclusion.",
-      "acceptanceCriteria": [
-        "seo Json extended (Zod on every SEO PUT route): robots {noindex, nofollow} booleans, canonicalOverride (validated absolute https URL), sitemapExclude boolean",
-        "Metadata rendering honors them for Pro (robots meta tag; canonicalOverride beats the US-007 helper); sitemap skips excluded entries",
-        "SeoEditorModal grows a Pro 'Indexing' section; Basic sees the locked state; stored values from a downgraded tenant go dormant (never rendered) — asserted",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
-      ],
-      "priority": 22,
-      "passes": false,
-      "notes": "US-007's helper was built with an options bag for exactly this. Fail-closed parsing per the segment-filter pattern: an unreadable robots value renders nothing rather than a wrong directive. noindex + sitemapExclude interact — audit (US-023) will flag noindexed-but-in-sitemap; keep flags independent here."
-    },
-    {
-      "id": "US-023",
-      "title": "SEO audit panel",
-      "description": "As a Pro tenant, I get a Yoast-class score telling me exactly what to fix.",
-      "acceptanceCriteria": [
-        "lib/seo/audit.ts checks: missing/short/long titles+descriptions per entity type; missing OG images; missing alt text (product_images.altText, post cover); duplicate titles across the store; sitemap health (entry count, product-URL id-form validity, deletedAt leakage); redirect loops/chains; noindex-on-sitemap-included warnings",
-        "GET /api/tenant-admin/seo/audit (canViewSeo + seoPro), result cached ~15min per tenant (in-process or DB timestamp — documented); each finding carries a deep link to the editor that fixes it",
-        "Audit tab in SEO Manager: weighted score (weights documented in-code), grouped findings, clean-state UI",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
-      ],
-      "priority": 23,
-      "passes": false,
-      "notes": "Deep-link pattern: email US-023/026 (findings -> the screen that fixes them). Keep each check a pure function over fetched rows — table-driven tests. Cache must be tenant-scoped and impersonation-safe (keyed on tenantId, not session)."
-    },
-    {
-      "id": "US-024",
-      "title": "Automatos AI assist — spike + service",
-      "description": "As the platform, AI SEO runs on the tenant's own Automatos AI credentials — the cross-sell is the architecture.",
-      "acceptanceCriteria": [
-        "Spike documented IN THE JOURNAL: what the per-tenant Automatos API (tenants.automatosApiKey/automatosAgentId, prisma/schema.prisma:794-795) supports server-side — endpoint shape, auth, latency; sources: public/automatos-widget.js wire calls + docs/PRDS/prd-automatos-ai-integration.md",
-        "lib/seo/ai-assist.ts: provider interface + Automatos implementation; strict output contracts (title <=60 chars, description <=160, alt <=120; JSON-validated; contract violation -> refused, never silently truncated)",
-        "No credentials -> feature reports 'unavailable' with the Connect-Automatos upsell shape; NO platform-key fallback in this PRD",
-        "Per-tenant rate limit (fail-closed for this write-adjacent path); prompts contain ONLY the tenant's own entity content (asserted — no cross-tenant data)",
-        "If the spike concludes the API cannot serve completions: BLOCK this story with the finding documented (RALPH_BLOCKED) — do not improvise another provider",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)"
-      ],
-      "priority": 24,
-      "passes": false,
-      "notes": "Automatos is a chat widget today (render points app/store/[slug]/layout.tsx:362-372, bundle public/automatos-widget.js) — the widget's network calls reveal the API base + message shape. Provider interface first so a future provider swap is config, not surgery. Secrets: automatosApiKey is a stored credential — never log it, never echo in errors. CROSS-SESSION FINDINGS (Automatos-extras session, PRD #236, 2026-08-13): the Automatos SDK has NO SEO widget — spike the server API directly, not the widget SDK; and the config split-brain is resolved: the tenants COLUMNS (automatosApiKey/automatosAgentId) are canonical, any settings-JSON copies are dead — read only the columns."
-    },
-    {
-      "id": "US-025",
-      "title": "AI assist UI",
-      "description": "As a Pro tenant, one click drafts my meta title, description, or alt text — I review, I save.",
-      "acceptanceCriteria": [
-        "'Generate with Automatos AI' buttons in SeoEditorModal (title + description from entity name/description/content) and in the US-009 alt editors",
-        "Generated text lands in the field as an editable draft — NEVER auto-saved; normal save flow applies",
-        "Loading/error/unavailable states (unavailable = Connect-Automatos upsell card); audit-log entry per generation",
-        "Server endpoint gated canEditSeo + seoPro + availability; rate limit surfaced in the UI error",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
-      ],
-      "priority": 25,
-      "passes": false,
-      "notes": "Depends on US-024's service; if US-024 BLOCKED, this story is BLOCKED with one journal line pointing at it (do not build UI against a dead service). Draft-not-save mirrors the email composer's review-before-send philosophy."
-    },
-    {
-      "id": "US-026",
-      "title": "Site verification + GA4 fields",
-      "description": "As a Pro tenant, I can verify Search Console and wire GA4 without anyone injecting raw HTML.",
-      "acceptanceCriteria": [
-        "Structured tenant-settings fields (lib/validation/tenant-settings.ts): googleSiteVerification + bingSiteVerification (token charset/length pinned), ga4MeasurementId (G-[A-Z0-9]{4,} pattern) — STRUCTURED FIELDS ONLY, raw head HTML is out of scope by design",
-        "Verification tokens render as meta tags in the store layout (Pro); GA4 script renders CSP-nonce-safe (middleware.ts:83-91 nonce plumbing) and only when the cookie-consent analytics flag permits (tenant-settings.ts:111 analyticsEnabled — integration behavior documented in-code)",
-        "Settings UI section (Pro-gated) with the three fields + validation errors",
-        "Typecheck passes",
-        "Tests pass (targeted vitest run)",
-        "Verify in browser using dev-browser skill (fallback per PROMPT)"
-      ],
-      "priority": 26,
-      "passes": false,
-      "notes": "tenantSettingsShape is the one shared read/write schema (email US-010 added businessAddress there — same pattern). GA4 consent posture: PRD assumes STRICT (no script until consent) — Open Question 3; if Gerard flips to Consent Mode, only this story's render condition changes. CSP: the GA script src needs the CSP script-src to allow googletagmanager.com — check lib/security/csp for how domains are added; document the addition."
+      "notes": "Organization builder: lib/seo/json-ld.ts (parent US-014 — escape discipline is law; sameAs values pass through the same serializer). Settings shape: lib/validation/tenant-settings.ts."
     }
   ]
 }
