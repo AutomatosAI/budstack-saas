@@ -172,8 +172,15 @@ export function buildPostalAddress(
  * Absolute URL for a store-relative asset path, or null when it will not parse.
  * JSON-LD is read out of band by a crawler that has no page to resolve a
  * relative reference against, so a relative `logo` is a broken one.
+ *
+ * Shared with the per-entity builders (US-015's Product image): every image that
+ * reaches a JSON-LD node goes through `storedPublicImagePath` first, so a
+ * presigned S3 URL resolves to NO image rather than to one that 403s.
  */
-function absoluteAssetUrl(storeUrl: string, ref: string | null): string | null {
+export function absoluteAssetUrl(
+  storeUrl: string,
+  ref: string | null,
+): string | null {
   const path = storedPublicImagePath(ref);
   if (!path) return null;
   try {

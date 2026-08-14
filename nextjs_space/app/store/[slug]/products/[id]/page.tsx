@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 
+import { JsonLd } from "@/components/seo/json-ld";
 import { prisma } from "@/lib/db";
 import {
   fetchProduct,
@@ -8,6 +9,10 @@ import {
 } from "@/lib/drgreen/doctor-green-api";
 import { logger } from "@/lib/logger";
 import { readEntitySeo } from "@/lib/seo/entity-seo";
+import {
+  buildProductJsonLd,
+  type ProductJsonLdSource,
+} from "@/lib/seo/product-json-ld";
 import {
   PRODUCT_NOT_FOUND_TITLE,
   buildProductMetadata,
@@ -136,30 +141,68 @@ export async function generateMetadata({
 }
 
 /**
- * SEO US-009 — the alt text the owner authored for this strain's imagery, or ""
- * when there is none.
+ * The live strain and the local row behind it, resolved once for everything the
+ * server side of this page needs: US-009's authored alt text and US-015's
+ * Product JSON-LD.
  *
- * BOTH loaders below are the `cache()`d ones `generateMetadata` already calls
- * with the same arguments, so on a normal render this costs NOTHING: React
- * dedupes them within the request. It resolves the live strain first for the
- * same reason metadata does — the row is matched on `drGreenStrainId`, and the
- * resolved id is the one the catalogue agrees with.
+ * BOTH loaders are the `cache()`d ones `generateMetadata` already calls with the
+ * same arguments, so on a normal render this costs NOTHING: React dedupes them
+ * within the request. It resolves the live strain first for the same reason
+ * metadata does — the row is matched on `drGreenStrainId`, and the resolved id
+ * is the one the catalogue agrees with.
  *
  * The storefront product API serves the Dr Green payload verbatim
  * (app/api/store/[slug]/products/route.ts:68-79) and no local row, so this is
  * the seam where an authored value reaches the client without adding a DB read
  * to a force-dynamic commerce route.
  */
-async function loadAuthoredImageAlt(
+async function loadProductForRender(
   tenantId: string,
   countryCode: string,
   productId: string,
-): Promise<string> {
+): Promise<{
+  product: DoctorGreenProduct | null;
+  seo: unknown;
+}> {
   const product = await loadLiveProduct(tenantId, countryCode, productId);
-  if (!product) return "";
+  if (!product) return { product: null, seo: null };
 
   const local = await loadProductSeoRow(tenantId, product.id);
-  return readEntitySeo(local?.seo).imageAlt ?? "";
+  return { product, seo: local?.seo ?? null };
+}
+
+/**
+ * SEO US-015 — the Product/Offer node, built from the SAME live strain the body
+ * renders. Nothing here can block the page: `buildProductJsonLd` returns [] for
+ * a Basic tenant, for a strain with no price and for a currency that is not an
+ * ISO code, and `<JsonLd>` renders nothing for [].
+ */
+function productJsonLdSource(
+  tenant: NonNullable<Awaited<ReturnType<typeof getCurrentTenant>>>,
+  product: DoctorGreenProduct,
+  seo: unknown,
+): ProductJsonLdSource {
+  return {
+    tenantId: tenant.id,
+    plan: tenant.plan,
+    businessName: tenant.businessName,
+    subdomain: tenant.subdomain,
+    customDomain: tenant.customDomain,
+    productId: product.id,
+    name: product.name,
+    description: product.description,
+    imageUrl: product.image_url ?? product.imageUrl,
+    price: product.price,
+    // The ISO code, never `product.currency` — that one is a display symbol.
+    currencyCode: product.currencyCode,
+    inStock: product.in_stock,
+    thcContent: product.thc_content ?? product.thc,
+    cbdContent: product.cbd_content ?? product.cbd,
+    // `type` is what the page prints (product-detail-client.tsx:344); the
+    // normalized `strain_type` is the upper-cased fallback for a blank one.
+    strainType: product.type || product.strain_type,
+    seo,
+  };
 }
 
 export default async function ProductDetailPage({
@@ -167,13 +210,24 @@ export default async function ProductDetailPage({
 }: ProductDetailPageProps) {
   const tenant = await getCurrentTenant();
 
-  const imageAlt = tenant
-    ? await loadAuthoredImageAlt(
+  const { product, seo } = tenant
+    ? await loadProductForRender(
         tenant.id,
         tenant.countryCode || DEFAULT_COUNTRY_CODE,
         params.id,
       )
-    : "";
+    : { product: null, seo: null };
 
-  return <ProductDetailClient imageAlt={imageAlt} />;
+  const imageAlt = readEntitySeo(seo).imageAlt ?? "";
+  const jsonLdNodes =
+    tenant && product
+      ? buildProductJsonLd(productJsonLdSource(tenant, product, seo))
+      : [];
+
+  return (
+    <>
+      <JsonLd nodes={jsonLdNodes} />
+      <ProductDetailClient imageAlt={imageAlt} />
+    </>
+  );
 }

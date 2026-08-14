@@ -1687,3 +1687,127 @@ FLAGGED, NOT FIXED (adjacent debt)
   StoreHomeContent are the obvious extraction when someone has a reason to.
 - The unit project still cannot render React (US-013's flag, unchanged), so no
   component test asserts the <script> element itself.
+
+================================================================================
+[2026-08-14] US-015 PASS — Product JSON-LD
+================================================================================
+
+WHAT LANDED
+lib/seo/product-json-ld.ts (new, 250 lines) — buildProductJsonLd(): one Product
+node with an Offer, gated on seo.pro, built from the SAME cache()d Dr Green
+fetch generateMetadata already made in US-004. Wired into
+app/store/[slug]/products/[id]/page.tsx via the existing <JsonLd> component;
+lib/seo/json-ld.ts exports absoluteAssetUrl so the image goes through the one
+presigned-URL-refusing path US-014 established.
+
+THE DECISION US-014 LEFT OPEN (its journal: "Worth a decision in US-015").
+Organization/LocalBusiness is homepage-only, so a Product `brand` that pointed
+at `{store}/#organization` by @id would be a DANGLING reference on the product
+page — structured data is parsed per page, and a consumer following that @id
+finds no node and therefore no brand name. So `brand` is a self-contained
+`{"@type":"Brand","name":businessName}`. It restates six characters of data and
+is correct standalone. No Organization stub on product pages.
+
+WHERE EACH FIELD COMES FROM, and the one that mattered
+- LIVE Dr Green strain for name/image/price/currency/stock/THC/CBD/type. The
+  local `products` row carries thcContent/cbdContent/strainType too and the
+  story notes name them — but sync/route.ts:61-63 writes them FROM this same
+  upstream payload, so the row is a snapshot, not an authored override. A
+  fallback to it would emit a THC figure the page itself no longer displays.
+  Google penalises exactly that mismatch. No fallback: what the shopper sees is
+  what the crawler is told. The fields ARE emitted (AC-2), sourced from the
+  payload that renders.
+- description: authored products.seo.description -> truncated strain copy, i.e.
+  US-004's cascade verbatim, so this block cannot contradict the
+  <meta name="description"> sitting beside it in the same head.
+
+THE CURRENCY TRAP (the story note's "do not hardcode EUR"). DoctorGreenProduct
+carries BOTH `currency` (a display SYMBOL — "R", "€" — from getCurrencySymbol,
+doctor-green-api.ts:286) and `currencyCode` (the ISO code), on adjacent lines of
+the same normalizeProduct return. product-detail-client.tsx:186 already reads
+the wrong one with `|| "EUR"`, hardcoding euros onto a South African store.
+priceCurrency is therefore VALIDATED, not trusted: /^[A-Za-z]{3}$/ or the whole
+node is dropped. A symbol cannot pass, so miswiring the field yields no rich
+result rather than a mispriced one. Asserted for R, €, C$, "", "EURO", "za".
+
+WHAT IS DELIBERATELY NOT EMITTED
+- No node AT ALL when price <= 0 or the currency is not ISO (AC-3, "no empty
+  Offer objects"). 0 is what normalizeProduct falls back to for "Price
+  unavailable"; a Product with a priceless Offer earns a Search Console warning,
+  not a rich result.
+- THC/CBD of 0 = absent, matching the pages' own convention (normalizeProduct
+  coerces a missing reading to 0; card and detail both hide the badge on falsy).
+  A `0%` claim would assert something the page does not show.
+- availability is InStock ONLY on an explicit `true`. normalizeProduct always
+  sets a boolean, so this is exact for a normalized payload and fails closed for
+  anything else — a false InStock is the mismatch that costs a merchant their
+  rich results.
+- No sku/gtin/priceValidUntil. Not in the ACs; the strain id is an obvious
+  future `sku` if someone wants merchant-listing eligibility.
+
+PRICE SEMANTICS: per gram. It is the number product-card.tsx:38,134 prints under
+a "per gram" label and the detail page repeats, emitted as a 2-decimal STRING —
+same precision the page shows, and it cannot arrive as a float artefact from the
+EUR conversion (45.230000000000004 -> "45.23", asserted).
+
+PAGE WIRING. loadAuthoredImageAlt (US-009) became loadProductForRender, which
+returns the strain AND its local seo blob for both consumers. Behaviour is
+identical for the alt path; it just stops resolving the same two cache()d
+loaders twice. No new query and no new fetch: both loaders are the ones
+generateMetadata already calls with the same arguments in the same request.
+Plan comes off getCurrentTenant() — resolveTenant does a bare findFirst with no
+select (tenant-resolver.ts:63-79), so the row already carries `plan`; no second
+tenant read was added.
+
+VERIFIED
+- pnpm exec tsc --noEmit                        -> exit 0
+- pnpm vitest run tests/unit/product-json-ld.test.ts -> 26 passed
+- pnpm vitest run tests/unit/store-json-ld.test.ts   -> 22 passed (US-014 intact
+  after json-ld.ts gained an export)
+- pnpm vitest run --project unit -> 137 files, 2227 passed, 0 failed
+  (was 136/2201 at US-014: +1 file, +26 tests, no regressions)
+- pnpm vitest run (all projects) -> 138 files, 2228 passed, 30 skipped
+- pnpm check:security                           -> both gates green
+- pnpm exec next lint (4 touched files)         -> no warnings or errors
+- pnpm build -> exit 0. /store/[slug]/products/[id] still ƒ (dynamic) at
+  10.2 kB. It was already dynamic via header-based tenant resolution, so the
+  headers() read inside <JsonLd> changes no classification. The build is the
+  check that matters: a server-only import (next/headers) now reaches this
+  route, and an RSC boundary violation is invisible to tsc.
+- LIVE: pnpm dev on the existing .env.local (never modified).
+  GET /                                    -> 200, response carries
+     `content-security-policy: default-src 'self'; script-src 'self'
+      'nonce-3acdhuj6vBRLIK7…'` — the nonce plumbing <JsonLd> attaches to.
+  GET /store/healingbuds/products/test-id  -> 404. Same cause US-014 recorded:
+     the dev server cannot reach the DB (10x "Can't reach database server" in
+     the log — Railway private network), so no tenant resolves.
+  visual: deferred to human review — asserting the rendered <script> needs a
+  real tenant on a reachable DB AND live Dr Green credentials. Everything below
+  the render (node shape, gate, currency validation, price/stock rules,
+  escaping) is asserted purely.
+
+DOCKERFILE CHECK (the email-p2 #232 lesson): one new module,
+lib/seo/product-json-ld.ts. `lib/` is already COPYied by the runner
+(nextjs_space/Dockerfile:76). Imports are @/lib/{seo,storage,entitlements} only
+— no next/server, no Prisma, no import edge leaving the bundle. No Dockerfile
+edit needed.
+
+NO SCHEMA CHANGE, NO MIGRATION, NO NEW MODEL, NO NEW QUERY, no
+tenantScopedModels change. Storefront-only: nothing here can 403 a shopper —
+a Basic tenant's product page sells exactly as before, it just carries no schema.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- product-detail-client.tsx:186 `const displayCurrency = product.currency ||
+  "EUR"` — reads the SYMBOL field and falls back to a hardcoded euro. The number
+  a shopper sees on a ZAR store can therefore be labelled wrong in the page body
+  while the JSON-LD beside it is right. Out of scope (checkout-adjacent render
+  path), but it is the live instance of the bug class this story guarded against.
+  product-card.tsx:39 has the same shape with a `|| "R"` fallback.
+- Offer omits eligibleQuantity/UnitPriceSpecification, so nothing states the
+  price is PER GRAM. Fine while the headline price on the page is per gram too,
+  but a store selling only in 5g units would want the reference quantity.
+- Product JSON-LD is DETAIL PAGES ONLY. The listing (/products) emits no
+  ItemList — not in scope for any story in this PRD.
+- The unit project still cannot render React (US-013's flag, unchanged), so no
+  component test asserts the <script> element itself; the serializer is asserted
+  directly instead.
