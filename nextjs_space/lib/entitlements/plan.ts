@@ -62,6 +62,19 @@ export function isPlan(value: unknown): value is Plan {
 export type PlanMirrorFailureReason = "no_clerk_org" | "clerk_write_failed";
 
 /**
+ * The `code` on a plan-gate 403, letting a client tell "your plan does not
+ * include this" apart from "your role does not allow this" and offer an upgrade
+ * rather than an "ask your admin" dead end.
+ *
+ * Here rather than in `./require-feature` for the same reason as the mirror
+ * reasons above: US-023's audit panel is a CLIENT component and needs to
+ * recognise the refusal, while `require-feature` reaches Prisma, pino and
+ * next/server — none of which may cross into a browser bundle. That module
+ * re-exports it, so every existing import site is unchanged.
+ */
+export const UPGRADE_REQUIRED_CODE = "upgrade_required";
+
+/**
  * Response contract of `PATCH /api/super-admin/tenants/[id]/plan` (US-012).
  *
  * `changed` is false when the submitted plan already matched the column — the

@@ -2851,3 +2851,124 @@ FLAGGED, NOT FIXED (adjacent debt)
   written out four times. Part of the ~31-route sweep.
 - No audit-log entry when an owner noindexes a page — consistent with US-020's
   redirects and US-021's renames. Still nobody's story.
+
+[2026-08-14] US-023 PASS — SEO audit panel
+- A SCORE NOBODY CAN ACT ON IS A VANITY METRIC, so the finding is the unit, not
+  the number: every one carries a `SeoAuditTarget` (tab + row id + label) and the
+  panel renders it as a Fix button that switches the SEO Manager's tab and opens
+  that row's editor. Wiring it meant making the tabs CONTROLLED
+  (`defaultValue` -> `value`/`onValueChange` in seo-page-client.tsx) — an
+  uncontrolled tablist cannot express "go there and open that". The row is looked
+  up in the LOCAL lists, which already hold this session's saves, so fixing one
+  finding and coming back for the next never reopens an editor on stale data; a
+  row that has since gone still switches the tab, because landing on the right
+  list beats a button that does nothing.
+- THE SCORE IS CAPPED PER CHECK AND THAT IS THE LOAD-BEARING DECISION. 100 minus
+  `perFinding x count`, bounded by each check's `cap` (weights and rationale in
+  `audit-types.ts`). A store with 400 unauthored products has 400 findings of one
+  kind, and an uncapped model would floor it at 0 with the redirect loop, the
+  duplicate titles and the leaking sitemap all invisible behind them. Capped, the
+  score answers "how many DIFFERENT things are wrong", which is the question an
+  owner can act on, while the group still reports its true `total`. Pinned by a
+  test that adds a redirect loop to 400 missing titles and asserts the score
+  still moves by exactly the loop's weight.
+- THE SITEMAP CHECKS RUN THE REAL BUILDER, not a re-derivation. `buildAuditSitemap`
+  calls `buildStoreSitemapEntries` — the same function app/store/[slug]/sitemap.xml
+  renders from, with the same filters — and every entity's `inSitemap` is a set
+  membership test of `storeCanonical(tenant, productPath(strainId))` against its
+  output. A re-derivation would only ever agree with itself; this fails the day
+  US-006's defect comes back (the sitemap advertising `/products/{slug}` where the
+  storefront serves `/products/{drGreenStrainId}`). One test pins that URL form
+  explicitly.
+- THE DELETED-LEAK CHECK NEEDED ROWS THE ORDINARY QUERY CANNOT RETURN, so the
+  route reads soft-deleted products SEPARATELY — `where: { tenantId, deletedAt:
+  { not: null } }`, which suppresses the extension's injected filter because
+  `injectNotDeleted` keeps a caller's own constraint (lib/soft-delete.ts:105).
+  A second small query rather than `withDeleted()` around the first: a store with
+  thousands of deleted rows must not crowd its live products out of the row
+  ceiling. The check is a canary — it should never fire, which is exactly why it
+  is worth asserting against live data and not only in a test.
+- `product_images.altText` DOES NOT EXIST, restated from US-009: there is no
+  `product_images` model, `products.images` is a `String[]` of URLs, and the
+  authored alt lives in `seo.imageAlt`. The alt check reads that, for any entity
+  that HAS an image of its own. Static pages are deliberately exempt from the
+  og-image check — they have no image by construction and US-018's branded card
+  is the designed answer for them, so flagging all five on every store would be
+  pure noise. Products, posts and conditions are not exempt: a post with no cover
+  is a genuinely worse share.
+- DUPLICATE TITLES COMPARE AUTHORED VALUES ONLY. Two products genuinely called
+  the same thing upstream is a catalogue problem an owner cannot fix in this
+  editor, and reporting it would be advice they cannot act on. Normalised
+  case-insensitively with whitespace collapsed AND trimmed — the trim was added
+  after a test caught that `"  Pain   Relief "` and `"Pain Relief"` grouped apart;
+  `readEntitySeo` trims upstream so production could not reach it, but the check
+  is now correct on its own terms.
+- LOOP DETECTION REUSES `findRedirectChainProblem` rather than reimplementing it,
+  one rule at a time against the rest of the table, so the audit and the write
+  route can never disagree about what a loop is. Chains (`/a`->`/b`->`/c`) are
+  legal and get `info`, not a refusal. Noted: that function calls a >10-hop
+  acyclic chain a "loop" — pathological either way, and worth a critical.
+- CACHE IS IN-PROCESS AND KEYED ON TENANT ID ALONE (the story's
+  impersonation-safety note). Under PRD-302 `ctx.tenantId` is the IMPERSONATED
+  tenant, which is the store whose audit an operator must see; keying on a
+  session, user or Clerk org would serve an impersonating operator their own
+  result. Asserted by a test that runs the route as one tenant, switches, and
+  checks the second answer is neither cached nor the first store's stats. Chose
+  in-process over a DB table because the result is derived data — every input is
+  already in Postgres — so persisting it buys surviving a restart, worth nothing
+  for a 15-minute TTL. Concurrent callers share one run; a FAILED run is never
+  cached, so a database blip does not tell an owner for a quarter of an hour that
+  their audit is unavailable.
+- `?refresh=1` recomputes, and the Re-run button sends it. Without it, fixing
+  three findings shows the old score for fifteen minutes and the panel reads as
+  broken. It is a read behind `canViewSeo` + `seo.pro`, so the ceiling is a tenant
+  admin recomputing their own store. FLAGGED, not done: invalidating from the six
+  SEO write routes is the tighter design and is a story of its own —
+  `invalidateSeoAudit(tenantId)` is exported and tested, ready for it.
+- `UPGRADE_REQUIRED_CODE` MOVED to `lib/entitlements/plan.ts` and is re-exported
+  from `require-feature.ts` (every existing import site unchanged). The audit
+  panel is a CLIENT component and must recognise a plan refusal to offer an
+  upgrade instead of "ask your admin", but `require-feature` reaches Prisma, pino
+  and next/server. `plan.ts` already carries `PlanMirrorFailureReason` for exactly
+  this reason and says so in its docstring — same move, same justification.
+- THE READ IS PLAN-GATED HERE, unlike the redirect routes, and the difference is
+  deliberate: there the rows are the owner's own authored work and hiding them
+  behind a downgrade looks like data loss; here there is no stored artefact at
+  all — the audit IS the Pro feature. A Basic tenant meets it as the locked card
+  in the Pro tab.
+- Row ceiling of 2000 per entity type (`take: MAX + 1`, so "there is more" is
+  known without a COUNT), reported in `stats.truncated` and rendered as a
+  sentence: "only the first rows of products were audited, so the score is a
+  sample". No silent caps — the per-check display cap of 25 is stated the same
+  way ("showing 25 of 400").
+- Split across five modules on the way through because `audit-checks.ts` reached
+  615 lines: `audit-types.ts` (vocabulary + weights) -> `audit-snapshot.ts` (row
+  shapes, the four-table flatten, the sitemap build) -> `audit-checks.ts` (the
+  judgement) -> `audit.ts` (scoring + orchestration), plus `audit-cache.ts`. A
+  clean DAG, no cycles, each file under 400 lines.
+- Verified: `pnpm exec tsc --noEmit` exit 0 repo-wide. Full unit project 152
+  files / 2559 tests green, 83 of them new — `seo-audit.test.ts` (68: a table
+  case per field rule, the entity collectors including junk-typed rows, sitemap
+  health per branch, the redirect graph, the score caps, the cache including
+  tenant keying and non-caching of failures, and the client parser) and
+  `seo-audit-route.test.ts` (15: both gates through the real wrappers, the
+  permission 403 proven to precede the plan lookup, tenant scoping on all five
+  reads, the separate soft-deleted query, the row ceiling, 404, cache/refresh and
+  impersonation keying). `pnpm lint` zero findings in any touched file;
+  `check:security` both gates pass. No migration, no dependency, no Dockerfile
+  change — every new module lives in `lib/`, `app/` or `components/`, all of
+  which the runner image already has.
+- visual: deferred to human review. `pnpm dev` boots clean (Ready in 3.3s) and
+  both surfaces were probed, but Clerk middleware 307s `/tenant-admin/seo` and
+  `/api/tenant-admin/seo/audit` to `/auth/login` before Next compiles the route,
+  there are no tenant-admin credentials here (env files are off-limits), the DB
+  is on Railway's private network, and this repo has no React-rendering test
+  setup. The route is genuinely executed at runtime by the route test, which
+  drives the real handler and reads the real NextResponse. What a human should
+  eyeball: the Fix button on a finding landing on the right tab WITH the editor
+  open, the clean-state panel on a fully-authored store, and the Audit tab being
+  absent for a Basic tenant.
+- NOT FIXED, flagged: `seo-page-client.tsx` is now 664 lines with six tabs, four
+  modals and the audit deep-link dispatcher in one file. Under the 800 ceiling
+  but past the point where the tab bodies should be components of their own —
+  the same shape the ~31-route sweep is for, and not this story's to do.

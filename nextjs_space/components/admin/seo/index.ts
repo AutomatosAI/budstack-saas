@@ -4,5 +4,6 @@ export { LockedFeatureCard } from './LockedFeatureCard';
 export { OgImageField } from './OgImageField';
 export { RedirectRowItem, type RedirectRow } from './RedirectRowItem';
 export { RedirectsTab } from './RedirectsTab';
+export { SeoAuditTab } from './SeoAuditTab';
 export { SeoEditorModal } from './SeoEditorModal';
 export { SeoProUpsell } from './SeoProUpsell';

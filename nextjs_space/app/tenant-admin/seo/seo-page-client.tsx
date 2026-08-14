@@ -4,10 +4,12 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   RedirectsTab,
+  SeoAuditTab,
   SeoEditorModal,
   SeoProUpsell,
   type RedirectRow,
 } from "@/components/admin/seo";
+import type { SeoAuditTarget } from "@/lib/seo/audit-types";
 import { conditionPath } from "@/lib/seo/condition-paths";
 import {
   isEmptyEntitySeo,
@@ -31,6 +33,7 @@ import {
   AlertCircle,
   Sparkles,
   Signpost,
+  Gauge,
 } from "lucide-react";
 
 const sectionTitleStyle = {
@@ -118,6 +121,12 @@ export function SeoPageClient({
   const [localProducts, setLocalProducts] = useState(products);
   const [localPosts, setLocalPosts] = useState(posts);
   const [localConditions, setLocalConditions] = useState(conditions);
+  /**
+   * US-023 made the tabs CONTROLLED. An audit finding's Fix button has to move
+   * the panel to another tab and open an editor there, which an uncontrolled
+   * `defaultValue` cannot express.
+   */
+  const [activeTab, setActiveTab] = useState("products");
 
   // The same emptiness rule the write routes and the storefront apply, so the
   // badge cannot say "Default" for an entity whose only authored field is one
@@ -226,6 +235,36 @@ export function SeoPageClient({
     );
   };
 
+  /**
+   * US-023 — the deep link on an audit finding: move to the tab that owns the
+   * entity, and open its editor.
+   *
+   * The row is looked up in the LOCAL lists, which already carry every save made
+   * in this session, so fixing one finding and returning for the next never
+   * reopens an editor on stale data. A finding whose row is no longer here — the
+   * audit's cached result describing a store that has since changed — still
+   * switches the tab: landing on the right list beats a button that does
+   * nothing. "redirects" has no per-row editor; the tab itself is the fix.
+   */
+  const handleAuditFix = (target: SeoAuditTarget) => {
+    setActiveTab(target.tab);
+    if (!target.entityId) return;
+
+    if (target.tab === "products") {
+      const product = localProducts.find((p) => p.id === target.entityId);
+      if (product) setSelectedProduct(product);
+    } else if (target.tab === "posts") {
+      const post = localPosts.find((p) => p.id === target.entityId);
+      if (post) setSelectedPost(post);
+    } else if (target.tab === "conditions") {
+      const condition = localConditions.find((c) => c.id === target.entityId);
+      if (condition) setSelectedCondition(condition);
+    } else if (target.tab === "pages") {
+      const page = STORE_SEO_PAGES.find((p) => p.key === target.entityId);
+      if (page) setSelectedPage(page);
+    }
+  };
+
   const SeoStatusBadge = ({ hasCustomSeo }: { hasCustomSeo: boolean }) => (
     <span className={hasCustomSeo ? "bs-chip bs-chip-green inline-flex items-center gap-1" : "bs-chip bs-chip-muted inline-flex items-center gap-1"}>
       {hasCustomSeo ? (
@@ -244,13 +283,20 @@ export function SeoPageClient({
 
   return (
     <>
-      <Tabs defaultValue="products" className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         {/*
-          Five tabs either way: an entitled tenant gets Redirects where the
-          upsell tab sits for everyone else. Both arms stay explicit so the next
-          C story that adds a tab has to decide which arm it belongs in.
+          Four shared tabs, then the plan decides: an entitled tenant gets
+          Redirects and Audit, everyone else gets the single upsell tab. Both
+          arms stay explicit so the next C story that adds a tab has to decide
+          which arm it belongs in.
         */}
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList
+          className={`grid w-full grid-cols-2 ${seoProUnlocked ? "sm:grid-cols-6" : "sm:grid-cols-5"} lg:w-auto lg:inline-grid`}
+        >
           <TabsTrigger value="products" className="gap-2">
             <Package className="h-4 w-4 hidden sm:block" aria-hidden="true" />
             Products ({localProducts.length})
@@ -276,6 +322,16 @@ export function SeoPageClient({
             <TabsTrigger value="redirects" className="gap-2">
               <Signpost className="h-4 w-4 hidden sm:block" aria-hidden="true" />
               Redirects ({redirects.length})
+            </TabsTrigger>
+          )}
+          {/*
+            US-023 — the audit. Pro only, and last: it is the tab that sends an
+            owner to all the others.
+          */}
+          {seoProUnlocked && (
+            <TabsTrigger value="audit" className="gap-2">
+              <Gauge className="h-4 w-4 hidden sm:block" aria-hidden="true" />
+              Audit
             </TabsTrigger>
           )}
           {/*
@@ -518,6 +574,13 @@ export function SeoPageClient({
         {seoProUnlocked && (
           <TabsContent value="redirects">
             <RedirectsTab baseUrl={baseUrl} initialRedirects={redirects} />
+          </TabsContent>
+        )}
+
+        {/* Audit Tab — Pro only (US-023) */}
+        {seoProUnlocked && (
+          <TabsContent value="audit">
+            <SeoAuditTab onFix={handleAuditFix} />
           </TabsContent>
         )}
 

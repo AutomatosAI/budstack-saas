@@ -30,15 +30,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getTenantFeatures, type FeatureKey } from "./features";
-import { FAIL_CLOSED_PLAN, parsePlan, type Plan } from "./plan";
+import {
+  FAIL_CLOSED_PLAN,
+  parsePlan,
+  UPGRADE_REQUIRED_CODE,
+  type Plan,
+} from "./plan";
 
 /**
  * Distinct 403 body so the client can tell "your plan doesn't include this"
  * apart from "your role doesn't allow this" (which returns a bare
  * `{ error }` from the permission wrapper) and offer an upgrade instead of a
  * "ask your admin" dead end.
+ *
+ * The code itself lives in `./plan` — a pure module a client component can
+ * import — and is re-exported here so existing call sites are unchanged.
  */
-export const UPGRADE_REQUIRED_CODE = "upgrade_required";
+export { UPGRADE_REQUIRED_CODE };
 
 export interface UpgradeRequiredBody {
   error: string;
