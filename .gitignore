@@ -63,4 +63,11 @@ backups/
 uploads/
 
 # Graphify knowledge graph outputs
-graphify-out/
+
+# graphify: ignore raw graph + scratch, SHARE the report
+graphify-out/*
+!graphify-out/GRAPH_REPORT.md
+
+# Exported browser cookies — NEVER commit (Google session credentials)
+cookie.txt
+cookies.txt

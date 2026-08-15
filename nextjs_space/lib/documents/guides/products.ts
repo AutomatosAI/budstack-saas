@@ -15,6 +15,7 @@ export const productsGuide: Guide = {
   summary:
     "Your synced product range — where it comes from, what's in stock, and how the catalogue stays current.",
   status: "published",
+  video: { youtubeId: "yd_Q_OgatG4", title: "The Catalogue" },
   updatedAt: "2026-08-15",
   sections: [
     {

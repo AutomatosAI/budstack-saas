@@ -15,6 +15,7 @@ export const settingsGuide: Guide = {
   summary:
     "The connections that power your store — domain, Dr Green, verification, AI, and email sending.",
   status: "published",
+  video: { youtubeId: "k4ePJmLXQFo", title: "The Engine Room" },
   updatedAt: "2026-08-15",
   sections: [
     {

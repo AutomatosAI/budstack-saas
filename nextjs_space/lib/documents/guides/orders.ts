@@ -15,6 +15,7 @@ export const ordersGuide: Guide = {
   summary:
     "Every order from placed to delivered — the queue you work each day, and what Dr Green is doing with it in the background.",
   status: "published",
+  video: { youtubeId: "XWpGApYEW9Y", title: "The Order Desk" },
   updatedAt: "2026-08-15",
   sections: [
     {

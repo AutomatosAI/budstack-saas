@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { GUIDES } from "@/lib/documents/registry";
+import { publishedSeriesVideos } from "@/lib/documents/series-videos";
+import { VideoEmbed } from "./VideoEmbed";
 
 export const metadata: Metadata = {
   title: "The BudStacks Guide",
@@ -10,6 +12,7 @@ export const metadata: Metadata = {
 
 export default function DocumentsIndexPage() {
   const ordered = [...GUIDES].sort((a, b) => a.part - b.part);
+  const introVideos = publishedSeriesVideos();
   return (
     <main className="mx-auto max-w-[880px] px-5 pb-20">
       <header className="border-b-2 border-bs-green pb-6 pt-14">
@@ -25,6 +28,15 @@ export default function DocumentsIndexPage() {
           what it does, and why it earns a place in your week. Pick a part and dive in.
         </p>
       </header>
+
+      {introVideos.length > 0 && (
+        <section className="mt-8">
+          <h2 className="bs-eyebrow mb-2">Start here</h2>
+          {introVideos.map((v) => (
+            <VideoEmbed key={v.youtubeId} video={v} />
+          ))}
+        </section>
+      )}
 
       <ul className="mt-8 grid gap-4 sm:grid-cols-2">
         {ordered.map((g) => (

@@ -14,6 +14,7 @@ export const data_processorsGuide: Guide = {
   summary:
     "Who processes your customers' data on your behalf — transparency, built in.",
   status: "published",
+  video: { youtubeId: "TyKwGR97M0Y", title: "Compliance, Handled" },
   updatedAt: "2026-08-15",
   sections: [
     {

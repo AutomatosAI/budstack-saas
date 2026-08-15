@@ -14,6 +14,7 @@ export const cookie_settingsGuide: Guide = {
   summary:
     "Your storefront's cookie banner and privacy compliance — set once, correct for your region.",
   status: "published",
+  video: { youtubeId: "TyKwGR97M0Y", title: "Compliance, Handled" },
   updatedAt: "2026-08-15",
   sections: [
     {

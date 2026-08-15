@@ -14,6 +14,7 @@ export const company_detailsGuide: Guide = {
   summary:
     "The legal identity behind your store — what appears in your privacy notice.",
   status: "published",
+  video: { youtubeId: "TyKwGR97M0Y", title: "Compliance, Handled" },
   updatedAt: "2026-08-15",
   sections: [
     {

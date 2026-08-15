@@ -15,6 +15,7 @@ export const webhooksGuide: Guide = {
   summary:
     "Real-time notifications to other systems when things happen in your store.",
   status: "published",
+  video: { youtubeId: "nzB_DgWJR9c", title: "Trust & Plumbing" },
   updatedAt: "2026-08-15",
   sections: [
     {

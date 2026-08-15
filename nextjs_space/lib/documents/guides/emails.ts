@@ -14,6 +14,7 @@ export const emailsGuide: Guide = {
   summary:
     "One place for every email your store sends — the automatic ones (order confirmations, welcome emails) and the ones you write (newsletters and offers).",
   status: "published",
+  video: { youtubeId: "PQKVGX9rWH0", title: "The Email Hub" },
   updatedAt: "2026-08-15",
   sections: [
     {
