@@ -18,6 +18,13 @@ const isPublicRoute = createRouteMatcher([
   "/sitemap.xml",
   "/auth/login(.*)",
   "/auth/signup(.*)",
+  // Account recovery, and the only routes here whose absence LOCKED USERS OUT
+  // rather than merely hiding a page: a visitor who has forgotten their
+  // password was redirected to the login they cannot complete. Every one of
+  // these is reached with no session by definition.
+  "/auth/forgot-password",
+  "/auth/reset-password(.*)",
+  "/auth/callback",
   "/store/(.*)", // Storefronts are public
   "/api/webhooks(.*)",
   "/api/uploadthing(.*)",
@@ -51,6 +58,33 @@ const isPublicRoute = createRouteMatcher([
   "/terms", // Terms of service
   "/privacy", // Privacy policy
   "/cookies", // Cookie policy
+  // These three shipped as public legal pages but were never added here, so a
+  // signed-out visitor or crawler got a 307 to /auth/login. Confirmed against
+  // production before the fix: /terms and /privacy returned 200 while /dpa,
+  // /aup and /regulatory returned 307. /regulatory is also linked from the
+  // storefront footer, so the dead end was reachable from tenant sites.
+  "/dpa", // Data processing agreement
+  "/aup", // Acceptable use policy
+  "/regulatory", // Regulatory information
+  "/faq", // Public FAQ
+  // Public compliance pages. /legal/subprocessors in particular is a GDPR
+  // transparency obligation and is linked from the DPA — a login wall in front
+  // of it is a compliance problem, not just a broken link.
+  "/legal/changelog",
+  "/legal/subprocessors",
+  // The BudStacks Guide (#246/#249/#251) — 18 illustrated guide pages carrying
+  // 16 embedded videos, built as top-of-funnel marketing and then reachable
+  // only by signed-in users. Both the index and every guide beneath it.
+  "/documents",
+  "/documents/(.*)",
+  // Public lead capture for the homepage CTA and the Operator 101 download.
+  // UNAUTHENTICATED BY DESIGN — a prospect has no account and no tenant, which
+  // is why it is not the storefront newsletter endpoint (see the route's own
+  // header). Consent, honeypot and IP rate-limiting are enforced inside it.
+  // Without this entry the endpoint answered every submission with a 307 to
+  // Clerk, so PRD Phase 1 lead capture recorded nothing from the moment #254
+  // deployed until this landed.
+  "/api/platform/leads",
   "/accept-invite(.*)", // PRD-301 team invitation acceptance (logged-out invitees)
   "/api/team/invitation(.*)", // PRD-301 public token-gated invitation preview
 ]);
