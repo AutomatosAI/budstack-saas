@@ -1,0 +1,3 @@
+# state.json is a LIVE admin session — never commit it.
+state.json
+shots/

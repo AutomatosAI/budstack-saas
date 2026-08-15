@@ -1,0 +1,257 @@
+[
+  {
+    "id": "overview",
+    "route": "/tenant-admin"
+  },
+  {
+    "id": "products",
+    "route": "/tenant-admin/products"
+  },
+  {
+    "id": "orders",
+    "route": "/tenant-admin/orders"
+  },
+  {
+    "id": "customers",
+    "route": "/tenant-admin/customers"
+  },
+  {
+    "id": "customer-detail",
+    "route": "/tenant-admin/customers",
+    "clicks": [
+      "a[href^=\"/tenant-admin/customers/\"]"
+    ]
+  },
+  {
+    "id": "analytics",
+    "route": "/tenant-admin/analytics",
+    "settleMs": 3000
+  },
+  {
+    "id": "analytics-90d",
+    "route": "/tenant-admin/analytics",
+    "clicks": [
+      "button:has-text(\"90 Days\")"
+    ],
+    "settleMs": 3000
+  },
+  {
+    "id": "branding",
+    "route": "/tenant-admin/branding",
+    "settleMs": 6000,
+    "gotoWait": "load"
+  },
+  {
+    "id": "branding-layout",
+    "route": "/tenant-admin/branding",
+    "clicks": [
+      "[id$=\"-trigger-layout\"]"
+    ],
+    "gotoWait": "load",
+    "settleMs": 4000
+  },
+  {
+    "id": "branding-content",
+    "route": "/tenant-admin/branding",
+    "clicks": [
+      "[id$=\"-trigger-content\"]"
+    ],
+    "gotoWait": "load",
+    "settleMs": 4000
+  },
+  {
+    "id": "seo-products",
+    "route": "/tenant-admin/seo",
+    "clicks": [
+      "[id$=\"-trigger-products\"]"
+    ]
+  },
+  {
+    "id": "seo-posts",
+    "route": "/tenant-admin/seo",
+    "clicks": [
+      "[id$=\"-trigger-posts\"]"
+    ]
+  },
+  {
+    "id": "seo-conditions",
+    "route": "/tenant-admin/seo",
+    "clicks": [
+      "[id$=\"-trigger-conditions\"]"
+    ]
+  },
+  {
+    "id": "seo-pages",
+    "route": "/tenant-admin/seo",
+    "clicks": [
+      "[id$=\"-trigger-pages\"]"
+    ]
+  },
+  {
+    "id": "seo-editor-modal",
+    "route": "/tenant-admin/seo",
+    "clicks": [
+      "[id$=\"-trigger-pages\"]",
+      "button:has-text(\"Edit SEO\")"
+    ],
+    "fullPage": false
+  },
+  {
+    "id": "seo-redirects",
+    "route": "/tenant-admin/seo",
+    "clicks": [
+      "[id$=\"-trigger-redirects\"]"
+    ]
+  },
+  {
+    "id": "seo-verification",
+    "route": "/tenant-admin/seo",
+    "clicks": [
+      "[id$=\"-trigger-verification\"]"
+    ]
+  },
+  {
+    "id": "seo-ai-crawlers",
+    "route": "/tenant-admin/seo",
+    "clicks": [
+      "[id$=\"-trigger-ai-crawlers\"]"
+    ]
+  },
+  {
+    "id": "seo-citations",
+    "route": "/tenant-admin/seo",
+    "clicks": [
+      "[id$=\"-trigger-citations\"]"
+    ]
+  },
+  {
+    "id": "seo-audit",
+    "route": "/tenant-admin/seo",
+    "clicks": [
+      "[id$=\"-trigger-audit\"]"
+    ],
+    "settleMs": 12000
+  },
+  {
+    "id": "templates-my-themes",
+    "route": "/tenant-admin/templates"
+  },
+  {
+    "id": "templates-marketplace",
+    "route": "/tenant-admin/templates",
+    "clicks": [
+      "[id$=\"-trigger-marketplace\"]"
+    ]
+  },
+  {
+    "id": "emails-templates",
+    "route": "/tenant-admin/emails"
+  },
+  {
+    "id": "emails-campaigns",
+    "route": "/tenant-admin/emails",
+    "clicks": [
+      "[id$=\"-trigger-campaigns\"]"
+    ]
+  },
+  {
+    "id": "emails-segments",
+    "route": "/tenant-admin/emails",
+    "clicks": [
+      "[id$=\"-trigger-segments\"]"
+    ]
+  },
+  {
+    "id": "emails-events",
+    "route": "/tenant-admin/emails",
+    "clicks": [
+      "[id$=\"-trigger-events\"]"
+    ]
+  },
+  {
+    "id": "emails-activity",
+    "route": "/tenant-admin/emails",
+    "clicks": [
+      "[id$=\"-trigger-activity\"]"
+    ]
+  },
+  {
+    "id": "emails-new",
+    "route": "/tenant-admin/emails/new"
+  },
+  {
+    "id": "emails-new-html",
+    "route": "/tenant-admin/emails/new",
+    "clicks": [
+      "[id$=\"-trigger-advanced\"]"
+    ]
+  },
+  {
+    "id": "emails-campaign-new",
+    "route": "/tenant-admin/emails/campaigns/new"
+  },
+  {
+    "id": "emails-campaign-detail",
+    "route": "/tenant-admin/emails",
+    "clicks": [
+      "[id$=\"-trigger-campaigns\"]",
+      "a[href^=\"/tenant-admin/emails/campaigns/\"]"
+    ]
+  },
+  {
+    "id": "the-wire",
+    "route": "/tenant-admin/the-wire"
+  },
+  {
+    "id": "the-wire-new",
+    "route": "/tenant-admin/the-wire/new"
+  },
+  {
+    "id": "webhooks",
+    "route": "/tenant-admin/webhooks"
+  },
+  {
+    "id": "webhooks-create",
+    "route": "/tenant-admin/webhooks",
+    "clicks": [
+      "button:has-text(\"Create Webhook\")"
+    ],
+    "fullPage": false
+  },
+  {
+    "id": "audit-logs",
+    "route": "/tenant-admin/audit-logs"
+  },
+  {
+    "id": "team",
+    "route": "/tenant-admin/team"
+  },
+  {
+    "id": "team-roles",
+    "route": "/tenant-admin/team/roles"
+  },
+  {
+    "id": "settings",
+    "route": "/tenant-admin/settings"
+  },
+  {
+    "id": "cookie-settings",
+    "route": "/tenant-admin/cookie-settings"
+  },
+  {
+    "id": "legal",
+    "route": "/tenant-admin/legal"
+  },
+  {
+    "id": "legal-documents",
+    "route": "/tenant-admin/legal/documents"
+  },
+  {
+    "id": "legal-subprocessors",
+    "route": "/tenant-admin/legal/subprocessors"
+  },
+  {
+    "id": "profile",
+    "route": "/tenant-admin/profile"
+  }
+]
