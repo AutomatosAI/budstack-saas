@@ -46,7 +46,7 @@ export default async function SettingsPage() {
 
       <SettingsForm
         tenant={tenant}
-        features={Array.from(getTenantFeatures({ id: tenant.id }))}
+        features={Array.from(getTenantFeatures({ id: tenant.id, plan: tenant.plan }))}
       />
     </div>
   );
