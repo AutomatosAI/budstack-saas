@@ -1,11 +1,39 @@
 import Link from "next/link";
+import { format } from "date-fns";
 import { FileText } from "lucide-react";
 import { Navbar, Footer } from "@/components/landing";
-import { BLOG_POSTS } from "@/lib/blog/posts";
+import { loadPublishedPlatformPosts } from "@/lib/platform/published-posts";
+import type { PlatformPostSummary } from "@/lib/platform/posts";
+import { blogPostPath } from "@/lib/seo/blog-paths";
 
-// Editorial posts live in lib/blog/posts.ts (single source, shared with the
-// detail page). The entries below are the original samples, kept until each is
-// rewritten — migrate them into that module as you go.
+/**
+ * US-008 — the index lists published `platform_posts`, newest first. Nothing on
+ * this page is authored in code any more: a super-admin publishes at
+ * /super-admin/the-wire and the article is live without a deploy.
+ *
+ * MID-RUN STATE. `samplePosts` below and `BLOG_POSTS` (lib/blog/posts.ts) are
+ * no longer rendered, and they are still here because their content is not in
+ * the database yet — US-010 migrates the two editorial posts and US-011 the six
+ * samples, keeping every existing /blog/<slug> URL live. US-012 deletes them,
+ * and only then. Until those land the index is legitimately empty; the detail
+ * page still serves both arrays, so no published URL 404s in the meantime.
+ */
+
+/**
+ * The build-time Prisma client is a mock that answers every query with `[]`
+ * (DATABASE_URL is a dummy at build). Without this, an empty blog would be
+ * baked into the static output and no publish would ever appear — the same
+ * reason app/sitemap.ts sets it.
+ */
+export const dynamic = "force-dynamic";
+
+/** Matches the dates the inline posts carried, e.g. "Jan 10, 2026". */
+function formatPostDate(publishedAt: Date | null): string | null {
+  if (!publishedAt) return null;
+  return format(new Date(publishedAt), "MMM d, yyyy");
+}
+
+// Awaiting migration — see the note above. Not rendered.
 const samplePosts = [
     {
         id: 1,
@@ -63,7 +91,11 @@ const samplePosts = [
     },
 ];
 
-export default function BlogPage() {
+export default async function BlogPage() {
+    // Throws rather than returning [] when the database cannot answer, so an
+    // outage does not render as "we have never published anything".
+    const posts: PlatformPostSummary[] = await loadPublishedPlatformPosts();
+
     return (
         <div className="budstacks-theme min-h-screen">
             <Navbar />
@@ -87,43 +119,72 @@ export default function BlogPage() {
                         </p>
                     </div>
 
-                    {/* Blog grid */}
-                    <div className="grid gap-8 md:grid-cols-2">
-                        {[...BLOG_POSTS, ...samplePosts].map((post) => (
-                            <Link
-                                key={post.id}
-                                href={`/blog/${post.slug}`}
-                                className="card-floating group overflow-hidden"
-                            >
-                                {/* Image — gradient backdrop shows through if photo fails to load */}
-                                <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-bs-green-500/25 via-bs-bg-1 to-bs-gold-400/15">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                        src={post.image}
-                                        alt={post.title}
-                                        loading="lazy"
-                                        referrerPolicy="no-referrer"
-                                        className="h-full w-full object-cover opacity-90 transition-all duration-300 group-hover:scale-105 group-hover:opacity-100"
-                                    />
-                                    {/* Top-down dark wash for legibility against varied photos */}
-                                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bs-bg-0/60 via-transparent to-transparent" />
-                                </div>
+                    {/* Blog grid — a successful query with no rows lands here,
+                        and says so. A query that FAILED never reaches this
+                        point; loadPublishedPlatformPosts throws. */}
+                    {posts.length === 0 ? (
+                        <div className="card-floating mx-auto max-w-xl p-12 text-center">
+                            <FileText
+                                className="mx-auto mb-4 h-8 w-8 text-bs-fg-3"
+                                aria-hidden="true"
+                            />
+                            <h2 className="font-bs-serif text-xl font-medium text-bs-fg-0">
+                                Nothing published yet
+                            </h2>
+                            <p className="mt-2 text-sm text-bs-fg-2">
+                                The first posts are on their way — check back shortly.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="grid gap-8 md:grid-cols-2">
+                            {posts.map((post) => {
+                                const date = formatPostDate(post.publishedAt);
 
-                                {/* Content */}
-                                <div className="p-6">
-                                    <p className="mb-2 font-bs-mono text-[11px] uppercase tracking-[0.14em] text-bs-fg-3">
-                                        {post.date}
-                                    </p>
-                                    <h2 className="font-bs-serif text-xl font-medium text-bs-fg-0 transition-colors group-hover:text-bs-green-300">
-                                        {post.title}
-                                    </h2>
-                                    <p className="mt-2 line-clamp-2 text-sm text-bs-fg-2">
-                                        {post.excerpt}
-                                    </p>
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
+                                return (
+                                    <Link
+                                        key={post.id}
+                                        href={blogPostPath(post.slug)}
+                                        className="card-floating group overflow-hidden"
+                                    >
+                                        {/* Image — gradient backdrop shows through if the photo
+                                            fails to load, and is the whole backdrop when a post
+                                            has no cover at all */}
+                                        <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-bs-green-500/25 via-bs-bg-1 to-bs-gold-400/15">
+                                            {post.coverImage ? (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
+                                                <img
+                                                    src={post.coverImage}
+                                                    alt={post.coverImageAlt || post.title}
+                                                    loading="lazy"
+                                                    referrerPolicy="no-referrer"
+                                                    className="h-full w-full object-cover opacity-90 transition-all duration-300 group-hover:scale-105 group-hover:opacity-100"
+                                                />
+                                            ) : null}
+                                            {/* Top-down dark wash for legibility against varied photos */}
+                                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bs-bg-0/60 via-transparent to-transparent" />
+                                        </div>
+
+                                        {/* Content */}
+                                        <div className="p-6">
+                                            {date ? (
+                                                <p className="mb-2 font-bs-mono text-[11px] uppercase tracking-[0.14em] text-bs-fg-3">
+                                                    {date}
+                                                </p>
+                                            ) : null}
+                                            <h2 className="font-bs-serif text-xl font-medium text-bs-fg-0 transition-colors group-hover:text-bs-green-300">
+                                                {post.title}
+                                            </h2>
+                                            {post.excerpt ? (
+                                                <p className="mt-2 line-clamp-2 text-sm text-bs-fg-2">
+                                                    {post.excerpt}
+                                                </p>
+                                            ) : null}
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </main>
 

@@ -674,3 +674,115 @@ US-008 (/blog index reads the database). It must NOT delete the inline arrays �
 that is US-012, and only after US-010 and US-011 have put the content in the
 table. It also has to fail loudly: a query that throws must not render as an
 empty blog, because an outage that looks like "no posts" is worse than an error.
+
+================================================================================
+[2026-08-15] US-008 PASS — /blog index reads the database
+================================================================================
+
+WHAT LANDED
+- lib/platform/published-posts.ts (new, 74 lines) — loadPublishedPlatformPosts().
+  where { published: true }, orderBy publishedAt desc then createdAt desc,
+  select PLATFORM_POST_SUMMARY_SELECT (reused from US-004; drops the article
+  body). Row type declared explicitly — the prisma export is any-widened.
+- app/blog/page.tsx — now an async server component reading that function.
+  export const dynamic = "force-dynamic". Card markup, spacing and classes are
+  byte-identical to what shipped; only the data source and three null guards
+  changed. Links go through blogPostPath() (US-007's helper), not a literal.
+- tests/unit/blog-published-posts.test.ts (16 tests) — the query shape, the
+  outage/empty distinction, and a text block on the page source.
+
+THE DECISION THAT MATTERED — an outage is not an empty blog
+- A zero-row result and an unreachable database are indistinguishable once the
+  answer is an array, so the distinction is made where the query is made.
+  loadPublishedPlatformPosts LOGS the driver reason via logger.error and
+  RE-THROWS a fixed message; it never returns []. A visitor gets a 500, which is
+  true, rather than a 200 page saying budstacks.io has never published anything.
+- This is the OPPOSITE call from app/sitemap.ts, which swallows the same failure
+  deliberately. Noted in the module comment so the two do not get "harmonised":
+  there, one missing section costs freshness; here the failed section IS the page.
+- The thrown message carries no host, driver or SQL. Next.js prints a server
+  component's error message on the dev error page, and a test asserts the string
+  matches none of /postgres|prisma|ECONNREFUSED|5432|select/i.
+
+OTHER DECISIONS
+- New module rather than adding the query to lib/platform/posts.ts: that file is
+  imported by post-form.tsx / slug-field.tsx / cover-image-field.tsx, which are
+  client components. A prisma or pino import there pulls the server runtime into
+  the browser bundle.
+- publishedAt is ordered NULLS LAST explicitly. The write routes stamp it on the
+  transition into published, so a live post always has one — but Postgres sorts
+  NULLs FIRST under DESC, and a dateless row would otherwise lead the blog with
+  a blank date. createdAt desc is the tiebreak.
+- Three null guards the inline arrays never needed, because the columns are
+  nullable: no coverImage renders no <img> (the gradient backdrop that was
+  already behind it becomes the whole card image, so the aspect box and the card
+  height are unchanged — measured at 558x477 for all three cards in the browser);
+  no excerpt and no publishedAt drop their own <p>.
+- alt text is coverImageAlt || title. coverImageAlt is a real column on
+  platform_posts, not the seo.imageAlt alias the tenant routes translate, so
+  entityImageAlt() does not apply here.
+- Empty state added (the array could never be empty before): "Nothing published
+  yet" in a card-floating panel, marketing tokens, not the admin's bs-card.
+- samplePosts stays in the file, unrendered, and the BLOG_POSTS import is gone
+  (the module itself is untouched and the detail page still reads it). Deleting
+  the arrays is US-012 and only after US-010/US-011 have put that content in the
+  table. eslint's no-unused-vars is off repo-wide and tsconfig sets no
+  noUnusedLocals, so the dead array costs nothing — no disable comment needed.
+  A test asserts both arrays are still present, so US-012 has to remove it
+  deliberately.
+
+VERIFICATION
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm vitest run tests/unit/blog-published-posts.test.ts → 16 passed.
+- pnpm vitest run (full) → 174 files passed, 3147 tests, 8 files / 30 tests
+  skipped (the DB-backed integration project). No regressions.
+- pnpm build → exit 0. .next/server/app/blog/ contains page.js and NO blog.html,
+  and /blog appears in neither routes nor dynamicRoutes in
+  .next/prerender-manifest.json — force-dynamic took effect, nothing baked.
+- check:public-routes ✓ (107 pages, 1 public API handler), check:article-typography ✓,
+  check:security ✓, next lint on all three touched files ✓.
+
+  visual: DONE, all three states, dev-browser + curl.
+  Unlike US-006/US-007 this story is verifiable from here: /blog is public, so
+  no Clerk session is needed. The local DATABASE_URL is still unreachable
+  (postgres-budstack-development.up.railway.app:5432, private network only), so
+  a THROWAWAY Postgres 17 was stood up on 127.0.0.1:55432 with its own data dir
+  in /tmp, the US-002 migration applied to it by hand, and pnpm dev pointed at
+  it by an inline env var. No .env file was read or written. Torn down and the
+  data dir deleted afterwards; brew services untouched.
+    1. OUTAGE — against the real (unreachable) DATABASE_URL: GET /blog → HTTP
+       500, and the server log carries
+       {"level":"error", "reason":"...Can't reach database server at ...",
+        "msg":"[blog] published platform posts query failed"}.
+       This is the AC's load-bearing case and it is now proven live, not argued.
+    2. EMPTY — table present, zero published rows: HTTP 200, zero
+       a.card-floating, "Nothing published yet" panel. Screenshotted.
+    3. POPULATED — 3 published + 1 draft seeded: HTTP 200, three cards in
+       publishedAt order (Aug 14 → Jul 1 → Jun 1), the draft absent, dates
+       rendered "Aug 14, 2026" (same shape the inline strings used), alt text
+       "A franchise storefront" from coverImageAlt on the row that has one and
+       the title on the row that does not, and the no-cover card the same
+       558x477 as the others. Screenshotted.
+  Note: prisma migrate deploy CANNOT build this schema from empty — it dies at
+  20260108_add_user_profile_fields with 'relation "users" does not exist'. The
+  migration history is not self-contained from zero (the baseline predates it).
+  Pre-existing, out of scope here, but it means no local full-schema DB.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- /blog has NO metadata export at all — no title, no description, no canonical.
+  Not this story's AC; US-017 (canonicals) and US-015 (SEO settings) own it.
+- No pagination. Every published post renders on one page. Fine at eight posts,
+  not at eighty; nothing in the PRD asks for it.
+- No app/blog/error.tsx, so the 500 is Next's default error shell rather than a
+  branded page. Deliberate: adding an error boundary is a design decision beyond
+  this diff, and the status code — the part that matters to a crawler and to
+  monitoring — is already correct. Worth a human's call later.
+- The build-time static analysis emits a wall of "Dynamic server usage" errors
+  from ~15 API routes. Pre-existing, unrelated, build still exits 0.
+
+NEXT
+US-009 (/blog/[slug] reads the database, with its own metadata). It will want a
+by-slug reader beside loadPublishedPlatformPosts, and its generateMetadata must
+share the page's fetch through React cache() rather than querying twice. The
+detail page keeps its own inline samplePosts array until US-012 — until US-010
+and US-011 migrate them, every one of those slugs must keep resolving.
