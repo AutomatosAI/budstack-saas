@@ -189,3 +189,77 @@ FLAGGED, NOT FIXED (adjacent debt)
   retiring them or moving them under a clearly-named archive/ — not this story's
   diff, and deleting them is a human call since they document what was applied by
   hand to live.
+
+================================================================================
+[2026-08-15] US-003 PASS — Extract the Wire HTML sanitiser to lib/
+================================================================================
+
+WHAT LANDED
+- lib/security/post-sanitize.ts — the article-body policy that was inlined in
+  the Wire render path, now a module-level `sanitizeHtml.IOptions` const plus an
+  exported `sanitizePostHtml(html: string | null | undefined): string`. Follows
+  the existing house pattern in that directory exactly (email-sanitize.ts,
+  svg-sanitize.ts: one options const, one thin exported function).
+- app/store/[slug]/the-wire/[postSlug]/page.tsx — 31 lines of inline config
+  replaced by one call. The `sanitize-html` import is gone from the page; the
+  page no longer knows the policy, only that there is one.
+- tests/unit/post-sanitize.test.ts — 16 tests that write the policy down:
+  script/on*/javascript:/<style>/style="" all stripped; headings, lists, links,
+  emphasis, class, id, img and video attributes all survive; iframes limited to
+  www.youtube.com and player.vimeo.com (including a lookalike-hostname case,
+  www.youtube.com.evil.io, which is dropped); null/undefined/"" -> "".
+
+THE ALLOWLISTS ARE UNCHANGED — PROVEN, NOT ASSERTED
+Rather than eyeball the copy, I stood up a throwaway parity harness: the ORIGINAL
+inline config pasted verbatim from git HEAD alongside the real shipped module,
+both run over a 25-input corpus (hostile + benign: script tags, on* handlers,
+javascript:/data:/ftp: URLs, an unclosed-tag soup, svg+script, the two allowed
+iframe hosts, a lookalike host, a protocol-relative iframe src, style attributes
+that the allowedStyles map would have permitted, form/object/embed). All 25
+produced byte-identical output, and the harness carried a non-vacuity assertion
+so a silently empty corpus could not pass. The harness was then DELETED — it
+contains a second copy of the config, which is the exact thing this story exists
+to remove.
+
+FOUND: allowedStyles IS INERT TODAY (carried over anyway, deliberately)
+The attribute map is `'*': ['class','id']` with the original author's comment
+"Removed 'style' from global allowlist", and no per-tag list re-admits `style`.
+sanitize-html only consults `allowedStyles` for a style attribute that survived
+`allowedAttributes`, so every inline style is dropped outright and the whole
+regex map is dead config. It was copied over unchanged regardless: the AC says
+copy exactly and loosen nothing, and admitting `style` to make the map live
+would be a loosening. Documented in the file so the next reader does not mistake
+the map for evidence that inline styles are permitted.
+
+VERIFIED
+- pnpm exec tsc --noEmit -> exit 0.
+- pnpm vitest run tests/unit/post-sanitize.test.ts -> 16/16 passed.
+- pnpm vitest run -> exit 0, 170 files / 3051 tests passed, 8 files + 30 tests
+  skipped. (Was 169/3035 at US-002; the delta is exactly the new file.)
+- Parity harness -> 26/26 passed before deletion (25 corpus inputs + non-vacuity).
+- pnpm check:public-routes, check:article-typography, check:security -> all exit 0.
+- eslint on the two new files -> exit 0 at --max-warnings=0. The Wire page still
+  carries its one pre-existing @next/next/no-img-element warning on the cover
+  image at line 201, untouched by this diff.
+- The sanitize-html "allowVulnerableTags" warning in full-suite output is
+  pre-existing (lib/security/email-sanitize.ts allows the <style> TAG, which is
+  what triggers it); it does not appear when the new test file runs alone.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- app/api/integrations/automatos/posts/route.ts:43 holds a THIRD copy of this
+  policy (`SANITIZE_OPTIONS`), with a comment that already says "keep the two in
+  sync when either changes". It is the same config minus `allowedStyles` — and
+  since allowedStyles is inert, switching that route to `sanitizePostHtml` would
+  be behaviour-identical. Not done here: that route is an authenticated
+  machine-to-machine ingest endpoint and this story names only the Wire page. It
+  is a one-line follow-up and the obvious next place drift will appear.
+- app/blog/[slug]/page.tsx:273 calls bare `sanitizeHtml(post.content || "")`
+  with NO options at all — sanitize-html defaults, so no img, no iframe, no
+  video, no class/id. That is the platform blog, and US-009 rewrites that render
+  path against the database; it should adopt `sanitizePostHtml` then, which will
+  be a deliberate widening of what the platform blog can render and should be
+  called out as such rather than slipped in.
+
+NOT DONE / OUT OF SCOPE
+- No caller other than the Wire page uses the new module yet. US-004 (platform
+  posts write API) is the second consumer and the reason this story exists.

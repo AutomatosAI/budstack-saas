@@ -5,8 +5,8 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, User } from "lucide-react";
-import sanitizeHtml from "sanitize-html";
 import type { posts, users } from "@prisma/client";
+import { sanitizePostHtml } from "@/lib/security/post-sanitize";
 import { getCurrentTenant, getTenantWithTemplate } from "@/lib/tenant/tenant";
 import { runWithTenantContextAsync } from "@/lib/tenant/tenant-context";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -159,36 +159,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   const jsonLdNodes = await articleJsonLdNodes(tenant, post);
 
-  // Server-side HTML sanitization for XSS protection
-  // Using sanitize-html (Node.js compatible) instead of isomorphic-dompurify (ESM issues)
-  const cleanContent = sanitizeHtml(post.content || "", {
-    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'iframe', 'video']),
-    allowedAttributes: {
-      ...sanitizeHtml.defaults.allowedAttributes,
-      '*': ['class', 'id'], // Removed 'style' from global allowlist
-      img: ['src', 'alt', 'title', 'width', 'height'],
-      iframe: ['src', 'width', 'height', 'frameborder', 'allowfullscreen'],
-      video: ['src', 'width', 'height', 'controls', 'autoplay', 'loop', 'muted'],
-    },
-    allowedIframeHostnames: ['www.youtube.com', 'player.vimeo.com'],
-    // Controlled whitelist of safe CSS properties
-    allowedStyles: {
-      '*': {
-        // Typography
-        'color': [/^#[0-9a-fA-F]{3,6}$/, /^rgb\(/, /^rgba\(/],
-        'text-align': [/^left$/, /^right$/, /^center$/, /^justify$/],
-        'font-size': [/^\d+(?:px|em|rem|%)$/],
-        'font-weight': [/^(?:normal|bold|[1-9]00)$/],
-        // Layout
-        'width': [/^\d+(?:px|em|rem|%)$/],
-        'height': [/^\d+(?:px|em|rem|%)$/],
-        'margin': [/^\d+(?:px|em|rem|%)(?: \d+(?:px|em|rem|%))*$/],
-        'padding': [/^\d+(?:px|em|rem|%)(?: \d+(?:px|em|rem|%))*$/],
-        // Background
-        'background-color': [/^#[0-9a-fA-F]{3,6}$/, /^rgb\(/, /^rgba\(/],
-      }
-    }
-  });
+  // Server-side HTML sanitization for XSS protection. The policy itself now
+  // lives in lib/security/post-sanitize.ts (US-003) so this render path and the
+  // platform posts API cannot drift apart — the rules moved unchanged.
+  const cleanContent = sanitizePostHtml(post.content);
 
   return (
     <div className="min-h-screen bg-background text-foreground pt-36 pb-12">
