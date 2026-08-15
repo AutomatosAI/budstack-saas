@@ -566,3 +566,111 @@ SEO-Pro entitlement gating and AiAssistButton removed, posts covers to
 /api/platform/upload, and must keep the published-slug edit BLOCKED until US-019
 lands the auto-301 — the PATCH route already refuses that server-side
 (PUBLISHED_SLUG_LOCKED_MESSAGE), so the form only has to say why.
+
+================================================================================
+[2026-08-15] US-007 PASS — Super-admin post editor
+================================================================================
+
+WHAT LANDED
+- app/super-admin/the-wire/post-form.tsx (344) — TipTap body, title, slug,
+  excerpt, cover + alt, byline, publish toggle. Posts to /api/platform/posts
+  (POST on create, PATCH on edit).
+- app/super-admin/the-wire/slug-field.tsx (91) — the URL field and its lock.
+- app/super-admin/the-wire/cover-image-field.tsx (158) — upload + preview + alt,
+  pointed at /api/platform/upload (US-005).
+- app/super-admin/the-wire/new/page.tsx and [id]/page.tsx — the two routes.
+- lib/platform/post-editor.ts (118) — the pure decisions, split out so they can
+  be asserted without a browser.
+- lib/seo/blog-paths.ts (30) — BLOG_INDEX_PATH / blogPostPath, the platform
+  sibling of lib/seo/wire-paths.ts.
+- tests/unit/platform-post-editor.test.ts — 21 tests.
+
+DECISIONS
+- REMOVED as the story asks: the tenant form's SEO-Pro entitlement gating and
+  the AiAssistButton. Both are tenant concepts — entitlements read a plan off a
+  tenant column and the AI route resolves Automatos credentials per tenant, so
+  on the platform the button could only ever fail. Also dropped the tenant
+  form's slugRedirect response handling: nothing to report until US-019.
+  A text-reading test pins all four symbols out (comments stripped first, since
+  these files explain what they left behind by naming it).
+- THE SLUG LOCK KEYS OFF SAVED STATE, not the form's publish toggle. The PATCH
+  route compares against `existing.published` in the database, so unpublishing
+  and renaming in ONE save is still refused server-side; a UI that unlocked on
+  the toggle would let someone type a new URL and then eat a 409. The field is
+  readOnly with PUBLISHED_SLUG_LOCKED_MESSAGE — the same sentence the API
+  answers with — beside it, and unlocks after the unpublish is saved.
+- readOnly, not disabled: a react-hook-form registered input that is `disabled`
+  drops out of the submitted values, and the live URL is the thing an author
+  most wants to copy.
+- buildPlatformPostBody OMITS the slug key entirely on a locked post rather than
+  echoing the unchanged one. An absent key means the PATCH route never evaluates
+  a rename at all, so fixing a typo in a live article cannot trip the refusal.
+  It also omits an empty slug so the POST route derives one — `""` would fail
+  the server schema's min(1).
+- Auto-derive uses resolveCreateSlug, the SAME function the POST route applies
+  when no slug is sent, so the field shows what the server would have chosen.
+  It returns "" (not a guess) for a punctuation-only or over-long title, so the
+  author supplies one instead of publishing at /blog/-. Derivation stops the
+  moment the author types in the URL field, and never runs when editing.
+- The byline defaults to "BudStacks" / "Platform Team" — what the two editorial
+  posts already carry — NOT the signed-in super-admin's name. authorName is
+  printed on a public page; putting a person's name there because they happened
+  to be logged in is a surprising thing to do on their behalf. Editable either
+  way. authorName is required by the create schema, so the form has to supply
+  it; the ACs list the fields but not the byline.
+- The [id] page gates the param through the shared parseUuid before it reaches
+  Prisma (caught, mapped to notFound — a bad id in a typed URL is a missing
+  page, not a 500). force-dynamic on it; the `new` page reads nothing.
+- The form is split three ways (shell / slug / cover) rather than shipping one
+  473-line file like the tenant original. Every file is under 350 lines.
+
+VERIFICATION
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm vitest run tests/unit/platform-post-editor.test.ts → 21 passed.
+- pnpm vitest run (full) → 173 files passed, 3131 tests, 8 files / 30 tests
+  skipped (the DB-backed integration project). No regressions.
+- pnpm build → exit 0. Both routes appear in the manifest as dynamic:
+  ƒ /super-admin/the-wire/[id] and ƒ /super-admin/the-wire/new, 281 kB first
+  load. This is the check that matters for a client component importing
+  lib/platform/posts.ts — the module graph builds for the browser.
+- check:public-routes ✓ (107 pages, 1 public API handler), check:article-typography ✓,
+  check:security ✓, next lint on all 8 touched files ✓.
+
+  visual: deferred to human review.
+  Three separate reasons, none of them fixable from here:
+    1. No super-admin Clerk credentials in this session. Confirmed by curl:
+       /super-admin/the-wire/new and /super-admin/the-wire/{uuid} both redirect
+       to /auth/login at middleware, so the pages never even compile in dev.
+    2. The local dev server cannot reach the database — DATABASE_URL points at
+       postgres-budstack-development.up.railway.app, which is private-network
+       only. Even with a session, no draft could be created.
+    3. "confirm it appears on /blog" is NOT SATISFIABLE IN THIS STORY. /blog
+       still renders the inline arrays in app/blog/page.tsx; US-008 is the story
+       that makes it read the database. Curled /blog live → 200, serving the
+       inline content, which is the correct state until US-008.
+  A human with a super-admin session should confirm: the slug auto-derives while
+  typing a title, the URL field is read-only with its explanation on a published
+  post and editable on a draft, and the cover upload round-trips.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- No per-post SEO overrides in the editor. `platform_posts.seo` exists and both
+  write routes accept it, but no AC asks for the fields and US-014/US-015 own
+  platform SEO. The strict schema means an unsent key is simply left alone.
+- No unsaved-changes guard. Navigating away mid-edit loses the draft silently —
+  the tenant form has the same hole.
+- Tiptap is mounted with form.getValues("content"), so it does not re-sync if
+  the value changes underneath it. Copied deliberately from the tenant form;
+  fixing it there and here together is the right shape, not in a UI story.
+
+TOUCHED BEYOND THE NEW FILES
+- app/super-admin/the-wire/posts-list.tsx: three hardcoded `/blog/${slug}`
+  literals swapped for blogPostPath(). Judgement call — I was introducing the
+  canonical definition one directory away, and leaving a second copy of the blog
+  URL in the same folder is the drift the repo's own comments warn about. No
+  behaviour change; the strings render identically.
+
+NEXT
+US-008 (/blog index reads the database). It must NOT delete the inline arrays —
+that is US-012, and only after US-010 and US-011 have put the content in the
+table. It also has to fail loudly: a query that throws must not render as an
+empty blog, because an outage that looks like "no posts" is worse than an error.

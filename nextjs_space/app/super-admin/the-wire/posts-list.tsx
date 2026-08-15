@@ -9,6 +9,7 @@ import { Edit, Eye, EyeOff, Newspaper, Trash2 } from "lucide-react";
 import { RowPill } from "@/components/admin/shared/RowPill";
 import { toast } from "@/components/ui/sonner";
 import type { PlatformPostSummary } from "@/lib/platform/posts";
+import { blogPostPath } from "@/lib/seo/blog-paths";
 
 /**
  * The platform post list, adapted from `app/tenant-admin/the-wire/posts-list.tsx`
@@ -55,8 +56,8 @@ export default function PlatformPostsList({
       const next = !post.published;
       const ok = window.confirm(
         next
-          ? `Publish "${post.title}"?\n\nIt goes live at /blog/${post.slug}.`
-          : `Unpublish "${post.title}"?\n\nIts live URL /blog/${post.slug} stops resolving, and anything already linking to it breaks.`,
+          ? `Publish "${post.title}"?\n\nIt goes live at ${blogPostPath(post.slug)}.`
+          : `Unpublish "${post.title}"?\n\nIts live URL ${blogPostPath(post.slug)} stops resolving, and anything already linking to it breaks.`,
       );
       if (!ok) return;
 
@@ -105,7 +106,7 @@ export default function PlatformPostsList({
       const ok = window.confirm(
         `Delete "${post.title}"?\n\nThis cannot be undone.` +
           (post.published
-            ? ` It is live at /blog/${post.slug} — that URL will 404.`
+            ? ` It is live at ${blogPostPath(post.slug)} — that URL will 404.`
             : ""),
       );
       if (!ok) return;
@@ -177,7 +178,7 @@ export default function PlatformPostsList({
                       {post.title}
                     </span>
                     <div className="text-xs text-bs-fg-muted truncate max-w-[150px] sm:max-w-[200px] font-mono">
-                      /blog/{post.slug}
+                      {blogPostPath(post.slug)}
                     </div>
                     <div className="sm:hidden text-xs text-bs-fg-muted mt-1">
                       {post.authorName} •{" "}
