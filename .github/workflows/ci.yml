@@ -54,6 +54,14 @@ jobs:
       - name: Lockfile guard (PRD-209)
         run: pnpm check:lockfile
 
+      # isPublicRoute is an allowlist, and a page missing from it 307s every
+      # anonymous visitor and crawler to the Clerk login while looking fine in
+      # development. Four occurrences to date — robots/sitemap, the Automatos
+      # ingest route, the legal pages + lead endpoint, and the whole /documents
+      # guide hub. Clean on this tree after that fix, so it gates.
+      - name: Public route guard (allowlist vs route tree)
+        run: pnpm check:public-routes
+
       # PRD-216 AC-7: PRD-200 string-aware grep gates (CSS sanitize +
       # error-message-leak). These already pass on this tree, so they gate
       # the build (blocking).
