@@ -92,7 +92,16 @@ export function GuideView({ guide }: { guide: Guide }) {
 
   return (
     <article className="mx-auto max-w-[880px] px-5 pb-20">
-      <header className="border-b-2 border-bs-green pb-5 pt-12">
+      <nav aria-label="Breadcrumb" className="pt-8">
+        <Link
+          href="/documents"
+          className="inline-flex items-center gap-1.5 text-sm text-bs-fg-muted hover:text-bs-green"
+        >
+          <span aria-hidden="true">←</span> All guides
+        </Link>
+      </nav>
+
+      <header className="border-b-2 border-bs-green pb-5 pt-6">
         <p className="bs-eyebrow mb-2">The BudStacks Guide · Part {guide.part}</p>
         <h1
           className="text-4xl text-bs-fg md:text-5xl"
