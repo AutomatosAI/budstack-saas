@@ -10,6 +10,26 @@ const sectionTitleStyle = {
 
 const PAGE_SIZE = 50;
 
+/**
+ * Row shapes stated explicitly: this repo's generated Prisma client widens its
+ * exported types, so map callbacks over query results land as implicit `any`
+ * (TS7006) unless annotated.
+ */
+type LeadRow = {
+  id: string;
+  email: string;
+  status: PlatformLeadStatus;
+  source: string;
+  name: string | null;
+  company: string | null;
+  createdAt: Date;
+};
+
+type StatusCount = {
+  status: PlatformLeadStatus;
+  _count: { _all: number };
+};
+
 /** Chip colour per pipeline stage — worked leads read warmer than new ones. */
 const STATUS_STYLES: Record<PlatformLeadStatus, string> = {
   NEW: "bg-bs-green-500/15 text-bs-green-300",
@@ -68,7 +88,7 @@ export default async function SuperAdminLeadsPage({
   ]);
 
   const counts = Object.fromEntries(
-    byStatus.map((row) => [row.status, row._count._all]),
+    (byStatus as StatusCount[]).map((row) => [row.status, row._count._all]),
   ) as Partial<Record<PlatformLeadStatus, number>>;
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -124,7 +144,7 @@ export default async function SuperAdminLeadsPage({
                 </tr>
               </thead>
               <tbody>
-                {leads.map((lead) => (
+                {(leads as LeadRow[]).map((lead) => (
                   <tr
                     key={lead.id}
                     className="border-b border-bs-border/50 last:border-0"
