@@ -27,6 +27,7 @@ const NAV_ITEMS: readonly NavItem[] = [
     { label: "The Stack", href: "/#features" },
     { label: "The Numbers", href: "/#pricing" },
     { label: "Marketplace", href: "/marketplace", isRoute: true },
+    { label: "Guides", href: "/documents", isRoute: true },
     { label: "Blog", href: "/blog", isRoute: true },
     { label: "Contact", href: "/contact", isRoute: true },
 ];

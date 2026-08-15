@@ -10,6 +10,7 @@ const COLUMNS = [
             { label: "The Stack", href: "/#features" },
             { label: "The Numbers", href: "/#pricing" },
             { label: "Marketplace", href: "/marketplace" },
+            { label: "Guides", href: "/documents" },
         ],
     },
     {
