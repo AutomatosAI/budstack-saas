@@ -375,3 +375,98 @@ NEXT
 US-005 (platform image upload route) is the next unchecked story. US-006/US-007
 consume these endpoints; US-007 should read the length caps from
 lib/platform/posts.ts rather than restating them in the form.
+
+================================================================================
+[2026-08-15] US-005 PASS — Platform image upload route
+
+WHAT LANDED
+- app/api/platform/upload/route.ts (86 lines). POST only, withSuperAdmin +
+  requireSameOrigin, formData -> Buffer -> validateUploadBuffer -> uploadFile.
+  The second /api/platform/* route to require a session; the header says in so
+  many words that the unauthenticated `leads` route is not the model.
+- lib/storage/upload-validation.ts: sanitizeUploadFileName() extracted — the
+  traversal/separator strip that decides the only caller-controlled part of the
+  S3 key. Capped at 200 chars.
+- lib/storage/public-image-url.ts: `platform/uploads/` joins
+  `tenants/{id}/uploads/` as a servable key shape. PLATFORM_UPLOAD_PREFIX is
+  exported and the route imports it, so the prefix it writes to and the prefix
+  the public route will serve cannot drift apart.
+- tests/unit/platform-upload-api.test.ts (13 tests) + 5 added to
+  tests/unit/public-image-url.test.ts.
+
+THE DECISION THAT MATTERED — publicUrl has to be DURABLE
+The tenant Wire form stores `data.publicUrl || data.url` (post-form.tsx:100),
+and `url` is a presigned link that dies in ~1h. So a platform route that only
+returned the presigned URL would satisfy "same response shape" on paper and
+store a blog cover that breaks the same afternoon — the exact failure the
+tenant route's own comment describes. The durable path is /api/public/images/,
+and its parser only served `tenants/{id}/uploads/`, so it had to learn one more
+shape. That is why this story touched a shared module and not just the route.
+
+Two alternatives rejected:
+- Uploading under `tenants/platform/uploads/` to avoid touching the module. It
+  works mechanically (the S3 scope guard would accept it), and that is the
+  problem: a fabricated tenant id that satisfies a tenant guard by accident,
+  written into every key, for the rest of the bucket's life.
+- Returning publicUrl: null and letting US-007 deal with it. That pushes an
+  expiring URL into the database, which is what the whole durable-image route
+  exists to prevent.
+
+Scope of the widening, checked rather than assumed: the platform prefix opens
+`platform/uploads/` ONLY. The pre-existing platform branding keys written by
+super-admin/platform-settings (`platform/logo-*`, `platform/favicon-*`) are
+passed to uploadFile as a FILENAME with no prefix, so they land at
+`{folderPrefix}uploads/{ts}-platform/logo-…` and match neither shape — they
+stay private. Four negative tests pin that (`platform/logo-…`,
+`platform/backups/…`, `platformX/uploads/…`, an SVG under the platform prefix).
+PublicImageRequest.tenantId is now `string | null`; both call sites (the images
+route, the OG card route) read only s3Key and contentType, so nothing broke.
+
+WHY NOT /api/tenant-admin/upload (AC-2, verified in code)
+It is withTenantAuth, which reads tenantId off the user and 403s when there is
+none — a super-admin has none. Under impersonation it would succeed and file
+the platform's blog cover inside a tenant's folder, where a tenant delete would
+eventually take it. Also: getFileUrl is called WITHOUT the { tenantId } option
+here, deliberately — that option asserts the key sits in that tenant's prefix
+and would throw 403 on every platform upload. A test pins the bare call.
+
+VALIDATION
+- pnpm exec tsc --noEmit -> exit 0.
+- pnpm vitest run tests/unit/platform-upload-api.test.ts
+  tests/unit/public-image-url.test.ts -> 50/50 passed.
+- pnpm vitest run -> exit 0, 172 files / 3110 tests passed, 8 files + 30 tests
+  skipped. (Was 171/3091 at US-004; the delta is the new file + 5 added cases.)
+- pnpm check:public-routes -> 104 pages, 1 public API handler, all allowlisted.
+  Nothing added to isPublicRoute: this route is authenticated. Note the
+  allowlist names /api/platform/leads explicitly, NOT a /api/platform(.*)
+  wildcard, so the new route is private at the middleware layer too.
+- pnpm check:article-typography, pnpm check:security -> exit 0.
+- next lint on all four touched files -> clean.
+- visual: n/a (no UI in this story). Clerk-gated, so not curled live; US-007
+  exercises it through the editor.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- validateUploadBuffer ACCEPTS a buffer file-type cannot identify when the
+  claimed MIME starts with image/ (upload-validation.ts:139) — a text file
+  named .png and declared image/png passes. Pre-existing and shared with the
+  tenant route, and downstream mitigated: the public image route derives
+  Content-Type from the extension allow-list and sends X-Content-Type-Options:
+  nosniff, so it cannot come back as script. A test asserting the gap was NOT
+  written; the suite pins what IS enforced (a PDF declared image/png is
+  rejected on the category mismatch). Worth closing in the validator itself.
+- The two pre-existing inline copies of the filename sanitiser
+  (tenant-admin/upload:35, super-admin/platform-settings:40) were left alone —
+  behaviour-identical, but rewriting two live routes is not this story. The
+  helper's docblock names them so the next reader finds all three.
+- super-admin/platform-settings passes a slash-bearing "filename" to uploadFile,
+  producing the mangled key `{prefix}uploads/{ts}-platform/logo-{ts}-{name}`.
+  Harmless today, but it is why the branding assets are not where the code
+  reads as if they are.
+- No rate limiting and no audit log on the upload, matching every other upload
+  route in the repo. Super-admin auth is the only gate.
+
+NEXT
+US-006 (super-admin Wire list page) is the next unchecked story. It is the
+first UI story in the run, so it carries a dev-browser check; the Clerk gate on
+/super-admin means that may need a human, and the fallback is component/route
+tests plus `visual: deferred to human review`.
