@@ -151,3 +151,14 @@ export const OG_IMAGE_TIMEOUT_MS = 500;
  * limiter's own fail-open does not cover this case.
  */
 export const EMAIL_TRACKING_TIMEOUT_MS = 500;
+
+/**
+ * Platform lead capture (budstacks.io homepage CTA / Operator 101 download).
+ * Tighter than the newsletter limiter: this is a once-per-visitor action, so
+ * anything above a few attempts a minute from one IP is a script.
+ */
+export const PLATFORM_LEAD_MAX_REQUESTS = 5;
+export const PLATFORM_LEAD_WINDOW_MS = 60_000; // 1 minute
+
+/** The Operator 101 guide, served on a successful lead capture. */
+export const OPERATOR_101_PDF_PATH = "/downloads/budstacks-operator-101.pdf";

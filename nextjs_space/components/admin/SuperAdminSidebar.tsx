@@ -22,6 +22,7 @@ import { AdminSidebar, type AdminMenuItem } from "./AdminSidebar";
 export enum PanelType {
   OVERVIEW = "overview",
   TENANTS = "tenants",
+  LEADS = "leads",
   IMPERSONATION = "impersonation",
   ONBOARDING = "onboarding",
   ANALYTICS = "analytics",
@@ -51,6 +52,12 @@ const superAdminMenuItems: AdminMenuItem[] = [
     icon: Building2,
     href: "/super-admin/tenants",
     shortcut: ["G", "T"],
+  },
+  {
+    id: PanelType.LEADS,
+    label: "Leads",
+    icon: UserPlus,
+    href: "/super-admin/leads",
   },
   {
     id: PanelType.IMPERSONATION,

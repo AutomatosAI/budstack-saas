@@ -5,6 +5,7 @@ import DashboardShowcase from "@/components/homepage/DashboardShowcase";
 import FeatureTabs from "@/components/homepage/FeatureTabs";
 import InvestmentBento from "@/components/homepage/InvestmentBento";
 import GlobalMap from "@/components/homepage/GlobalMap";
+import LeadMagnet from "@/components/homepage/LeadMagnet";
 import CTA from "@/components/homepage/CTA";
 import Footer from "@/components/homepage/Footer";
 
@@ -19,6 +20,7 @@ export default function HomePage() {
                 <FeatureTabs />
                 <InvestmentBento />
                 <GlobalMap />
+                <LeadMagnet />
                 <CTA />
             </main>
             <Footer />
