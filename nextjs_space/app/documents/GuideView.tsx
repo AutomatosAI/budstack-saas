@@ -1,6 +1,28 @@
 import Link from "next/link";
-import type { Guide, GuideSection } from "@/lib/documents/types";
+import type { Guide, GuideSection, GuideVideo } from "@/lib/documents/types";
 import { GUIDES } from "@/lib/documents/registry";
+
+/**
+ * Guide videos embed via YouTube's privacy-enhanced host only — no cookies
+ * until play, and the CSP's docs variant allows exactly this frame origin.
+ */
+function VideoEmbed({ video }: { video: GuideVideo }) {
+  return (
+    <figure className="my-6">
+      <div className="relative w-full overflow-hidden rounded-bs-md border border-bs-border-100" style={{ paddingTop: "56.25%" }}>
+        <iframe
+          className="absolute inset-0 h-full w-full"
+          src={`https://www.youtube-nocookie.com/embed/${video.youtubeId}`}
+          title={video.title}
+          loading="lazy"
+          allow="encrypted-media; picture-in-picture; fullscreen"
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      </div>
+      <figcaption className="mt-2 text-sm text-bs-fg-muted">▶ {video.title}</figcaption>
+    </figure>
+  );
+}
 
 /**
  * The one renderer for every guide — all layout and styling lives here so the
@@ -55,6 +77,7 @@ function Section({ section }: { section: GuideSection }) {
       {section.walkthroughs?.map((w) => (
         <div key={w.title} className="mt-5 rounded-bs-md border border-bs-border-100 bg-bs-card-2 p-5">
           <h3 className="bs-eyebrow mb-3">Try it: {w.title}</h3>
+          {w.video && <VideoEmbed video={w.video} />}
           <ol className="max-w-[68ch] list-decimal space-y-3 pl-5 text-bs-fg marker:font-semibold marker:text-bs-green">
             {w.steps.map((s, i) => (
               <li key={i}>
@@ -103,6 +126,8 @@ export function GuideView({ guide }: { guide: Guide }) {
           In your admin: <code className="rounded bg-bs-card-2 px-2 py-0.5">{guide.adminPath}</code>
         </p>
       </header>
+
+      {guide.video && <VideoEmbed video={guide.video} />}
 
       {guide.sections.length > 1 && (
         <nav aria-label="Sections" className="my-6 flex flex-wrap gap-2">
