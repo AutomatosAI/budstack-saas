@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import { Navbar, Footer } from "@/components/landing";
+import { BLOG_POSTS } from "@/lib/blog/posts";
 
-// Sample blog posts - in a real app these would come from a CMS or database.
-// Images are local SVG placeholders (themed to BudStacks palette) —
-// placeholder while the blog widget is being finished.
-const blogPosts = [
+// Editorial posts live in lib/blog/posts.ts (single source, shared with the
+// detail page). The entries below are the original samples, kept until each is
+// rewritten — migrate them into that module as you go.
+const samplePosts = [
     {
         id: 1,
         slug: "getting-started-with-medical-cannabis-franchise",
@@ -88,7 +89,7 @@ export default function BlogPage() {
 
                     {/* Blog grid */}
                     <div className="grid gap-8 md:grid-cols-2">
-                        {blogPosts.map((post) => (
+                        {[...BLOG_POSTS, ...samplePosts].map((post) => (
                             <Link
                                 key={post.id}
                                 href={`/blog/${post.slug}`}

@@ -3,9 +3,12 @@ import { notFound } from "next/navigation";
 import { FileText, ArrowLeft } from "lucide-react";
 import sanitizeHtml from "sanitize-html";
 import { Navbar, Footer } from "@/components/landing";
+import { BLOG_POSTS } from "@/lib/blog/posts";
 
-// Sample blog posts data - in production this would come from a CMS/database
-const blogPosts = [
+// Editorial posts live in lib/blog/posts.ts (single source, shared with the
+// index). The entries below are the original samples, kept until each is
+// rewritten — migrate them into that module as you go.
+const samplePosts = [
     {
         id: 1,
         slug: "getting-started-with-medical-cannabis-franchise",
@@ -176,9 +179,12 @@ const blogPosts = [
     },
 ];
 
+/** Editorial posts first, then the remaining samples. */
+const allPosts = [...BLOG_POSTS, ...samplePosts];
+
 // Get related posts (exclude current post)
 function getRelatedPosts(currentSlug: string, limit = 2) {
-    return blogPosts
+    return allPosts
         .filter((post) => post.slug !== currentSlug)
         .slice(0, limit);
 }
@@ -189,7 +195,7 @@ interface PageProps {
 
 export default async function BlogPostPage({ params }: PageProps) {
     const { slug } = await params;
-    const post = blogPosts.find((p) => p.slug === slug);
+    const post = allPosts.find((p) => p.slug === slug);
 
     if (!post) {
         notFound();
@@ -336,7 +342,7 @@ export default async function BlogPostPage({ params }: PageProps) {
 
 // Generate static params for all blog posts
 export function generateStaticParams() {
-    return blogPosts.map((post) => ({
+    return allPosts.map((post) => ({
         slug: post.slug,
     }));
 }
