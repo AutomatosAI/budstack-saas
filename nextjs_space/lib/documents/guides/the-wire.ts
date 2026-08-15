@@ -13,6 +13,7 @@ export const the_wireGuide: Guide = {
   summary:
     "Your store's own news channel — articles that inform customers and feed your search presence.",
   status: "published",
+  video: { youtubeId: "sZQQnziuFZs", title: "The Wire" },
   updatedAt: "2026-08-15",
   sections: [
     {

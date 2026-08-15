@@ -14,6 +14,7 @@ export const legal_pagesGuide: Guide = {
   summary:
     "Terms, privacy, cookies, and regulatory pages — maintained wording or your own.",
   status: "published",
+  video: { youtubeId: "TyKwGR97M0Y", title: "Compliance, Handled" },
   updatedAt: "2026-08-15",
   sections: [
     {

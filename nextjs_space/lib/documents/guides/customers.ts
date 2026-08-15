@@ -14,6 +14,7 @@ export const customersGuide: Guide = {
   summary:
     "Everyone who shops with you — their details, their history, the labels you put on them, and what you're allowed to email them about.",
   status: "published",
+  video: { youtubeId: "XiK9lg0L8ME", title: "The Customer Book" },
   updatedAt: "2026-08-15",
   sections: [
     {

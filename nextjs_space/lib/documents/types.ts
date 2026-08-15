@@ -17,10 +17,18 @@ export type GuideStep = {
   note?: string;
 };
 
+/** An embedded guide video — YouTube id only (privacy-enhanced host). */
+export type GuideVideo = {
+  youtubeId: string;
+  title: string;
+};
+
 export type GuideWalkthrough = {
   /** Task-shaped title, e.g. "Send your first newsletter". */
   title: string;
   steps: GuideStep[];
+  /** Optional real-UI walkthrough recording for this task. */
+  video?: GuideVideo;
 };
 
 export type GuideShot = {
@@ -67,6 +75,8 @@ export type Guide = {
   /** 1–2 sentence summary shown on the index and under the title. */
   summary: string;
   status: GuideStatus;
+  /** Optional section overview video, shown under the guide header. */
+  video?: GuideVideo;
   sections: GuideSection[];
   /** Known gaps / planned improvements — rendered as a discreet footer list. */
   improvements?: string[];

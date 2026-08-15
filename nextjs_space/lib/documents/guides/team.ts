@@ -15,6 +15,7 @@ export const teamGuide: Guide = {
   summary:
     "Invite your people and control exactly what each of them can see and do.",
   status: "published",
+  video: { youtubeId: "RW4GPQ0ZKyw", title: "The Team Room" },
   updatedAt: "2026-08-15",
   sections: [
     {

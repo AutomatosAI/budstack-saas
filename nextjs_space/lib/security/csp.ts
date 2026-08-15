@@ -9,7 +9,7 @@
 // (global `crypto`) which exists in both the Edge runtime and Node, never
 // node:crypto (absent on Edge).
 
-export type CspVariant = "base" | "admin" | "store";
+export type CspVariant = "base" | "admin" | "store" | "docs";
 
 /**
  * SEO US-026 — the Google Analytics 4 hosts, added to the STORE variant only so
@@ -93,7 +93,9 @@ export function buildCsp({
     // Where the measurement protocol actually posts. Without these the tag loads
     // and every hit is blocked, which looks exactly like "analytics is broken".
     `connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.com https://*.drgreennft.com https://*.amazonaws.com wss://*.clerk.accounts.dev${store ? ` ${GA4_CONNECT_HOSTS.join(" ")}` : ""}`,
-    "frame-src 'self' https://challenges.cloudflare.com https://*.clerk.accounts.dev",
+    // The docs pages (/documents) embed guide videos via YouTube's
+    // privacy-enhanced host — allowed on that variant only, nowhere else.
+    `frame-src 'self' https://challenges.cloudflare.com https://*.clerk.accounts.dev${variant === "docs" ? " https://www.youtube-nocookie.com" : ""}`,
     `frame-ancestors ${frameAncestors}`,
     "object-src 'none'",
     "base-uri 'self'",
@@ -111,6 +113,7 @@ export function buildCsp({
  */
 export function variantForServedPath(servedPath: string): CspVariant {
   if (servedPath.startsWith("/store")) return "store";
+  if (servedPath.startsWith("/documents")) return "docs";
   if (
     servedPath === "/tenant-admin/analytics" ||
     servedPath === "/super-admin/analytics"

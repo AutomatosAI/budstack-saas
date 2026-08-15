@@ -15,6 +15,7 @@ export const analyticsGuide: Guide = {
   summary:
     "Revenue, customers, and what's actually selling — measured from your own orders, not guessed.",
   status: "published",
+  video: { youtubeId: "XJ5T8ot58I4", title: "The Numbers" },
   updatedAt: "2026-08-15",
   sections: [
     {

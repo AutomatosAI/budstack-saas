@@ -13,6 +13,7 @@ export const brandingGuide: Guide = {
   summary:
     "Your storefront's identity — colours, logo, layout, and content, edited live.",
   status: "published",
+  video: { youtubeId: "6YRlTYVar7g", title: "The Look" },
   updatedAt: "2026-08-15",
   sections: [
     {

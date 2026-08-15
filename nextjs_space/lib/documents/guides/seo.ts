@@ -15,6 +15,7 @@ export const seoGuide: Guide = {
   summary:
     "One screen for being found — how each page reads in Google, how a shared link looks, and what the AI assistants are allowed to read and say about your store.",
   status: "published",
+  video: { youtubeId: "TUhuoj2uu58", title: "The SEO Manager" },
   updatedAt: "2026-08-15",
   sections: [
     {
@@ -331,6 +332,7 @@ export const seoGuide: Guide = {
       walkthroughs: [
         {
           title: "Decide what the AI robots may read",
+          video: { youtubeId: "HrvmocFQA2s", title: "Found by AI" },
           steps: [
             { text: "Open the AI Crawlers tab and read the two cards below the choices — one for search robots, one for training robots." },
             {

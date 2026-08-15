@@ -13,6 +13,7 @@ export const store_themesGuide: Guide = {
   summary:
     "Whole-store designs — switch, clone, and customise your storefront's foundation.",
   status: "published",
+  video: { youtubeId: "6YRlTYVar7g", title: "The Look" },
   updatedAt: "2026-08-15",
   sections: [
     {

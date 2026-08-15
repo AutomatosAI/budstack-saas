@@ -14,6 +14,7 @@ export const overviewGuide: Guide = {
   summary:
     "Your store at a glance — the numbers that matter today and shortcuts to everything else.",
   status: "published",
+  video: { youtubeId: "SSgGA_9nr08", title: "The Control Room" },
   updatedAt: "2026-08-15",
   sections: [
     {

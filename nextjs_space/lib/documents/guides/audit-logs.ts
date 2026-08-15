@@ -15,6 +15,7 @@ export const audit_logsGuide: Guide = {
   summary:
     "A record of every action taken in your store admin — who did what, when.",
   status: "published",
+  video: { youtubeId: "nzB_DgWJR9c", title: "Trust & Plumbing" },
   updatedAt: "2026-08-15",
   sections: [
     {
