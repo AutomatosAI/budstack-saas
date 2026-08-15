@@ -470,3 +470,99 @@ US-006 (super-admin Wire list page) is the next unchecked story. It is the
 first UI story in the run, so it carries a dev-browser check; the Clerk gate on
 /super-admin means that may need a human, and the fallback is component/route
 tests plus `visual: deferred to human review`.
+
+[2026-08-15] US-006 PASS — Super-admin Wire list page
+
+WHAT LANDED
+- app/super-admin/the-wire/page.tsx — server component, force-dynamic, one
+  findMany over platform_posts ordered createdAt desc, typed
+  PlatformPostSummary[] and selected with the shared
+  PLATFORM_POST_SUMMARY_SELECT from lib/platform/posts (US-004's own list
+  projection, so the page and GET /api/platform/posts cannot drift). Header
+  carries the "New post" link to /super-admin/the-wire/new.
+- app/super-admin/the-wire/posts-list.tsx — client list adapted from
+  app/tenant-admin/the-wire/posts-list.tsx. Columns: title (+ /blog/{slug}),
+  status pill, author (name + role), publishedAt. Row actions: edit link,
+  publish/unpublish, delete.
+- components/admin/SuperAdminSidebar.tsx — PanelType.THE_WIRE + a "The Wire"
+  entry (Newspaper icon) immediately after Leads, both being platform-owned
+  content. AdminSidebar.isActive uses startsWith for non-root hrefs, so the
+  editor routes added in US-007 will keep the entry lit.
+
+DECISIONS
+- force-dynamic is load-bearing, not decoration: the build-time Prisma client is
+  a mock answering [] for every query, so without it the empty state would be
+  baked into the static output. Confirmed in the build manifest — the route
+  prints as `ƒ /super-admin/the-wire` (server-rendered on demand), not ●.
+- Explicit row type on the query per the any-widened prisma export; the list's
+  props are `PlatformPostSummary[]` via `import type`, which is erased at
+  compile time so lib/platform/posts (and zod) never reaches the client bundle.
+- BOTH actions confirm, which is stricter than the tenant list (it confirms
+  delete only). Publishing puts a URL on the public internet and unpublishing
+  takes a live one away, so both name the URL in the prompt. window.confirm is
+  the house idiom for this (learning-manager, subprocessors, legal-templates).
+- The publish toggle takes `published`/`publishedAt` FROM the PATCH response
+  rather than assuming them. publishedAt is stamped server-side on the first
+  publish and deliberately retained on unpublish (resolvePublishedAt), so an
+  optimistic guess would show a date the row does not have.
+- One busyId for the whole row rather than a flag per action: a delete in flight
+  plus a second click answers 404, which would surface as a failure toast for an
+  operation that actually succeeded.
+- Dropped from the tenant original: the newsletter action (campaigns are a
+  tenant feature), the AUTOMATOS source pill (platform posts are hand-written),
+  and the `users` join for the byline — platform_posts denormalises the author
+  into authorName/authorRole, which is the whole reason it is a separate table.
+- Auth: the segment layout already gates on SUPER_ADMIN; the page repeats the
+  check as leads/page.tsx and subprocessors/page.tsx do. No middleware change —
+  check-public-routes lists `super-admin` under INTENTIONALLY_PRIVATE, and the
+  guard still passes at 105 pages (was 104; the new page is correctly counted as
+  private, not as an unallowlisted public page).
+
+VALIDATION
+- pnpm exec tsc --noEmit -> exit 0.
+- pnpm vitest run --project unit -> 171 files / 3109 tests passed, 0 failed.
+  (US-005 recorded 172/3110 for `pnpm vitest run`, which also collects the
+  integration project; the unit-project figure here is the like-for-like one.)
+- pnpm build -> exit 0. New route appears as `ƒ /super-admin/the-wire` 5.41 kB.
+  The Dynamic-server-usage lines in the build log are pre-existing noise from
+  static analysis of unrelated /api routes, unchanged by this diff.
+- pnpm check:public-routes, check:article-typography, check:security -> all green.
+- next lint on the three touched files -> clean.
+- Route reachable and gated: curl /super-admin/the-wire -> 307 to
+  /auth/login?redirect_url=… . curl /blog -> 200 (unaffected).
+- visual: DEFERRED TO HUMAN REVIEW. Two environmental blockers, both verified
+  rather than assumed:
+    1. dev-browser (standalone Chromium) has no Clerk session and is bounced to
+       /auth/login; signing in needs credentials this run does not have and must
+       not invent.
+    2. The local DATABASE_URL is unreachable from this machine — the dev server
+       logs PrismaClientInitializationError for the root layout's own platform
+       settings query on every request. Even with a session the list would
+       throw, so a screenshot would prove nothing about the query.
+  A human with a super-admin session should confirm: the sidebar entry, the
+  empty state, and that the publish/delete confirmations read correctly.
+  No component test was written in its place because the `unit` vitest project
+  is node-environment only and includes tests/unit/**/*.test.ts — there is no
+  jsdom or testing-library anywhere in the repo, so a React render test would
+  mean standing up a new test environment inside a UI story.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- The list links to /super-admin/the-wire/{id} and /super-admin/the-wire/new,
+  which do not exist until US-007 — both 404 in the meantime. That is the
+  ordering the plan asks for, not an oversight.
+- No pagination. Every platform post is fetched on each load; the blog is eight
+  posts and this is the platform's own table, so a page size would be premature.
+  Worth revisiting if it ever reaches the hundreds — the tenant list has the
+  same shape.
+- No audit-log write on publish/unpublish/delete, matching US-004's routes and
+  the rest of the super-admin CRUD screens. If publishing ever needs an
+  accountability trail, it belongs in the API route, not in this component.
+- The tenant original types `initialPosts: any[]` while declaring an unused
+  `Post` interface beside it. Left alone; the platform copy is typed properly.
+
+NEXT
+US-007 (super-admin post editor) is next. It adapts post-form.tsx with the
+SEO-Pro entitlement gating and AiAssistButton removed, posts covers to
+/api/platform/upload, and must keep the published-slug edit BLOCKED until US-019
+lands the auto-301 — the PATCH route already refuses that server-side
+(PUBLISHED_SLUG_LOCKED_MESSAGE), so the form only has to say why.

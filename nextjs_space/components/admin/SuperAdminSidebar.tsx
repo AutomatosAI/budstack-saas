@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Database,
   FileText,
+  Newspaper,
 } from "lucide-react";
 import { AdminSidebar, type AdminMenuItem } from "./AdminSidebar";
 
@@ -23,6 +24,7 @@ export enum PanelType {
   OVERVIEW = "overview",
   TENANTS = "tenants",
   LEADS = "leads",
+  THE_WIRE = "the-wire",
   IMPERSONATION = "impersonation",
   ONBOARDING = "onboarding",
   ANALYTICS = "analytics",
@@ -58,6 +60,14 @@ const superAdminMenuItems: AdminMenuItem[] = [
     label: "Leads",
     icon: UserPlus,
     href: "/super-admin/leads",
+  },
+  {
+    // The budstacks.io blog. Sits next to Leads because both are the platform's
+    // own content, not anything a tenant owns.
+    id: PanelType.THE_WIRE,
+    label: "The Wire",
+    icon: Newspaper,
+    href: "/super-admin/the-wire",
   },
   {
     id: PanelType.IMPERSONATION,

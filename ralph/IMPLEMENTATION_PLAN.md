@@ -11,7 +11,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-platform-content-and-seo.md`
 - [x] US-003 Extract the Wire HTML sanitiser to lib/
 - [x] US-004 Platform posts write API
 - [x] US-005 Platform image upload route
-- [ ] US-006 Super-admin Wire list page
+- [x] US-006 Super-admin Wire list page
 - [ ] US-007 Super-admin post editor
 - [ ] US-008 /blog index reads the database
 - [ ] US-009 /blog/[slug] reads the database, with its own metadata
