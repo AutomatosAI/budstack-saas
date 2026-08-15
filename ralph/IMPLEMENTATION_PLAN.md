@@ -4,7 +4,7 @@ Single source of truth for Ralph progress. Flip `- [ ]` → `- [x]` only on real
 Stories: `ralph/prd.json` · PRD: `tasks/prd-platform-content-and-seo.md`
 
 **Workstream A — verification (the sweep is built, nobody has looked at it)**
-- [ ] US-001 Verify the article typography sweep in a browser
+- [x] US-001 Verify the article typography sweep in a browser
 
 **Workstream B — platform Wire: the blog out of code**
 - [ ] US-002 platform_posts model and migration

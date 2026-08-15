@@ -2,3 +2,108 @@
 # PRD: tasks/prd-platform-content-and-seo.md · Stories: ralph/prd.json
 # Started: 2026-08-15
 
+[2026-08-15] US-001 PASS — Verify the article typography sweep in a browser
+
+Precondition met: `.tenant-article` is present in components/tenant-theme-provider.tsx
+(TENANT_SCOPED_CSS, ~line 268). The feat/article-typography work IS on this branch's
+base, so nothing was blocked.
+
+VERIFICATION RIG (no repo changes; all of it torn down afterwards)
+- The `.env` DATABASE_URL points at postgres-budstack-development.up.railway.app:5432,
+  which is TCP-unreachable from this machine. Rather than defer every DB-backed
+  surface, stood up a throwaway local Postgres 17 (homebrew, port 55432, /tmp data
+  dir) and built its schema with
+  `prisma migrate diff --from-empty --to-schema-datamodel` piped to psql.
+  Chose migrate-diff over `db push`/`migrate dev` deliberately: psql can only reach
+  the local socket, so there is no path by which the live URL could be touched.
+- FOUND: `prisma migrate deploy` CANNOT build this schema from empty. The first
+  migration (20260108_add_user_profile_fields) ALTERs `users`, which no earlier
+  migration creates — it fails P3018 / 42P01. The 40 migration dirs are an
+  incremental history over a pre-existing database, not a from-scratch baseline.
+  Relevant to every later Prisma story: a new migration is appended to that history
+  and applied by entrypoint.sh against an already-populated DB; it can never be
+  validated by replaying the directory from zero.
+- FOUND: the checked-out node_modules Prisma client was STALE — it predated
+  platform_leads, so `PlatformLeadStatus` was missing and BOTH `tsc --noEmit` and
+  `next build` failed on app/super-admin/leads/page.tsx before I touched anything.
+  `pnpm prisma generate` fixes it. Pre-existing local-env state, not a code defect,
+  but any fresh clone hits it.
+- Seeded a tenant whose designSystem is deliberately magenta/violet (primary
+  #B5179E) precisely so BudStacks green (#52D97A) leaking through would be obvious,
+  plus a post exercising every block element and a learning_resource.
+
+DEV MODE CANNOT VERIFY THIS — the finding that shaped the run
+- Under `pnpm dev` the tenant post rendered with DEFAULT navy links and markers and
+  every `--tenant-color-*` var unset. Cause is NOT the typography sweep: the app's
+  CSP (lib/security/csp.ts) omits 'unsafe-eval' for the "base"/"store" variants,
+  Next.js dev compiles with eval, so hydration dies on
+  `EvalError: Evaluating a string as JavaScript violates ... 'unsafe-eval'`.
+  TenantThemeProvider applies its vars in useEffect, which therefore never runs.
+  => Any storefront theming check MUST be done against `pnpm build && pnpm start`.
+  A dev-only look would have reported a false failure here.
+
+SURFACES CHECKED (production build, port 3111, real Chromium via dev-browser)
+1. /store/verifystore/the-wire/typography-proof — PASS, and the tenant-brand AC is
+   genuinely satisfied: link colour rgb(181,23,157) and ul marker rgb(181,23,157)
+   are #B5179E, the TENANT's magenta, not #52D97A. Container carries
+   --tenant-color-primary: 309 77% 40%. h2 30px / h3 24px / p 16px with real
+   margins; blockquote italic behind a magenta 2px rule with muted-foreground text;
+   code + pre on the tenant's muted background and border; table bordered; hr ruled.
+   Cover image spans the container: h1, cover and .tenant-article all measure
+   x=208 w=864 inside a 896px container — NOT clamped to a text measure. Zero page
+   errors.
+2. /terms, /privacy, /dpa, /aup — PASS. All four carry .bs-article: h2 30px
+   Cormorant Garamond, p 17px, li 17px with 6px spacing, green underlined links,
+   green list markers, on the dark legal card. Real heading sizes and paragraph
+   spacing, not unstyled flow.
+3. /regulatory — PASS, correct BY OMISSION exactly as specced. No .bs-article;
+   renders on the light :root palette as dark navy (rgb(15,23,41)) on light grey
+   with 24px Cormorant headings and 24px paragraph spacing. Readable. Confirms the
+   deliberate exclusion: .bs-article's body colour is #C6CCC8, which on this light
+   background WOULD be grey-on-white.
+4. /learn/typography-proof — PASS. h1 36px / h2 30px / h3 24px Cormorant, p 17px,
+   fenced code block on rgb(15,21,23) in JetBrains Mono, inline code chipped, image
+   rendered 1024x585 natural, displayed 734px = the article width, max-width 100%,
+   border-radius 12px.
+5. /tenant-admin/the-wire/new (TipTap) — styling verified, NOT an authenticated
+   click-through. The route 307s to /auth/login and I have no Clerk credentials.
+   Instead: loaded a real page so the app's COMPILED css bundle was live, then
+   injected the exact wrapper from app/tenant-admin/layout.tsx:230
+   (data-surface="admin" .budstacks-theme .canvas-bg) around the exact editor class
+   string from components/editor/tiptap.tsx:147, and measured. Result: bg-background
+   resolves to rgb(9,11,11) near-black, body text #C6CCC8 — high contrast, so the
+   concern in tiptap.tsx's own comment does not bite. h2 30px Cormorant, bullet
+   markers rgb(82,217,122) = #52D97A, blockquote italic with a green rule. All three
+   elements the AC names show visible formatting. What is NOT proven: that TipTap
+   applies those tags as you type. visual: editor keystroke behaviour deferred to
+   human review.
+
+VALIDATION
+- pnpm exec tsc --noEmit -> exit 0, no output (after prisma generate, see above)
+- pnpm vitest run -> exit 0; 168 files passed, 8 skipped; 3026 tests passed, 30
+  skipped; 0 failures
+- pnpm check:public-routes -> green (104 pages, 1 public API handler)
+- pnpm check:article-typography -> green (no inert prose-* in app/, components/, lib/)
+- pnpm check:security -> green (CSS sinks sanitised; no error.message leaks)
+- pnpm build -> exit 0, 188 static pages
+
+NO SOURCE CHANGES. Every surface was already correct; nothing needed fixing. Working
+tree returned to its starting state (only the ambient untracked files).
+
+FLAGGED, NOT FIXED (adjacent debt, out of scope)
+- app/learn/[slug]/markdown-content.tsx is a regex renderer with NO blockquote and
+  NO table support: `> quote` renders with a literal ">" and a markdown table
+  renders as literal pipes. Ordered lists render as bullets (both list branches emit
+  bare <li> and the wrapper only ever produces <ul>). Its allowedSchemes also
+  exclude data:, so data-URI images are stripped. Content-pipeline debt, unrelated
+  to the typography sweep.
+- The storefront shows TWO stacked cookie banners at once (CookieConsent plus a
+  second full-width green bar), which together cover the top of the article.
+
+NOTE FOR LATER STORIES: the tenant used here had NO tenant_templates row, so the
+magenta reached the page through TenantThemeProvider's legacy
+`settings.designSystem` fallback (tenant-theme-provider.tsx:45-46) rather than
+`activeTemplate.designSystem` (app/store/[slug]/layout.tsx:358). Both paths feed the
+same applyThemeToContainer, so the typography result is identical either way — but
+the primary path is the tenant_templates one and was not separately exercised.
+
