@@ -107,3 +107,85 @@ magenta reached the page through TenantThemeProvider's legacy
 same applyThemeToContainer, so the typography result is identical either way — but
 the primary path is the tenant_templates one and was not separately exercised.
 
+
+================================================================================
+[2026-08-15] US-002 PASS — platform_posts model and migration
+================================================================================
+
+WHAT LANDED
+- prisma/schema.prisma: new `platform_posts` model, placed beside
+  learning_resources (the other non-tenant-scoped platform table) rather than in
+  the tenant block, so the grouping states the scoping intent.
+  Fields: id uuid / slug @unique / title / excerpt? / content / coverImage? /
+  coverImageAlt? / authorName / authorRole? / published(false) / publishedAt? /
+  seo Json? / createdAt / updatedAt.
+- prisma/migrations/20260815000000_add_platform_posts/migration.sql — a TIMESTAMPED
+  DIRECTORY, so entrypoint.sh's `prisma migrate deploy` actually applies it.
+- tests/unit/platform-posts-schema.test.ts — 9 offline guards (see below).
+
+DECISIONS
+- authorName/authorRole are denormalised strings with NO relation and no @relation
+  anywhere in the model, per AC. Two independent reasons, both now in the schema
+  comment: `users` is itself in tenantScopedModels so an FK join is unreadable from
+  the apex, and getCurrentUser().id is a CLERK id — writing it into a uuid FK is the
+  P2003 that broke the lekkerweed blog in #226. learning_resources sets the
+  precedent of a platform table with no author relation.
+- NULLABILITY: title/content/slug/authorName are required; excerpt, coverImage,
+  coverImageAlt, authorRole, publishedAt, seo are nullable. Mirrors tenant `posts`
+  (excerpt?/coverImage? optional, author required). A draft is
+  (published=false, publishedAt NULL); publishedAt is meant to be set once at first
+  publish so the public date does not jump on later typo fixes — US-004 owns
+  enforcing that.
+- INDEX DEVIATION, called out deliberately: the AC asks for "indexes on
+  [published, publishedAt] and [slug]". I shipped @@index([published, publishedAt])
+  plus the UNIQUE index that `slug @unique` already creates
+  (platform_posts_slug_key). I did NOT add a second plain @@index([slug]) — it would
+  be redundant storage and write cost serving the identical lookup. Slug lookups
+  (/blog/[slug], the editor's uniqueness check) are indexed. platform_leads does
+  exactly this: `email @unique` with no extra index beside it. Flagging it so a
+  reviewer sees a decision, not an omission.
+
+VERIFICATION
+- pnpm prisma validate -> valid; pnpm prisma generate -> ok.
+- Migration DDL diffed against
+  `prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script`
+  and is BYTE-IDENTICAL to Prisma's own output for this table (table + both
+  indexes). No hand-rolled drift.
+- pnpm exec tsc --noEmit -> exit 0.
+- pnpm vitest run -> exit 0, 169 files / 3035 tests passed, 8 files + 30 tests
+  skipped. (Was 168/3026 before this story; the delta is exactly the new file.)
+- pnpm check:public-routes, check:article-typography, check:security -> all green.
+- eslint on the new test file -> clean.
+- lib/db.ts NOT touched: platform_posts is absent from tenantScopedModels, verified
+  by grep and now by test.
+
+THE GUARD TEST WAS NEGATIVE-TESTED
+Rather than trust that the assertions can fire, I temporarily inserted
+'platform_posts' into tenantScopedModels and re-ran: the suite went to
+1 failed | 8 passed, naming the right test. lib/db.ts was then restored from a
+backup copy and confirmed clean in git status. The three invariants guarded are the
+three that regress silently: (1) platform models staying OUT of the opt-in
+tenantScopedModels allowlist — asserted for platform_posts, platform_leads and
+learning_resources together, with a companion assertion that 'posts'/'users' are
+still IN it so the absence keeps meaning something; (2) no users relation /
+authorId / tenantId on platform_posts; (3) the migration existing as a timestamped
+directory with no loose platform_posts .sql beside it.
+
+NOT DONE / OUT OF SCOPE
+- No API, no page, nothing reads or writes this table yet — US-004 onward.
+- No seed data. US-010 and US-011 own migrating the two editorial and six sample
+  posts; the inline arrays in app/blog/page.tsx, app/blog/[slug]/page.tsx and
+  lib/blog/posts.ts are untouched and still the live source.
+- The migration has NOT been run against any database. It applies itself on the
+  next container boot via entrypoint.sh.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- The seven loose .sql files at the top of prisma/migrations/ (add_platform_leads.sql,
+  add_platform_config.sql, add_automatos_chatbot_enabled.sql,
+  add_product_drgreen_strain_id.sql, add_wire_mode_and_post_source.sql,
+  drgreen_integration.sql, init_complete_schema.sql) are still there and still
+  invisible to `migrate deploy`. Anyone reading the directory sees 40 real
+  migrations and 7 files that look like migrations and are not. Worth either
+  retiring them or moving them under a clearly-named archive/ — not this story's
+  diff, and deleting them is a human call since they document what was applied by
+  hand to live.

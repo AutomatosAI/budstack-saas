@@ -1235,6 +1235,53 @@ model learning_resources {
   @@index([sortOrder])
 }
 
+/// budstacks.io's OWN blog posts — the platform's editorial, written in
+/// super-admin and read by /blog. Deliberately NOT the `posts` model: that one
+/// is tenant-scoped in lib/db.ts and belongs to a store's Wire.
+///
+/// Like platform_leads and learning_resources, this model is kept OUT of
+/// `tenantScopedModels` in lib/db.ts. That Set is an opt-in allowlist, and
+/// adding a platform table to it would inject a tenantId filter into every
+/// apex query and return nothing.
+///
+/// The author is DENORMALISED STRINGS on purpose, with no relation to `users`:
+///   - `users` is tenant-scoped, so an FK join is unreadable from the apex;
+///   - getCurrentUser().id is a CLERK id, not a users.id, and writing it into a
+///     uuid FK throws P2003 — the failure that broke the lekkerweed blog in #226.
+/// learning_resources sets the same precedent by carrying no author relation.
+model platform_posts {
+  id      String  @id @default(uuid())
+  slug    String  @unique
+  title   String
+  excerpt String?
+  /// Sanitised HTML, written by the Wire-style editor and rendered by /blog.
+  content String
+
+  coverImage String?
+  /// Alt text for coverImage. Nullable because a post may have no cover at all;
+  /// when there IS a cover this is what keeps the article accessible.
+  coverImageAlt String?
+
+  /// Byline as typed, e.g. "BudStacks" / "Platform Team". Never a users FK.
+  authorName String
+  authorRole String?
+
+  published Boolean @default(false)
+  /// Set when the post first goes live; stays put on later edits so the public
+  /// date does not jump every time a typo is fixed. NULL while it is a draft.
+  publishedAt DateTime?
+
+  /// Per-post metaTitle / metaDescription / ogImage overrides, same shape the
+  /// tenant `posts` model uses.
+  seo Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// The public index's only query: published posts, newest first.
+  @@index([published, publishedAt])
+}
+
 enum Role {
   PATIENT
   TENANT_ADMIN

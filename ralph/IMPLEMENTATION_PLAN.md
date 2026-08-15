@@ -7,7 +7,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-platform-content-and-seo.md`
 - [x] US-001 Verify the article typography sweep in a browser
 
 **Workstream B — platform Wire: the blog out of code**
-- [ ] US-002 platform_posts model and migration
+- [x] US-002 platform_posts model and migration
 - [ ] US-003 Extract the Wire HTML sanitiser to lib/
 - [ ] US-004 Platform posts write API
 - [ ] US-005 Platform image upload route
