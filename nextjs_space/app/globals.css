@@ -1365,6 +1365,73 @@ html {
   .bs-toast-rail-success { @apply border-l-4 border-l-bs-green; }
   .bs-toast-rail-warn    { @apply border-l-4 border-l-bs-warn; }
   .bs-toast-rail-danger  { @apply border-l-4 border-l-bs-danger; }
+
+  /* Long-form article body — blog posts, rendered from sanitised HTML via
+     dangerouslySetInnerHTML.
+
+     These pages previously carried @tailwindcss/typography `prose-*` classes,
+     but that plugin is not installed, so every one of them was inert: preflight
+     had stripped heading sizes and paragraph margins and nothing put them back.
+     Styling the tags directly keeps the design system in charge and adds no
+     dependency. Scoped to .bs-article so it can never leak into app chrome. */
+  .bs-article {
+    @apply text-bs-fg-body;
+    /* ~68 characters is the readable measure; the container above is wider for
+       the header and cover image, so the text column constrains itself. */
+    max-width: 68ch;
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+  .bs-article > * + * { margin-top: 1.25em; }
+
+  .bs-article h2 {
+    @apply text-bs-fg;
+    font-family: var(--bs-font-display, 'Cormorant Garamond', serif);
+    font-size: 1.875rem;
+    line-height: 1.2;
+    font-weight: 500;
+    margin-top: 2.25em;
+    margin-bottom: 0.6em;
+    letter-spacing: -0.01em;
+  }
+  .bs-article h3 {
+    @apply text-bs-fg;
+    font-family: var(--bs-font-display, 'Cormorant Garamond', serif);
+    font-size: 1.5rem;
+    line-height: 1.25;
+    font-weight: 500;
+    margin-top: 1.9em;
+    margin-bottom: 0.5em;
+  }
+  /* A heading opening the article should not push it down the page. */
+  .bs-article > h2:first-child,
+  .bs-article > h3:first-child { margin-top: 0; }
+
+  .bs-article p { margin-bottom: 1.25em; }
+  .bs-article strong { @apply text-bs-fg; font-weight: 600; }
+  .bs-article em { font-style: italic; }
+  .bs-article a { @apply text-bs-green-soft underline underline-offset-2; }
+  .bs-article a:hover { @apply text-bs-green; }
+
+  .bs-article ul,
+  .bs-article ol { margin: 1.4em 0; padding-left: 1.4em; }
+  .bs-article ul { list-style: disc; }
+  .bs-article ol { list-style: decimal; }
+  .bs-article li { margin-bottom: 0.6em; padding-left: 0.25em; }
+  .bs-article li::marker { @apply text-bs-green; }
+
+  .bs-article blockquote {
+    @apply border-l-2 border-bs-green text-bs-fg-muted;
+    padding-left: 1.15em;
+    margin: 1.75em 0;
+    font-style: italic;
+  }
+  .bs-article code {
+    @apply bg-bs-card-2 border border-bs-border text-bs-fg rounded;
+    padding: 0.15em 0.4em;
+    font-size: 0.9em;
+  }
+  .bs-article hr { @apply border-bs-border; margin: 2.5em 0; }
 }
 
 /* ===========================================================================
