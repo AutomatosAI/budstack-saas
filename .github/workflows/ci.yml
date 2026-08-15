@@ -54,6 +54,13 @@ jobs:
       - name: Lockfile guard (PRD-209)
         run: pnpm check:lockfile
 
+      # Article-typography guard: @tailwindcss/typography is not installed, so
+      # every `prose-*` class is inert and styles nothing. Eight surfaces
+      # shipped that way, including live tenant blogs. Clean on this tree after
+      # the typography sweep, so it gates.
+      - name: Article typography guard (no inert prose-*)
+        run: pnpm check:article-typography
+
       # PRD-216 AC-7: PRD-200 string-aware grep gates (CSS sanitize +
       # error-message-leak). These already pass on this tree, so they gate
       # the build (blocking).

@@ -201,7 +201,7 @@ export default function AupPage() {
 
 
                     <div className="card-floating p-10 lg:p-12">
-                        <div className="prose prose-invert prose-lg max-w-none prose-headings:font-bs-serif prose-headings:text-bs-fg-0 prose-p:text-bs-fg-2 prose-li:text-bs-fg-2 prose-strong:text-bs-fg-1 prose-a:text-bs-green-300">
+                        <div className="bs-article max-w-none">
                             {SECTIONS.map((s) => (
                                 <section key={s.id} id={s.id} className="mb-10 last:mb-0">
                                     <h2 className="font-bs-serif text-2xl font-medium text-bs-fg-0 mb-4">

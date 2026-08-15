@@ -1403,9 +1403,13 @@ html {
     margin-top: 1.9em;
     margin-bottom: 0.5em;
   }
-  /* A heading opening the article should not push it down the page. */
+  /* A heading opening the article should not push it down the page — nor one
+     opening a block within it. The legal pages wrap each clause in a <section>
+     that already carries its own margin, so a heading's top margin there is
+     spacing on top of spacing. */
   .bs-article > h2:first-child,
-  .bs-article > h3:first-child { margin-top: 0; }
+  .bs-article > h3:first-child,
+  .bs-article :is(section, article, div) > :is(h2, h3):first-child { margin-top: 0; }
 
   .bs-article p { margin-bottom: 1.25em; }
   .bs-article strong { @apply text-bs-fg; font-weight: 600; }
@@ -1431,7 +1435,70 @@ html {
     padding: 0.15em 0.4em;
     font-size: 0.9em;
   }
+  /* Long code lines scroll inside the block, never the page. */
+  .bs-article pre {
+    @apply bg-bs-input border border-bs-border text-bs-fg rounded-lg;
+    padding: 1em 1.15em;
+    margin: 1.75em 0;
+    overflow-x: auto;
+  }
+  .bs-article pre code {
+    @apply bg-transparent border-0 p-0;
+    font-size: 0.875em;
+  }
   .bs-article hr { @apply border-bs-border; margin: 2.5em 0; }
+
+  /* Added for the Learning Center, whose markdown renderer emits h1, img and
+     pre (app/learn/[slug]/markdown-content.tsx). The blog needed none of these
+     because its posts are hand-authored HTML that happens to start at h2. */
+  .bs-article h1 {
+    @apply text-bs-fg;
+    font-family: var(--bs-font-display, 'Cormorant Garamond', serif);
+    font-size: 2.25rem;
+    line-height: 1.15;
+    font-weight: 500;
+    margin-top: 2.25em;
+    margin-bottom: 0.6em;
+    letter-spacing: -0.015em;
+  }
+  .bs-article > h1:first-child { margin-top: 0; }
+  .bs-article h4 {
+    @apply text-bs-fg;
+    font-size: 1.25rem;
+    line-height: 1.3;
+    font-weight: 600;
+    margin-top: 1.75em;
+    margin-bottom: 0.5em;
+  }
+
+  /* An author can paste an image of any width; it must not widen the page. */
+  .bs-article img {
+    @apply rounded-xl;
+    max-width: 100%;
+    height: auto;
+  }
+  .bs-article figure { margin: 1.75em 0; }
+  .bs-article figcaption {
+    @apply text-bs-fg-muted;
+    font-size: 0.875em;
+    margin-top: 0.6em;
+  }
+
+  /* Same reasoning as pre: a wide table scrolls itself, not the document. */
+  .bs-article table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin: 1.75em 0;
+  }
+  .bs-article th,
+  .bs-article td {
+    @apply border border-bs-border;
+    padding: 0.5em 0.75em;
+    text-align: left;
+  }
+  .bs-article th { @apply text-bs-fg; font-weight: 600; }
 }
 
 /* ===========================================================================

@@ -134,7 +134,17 @@ const Tiptap = ({ content, onChange, editable = true }: TiptapProps) => {
         },
         editorProps: {
             attributes: {
-                class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[300px] p-4 border border-t-0 rounded-b-md border-input bg-background',
+                // `bs-article`, not the old `prose-*` chain: @tailwindcss/typography
+                // is not installed, so those classes styled nothing and authors
+                // wrote long-form posts with no visible formatting at all.
+                //
+                // This editor renders on admin surfaces (.budstacks-theme sets a
+                // near-black --background), which is what bs-article's light body
+                // colour is built for. It shows STRUCTURE — heading rhythm, list
+                // markers, quotes, code. A tenant's published post takes its brand
+                // colours from `.tenant-article` instead (tenant-theme-provider),
+                // so the hues here are the platform's, not a preview of theirs.
+                class: 'bs-article mx-auto focus:outline-none min-h-[300px] p-4 border border-t-0 rounded-b-md border-input bg-background',
             },
         },
     });

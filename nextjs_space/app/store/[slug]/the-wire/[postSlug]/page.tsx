@@ -202,12 +202,16 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           Back to The Wire
         </Link>
 
-        <article className="prose prose-lg mx-auto dark:prose-invert">
+        {/* The header, meta row and cover image sit OUTSIDE .tenant-article:
+            the article rules govern authored body copy, and a cover image
+            constrained to the text measure would be cropped furniture. This
+            replaces the two `not-prose` escapes the inert prose classes needed. */}
+        <article>
           <h1 className="mb-4 text-4xl font-extrabold tracking-tight md:text-5xl">
             {post.title}
           </h1>
 
-          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-8 not-prose">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-8">
             <div className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
               {format(new Date(post.createdAt), "MMMM d, yyyy")}
@@ -219,7 +223,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           </div>
 
           {post.coverImage && (
-            <div className="aspect-video relative rounded-lg overflow-hidden mb-8 not-prose">
+            <div className="aspect-video relative rounded-lg overflow-hidden mb-8">
               <img
                 src={post.coverImage}
                 // US-009 — the authored alt, falling back to the title (the
@@ -231,8 +235,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </div>
           )}
 
-          {/* Render HTML Content */}
-          <div dangerouslySetInnerHTML={{ __html: cleanContent }} />
+          {/* Render HTML Content — .tenant-article supplies the typography the
+              inert prose-* classes never did (tenant-theme-provider.tsx). */}
+          <div
+            className="tenant-article"
+            dangerouslySetInnerHTML={{ __html: cleanContent }}
+          />
         </article>
       </div>
     </div>

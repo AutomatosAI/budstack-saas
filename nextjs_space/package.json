@@ -23,6 +23,7 @@
     "check:grep-gates:report": "node scripts/ci/check-no-tenant-context-escapes.mjs || true; node scripts/ci/check-no-pii-in-logs.mjs || true",
     "check:docs-lint": "node scripts/ci/check-docs-lint.mjs",
     "check:lockfile": "node scripts/ci/check-single-lockfile.mjs",
+    "check:article-typography": "node scripts/ci/check-no-inert-prose-classes.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
