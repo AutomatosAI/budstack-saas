@@ -1,0 +1,103 @@
+{
+  "project": "BudStack SaaS",
+  "branchName": "ralph/seo-llm-visibility",
+  "description": "LLM Visibility (GEO) — SEO Pro addendum: AI crawler policy, product Q&A blocks, llms.txt, LLM-readiness audit, AI citation monitor, entity grounding. All gated on existing FEATURES.SEO_PRO. Source: tasks/prd-seo-llm-visibility.md.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "AI crawler policy manager",
+      "description": "As a Pro tenant, I control which AI bots read my store — search crawlers for visibility, training crawlers by choice.",
+      "acceptanceCriteria": [
+        "lib/seo/ai-crawlers.ts: bot registry as data — search class (OAI-SearchBot, Claude-SearchBot, PerplexityBot, xAI search UA) and training class (GPTBot, ClaudeBot, anthropic-ai, Google-Extended, CCBot, meta-externalagent) with owner labels; ONE source for robots rendering and the audit",
+        "Tenant setting aiCrawlerPolicy ('open'|'search-only'|'blocked', default 'open') in the validated tenant-settings shape",
+        "app/store/[slug]/robots.txt renders per-bot directives from the policy for Pro tenants; Basic tenants render today's output byte-identical (asserted)",
+        "Pro-gated UI card in the SEO Manager: policy radio + per-class copy stating plainly what each choice costs (search-blocked = absent from AI answers; training-blocked = absent from future model knowledge)",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run — robots output matrix per policy x plan)",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Robots route from the parent run: app/store/[slug]/robots.txt/route.ts (custom-domain aware, cached). Tenant settings shape: lib/validation/tenant-settings.ts (the parent run added businessAddress + socialLinks pattern precedent). Plan resolution: the route must read the tenant row's plan and gate via FEATURES.SEO_PRO membership (lib/entitlements — do NOT touch the Automatos keys in features.ts; #243 restored them after a merge collision). 2026 fact the copy must reflect: search and training bots are SEPARATE per provider — blocking GPTBot does not remove you from ChatGPT Search (OAI-SearchBot does)."
+    },
+    {
+      "id": "US-002",
+      "title": "Product Q&A blocks",
+      "description": "As a Pro tenant, my products answer the questions buyers ask — visibly, and in the schema answer engines cite.",
+      "acceptanceCriteria": [
+        "Q&A stored in products.seo.qa ({question, answer}[] — Zod on all SEO PUT routes; max 10 pairs; question <=200 chars, answer <=1000; no migration)",
+        "SEO Manager product modal gains a Q&A editor (add/remove/reorder); 'Draft Q&A with Automatos AI' reuses lib/seo/ai-assist.ts with a NEW output contract (JSON array of pairs, validated, refused on violation, lands as editable draft — never auto-saved)",
+        "Product detail renders the Q&A visibly (bs-* accordion) AND as FAQPage JSON-LD through the existing lib/seo/json-ld.ts builders — both Pro-gated; Basic renders neither (asserted)",
+        "Typecheck passes",
+        "Tests pass (targeted vitest run)",
+        "Verify in browser using dev-browser skill (fallback per PROMPT)"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "entity-seo parsing: lib/seo/entity-seo.ts (fail-closed reader from parent US-003) — extend, don't fork. FAQPage builder exists (parent US-017, conditions). ai-assist provider interface: lib/seo/ai-assist.ts (parent US-024 — Automatos backend token exchange + SSE chat; tenant columns are the canonical credential store). Product detail page + its cached fetch: parent US-004's shape. Q&A prompts feed ONLY the tenant's own product content (no cross-tenant data — parent rule)."
+    },
+    {
+      "id": "US-003",
+      "title": "llms.txt generator",
+      "description": "As a Pro tenant, my store publishes a clean machine-readable inventory — cheap insurance, honestly framed.",
+      "acceptanceCriteria": [
+        "app/store/[slug]/llms.txt route: generated markdown — business identity + address, condition guides (title/summary/URL), top products, recent published Wire posts; primary-host URLs via storeCanonical; respects sitemapExclude/noindex from parent US-022; Cache-Control like the sitemap; works on custom domains (middleware rewrite matcher must pass .txt — it already does for robots.txt, verify llms.txt path)",
+        "Basic tenants: 404 (Pro gate); SEO Manager card copy states plainly: standards-track, ~10% adoption, no proven citation lift, zero cost",
+        "Typecheck passes",
+        "Tests pass (content shape, exclusion honoring, plan gating, host awareness)"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Sitemap route is the template: app/store/[slug]/sitemap.xml/route.ts (parent US-006 — filters, lastmod, caching). Middleware matcher: middleware.ts:247 region. The honesty copy is an AC, not decoration — the SE Ranking 300k-domain study found no measurable lift; the UI must not oversell."
+    },
+    {
+      "id": "US-004",
+      "title": "LLM-readiness audit section",
+      "description": "As a Pro tenant, the audit tells me what an LLM can and cannot see of my store.",
+      "acceptanceCriteria": [
+        "New category in lib/seo/audit.ts: (a) search-crawler access per aiCrawlerPolicy — blocked search bots is the top-weight finding; (b) Q&A coverage across products/conditions; (c) llms.txt presence/staleness; (d) crawler-invisible blog detection: a tenant whose blog surface is the Automatos Shadow-DOM widget (wireMode column) gets a finding explaining the content is invisible to every crawler and LLM, deep-linking the Wire mode selector; (e) heading-structure quality on condition/post content",
+        "Findings carry deep links per the parent pattern; category weights documented in-code",
+        "Typecheck passes",
+        "Tests pass (each check table-driven over fixture rows)"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Audit engine: lib/seo/audit.ts (parent US-023 — pure checks over fetched rows, 15min cache, deep-link shape). wireMode column + the Shadow-DOM finding come from the Automatos session (their memory: 'blog widget Shadow-DOM = non-crawlable'); the mode selector UI shipped in their #240. Bot registry from US-001 is the source for check (a)."
+    },
+    {
+      "id": "US-005",
+      "title": "AI citation monitor v1",
+      "description": "As a Pro tenant, I can see whether AI engines cite my store when my market asks relevant questions.",
+      "acceptanceCriteria": [
+        "Model llm_citation_checks (tenantId, engine, prompt, cited Boolean, citedUrl?, mentionText?, checkedAt; @@index([tenantId, checkedAt]); tenant-scoped registration; hand-authored migration, no migrate dev)",
+        "Weekly repeatable job on its OWN queue ('llm-citation') following the reorder-reminders pattern exactly: idempotent scheduler upsert, per-tenant fault isolation (one store's failure never starves the rest), per-run cap (default 6 prompts x 2 engines per tenant), attempts: 1",
+        "THE TENANT'S OWN CONFIGURED AI, NOTHING NEW (Gerard's direction 2026-08-14): the monitor calls through the SAME tenant Automatos service lib/seo/ai-assist.ts already uses (tenants.automatosApiKey/automatosAgentId — the tenant's chosen LLM provider is configured on their Automatos side, stored in DB, set in settings). NO platform keys, NO gateway adapter, NO new provider config of any kind — reuse the existing service and its unavailable state",
+        "Multi-model checks WHERE THE TENANT'S WORKSPACE PERMITS: the widgets chat wire accepts model_id (parent US-024 spike) — vary it across the workspace's enabled models for per-model rows; if variation is not permitted/available, fall back to the agent's default model as a single engine row. Labels come from the model ids returned, never hardcoded vendor names",
+        "Tenants WITHOUT an Automatos connection: the monitor tab shows the same Connect-Automatos upsell state as AI drafting — 'not configured' is a cross-sell surface, never an error",
+        "Honest framing in the dashboard copy: results measure what the tenant's configured model(s) cite with retrieval — the answering model id is shown on every row; no claim about the consumer apps",
+        "Prompts generated from tenant market data (country, condition topics, product categories) with medical-information framing — the rationale (engine content policies around cannabis commerce) documented in-code",
+        "Dashboard tab in the SEO Manager: per-engine cited/not-cited trend + latest mention text; empty state for unconfigured engines; Pro-gated",
+        "Worker lessons applied and journaled: own queue (email-queue expiry guard incompatibility), bypassTenantScope with tenantId in every query, Docker runner COPY check stated explicitly, touched worker files typechecked via throwaway tsconfig (scripts/ excluded from repo tsc)",
+        "Typecheck passes",
+        "Tests pass (adapter contract with mocked engines, host-match extraction incl. www/subpath forms, scheduler idempotency, key-gating, cap enforcement)"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "The reorder-reminders pattern is the template: email run US-028 (see ralph/archive/2026-08-12-email-authoring-campaigns/progress.txt) — upsertJobScheduler fixed id, own queue, conditional-write idempotency, 5k cap, per-tenant try/catch. NEVER log or echo API keys; secrets are env names only. API spend is real: cap hard, log cost. SUPERSEDED DIRECTIONS (do not implement): platform env keys and an OpenRouter gateway adapter were both considered and REJECTED — the tenant's chosen provider lives in their Automatos config (DB-backed, settings-page-set) and the monitor must use it via the existing lib/seo/ai-assist.ts service. Extend that service minimally if the monitor needs model_id variation or citation/URL extraction from responses — extension of the existing service is reuse; a parallel client is not. Rate/cost: cap prompts per tenant per run; the spend rides the tenant's own Automatos account (say so in the UI copy)."
+    },
+    {
+      "id": "US-006",
+      "title": "Entity grounding",
+      "description": "As a Pro tenant, engines connect my brand entity across the web.",
+      "acceptanceCriteria": [
+        "socialLinks in the validated tenant-settings shape (https URLs only, max 8, capped length) + settings UI field",
+        "Organization JSON-LD gains sameAs from socialLinks (Pro tenants; omitted when empty — never an empty array)",
+        "Typecheck passes",
+        "Tests pass (validation matrix, sameAs rendering/omission)"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Organization builder: lib/seo/json-ld.ts (parent US-014 — escape discipline is law; sameAs values pass through the same serializer). Settings shape: lib/validation/tenant-settings.ts."
+    }
+  ]
+}
