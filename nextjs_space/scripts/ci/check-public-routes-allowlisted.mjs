@@ -84,25 +84,88 @@ const patterns = readPublicPatterns(readFileSync(middlewarePath, "utf8"));
 const matchers = patterns.map(patternToRegExp);
 const isPublic = (path) => matchers.some((re) => re.test(path));
 
-/** Top-level segments under app/ that render a page. */
-const segments = readdirSync(join(appRoot, "app"), { withFileTypes: true })
-  .filter((e) => e.isDirectory())
-  .map((e) => e.name)
-  // Route groups `(name)`, private folders `_name`, and dynamic segments are
-  // not addressable top-level paths.
-  .filter((n) => !n.startsWith("(") && !n.startsWith("_") && !n.startsWith("["))
-  .filter((n) => existsSync(join(appRoot, "app", n, "page.tsx")))
-  .sort();
+/**
+ * Unauthenticated API handlers that must STAY unauthenticated. A route.ts gives
+ * no signal about whether it expects a session, so these are declared rather
+ * than discovered — the point is that dropping one from the allowlist fails CI.
+ * `/api/platform/leads` is here because that is precisely what happened: it
+ * shipped in #254 and answered every submission with a redirect to Clerk.
+ */
+const PUBLIC_API_HANDLERS = [
+  {
+    path: "/api/platform/leads",
+    file: "app/api/platform/leads/route.ts",
+    why: "homepage CTA + Operator 101 download — a prospect has no account and no tenant",
+  },
+];
+
+/**
+ * Every page in the App Router tree, as an addressable path.
+ *
+ * Recursive, not top-level only: `app/documents/[slug]/page.tsx` is 18 guide
+ * pages, and a top-level scan cannot see that dropping `/documents/(.*)` puts
+ * all of them back behind the login wall. Walking the whole tree is also what
+ * surfaced /auth/forgot-password, /auth/callback, /legal/changelog and
+ * /legal/subprocessors as already broken.
+ *
+ * Dynamic segments become a probe value so the matcher test means something.
+ * An OPTIONAL catch-all `[[...rest]]` also matches its parent, so it yields the
+ * parent path — that is the only reason /auth/login resolves at all, since
+ * there is no app/auth/login/page.tsx, just [[...rest]].
+ */
+function collectRoutes(dir, segments = []) {
+  const routes = [];
+
+  if (existsSync(join(dir, "page.tsx"))) {
+    routes.push(`/${segments.join("/")}`.replace(/\/+$/, "") || "/");
+  }
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const name = entry.name;
+    if (name.startsWith("_") || name === "node_modules") continue;
+
+    let next;
+    if (name.startsWith("(") && name.endsWith(")")) {
+      next = segments; // route group — organisational, not addressable
+    } else if (name.startsWith("[[") && name.endsWith("]]")) {
+      next = segments; // optional catch-all — also matches the parent
+    } else if (name.startsWith("[")) {
+      next = [...segments, "__probe__"];
+    } else {
+      next = [...segments, name];
+    }
+
+    routes.push(...collectRoutes(join(dir, name), next));
+  }
+
+  return routes;
+}
 
 const violations = [];
 
-for (const segment of segments) {
-  if (INTENTIONALLY_PRIVATE.has(segment)) continue;
-  const path = `/${segment}`;
-  if (!isPublic(path)) {
+const routes = [...new Set(collectRoutes(join(appRoot, "app")))].sort();
+
+for (const route of routes) {
+  if (route === "/") continue; // the root page, allowlisted as "/"
+  const topSegment = route.split("/")[1];
+  if (INTENTIONALLY_PRIVATE.has(topSegment)) continue;
+  if (!isPublic(route)) {
     violations.push({
-      path,
-      hint: `app/${segment}/page.tsx renders a public page but /${segment} is not in isPublicRoute`,
+      path: route,
+      hint: `a page.tsx renders ${route} but no isPublicRoute pattern matches it`,
+    });
+  }
+}
+
+for (const handler of PUBLIC_API_HANDLERS) {
+  // A removed route is not this guard's business — only a still-present
+  // unauthenticated handler that has lost its allowlist entry.
+  if (!existsSync(join(appRoot, handler.file))) continue;
+  if (!isPublic(handler.path)) {
+    violations.push({
+      path: handler.path,
+      hint: `${handler.file} is unauthenticated by design (${handler.why}) but is not in isPublicRoute`,
     });
   }
 }
@@ -142,5 +205,5 @@ if (violations.length > 0) {
 }
 
 console.log(
-  `✓ Public-route guard: ${segments.length} top-level pages and every sitemap path are reachable logged-out.`,
+  `✓ Public-route guard: ${routes.length} pages, ${PUBLIC_API_HANDLERS.length} public API handler(s) and every sitemap path are allowlisted.`,
 );

@@ -18,6 +18,13 @@ const isPublicRoute = createRouteMatcher([
   "/sitemap.xml",
   "/auth/login(.*)",
   "/auth/signup(.*)",
+  // Account recovery, and the only routes here whose absence LOCKED USERS OUT
+  // rather than merely hiding a page: a visitor who has forgotten their
+  // password was redirected to the login they cannot complete. Every one of
+  // these is reached with no session by definition.
+  "/auth/forgot-password",
+  "/auth/reset-password(.*)",
+  "/auth/callback",
   "/store/(.*)", // Storefronts are public
   "/api/webhooks(.*)",
   "/api/uploadthing(.*)",
@@ -60,6 +67,11 @@ const isPublicRoute = createRouteMatcher([
   "/aup", // Acceptable use policy
   "/regulatory", // Regulatory information
   "/faq", // Public FAQ
+  // Public compliance pages. /legal/subprocessors in particular is a GDPR
+  // transparency obligation and is linked from the DPA — a login wall in front
+  // of it is a compliance problem, not just a broken link.
+  "/legal/changelog",
+  "/legal/subprocessors",
   // The BudStacks Guide (#246/#249/#251) — 18 illustrated guide pages carrying
   // 16 embedded videos, built as top-of-funnel marketing and then reachable
   // only by signed-in users. Both the index and every guide beneath it.

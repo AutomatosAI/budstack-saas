@@ -14,7 +14,7 @@ BudStacks sells storefronts, content tooling and SEO to cannabis operators. Its 
 
 Four concrete gaps, all verified in the live tree — and for the first, against production — on 2026-08-15:
 
-0. **Much of it is behind a login wall.** `/documents` (all 18 guide pages), `/faq`, `/dpa`, `/aup`, `/regulatory` and `POST /api/platform/leads` are missing from the `isPublicRoute` allowlist, so anonymous visitors and crawlers get a 307 to Clerk. The guide hub has never been indexable, and platform lead capture — the whole of Phase 1 — has recorded nothing since it shipped. Fixed first, in Workstream 0.
+0. **Much of it is behind a login wall — including password reset.** Twelve routes are missing from the `isPublicRoute` allowlist, so anonymous visitors and crawlers get a 307 to Clerk: `/auth/forgot-password` and the rest of account recovery, `/documents` (all 18 guide pages), `/faq`, the legal and compliance pages, and `POST /api/platform/leads`. A locked-out user cannot reset their password, the guide hub has never been indexable, and platform lead capture — the whole of Phase 1 — has recorded nothing since it shipped. Fixed first, in Workstream 0.
 
 
 1. **Article text is unstyled.** `@tailwindcss/typography` is not installed — `tailwind.config.ts:255` loads only `tailwindcss-animate`. Every `prose-*` class in the repo is inert: preflight strips heading sizes and paragraph margins and nothing puts them back. PR #255 fixed this for the platform blog with a hand-rolled `.bs-article`. **Eight surfaces still render long-form text with no typography at all**, including `/store/[slug]/the-wire/[postSlug]` — live on every tenant storefront — and the TipTap editor, so authors cannot see formatting while writing it.
@@ -41,34 +41,43 @@ This PRD closes all three so marketing runs without an engineer, and does it mos
 Found during PRD review and **confirmed live against budstacks.io on 2026-08-15**, not inferred from source:
 
 ```
-GET  /terms                    -> 200      GET  /dpa                     -> 307 → /auth/login
-GET  /privacy                  -> 200      GET  /aup                     -> 307 → /auth/login
-GET  /cookies                  -> 200      GET  /regulatory              -> 307 → /auth/login
-GET  /blog                     -> 200      GET  /faq                     -> 307 → /auth/login
-GET  /learn                    -> 200      GET  /documents               -> 307 → /auth/login
-GET  /marketplace              -> 200      GET  /documents/getting-started -> 307 → /auth/login
-GET  /contact                  -> 200      POST /api/platform/leads      -> 307 → /auth/login
+WORKING                          BROKEN — 307 → /auth/login
+GET  /terms          -> 200      GET  /documents                  (index + all 18 guides)
+GET  /privacy        -> 200      GET  /documents/getting-started
+GET  /cookies        -> 200      GET  /faq
+GET  /blog           -> 200      GET  /dpa
+GET  /blog/<post>    -> 200      GET  /aup
+GET  /learn          -> 200      GET  /regulatory
+GET  /marketplace    -> 200      GET  /legal/changelog
+GET  /contact        -> 200      GET  /legal/subprocessors
+GET  /auth/login     -> 200      GET  /auth/forgot-password
+                                 GET  /auth/callback
+                                 GET  /auth/reset-password/<token>
+                                 POST /api/platform/leads
 ```
 
-The routes exist and work. They are simply missing from `isPublicRoute` in `middleware.ts:9-56`, which lists `/terms`, `/privacy` and `/cookies` but not these seven.
+The routes exist and work. They are simply missing from `isPublicRoute` in `middleware.ts:9-56`.
 
-Three consequences, in order of cost:
+Four consequences, in order of cost:
 
-- **The entire `/documents` guide hub is invisible.** 18 illustrated guide pages carrying 16 videos (#246, #249, #251), built as top-of-funnel marketing, have never been reachable by a signed-out visitor or indexed by any crawler. The index and every guide beneath it 307. This is the largest single piece of marketing content the platform has.
+- **Account recovery is broken.** `/auth/forgot-password` redirects to the login page — a user who has forgotten their password is sent to the one screen they cannot complete. `/auth/reset-password/<token>` and `/auth/callback` are behind the same wall. This is the only item here that locks users out rather than merely hiding content, and it is the reason US-000 ships immediately.
+- **The entire `/documents` guide hub is invisible.** 18 illustrated guide pages carrying 16 videos (#246, #249, #251), built as top-of-funnel marketing, have never been reachable by a signed-out visitor or indexed by any crawler.
 - **Platform lead capture has been dead since #254 deployed.** Every homepage CTA and Operator-101 submission has hit Clerk's auth wall and recorded nothing. The whole of Phase 1 does not work in production.
-- **Four of the pages this PRD styles are invisible** to anonymous visitors and crawlers. Styling `/regulatory` (US-004) while nobody can load it is wasted work.
+- **Public compliance pages are gated.** `/legal/subprocessors` is a GDPR transparency obligation linked from the DPA; a login wall in front of it is a compliance problem, not just a broken link. `/dpa`, `/aup` and `/regulatory` — four of the pages this PRD styles — are equally unreachable, which makes US-004 unobservable until this lands.
 
-This is the **fourth occurrence of the same class** — `/robots.txt` and `/sitemap.xml` needed it (SEO US-006), then the Automatos ingest route (fix `f59ac74`), then the legal pages and the lead endpoint, then `/documents` and `/faq` found while fixing those. Four occurrences is what makes this worth a guard rather than a one-line patch.
+This is the **fourth occurrence of the same class** — `/robots.txt` and `/sitemap.xml` (SEO US-006), then the Automatos ingest route (fix `f59ac74`), then the legal pages and the lead endpoint, then everything else above. Each round was found by looking only at the routes already suspected. **Enumerating the whole App Router tree against the allowlist is what found the rest, and that enumeration is now the CI guard** — which is the actual lesson, and why this is not a one-line patch.
 
 #### US-000: Public routes reach the public
 **Description:** As an anonymous visitor or crawler, I want the public marketing pages and the lead endpoint to load, so the site's own funnel is not behind a login wall.
 
 **Acceptance Criteria:**
-- [ ] `/dpa`, `/aup`, `/regulatory`, `/faq`, `/documents`, `/documents/(.*)` and `/api/platform/leads` added to `isPublicRoute` (`middleware.ts:9-56`)
-- [ ] Each verified anonymously with curl after deploy: the six page routes return 200, and `POST /api/platform/leads` with an invalid body returns a 400 validation error rather than a 307
+- [ ] Twelve entries added to `isPublicRoute` (`middleware.ts:9-56`): `/auth/forgot-password`, `/auth/reset-password(.*)`, `/auth/callback`, `/documents`, `/documents/(.*)`, `/faq`, `/dpa`, `/aup`, `/regulatory`, `/legal/changelog`, `/legal/subprocessors`, `/api/platform/leads`
+- [ ] Each verified anonymously with curl after deploy: every page route returns 200, and `POST /api/platform/leads` with an invalid body returns a 400 validation error rather than a 307
 - [ ] At least one `/documents/<guide>` sub-page verified, not just the index
+- [ ] **Password reset walked end-to-end signed-out** — request the email, follow the link, set a new password. This is the one path where the bug locked people out
 - [ ] One real lead submitted end-to-end through the homepage CTA and confirmed present in `platform_leads`
-- [ ] **A CI guard compares the route tree against the allowlist** — every top-level `app/*/page.tsx` must be allowlisted or explicitly named as private with a reason, and every path the platform sitemap advertises must be allowlisted. A source check, not an HTTP probe: CI never starts the app, so there is no origin to curl. Pairs with the US-005 guard as the other half of "the sweep cannot silently regress"
+- [ ] **A CI guard compares the route tree against the allowlist.** It walks the App Router **recursively** — nested and dynamic pages included, since `/documents/[slug]` is 18 pages a top-level scan cannot see — and checks a declared manifest of unauthenticated API handlers, since a `route.ts` gives no signal about whether it expects a session. Every discovered page must be allowlisted or sit under a top segment explicitly named private with a reason. A source check, not an HTTP probe: CI never starts the app, so there is no origin to curl
+- [ ] Guard verified to pass on the fixed tree: 104 routes discovered, zero unmatched
 - [ ] Shipped as its own PR, merged and deployed before any other story in this PRD
 - [ ] Separately raised (not fixed here): the Clerk redirect leaks the container's internal origin — `redirect_url=https%3A%2F%2F0.0.0.0%3A8080%2Fdpa` — so even an authenticating user lands on an unreachable URL. Config, not middleware, and out of scope for this story
 
@@ -201,7 +210,8 @@ Reuse targets, all proven in production: `posts` model (`prisma/schema.prisma:68
 - [ ] Adapted from `app/tenant-admin/the-wire/post-form.tsx` — TipTap body, title, slug, excerpt, cover image + alt, published toggle
 - [ ] **A new `POST /api/platform/upload` route, guarded by `withSuperAdmin`, reusing the existing S3 client.** The tenant form posts to `/api/tenant-admin/upload` (`post-form.tsx:89`), which is `withTenantAuth` and derives `tenantId` from the authenticated user — a super-admin has no tenant, so that route either rejects the upload or stamps it against the wrong tenant. Do not reuse it
 - [ ] The tenant form's SEO-Pro entitlement gating (`post-form.tsx:52-78`) and `AiAssistButton` (`:384`) are **removed** — entitlements are a tenant concept and the platform is not on a plan
-- [ ] Slug auto-derives from the title on create and is editable; editing an existing slug warns that the old URL will break (auto-301 is US-020)
+- [ ] Slug auto-derives from the title on create, and is freely editable **while the post is a draft**
+- [ ] **Editing the slug of a PUBLISHED post is blocked until US-020 (auto-301) is deployed**, and the UI says why. A warning is not enough: between this story and US-020 a slug change silently 404s a live URL and discards its inbound links. Either US-020 moves ahead of this story or the field is disabled for published posts — do not ship "warn and allow"
 - [ ] Verify in browser using dev-browser skill — create, save as draft, publish, edit, confirm it appears on `/blog`
 - [ ] Typecheck/lint passes
 
@@ -212,7 +222,7 @@ Reuse targets, all proven in production: `posts` model (`prisma/schema.prisma:68
 - [ ] `app/blog/page.tsx` queries `platform_posts` where `published: true`, newest `publishedAt` first
 - [ ] Card layout, spacing and styling unchanged from the current page
 - [ ] `export const dynamic = "force-dynamic"` — at build time `DATABASE_URL` is a dummy and the mock client in `lib/db.ts` returns `[]`, which would bake an empty blog into the static output (the same reason `app/sitemap.ts` sets it)
-- [ ] A database error renders an empty state, never a 500
+- [ ] **An empty blog and a broken database must not look the same.** A successful zero-row query renders the empty state; a query that throws logs the error and returns a controlled failure, never a 200 with no posts. Serving "no articles" during an outage hides it from users, crawlers and monitoring at once — and teaches Google the blog is empty
 - [ ] Explicit row type on the query result
 - [ ] Verify in browser using dev-browser skill
 - [ ] Typecheck/lint passes
@@ -222,7 +232,8 @@ Reuse targets, all proven in production: `posts` model (`prisma/schema.prisma:68
 
 **Acceptance Criteria:**
 - [ ] `app/blog/[slug]/page.tsx` loads one post by slug; unpublished or missing returns `notFound()`
-- [ ] `generateMetadata` exports per-post title, description (from `excerpt`), canonical URL from `platformBaseUrl()`, and OG image from `coverImage` — **this page has no metadata export at all today**, so every post currently serves the root layout's title
+- [ ] `generateMetadata` exports per-post title, description (from `excerpt`), canonical URL from `platformBaseUrl()`, and an OG image — **this page has no metadata export at all today**, so every post currently serves the root layout's title
+- [ ] **Every published post resolves an OG image**, falling back to the platform default from US-014 when `coverImage` is null. Neither the editor nor the migration makes a cover mandatory, so `coverImage` alone would leave posts with no share image at all
 - [ ] Body renders through `.bs-article` (from #255) with the content sanitised
 - [ ] Related-posts block preserved, now sourced from the database
 - [ ] `generateStaticParams` (`:344`) removed or reconciled with `force-dynamic`
@@ -260,7 +271,9 @@ Reuse targets: `components/admin/seo/` (22 files) and `app/tenant-admin/seo/seo-
 **Description:** As a super-admin, I want to edit budstacks.io's own metadata without touching code.
 
 **Acceptance Criteria:**
-- [ ] Model keyed by marketing route (`/`, `/marketplace`, `/learn`, `/blog`, `/contact`) holding title, description, OG image, `noindex`
+- [ ] Model keyed by marketing route, holding title, description, OG image, `noindex`
+- [ ] **Covers every public marketing route, not a subset** — `/`, `/marketplace`, `/learn`, `/blog`, `/contact`, plus `/documents` and its guides, `/faq`, `/regulatory`, `/terms`, `/privacy`, `/cookies`, `/dpa`, `/aup`, `/legal/*`. US-000 makes all of these publicly indexable; any route without an owner here inherits the root layout's generic title, which is the defect US-011 fixes for posts
+- [ ] One platform default OG image seeds the table so no route is left without one
 - [ ] SQL applied to prod before the reading code deploys
 - [ ] `/super-admin/seo` page reusing `SeoEditorModal` and `GooglePreview` from `components/admin/seo/`
 - [ ] Not added to `tenantScopedModels`
@@ -416,7 +429,13 @@ Closed during PRD review on 2026-08-15, each verified against the tree or prod r
 
 **2026-08-15 — independent review against the live tree and prod.** Four findings accepted and folded in above: US-000 added (middleware), US-007's auth reference corrected, US-009's upload gap closed, and six open questions resolved.
 
-Acting on finding 1 turned up **two more routes the review had not reached**: `/faq` and — more costly — `/documents` and every guide beneath it, so US-000 covers seven entries rather than four. Enumerating `app/*/page.tsx` against the allowlist, rather than checking only the routes already suspected, is what surfaced them; that enumeration is now the CI guard.
+Acting on finding 1 turned up **two more routes the review had not reached**: `/faq` and — more costly — `/documents` and every guide beneath it. Enumerating `app/*/page.tsx` against the allowlist, rather than checking only the routes already suspected, is what surfaced them.
+
+**2026-08-15 — automated review of PR #256.** One finding on the guard itself, accepted and acted on: it discovered only top-level `app/<segment>/page.tsx`, so it could not see nested or dynamic pages (`app/documents/[slug]/page.tsx`) and never checked the leads `route.ts` — meaning a future deletion of `/documents/(.*)` or `/api/platform/leads` from the allowlist would have passed CI. Rewriting it to walk the tree recursively **immediately exposed five more broken routes**, one of them worse than anything found so far: `/auth/forgot-password`, `/auth/reset-password/<token>` and `/auth/callback` (account recovery — users locked out, not merely content hidden), plus `/legal/changelog` and `/legal/subprocessors`. US-000 went from seven entries to twelve.
+
+The lesson is the one already stated above and now demonstrated twice in a row: **every round of this bug was found by widening the search, never by looking harder at the routes already suspected.** The guard's value is that it does the widening automatically.
+
+The remaining seven PR-review comments are all against future stories rather than shipped code (slug edits before redirects exist, empty-blog versus database outage, OG-image fallback, metadata coverage for the newly-public routes). They are folded into their stories.
 
 Two corrections to the review itself, verified with `git show origin/main`:
 
