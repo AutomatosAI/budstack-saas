@@ -1109,6 +1109,48 @@ enum SubscriberStatus {
   SUPPRESSED
 }
 
+/// Where a platform lead is in the follow-up pipeline. Platform-level only —
+/// tenant customers have their own lifecycle.
+enum PlatformLeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  UNSUBSCRIBED
+  REJECTED
+}
+
+/// Marketing leads captured on budstacks.io itself — prospective operators and
+/// investors. Deliberately NOT tenant-scoped: these people have no store yet,
+/// which is why newsletter_subscribers (tenantId required) cannot hold them.
+model platform_leads {
+  id     String             @id @default(uuid())
+  email  String             @unique
+  status PlatformLeadStatus @default(NEW)
+  /// Where the address came from, e.g. "homepage-cta", "pdf-101".
+  source String
+
+  name    String?
+  company String?
+  country String?
+  /// Free-text follow-up notes written in super-admin.
+  notes   String?
+
+  /// GDPR: when the visitor actively ticked the consent box, and the text they
+  /// agreed to. Both are the evidence if the basis is ever challenged.
+  consentAt   DateTime?
+  consentText String?
+
+  unsubscribedAt DateTime?
+  lastContactAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([source])
+}
+
 /// Why an address is suppressed. Lower-case on purpose: unlike the other enums
 /// here these values are also the wire values the API and the audit trail use,
 /// and US-004 pins them as `unsubscribed | bounced | manual`.
