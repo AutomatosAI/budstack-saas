@@ -9,7 +9,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-platform-content-and-seo.md`
 **Workstream B — platform Wire: the blog out of code**
 - [x] US-002 platform_posts model and migration
 - [x] US-003 Extract the Wire HTML sanitiser to lib/
-- [ ] US-004 Platform posts write API
+- [x] US-004 Platform posts write API
 - [ ] US-005 Platform image upload route
 - [ ] US-006 Super-admin Wire list page
 - [ ] US-007 Super-admin post editor

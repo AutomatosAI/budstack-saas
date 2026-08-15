@@ -263,3 +263,115 @@ FLAGGED, NOT FIXED (adjacent debt)
 NOT DONE / OUT OF SCOPE
 - No caller other than the Wire page uses the new module yet. US-004 (platform
   posts write API) is the second consumer and the reason this story exists.
+
+================================================================================
+[2026-08-15] US-004 PASS — Platform posts write API
+================================================================================
+
+WHAT LANDED
+- lib/platform/posts.ts (new) — the write CONTRACT, shared by both routes so the
+  collection and the item cannot disagree about what a post is: length caps, the
+  two Zod schemas, the explicit PlatformPostRow / PlatformPostSummary types, the
+  list `select`, the publishedAt rule and the slug-derivation rule. Deliberately
+  free of Prisma and next/server imports — US-007's editor is a client component
+  and will want the length caps, and post-slug.ts already documents why that
+  matters.
+- app/api/platform/posts/route.ts — GET (list) + POST (create).
+- app/api/platform/posts/[id]/route.ts — GET + PATCH + DELETE.
+- tests/unit/platform-posts-api.test.ts — 40 tests.
+
+NOT MODELLED ON platform/leads, WHICH IS THE POINT
+leads is the only other /api/platform route and is unauthenticated by design (a
+prospect has no account). Every handler here is wrapped in withSuperAdmin /
+withSuperAdminParams — the first /api/platform/* routes to use them — and every
+MUTATING handler also runs requireSameOrigin, following the newest super-admin
+precedent (tenants/[id]/plan, learning DELETE) rather than the older majority
+that has no CSRF guard. Pinned by test: a TENANT_ADMIN is refused on all five
+handlers and no prisma write is attempted; a cross-site POST with a valid
+super-admin session gets 403 CROSS_ORIGIN_BLOCKED before any parsing.
+
+AC DEVIATION — THE REFUSAL IS 401, NOT 403
+The AC says "returns 403 to a tenant admin" AND names withSuperAdmin. The
+wrapper answers 401 (lib/api-auth.ts:155), as it does for all 44 existing
+super-admin routes. Forking the shared wrapper for one route family, or bolting
+an unreachable second role check inside the handler, both cost more than the
+inconsistency. The security property the AC is after — a tenant admin cannot
+read or write platform posts — holds and is tested; only the status code
+differs. Documented in the route header so the next reader is not surprised.
+
+THE SLUG REGEX IS ENFORCED SERVER-SIDE (the tenant gap, closed)
+POST_SLUG_PATTERN and POST_SLUG_MAX_LENGTH are applied in the Zod schema, not
+left to the client form the way app/api/tenant-admin/posts/[id] does. Rejected
+with POST_SLUG_HINT: upper case, spaces, slashes, dots, empty. Still accepted:
+underscores, digits and a leading hyphen — POST_SLUG_PATTERN has to take those
+because the editor posts stored legacy slugs straight back.
+
+FOUND: A PUNCTUATION TITLE DERIVES THE SLUG "-", WHICH IS VALID
+slugifyPostTitle("!!! ??? ***") returns a bare "-": the ! ? * are stripped as
+non-word, the space-hyphens survive, and the run collapses to one. That PASSES
+POST_SLUG_PATTERN — it must, see above — so a title of punctuation alone would
+have published at /blog/-. resolveCreateSlug is therefore stricter than the
+validator, and only on the DERIVED path: a derived slug must carry at least one
+[a-z0-9], and one longer than POST_SLUG_MAX_LENGTH (reachable — the title cap is
+300) is refused rather than truncated. Either way the answer is "enter a slug
+explicitly", never a URL nobody chose. An AUTHORED slug is still taken verbatim.
+Three cases pinned.
+
+PUBLISHED SLUGS ARE LOCKED — this is the run's anti-pattern list, in code
+PATCH refuses a slug change on a published post with 409 and a message that says
+why. It is enforced in the API, not only in the editor US-007 will build, so an
+API caller cannot route around the form's warning. US-019 (auto-301) is what
+lifts this: search PUBLISHED_SLUG_LOCKED_MESSAGE in lib/platform/posts.ts. A
+live post re-sending its OWN slug is not a rename and is allowed (the editor
+posts the slug on every save); a draft renames freely.
+
+publishedAt SEMANTICS, ALL FIVE PINNED
+create published -> stamped now; create draft -> null; draft->published ->
+stamped; edit while live -> the ORIGINAL date, unchanged; unpublish -> the
+original date KEPT, not cleared. The last one is a judgement call the schema
+comment does not settle: clearing it would make a re-publish invent a new date,
+which contradicts "stamped once". An edit that says nothing about publishing
+writes neither column.
+
+DUPLICATE SLUG -> 409, TWICE OVER
+findUnique pre-check for the clean message (the slug is named in it), plus a
+P2002 catch for the race between that read and the insert, mapping to the same
+409. No Prisma text reaches the client. PATCH additionally maps P2025 to 404,
+and DELETE maps P2025 to 404 rather than reporting success on a row that was
+not there.
+
+VERIFIED
+- pnpm exec tsc --noEmit -> exit 0. Every query carries an explicit row type;
+  the PATCH data object is a locally-declared Partial rather than
+  Prisma.platform_postsUpdateInput, because EntitySeo is an INTERFACE and TS
+  will not treat it as index-signature compatible with InputJsonObject — the
+  generated type would have needed a cast, which is the check worth keeping.
+- pnpm vitest run tests/unit/platform-posts-api.test.ts -> 40/40 passed.
+- pnpm vitest run -> exit 0, 171 files / 3091 tests passed, 8 files + 30 tests
+  skipped. (Was 170/3051 at US-003; the delta is exactly the new file.)
+- pnpm check:public-routes -> 104 pages, 1 public API handler, all allowlisted.
+  These routes are authenticated, so nothing was added to isPublicRoute — that
+  is the correct outcome, not an omission.
+- pnpm check:article-typography, pnpm check:security -> exit 0.
+- next lint --max-warnings=0 on all four files -> clean.
+- visual: n/a (no UI in this story). The routes are Clerk-gated, so they were
+  not curled live; behaviour is covered by the route tests above.
+
+FLAGGED, NOT FIXED (adjacent debt / deliberate omissions)
+- NO AUDIT LOGGING. createAuditLog is not called: the ACs do not ask for it,
+  AUDIT_ACTIONS has no platform-content keys, and the closest precedent
+  (app/api/super-admin/learning, super-admin CRUD over a platform model) has
+  none either. Deleting a published post is nonetheless an unaudited
+  destructive action. Adding ~4 AUDIT_ACTIONS keys and 3 call sites is the
+  follow-up; it was left out to hold the diff to the story.
+- coverImage is a free string capped at 2000 chars, not a validated URL —
+  identical to the tenant post routes. A super-admin is trusted and an <img
+  src> will not execute a javascript: URL, but US-008/US-009 render this value
+  and should decide there whether to constrain it.
+- app/api/integrations/automatos/posts/route.ts:43 still holds the THIRD copy of
+  the sanitiser policy (flagged at US-003, unchanged).
+
+NEXT
+US-005 (platform image upload route) is the next unchecked story. US-006/US-007
+consume these endpoints; US-007 should read the length caps from
+lib/platform/posts.ts rather than restating them in the form.
