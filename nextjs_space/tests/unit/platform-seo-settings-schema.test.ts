@@ -165,11 +165,18 @@ describe("platform_seo_settings migration is deployable (US-013)", () => {
   });
 
   it("sorts after the migration that precedes it", () => {
+    // `migrate deploy` applies directories in lexicographic order, so what has
+    // to hold is this migration's POSITION relative to the history it was
+    // written against — not that it is the newest one in the tree, which every
+    // subsequent migration would falsify (US-019's did).
     const dirs = readdirSync(migrationsDir, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => e.name)
       .sort();
-    expect(dirs[dirs.length - 1]).toBe(migrationDir());
+    const index = dirs.indexOf(migrationDir());
+
+    expect(index).toBeGreaterThan(0);
+    expect(dirs[index - 1]).toBe("20260816010000_seed_sample_platform_posts");
   });
 
   it("creates the table and its unique index, with no FK", () => {

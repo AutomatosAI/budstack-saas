@@ -15,6 +15,7 @@ const { withinPublicRateLimit } = vi.hoisted(() => ({
 }));
 const prismaMock = vi.hoisted(() => ({
   seo_redirects: { findMany: vi.fn() },
+  platform_seo_redirects: { findMany: vi.fn() },
 }));
 
 vi.mock("@/lib/db", () => ({ prisma: prismaMock }));
@@ -27,6 +28,9 @@ import { GET as redirectFeed } from "@/app/api/public/seo/redirects/route";
 
 const TENANT_ID = "tenant-a";
 const ROWS = [{ fromPath: "/old", toPath: "/new", statusCode: 301 }];
+const PLATFORM_ROWS = [
+  { fromPath: "/blog/old-post", toPath: "/blog/new-post", statusCode: 301 },
+];
 
 function request(query: Record<string, string>) {
   const url = new URL("http://localhost/api/public/seo/redirects");
@@ -47,6 +51,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   withinPublicRateLimit.mockResolvedValue(true);
   prismaMock.seo_redirects.findMany.mockResolvedValue(ROWS);
+  prismaMock.platform_seo_redirects.findMany.mockResolvedValue(PLATFORM_ROWS);
   tenantOnPlan("pro");
 });
 
@@ -124,5 +129,68 @@ describe("GET /api/public/seo/redirects", () => {
       const response = await redirectFeed(request({ host: "acme.budstacks.io" }));
       expect((await response.json()).redirects, plan).toEqual(ROWS);
     }
+  });
+});
+
+/**
+ * Platform US-019 — the same feed, the other table. budstacks.io's redirects
+ * belong to no tenant and are gated by no plan, so the two branches share
+ * nothing but the rate limit and the response shape.
+ */
+describe("GET /api/public/seo/redirects?scope=platform", () => {
+  const platformRequest = () =>
+    request({ host: "budstacks.io", path: "/blog/old-post", scope: "platform" });
+
+  it("answers from platform_seo_redirects", async () => {
+    const response = await redirectFeed(platformRequest());
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ redirects: PLATFORM_ROWS });
+  });
+
+  it("resolves no tenant and reads no tenant table", async () => {
+    // Both would be answering a question the apex does not ask. resolveTenant
+    // on the apex host returns nothing useful anyway; calling it would just be
+    // a query per refresh.
+    await redirectFeed(platformRequest());
+
+    expect(resolveTenant).not.toHaveBeenCalled();
+    expect(prismaMock.seo_redirects.findMany).not.toHaveBeenCalled();
+  });
+
+  it("is not plan-gated — the platform is not a customer of itself", async () => {
+    tenantOnPlan("basic");
+
+    const response = await redirectFeed(platformRequest());
+
+    expect((await response.json()).redirects).toEqual(PLATFORM_ROWS);
+  });
+
+  it("scopes by nothing, and orders by insertion for the cache", async () => {
+    await redirectFeed(platformRequest());
+
+    const read = prismaMock.platform_seo_redirects.findMany.mock.calls[0][0];
+    expect(read).not.toHaveProperty("where");
+    expect(read.orderBy).toEqual({ createdAt: "asc" });
+  });
+
+  it("ignores an unrecognised scope and answers as a tenant would", async () => {
+    // Fail-closed parsing: the whole query is refused rather than silently
+    // treated as the platform.
+    const response = await redirectFeed(
+      request({ host: "acme.budstacks.io", scope: "everything" }),
+    );
+
+    expect(await response.json()).toEqual({ redirects: [] });
+    expect(prismaMock.platform_seo_redirects.findMany).not.toHaveBeenCalled();
+  });
+
+  it("is rate-limited on the same bucket", async () => {
+    withinPublicRateLimit.mockResolvedValue(false);
+
+    const response = await redirectFeed(platformRequest());
+
+    expect(response.status).toBe(429);
+    expect(prismaMock.platform_seo_redirects.findMany).not.toHaveBeenCalled();
   });
 });

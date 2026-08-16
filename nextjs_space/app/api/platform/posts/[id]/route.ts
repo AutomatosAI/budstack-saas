@@ -6,18 +6,19 @@ import { apiError, apiValidationError } from "@/lib/api-error";
 import { prisma } from "@/lib/db";
 import {
   PLATFORM_POST_BODY_MAX_BYTES,
-  PUBLISHED_SLUG_LOCKED_MESSAGE,
   duplicateSlugMessage,
   platformPostUpdateSchema,
   platformPostValidationMessage,
   resolvePublishedAt,
   type PlatformPostRow,
 } from "@/lib/platform/posts";
+import { blogPostPath } from "@/lib/seo/blog-paths";
 import {
   readEntitySeo,
   isEmptyEntitySeo,
   type EntitySeo,
 } from "@/lib/seo/entity-seo";
+import { applyPlatformSlugRenameRedirect } from "@/lib/seo/platform-slug-redirects";
 import { sanitizePostHtml } from "@/lib/security/post-sanitize";
 import { requireSameOrigin } from "@/lib/security/require-same-origin";
 import { parseJsonBody } from "@/lib/validation/body";
@@ -145,19 +146,12 @@ export const PATCH = withSuperAdminParams(async (req, _ctx, params) => {
     data.seo = isEmptyEntitySeo(authored) ? Prisma.DbNull : authored;
   }
 
-  // A rename is refused while the post is live. US-019 adds the automatic 301
-  // that makes it safe; until then the old URL would simply 404 and every
-  // inbound link to it would be discarded. Refused server-side, not only in the
-  // editor, so an API caller cannot route around the form's warning.
-  if (input.slug !== undefined && input.slug !== existing.slug) {
-    if (existing.published) {
-      return apiError(new Error("Published slug is locked"), {
-        route: ROUTE_PATCH,
-        status: 409,
-        safeMessage: PUBLISHED_SLUG_LOCKED_MESSAGE,
-      });
-    }
+  // US-019 — a rename is allowed on a LIVE post now, because the old URL no
+  // longer just 404s: the 301 below is written after the rename lands. Until
+  // this story the answer here was a 409.
+  let renamedFrom: string | null = null;
 
+  if (input.slug !== undefined && input.slug !== existing.slug) {
     const clash: { id: string } | null = await prisma.platform_posts.findUnique({
       where: { slug: input.slug },
       select: { id: true },
@@ -171,6 +165,14 @@ export const PATCH = withSuperAdminParams(async (req, _ctx, params) => {
     }
 
     data.slug = input.slug;
+
+    // Only a URL that has BEEN PUBLIC earns a redirect. `publishedAt` is
+    // stamped on the first publish and never cleared (`resolvePublishedAt`), so
+    // it answers "has this post ever been live?" — which `published` does not:
+    // a post unpublished, renamed and republished still has an old URL out in
+    // the world. A draft that has never been live has no link to preserve, and
+    // a rule for it would be clutter counting against the table's cap.
+    if (existing.publishedAt !== null) renamedFrom = existing.slug;
   }
 
   if (input.published !== undefined) {
@@ -188,7 +190,18 @@ export const PATCH = withSuperAdminParams(async (req, _ctx, params) => {
       data,
     });
 
-    return NextResponse.json({ post });
+    // AFTER the rename lands, never before: a redirect to a URL that failed to
+    // exist is worse than no redirect at all. The helper never throws — a write
+    // that fails comes back as `write_failed`, because a post the author
+    // successfully renamed must not 500 on its way back.
+    const slugRedirect = renamedFrom
+      ? await applyPlatformSlugRenameRedirect({
+          oldPath: blogPostPath(renamedFrom),
+          newPath: blogPostPath(post.slug),
+        })
+      : null;
+
+    return NextResponse.json(slugRedirect ? { post, slugRedirect } : { post });
   } catch (error) {
     const code = (error as { code?: string })?.code;
     // P2002 = the unique index fired between the clash check and this write.

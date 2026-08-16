@@ -16,7 +16,7 @@ import {
   DEFAULT_PLATFORM_AUTHOR_ROLE,
   buildPlatformPostBody,
   deriveDraftSlug,
-  isPublishedSlugLocked,
+  isPublishedSlugMove,
   type PlatformPostFormValues,
 } from "@/lib/platform/post-editor";
 import {
@@ -46,9 +46,11 @@ import SlugField from "./slug-field";
  *    resolves Automatos credentials per tenant — there is no tenant to resolve
  *    them from, so the button could only ever fail.
  *
- * Also gone: the tenant form's `slugRedirect` result handling, because there is
- * nothing to report yet. A published post's URL is frozen until US-019 writes
- * the 301 (see `slug-field.tsx`), so no save here can move a live URL.
+ * Kept from the tenant form, and only since US-019: the `slugRedirect` result
+ * handling. A published post's URL used to be frozen; renaming one now writes a
+ * 301 from the old path, and the server is the only thing that knows whether
+ * that write actually landed — so the toast reports what it says rather than
+ * what the form assumed.
  *
  * The API is the boundary that matters: every rule the form applies is applied
  * again by `/api/platform/posts`, which is super-admin-only, same-origin-only
@@ -126,12 +128,14 @@ export default function PlatformPostForm({
     defaultValues: initialData ?? BLANK,
   });
 
-  // Keyed off the SAVED publish state, not the toggle below: the PATCH route
-  // compares against the row in the database, so unpublishing and renaming in
-  // one save is refused. The URL unlocks after the unpublish is saved.
-  const slugLocked = isPublishedSlugLocked({
+  // Keyed off the SAVED publish state and the SAVED slug, not the toggle below:
+  // the PATCH route compares against the row in the database, and that is what
+  // decides whether this save moves a public URL.
+  const slugIsMove = isPublishedSlugMove({
     isEditing,
     savedPublished: Boolean(initialData?.published),
+    savedSlug: initialData?.slug ?? "",
+    slug: form.watch("slug"),
   });
 
   const onSubmit = async (values: PlatformPostFormValues) => {
@@ -144,20 +148,39 @@ export default function PlatformPostForm({
         {
           method: isEditing ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(buildPlatformPostBody(values, { slugLocked })),
+          body: JSON.stringify(buildPlatformPostBody(values)),
         },
       );
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || "Something went wrong.");
 
-      toast.success(
-        isEditing
-          ? "Post updated"
-          : values.published
-            ? "Post published"
-            : "Draft saved",
-      );
+      // US-019 — what the rename actually did to the old URL, as reported by
+      // the only thing that knows. A redirect write that failed is said out
+      // loud: the post moved either way, and an author who is not told is an
+      // author who never fixes the dead link.
+      const outcome = (
+        json as { slugRedirect?: { redirected?: unknown } } | null
+      )?.slugRedirect;
+
+      if (outcome?.redirected) {
+        toast.success("Post updated", {
+          description: "The old URL now redirects here.",
+        });
+      } else if (outcome) {
+        toast.warning("Post updated — the old URL was not redirected", {
+          description: "It will 404 until a redirect is added for it.",
+        });
+      } else {
+        toast.success(
+          isEditing
+            ? "Post updated"
+            : values.published
+              ? "Post published"
+              : "Draft saved",
+        );
+      }
+
       router.push(WIRE_INDEX);
       router.refresh();
     } catch (error) {
@@ -220,7 +243,7 @@ export default function PlatformPostForm({
 
             <SlugField
               form={form}
-              locked={slugLocked}
+              isMove={slugIsMove}
               onEdited={() => setSlugTouched(true)}
             />
 

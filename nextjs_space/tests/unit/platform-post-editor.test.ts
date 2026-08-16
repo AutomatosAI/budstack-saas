@@ -6,14 +6,14 @@ import {
   DEFAULT_PLATFORM_AUTHOR_NAME,
   buildPlatformPostBody,
   deriveDraftSlug,
-  isPublishedSlugLocked,
+  isPublishedSlugMove,
   type PlatformPostFormValues,
 } from "@/lib/platform/post-editor";
 import { BLOG_INDEX_PATH, blogPostPath } from "@/lib/seo/blog-paths";
 import { POST_SLUG_MAX_LENGTH } from "@/lib/seo/post-slug";
 
 /**
- * US-007 — the super-admin post editor.
+ * US-007 — the super-admin post editor, as US-019 left it.
  *
  * There is no component-test harness in this repo (nothing under tests/unit
  * renders React), so the decisions worth pinning were split out of the form
@@ -21,11 +21,12 @@ import { POST_SLUG_MAX_LENGTH } from "@/lib/seo/post-slug";
  *
  *  1. a new post's URL is derived by the SAME rule the POST route would apply,
  *     and is left blank rather than guessed when a title yields nothing usable;
- *  2. a PUBLISHED post's URL is locked, and the lock reads the SAVED state, not
- *     the form's publish toggle — the PATCH route compares against the database
- *     row, so unpublishing and renaming in one save is refused;
- *  3. a save on a locked post sends no slug at all, so fixing a typo in a live
- *     article cannot trip the rename refusal.
+ *  2. changing a LIVE post's URL is flagged as a move — US-019 removed the
+ *     read-only lock this field used to carry, because the save now writes a
+ *     301 from the old path. The flag reads the SAVED state, not the form's
+ *     publish toggle, because that is what the PATCH route compares against;
+ *  3. a save always sends the slug it has, and only an EMPTY one is dropped so
+ *     the create route can derive it.
  *
  * The last block reads the form as text, guarding the removals the story asks
  * for: the tenant editor's entitlement gating and its AI assist button must not
@@ -70,56 +71,66 @@ describe("deriveDraftSlug", () => {
   });
 });
 
-describe("isPublishedSlugLocked", () => {
-  it("does not lock a new post, even one created as published", () => {
-    // Nothing links to a post that does not exist yet — there is no old URL.
-    expect(
-      isPublishedSlugLocked({ isEditing: false, savedPublished: true }),
-    ).toBe(false);
+describe("isPublishedSlugMove (US-019)", () => {
+  const move = (over: Partial<Parameters<typeof isPublishedSlugMove>[0]> = {}) =>
+    isPublishedSlugMove({
+      isEditing: true,
+      savedPublished: true,
+      savedSlug: "old-url",
+      slug: "new-url",
+      ...over,
+    });
+
+  it("flags a changed URL on a live post", () => {
+    expect(move()).toBe(true);
   });
 
-  it("does not lock a saved draft", () => {
-    expect(
-      isPublishedSlugLocked({ isEditing: true, savedPublished: false }),
-    ).toBe(false);
+  it("says nothing when the live post's URL is untouched", () => {
+    // A warning next to a field nobody edited is noise, and noise is what an
+    // author learns to click past on the one save that mattered.
+    expect(move({ slug: "old-url" })).toBe(false);
   });
 
-  it("locks a post that is already live", () => {
-    expect(
-      isPublishedSlugLocked({ isEditing: true, savedPublished: true }),
-    ).toBe(true);
+  it("says nothing for a draft — no public URL exists to move", () => {
+    expect(move({ savedPublished: false })).toBe(false);
+  });
+
+  it("says nothing on create, even when the post is published immediately", () => {
+    // Nothing links to a post that does not exist yet: there is no old URL.
+    expect(move({ isEditing: false })).toBe(false);
+  });
+
+  it("ignores whitespace-only edits", () => {
+    expect(move({ slug: "  old-url  " })).toBe(false);
+    expect(move({ slug: "   " })).toBe(false);
   });
 });
 
 describe("buildPlatformPostBody", () => {
-  it("sends the slug when the post is editable", () => {
-    const body = buildPlatformPostBody(values(), { slugLocked: false });
+  it("sends the slug it has", () => {
+    const body = buildPlatformPostBody(values());
     expect(body.slug).toBe("should-you-build-on-wordpress");
   });
 
-  it("omits the slug entirely on a locked post", () => {
-    // Not "sends the unchanged slug": an absent key means the PATCH route never
-    // evaluates a rename, so a body-only edit to a live article cannot 409.
-    const body = buildPlatformPostBody(
-      values({ published: true }),
-      { slugLocked: true },
-    );
-    expect("slug" in body).toBe(false);
+  it("still sends a live post's unchanged slug (US-019)", () => {
+    // Before US-019 this key was withheld on a published post to dodge the
+    // rename refusal. There is no refusal now, and the PATCH route treats a
+    // slug equal to the stored one as no rename at all — so nothing is written
+    // and no redirect is minted for a body-only edit.
+    const body = buildPlatformPostBody(values({ published: true }));
+    expect(body.slug).toBe("should-you-build-on-wordpress");
     expect(body.published).toBe(true);
   });
 
   it("omits an empty slug so the create route derives it from the title", () => {
     // `""` would fail the server schema's min(1); an absent key is the ask.
-    const body = buildPlatformPostBody(values({ slug: "   " }), {
-      slugLocked: false,
-    });
+    const body = buildPlatformPostBody(values({ slug: "   " }));
     expect("slug" in body).toBe(false);
   });
 
   it("trims what it sends, so a padded field is not stored padded", () => {
     const body = buildPlatformPostBody(
       values({ title: "  Spaced  ", authorName: " BudStacks ", slug: " abc " }),
-      { slugLocked: false },
     );
     expect(body.title).toBe("Spaced");
     expect(body.authorName).toBe("BudStacks");
@@ -128,9 +139,7 @@ describe("buildPlatformPostBody", () => {
 
   it("leaves the article body untouched — HTML is whitespace-significant", () => {
     const content = "  <p>Leading space is the editor's.</p>  ";
-    const body = buildPlatformPostBody(values({ content }), {
-      slugLocked: false,
-    });
+    const body = buildPlatformPostBody(values({ content }));
     expect(body.content).toBe(content);
   });
 
@@ -146,7 +155,7 @@ describe("buildPlatformPostBody", () => {
       "authorRole",
       "published",
     ];
-    const body = buildPlatformPostBody(values(), { slugLocked: false });
+    const body = buildPlatformPostBody(values());
     expect(Object.keys(body).every((key) => allowed.includes(key))).toBe(true);
   });
 });

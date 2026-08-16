@@ -53,17 +53,17 @@ export function duplicateSlugMessage(slug: string): string {
 }
 
 /**
- * Refusal wording for renaming a LIVE post.
+ * What the editor says next to a LIVE post's URL before it is changed.
  *
- * Changing a published post's slug 404s a URL that is already indexed and
- * already linked to, and discards every inbound link pointing at it. The
- * automatic 301 that makes a rename safe is US-019; until it exists the answer
- * is no, and it is refused HERE rather than only in the editor so an API caller
- * cannot route around the warning the form shows.
+ * The rename itself is allowed — US-019 writes the 301 from the old path the
+ * moment the save lands (lib/seo/platform-slug-redirects.ts), so the URL in
+ * every existing link keeps resolving. This is the warning that a rename is a
+ * move rather than an edit, not a refusal; the only refusal left is a slug
+ * another post already owns.
  */
-export const PUBLISHED_SLUG_LOCKED_MESSAGE =
-  "A published post's URL cannot be changed yet — it would break the live link. " +
-  "Unpublish it first, or change the slug before publishing.";
+export const PUBLISHED_SLUG_MOVE_NOTE =
+  "This post is live. Changing its URL moves it — the old address will " +
+  "redirect here permanently (301), so existing links keep working.";
 
 const slugSchema = z
   .string()

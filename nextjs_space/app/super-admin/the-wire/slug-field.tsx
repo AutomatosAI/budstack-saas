@@ -1,42 +1,42 @@
 "use client";
 
-import { Lock } from "lucide-react";
+import { ArrowRightLeft } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { PlatformPostFormValues } from "@/lib/platform/post-editor";
-import { PUBLISHED_SLUG_LOCKED_MESSAGE } from "@/lib/platform/posts";
+import { PUBLISHED_SLUG_MOVE_NOTE } from "@/lib/platform/posts";
 import { BLOG_INDEX_PATH, blogPostPath } from "@/lib/seo/blog-paths";
 import { POST_SLUG_HINT, POST_SLUG_MAX_LENGTH } from "@/lib/seo/post-slug";
 
 /**
- * The post's URL, and the one control in this editor that can be taken away.
+ * The post's URL, and the one field where a save has a consequence beyond this
+ * post.
  *
- * While the post is a DRAFT the field is free: nothing links to it yet, so
- * renaming costs nothing. Once it is PUBLISHED the field goes read-only, and
- * the reason is stated next to it rather than left to be discovered by a 409 —
- * a live URL that starts 404ing takes its inbound links and its search
- * placement with it, and the automatic 301 that would make a rename safe is
- * US-019.
+ * It used to go READ-ONLY once the post was published, because renaming a live
+ * article 404s a URL that is already indexed and already linked to. US-019
+ * removed that lock by removing the reason for it: the save now writes a 301
+ * from the old path (lib/seo/platform-slug-redirects.ts), so every existing
+ * link keeps resolving.
  *
- * Read-only rather than `disabled`: the value stays visible and selectable (an
- * author usually wants to copy the live URL, not edit it), it remains
- * focusable so a screen reader reaches the explanation this field points at,
- * and react-hook-form keeps holding it — a `disabled` registered input would
- * drop out of the submitted values.
+ * What is left is a WARNING, not a refusal, and it appears only when the field
+ * has actually been changed on a live post — a warning shown next to an
+ * untouched URL is noise the author learns to skip past. The one refusal still
+ * possible is a slug another post already owns, which the API answers with 409.
  */
 export default function SlugField({
   form,
-  locked,
+  isMove,
   onEdited,
 }: {
   form: UseFormReturn<PlatformPostFormValues>;
-  locked: boolean;
+  /** Live post + changed URL: this save moves a public address. */
+  isMove: boolean;
   /** Told the author typed here, so the title stops driving the slug. */
   onEdited: () => void;
 }) {
   const slug = form.watch("slug");
   const error = form.formState.errors.slug?.message;
-  const noteId = locked ? "slug-locked-note" : "slug-hint";
+  const noteId = "slug-hint";
 
   return (
     <div className="space-y-2">
@@ -51,32 +51,15 @@ export default function SlugField({
         <input
           id="slug"
           {...form.register("slug", { onChange: onEdited })}
-          readOnly={locked}
           maxLength={POST_SLUG_MAX_LENGTH}
           spellCheck={false}
           placeholder="derived-from-the-title"
           aria-describedby={noteId}
-          className={
-            locked
-              ? "bs-input flex-1 opacity-60 cursor-not-allowed"
-              : "bs-input flex-1"
-          }
+          className="bs-input flex-1"
         />
-        {locked && (
-          <Lock
-            className="h-4 w-4 shrink-0 text-bs-fg-muted"
-            aria-hidden="true"
-          />
-        )}
       </div>
 
-      {locked ? (
-        // The same sentence the PATCH route answers a rename with, so the
-        // editor and the API cannot describe the rule differently.
-        <p id={noteId} className="text-xs text-bs-fg-muted">
-          {PUBLISHED_SLUG_LOCKED_MESSAGE}
-        </p>
-      ) : error ? (
+      {error ? (
         <p id={noteId} className="text-sm text-bs-danger">
           {error}
         </p>
@@ -86,6 +69,18 @@ export default function SlugField({
           <code>{blogPostPath(slug || "…")}</code>.
         </p>
       )}
+
+      {/* The same sentence lib/platform/posts.ts holds, so the editor and any
+          other surface describing this rule cannot word it differently. */}
+      {isMove ? (
+        <p className="flex items-start gap-2 text-xs text-bs-fg-muted">
+          <ArrowRightLeft
+            className="h-3.5 w-3.5 shrink-0 mt-0.5"
+            aria-hidden="true"
+          />
+          <span>{PUBLISHED_SLUG_MOVE_NOTE}</span>
+        </p>
+      ) : null}
     </div>
   );
 }

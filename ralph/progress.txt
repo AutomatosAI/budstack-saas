@@ -1926,3 +1926,112 @@ it passes, US-019 unblocks US-007: the published-slug edit is refused in TWO
 places today — PUBLISHED_SLUG_LOCKED_MESSAGE in lib/platform/posts.ts (enforced by
 the item route, so an API caller cannot route around it) and the editor's own
 slug-field.tsx — and BOTH have to be re-enabled, with the journal saying so.
+
+================================================================================
+[2026-08-16] US-019 PASS — Slug changes issue a 301
+
+WHAT LANDED
+- New model `platform_seo_redirects` + timestamped migration
+  20260816030000_add_platform_seo_redirects. Kept OUT of `tenantScopedModels`,
+  like every other platform_* table.
+- Why a SECOND table rather than platform rows in `seo_redirects`: that table's
+  tenantId is NOT NULL with an FK to tenants AND the model is in
+  tenantScopedModels, so a null-tenant row would be filtered out of every read by
+  the $extends rewrite and would NOT be deduplicated by
+  @@unique([tenantId, fromPath]) — Postgres treats NULLs in a unique index as
+  distinct, so two rows could claim the same path.
+- Everything ELSE is reused, not rewritten. `planSlugRenameRedirect`
+  (lib/seo/slug-redirects.ts) is pure and decides all three steps unchanged, so
+  chains COLLAPSE rather than nest and a rename-back clears the rule that would
+  otherwise shadow the post's new address. lib/seo/platform-slug-redirects.ts is
+  ~60 lines: the same plan, applied to the other table, with no tenantId in any
+  predicate.
+- Middleware fires it. The apex previously had NO redirect scope at all
+  (`storeRedirectScope` returns null for a null hint), so `resolvePlatformRedirect`
+  was added beside `resolveStoreRedirect` — same in-memory SWR cache, same
+  matcher, distinct cache key. A tenant request costs two string comparisons and
+  never fetches.
+- The feed (`/api/public/seo/redirects`) grew ONE query parameter, `scope=platform`,
+  which skips tenant resolution and the seo.pro gate — there is no tenant to
+  resolve and the platform is not a customer of itself. Absent scope = today's
+  behaviour, byte for byte. No new public route, so no allowlist entry needed;
+  auth-public-routes.ts's reason string was extended to say what the new scope
+  answers.
+
+US-007 UNBLOCKED, AS THE STORY REQUIRED
+Both refusals are gone, and both were removed:
+- server: the 409 + PUBLISHED_SLUG_LOCKED_MESSAGE in the PATCH route. The only
+  refusal left on a rename is a slug another post owns (still 409).
+- editor: slug-field.tsx's read-only lock. It now shows a WARNING, and only when
+  a live post's URL has actually been changed — PUBLISHED_SLUG_MOVE_NOTE replaced
+  PUBLISHED_SLUG_LOCKED_MESSAGE, `isPublishedSlugLocked` became
+  `isPublishedSlugMove`, and `buildPlatformPostBody` lost its `slugLocked` option
+  (an unchanged slug is now sent and simply isn't a rename).
+The form reports what the SERVER says the rename did (`slugRedirect`), the same
+shape the tenant editor already consumes — including saying out loud when the
+redirect write failed, because the post moved either way.
+
+DECISION WORTH KNOWING
+A redirect is written only when `existing.publishedAt !== null`, not when
+`published` is true. publishedAt is stamped once on first publish and never
+cleared, so it answers "has this URL ever been public?" — which `published` does
+not: a post unpublished, renamed and republished still has an old URL in the
+wild. A never-published draft gets no rule (nothing links to it, and a rule would
+count against the table's cap).
+
+VERIFIED
+- pnpm exec tsc --noEmit: exit 0.
+- pnpm vitest run: 182 files / 3367 tests pass, 0 fail. New: 11 cases in
+  tests/unit/platform-slug-redirects.test.ts (write layer + surface predicate),
+  6 in seo-redirect-feed.test.ts (the platform scope), 7 in
+  seo-redirect-lookup.test.ts (middleware layer: right feed URL, tenant hosts
+  never resolve against the platform table, cache keys stay separate).
+  platform-posts-api.test.ts's "URL is locked" block became "renaming a live post
+  leaves a 301 behind" — 6 cases including the collision 409 and the failed-write
+  report.
+- prisma validate OK; migration SQL diffed against
+  `prisma migrate diff --from-empty --to-schema-datamodel` — identical DDL.
+- check:public-routes, check:article-typography, check:security, lint: all clean.
+- LIVE, against `pnpm dev`: /api/public/seo/redirects?scope=platform reaches
+  `prisma.platform_seo_redirects.findMany()` while the same route with no scope
+  reaches `prisma.tenants.findFirst()` — proving branch selection end to end.
+  Both then 500 on "Can't reach database server at
+  postgres-budstack-development.up.railway.app:5432", which is this machine, not
+  the code (Railway Postgres is private-network only). /terms served 200 with the
+  new middleware in place, so the added call site compiles and runs on the apex.
+- NOT verified here: an actual 301 on a live URL. It needs a database to hold a
+  renamed post and a rule. Deferred to a deploy or a human with DB access; every
+  layer beneath it is unit-covered.
+
+ONE PRE-EXISTING TEST FIXED (it broke on ANY new migration)
+tests/unit/platform-seo-settings-schema.test.ts asserted its migration was the
+LAST directory in prisma/migrations. Its own test name says "sorts after the
+migration that precedes it"; the assertion said "is the newest migration in the
+tree", which every future migration falsifies — mine was simply the first. Now
+pinned to its actual position (directly after 20260816010000_seed_sample_platform_posts).
+
+FLAGGED, NOT FIXED
+- The platform redirect table has NO admin UI. A rename writes rules; nothing
+  lists, edits or deletes them. Tenants get RedirectsTab for exactly this. Not in
+  any story's ACs — worth one if the table grows.
+- SEO_REDIRECT_MAX_PER_TENANT (500) now caps the platform table too. The name
+  says tenant; the constraint is per redirect TABLE (middleware caches the whole
+  thing). Reused rather than duplicated; renaming it would touch tenant code for
+  no behaviour change.
+- Renaming AND unpublishing in one save writes a 301 from the old URL to a URL
+  that 404s until it is republished. Correct once republished, and no worse than
+  the old URL 404ing directly; not worth a branch.
+- Unchanged from earlier stories: /blog index still emits no structured data;
+  app/learn/[slug]/page.tsx still queries twice per request and has no JSON-LD;
+  the seven loose .sql files at the top of prisma/migrations/ still never run;
+  untracked prisma/migrations/20260430_tenants_templateid_setnull/ would run if
+  committed by accident.
+
+NEXT
+US-020 (platform SEO audit panel) — the last story. Reuse SeoAuditTab from
+components/admin/seo/ against platform routes on /super-admin/seo; flag missing
+titles, descriptions, OG images and absent canonicals. Watch: the tenant audit
+route (app/api/tenant-admin/seo/audit/route.ts) reads seo_redirects among other
+tenant tables, so the platform version needs its own data source rather than a
+copy of that route. AC asks for a browser check — /super-admin is Clerk-gated, so
+expect to fall back to route/component tests and say so rather than claim it.

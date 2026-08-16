@@ -69,8 +69,9 @@ export default async function EditPlatformPostPage({
       initialData={{
         id: post.id,
         title: post.title,
-        // What the post is published at today. `published` is what freezes it:
-        // a live URL cannot move until US-019 writes the 301.
+        // What the post is published at today, and the value the editor
+        // compares against to tell whether a save MOVES a live URL — US-019
+        // writes the 301 when it does.
         slug: post.slug,
         content: post.content,
         excerpt: post.excerpt ?? "",

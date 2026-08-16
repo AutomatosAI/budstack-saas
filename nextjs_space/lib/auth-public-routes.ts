@@ -157,7 +157,10 @@ export const AUTH_PUBLIC_ROUTES: readonly PublicRoute[] = [
       "unusable on a loopback fetch behind Cloudflare for SaaS — see the " +
       "route docstring), the rows are read inside that tenant's context, it is " +
       "IP rate-limited, and it is gated on seo.pro with the same empty answer " +
-      "as an unknown host so plans cannot be enumerated.",
+      "as an unknown host so plans cannot be enumerated. Platform US-019 adds " +
+      "?scope=platform, which answers from platform_seo_redirects — " +
+      "budstacks.io's own 301s, belonging to no tenant and gated by no plan, " +
+      "and equally observable by requesting any of the paths it lists.",
   },
   {
     pattern: "/api/store/[slug]/products",

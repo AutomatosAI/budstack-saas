@@ -17,8 +17,8 @@ import { NextRequest } from "next/server";
  *     pre-check catches it or the unique index does;
  *  4. `publishedAt` is stamped on the transition into published and never
  *     rewritten, so the public date does not jump when a typo is fixed;
- *  5. a PUBLISHED post's slug cannot move until the automatic 301 exists
- *     (US-019) — a live URL must not start 404ing;
+ *  5. renaming a PUBLISHED post writes a 301 from its old URL (US-019), which
+ *     is what replaced the 409 this route used to answer a rename with;
  *  6. `content` is sanitised on the way in.
  *
  * Module-boundary mocks only (getCurrentUser, prisma). The real auth wrapper,
@@ -33,6 +33,13 @@ const prismaMock = vi.hoisted(() => ({
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+  },
+  platform_seo_redirects: {
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+    deleteMany: vi.fn(),
   },
 }));
 
@@ -115,6 +122,12 @@ beforeEach(() => {
   );
   prismaMock.platform_posts.delete.mockResolvedValue({ id: POST_ID });
   prismaMock.platform_posts.findMany.mockResolvedValue([]);
+  // An empty redirect table is the normal state: nothing has been renamed yet.
+  prismaMock.platform_seo_redirects.findMany.mockResolvedValue([]);
+  prismaMock.platform_seo_redirects.create.mockResolvedValue({});
+  prismaMock.platform_seo_redirects.update.mockResolvedValue({});
+  prismaMock.platform_seo_redirects.updateMany.mockResolvedValue({ count: 0 });
+  prismaMock.platform_seo_redirects.deleteMany.mockResolvedValue({ count: 0 });
 });
 
 describe("platform posts are super-admin only (US-004)", () => {
@@ -338,22 +351,13 @@ describe("publishedAt is stamped once (US-004)", () => {
   });
 });
 
-describe("a published post's URL is locked until the 301 exists (US-004)", () => {
-  it("refuses to rename a live post", async () => {
-    prismaMock.platform_posts.findUnique.mockResolvedValue(
-      storedPost({ published: true, publishedAt: new Date() }),
-    );
+describe("renaming a live post leaves a 301 behind (US-019)", () => {
+  /** A live post: renaming this one has a public URL to preserve. */
+  const live = () => storedPost({ published: true, publishedAt: new Date() });
 
-    const res = await editPost(request("PATCH", { slug: "new-url" }), params);
-
-    expect(res.status).toBe(409);
-    expect((await res.json()).error).toMatch(/cannot be changed yet/i);
-    expect(prismaMock.platform_posts.update).not.toHaveBeenCalled();
-  });
-
-  it("allows a rename while the post is still a draft", async () => {
+  it("renames a live post and redirects its old URL", async () => {
     prismaMock.platform_posts.findUnique
-      .mockResolvedValueOnce(storedPost())
+      .mockResolvedValueOnce(live())
       .mockResolvedValueOnce(null);
 
     const res = await editPost(request("PATCH", { slug: "new-url" }), params);
@@ -363,14 +367,52 @@ describe("a published post's URL is locked until the 301 exists (US-004)", () =>
       where: { id: POST_ID },
       data: expect.objectContaining({ slug: "new-url" }),
     });
+    // Written from the OLD path to the new one, and only after the rename
+    // itself landed.
+    expect(prismaMock.platform_seo_redirects.create).toHaveBeenCalledWith({
+      data: {
+        fromPath: "/blog/how-storefront-margins-actually-work",
+        toPath: "/blog/new-url",
+        statusCode: 301,
+      },
+    });
+    expect((await res.json()).slugRedirect).toMatchObject({ redirected: true });
+  });
+
+  it("writes no redirect for a post that has never been live", async () => {
+    // A draft's URL is not in anybody's index; a rule for it would be clutter
+    // counting against the table's cap.
+    prismaMock.platform_posts.findUnique
+      .mockResolvedValueOnce(storedPost())
+      .mockResolvedValueOnce(null);
+
+    const res = await editPost(request("PATCH", { slug: "new-url" }), params);
+
+    expect(res.status).toBe(200);
+    expect(prismaMock.platform_seo_redirects.create).not.toHaveBeenCalled();
+    expect((await res.json()).slugRedirect).toBeUndefined();
+  });
+
+  it("redirects for a post that WAS live and is currently unpublished", async () => {
+    // `published: false` with a `publishedAt` stamp means the URL has been
+    // public — the stamp is set once and never cleared.
+    prismaMock.platform_posts.findUnique
+      .mockResolvedValueOnce(
+        storedPost({ published: false, publishedAt: new Date() }),
+      )
+      .mockResolvedValueOnce(null);
+
+    await editPost(request("PATCH", { slug: "new-url" }), params);
+
+    expect(prismaMock.platform_seo_redirects.create).toHaveBeenCalled();
   });
 
   it("lets a live post re-send its OWN slug — that is not a rename", async () => {
-    const live = storedPost({ published: true, publishedAt: new Date() });
-    prismaMock.platform_posts.findUnique.mockResolvedValue(live);
+    const post = live();
+    prismaMock.platform_posts.findUnique.mockResolvedValue(post);
 
     const res = await editPost(
-      request("PATCH", { slug: live.slug, title: "Retitled" }),
+      request("PATCH", { slug: post.slug, title: "Retitled" }),
       params,
     );
 
@@ -378,6 +420,40 @@ describe("a published post's URL is locked until the 301 exists (US-004)", () =>
     expect(prismaMock.platform_posts.update).toHaveBeenCalledWith({
       where: { id: POST_ID },
       data: expect.objectContaining({ title: "Retitled" }),
+    });
+    expect(prismaMock.platform_seo_redirects.create).not.toHaveBeenCalled();
+  });
+
+  it("still refuses a rename onto a slug another post owns", async () => {
+    // The 301 removed the reason to refuse a rename; it did not remove the
+    // reason to refuse a COLLISION.
+    prismaMock.platform_posts.findUnique
+      .mockResolvedValueOnce(live())
+      .mockResolvedValueOnce({ id: "another-post" });
+
+    const res = await editPost(request("PATCH", { slug: "taken" }), params);
+
+    expect(res.status).toBe(409);
+    expect(prismaMock.platform_posts.update).not.toHaveBeenCalled();
+    expect(prismaMock.platform_seo_redirects.create).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed redirect write instead of failing the rename", async () => {
+    // The post has already moved by then. A 500 here would tell the author the
+    // edit was lost when it was not.
+    prismaMock.platform_posts.findUnique
+      .mockResolvedValueOnce(live())
+      .mockResolvedValueOnce(null);
+    prismaMock.platform_seo_redirects.create.mockRejectedValueOnce(
+      new Error("db down"),
+    );
+
+    const res = await editPost(request("PATCH", { slug: "new-url" }), params);
+
+    expect(res.status).toBe(200);
+    expect((await res.json()).slugRedirect).toMatchObject({
+      redirected: false,
+      reason: "write_failed",
     });
   });
 });

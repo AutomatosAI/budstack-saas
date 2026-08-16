@@ -48,6 +48,26 @@ import {
 /** The Node-runtime feed. Public (see the route's own docstring for why). */
 export const STORE_REDIRECTS_FEED_PATH = "/api/public/seo/redirects";
 
+/**
+ * Which table a request's redirects come from (Platform US-019).
+ *
+ * `store` reads `seo_redirects` for one tenant; `platform` reads
+ * `platform_seo_redirects`, which belongs to budstacks.io itself and has no
+ * tenant at all. Same feed, same cache, same matcher — one query parameter
+ * apart. See lib/seo/platform-slug-redirects.ts for why the two tables cannot
+ * be one.
+ */
+export type RedirectScopeKind = "store" | "platform";
+
+/** The `scope` value the feed recognises; absent means the tenant table. */
+export const PLATFORM_REDIRECT_SCOPE = "platform";
+
+/**
+ * The platform's cache key. Colon-free, so it can never collide with a tenant
+ * key (`sub:`, `cd:`, `slug:`).
+ */
+const PLATFORM_CACHE_KEY = "platform";
+
 /** Past this, the cached table is served but a refresh starts behind it. */
 const REFRESH_AFTER_MS = 60_000;
 
@@ -160,16 +180,25 @@ function parseFeedBody(body: unknown): SeoRedirectRule[] {
   return rules;
 }
 
-async function fetchTable(
-  origin: string,
-  host: string,
-  pathname: string,
-): Promise<SeoRedirectRule[]> {
-  const url = new URL(STORE_REDIRECTS_FEED_PATH, origin);
-  url.searchParams.set("host", host);
+/** What one refresh asks the feed. `scope` picks which table answers. */
+interface FeedQuery {
+  readonly origin: string;
+  readonly host: string;
+  readonly pathname: string;
+  readonly scope: RedirectScopeKind;
+}
+
+async function fetchTable(query: FeedQuery): Promise<SeoRedirectRule[]> {
+  const url = new URL(STORE_REDIRECTS_FEED_PATH, query.origin);
+  url.searchParams.set("host", query.host);
   // Only read for dev's `/store/{slug}` resolution; on a tenant host the feed
   // resolves from `host` alone and ignores it.
-  url.searchParams.set("path", pathname);
+  url.searchParams.set("path", query.pathname);
+  // Absent for a store, so the feed's existing contract is unchanged and its
+  // default stays the tenant table.
+  if (query.scope === "platform") {
+    url.searchParams.set("scope", PLATFORM_REDIRECT_SCOPE);
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -215,16 +244,11 @@ function remember(
 }
 
 /** One refresh per key at a time — a burst of cold requests costs one fetch. */
-function refresh(
-  key: string,
-  origin: string,
-  host: string,
-  pathname: string,
-): Promise<CacheEntry> {
+function refresh(key: string, query: FeedQuery): Promise<CacheEntry> {
   const pending = inFlight.get(key);
   if (pending) return pending;
 
-  const started = fetchTable(origin, host, pathname)
+  const started = fetchTable(query)
     .then((rules) => remember(key, rules, true))
     // A failed refresh keeps whatever is already cached (an outage should not
     // switch working redirects off) and retries soon.
@@ -239,9 +263,7 @@ function refresh(
 
 async function redirectTable(
   key: string,
-  origin: string,
-  host: string,
-  pathname: string,
+  query: FeedQuery,
 ): Promise<SeoRedirectRule[]> {
   const now = Date.now();
   const entry = tableCache.get(key);
@@ -249,12 +271,12 @@ async function redirectTable(
   if (entry && now < entry.hardExpiresAt) {
     if (now >= entry.refreshAt) {
       // Deliberately not awaited — see the cost model in the module docstring.
-      void refresh(key, origin, host, pathname);
+      void refresh(key, query);
     }
     return entry.rules;
   }
 
-  return (await refresh(key, origin, host, pathname)).rules;
+  return (await refresh(key, query)).rules;
 }
 
 export interface StoreRedirectDecision {
@@ -287,12 +309,12 @@ export async function resolveStoreRedirect(input: {
   const scope = storeRedirectScope(input.hint, input.pathname);
   if (!scope) return null;
 
-  const rules = await redirectTable(
-    scope.key,
-    input.origin,
-    input.host,
-    input.pathname,
-  );
+  const rules = await redirectTable(scope.key, {
+    origin: input.origin,
+    host: input.host,
+    pathname: input.pathname,
+    scope: "store",
+  });
   if (rules.length === 0) return null;
 
   const storePath = input.pathname.slice(scope.basePath.length) || "/";
@@ -305,6 +327,63 @@ export async function resolveStoreRedirect(input: {
     location: `${scope.basePath}${destination}` || "/",
     statusCode: rule.statusCode,
   };
+}
+
+/**
+ * Is this request served by the PLATFORM's own routes rather than a store's?
+ *
+ * True for exactly the requests middleware falls through to after its subdomain
+ * and custom-domain branches have returned: a null hint (the apex
+ * `budstacks.io`, and localhost in dev) on a path that is not dev's
+ * `/store/{slug}` routing. That is the whole definition — no env var is
+ * consulted, which is what makes a platform redirect reproducible on a laptop
+ * and not only in production.
+ *
+ * `parseHostToTenantHint` maps every OTHER host to a subdomain or a custom
+ * domain, so an unknown or crafted host cannot reach this scope.
+ */
+export function isPlatformRedirectSurface(
+  hint: TenantHostHint,
+  pathname: string,
+): boolean {
+  return hint === null && !/^\/store\/[^/]/.test(pathname);
+}
+
+/**
+ * The platform's own 301 for this request, or null (Platform US-019).
+ *
+ * Same one-hop rule, same GET/HEAD-only rule and the same fail-open behaviour
+ * as {@link resolveStoreRedirect} — it is the same cache and the same matcher,
+ * pointed at `platform_seo_redirects`. Written today by a published blog post's
+ * rename, so `/blog/{old}` answers 301 instead of the 404 it used to.
+ *
+ * The cost on a TENANT request is two string checks and a null: the hint is
+ * non-null there, so nothing below the guard runs. On the apex it is one Map
+ * lookup once warm, and an empty table short-circuits before any matching.
+ */
+export async function resolvePlatformRedirect(input: {
+  readonly origin: string;
+  readonly host: string;
+  readonly pathname: string;
+  readonly method: string;
+  readonly hint: TenantHostHint;
+}): Promise<StoreRedirectDecision | null> {
+  if (input.method !== "GET" && input.method !== "HEAD") return null;
+  if (!isPlatformRedirectSurface(input.hint, input.pathname)) return null;
+  if (!isRedirectablePath(input.pathname)) return null;
+
+  const rules = await redirectTable(PLATFORM_CACHE_KEY, {
+    origin: input.origin,
+    host: input.host,
+    pathname: input.pathname,
+    scope: "platform",
+  });
+  if (rules.length === 0) return null;
+
+  const rule = matchRedirect(rules, input.pathname);
+  if (!rule) return null;
+
+  return { location: rule.toPath, statusCode: rule.statusCode };
 }
 
 /** Test-only: drop every cached table so a case starts from cold. */

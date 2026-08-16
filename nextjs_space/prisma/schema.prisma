@@ -1326,6 +1326,38 @@ model platform_seo_settings {
   updatedAt DateTime @updatedAt
 }
 
+/// budstacks.io's OWN 301s (Platform US-019) — the platform-scoped twin of
+/// `seo_redirects`, which cannot hold these rows: its `tenantId` is a required
+/// FK to `tenants`, and it is in `tenantScopedModels`, so a null-tenant row
+/// would be both unreachable through the `$extends` rewrite and unprotected by
+/// `@@unique([tenantId, fromPath])` (Postgres treats NULLs as distinct).
+///
+/// Every RULE about these rows is shared rather than restated: the paths are
+/// normalised and lower-cased by lib/seo/redirects.ts, the rename plan is
+/// `planSlugRenameRedirect` (lib/seo/slug-redirects.ts) unchanged, and
+/// middleware matches with the same `matchRedirect`. Only the storage differs.
+///
+/// Kept OUT of `tenantScopedModels` in lib/db.ts, like platform_posts,
+/// platform_seo_settings, platform_leads and learning_resources.
+///
+/// Written today by a published post's rename (/blog/{old} → /blog/{new}); the
+/// column is a plain path, so nothing here is blog-specific.
+model platform_seo_redirects {
+  id String @id @default(uuid())
+
+  /// Stored NORMALISED AND LOWER-CASED — the match key middleware compares an
+  /// incoming pathname against, and what makes this UNIQUE a real duplicate
+  /// guard rather than a near-miss one.
+  fromPath String @unique
+  /// Normalised, case preserved: a destination, not a key.
+  toPath String
+
+  statusCode Int      @default(301)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 enum Role {
   PATIENT
   TENANT_ADMIN

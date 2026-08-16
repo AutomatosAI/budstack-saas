@@ -13,14 +13,15 @@ import { resolveCreateSlug } from "./posts";
  *  1. A new post's URL comes from its title, using the SAME derivation the POST
  *     route applies when no slug is sent (`resolveCreateSlug`) — so what the
  *     author sees in the field is what the server would have chosen anyway.
- *  2. A PUBLISHED post's URL is locked. Changing it 404s a live link and
- *     discards everything pointing at it; the automatic 301 that makes a rename
- *     safe is US-019. The API refuses it too (409, `PUBLISHED_SLUG_LOCKED_MESSAGE`)
- *     — this is the half that explains it before the save rather than after.
- *  3. The lock keys off the SAVED state, not the form's publish toggle. The
- *     PATCH route compares against the row in the database, so unpublishing and
- *     renaming in one save would still be refused; the URL becomes editable
- *     after the unpublish is saved, and the copy in the form says so.
+ *  2. A PUBLISHED post's URL can be changed, and doing so is a MOVE: US-019
+ *     writes a 301 from the old path as the save lands, so nothing that linked
+ *     to the old URL breaks. The editor says this before the save
+ *     (`PUBLISHED_SLUG_MOVE_NOTE`) rather than leaving it to be discovered
+ *     afterwards. Until US-019 the same field was read-only and the API
+ *     answered a rename with 409.
+ *  3. "Live" means the SAVED state, not the form's publish toggle — the warning
+ *     has to describe the row as it currently stands in the database, which is
+ *     what the PATCH route reasons about.
  */
 
 /** Every field the editor writes. All strings, so the form has no undefined. */
@@ -73,34 +74,38 @@ export function deriveDraftSlug(title: string): string {
 }
 
 /**
- * Is this post's URL frozen? True only when editing a post that is ALREADY
- * live — see rule 3 above for why the form's own publish toggle is not
- * consulted, and why a brand-new post created as published is not locked (it
- * has no old URL to break).
+ * Would saving this move a URL that is already public?
+ *
+ * True only when editing a post whose SAVED state is published and whose slug
+ * has been changed — see rule 3 above for why the form's own publish toggle is
+ * not consulted, and note that a brand-new post created as published is never a
+ * move (it has no old URL to leave behind). Drives the warning next to the
+ * field; the redirect itself is the server's to write.
  */
-export function isPublishedSlugLocked(args: {
+export function isPublishedSlugMove(args: {
   isEditing: boolean;
   savedPublished: boolean;
+  savedSlug: string;
+  slug: string;
 }): boolean {
-  return args.isEditing && args.savedPublished;
+  if (!args.isEditing || !args.savedPublished) return false;
+  return args.slug.trim() !== "" && args.slug.trim() !== args.savedSlug;
 }
 
 /**
  * The JSON a save sends.
  *
- * `slug` is dropped when the post is locked or the field is empty. Dropping it
- * on a locked post means a routine save — fixing a typo in the body of a live
- * article — never presents a slug at all, so it cannot trip the rename refusal
- * on its way through; dropping an empty one keeps the create route free to
- * derive it, which sending `""` would not (the schema requires at least one
- * character when the key is present).
+ * `slug` is dropped when the field is empty, which keeps the create route free
+ * to derive it from the title — sending `""` would not (the schema requires at
+ * least one character when the key is present). A slug that is present and
+ * unchanged is sent as-is and costs nothing: the PATCH route compares it with
+ * the stored one and only treats a DIFFERENT value as a rename.
  *
  * Trimmed here as well as in the schema so the body that goes over the wire is
  * the body that gets stored — no field arrives padded and comes back different.
  */
 export function buildPlatformPostBody(
   values: PlatformPostFormValues,
-  opts: { slugLocked: boolean },
 ): PlatformPostRequestBody {
   const body: PlatformPostRequestBody = {
     title: values.title.trim(),
@@ -114,7 +119,7 @@ export function buildPlatformPostBody(
   };
 
   const slug = values.slug.trim();
-  if (opts.slugLocked || !slug) return body;
+  if (!slug) return body;
 
   return { ...body, slug };
 }
