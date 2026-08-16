@@ -1041,3 +1041,109 @@ outrank polish, and Workstream D is not Ralph's). Keep giving each row a
 distinct publishedAt or the six will order arbitrarily against each other and
 against these two. Only when all 8 rows exist does US-012 get to delete the
 arrays.
+
+
+================================================================================
+[2026-08-16] US-011 PASS — Migrate the six sample posts into platform_posts
+================================================================================
+
+WHAT LANDED
+- prisma/migrations/20260816010000_seed_sample_platform_posts/migration.sql —
+  one INSERT, six rows, ON CONFLICT ("slug") DO NOTHING. Sorts after
+  20260815000000_add_platform_posts (table) and after the US-010 seed.
+- tests/unit/platform-posts-seed.test.ts — the US-010 helpers were generalised
+  (seedDirNameFor(pattern) / sqlFor(pattern)) instead of a second copy of the fs
+  plumbing, and US-011 blocks added on top. 12 tests → 24, all passing.
+
+CRASH RECOVERY
+A predecessor iteration died mid-US-011. What it left was an EMPTY
+prisma/migrations/20260816010000_seed_sample_platform_posts/ directory (git
+does not track empty directories, so it never showed in git status) plus a
+155-line /tmp/us011_values.sql scratch. Nothing in-repo to adopt and nothing
+load-bearing to verify — the scratch was hand-written VALUES with no header, no
+verification behind it, and I could not tell whether its six bodies had been
+transcribed faithfully. Replaced rather than finished; /tmp scratch deleted. The
+empty directory name was reused, since the timestamp was already correct.
+
+DECISIONS
+- The SQL was GENERATED from app/blog/[slug]/page.tsx, not retyped. The six
+  bodies run to ~6k characters of HTML with apostrophes throughout; hand-copying
+  them is the single likeliest way this story ships a silent corruption. A
+  throwaway node script evaluated the array literal and emitted the INSERT, so
+  fidelity is true by construction rather than by proofreading. Script was
+  scratch and is deleted — the migration is the artefact, not the generator.
+- Bodies are dollar-quoted ($post$), so no apostrophe escaping to get wrong.
+  Scalars use ordinary quoting with '' doubling — visible in
+  'dispensary''s performance'.
+- Two header rewrites were needed for a reason worth recording: the prose
+  originally contained a literal $post$ and the words "published: true" and
+  "DO UPDATE". All three are harmless to Postgres inside a -- comment, but they
+  break the text-level assertions the seed tests are built on (the body regex
+  matched from the comment's tag, and the true-count came out 7 for 6 rows).
+  Comments in a file that is asserted as text are not free — worded around.
+- publishedAt is each post's own date at 12:00 UTC. All six dates differ, so
+  unlike the editorial pair no minute offset was needed. Range is 2025-12-10 to
+  2026-01-10, so all six sort BELOW the two editorial posts (2026-08-15) on the
+  index — intended.
+- published: true despite the prose being placeholder. The six URLs are already
+  indexed and linked; a live URL with weak copy beats a 404. Workstream D
+  (the rewrite) is a human's, and DO NOTHING rather than DO UPDATE means that
+  rewrite survives every future redeploy.
+- Fixed UUIDs, not readable keys — /api/platform/posts/[id] runs parseUuid, and
+  these are precisely the rows a human must open in the editor to rewrite. A row
+  keyed 'sample-post-1' would be published but uneditable and undeletable.
+
+HOW VERIFIED
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm prisma validate → schema valid.
+- pnpm vitest run tests/unit/platform-posts-seed.test.ts → 24/24.
+- pnpm vitest run (full) → 176 files passed, 3218 tests, 8 files / 30 tests
+  skipped (the DB-backed integration ones). No regressions.
+- check:public-routes, check:article-typography, check:security → all green.
+  next lint on the touched test file → clean.
+- REAL POSTGRES, not just text assertions. Spun a throwaway PG 17.9 cluster in
+  /tmp (initdb, port 55433, unix socket only), applied
+  20260815000000_add_platform_posts then both seeds in the lexicographic order
+  migrate deploy uses. All three applied clean; 8 rows, all published, ordering
+  by publishedAt DESC exactly as the index will render it.
+- IDEMPOTENCY PROVEN, not asserted. UPDATEd one row to simulate the human
+  rewrite landing via /super-admin/the-wire, then replayed BOTH seed files as a
+  redeploy would. Still 8 rows, and the edited title/content survived untouched.
+- FIDELITY PROVEN BY ROUND-TRIP. Read all six rows back out of Postgres as JSON
+  and compared against the source array in app/blog/[slug]/page.tsx field by
+  field: content, slug, title, excerpt, coverImage, authorName, authorRole all
+  byte-for-byte identical. This is the check that matters for US-012 — the
+  arrays are about to be deleted, and after that the rows are the only copy.
+- Cluster stopped and removed; no artefacts left in /tmp.
+- No browser check: US-011 ships no app code, and the story asks for none. The
+  live database is on Railway's private network and gets these rows when
+  entrypoint.sh runs migrate deploy on the next boot. The /tmp cluster is the
+  stronger substitute — it proved the SQL, the idempotency and the content
+  fidelity, none of which a rendered page would have shown.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- The six posts' prose is genuinely weak and now LIVE-on-next-deploy. Two of the
+  claims read as promises a regulated business should not be making —
+  "compliance reporting with one click" and "our current uptime is 99.9%" are
+  both stated as fact in rows that are now published. That is Workstream D's
+  problem, but it is worth a human seeing before the merge, not after.
+- The two arrays are still duplicated and still divergent (6 entries vs 8).
+  US-012 is the story that ends that, and its precondition is now met: all 8
+  posts exist as rows. Nothing else should delete them first.
+- Unchanged from US-010: the seven loose .sql files at the top of
+  prisma/migrations/ still never run; the untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ is still sitting in the
+  working tree unversioned and would run if anyone committed it by accident;
+  no app/blog/error.tsx; third sanitiser copy in
+  app/api/integrations/automatos/posts/route.ts:43; app/learn/[slug]/page.tsx
+  double-queries; no metadataBase on the platform root layout; no pagination.
+
+NEXT
+US-012 (delete the inline post arrays). Its BLOCKED precondition is satisfied —
+US-010 and US-011 have both passed and all 8 slugs are rows. Remove samplePosts
+from app/blog/page.tsx AND app/blog/[slug]/page.tsx, delete lib/blog/posts.ts
+with its imports, and confirm `grep -rn 'samplePosts\|BLOG_POSTS' app lib` comes
+back empty. That story DOES carry a dev-browser AC: /blog must list all 8 and
+each /blog/<slug> must still render — which needs a database carrying the rows,
+so if the local environment cannot reach one, say so plainly and record
+`visual: deferred to human review` rather than claiming the check.
