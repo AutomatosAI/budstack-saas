@@ -45,6 +45,14 @@ const BUTTON_STYLES = ["rounded", "square", "pill"];
 const BORDER_RADII = ["none", "small", "medium", "large"];
 const SPACINGS = ["compact", "normal", "comfortable"];
 const SHADOW_STYLES = ["none", "soft", "medium", "bold"];
+/**
+ * The four tokens the Type tab's Letter Spacing select offers, and the four keys
+ * `tenant-theme-provider`'s `letterSpacingMap` resolves. A design system stores
+ * the CHOSEN one of these under `typography.letterSpacing`, not the map of all
+ * of them — see the note on `letterSpacingPreset` below for why that distinction
+ * had teeth.
+ */
+const LETTER_SPACINGS = ["tight", "normal", "wide", "wider"];
 
 interface InitialFormDataTenant {
   businessName: string;
@@ -133,7 +141,22 @@ export function buildInitialFormData(
     })(),
     fontWeight: getVal(["typography", "fontWeight", "body"], undefined) || settings.fontWeight || "400",
     headingFontWeight: getVal(["typography", "fontWeight", "heading"], undefined) || settings.headingFontWeight || "700",
-    letterSpacingPreset: getVal(["typography", "letterSpacing"], undefined) || settings.letterSpacingPreset || "normal",
+    // Pinned to the token list on BOTH sources, which is the fix for a defect
+    // that reached production: this line used to take
+    // `typography.letterSpacing` raw, while every sibling above drills one level
+    // deeper (`fontSize.base`) and/or runs a normaliser. A template whose design
+    // system holds the letter-spacing MAP there — `{tight, normal, wide, …}` —
+    // therefore put an OBJECT into this `string` field, the branding save wrote
+    // it to `tenants.settings.letterSpacingPreset`, and `parseTenantSettings`
+    // then rejected the whole blob on every storefront read (one bad key used to
+    // fail the settings object as a unit), silently taking that tenant's
+    // verification tags, GA4 id, tagline and cookie copy down with it.
+    // `matchOption` returns undefined for a non-string, so a map now falls
+    // through to the stored value and then to "normal".
+    letterSpacingPreset:
+      matchOption(getVal(["typography", "letterSpacing"], undefined), LETTER_SPACINGS) ||
+      matchOption(settings.letterSpacingPreset, LETTER_SPACINGS) ||
+      "normal",
 
     template: settings.template || "modern",
     buttonStyle:

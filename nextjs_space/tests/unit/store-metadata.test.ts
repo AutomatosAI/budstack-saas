@@ -235,4 +235,35 @@ describe("buildStoreMetadata — site verification (US-026)", () => {
     });
     expect(metadata.openGraph?.siteName).toBe(BUSINESS_NAME);
   });
+
+  /**
+   * The production regression, end to end.
+   *
+   * Search Console reported the tag as missing from `<head>` and it was: the
+   * token was stored and valid, but the blob also carried ONE malformed cosmetic
+   * key (`letterSpacingPreset` holding a design-system map instead of a token),
+   * and `parseTenantSettings` used to fail the whole object over it — so this
+   * builder read `{}` and emitted no verification at all. The token must now
+   * survive its neighbour.
+   */
+  it("emits the tag even when an unrelated settings key is malformed", () => {
+    const metadata = buildStoreMetadata(
+      source({
+        plan: "trial",
+        settings: {
+          googleSiteVerification: GOOGLE_TOKEN,
+          tagline: "Lekker local",
+          letterSpacingPreset: {
+            wide: "0.025em",
+            tight: "-0.02em",
+            normal: "0",
+          },
+        },
+      }),
+    );
+
+    expect(metadata.verification).toEqual({ google: GOOGLE_TOKEN });
+    // the same parse feeds the description, which was collateral damage too
+    expect(metadata.description).toBe("Lekker local");
+  });
 });

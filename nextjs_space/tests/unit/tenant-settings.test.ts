@@ -121,3 +121,83 @@ describe("parseTenantSettingsResult — exposes validity + issue count", () => {
     expect(result.settings).toEqual({});
   });
 });
+
+/**
+ * The production defect: one cosmetic key made the whole blob unreadable, which
+ * switched off Search Console verification, GA4, the tagline and the cookie copy
+ * for that store. The stored value below is the real one — a template's
+ * design-system letter-spacing MAP written into a field that holds one token.
+ */
+describe("parseTenantSettingsResult — one bad key must not take the blob down", () => {
+  const LETTER_SPACING_MAP = {
+    wide: "0.025em",
+    tight: "-0.02em",
+    wider: "0.05em",
+    normal: "0",
+    widest: "0.1em",
+  };
+
+  const REAL_WORLD_BLOB = {
+    ...GOOD_BLOB,
+    googleSiteVerification: "aO6R48veBlW75o-L9QyZ1M2dfQTyjz0vQyJTuKkOBng",
+    analyticsEnabled: true,
+    ga4MeasurementId: "G-ABCD123456",
+    // the one offending key — a string field holding an object
+    letterSpacingPreset: LETTER_SPACING_MAP,
+  };
+
+  it("keeps every OTHER key when a single key fails", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { settings } = parseTenantSettingsResult(REAL_WORLD_BLOB);
+
+    expect(settings.googleSiteVerification).toBe(
+      "aO6R48veBlW75o-L9QyZ1M2dfQTyjz0vQyJTuKkOBng",
+    );
+    expect(settings.ga4MeasurementId).toBe("G-ABCD123456");
+    expect(settings.analyticsEnabled).toBe(true);
+    expect(settings.tagline).toBe("Wellness, delivered");
+    expect(settings.primaryColor).toBe("#10b981");
+  });
+
+  it("drops only the offending key, and reports it by name", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const result = parseTenantSettingsResult(REAL_WORLD_BLOB);
+
+    expect(result.ok).toBe(false);
+    expect(result.droppedKeys).toEqual(["letterSpacingPreset"]);
+    expect(result.settings).not.toHaveProperty("letterSpacingPreset");
+  });
+
+  it("names the dropped key in the failure log without leaking any value", () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    parseTenantSettingsResult(REAL_WORLD_BLOB, { tenantId: "t_1" });
+
+    const [, payload] = errSpy.mock.calls[0];
+    expect(payload).toMatchObject({
+      event: "security.tenant_settings_parse_failed",
+      tenantId: "t_1",
+      droppedKeys: ["letterSpacingPreset"],
+    });
+    // the offending VALUE must still never reach the log
+    expect(JSON.stringify(payload)).not.toContain("0.025em");
+  });
+
+  it("attributes a nested failure to its top-level key and keeps the siblings", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const result = parseTenantSettingsResult({
+      ...GOOD_BLOB,
+      footer: { certifications: [{ name: 42 }] },
+    });
+
+    expect(result.droppedKeys).toEqual(["footer"]);
+    expect(result.settings.tagline).toBe("Wellness, delivered");
+  });
+
+  it("still returns the typed default when the blob itself is the wrong type", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const result = parseTenantSettingsResult("not-an-object");
+
+    expect(result.settings).toEqual({});
+    expect(result.droppedKeys).toEqual([]);
+  });
+});
