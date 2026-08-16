@@ -11,8 +11,10 @@ import {
 import { AiAssistButton, AutomatosConnectCard } from "./AiAssistButton";
 import { GooglePreview } from "./GooglePreview";
 import {
+  INDEXING_FIELD_KEYS,
   IndexingFields,
   canonicalOverrideError,
+  type IndexingFieldKey,
   type IndexingValue,
 } from "./IndexingFields";
 import { OgImageField } from "./OgImageField";
@@ -40,17 +42,33 @@ function readIndexingValue(seo: SeoData | undefined): IndexingValue {
 }
 
 /**
- * The same three controls as the keys a PUT route accepts.
+ * The indexing controls as the keys a PUT route accepts — and ONLY the ones the
+ * surface actually rendered.
  *
  * Sent ONLY by an entitled tenant (see the save handler): the routes 403 a
  * Basic tenant that includes them, and omitting them is also what makes a Basic
  * save preserve whatever rules are already stored.
+ *
+ * Narrowed by `fields` for US-014's platform editor, whose route parses
+ * `.strict()` over four real columns: sending a key it did not offer would 400
+ * the save on a control the super-admin never saw.
  */
-function indexingPayload(value: IndexingValue): Partial<SeoData> {
+function indexingPayload(
+  value: IndexingValue,
+  fields: readonly IndexingFieldKey[],
+): Partial<SeoData> {
+  const shows = (field: IndexingFieldKey) => fields.includes(field);
+  const robots = {
+    ...(shows("noindex") ? { noindex: value.noindex } : {}),
+    ...(shows("nofollow") ? { nofollow: value.nofollow } : {}),
+  };
+
   return {
-    robots: { noindex: value.noindex, nofollow: value.nofollow },
-    canonicalOverride: value.canonicalOverride.trim(),
-    sitemapExclude: value.sitemapExclude,
+    ...(shows("noindex") || shows("nofollow") ? { robots } : {}),
+    ...(shows("canonicalOverride")
+      ? { canonicalOverride: value.canonicalOverride.trim() }
+      : {}),
+    ...(shows("sitemapExclude") ? { sitemapExclude: value.sitemapExclude } : {}),
   };
 }
 
@@ -120,6 +138,19 @@ interface SeoEditorModalProps {
    */
   canEditIndexing?: boolean;
   /**
+   * US-014 — which indexing controls this surface STORES. Defaults to all four,
+   * which is every tenant editor. The platform SEO editor passes `["noindex"]`:
+   * `platform_seo_settings` has that column and no others, so offering the rest
+   * would ship three controls a save silently discards.
+   */
+  indexingFields?: readonly IndexingFieldKey[];
+  /**
+   * US-014 — where the OG image upload posts, when it is offered. Defaults to
+   * the tenant-scoped route; see `OgImageField` for why the platform editor
+   * cannot use it.
+   */
+  ogUploadEndpoint?: string;
+  /**
    * US-025 — `seoProUnlocked` again, for the AI drafting buttons. Backed by
    * `requireFeature(SEO_PRO)` on `/api/tenant-admin/seo/ai-assist`.
    */
@@ -152,6 +183,8 @@ export function SeoEditorModal({
   onSave,
   canUploadOgImage = false,
   canEditIndexing = false,
+  indexingFields = INDEXING_FIELD_KEYS,
+  ogUploadEndpoint,
   canUseAiAssist = false,
   canEditQa = false,
   aiAssistConnected = false,
@@ -200,9 +233,13 @@ export function SeoEditorModal({
   }, [aiAssistConnected, isOpen]);
 
   // A canonical the route would reject: the save is blocked here so the owner
-  // sees WHICH field is wrong rather than a generic failure toast.
+  // sees WHICH field is wrong rather than a generic failure toast. Only when
+  // the field was offered — a surface that does not store canonicals must not
+  // be blocked by a value it never rendered.
   const blockedByCanonical =
-    canEditIndexing && canonicalOverrideError(indexing.canonicalOverride) !== null;
+    canEditIndexing &&
+    indexingFields.includes("canonicalOverride") &&
+    canonicalOverrideError(indexing.canonicalOverride) !== null;
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -218,7 +255,7 @@ export function SeoEditorModal({
         description,
         ogImage,
         ...(showAltText ? { imageAlt } : {}),
-        ...(canEditIndexing ? indexingPayload(indexing) : {}),
+        ...(canEditIndexing ? indexingPayload(indexing, indexingFields) : {}),
         // US-002 — sent only by a Pro tenant on a product, for both reasons the
         // indexing keys are: the route 403s a Basic tenant that sends `qa`, and
         // an absent key is what preserves whatever pairs are already stored.
@@ -374,6 +411,7 @@ export function SeoEditorModal({
             value={ogImage}
             onChange={setOgImage}
             canUpload={canUploadOgImage}
+            uploadEndpoint={ogUploadEndpoint}
           />
 
           {/* US-002 — products only; the locked card is what a Basic tenant
@@ -395,6 +433,7 @@ export function SeoEditorModal({
             onChange={setIndexing}
             canEdit={canEditIndexing}
             entityType={entityType}
+            fields={indexingFields}
           />
         </div>
 

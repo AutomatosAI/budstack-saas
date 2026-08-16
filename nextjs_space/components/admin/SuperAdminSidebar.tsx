@@ -14,6 +14,7 @@ import {
   Database,
   FileText,
   Newspaper,
+  Search,
 } from "lucide-react";
 import { AdminSidebar, type AdminMenuItem } from "./AdminSidebar";
 
@@ -25,6 +26,7 @@ export enum PanelType {
   TENANTS = "tenants",
   LEADS = "leads",
   THE_WIRE = "the-wire",
+  SEO = "seo",
   IMPERSONATION = "impersonation",
   ONBOARDING = "onboarding",
   ANALYTICS = "analytics",
@@ -68,6 +70,15 @@ const superAdminMenuItems: AdminMenuItem[] = [
     label: "The Wire",
     icon: Newspaper,
     href: "/super-admin/the-wire",
+  },
+  {
+    // budstacks.io's own metadata. Next to The Wire because both decide what
+    // the public site says about itself; the tenant SEO Manager is the same
+    // idea one level down, and uses the same icon.
+    id: PanelType.SEO,
+    label: "Platform SEO",
+    icon: Search,
+    href: "/super-admin/seo",
   },
   {
     id: PanelType.IMPERSONATION,

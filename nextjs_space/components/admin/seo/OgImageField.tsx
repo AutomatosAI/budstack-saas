@@ -38,6 +38,7 @@ import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from "@/lib/seo/og-image";
 import {
   OG_IMAGE_ACCEPT,
   OG_IMAGE_MAX_LABEL,
+  OG_IMAGE_UPLOAD_URL,
   ogImageFileError,
   ogImageSizeWarning,
   uploadOgImage,
@@ -54,9 +55,24 @@ interface OgImageFieldProps {
    * server gate behind it.
    */
   canUpload: boolean;
+  /**
+   * Where a picked file is posted. Defaults to the tenant-scoped upload route.
+   *
+   * US-014 — the platform SEO editor passes `/api/platform/upload`, which is
+   * `withSuperAdmin` and files bytes under the platform's own S3 prefix. The
+   * tenant route would refuse a super-admin outright (it reads `tenantId` off
+   * the user and 403s when there isn't one) or, under impersonation, file
+   * budstacks.io's own social card inside somebody's store.
+   */
+  uploadEndpoint?: string;
 }
 
-export function OgImageField({ value, onChange, canUpload }: OgImageFieldProps) {
+export function OgImageField({
+  value,
+  onChange,
+  canUpload,
+  uploadEndpoint = OG_IMAGE_UPLOAD_URL,
+}: OgImageFieldProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [size, setSize] = useState<ImageSize | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
@@ -87,7 +103,7 @@ export function OgImageField({ value, onChange, canUpload }: OgImageFieldProps) 
     setIsUploading(true);
     try {
       // The durable URL, never the presigned one — see og-image-upload.ts.
-      onChange(await uploadOgImage(file));
+      onChange(await uploadOgImage(file, uploadEndpoint));
       toast.success("Image uploaded");
     } catch (error) {
       toast.error(
@@ -150,8 +166,8 @@ export function OgImageField({ value, onChange, canUpload }: OgImageFieldProps) 
       {canUpload ? (
         <p className="text-xs text-bs-fg-muted">
           Paste a URL, or upload a PNG, JPEG, GIF or WebP up to{" "}
-          {OG_IMAGE_MAX_LABEL}. An uploaded image is stored on your own store, so
-          it keeps working — a link that expires shows nothing at all.
+          {OG_IMAGE_MAX_LABEL}. An uploaded image is stored on this site, so it
+          keeps working — a link that expires shows nothing at all.
         </p>
       ) : (
         <p className="text-xs text-bs-fg-muted">

@@ -3,7 +3,12 @@ export { AiCrawlersTab } from './AiCrawlersTab';
 export { BrandProfilesCard } from './BrandProfilesCard';
 export { CitationsTab } from './CitationsTab';
 export { GooglePreview } from './GooglePreview';
-export { IndexingFields, type IndexingValue } from './IndexingFields';
+export {
+  INDEXING_FIELD_KEYS,
+  IndexingFields,
+  type IndexingFieldKey,
+  type IndexingValue,
+} from './IndexingFields';
 export { LlmsTxtCard } from './LlmsTxtCard';
 export { LockedFeatureCard } from './LockedFeatureCard';
 export { OgImageField } from './OgImageField';

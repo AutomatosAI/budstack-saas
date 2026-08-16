@@ -21,7 +21,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-platform-content-and-seo.md`
 
 **Workstream C — platform SEO: budstacks.io manages its own**
 - [x] US-013 platform_seo_settings model and migration
-- [ ] US-014 Super-admin platform SEO page
+- [x] US-014 Super-admin platform SEO page
 - [ ] US-015 Marketing pages consume the SEO settings
 - [ ] US-016 Blog posts enter the platform sitemap
 - [ ] US-017 Canonicals across platform marketing routes

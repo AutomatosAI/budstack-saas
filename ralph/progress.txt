@@ -1356,3 +1356,114 @@ and a second hand-typed copy is how the two drift. Reuse SeoEditorModal +
 GooglePreview from components/admin/seo/, guard any API route with
 withSuperAdmin (NOT the unauthenticated shape of app/api/platform/leads), and
 give every query an explicit row type — the prisma export is any-widened.
+
+================================================================================
+[2026-08-16] US-014 PASS — Super-admin platform SEO page
+
+WHAT LANDED
+- lib/platform/seo-routes.ts — the canonical TypeScript list the previous
+  journal asked for. 15 static routes (byte-for-byte the migration's seed) plus
+  one row per PUBLISHED guide, resolved from lib/documents/registry. The write
+  route validates against it, so a misspelt path is refused rather than filed as
+  a row no page will ever read.
+- lib/platform/seo-settings.ts — flat Zod write contract over the four real
+  columns, .strict(). NOT EntitySeo: the tenant blob exists because a store's
+  metadata rides on the entity's own column; this table has columns, and a key
+  with nothing behind it is the write-only control the SEO workstream exists to
+  delete. ogImage is refused unless it is a rooted path or an absolute http(s)
+  URL — exactly what platformAbsoluteUrl() will resolve, so the table cannot
+  hold a value no rendered tag ever carries.
+- app/api/platform/seo/route.ts — PUT only, withSuperAdmin + requireSameOrigin.
+  Fourth route under /api/platform/ and the third to require a session; leads
+  remains the deliberate unauthenticated exception and was not copied. upsert by
+  routePath, so the first save on a rowless guide is the same request as the
+  tenth on the homepage. "" is stored as NULL (US-015 falls back per COLUMN; a
+  stored "" would override a real title with nothing). Absent noindex defaults
+  false.
+- app/super-admin/seo/{page.tsx,platform-seo-client.tsx} — force-dynamic server
+  read (explicit PlatformSeoSettingRow[]), grouped list, SeoEditorModal for the
+  edit. Nav entry added to SuperAdminSidebar beside The Wire.
+
+THE ONE REAL DESIGN CALL: SeoEditorModal is tenant-shaped
+Reused as the AC asks, but three of its surfaces would have LIED on a platform
+page, so each became one additive prop with the current behaviour as its default
+(every tenant call site is untouched):
+- IndexingFields renders four controls; platform_seo_settings stores one. Passing
+  canEditIndexing={false} instead would show a super-admin a "Upgrade to Pro"
+  card. New `fields` prop → the platform editor offers noindex alone, and
+  indexingPayload now sends only the keys the surface rendered, so the .strict()
+  route cannot 400 on a control nobody saw.
+- OgImageField's upload posted to /api/tenant-admin/upload, which 403s a
+  super-admin (no tenantId) or, under impersonation, files budstacks.io's social
+  card inside somebody's store. New `uploadEndpoint` prop → US-005's
+  /api/platform/upload, whose response shape is already field-for-field
+  identical. uploadOgImage already took the URL as an optional second arg, so
+  nothing new was written. Its canUpload copy said "stored on your own store" —
+  now "on this site", true on both surfaces.
+- canUseAiAssist / canEditQa stay off: both are tenant-plan features behind
+  tenant routes.
+GooglePreview is reused THROUGH the modal, which is its only host — no second
+call site was invented to make the AC read literally.
+
+GUIDES ARE ROWS, POSTS ARE NOT
+US-013's seed excluded every dynamic family. /documents/{slug} is different in
+kind from /blog/{slug}: guides are a code registry with stable paths, blog and
+learn entries are database rows that already carry their own authored metadata.
+So the guides are in the list (the AC asks for them by name) and the other two
+families are not. Guides start rowless — the list flags them "No social image",
+which is the honest state until US-015 decides their fallback.
+
+The badge tracks title+description only. Counting ogImage would read "Custom"
+for all 15 static routes on day one, because the seed gave every one of them the
+platform default — a badge that is always green says nothing.
+
+VERIFIED
+- pnpm exec tsc --noEmit: exit 0.
+- pnpm vitest run: 178 files / 3277 tests pass, 0 fail (full project, no
+  regression from the shared-component props). New: tests/unit/
+  platform-seo-settings-api.test.ts, 38 tests — tenant admin/patient/signed-out
+  all refused, cross-origin refused, unknown routePath refused, an extra key
+  refused by .strict(), //host and bare-filename og images refused, ""→NULL,
+  trimming, noindex default, response echoes the stored row, no tenantId in the
+  query, and the route list covers every path the AC enumerates plus every
+  published guide and no coming-soon one.
+- check:public-routes, check:article-typography, check:security: all green.
+- next lint over app/ components/ lib/: no finding in any touched file.
+- pnpm build: compiled successfully; /super-admin/seo and /api/platform/seo both
+  in the route manifest. Page-specific JS is 2.17 kB (tenant SEO Manager is
+  6.95 kB), and grepping .next/static/chunks for guide prose returns 0 hits —
+  the type-only import boundary held and the 18 guide modules did NOT reach the
+  browser bundle. That was the specific risk in resolving the route list
+  server-side.
+
+VISUAL: DEFERRED TO HUMAN REVIEW
+Could not be checked with the dev-browser skill and is not claimed. /super-admin/
+seo is Clerk-gated — a live request returns 307 to /auth/login?redirect_url=…
+(recorded), and there are no super-admin credentials in this environment. The
+local DATABASE_URL is unreachable besides (Prisma throws in RootLayout on every
+dev request; the DB is on Railway's private network). The repo has no React
+component-render harness — no @testing-library/react anywhere — so the JSX could
+not be asserted in vitest either; adding that dependency is well outside this
+story. The production build above is the strongest compile-level substitute
+available.
+
+FLAGGED, NOT FIXED
+- SeoEditorModal's save handler console.error's on failure. Pre-existing, in a
+  shared tenant component; out of scope for this diff.
+- The modal's failure toast is generic ("Failed to save SEO settings"), so a 400
+  from the platform route loses the message the schema wrote for a person. Same
+  behaviour every tenant editor already has; worth fixing once, for both.
+- Unchanged from earlier stories: the seven loose .sql files at the top of
+  prisma/migrations/ that never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ that WOULD run if
+  committed by accident; no metadataBase on the platform root layout.
+
+NEXT
+US-015 (marketing pages consume the settings) — the reader that finally makes
+this table do something. Points to watch: fall back per COLUMN, not per row (the
+seeded rows carry an image and nothing else, so a per-row check would blank
+every title on the site); the current hardcoded values in app/layout.tsx ~line 32
+are the documented fallback; generateMetadata must share the page's fetch via
+React cache() rather than issuing a second query; and /documents/{slug} has no
+row of its own, so decide deliberately whether it inherits /documents or the
+guide's own generateMetadata stays the source.
