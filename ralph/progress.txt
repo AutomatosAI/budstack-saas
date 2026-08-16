@@ -1700,3 +1700,118 @@ this one central change rather than fifteen page edits. Canonical host is the
 APEX — platformBaseUrl() already returns it and middleware's wwwRedirectHost
 branch 301s www, so do not re-solve that. blogPostPath() is already the shared
 path helper; /documents/{slug} goes through generatePlatformGuideMetadata.
+
+================================================================================
+[2026-08-16] US-017 PASS — Canonicals across platform marketing routes
+
+WHAT LANDED
+- lib/seo/platform-page-metadata.ts: `buildPlatformPageMetadata` now returns
+  `alternates: { canonical }`, and og:url is the SAME string rather than a second
+  computation of it. One change, 33 routes: the 15 static marketing routes and all
+  18 /documents guides go through this builder (US-015), so none of them needed
+  editing and no page file gained a hardcoded URL.
+- app/learn/[slug]/page.tsx: the one public content route with its own
+  generateMetadata and no canonical. Built from the RESOLVED ROW's slug, not
+  params.slug, so a request that reached the row by some other casing or encoding
+  still points at the address app/sitemap.ts lists. The not-found branch stays
+  canonical-free — declaring one would hand a crawler a 404's address.
+- tests/unit/platform-page-metadata.test.ts: +7. Route's own absolute path;
+  homepage → bare origin with no trailing slash; canonical === og:url; a canonical
+  for EVERY route platformSeoRoutes() offers (guides included, so an added guide is
+  covered without editing the test); a noindex route still declares one; origin
+  read from env at call time and never www. Plus a source-level check that the two
+  database-backed routes declare their own.
+
+WHAT WAS ALREADY DONE — NOT REBUILT
+- /blog/<slug> (AC-2) has emitted `alternates.canonical` since US-009, via
+  buildPlatformPostMetadata → platformCanonical(blogPostPath(slug)). Asserted
+  already in platform-post-metadata.test.ts:181. Verified live, not re-implemented.
+- AC-3 (apex, not www) needed no code. `wwwRedirectHost` (lib/parse-host.ts:47)
+  strips the prefix and middleware.ts:155 301s to the apex BEFORE tenant
+  resolution; covered by tests/unit/parse-host.test.ts. The canonical takes its
+  origin from platformBaseUrl(), which is env-derived — verified live as
+  https://budstacks.io/... with no www anywhere.
+
+DECISIONS
+- CANONICAL IS BUILT, NEVER AUTHORED. platform_seo_settings has title,
+  description, ogImage and noindex and deliberately no canonical column (see the
+  header of lib/platform/seo-settings.ts, which records that canonicalOverride was
+  left out on purpose). A hand-typed canonical is how a page ends up pointing at a
+  URL that 404s, and for a static route the only correct answer is its own path.
+  So no schema change, no migration and no editor field in this story.
+- The real prize is not www. Middleware already 301s that, and a crawler only
+  learns of it by following a www link. What nothing but a canonical catches is
+  ?utm_source=, ?ref=, ?fbclid= — every campaign and referral URL answers 200 on
+  the same content. Verified explicitly below.
+
+VERIFIED LIVE (AC-5 asked for three routes; 19 were checked)
+Two dev-server runs. The first used the existing .env.local unchanged — its
+DATABASE_URL points at Railway, which is TCP-unreachable from this machine, and
+that is itself the degrade case: /terms answered 200 with the correct canonical
+while [platform-seo] settings read failed logged, confirming the canonical does
+not depend on the settings row. The second ran against a throwaway Postgres 17
+(port 55437, /tmp data dir) built with `prisma migrate diff --from-empty
+--to-schema-datamodel` piped to psql, seeded with one published platform_posts row
+and one published learning_resources row. No .env file was read from, written to
+or modified; DATABASE_URL was passed inline. Cluster, data dir and both servers
+destroyed afterwards; ports 3000 and 55437 confirmed free.
+
+  All 15 static routes + /documents/overview + /documents/products:
+    canonical present on every one, 0 missing. Spot values —
+    /                     -> https://budstacks.io          (bare origin, no slash)
+    /terms                -> https://budstacks.io/terms
+    /legal/changelog      -> https://budstacks.io/legal/changelog
+    /documents/overview   -> https://budstacks.io/documents/overview
+    /contact              -> https://budstacks.io/contact   (via its layout)
+    og:url matched the canonical on every route sampled.
+  /blog                        -> https://budstacks.io/blog
+  /blog/canonical-check        -> https://budstacks.io/blog/canonical-check
+  /learn/canonical-check-article -> https://budstacks.io/learn/canonical-check-article
+  THE CASE THE STORY IS FOR:
+    /terms?utm_source=newsletter&utm_campaign=aug -> https://budstacks.io/terms
+    /faq?ref=partner&fbclid=abc123                -> https://budstacks.io/faq
+    /learn/...?utm_source=twitter                 -> the clean /learn/... path
+  NEGATIVE:
+    /learn/no-such-article  404, NO canonical
+    /blog/no-such-post      404, NO canonical
+
+CHECKS
+- pnpm exec tsc --noEmit → exit 0
+- pnpm vitest run → 3315 passed, 30 skipped, 0 failed (180 files). Baseline after
+  US-016 was 3308; +7 is exactly this story's new tests, so no regressions.
+- pnpm check:public-routes → 108 pages, all allowlisted. No new public route was
+  added, so nothing needed adding to isPublicRoute.
+- pnpm check:article-typography → clean. pnpm check:security → clean.
+- next lint on both touched source files → no warnings or errors.
+- No Prisma work in this story: no schema change, no migration, nothing to
+  validate or generate.
+
+FLAGGED, NOT FIXED
+- app/learn/[slug]/page.tsx runs the SAME learning_resources.findUnique TWICE per
+  request — once in generateMetadata, once in the page body — because neither is
+  React-cache()d. Pre-existing (PRD-220 era), not introduced or worsened here: my
+  change adds no query. Left alone to keep the diff to the canonical, but it is the
+  one file on the platform side that does not follow the loadPlatformSeoSetting /
+  loadPublishedPlatformPost cache() arrangement, and it should adopt it.
+- /learn/<slug> takes its metadata from the row directly and has no og:image, no
+  og:type and no article timestamps — the gap US-009 closed for /blog/<slug>. It is
+  in the sitemap and shares as a bare grey card. Out of scope here; worth a story.
+- /learn/<slug> is NOT an authorable route in platform_seo_settings (by design —
+  seo-routes.ts explains why rows cannot key on rows), so its title still ships in
+  code. Consistent with /blog/<slug>, which carries its own `seo` Json instead.
+- Still no metadataBase on the platform root layout. Confirmed this does not bite
+  the canonical: Next's resolveAbsoluteUrlWithPathname skips resolution entirely
+  when there is no base, so an ABSOLUTE value passes through verbatim — which is
+  what platformCanonical always returns. A relative one would have shipped
+  host-less. Recorded because the next person to add an alternate will face it.
+- Unchanged from earlier stories: the seven loose .sql files at the top of
+  prisma/migrations/ that never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ that WOULD run if
+  committed by accident.
+
+NEXT
+US-018 (Article and BreadcrumbList JSON-LD). Points to watch: REUSE
+lib/seo/article-json-ld.ts and lib/seo/breadcrumb-json-ld.ts — a second JSON-LD
+implementation is an explicit revert-on-review anti-pattern. The canonical string
+this story now emits is the URL those builders should use for @id / mainEntityOfPage,
+so read platformCanonical rather than rebuilding the URL.

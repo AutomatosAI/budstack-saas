@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 /**
  * US-015 — budstacks.io's marketing pages consume `platform_seo_settings`.
@@ -31,7 +31,10 @@ import { describe, it, expect } from "vitest";
  * visible only in the source.
  */
 
-import { PLATFORM_SEO_STATIC_ROUTES } from "@/lib/platform/seo-routes";
+import {
+  PLATFORM_SEO_STATIC_ROUTES,
+  platformSeoRoutes,
+} from "@/lib/platform/seo-routes";
 import {
   PLATFORM_DEFAULT_DESCRIPTION,
   PLATFORM_DEFAULT_TITLE,
@@ -250,6 +253,81 @@ describe("buildPlatformPageMetadata — social card", () => {
   });
 });
 
+/**
+ * US-017 — one canonical per marketing page, and it is the apex one.
+ *
+ * These pages declared none, so every address that answered 200 on them was a
+ * candidate to be indexed in its own right. The www→apex 301 in middleware
+ * (`wwwRedirectHost`, middleware.ts:155) handles one of those; nothing but a
+ * canonical handles `?utm_source=…`, `?ref=…` or `?fbclid=…`, which is most of
+ * what a marketing site is linked by.
+ */
+describe("buildPlatformPageMetadata — canonical", () => {
+  it("declares the route's own absolute path on the platform origin", () => {
+    const meta = buildPlatformPageMetadata({ routePath: "/terms" });
+
+    expect(meta.alternates?.canonical).toBe(`${platformBaseUrl()}/terms`);
+  });
+
+  it("canonicals the homepage to the bare origin, with no trailing slash", () => {
+    // `/` and `` are the same page; a canonical of `https://budstacks.io/` and
+    // one of `https://budstacks.io` are two declarations of one page.
+    expect(
+      buildPlatformPageMetadata({ routePath: "/" }).alternates?.canonical,
+    ).toBe(platformBaseUrl());
+  });
+
+  it("keeps the canonical and og:url as ONE url", () => {
+    // Two URLs for one page is the defect this closes, not a second copy of it.
+    for (const routePath of ["/", "/privacy", "/legal/changelog"]) {
+      const meta = buildPlatformPageMetadata({ routePath });
+      expect(meta.alternates?.canonical, routePath).toBe(meta.openGraph?.url);
+    }
+  });
+
+  it("resolves a canonical for every authorable route, static and guide", () => {
+    // Guides come from the registry, so an added guide is covered without this
+    // list being edited — the drift the route table exists to prevent.
+    for (const route of platformSeoRoutes()) {
+      const canonical = buildPlatformPageMetadata({
+        routePath: route.path,
+        fallback: PLATFORM_ROUTE_FALLBACKS[route.path],
+        setting: row(),
+      }).alternates?.canonical;
+
+      expect(canonical, route.path).toBe(
+        route.path === "/"
+          ? platformBaseUrl()
+          : `${platformBaseUrl()}${route.path}`,
+      );
+    }
+  });
+
+  it("declares a canonical on a noindex route too", () => {
+    // Independent signals: "do not list this page" is not "I have no opinion
+    // about which URL it is", and a route can be flipped back to indexable.
+    expect(
+      buildPlatformPageMetadata({
+        routePath: "/faq",
+        setting: row({ noindex: true }),
+      }).alternates?.canonical,
+    ).toBe(`${platformBaseUrl()}/faq`);
+  });
+
+  it("takes its origin from the environment at call time, and never www", () => {
+    // AC-3: the canonical host is the APEX. www is 301'd to it in middleware
+    // before any of this runs, so a canonical pointing at www would name the
+    // one host that redirects away.
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://budstacks.io/");
+
+    const canonical = buildPlatformPageMetadata({ routePath: "/privacy" })
+      .alternates?.canonical;
+
+    expect(canonical).toBe("https://budstacks.io/privacy");
+    expect(String(canonical)).not.toMatch(/^https?:\/\/www\./);
+  });
+});
+
 describe("PLATFORM_ROUTE_FALLBACKS", () => {
   it("covers exactly the static routes the admin list offers", () => {
     // The drift guard. A route added to one list and not the other silently
@@ -322,5 +400,30 @@ describe("the marketing pages themselves", () => {
 
     expect(source).toContain("generatePlatformGuideMetadata(params.slug");
     expect(source).not.toContain('generatePlatformRouteMetadata("/documents")');
+  });
+
+  it("US-017: the two database-backed content routes declare their own canonical", () => {
+    // These are the only public marketing routes that do NOT go through
+    // `buildPlatformPageMetadata` — they are rows, not settings-table routes
+    // (lib/platform/seo-routes.ts), so each builds its canonical itself and
+    // neither is covered by the block above. Source-level because there is no
+    // component-test harness in this repo; the behaviour of the blog's builder
+    // is asserted directly in platform-post-metadata.test.ts.
+    const blog = readFileSync(
+      join(process.cwd(), "app", "blog", "[slug]", "page.tsx"),
+      "utf8",
+    );
+    // The blog post canonical is built inside buildPlatformPostMetadata
+    // (US-009), so the page delegates rather than assembling a second one.
+    expect(blog).toContain("buildPlatformPostMetadata");
+
+    const learn = readFileSync(
+      join(process.cwd(), "app", "learn", "[slug]", "page.tsx"),
+      "utf8",
+    );
+    expect(learn).toContain("platformCanonical(");
+    expect(learn).toContain("alternates: { canonical:");
+    // Built from the resolved row, never from the raw route param.
+    expect(learn).not.toContain("platformCanonical(`/learn/${params.slug}`)");
   });
 });

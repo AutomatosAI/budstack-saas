@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, BookOpen, Play, FileText, Download, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
+import { platformCanonical } from "@/lib/seo/platform-url";
 import { Navbar, Footer } from "@/components/landing";
 import { LearnChatbot } from "../learn-chatbot";
 import { MarkdownContent } from "./markdown-content";
@@ -25,10 +26,21 @@ export async function generateMetadata({
   const resource = await prisma.learning_resources.findUnique({
     where: { slug: params.slug, isPublished: true },
   });
+  // No canonical for a slug that resolves to nothing: this branch renders a
+  // 404, and declaring one would hand a crawler the address of a page that
+  // does not exist.
   if (!resource) return { title: "Not Found | BudStacks" };
   return {
     title: `${resource.title} | BudStacks Learning Center`,
     description: resource.description || undefined,
+    // US-017 — the last public content route on budstacks.io with no canonical.
+    // `/learn/{slug}` is listed in app/sitemap.ts and linked from the Learning
+    // Center, so every campaign and referral URL that lands on it —
+    // `?utm_source=…`, `?ref=…` — answers 200 on the same article and competes
+    // with it. The clean path is declared from the resolved row's slug rather
+    // than `params.slug`, so a request that reached the row by some other
+    // casing or encoding still points at the one address the sitemap lists.
+    alternates: { canonical: platformCanonical(`/learn/${resource.slug}`) },
   };
 }
 

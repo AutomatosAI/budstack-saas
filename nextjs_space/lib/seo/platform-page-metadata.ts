@@ -207,16 +207,40 @@ export function buildPlatformPageMetadata(
     platformAbsoluteUrl(PLATFORM_DEFAULT_OG_IMAGE) ??
     PLATFORM_DEFAULT_OG_IMAGE;
 
-  const url = platformCanonical(routePath);
+  const canonical = platformCanonical(routePath);
 
   return {
     title,
     description,
+    // US-017 — ONE declared URL per page, and it is the APEX one.
+    //
+    // These pages had no canonical at all, so every address that reaches them
+    // was a candidate to be indexed in its own right: www against the apex
+    // (middleware 301s that, but only once a crawler has followed the www link
+    // to find out), and — the one no redirect can catch — every campaign and
+    // referral URL, `?utm_source=…`, `?ref=…`, `?fbclid=…`. Those answer 200 on
+    // the same content, which is duplicate content the site is generating about
+    // itself. Declaring the clean path here consolidates the lot.
+    //
+    // BUILT, NOT AUTHORED. `platform_seo_settings` has title, description,
+    // ogImage and noindex and no canonical column, deliberately (see
+    // lib/platform/seo-settings.ts): a hand-typed canonical is how a page ends
+    // up pointing at a URL that 404s, and the only correct answer for a static
+    // route is its own path. `platformCanonical` supplies the origin from
+    // `platformBaseUrl()`, so it follows the container's env rather than a
+    // baked-in host, and strips the trailing slash so `/blog` and `/blog/`
+    // cannot be declared as two canonicals for one page.
+    //
+    // Absolute, like the images above: with no `metadataBase` on the platform
+    // layout, Next hands a relative alternate straight through to the tag
+    // (`resolveAbsoluteUrlWithPathname` skips resolution entirely when there is
+    // no base), so a relative value would ship a host-less canonical.
+    alternates: { canonical },
     openGraph: {
       siteName: PLATFORM_SITE_NAME,
       type: "website",
       locale: PLATFORM_OG_LOCALE,
-      url,
+      url: canonical,
       title,
       description,
       // No width/height: the image is whatever a super-admin pointed at, and
