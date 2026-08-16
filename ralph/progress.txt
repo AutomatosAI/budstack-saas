@@ -931,3 +931,113 @@ duplicate. It closes half the 404 window this story opened; US-011 closes the
 rest. Remember the migration history is not buildable from empty
 (20260108_add_user_profile_fields dies on a missing `users`), so verify the new
 migration against a hand-built table as US-008 and US-009 both did.
+
+================================================================================
+[2026-08-16] US-010 PASS — Migrate the two editorial posts into platform_posts
+
+ADOPTED A CRASHED ITERATION'S DRAFT. Phase 1 found two untracked files that
+belonged to this story and to nothing else — the seed directory and its test.
+A predecessor died after writing them and before committing. Per the recovery
+protocol I did not discard them: I re-derived every load-bearing claim in them
+against the real code, found all of them true, proved the SQL by executing it,
+and shipped them. The commit is the draft plus this verification; the diff is
+unchanged from what was found on disk.
+
+WHAT LANDED
+- prisma/migrations/20260816000000_seed_editorial_platform_posts/migration.sql
+  Two INSERTs, no DDL. Sorts after 20260815000000_add_platform_posts, which is
+  the constraint that matters: `migrate deploy` applies directories in
+  lexicographic order, so a seed sorting before its CREATE TABLE fails the boot.
+- tests/unit/platform-posts-seed.test.ts — 9 offline guards reading the
+  migration as text. No database, no generated client.
+
+THE FOUR DECISIONS IN THE SQL, RE-VERIFIED AGAINST THE CODE
+1. TIMESTAMPED DIRECTORY, not a loose .sql. Confirmed the seven loose files are
+   still sitting unapplied at the top of prisma/migrations/ (add_platform_leads
+   .sql and friends). A test asserts no file matching /platform_posts/ ever
+   joins them.
+2. FIXED UUID ids, not readable keys. Checked the claim rather than trusting it:
+   app/api/platform/posts/[id]/route.ts calls parseUuid at lines 86, 102 and 213
+   (GET/PATCH/DELETE). A row keyed 'wordpress-post' would be published and
+   public but uneditable and undeletable through the admin UI. The ids are v4
+   uuids and the test runs the real parseUuid over them.
+3. ON CONFLICT ("slug") DO NOTHING, never DO UPDATE. platform_posts_slug_key
+   exists in the CREATE TABLE, so the conflict target resolves. DO NOTHING is
+   the load-bearing half: a re-deploy must not overwrite an edit a super-admin
+   has since made in /super-admin/the-wire. Content migrates once; the editor
+   owns it from then on.
+4. publishedAt = the post's own date at 12:00 UTC, minus one minute per position
+   in the shipped array. Both posts shipped "Aug 15, 2026", and
+   lib/platform/published-posts.ts:66 orders by publishedAt DESC then createdAt
+   DESC — identical stamps would order the pair arbitrarily between deploys.
+   Midday keeps formatPostDate (date-fns, server-local zone) on the intended
+   calendar day either side of UTC. Column is TIMESTAMP(3), so the bare literal
+   is correct.
+
+VERIFIED BY ACTUALLY RUNNING IT, NOT BY READING IT
+The predecessor's note warned the migration history is not buildable from empty
+(20260108_add_user_profile_fields dies on a missing `users`). Local DATABASE_URL
+is unreachable anyway — P1001 against the Railway host, which is private-network
+only. So: threw up a disposable PostgreSQL 17.9 cluster in /tmp on a unix socket
+(matching Railway's major version), hand-applied 20260815000000_add_platform_
+posts, then the seed, then THE SEED A SECOND TIME.
+- Both migrations executed clean under ON_ERROR_STOP=1. The dollar-quoting
+  parses; there is no stray $post$ inside either body to terminate it early.
+- After two runs: 2 rows, not 4. Idempotency demonstrated, not asserted.
+- Read back from the database: slugs, published=t, authorName/authorRole, and
+  publishedAt 12:00:00 / 11:59:00 giving the shipped array's order under the
+  real ORDER BY.
+- md5(content) out of Postgres === md5 of the template literals in
+  lib/blog/posts.ts, for both posts. That is the "content copied verbatim" AC
+  proven end to end — em dashes, apostrophes and the "$3 to $4" figures survive
+  the dollar-quoting intact. Cluster destroyed afterwards; nothing outside /tmp
+  was touched.
+
+CONTENT IS MIGRATED RAW AND UNSANITISED, deliberately. sanitizePostHtml runs on
+the way out at app/blog/[slug]/page.tsx:265, so a later policy change applies to
+rows that predate it. coverImageAlt and seo stay NULL — the array had neither,
+and the article already falls back to the title for alt text and builds metadata
+from the post's own fields.
+
+VALIDATION
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm vitest run tests/unit/platform-posts-seed.test.ts platform-posts-schema
+  → 18 passed.
+- pnpm vitest run (full) → 176 files passed, 8 skipped, 3203 tests passed. No
+  regressions.
+- pnpm prisma validate → valid. pnpm prisma generate → ok. No schema delta in
+  this story: it is data only, so there is nothing for migrate diff to compare.
+- pnpm check:public-routes → 107 pages, 1 public API handler, all allowlisted.
+  pnpm check:article-typography → clean. pnpm check:security → clean.
+  next lint on the new test → clean.
+- Live curl: NOT POSSIBLE and not deferred by choice — /blog needs the rows, the
+  rows need the migration, and the migration only runs where the database is.
+  entrypoint.sh applies it on the next container boot. The /tmp cluster is the
+  substitute and it is a stronger one than curl would have been: it proves the
+  SQL, the idempotency and the byte-for-byte content, none of which a rendered
+  page would have shown.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- The seven loose .sql files at the top of prisma/migrations/ are still there,
+  still never applied by any deploy, still a trap for the next person who drops
+  a file beside them. Only this story's guard test would catch a new one, and
+  only if it mentions platform_posts.
+- An untracked prisma/migrations/20260430_tenants_templateid_setnull/ is sitting
+  in the working tree from before this run. Not mine, not staged, left alone —
+  but it is an unversioned migration directory that WOULD run on the next deploy
+  if anyone committed it accidentally. Worth a human look.
+- Everything flagged at US-003/008/009 is unchanged: no app/blog/error.tsx, the
+  third sanitiser copy in app/api/integrations/automatos/posts/route.ts:43,
+  app/learn/[slug]/page.tsx still double-queries, no metadataBase on the
+  platform root layout, no pagination.
+
+NEXT
+US-011 (the six sample posts). Take the copies from app/blog/[slug]/page.tsx —
+that file's array carries the full content; the index's is the truncated
+duplicate. Same shape as this seed: timestamped directory sorting after this
+one, fixed uuids, ON CONFLICT DO NOTHING, published:true so the URLs stay live
+even though the prose is placeholder (a human rewrites it later — live URLs
+outrank polish, and Workstream D is not Ralph's). Keep giving each row a
+distinct publishedAt or the six will order arbitrarily against each other and
+against these two. Only when all 8 rows exist does US-012 get to delete the
+arrays.
