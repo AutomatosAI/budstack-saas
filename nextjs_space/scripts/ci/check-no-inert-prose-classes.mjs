@@ -43,11 +43,24 @@ const SKIP_DIRS = new Set(["node_modules", ".next", "dist", "build", "coverage"]
  * `prose` as a CLASS token, not the English word. Matches `prose`, `prose-lg`,
  * `not-prose` and variant-prefixed forms (`sm:prose`, `hover:prose-a:underline`).
  *
- * Anchored on class-token boundaries — whitespace, quote or backtick — so
- * "prose" inside a sentence ("leave readable prose") cannot match, while
- * `class="a prose-lg b"` does.
+ * Anchored on a class-token boundary to the left — whitespace, quote or
+ * backtick — so "prose" inside a sentence cannot match, while
+ * `class="a prose-lg b"` does. Comments are stripped before this runs, which is
+ * the real defence against prose-the-English-word.
+ *
+ * ONE quantified class for the tail, deliberately. The previous form ended
+ * `prose(?:-[a-z0-9-]+)*`, which nests a `+` inside a `*` over a character class
+ * that itself contains `-`. That makes `prose-` followed by many dashes
+ * ambiguous to split, and the failing right-boundary lookahead then walks every
+ * split — exponential backtracking (CodeQL js/redos, flagged on PR #258;
+ * measured at 7ms for 28 dashes and rising sharply). A single `[a-z0-9:-]*` has
+ * exactly one way to match any input, so the same lookahead can only unwind it
+ * one character at a time: linear, measured flat at 0ms out to 60 dashes.
+ *
+ * The right boundary is KEPT — dropping it was the first attempt and it
+ * regressed "a paragraph of prose," into a match.
  */
-const VIOLATION = /(?:^|[\s"'`])(?:[a-z-]+:)*(?:not-)?prose(?:-[a-z0-9-]+)*(?=[\s"'`]|$)/;
+const VIOLATION = /(?:^|[\s"'`])(?:[a-z-]+:)*(?:not-)?prose[a-z0-9:-]*(?=[\s"'`]|$)/;
 
 /**
  * Strip comments before testing, rather than testing only `className=` lines.

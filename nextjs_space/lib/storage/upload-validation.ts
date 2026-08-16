@@ -43,11 +43,20 @@ const MAX_FILE_NAME_LENGTH = 200;
  * the same expression; they are the reason it now lives in one place.
  */
 export function sanitizeUploadFileName(rawName: string): string {
-  return rawName
-    .replace(/\.\.\//g, '')
-    .replace(/\.\.\\/g, '')
-    .replace(/[/\\]/g, '_')
-    .slice(0, MAX_FILE_NAME_LENGTH);
+  return (
+    rawName
+      // SEPARATORS FIRST, and the order is the security property — do not
+      // rearrange. Stripping "../" before the separators is what CodeQL flags as
+      // js/incomplete-multi-character-sanitization (PR #258): the removal is not
+      // iterative, so "....//" collapses back into "../" after one pass. Killing
+      // every / and \ up front leaves no traversal sequence for a later step to
+      // miss, and makes the remaining dots ordinary filename characters.
+      .replace(/[/\\]/g, '_')
+      // A name that is only dots, or starts with them, is a hidden file or a
+      // relative-path fragment wearing a filename's clothes.
+      .replace(/^\.+/, '')
+      .slice(0, MAX_FILE_NAME_LENGTH)
+  );
 }
 
 /**
