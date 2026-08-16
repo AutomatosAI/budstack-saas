@@ -135,7 +135,28 @@ describe("where the bytes land", () => {
   it("strips traversal and separators out of the filename", async () => {
     await upload(request(pngFile("../../etc/passwd.png")));
 
-    expect(s3.uploadFile.mock.calls[0][1]).toBe("etc_passwd.png");
+    const fileName: string = s3.uploadFile.mock.calls[0][1];
+
+    // Asserted as PROPERTIES, not as one exact string. The property is what
+    // makes the key safe — no separator of either flavour, and therefore no
+    // traversal sequence — and it holds however the sanitiser spells the
+    // result. Pinning the exact output instead made this test fail when
+    // `sanitizeUploadFileName` was reordered to satisfy CodeQL
+    // (js/incomplete-multi-character-sanitization), even though the reordered
+    // version is strictly safer: it was asserting an implementation detail.
+    expect(fileName).not.toMatch(/[/\\]/);
+    expect(fileName).not.toContain("../");
+    expect(fileName).not.toContain("..\\");
+    // The real name still survives at the end, so the upload is identifiable.
+    expect(fileName.endsWith("etc_passwd.png")).toBe(true);
+  });
+
+  it("leaves a legitimate filename alone", async () => {
+    await upload(request(pngFile("my..file.png")));
+
+    // Dots that are not a traversal sequence are ordinary filename characters
+    // once the separators are gone — sanitising must not mangle them.
+    expect(s3.uploadFile.mock.calls[0][1]).toBe("my..file.png");
   });
 
   it("signs the preview URL without a tenant scope — there is no tenant", async () => {
