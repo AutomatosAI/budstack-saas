@@ -786,3 +786,148 @@ by-slug reader beside loadPublishedPlatformPosts, and its generateMetadata must
 share the page's fetch through React cache() rather than querying twice. The
 detail page keeps its own inline samplePosts array until US-012 — until US-010
 and US-011 migrate them, every one of those slugs must keep resolving.
+
+================================================================================
+[2026-08-16] US-009 PASS — /blog/[slug] reads the database, with its own metadata
+
+ADOPTED WORK (crash recovery)
+Phase 1 found ONE uncommitted tracked change: platformCanonical() appended to
+lib/seo/platform-url.ts, its own doc comment labelling it "Platform US-009". A
+predecessor iteration died mid-story. Adopted rather than aborted, after
+checking its load-bearing claims against lib/seo/canonical.ts line by line —
+the body is storeCanonical's, faithfully: same one-leading-slash collapse
+(the protocol-relative defence), same origin+pathname return, same
+trailing-slash strip, same catch. Kept verbatim; six tests now pin it,
+including `//evil.example/x`.
+
+WHAT LANDED
+- app/blog/[slug]/page.tsx: the page had NO metadata export at all, so all
+  eight posts served the root layout's title. It now loads one published
+  platform_posts row by slug and exports generateMetadata.
+- lib/seo/platform-post-metadata.ts (NEW, 155 lines) — pure builder.
+  buildPostMetadata's counterpart, deliberately NOT a call into it: every input
+  that builder takes is a tenant (business name, subdomain, plan), and
+  budstacks.io is not one. Faking a tenant to reach the plan gates would be
+  worse than the forty lines.
+- lib/platform/published-posts.ts: loadPublishedPlatformPost (by slug) and
+  loadRelatedPlatformPosts, both React-cache()d.
+- lib/seo/platform-url.ts: platformAbsoluteUrl() beside the adopted canonical.
+- lib/seo/iso-timestamp.ts (NEW) — extracted, see below.
+- lib/platform/post-date.ts (NEW) — the byline date formatter, now shared.
+- generateStaticParams REMOVED (it enumerated the inline arrays; the route list
+  is the table now) and force-dynamic added.
+
+THE DEFECT NOBODY HAD NOTICED — no metadataBase on the platform
+Every store layout sets one (storeMetadataBase, store-metadata.ts:155). The
+PLATFORM root layout does not. Next absolutises a relative openGraph.images
+entry against that base, so the obvious implementation — hand Next the
+origin-relative path storedPublicImagePath returns, as the tenant builder does
+— would have shipped og:image="http://localhost:3000/...". Correct on the
+tenant side, silently wrong here. platformAbsoluteUrl() resolves the asset
+against platformBaseUrl() instead, and an absolute cover URL on someone else's
+CDN is handed back untouched rather than mangled into "/https://...".
+Adding a metadataBase to the root layout would fix it globally and change
+every existing platform page's relative-URL resolution at once; that is
+US-015/US-017's call, not a side effect of this story.
+
+WHY isoTimestamp MOVED
+The publishedTime parser lives in post-metadata.ts, which reaches
+brandedOgImage -> pro-features -> lib/entitlements/features. Importing it to
+format one date would drag a TENANT'S entitlement lookup into budstacks.io's
+own article page. Extracted to lib/seo/iso-timestamp.ts and re-exported from
+post-metadata.ts so article-json-ld.ts keeps its import — the same move
+wire-paths.ts already made out of that same file. Zero behaviour change; the
+full suite confirms it.
+
+THE ONE ASYMMETRY, ON PURPOSE
+loadPublishedPlatformPost RE-THROWS on a failed query (an outage is not a 404 —
+telling a crawler a live article is gone is a lie it remembers).
+loadRelatedPlatformPosts DEGRADES TO []. Opposite calls, because the article
+has already loaded and is what the visitor came for; taking it down over two
+links at the bottom turns a degraded page into no page. Both log.
+
+THE WINDOW THIS OPENS — read before US-010/US-011
+The AC is explicit: "loads one post by slug; unpublished or missing returns
+notFound()". So as of this commit the eight existing /blog/<slug> URLs resolve
+to 404 — confirmed live against blockchain-traceability-compliance. US-010
+(2 editorial) and US-011 (6 samples) close it, and they are the next two
+stories. The window exists only in these local commits; this branch is not
+deployed until a human merges it, by which point every one of those posts is a
+row. A DB-first-with-inline-fallback shim was considered and rejected: it is
+code US-012 must then rip out, and it would let US-010/US-011 look like they
+had worked when the rows had not landed.
+The inline arrays are UNTOUCHED and must stay that way — samplePosts in
+app/blog/[slug]/page.tsx is the ONLY copy of the six posts' article bodies, and
+US-011's migration is written from it. Deleting it before then destroys the
+source. A test pins its presence.
+
+VERIFICATION
+- pnpm exec tsc --noEmit -> exit 0. (It caught two real errors in my own test
+  file first — next's OpenGraph/Twitter are unions, so `type` and `card` need
+  narrowing. Fixed, not silenced.)
+- pnpm vitest run tests/unit/platform-post-metadata.test.ts (31 new) +
+  blog-published-posts.test.ts (16 -> 32) -> 63 passed.
+- pnpm vitest run (full) -> 175 files, 3194 tests passed, 8 files/30 skipped
+  (the DB-backed integration project). No regressions from the isoTimestamp move.
+- pnpm build -> exit 0. Build output lists `ƒ /blog/[slug]` (dynamic),
+  prerender-manifest.json holds no /blog entry, and .next/server/app/blog/
+  contains no .html — force-dynamic took effect and generateStaticParams is
+  genuinely gone.
+- check:article-typography ✓, check:public-routes ✓ (107 pages), check:security ✓,
+  next lint on every touched file ✓.
+
+  visual: DONE, dev-browser + curl, against a throwaway Postgres 17 on
+  127.0.0.1:55433 with its own data dir in /tmp, the US-002 migration applied by
+  hand, pnpm dev pointed at it by inline env vars. No .env file read or written;
+  torn down and the data dir deleted; the user's own Chrome on :9222 was left
+  alone (dev-browser was brought up on :9333/:9334 instead).
+  Seeded 3 published (one with cover+alt, one cover-no-alt, one NO cover) + 1 draft.
+    1. TITLES AND OG:IMAGES DIFFER PER POST — the AC's load-bearing check, from
+       page source:
+         "Should You Build Your Cannabis Storefront on WordPress? | BudStacks"
+           og:image .../images/blog/post-01-franchise.svg
+         "Understanding Dr. Green API Integration | BudStacks"
+           og:image .../images/blog/post-02-api.svg
+         "A Post With No Cover Image | BudStacks"
+           og:image .../budstack-hero-ecosystem.jpg   <- the default, live
+       Per-post canonical and description too; og:url == canonical.
+    2. ARTICLE FACTS: og:type=article, og:site_name=BudStacks, og:locale=en_US,
+       article:published_time=2026-08-15T09:00:00.000Z, article:author,
+       twitter:card=summary_large_image.
+    3. DRAFT -> 404, and grep for the draft's title in the response body: 0 hits.
+       Missing slug -> 404. (Note: the 404 page renders the not-found boundary's
+       own title, not PLATFORM_POST_NOT_FOUND_TITLE — Next discards the page's
+       metadata once notFound() is thrown. The value of returning it is what it
+       refuses to emit, and the page comment now says exactly that rather than
+       claiming a title that does not render.)
+    4. BODY: rendered inside .bs-article with REAL computed typography measured
+       in the browser (h2 30px/500, p 17px/29.75px line-height) — not an inert
+       class. A seeded <script>alert(1)</script> is absent from the output;
+       sanitizePostHtml stripped it.
+    5. RELATED STRIP: two cards from the database, the current post excluded,
+       newest first, cover-less card falling back to the gradient backdrop. With
+       only one post published the whole strip (heading included) disappears
+       rather than heading over nothing. Both states screenshotted.
+    6. Byline renders "BudStacks – Platform Team" with a role and plain
+       "BudStacks" without one; coverImageAlt is used as alt, title as fallback.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- app/learn/[slug]/page.tsx runs its findUnique TWICE — once in
+  generateMetadata, once in the body — with no cache(). Same defect this story
+  removed from /blog. Two lines to fix; out of scope here.
+- The platform root layout still has no metadataBase (above). Any future
+  relative og:image on a platform page has the same trap waiting.
+- Still no app/blog/error.tsx, so the 500 is Next's default shell (flagged at
+  US-008, unchanged).
+- app/api/integrations/automatos/posts/route.ts:43 still holds the THIRD copy of
+  the sanitiser policy (flagged at US-003, unchanged).
+- No pagination on the related strip or the index (flagged at US-008).
+
+NEXT
+US-010 (migrate the two editorial posts in lib/blog/posts.ts into
+platform_posts). Timestamped migration DIRECTORY, never a loose .sql; slugs
+identical to today's; ON CONFLICT (slug) DO NOTHING so a re-deploy cannot
+duplicate. It closes half the 404 window this story opened; US-011 closes the
+rest. Remember the migration history is not buildable from empty
+(20260108_add_user_profile_fields dies on a missing `users`), so verify the new
+migration against a hand-built table as US-008 and US-009 both did.

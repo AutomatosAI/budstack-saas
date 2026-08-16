@@ -40,6 +40,7 @@ import type { Metadata } from "next";
 import { storeCanonical } from "@/lib/seo/canonical";
 import { readEntitySeo } from "@/lib/seo/entity-seo";
 import { seoIndexingDirectives } from "@/lib/seo/indexing";
+import { isoTimestamp } from "@/lib/seo/iso-timestamp";
 import { brandedOgImage } from "@/lib/seo/og-image";
 import {
   STORE_OG_LOCALE,
@@ -99,24 +100,11 @@ export interface PostMetadataSource extends WireTenantSource {
   readonly authorName: unknown;
 }
 
-/**
- * ISO-8601 timestamp for `article:published_time`, or undefined when the value
- * is not a real date.
- *
- * Accepts a string as well as a Date: a JSON round trip turns one into the
- * other, and an `Invalid Date` reaching `toISOString()` throws a RangeError —
- * the failure mode that takes render routes down elsewhere in this repo.
- *
- * Exported for US-016's `datePublished`/`dateModified`: the Article node and the
- * `article:published_time` tag on the same page must agree, and one parser is
- * how they do.
- */
-export function isoTimestamp(value: unknown): string | undefined {
-  if (typeof value !== "string" && !(value instanceof Date)) return undefined;
-
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
-}
+// The `article:published_time` / `datePublished` parser now lives in a
+// dependency-free module of its own (Platform US-009: the platform blog needs
+// it and must not import this file's entitlement chain to get it), re-exported
+// here so US-016's article-json-ld.ts keeps its import.
+export { isoTimestamp };
 
 /** Metadata for The Wire's index page. */
 export function buildWireIndexMetadata(source: WireTenantSource): Metadata {

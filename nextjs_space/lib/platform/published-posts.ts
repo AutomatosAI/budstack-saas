@@ -1,7 +1,10 @@
+import { cache } from "react";
+
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import {
   PLATFORM_POST_SUMMARY_SELECT,
+  type PlatformPostRow,
   type PlatformPostSummary,
 } from "@/lib/platform/posts";
 
@@ -27,6 +30,9 @@ import {
  */
 export const BLOG_UNAVAILABLE_MESSAGE =
   "The blog could not be loaded right now.";
+
+/** How many articles the "More from the blog" strip shows. */
+export const RELATED_POSTS_LIMIT = 2;
 
 /**
  * Published posts, newest first — the public index's only query.
@@ -73,3 +79,85 @@ export async function loadPublishedPlatformPosts(): Promise<
     throw new Error(BLOG_UNAVAILABLE_MESSAGE);
   }
 }
+
+/**
+ * US-009 — the one published article a /blog/<slug> URL names, or null.
+ *
+ * ONE query, shared by `generateMetadata` and the page body through React
+ * `cache()`, the way app/store/[slug]/the-wire/[postSlug]/page.tsx shares its
+ * post. Two copies of it would make every article render two identical round
+ * trips, and would let the title and the body disagree if a publish landed
+ * between them.
+ *
+ * `published: true` is part of the QUERY rather than a check on the result, so
+ * an unpublished draft's title cannot leak into the 404 page's <title> —
+ * metadata resolves before the page body reaches its `notFound()`.
+ *
+ * `findUnique` is correct here, unlike everywhere in this repo that touches a
+ * tenant-scoped model: `platform_posts` is absent from `tenantScopedModels`, so
+ * no `$extends` layer rewrites the call, and `slug` is `@unique` in its own
+ * right rather than half of a compound key. The `published` filter rides along
+ * in the `where` for the reason above.
+ *
+ * AN OUTAGE IS NOT A 404, for the same reason it is not an empty blog: a failed
+ * query re-throws into a 500, which is true, rather than telling a crawler that
+ * a live article has been removed.
+ */
+export const loadPublishedPlatformPost = cache(
+  async (slug: string): Promise<PlatformPostRow | null> => {
+    try {
+      // Row type stated explicitly — the `prisma` export is any-widened.
+      const post: PlatformPostRow | null =
+        await prisma.platform_posts.findUnique({
+          where: { slug, published: true },
+        });
+
+      return post;
+    } catch (error) {
+      logger.error("[blog] published platform post query failed", {
+        reason: error instanceof Error ? error.message : "unknown",
+      });
+      throw new Error(BLOG_UNAVAILABLE_MESSAGE);
+    }
+  },
+);
+
+/**
+ * US-009 — the "More from the blog" strip under an article: other published
+ * posts, newest first, never the one being read.
+ *
+ * THIS ONE DEGRADES TO `[]` RATHER THAN THROWING, which is the opposite call
+ * from the two loaders above, and deliberately. There the failed query IS the
+ * page — an empty answer would be a lie about what budstacks.io has published.
+ * Here the article has already loaded and is what the visitor came for; taking
+ * it down over a strip of two links at the bottom would turn a degraded page
+ * into no page. The failure is still logged, so it is visible as an outage
+ * rather than as a quiet absence.
+ */
+export const loadRelatedPlatformPosts = cache(
+  async (
+    excludeSlug: string,
+    limit: number = RELATED_POSTS_LIMIT,
+  ): Promise<PlatformPostSummary[]> => {
+    try {
+      const posts: PlatformPostSummary[] = await prisma.platform_posts.findMany(
+        {
+          where: { published: true, slug: { not: excludeSlug } },
+          orderBy: [
+            { publishedAt: { sort: "desc", nulls: "last" } },
+            { createdAt: "desc" },
+          ],
+          take: limit,
+          select: PLATFORM_POST_SUMMARY_SELECT,
+        },
+      );
+
+      return posts;
+    } catch (error) {
+      logger.error("[blog] related platform posts query failed", {
+        reason: error instanceof Error ? error.message : "unknown",
+      });
+      return [];
+    }
+  },
+);

@@ -1,13 +1,39 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { FileText, ArrowLeft } from "lucide-react";
-import sanitizeHtml from "sanitize-html";
 import { Navbar, Footer } from "@/components/landing";
-import { BLOG_POSTS } from "@/lib/blog/posts";
+import { formatPostDate } from "@/lib/platform/post-date";
+import type { PlatformPostSummary } from "@/lib/platform/posts";
+import {
+  loadPublishedPlatformPost,
+  loadRelatedPlatformPosts,
+} from "@/lib/platform/published-posts";
+import { sanitizePostHtml } from "@/lib/security/post-sanitize";
+import { BLOG_INDEX_PATH, blogPostPath } from "@/lib/seo/blog-paths";
+import {
+  PLATFORM_POST_NOT_FOUND_TITLE,
+  buildPlatformPostMetadata,
+} from "@/lib/seo/platform-post-metadata";
 
-// Editorial posts live in lib/blog/posts.ts (single source, shared with the
-// index). The entries below are the original samples, kept until each is
-// rewritten — migrate them into that module as you go.
+/**
+ * US-009 — one article, served from `platform_posts`, carrying its OWN title,
+ * description, canonical and og:image. Until now this page exported no metadata
+ * at all, so all eight posts shared the root layout's title.
+ *
+ * The build-time Prisma client is a mock that answers every query with `[]`
+ * (DATABASE_URL is a dummy at build), and `generateStaticParams` used to
+ * pre-render one route per inline post. Both are gone: the route list now lives
+ * in the database, so the page renders per request instead.
+ */
+export const dynamic = "force-dynamic";
+
+/**
+ * NOT RENDERED, and not deleted either — this array is the ONLY copy of the six
+ * sample posts' article bodies, and US-011's migration is written from it.
+ * US-010 does the same for `lib/blog/posts.ts`. US-012 deletes both, and only
+ * once the content is in the table.
+ */
 const samplePosts = [
     {
         id: 1,
@@ -179,29 +205,64 @@ const samplePosts = [
     },
 ];
 
-/** Editorial posts first, then the remaining samples. */
-const allPosts = [...BLOG_POSTS, ...samplePosts];
-
-// Get related posts (exclude current post)
-function getRelatedPosts(currentSlug: string, limit = 2) {
-    return allPosts
-        .filter((post) => post.slug !== currentSlug)
-        .slice(0, limit);
-}
-
 interface PageProps {
     params: Promise<{ slug: string }>;
 }
 
+/**
+ * Per-post metadata. `loadPublishedPlatformPost` is React-`cache()`d and is the
+ * SAME call the page body makes below, so this costs no extra query — and the
+ * title cannot describe a different revision from the body.
+ *
+ * A slug that resolves to nothing returns the not-found title rather than
+ * building one from a post that is not there. What a visitor SEES on that 404 is
+ * the not-found boundary's own metadata — verified live: Next renders the
+ * boundary's title, not this one — so the value here is what it refuses to
+ * emit. `published: true` is inside the query, so a draft is indistinguishable
+ * from a slug that never existed and neither can put its title in a tag.
+ *
+ * A query that FAILED never reaches here: the loader throws, which is a 500.
+ */
+export async function generateMetadata({
+    params,
+}: PageProps): Promise<Metadata> {
+    const { slug } = await params;
+    const post = await loadPublishedPlatformPost(slug);
+    if (!post) return { title: PLATFORM_POST_NOT_FOUND_TITLE };
+
+    return buildPlatformPostMetadata({
+        slug: post.slug,
+        title: post.title,
+        excerpt: post.excerpt,
+        coverImage: post.coverImage,
+        authorName: post.authorName,
+        publishedAt: post.publishedAt,
+        seo: post.seo,
+    });
+}
+
 export default async function BlogPostPage({ params }: PageProps) {
     const { slug } = await params;
-    const post = allPosts.find((p) => p.slug === slug);
+
+    // `published: true` is in the query, so a draft is indistinguishable from a
+    // slug that never existed — both 404 rather than leaking a title.
+    const post = await loadPublishedPlatformPost(slug);
 
     if (!post) {
         notFound();
     }
 
-    const relatedPosts = getRelatedPosts(post.slug);
+    // Degrades to [] if its own query fails; the article is what the visitor
+    // came for and must not be taken down over the strip at the bottom.
+    const relatedPosts: PlatformPostSummary[] =
+        await loadRelatedPlatformPosts(post.slug);
+
+    const publishedDate = formatPostDate(post.publishedAt);
+
+    // Sanitised on the way OUT as well as on the way in (the write API already
+    // applies the same policy): a row written before a rules change still
+    // renders under the current one.
+    const cleanContent = sanitizePostHtml(post.content);
 
     return (
         <div className="budstacks-theme min-h-screen">
@@ -211,7 +272,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                 <div className="mx-auto max-w-4xl">
                     {/* Back link */}
                     <Link
-                        href="/blog"
+                        href={BLOG_INDEX_PATH}
                         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
                     >
                         <ArrowLeft className="h-4 w-4" />
@@ -234,49 +295,66 @@ export default async function BlogPostPage({ params }: PageProps) {
                                 {post.title}
                             </h1>
 
-                            {/* Author info */}
+                            {/* Byline — the role is optional in the table, so the
+                                dash only appears when there is something after it */}
                             <p className="text-muted-foreground mb-2">
-                                {post.author} – {post.role}
+                                {post.authorRole
+                                    ? `${post.authorName} – ${post.authorRole}`
+                                    : post.authorName}
                             </p>
 
                             {/* Date */}
-                            <p className="text-sm font-medium text-accent uppercase tracking-wide">
-                                {post.date}
-                            </p>
+                            {publishedDate ? (
+                                <p className="text-sm font-medium text-accent uppercase tracking-wide">
+                                    {publishedDate}
+                                </p>
+                            ) : null}
                         </header>
 
-                        {/* Featured image with curved depth */}
-                        <div className="mb-12">
-                            <div
-                                className="aspect-[16/9] overflow-hidden rounded-[2.5rem]"
-                                style={{
-                                    boxShadow: `
+                        {/* Featured image with curved depth. A cover is optional
+                            — neither the editor nor the migration makes one
+                            mandatory — and an <img> with an empty src refetches
+                            the page itself, so the block is dropped entirely
+                            rather than rendered empty. */}
+                        {post.coverImage ? (
+                            <div className="mb-12">
+                                <div
+                                    className="aspect-[16/9] overflow-hidden rounded-[2.5rem]"
+                                    style={{
+                                        boxShadow: `
                     0 32px 64px -20px rgba(0, 0, 0, 0.12),
                     0 12px 24px -12px rgba(0, 0, 0, 0.10),
                     0 6px 12px -8px rgba(0, 0, 0, 0.08)
                   `,
-                                }}
-                            >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                    src={post.image}
-                                    alt={post.title}
-                                    className="w-full h-full object-cover"
-                                />
+                                    }}
+                                >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={post.coverImage}
+                                        // The authored alt describes the picture;
+                                        // the title describes the article, and is
+                                        // the fallback rather than the answer.
+                                        alt={post.coverImageAlt || post.title}
+                                        referrerPolicy="no-referrer"
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        ) : null}
 
-                        {/* Article content */}
+                        {/* Article content — .bs-article supplies the typography
+                            the inert prose-* classes never did (globals.css). */}
                         <div
                             className="bs-article"
-                            dangerouslySetInnerHTML={{
-                                __html: sanitizeHtml(post.content || ""),
-                            }}
+                            dangerouslySetInnerHTML={{ __html: cleanContent }}
                         />
                     </article>
                 </div>
 
-                {/* More posts section */}
+                {/* More posts section. Hidden entirely when this is the only
+                    published article, rather than showing a heading over
+                    nothing — which is what the inline arrays could never do. */}
+                {relatedPosts.length > 0 ? (
                 <div className="mx-auto max-w-5xl mt-24 pt-16 border-t border-border">
                     {/* Section header */}
                     <div className="text-center mb-12">
@@ -296,15 +374,23 @@ export default async function BlogPostPage({ params }: PageProps) {
 
                     {/* Related posts grid */}
                     <div className="grid gap-8 md:grid-cols-2">
-                        {relatedPosts.map((relatedPost) => (
+                        {relatedPosts.map((relatedPost) => {
+                            const relatedDate = formatPostDate(
+                                relatedPost.publishedAt,
+                            );
+
+                            return (
                             <Link
                                 key={relatedPost.id}
-                                href={`/blog/${relatedPost.slug}`}
+                                href={blogPostPath(relatedPost.slug)}
                                 className="group"
                             >
-                                {/* Image with curved depth */}
+                                {/* Image with curved depth. The gradient is the
+                                    whole backdrop for a post with no cover, so
+                                    the card keeps its shape either way — the
+                                    same treatment the index gives it. */}
                                 <div
-                                    className="aspect-[16/10] overflow-hidden rounded-[2rem] mb-4"
+                                    className="aspect-[16/10] overflow-hidden rounded-[2rem] mb-4 bg-gradient-to-br from-bs-green-500/25 via-bs-bg-1 to-bs-gold-400/15"
                                     style={{
                                         boxShadow: `
                       0 20px 40px -16px rgba(0, 0, 0, 0.10),
@@ -312,37 +398,41 @@ export default async function BlogPostPage({ params }: PageProps) {
                     `,
                                     }}
                                 >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                        src={relatedPost.image}
-                                        alt={relatedPost.title}
-                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                    />
+                                    {relatedPost.coverImage ? (
+                                        /* eslint-disable-next-line @next/next/no-img-element */
+                                        <img
+                                            src={relatedPost.coverImage}
+                                            alt={
+                                                relatedPost.coverImageAlt ||
+                                                relatedPost.title
+                                            }
+                                            loading="lazy"
+                                            referrerPolicy="no-referrer"
+                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        />
+                                    ) : null}
                                 </div>
 
                                 {/* Date */}
-                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                                    {relatedPost.date}
-                                </p>
+                                {relatedDate ? (
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                                        {relatedDate}
+                                    </p>
+                                ) : null}
 
                                 {/* Title */}
                                 <h3 className="font-display text-lg font-bold text-foreground transition-colors group-hover:text-accent">
                                     {relatedPost.title}
                                 </h3>
                             </Link>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
+                ) : null}
             </main>
 
             <Footer />
         </div>
     );
-}
-
-// Generate static params for all blog posts
-export function generateStaticParams() {
-    return allPosts.map((post) => ({
-        slug: post.slug,
-    }));
 }

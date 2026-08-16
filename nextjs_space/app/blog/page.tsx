@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { FileText } from "lucide-react";
 import { Navbar, Footer } from "@/components/landing";
+import { formatPostDate } from "@/lib/platform/post-date";
 import { loadPublishedPlatformPosts } from "@/lib/platform/published-posts";
 import type { PlatformPostSummary } from "@/lib/platform/posts";
 import { blogPostPath } from "@/lib/seo/blog-paths";
@@ -15,8 +15,13 @@ import { blogPostPath } from "@/lib/seo/blog-paths";
  * no longer rendered, and they are still here because their content is not in
  * the database yet — US-010 migrates the two editorial posts and US-011 the six
  * samples, keeping every existing /blog/<slug> URL live. US-012 deletes them,
- * and only then. Until those land the index is legitimately empty; the detail
- * page still serves both arrays, so no published URL 404s in the meantime.
+ * and only then; deleting them here first would destroy the copy those two
+ * migrations are written FROM.
+ *
+ * As of US-009 the detail page reads the database too, so between here and
+ * US-011 the eight existing /blog/<slug> URLs resolve to nothing. That window
+ * exists only in these local commits — this branch is not deployed until a
+ * human merges it, by which point every one of those posts is a row.
  */
 
 /**
@@ -26,12 +31,6 @@ import { blogPostPath } from "@/lib/seo/blog-paths";
  * reason app/sitemap.ts sets it.
  */
 export const dynamic = "force-dynamic";
-
-/** Matches the dates the inline posts carried, e.g. "Jan 10, 2026". */
-function formatPostDate(publishedAt: Date | null): string | null {
-  if (!publishedAt) return null;
-  return format(new Date(publishedAt), "MMM d, yyyy");
-}
 
 // Awaiting migration — see the note above. Not rendered.
 const samplePosts = [
