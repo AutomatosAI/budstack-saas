@@ -6,12 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Layout, Palette, Eye, Sparkles } from "lucide-react";
 import { Navbar, Footer } from "@/components/landing";
 import type { Metadata } from "next";
+import { generatePlatformRouteMetadata } from "@/lib/seo/generate-platform-metadata";
 
-export const metadata: Metadata = {
-  title: "Theme Marketplace | BudStacks",
-  description:
-    "Browse professional storefront themes for your cannabis business. Preview and choose the perfect design.",
-};
+// US-015 — read from `platform_seo_settings`, falling back per column to the
+// title and description this page used to hardcode (now in
+// PLATFORM_ROUTE_FALLBACKS, keyed by the same path the admin list edits).
+export function generateMetadata(): Promise<Metadata> {
+  return generatePlatformRouteMetadata("/marketplace");
+}
 
 // PRD-220 AC-C2: this page has no dynamic API calls, so without a revalidate
 // window Next.js would statically cache the signed preview URLs it bakes in

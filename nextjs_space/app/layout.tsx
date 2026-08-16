@@ -12,6 +12,10 @@ import { GlobalPlatformChatbot } from '@/components/landing/GlobalPlatformChatbo
 import { CookieBanner } from '@/components/legal/CookieBanner';
 import { prisma } from '@/lib/db';
 import { headers } from 'next/headers';
+import {
+  PLATFORM_DEFAULT_DESCRIPTION,
+  PLATFORM_DEFAULT_TITLE,
+} from '@/lib/seo/platform-page-metadata';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
@@ -29,9 +33,15 @@ const cormorantGaramond = Cormorant_Garamond({
 // Force dynamic rendering to avoid Clerk key requirement during build
 export const dynamic = 'force-dynamic';
 
+// US-015: the two strings below are the LAST-RESORT fallback for every
+// marketing route, so they live in lib/seo/platform-page-metadata.ts and are
+// imported here rather than repeated there. Everything else in this block is
+// inherited only by pages that declare nothing of their own — the fifteen
+// marketing routes now declare `openGraph`, `twitter` and (when a route is set
+// to noindex) `robots`, each of which Next replaces wholesale.
 export const metadata: Metadata = {
-  title: 'BudStacks - Medical Cannabis SaaS Platform',
-  description: 'Multi-tenant SaaS platform for medical cannabis dispensaries. Launch and manage your dispensary with ease.',
+  title: PLATFORM_DEFAULT_TITLE,
+  description: PLATFORM_DEFAULT_DESCRIPTION,
   keywords: 'medical cannabis, dispensary platform, SaaS, multi-tenant, cannabis business',
   authors: [{ name: 'BudStacks' }],
   openGraph: {

@@ -5,11 +5,14 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { prisma } from "@/lib/db";
 import type { SubprocessorRecord } from "@/lib/legal/subprocessor-notice";
+import { generatePlatformRouteMetadata } from "@/lib/seo/generate-platform-metadata";
 
-export const metadata: Metadata = {
-    title: "Sub-processors | BudStacks",
-    description: "Vendors that BudStacks engages to deliver the platform — purpose, region, and transfer mechanism.",
-};
+// US-015 — read from `platform_seo_settings`, falling back per column to the
+// title and description this page used to hardcode (now in
+// PLATFORM_ROUTE_FALLBACKS, keyed by the same path the admin list edits).
+export function generateMetadata(): Promise<Metadata> {
+    return generatePlatformRouteMetadata("/legal/subprocessors");
+}
 
 // The register is database-backed (WS3 US-011). It was a hardcoded array, so it
 // could only change with a deploy and nothing could start the 30-day notice

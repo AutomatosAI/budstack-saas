@@ -1,6 +1,8 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { FileText } from "lucide-react";
 import { Navbar, Footer } from "@/components/landing";
+import { generatePlatformRouteMetadata } from "@/lib/seo/generate-platform-metadata";
 import { formatPostDate } from "@/lib/platform/post-date";
 import { loadPublishedPlatformPosts } from "@/lib/platform/published-posts";
 import type { PlatformPostSummary } from "@/lib/platform/posts";
@@ -26,6 +28,16 @@ import { blogPostPath } from "@/lib/seo/blog-paths";
  * reason app/sitemap.ts sets it.
  */
 export const dynamic = "force-dynamic";
+
+/**
+ * US-015 — the index has never exported metadata, so it served the root
+ * layout's title while every article beneath it carries its own (US-009). It
+ * still falls back to that title, but a super-admin can now author one at
+ * /super-admin/seo without a deploy.
+ */
+export function generateMetadata(): Promise<Metadata> {
+    return generatePlatformRouteMetadata("/blog");
+}
 
 export default async function BlogPage() {
     // Throws rather than returning [] when the database cannot answer, so an

@@ -1467,3 +1467,139 @@ are the documented fallback; generateMetadata must share the page's fetch via
 React cache() rather than issuing a second query; and /documents/{slug} has no
 row of its own, so decide deliberately whether it inherits /documents or the
 guide's own generateMetadata stays the source.
+
+================================================================================
+[2026-08-16] US-015 PASS — Marketing pages consume the SEO settings
+================================================================================
+
+WHAT LANDED
+The read that finally makes platform_seo_settings do something. Fifteen static
+marketing routes plus the eighteen /documents guides now resolve their title,
+description, og:image and robots from the table, falling back to the metadata
+they shipped with.
+
+  lib/seo/platform-page-metadata.ts   NEW — pure builder + PLATFORM_ROUTE_FALLBACKS
+  lib/seo/generate-platform-metadata.ts NEW — cached loader + the two page entries
+  app/layout.tsx                      imports the two default constants
+  15 page files + app/contact/layout.tsx  export const metadata → generateMetadata
+  app/documents/[slug]/page.tsx       reads each guide's own row
+
+Split pure-from-impure exactly as lib/seo/page-metadata.ts is split from
+generate-page-metadata.ts on the tenant side: the builder takes a row and a
+fallback and touches no database, so it is total without a try/catch in every
+page, and testable without a mock.
+
+THE DECISIONS
+- FALLBACK IS PER COLUMN, not per row. Every one of the fifteen seeded rows
+  carries an ogImage and NULL everything else, so a "does a row exist?" test
+  would have blanked the title of every page on the site on day one. Verified
+  live against a real row (below) and pinned in the builder tests.
+- FALLBACKS ARE CENTRAL, in PLATFORM_ROUTE_FALLBACKS, holding each page's
+  hardcoded strings verbatim. Same arrangement as STORE_ROUTE_DEFINITIONS
+  (lib/seo/route-metadata.ts) for storefronts. A test asserts its keys are
+  EXACTLY PLATFORM_SEO_STATIC_ROUTES, so a route added to the admin list and not
+  here (or the reverse) fails rather than silently serving the platform default.
+- THE READ RETURNS NULL ON FAILURE, the opposite call from
+  lib/platform/published-posts.ts and deliberately. There the failed query IS
+  the page. Here it is an override of metadata the page already has, and
+  generateMetadata has no error.tsx boundary above it — re-throwing would take
+  a legal document down over its <title>. Logged, so an outage is visible.
+- noindex: false DECLARES NO ROBOTS KEY. Next replaces the key wholesale, so
+  emitting index: true would drop the max-image-preview/max-snippet googleBot
+  directives the root layout carries.
+- GUIDES DO NOT INHERIT /documents' ROW. Each published guide is already its own
+  authorable route in platformSeoRoutes(); inheriting would mean authoring one
+  title silently retitled eighteen pages. Its own title/summary is the fallback.
+- /contact GOT A LAYOUT. Its page is "use client" (react-hook-form), which
+  cannot export metadata at all — a 3-line layout beats splitting a working
+  286-line form for a <title>.
+- og:url IS NOW PER ROUTE. Declaring openGraph for the image replaces the
+  layout's block wholesale, and that block hardcodes url: https://budstacks.io —
+  so leaving it out would have deleted og:url from every subpage, and copying it
+  would have kept every subpage claiming to be the homepage. Same for twitter.
+  <link rel="canonical"> is NOT added here; that is US-017's deliverable.
+
+WHAT THE TESTS CAUGHT
+The og:image cascade first read
+  platformAbsoluteUrl(authored || DEFAULT) ?? DEFAULT
+which hands the RELATIVE constant back whenever the authored reference is one
+platformAbsoluteUrl rejects (a bare filename, //host/x). With no metadataBase on
+the platform layout, Next resolves a relative og:image against localhost — the
+exact tag the absolutiser exists to prevent. Now absolutises the default on its
+own line, matching postOgImage.
+
+VERIFIED
+- pnpm exec tsc --noEmit: exit 0.
+- pnpm vitest run: 180 files / 3305 tests pass, 0 fail (full project). New:
+  tests/unit/platform-page-metadata.test.ts (20) and platform-route-metadata
+  .test.ts (8).
+- check:public-routes (108 pages), check:article-typography, check:security: all
+  green. next lint over app/ lib/ tests/: no new finding in any touched file
+  (the warnings that remain are pre-existing unescaped quotes and <img> in page
+  BODIES; the one lint Error is the pre-existing 1015-line seo-audit.test.ts).
+- pnpm build: compiled successfully. prerender-manifest routes: 0 and zero .html
+  under .next/server/app — the root layout's force-dynamic still cascades, so
+  every marketing page is server-rendered per request and the build-time Prisma
+  mock cannot bake a fallback into static output. That was the risk worth
+  checking: had any of these pages been static, the feature would have worked in
+  dev and done nothing in production.
+
+VERIFIED LIVE (AC-5 satisfied, not deferred)
+Stood up a throwaway Postgres 17 on 127.0.0.1:55432 in /tmp, applied
+20260816020000_add_platform_seo_settings verbatim (the real artefact, seed and
+all), and ran the dev server with DATABASE_URL passed inline. No .env file was
+read from, written to or modified; the cluster and its data directory were
+destroyed afterwards and no process survives.
+
+  /terms, seeded row (ogImage only):
+    <title>Terms of Service | BudStacks</title>            ← shipped title kept
+    og:image  https://budstacks.io/budstack-hero-ecosystem.jpg  ← seeded, absolute
+    og:url    https://budstacks.io/terms                   ← was the apex
+    robots    index, follow                                ← inherited, not restated
+  after UPDATE …SET title/description/ogImage on /terms:
+    <title>Terms of Service — what operators agree to | BudStacks</title>
+    og:image  https://budstacks.io/social/terms-card.png
+    — no restart, no rebuild, no deploy. That is AC-5.
+  after UPDATE …SET noindex = true on /faq:
+    <meta name="robots" content="noindex, follow">         ← AC-3, a real tag
+  after DELETE of the /privacy row (the empty-table case, AC-2):
+    <title>Privacy Policy | BudStacks</title> — shipped metadata intact.
+  /documents/products with no row: its own title and summary, plus the platform
+  og:image it never had; then an authored row overrode the title while the
+  summary stood (per column), and /documents' own title was unaffected.
+  / and /contact: og:url correct per route; title is the platform default,
+  which is what both served before.
+
+The edit was applied as SQL against the same four columns the super-admin PUT
+upserts, because /super-admin/seo and PUT /api/platform/seo are Clerk-gated and
+there are no super-admin credentials in this environment. That write path is
+covered by the 38 tests in platform-seo-settings-api.test.ts from US-014; what
+could not be exercised end-to-end is the browser click, not the read under test.
+
+FLAGGED, NOT FIXED
+- /blog and /contact ship no title of their own — neither ever exported one —
+  so both still serve the platform default until someone authors one. Not
+  invented here: writing marketing copy is not this story. US-020's audit panel
+  is where they should surface.
+- The homepage's og:description is now the full platform description rather than
+  the shorter variant the layout's openGraph block carried. One string, and the
+  cards now agree with the <title>; noted because it is a visible change.
+- Still no metadataBase on the platform root layout. Everything here absolutises
+  its own URLs, so it does not bite — but a future page that forgets to will
+  ship localhost.
+- /blog 500s when platform_posts cannot be read (observed against the minimal
+  throwaway schema). That is US-008's deliberate "an outage is not an empty
+  blog", working as designed — recorded so the 500 in this run is not mistaken
+  for a regression.
+- Unchanged from earlier stories: the seven loose .sql files at the top of
+  prisma/migrations/ that never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ that WOULD run if
+  committed by accident.
+
+NEXT
+US-016 (blog posts enter the platform sitemap). Points to watch: mirror the
+existing learning_resources block in app/sitemap.ts rather than writing a new
+shape; keep the try/catch — that file swallows failures on purpose, the opposite
+call from the blog loaders; and the guides are a code registry, so their sitemap
+entries come from GUIDES filtered to published, the same filter guideRoutes()
+already applies in lib/platform/seo-routes.ts.

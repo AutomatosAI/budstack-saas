@@ -3,11 +3,14 @@ import Link from "next/link";
 import { Scale, FileText } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
+import { generatePlatformRouteMetadata } from "@/lib/seo/generate-platform-metadata";
 
-export const metadata: Metadata = {
-    title: "Terms of Service | BudStacks",
-    description: "Terms and conditions for using the BudStacks platform.",
-};
+// US-015 — read from `platform_seo_settings`, falling back per column to the
+// title and description this page used to hardcode (now in
+// PLATFORM_ROUTE_FALLBACKS, keyed by the same path the admin list edits).
+export function generateMetadata(): Promise<Metadata> {
+    return generatePlatformRouteMetadata("/terms");
+}
 
 const SECTIONS = [
     {

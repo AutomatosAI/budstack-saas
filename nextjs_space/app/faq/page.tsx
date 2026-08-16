@@ -1,9 +1,12 @@
 import { Metadata } from 'next';
+import { generatePlatformRouteMetadata } from '@/lib/seo/generate-platform-metadata';
 
-export const metadata: Metadata = {
-    title: 'Frequently Asked Questions',
-    description: 'Common questions about our services and medical cannabis',
-};
+// US-015 — read from `platform_seo_settings`, falling back per column to the
+// title and description this page used to hardcode (now in
+// PLATFORM_ROUTE_FALLBACKS, keyed by the same path the admin list edits).
+export function generateMetadata(): Promise<Metadata> {
+    return generatePlatformRouteMetadata('/faq');
+}
 
 export default function FAQPage() {
     return (

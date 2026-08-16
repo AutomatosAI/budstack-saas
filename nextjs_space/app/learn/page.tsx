@@ -14,12 +14,14 @@ import type { Metadata } from "next";
 import { Navbar, Footer } from "@/components/landing";
 import { LearnSearch } from "./learn-search";
 import { LearnChatbot } from "./learn-chatbot";
+import { generatePlatformRouteMetadata } from "@/lib/seo/generate-platform-metadata";
 
-export const metadata: Metadata = {
-  title: "Learning Center | BudStacks",
-  description:
-    "Guides, tutorials, and documentation to help you get the most out of BudStacks.",
-};
+// US-015 — read from `platform_seo_settings`, falling back per column to the
+// title and description this page used to hardcode (now in
+// PLATFORM_ROUTE_FALLBACKS, keyed by the same path the admin list edits).
+export function generateMetadata(): Promise<Metadata> {
+  return generatePlatformRouteMetadata("/learn");
+}
 
 // PRD-220 AC-C2: no dynamic API calls here, so without a revalidate window
 // Next.js would statically cache the signed cover-image URLs baked in at

@@ -4,11 +4,14 @@ import { Cookie, FileText, Settings, BarChart3, Shield } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { CookiePreferencesLink } from "@/components/legal/CookiePreferencesLink";
+import { generatePlatformRouteMetadata } from "@/lib/seo/generate-platform-metadata";
 
-export const metadata: Metadata = {
-    title: "Cookie Policy | BudStacks",
-    description: "Information about cookies and how we use them",
-};
+// US-015 — read from `platform_seo_settings`, falling back per column to the
+// title and description this page used to hardcode (now in
+// PLATFORM_ROUTE_FALLBACKS, keyed by the same path the admin list edits).
+export function generateMetadata(): Promise<Metadata> {
+    return generatePlatformRouteMetadata("/cookies");
+}
 
 const cookieTypes = [
     {
