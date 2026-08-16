@@ -18,6 +18,7 @@ const prismaMock = vi.hoisted(() => ({
   posts: { findMany: vi.fn() },
   conditions: { findMany: vi.fn() },
   learning_resources: { findMany: vi.fn() },
+  platform_posts: { findMany: vi.fn() },
 }));
 const { getCurrentTenant } = vi.hoisted(() => ({ getCurrentTenant: vi.fn() }));
 
@@ -27,6 +28,7 @@ vi.mock("@/lib/tenant/tenant", () => ({ getCurrentTenant }));
 import platformRobots from "@/app/robots";
 import platformSitemap from "@/app/sitemap";
 import { GET as storeSitemap } from "@/app/store/[slug]/sitemap.xml/route";
+import { GUIDES, publishedGuides } from "@/lib/documents/registry";
 import { storeCanonical } from "@/lib/seo/canonical";
 import { platformBaseUrl } from "@/lib/seo/platform-url";
 import {
@@ -61,6 +63,7 @@ beforeEach(() => {
   prismaMock.posts.findMany.mockResolvedValue([]);
   prismaMock.conditions.findMany.mockResolvedValue([]);
   prismaMock.learning_resources.findMany.mockResolvedValue([]);
+  prismaMock.platform_posts.findMany.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -266,6 +269,61 @@ describe("platform sitemap + robots", () => {
     });
   });
 
+  it("publishes every published blog post, dated from updatedAt", async () => {
+    // US-016 — /blog was listed and none of the articles under it were. Once
+    // US-008/US-009 made the blog database-backed, nothing but the index linked
+    // a post, so a publish had no route to discovery at all.
+    prismaMock.platform_posts.findMany.mockResolvedValue([
+      { slug: "the-economics-of-a-white-label-dispensary", updatedAt: new Date("2026-08-14T00:00:00Z") },
+    ]);
+
+    const entries = await platformSitemap();
+    const base = platformBaseUrl();
+    const post = entries.find(
+      (entry) => entry.url === `${base}/blog/the-economics-of-a-white-label-dispensary`,
+    );
+
+    expect(post).toBeDefined();
+    expect(post?.lastModified).toEqual(new Date("2026-08-14T00:00:00Z"));
+    expect(post?.priority).toBe(0.6);
+  });
+
+  it("asks for published posts only, with no tenant predicate", async () => {
+    // A draft must not be advertised. `published: true` is in the QUERY, so an
+    // unpublished row never reaches the document — and no tenantId appears,
+    // because `platform_posts` is deliberately outside `tenantScopedModels`
+    // (an opt-in allowlist) and a tenant filter here would empty the apex.
+    await platformSitemap();
+
+    expect(prismaMock.platform_posts.findMany).toHaveBeenCalledWith({
+      where: { published: true },
+      select: { slug: true, updatedAt: true },
+    });
+  });
+
+  it("publishes the guide index and every published guide", async () => {
+    // The largest content set on the site (18 pages, 16 embedded videos),
+    // public since #246/#249/#251 and absent from the sitemap until US-016.
+    const urls = (await platformSitemap()).map((entry) => entry.url);
+    const base = platformBaseUrl();
+
+    expect(urls).toContain(`${base}/documents`);
+    for (const guide of publishedGuides()) {
+      expect(urls).toContain(`${base}/documents/${guide.slug}`);
+    }
+    // A `coming-soon` guide has no page — app/documents/[slug]/page.tsx calls
+    // notFound() — so listing one would publish a 404. Every guide is published
+    // today, which makes the loop below vacuous and the length check the one
+    // that holds the property; both are here so that adding a coming-soon guide
+    // fails loudly rather than shipping a 404 into the sitemap.
+    for (const guide of GUIDES.filter((g) => g.status !== "published")) {
+      expect(urls).not.toContain(`${base}/documents/${guide.slug}`);
+    }
+    expect(
+      urls.filter((url) => url.startsWith(`${base}/documents/`)),
+    ).toHaveLength(publishedGuides().length);
+  });
+
   it("lists only routes a signed-out crawler can fetch", async () => {
     // Everything published here is in the middleware's isPublicRoute allowlist
     // (middleware.ts:8-46). /faq, /aup, /dpa, /regulatory and /legal/* are NOT,
@@ -280,11 +338,16 @@ describe("platform sitemap + robots", () => {
 
   it("still serves the marketing pages when the database is down", async () => {
     prismaMock.learning_resources.findMany.mockRejectedValue(new Error("no db"));
+    prismaMock.platform_posts.findMany.mockRejectedValue(new Error("no db"));
 
     const urls = (await platformSitemap()).map((entry) => entry.url);
 
     expect(urls).toContain(platformBaseUrl());
     expect(urls.some((url) => url.includes("/learn/"))).toBe(false);
+    expect(urls.some((url) => url.includes("/blog/"))).toBe(false);
+    // The guides are code, not rows — they survive an outage the two
+    // database-backed sections do not.
+    expect(urls).toContain(`${platformBaseUrl()}/documents/overview`);
   });
 
   it("takes its origin from the environment at call time", async () => {

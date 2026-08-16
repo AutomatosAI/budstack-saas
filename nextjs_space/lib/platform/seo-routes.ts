@@ -1,4 +1,4 @@
-import { GUIDES } from "@/lib/documents/registry";
+import { publishedGuides } from "@/lib/documents/registry";
 
 /**
  * US-014 — the ONE list of budstacks.io routes whose metadata a super-admin can
@@ -68,19 +68,19 @@ export const PLATFORM_SEO_STATIC_ROUTES: readonly PlatformSeoRoute[] = [
 /**
  * One row per PUBLISHED guide, in series order.
  *
- * `coming-soon` guides are excluded for the reason the sitemap excludes them:
- * `app/documents/[slug]/page.tsx` calls `notFound()` for anything that is not
- * published, so a row here would be metadata for a 404.
+ * `coming-soon` guides are excluded because `app/documents/[slug]/page.tsx`
+ * calls `notFound()` for anything that is not published, so a row here would be
+ * metadata for a 404. US-016 gave the sitemap the same problem, so the filter
+ * and the series ordering now live once in `publishedGuides()` — this list and
+ * the sitemap's `/documents/{slug}` entries cannot disagree about which guides
+ * exist.
  */
 function guideRoutes(): PlatformSeoRoute[] {
-  return [...GUIDES]
-    .filter((guide) => guide.status === "published")
-    .sort((a, b) => a.part - b.part)
-    .map((guide) => ({
-      path: `/documents/${guide.slug}`,
-      name: `Part ${guide.part} — ${guide.title}`,
-      group: "Documentation" as const,
-    }));
+  return publishedGuides().map((guide) => ({
+    path: `/documents/${guide.slug}`,
+    name: `Part ${guide.part} — ${guide.title}`,
+    group: "Documentation" as const,
+  }));
 }
 
 /** Every authorable route: the static list, then the guides beneath it. */

@@ -1603,3 +1603,100 @@ shape; keep the try/catch — that file swallows failures on purpose, the opposi
 call from the blog loaders; and the guides are a code registry, so their sitemap
 entries come from GUIDES filtered to published, the same filter guideRoutes()
 already applies in lib/platform/seo-routes.ts.
+
+================================================================================
+[2026-08-16] US-016 PASS — Blog posts enter the platform sitemap
+
+WHAT LANDED
+- app/sitemap.ts gained two sections and one marketing path:
+  * /blog/{slug} for every published platform_posts row — lastModified from
+    updatedAt, priority 0.6, changefreq monthly, built through blogPostPath()
+    so the sitemap entry and the page's own canonical (US-017) stay one string.
+  * /documents/{slug} for every published guide — lastModified from the guide
+    module's own ISO updatedAt, priority 0.6.
+  * /documents itself, priority 0.8. It was public since #246/#249/#251
+    (middleware.ts:78) and had never been listed, so the site's largest content
+    set — 18 pages carrying 16 videos — was discoverable only by a crawler that
+    happened to follow a link into it.
+- The two database reads now run under Promise.all. They are independent and the
+  document cannot be emitted until both answer or fail, so serialising them only
+  added latency.
+
+DECISIONS
+- Did NOT reuse loadPublishedPlatformPosts() from lib/platform/published-posts.ts.
+  That function RE-THROWS a failed query on purpose — /blog must 500 rather than
+  render "we have never published anything" — and the sitemap needs the opposite
+  trade: one missing section costs freshness, a sitemap that 500s teaches a
+  crawler the whole site is broken. Reusing it would have meant catching a throw
+  and re-deriving intent at the call site. Instead the four-line query is
+  repeated with the learning_resources block's try/catch, exactly as the AC asks,
+  and reads two columns where the public index needs twelve. Both headers now
+  cross-reference each other so the split is not read as an oversight.
+- Extracted publishedGuides() into lib/documents/registry.ts and pointed
+  lib/platform/seo-routes.ts' guideRoutes() at it. Without this the "filter to
+  published, sort by part" rule would have had two implementations, and a guide
+  flipping status would reach the sitemap and the authorable-route list at
+  different times — the drift that file's own header exists to prevent. Pure
+  refactor, no behaviour change; the 38 platform-seo-settings-api tests and the
+  20 platform-page-metadata tests cover it and stayed green.
+- No tenant predicate anywhere in the new query. platform_posts stays out of
+  tenantScopedModels (opt-in allowlist); a tenant filter would empty the apex.
+- Draft exclusion is in the QUERY (where: { published: true }), not a filter on
+  the result, so an unpublished row never reaches the document.
+
+VERIFIED
+- tsc --noEmit exit 0. Row type stated explicitly on the new findMany (the
+  prisma export is any-widened, so an inferred result would be TS7006 downstream).
+- pnpm vitest run: 180 files / 3308 tests passed, 8 files + 30 tests skipped
+  (integration, no DB). Targeted: sitemap.test.ts 23 tests, plus the two SEO
+  suites that import the refactored registry — 81 passed.
+- Four new tests: post URL + lastModified + priority; the query shape
+  (published-only, two columns, no tenantId); the guide index and all 18 guide
+  URLs with a length check that fails loudly if a coming-soon guide is ever
+  listed; and the outage case extended to cover platform_posts.
+- check:public-routes green — and it validates every sitemap path against the
+  middleware allowlist, so /documents being listed is machine-checked, not
+  asserted by hand. check:article-typography, check:security, eslint all clean.
+- LIVE: pnpm dev + curl http://localhost:3000/sitemap.xml → HTTP 200, 3845 bytes,
+  27 <loc> entries: 9 marketing paths + 18 guides, each guide carrying
+  <lastmod>2026-08-15</lastmod> and <priority>0.6</priority>.
+
+LIVE VERIFICATION CAVEAT — read this before treating the curl as full coverage.
+This machine cannot reach the database (postgres-budstack-development is on
+Railway's private network), so BOTH database sections logged their warn and
+degraded to [] during that fetch. What the curl therefore proves is the outage
+path, which is the AC's load-bearing clause: the sitemap answered 200 with the
+guides intact rather than 500ing, and the two failures were logged as
+"[seo] platform sitemap: learning resources unavailable" / "... blog posts
+unavailable". A published post appearing in the document is covered by unit test
+against a mocked prisma, NOT by live fetch. Confirming a real row on a
+database-connected environment is a human check.
+
+FLAGGED, NOT FIXED
+- The "lists only routes a signed-out crawler can fetch" test's comment is now
+  stale: it says /faq, /aup, /dpa, /regulatory and /legal/* are absent from the
+  middleware allowlist, but all five were added to it later (middleware.ts:66-72).
+  The assertion still passes and still describes what the sitemap does — those
+  pages are genuinely not listed — but the stated REASON is no longer true. Which
+  raises the real question: they are public and indexable and nothing points a
+  crawler at them. Adding them is a sitemap-content decision beyond US-016's ACs;
+  US-020's audit panel is where it should surface.
+- Guide priority is 0.6, the same as a blog post, chosen for consistency with the
+  other article-type entries; the ACs only fix the post value. Priority is close
+  to advisory for Google, so this is not worth a story on its own.
+- Unchanged from earlier stories: the seven loose .sql files at the top of
+  prisma/migrations/ that never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ that WOULD run if
+  committed by accident.
+
+NEXT
+US-017 (canonicals across platform marketing routes). Points to watch: the AC
+wants verification in page source on three routes, and this machine can serve
+public routes but not database-backed content — /blog/{slug} will 500 locally, so
+plan the three routes around what actually renders. buildPlatformPageMetadata in
+lib/seo/platform-page-metadata.ts is where a canonical belongs (every marketing
+page already routes through it via generatePlatformRouteMetadata), which makes
+this one central change rather than fifteen page edits. Canonical host is the
+APEX — platformBaseUrl() already returns it and middleware's wwwRedirectHost
+branch 301s www, so do not re-solve that. blogPostPath() is already the shared
+path helper; /documents/{slug} goes through generatePlatformGuideMetadata.

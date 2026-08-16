@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 
 import { prisma } from "@/lib/db";
+import { publishedGuides } from "@/lib/documents/registry";
 import { logger } from "@/lib/logger";
+import { blogPostPath } from "@/lib/seo/blog-paths";
 import { platformBaseUrl } from "@/lib/seo/platform-url";
 
 /**
@@ -27,6 +29,14 @@ import { platformBaseUrl } from "@/lib/seo/platform-url";
  * allowlist (middleware.ts:8-46); anything else on the apex answers a signed-out
  * request with a Clerk sign-in redirect, and listing it would be advertising a
  * login wall.
+ *
+ * US-016 added the two content sets that were missing. `/blog` was listed but
+ * none of the articles under it were, and once the blog became database-backed
+ * (US-008/US-009) a publish had no other way to be discovered — nothing links a
+ * post but the index. `/documents` was absent entirely despite being the site's
+ * largest content set. Each is a separate section below rather than one merged
+ * list because they fail independently: the guides are code and always render,
+ * the two database sections each degrade to nothing on their own.
  */
 
 /** Per-request: at build time DATABASE_URL is a dummy and the mock prisma
@@ -44,6 +54,11 @@ const MARKETING_PATHS: readonly MarketingPath[] = [
   { path: "", priority: 1.0, changeFrequency: "weekly" },
   { path: "/marketplace", priority: 0.9, changeFrequency: "weekly" },
   { path: "/learn", priority: 0.8, changeFrequency: "weekly" },
+  // US-016 — the guide index. Public since #246/#249/#251 (middleware.ts:78)
+  // and never listed here, so eighteen illustrated pages carrying sixteen
+  // videos — the largest content set on budstacks.io — were discoverable only
+  // by a crawler that happened to follow a link into them.
+  { path: "/documents", priority: 0.8, changeFrequency: "monthly" },
   { path: "/blog", priority: 0.7, changeFrequency: "weekly" },
   { path: "/contact", priority: 0.6, changeFrequency: "monthly" },
   { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
@@ -77,15 +92,72 @@ async function loadPublishedLearningResources(): Promise<LearningResourceRow[]> 
   }
 }
 
+interface PlatformPostSlugRow {
+  readonly slug: string;
+  readonly updatedAt: Date;
+}
+
+/**
+ * US-016 — published `platform_posts`, or [] when the database is unreachable.
+ *
+ * NOT `loadPublishedPlatformPosts()` from lib/platform/published-posts.ts, and
+ * deliberately: that one RE-THROWS a failed query so /blog 500s rather than
+ * rendering as "we have never published anything". The trade runs the other way
+ * here — see the header — so this repeats the four-line query with the
+ * learning-resources block's try/catch instead of catching a throw the caller
+ * would then have to interpret. It also reads two columns where the index
+ * needs twelve.
+ *
+ * `platform_posts` is deliberately absent from `tenantScopedModels` (lib/db.ts,
+ * an OPT-IN allowlist), so no tenant predicate is welded onto this read — which
+ * is what makes it answerable on the apex at all.
+ */
+async function loadPublishedPlatformPosts(): Promise<PlatformPostSlugRow[]> {
+  try {
+    return await prisma.platform_posts.findMany({
+      where: { published: true },
+      select: { slug: true, updatedAt: true },
+    });
+  } catch (error) {
+    logger.warn("[seo] platform sitemap: blog posts unavailable", {
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+    return [];
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = platformBaseUrl();
-  const resources = await loadPublishedLearningResources();
+
+  // Concurrent: two independent reads, and the document cannot be emitted until
+  // both have answered (or failed) anyway.
+  const [resources, posts] = await Promise.all([
+    loadPublishedLearningResources(),
+    loadPublishedPlatformPosts(),
+  ]);
 
   return [
     ...MARKETING_PATHS.map((entry) => ({
       url: `${baseUrl}${entry.path}`,
       changeFrequency: entry.changeFrequency,
       priority: entry.priority,
+    })),
+    // The guides are code, not rows, so they are the one section here that
+    // cannot go missing when the database is down. `updatedAt` is the ISO date
+    // the guide module states.
+    ...publishedGuides().map((guide) => ({
+      url: `${baseUrl}/documents/${encodeURIComponent(guide.slug)}`,
+      lastModified: guide.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
+    ...posts.map((post) => ({
+      // `blogPostPath` rather than the literal, so the sitemap entry, the page's
+      // own canonical (US-017) and the admin's preview link stay one string.
+      url: `${baseUrl}${blogPostPath(encodeURIComponent(post.slug))}`,
+      lastModified: post.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
     })),
     ...resources.map((resource) => ({
       url: `${baseUrl}/learn/${encodeURIComponent(resource.slug)}`,
