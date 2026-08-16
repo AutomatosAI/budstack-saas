@@ -1261,3 +1261,98 @@ US-013 (platform_seo_settings model and migration), the first story of
 Workstream C. Prisma story: timestamped migration DIRECTORY, and the new model
 stays OUT of tenantScopedModels in lib/db.ts alongside platform_posts,
 platform_leads and learning_resources.
+
+[2026-08-16] US-013 PASS — platform_seo_settings model and migration
+
+WHAT LANDED
+- prisma/schema.prisma: `platform_seo_settings` — uuid id, `routePath String
+  @unique`, nullable title/description/ogImage, `noindex Boolean @default(false)`,
+  createdAt/updatedAt. No tenantId, no @relation, no second index (the UNIQUE on
+  routePath is both the duplicate guard and the only lookup any reader makes —
+  platform_posts treats `slug` the same way).
+- prisma/migrations/20260816020000_add_platform_seo_settings/migration.sql — a
+  timestamped DIRECTORY, so entrypoint.sh's `migrate deploy` actually applies it.
+  Its DDL is byte-identical to `prisma migrate diff --from-empty
+  --to-schema-datamodel --script` output for this model; the seed INSERT is the
+  only hand-written SQL.
+- tests/unit/platform-seo-settings-schema.test.ts — 19 offline guards, same
+  text-reading shape as platform-posts-schema.test.ts.
+
+DECISIONS
+- EVERY AUTHORED COLUMN IS NULLABLE, because a row is an OVERRIDE, not a
+  replacement. US-015 has to apply it per COLUMN, not per row: with a row
+  present for all 15 routes, a per-row fallback would make an authored title
+  with no description blank that page's description. Written into the model
+  docstring and the migration header so US-015 cannot miss it.
+- THE SEED CARRIES ONLY "ogImage". Title and description stay NULL so the
+  existing `export const metadata` on each page remains the source of the copy —
+  freezing marketing copy into SQL would make editing it a deploy again, which
+  is the defect this workstream exists to remove. The AC's "one platform default
+  OG image so no route is left without one" is met literally: 15 rows, all
+  15 with an image, 0 with copy.
+- The image is PLATFORM_DEFAULT_OG_IMAGE (/budstack-hero-ecosystem.jpg) from
+  lib/seo/platform-post-metadata.ts, which already flags itself as "the value
+  US-013 replaces". Seeded as a ROOTED PATH, never an absolute URL, so
+  platformAbsoluteUrl() resolves it against the origin the container is serving
+  and staging does not advertise production's asset. The test imports the
+  constant rather than restating the string, so the two cannot drift.
+- 15 ROUTES, taken from middleware.ts's isPublicRoute allowlist: / /marketplace
+  /learn /blog /contact /documents /faq /regulatory /terms /privacy /cookies
+  /dpa /aup /legal/changelog /legal/subprocessors. That is the full US-014 list.
+  The three DYNAMIC families (/blog/{slug}, /learn/{slug}, /documents/{slug})
+  are deliberately absent — each entity carries its own metadata, and a settings
+  table cannot hold a row per row of another table.
+- Fixed UUIDs, not readable keys: an admin route that runs parseUuid on a path
+  param must be able to address every seeded row (the reason the platform_posts
+  seeds did the same).
+- ON CONFLICT DO NOTHING, deliberately not an upsert, so a replay cannot
+  overwrite an image a super-admin has since chosen.
+- NOT added to tenantScopedModels — the one place the repo's "new model joins
+  the allowlist" convention is inverted. That Set is opt-in; a platform table
+  inside it gets a tenantId filter welded onto every apex query and returns
+  nothing rather than erroring.
+
+VERIFIED
+- prisma validate ok · prisma generate ok (delegate present in the generated
+  client) · tsc --noEmit exit 0 · vitest full run 177 files / 3239 tests pass,
+  8 files / 30 tests skipped (the DB-backed integration set, as always).
+- check:public-routes, check:article-typography, check:security all green.
+  next lint on the new test file clean.
+- REAL POSTGRES. Threw up a throwaway PG 17 cluster in /tmp (port 55435, unix
+  socket only) and applied the migration with psql -v ON_ERROR_STOP=1:
+  CREATE TABLE / CREATE INDEX / INSERT 0 15. Then, on that live table:
+    * replaying the INSERT block alone → INSERT 0 0, count still 15;
+    * an authored edit (title + ogImage on /blog) SURVIVED a replay untouched,
+      which is what "not an upsert" buys;
+    * a duplicate routePath was refused by platform_seo_settings_routePath_key;
+    * 15 rows, 15 with an ogImage, 0 with title/description, 0 noindexed.
+  Cluster stopped and deleted; .env/.env.local never touched.
+- The allowlist guard was NEGATIVE-TESTED: temporarily added
+  'platform_seo_settings' to tenantScopedModels, confirmed the test fails
+  (1 failed | 18 passed), then restored lib/db.ts (git diff clean).
+
+FLAGGED, NOT FIXED (adjacent debt)
+- app/layout.tsx declares `openGraph` with NO images key, so every budstacks.io
+  page shares to a bare grey card today. The seeded rows are the data half of
+  the fix; the reader that consumes them is US-015, and until it lands the seed
+  changes nothing a crawler sees. Not a defect in this story — just worth
+  knowing the table is inert for one more story.
+- The whole-file migration re-run fails at CREATE TABLE (no IF NOT EXISTS).
+  That matches every other migration in the directory and is correct for
+  `migrate deploy`, whose _prisma_migrations ledger never replays an applied
+  migration. Only noting it so nobody reads "idempotent" in the header as
+  applying to the DDL — it applies to the seed.
+- Unchanged from earlier stories: seven loose .sql files at the top of
+  prisma/migrations/ that never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ in the working tree
+  that WOULD run if committed by accident; the migration history still cannot be
+  replayed from empty (20260108_add_user_profile_fields ALTERs `users`, which no
+  earlier migration creates); no metadataBase on the platform root layout.
+
+NEXT
+US-014 (super-admin platform SEO page). It needs a canonical TypeScript list of
+the same 15 routes — the migration is the only place that list exists right now,
+and a second hand-typed copy is how the two drift. Reuse SeoEditorModal +
+GooglePreview from components/admin/seo/, guard any API route with
+withSuperAdmin (NOT the unauthenticated shape of app/api/platform/leads), and
+give every query an explicit row type — the prisma export is any-widened.
