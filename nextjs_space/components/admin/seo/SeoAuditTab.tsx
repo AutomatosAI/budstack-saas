@@ -21,6 +21,7 @@ import type {
 } from "@/lib/seo/audit-types";
 import type { SeoAuditSnapshot } from "@/lib/seo/audit-cache";
 import { fetchSeoAudit } from "./audit-client";
+import { TENANT_SEO_AUDIT_COPY, type SeoAuditCopy } from "./audit-copy";
 
 /**
  * SEO Supercharge US-023 — the Audit tab of the SEO Manager.
@@ -36,11 +37,23 @@ import { fetchSeoAudit } from "./audit-client";
  * boundary is `requireFeature(FEATURES.SEO_PRO)` on the route, which 403s a
  * Basic tenant whatever this component does — and the upgrade state below is
  * what it renders when that happens anyway.
+ *
+ * PLATFORM US-020 — the same panel now also audits budstacks.io itself, from
+ * /super-admin/seo. Nothing about the score, the grouping or the deep links
+ * differs, so nothing is reimplemented: which audit to run arrives as `apiPath`
+ * and the sentences that name what was checked arrive as `copy`, both defaulting
+ * to the store's. The plan gate has no meaning on the platform side (there is no
+ * plan to upgrade), and needs no branch — that endpoint simply never answers
+ * `upgrade_required`.
  */
 
 interface SeoAuditTabProps {
   /** Open the editor a finding points at. */
   onFix: (target: SeoAuditTarget) => void;
+  /** Which audit to run. Defaults to the tenant SEO Manager's. */
+  apiPath?: string;
+  /** What to call the thing being audited. Defaults to the store's wording. */
+  copy?: SeoAuditCopy;
 }
 
 const sectionTitleStyle = {
@@ -168,10 +181,12 @@ function ScoreHeader({
   snapshot,
   refreshing,
   onRefresh,
+  copy,
 }: {
   snapshot: SeoAuditSnapshot;
   refreshing: boolean;
   onRefresh: () => void;
+  copy: SeoAuditCopy;
 }) {
   const { audit } = snapshot;
   const grade = GRADE_COPY[audit.grade] ?? GRADE_COPY.poor;
@@ -216,12 +231,7 @@ function ScoreHeader({
         </div>
       </div>
 
-      <p className="text-sm text-bs-fg-muted">
-        Checked {stats.products} products, {stats.posts} posts,{" "}
-        {stats.conditions} condition pages, {stats.pages} store pages and{" "}
-        {stats.redirects} redirects. Your sitemap publishes {stats.sitemapEntries}{" "}
-        URLs.
-      </p>
+      <p className="text-sm text-bs-fg-muted">{copy.stats(stats)}</p>
 
       {stats.truncated.length > 0 && (
         <p className="text-sm text-bs-warn">
@@ -234,30 +244,37 @@ function ScoreHeader({
   );
 }
 
-export function SeoAuditTab({ onFix }: SeoAuditTabProps) {
+export function SeoAuditTab({
+  onFix,
+  apiPath,
+  copy = TENANT_SEO_AUDIT_COPY,
+}: SeoAuditTabProps) {
   const [snapshot, setSnapshot] = useState<SeoAuditSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [upgradeRequired, setUpgradeRequired] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async (refresh: boolean) => {
-    if (refresh) setRefreshing(true);
-    else setLoading(true);
+  const load = useCallback(
+    async (refresh: boolean) => {
+      if (refresh) setRefreshing(true);
+      else setLoading(true);
 
-    const outcome = await fetchSeoAudit({ refresh });
-    if (outcome.ok) {
-      setSnapshot(outcome.snapshot);
-      setError(null);
-      setUpgradeRequired(false);
-    } else {
-      setError(outcome.error);
-      setUpgradeRequired(outcome.upgradeRequired);
-    }
+      const outcome = await fetchSeoAudit({ refresh, apiPath });
+      if (outcome.ok) {
+        setSnapshot(outcome.snapshot);
+        setError(null);
+        setUpgradeRequired(false);
+      } else {
+        setError(outcome.error);
+        setUpgradeRequired(outcome.upgradeRequired);
+      }
 
-    setRefreshing(false);
-    setLoading(false);
-  }, []);
+      setRefreshing(false);
+      setLoading(false);
+    },
+    [apiPath],
+  );
 
   useEffect(() => {
     void load(false);
@@ -268,7 +285,7 @@ export function SeoAuditTab({ onFix }: SeoAuditTabProps) {
       <section className="bs-card bs-card-pad">
         <p className="text-sm text-bs-fg-muted text-center py-8 inline-flex items-center gap-2 w-full justify-center">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          Checking every page in your store…
+          {copy.loading}
         </p>
       </section>
     );
@@ -308,6 +325,7 @@ export function SeoAuditTab({ onFix }: SeoAuditTabProps) {
         snapshot={snapshot}
         refreshing={refreshing}
         onRefresh={() => void load(true)}
+        copy={copy}
       />
 
       {failing.length === 0 ? (
@@ -317,11 +335,7 @@ export function SeoAuditTab({ onFix }: SeoAuditTabProps) {
             aria-hidden="true"
           />
           <h4 className="font-medium text-bs-fg">Nothing to fix</h4>
-          <p className="text-sm text-bs-fg-muted">
-            All {passed} checks passed. Titles, descriptions, images, your
-            sitemap, your redirects and what the AI crawlers can read are all in
-            order.
-          </p>
+          <p className="text-sm text-bs-fg-muted">{copy.clean(passed)}</p>
         </section>
       ) : (
         <>

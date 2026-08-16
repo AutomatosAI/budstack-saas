@@ -1,4 +1,9 @@
 import { publishedGuides } from "@/lib/documents/registry";
+import type { Guide } from "@/lib/documents/types";
+import {
+  PLATFORM_ROUTE_FALLBACKS,
+  type PlatformRouteFallback,
+} from "@/lib/seo/platform-page-metadata";
 
 /**
  * US-014 — the ONE list of budstacks.io routes whose metadata a super-admin can
@@ -86,6 +91,46 @@ function guideRoutes(): PlatformSeoRoute[] {
 /** Every authorable route: the static list, then the guides beneath it. */
 export function platformSeoRoutes(): readonly PlatformSeoRoute[] {
   return [...PLATFORM_SEO_STATIC_ROUTES, ...guideRoutes()];
+}
+
+/**
+ * The metadata one guide page SHIPS with — its own title and summary, suffixed
+ * with the series name.
+ *
+ * ONE definition, called by both the page (`app/documents/[slug]/page.tsx`, via
+ * `generatePlatformGuideMetadata`) and US-020's audit. A second copy in the
+ * audit would let it report a title the page does not serve — which is exactly
+ * the class of defect the audit exists to find.
+ */
+export function platformGuideFallback(guide: Guide): PlatformRouteFallback {
+  return {
+    title: `${guide.title} — The BudStacks Guide`,
+    description: guide.summary,
+  };
+}
+
+/**
+ * What each authorable route serves before `platform_seo_settings` has an
+ * opinion — the static pages' shipped strings, then every published guide's.
+ *
+ * US-020's audit reads this to tell "this page has a title of its own" from
+ * "this page falls through to the platform default", which is the difference
+ * between a described page and one sharing a sentence with fourteen others.
+ * Server-side only, like the rest of this module: it reaches the guide registry.
+ */
+export function platformRouteFallbacks(): ReadonlyMap<
+  string,
+  PlatformRouteFallback
+> {
+  return new Map<string, PlatformRouteFallback>([
+    ...Object.entries(PLATFORM_ROUTE_FALLBACKS),
+    ...publishedGuides().map(
+      (guide): [string, PlatformRouteFallback] => [
+        `/documents/${guide.slug}`,
+        platformGuideFallback(guide),
+      ],
+    ),
+  ]);
 }
 
 /**

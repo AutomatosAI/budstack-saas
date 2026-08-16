@@ -398,7 +398,11 @@ describe("the marketing pages themselves", () => {
       "utf8",
     );
 
-    expect(source).toContain("generatePlatformGuideMetadata(params.slug");
+    // Whitespace-tolerant: US-020 gave the call a second argument
+    // (`platformGuideFallback`, shared with the audit), which wraps it over
+    // three lines. What is being pinned is the slug reaching the per-guide
+    // loader, not the formatter's opinion of where the newline goes.
+    expect(source).toMatch(/generatePlatformGuideMetadata\(\s*params\.slug/);
     expect(source).not.toContain('generatePlatformRouteMetadata("/documents")');
   });
 

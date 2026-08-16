@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { GUIDES, getGuide } from "@/lib/documents/registry";
+import { platformGuideFallback } from "@/lib/platform/seo-routes";
 import { generatePlatformGuideMetadata } from "@/lib/seo/generate-platform-metadata";
 import { GuideView } from "../GuideView";
 
@@ -19,6 +20,11 @@ export function generateStaticParams() {
  * An unknown slug still returns `{}` — the page calls `notFound()` below, and
  * building metadata for a guide that is not there would put the platform
  * default title on a 404.
+ *
+ * US-020 — the fallback is `platformGuideFallback`, the same call the audit
+ * makes when it judges whether this page has a title of its own. It was two
+ * literals here; the audit would have been a second copy of them, free to
+ * report a title the page does not serve.
  */
 export function generateMetadata({
   params,
@@ -28,10 +34,10 @@ export function generateMetadata({
   const guide = getGuide(params.slug);
   if (!guide) return {};
 
-  return generatePlatformGuideMetadata(params.slug, {
-    title: `${guide.title} — The BudStacks Guide`,
-    description: guide.summary,
-  });
+  return generatePlatformGuideMetadata(
+    params.slug,
+    platformGuideFallback(guide),
+  );
 }
 
 export default function GuidePage({ params }: { params: { slug: string } }) {

@@ -19,7 +19,7 @@
 
 import { UPGRADE_REQUIRED_CODE } from "@/lib/entitlements/plan";
 import {
-  SEO_AUDIT_CHECKS,
+  SEO_AUDIT_ALL_CHECKS,
   SEO_AUDIT_TABS,
   type SeoAuditCheckResult,
   type SeoAuditFinding,
@@ -111,7 +111,11 @@ function parseChecks(value: unknown): SeoAuditCheckResult[] {
     // An unknown check id means this page is older than the API that answered
     // it. Dropping the group is the honest degrade: the score still adds up,
     // and the owner is not shown a heading with no meaning.
-    if (!SEO_AUDIT_CHECKS.includes(check as SeoAuditCheckResult["check"])) {
+    //
+    // Filtered against the whole VOCABULARY (US-020), not one audit's run list:
+    // this parser now reads two endpoints, and the platform audit's
+    // `canonical-missing` group is a check that ran, not a page out of date.
+    if (!SEO_AUDIT_ALL_CHECKS.includes(check as SeoAuditCheckResult["check"])) {
       return [];
     }
     return [
@@ -207,16 +211,22 @@ async function refusal(
  * `refresh` bypasses the server's 15-minute cache — what the Re-run button
  * sends, so an owner who has just fixed three findings sees the new score
  * instead of the old one.
+ *
+ * `apiPath` is which audit to run (US-020): the store's by default, or the
+ * platform's own (`/api/platform/seo/audit`) from the super-admin SEO page. Both
+ * answer the same `SeoAuditSnapshot` shape, which is what lets one parser and
+ * one panel serve both.
  */
 export async function fetchSeoAudit(
-  options: { readonly refresh?: boolean } = {},
+  options: { readonly refresh?: boolean; readonly apiPath?: string } = {},
 ): Promise<SeoAuditFetchOutcome> {
+  const path = options.apiPath ?? SEO_AUDIT_API_PATH;
+
   let response: Response;
   try {
-    response = await fetch(
-      options.refresh ? `${SEO_AUDIT_API_PATH}?refresh=1` : SEO_AUDIT_API_PATH,
-      { headers: { accept: "application/json" } },
-    );
+    response = await fetch(options.refresh ? `${path}?refresh=1` : path, {
+      headers: { accept: "application/json" },
+    });
   } catch {
     return { ok: false, error: NETWORK_ERROR, upgradeRequired: false };
   }

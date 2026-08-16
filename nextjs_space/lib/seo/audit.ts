@@ -59,6 +59,7 @@ import {
   SEO_AUDIT_MAX_FINDINGS_PER_CHECK,
   SEO_AUDIT_SEVERITY_ORDER,
   SEO_AUDIT_WEIGHTS,
+  type SeoAuditCheckId,
   type SeoAuditCheckResult,
   type SeoAuditFinding,
   type SeoAuditGrade,
@@ -86,8 +87,11 @@ export function seoAuditGrade(score: number): SeoAuditGrade {
 }
 
 /** Where a check sits in the result: failing first, then worst severity first. */
-function checkRank(result: SeoAuditCheckResult): number {
-  const declared = SEO_AUDIT_CHECKS.indexOf(result.check);
+function checkRank(
+  result: SeoAuditCheckResult,
+  checks: readonly SeoAuditCheckId[],
+): number {
+  const declared = checks.indexOf(result.check);
   const failing = result.total > 0 ? 0 : 1;
   return (
     failing * 1_000_000 +
@@ -103,10 +107,18 @@ function checkRank(result: SeoAuditCheckResult): number {
  * EVERY check appears in the result, including the clean ones. That is what the
  * Audit tab's clean state is built from — "14 checks passed" is a sentence the
  * UI can only write if it is told about the checks that found nothing.
+ *
+ * `checks` is WHICH checks this audit ran, defaulting to the store's. Platform
+ * US-020 scores a different set over budstacks.io's own routes
+ * (`PLATFORM_SEO_AUDIT_CHECKS`), and passing it here is what keeps a result from
+ * reporting checks it never evaluated as checks that passed — a store audit must
+ * not claim a canonical check it has no data for, and the platform audit must not
+ * claim a deleted-product-leak check that has no meaning off a storefront.
  */
 export function scoreSeoAudit(
   findings: readonly SeoAuditFinding[],
   stats: SeoAuditStats,
+  checks: readonly SeoAuditCheckId[] = SEO_AUDIT_CHECKS,
 ): SeoAuditResult {
   const byCheck = new Map<string, SeoAuditFinding[]>();
   for (const item of findings) {
@@ -115,20 +127,22 @@ export function scoreSeoAudit(
     else byCheck.set(item.check, [item]);
   }
 
-  const checks: SeoAuditCheckResult[] = SEO_AUDIT_CHECKS.map((check) => {
-    const weight = SEO_AUDIT_WEIGHTS[check];
-    const group = byCheck.get(check) ?? [];
-    return {
-      check,
-      severity: weight.severity,
-      title: weight.title,
-      total: group.length,
-      findings: group.slice(0, SEO_AUDIT_MAX_FINDINGS_PER_CHECK),
-      penalty: Math.min(weight.cap, weight.perFinding * group.length),
-    };
-  }).sort((a, b) => checkRank(a) - checkRank(b));
+  const results: SeoAuditCheckResult[] = checks
+    .map((check) => {
+      const weight = SEO_AUDIT_WEIGHTS[check];
+      const group = byCheck.get(check) ?? [];
+      return {
+        check,
+        severity: weight.severity,
+        title: weight.title,
+        total: group.length,
+        findings: group.slice(0, SEO_AUDIT_MAX_FINDINGS_PER_CHECK),
+        penalty: Math.min(weight.cap, weight.perFinding * group.length),
+      };
+    })
+    .sort((a, b) => checkRank(a, checks) - checkRank(b, checks));
 
-  const penalty = checks.reduce((sum, check) => sum + check.penalty, 0);
+  const penalty = results.reduce((sum, check) => sum + check.penalty, 0);
   const score = Math.max(0, Math.min(100, 100 - penalty));
 
   const severityCounts: Record<SeoAuditSeverity, number> = {
@@ -136,14 +150,14 @@ export function scoreSeoAudit(
     warning: 0,
     info: 0,
   };
-  for (const check of checks) {
+  for (const check of results) {
     severityCounts[check.severity] += check.total;
   }
 
   return {
     score,
     grade: seoAuditGrade(score),
-    checks,
+    checks: results,
     totalFindings: findings.length,
     severityCounts,
     stats,

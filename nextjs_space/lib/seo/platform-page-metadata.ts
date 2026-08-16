@@ -167,18 +167,52 @@ export interface PlatformPageMetadataSource {
   readonly setting?: PlatformSeoOverride | null;
 }
 
-/** Authored value, then the page's shipped value, then the platform default. */
+/**
+ * Authored value, then the page's shipped value, then the platform default —
+ * and WHICH of the three it was.
+ *
+ * `usesDefault` exists for US-020: falling through to the platform default is
+ * not a neutral outcome, it is this route serving the same sentence as every
+ * other unauthored route, which is what the audit reports as a missing title or
+ * description. Returned by the resolver rather than recomputed by the audit so
+ * there is one cascade — an audit that re-derived it would eventually disagree
+ * with the tag on the page it is judging.
+ */
 function resolveText(
   authored: string | null | undefined,
   shipped: string | undefined,
   platformDefault: string,
-): string {
-  return seoText(authored) || seoText(shipped) || platformDefault;
+): { value: string; usesDefault: boolean } {
+  const value = seoText(authored) || seoText(shipped);
+  return value
+    ? { value, usesDefault: false }
+    : { value: platformDefault, usesDefault: true };
 }
 
-export function buildPlatformPageMetadata(
+/**
+ * What one route actually serves, before it is shaped into a {@link Metadata}.
+ *
+ * Split out for US-020's audit, which needs the resolved values AND whether each
+ * fell back — questions a built `Metadata` cannot answer (its `openGraph.images`
+ * is a five-way union, and "this title is the platform default" is not
+ * recoverable from the string alone without restating the cascade).
+ */
+export interface PlatformPageSeo {
+  readonly title: string;
+  readonly description: string;
+  /** Absolute; the platform hero when the route has no image of its own. */
+  readonly ogImage: string;
+  readonly canonical: string;
+  /** True when the field is the platform-wide default, not this route's. */
+  readonly usesDefaultTitle: boolean;
+  readonly usesDefaultDescription: boolean;
+  readonly usesDefaultOgImage: boolean;
+}
+
+/** Resolve one route's metadata. Pure and total, like the builder above it. */
+export function resolvePlatformPageSeo(
   source: PlatformPageMetadataSource,
-): Metadata {
+): PlatformPageSeo {
   const { routePath, fallback, setting } = source;
 
   const title = resolveText(
@@ -202,12 +236,37 @@ export function buildPlatformPageMetadata(
   // the two together would hand that null back the RELATIVE constant, which is
   // the one thing that must never reach the tag: with no `metadataBase` on the
   // platform layout, Next resolves a relative og:image against localhost.
+  const platformDefaultImage =
+    platformAbsoluteUrl(PLATFORM_DEFAULT_OG_IMAGE) ?? PLATFORM_DEFAULT_OG_IMAGE;
   const ogImage =
-    platformAbsoluteUrl(seoText(setting?.ogImage)) ??
-    platformAbsoluteUrl(PLATFORM_DEFAULT_OG_IMAGE) ??
-    PLATFORM_DEFAULT_OG_IMAGE;
+    platformAbsoluteUrl(seoText(setting?.ogImage)) ?? platformDefaultImage;
 
-  const canonical = platformCanonical(routePath);
+  return {
+    title: title.value,
+    description: description.value,
+    ogImage,
+    canonical: platformCanonical(routePath),
+    usesDefaultTitle: title.usesDefault,
+    usesDefaultDescription: description.usesDefault,
+    // THE RENDERED CARD IS WHAT IS COMPARED, not the column. Two routes serve
+    // the platform hero: one with no row, and one whose row points AT the hero —
+    // which is what the US-013 seed wrote for all fifteen static routes. Both
+    // share their social card with the whole site, so both answer true; asking
+    // "is the column filled in" would call fifteen identical grey cards fifteen
+    // images of their own. A reference this origin cannot serve (a bare
+    // filename, a protocol-relative `//host/x`) resolves to null above and the
+    // page falls back to the hero, so it lands here as the default it will
+    // actually render as.
+    usesDefaultOgImage: ogImage === platformDefaultImage,
+  };
+}
+
+export function buildPlatformPageMetadata(
+  source: PlatformPageMetadataSource,
+): Metadata {
+  const { setting } = source;
+  const { title, description, ogImage, canonical } =
+    resolvePlatformPageSeo(source);
 
   return {
     title,

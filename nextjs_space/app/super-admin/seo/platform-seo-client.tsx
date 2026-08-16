@@ -3,9 +3,14 @@
 import { useMemo, useState } from "react";
 import { AlertCircle, CheckCircle, EyeOff, ImageOff, Search } from "lucide-react";
 
-import { SeoEditorModal } from "@/components/admin/seo";
+import {
+  PLATFORM_SEO_AUDIT_COPY,
+  SeoAuditTab,
+  SeoEditorModal,
+} from "@/components/admin/seo";
 import type { PlatformSeoRoute } from "@/lib/platform/seo-routes";
 import type { PlatformSeoSettingRow } from "@/lib/platform/seo-settings";
+import type { SeoAuditTarget } from "@/lib/seo/audit-types";
 import type { EntitySeo } from "@/lib/seo/entity-seo";
 
 /**
@@ -32,6 +37,9 @@ const PLATFORM_INDEXING_FIELDS = ["noindex"] as const;
 
 /** US-005's super-admin upload route — see the module note. */
 const PLATFORM_UPLOAD_ENDPOINT = "/api/platform/upload";
+
+/** US-020's audit of this site, answered by the platform engine. */
+const PLATFORM_AUDIT_ENDPOINT = "/api/platform/seo/audit";
 
 const GROUP_BLURB: Readonly<Record<string, string>> = {
   Marketing:
@@ -138,8 +146,31 @@ export default function PlatformSeoClient({
     setStored((prev) => ({ ...prev, [saved.routePath]: saved }));
   };
 
+  /**
+   * US-020 — open the editor a finding points at.
+   *
+   * A finding about a marketing route carries that route's PATH as its
+   * `entityId`, which is the same key this list is indexed by, so the fix is the
+   * row's own modal rather than a second editor. A finding about a blog post
+   * carries an `href` to The Wire instead and is rendered as a link by the panel
+   * — it never reaches this handler.
+   *
+   * An id that matches nothing (a stale cached audit naming a route since
+   * removed from the list) does nothing rather than opening an empty modal.
+   */
+  const handleAuditFix = (target: SeoAuditTarget) => {
+    const route = routes.find((candidate) => candidate.path === target.entityId);
+    if (route) setSelected(route);
+  };
+
   return (
     <>
+      <SeoAuditTab
+        onFix={handleAuditFix}
+        apiPath={PLATFORM_AUDIT_ENDPOINT}
+        copy={PLATFORM_SEO_AUDIT_COPY}
+      />
+
       {groups.map((group) => (
         <section key={group} className="bs-card bs-card-pad space-y-4">
           <div>

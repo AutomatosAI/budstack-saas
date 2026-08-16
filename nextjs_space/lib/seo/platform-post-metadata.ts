@@ -113,10 +113,33 @@ export function platformPostOgImage(
   );
 }
 
-/** Metadata for one budstacks.io/blog article. */
-export function buildPlatformPostMetadata(
+/**
+ * What one article actually serves, before it is shaped into a {@link Metadata}.
+ *
+ * Split out for Platform US-020's audit, for the reason its page counterpart is
+ * (`resolvePlatformPageSeo`): the audit's questions are "does this article have
+ * a description of its own" and "is its social card the platform hero", and
+ * neither survives into the built `Metadata` — the description key is OMITTED
+ * when there is nothing to say, and the image is a union type the audit would
+ * have to guess its way through. Re-deriving either would be a second copy of
+ * the cascade below, drifting from the tag it claims to describe.
+ */
+export interface PlatformPostSeo {
+  /** The `<title>`, as Next receives it — absolute when authored. */
+  readonly title: Metadata["title"];
+  /** "" when the article inherits the layout's platform description. */
+  readonly description: string;
+  readonly ogImage: string;
+  readonly canonical: string;
+  readonly authorName: string;
+  /** True when the card is the platform hero rather than this article's. */
+  readonly usesDefaultOgImage: boolean;
+}
+
+/** Resolve one article's metadata. Pure and total. */
+export function resolvePlatformPostSeo(
   source: PlatformPostMetadataSource,
-): Metadata {
+): PlatformPostSeo {
   const seo = readEntitySeo(source.seo);
 
   // An AUTHORED title renders exactly as typed — that is what authoring it
@@ -138,10 +161,29 @@ export function buildPlatformPostMetadata(
   // description on every article — the duplicate-content defect this closes.
   const description = seoText(seo.description) || seoText(source.excerpt);
 
-  const canonical = platformCanonical(blogPostPath(source.slug));
   const ogImage = platformPostOgImage(seo.ogImage, source.coverImage);
+
+  return {
+    title,
+    description,
+    ogImage,
+    canonical: platformCanonical(blogPostPath(source.slug)),
+    authorName: seoText(source.authorName) || PLATFORM_SITE_NAME,
+    // Compared against what the cascade produces for an article with neither an
+    // authored image nor a cover, so a stored reference this origin cannot serve
+    // — a presigned S3 URL, a bare filename — counts as the default it will
+    // actually render as.
+    usesDefaultOgImage: ogImage === platformPostOgImage(undefined, null),
+  };
+}
+
+/** Metadata for one budstacks.io/blog article. */
+export function buildPlatformPostMetadata(
+  source: PlatformPostMetadataSource,
+): Metadata {
+  const { title, description, ogImage, canonical, authorName } =
+    resolvePlatformPostSeo(source);
   const publishedTime = isoTimestamp(source.publishedAt);
-  const authorName = seoText(source.authorName) || PLATFORM_SITE_NAME;
 
   return {
     title,

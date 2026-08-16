@@ -27,7 +27,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-platform-content-and-seo.md`
 - [x] US-017 Canonicals across platform marketing routes
 - [x] US-018 Article and BreadcrumbList JSON-LD
 - [x] US-019 Slug changes issue a 301
-- [ ] US-020 Platform SEO audit panel
+- [x] US-020 Platform SEO audit panel
 
 ---
 

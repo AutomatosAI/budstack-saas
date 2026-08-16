@@ -2035,3 +2035,126 @@ route (app/api/tenant-admin/seo/audit/route.ts) reads seo_redirects among other
 tenant tables, so the platform version needs its own data source rather than a
 copy of that route. AC asks for a browser check — /super-admin is Clerk-gated, so
 expect to fall back to route/component tests and say so rather than claim it.
+
+================================================================================
+[2026-08-16] US-020 PASS — Platform SEO audit panel
+================================================================================
+
+WHAT LANDED
+The audit we sell to tenants now runs against budstacks.io, on /super-admin/seo,
+above the route list it fixes. Four checks: no canonical, no title of its own, no
+description of its own, no social card of its own — over every authorable route
+(15 marketing pages + 18 published guides) and every published blog post.
+
+  lib/platform/seo-audit.ts (new, pure)  — the engine + PLATFORM_SEO_AUDIT_CHECKS
+  app/api/platform/seo/audit/route.ts    — withSuperAdmin, two reads, GET only
+  components/admin/seo/audit-copy.ts     — the four sentences that name the subject
+  app/super-admin/seo/platform-seo-client.tsx — the panel, wired to the editor
+
+REUSED, NOT REWRITTEN
+- SeoAuditTab renders both audits. It gained two optional props — `apiPath`
+  (which audit) and `copy` (what to call what was checked) — both defaulting to
+  the store's, so the SEO Manager's call site is byte-identical. Score, grades,
+  grouping, per-finding deep links, the cache-age line and the Re-run button are
+  untouched.
+- `cachedSeoAudit` (the tenant 15-minute cache) holds this audit too, under
+  PLATFORM_SEO_AUDIT_CACHE_KEY = "platform:budstacks.io" — deliberately a shape
+  no tenant UUID can collide with, because one Map holds both.
+- `scoreSeoAudit` scores it. It gained an optional third argument: WHICH checks
+  this audit ran. Without it the platform result would have claimed to pass
+  sitemap-deleted-leak and qa-missing, which have no meaning off a storefront.
+
+THE DECISION THAT SHAPED THE REST: IT JUDGES WHAT THE PAGE SERVES
+Every check runs over the output of the same resolvers `generateMetadata` calls,
+so the audit cannot drift from the tags it describes. That needed two small
+extractions, both behaviour-preserving:
+  - `resolvePlatformPageSeo` out of `buildPlatformPageMetadata`
+  - `resolvePlatformPostSeo` out of `buildPlatformPostMetadata`
+Each returns the resolved strings plus whether the field fell through to the
+platform default — a question a built `Metadata` cannot answer (its
+openGraph.images is a five-way union, and "this is the default title" is not
+recoverable from the string without restating the cascade). The builders now
+consume their own resolver; nothing else about them changed.
+Third extraction, same reason: the guide fallback `{title, description}` was two
+literals inside app/documents/[slug]/page.tsx. It is now `platformGuideFallback`
+in lib/platform/seo-routes.ts, called by the page AND the audit, so the audit
+cannot report a title the page does not serve.
+
+TWO JUDGEMENT CALLS WORTH REVIEWING
+1. `og-image-missing` compares the RENDERED CARD, not the column. The US-013 seed
+   pointed all 15 static routes AT the platform hero, so judging "is the column
+   filled in" would call fifteen identical grey cards fifteen images of their
+   own. Consequence: on day one the panel reports ~33 og findings (every route)
+   plus any post without a cover. That is true — budstacks.io has one stock
+   social image — and it is an `info` check, capped at 5 points, sorted last.
+2. `title-missing` is about AUTHORSHIP, not string comparison. An authored title
+   that repeats the platform default counts as the route's own. Consequence: the
+   HOMEPAGE is flagged, because PLATFORM_ROUTE_FALLBACKS["/"] is {} and it
+   inherits the layout's title. The advice is still right — the site's most
+   valuable string is currently a shared constant — but it is worth knowing the
+   first thing the panel will say about `/` is "no title of its own", alongside
+   /blog and /contact, which is the state the US-015 header predicted.
+
+THE CANONICAL CHECK IS NOT A TAUTOLOGY
+It parses the declared canonical and asks whether its path names THIS page,
+rather than comparing the resolver's output with itself. That catches the real
+failure: `platformCanonical` returns the bare origin when `new URL` cannot parse
+a path, so an unparseable route would declare the HOMEPAGE canonical and ask
+Google to index that instead. Trailing slashes and percent-encoding are
+normalised on both sides. Today every route and post passes it; it is a guard,
+and it is the only check here that can fail on data nobody typed.
+
+VERIFIED
+- pnpm exec tsc --noEmit: exit 0.
+- pnpm vitest run: 183 files / 3405 tests pass, 0 fail. New:
+  tests/unit/platform-seo-audit.test.ts, 38 cases (engine, canonicalNamesRoute,
+  result shape, finding targets, the client parser, and the route: 401 for a
+  signed-out caller and for a tenant admin, no tenantId in either read, published
+  posts only, cache hit then refresh=1 recompute, and a failed query answering
+  500 with the safe message and NOT being cached).
+- pnpm build: exit 0. It caught what tsc cannot — a Next route module may export
+  only handlers and config, so `export const PLATFORM_SEO_AUDIT_CACHE_KEY` in the
+  route failed the build with "not a valid Route export field". The constant now
+  lives in lib/platform/seo-audit.ts. Both new entries appear in the output:
+  ƒ /api/platform/seo/audit and ƒ /super-admin/seo (2.23 kB).
+- check:public-routes (108 pages, still exactly 1 public API handler — the new
+  route is NOT public), check:article-typography, check:security, lint: clean.
+- LIVE against `pnpm dev`: signed-out GET /api/platform/seo/audit → 307 to
+  /auth/login, with and without ?refresh=1; /super-admin/seo the same. The
+  metadata refactor was checked on rendered HTML: /terms serves
+  <title>Terms of Service | BudStacks</title>, canonical and og:url
+  https://budstacks.io/terms, og:image the hero; /documents/seo serves
+  "The SEO Manager — The BudStacks Guide" with its summary as the description and
+  its own canonical — i.e. the extracted resolver and platformGuideFallback
+  produce exactly what shipped before.
+- ONE PRE-EXISTING TEST ADJUSTED (my diff broke it): platform-page-metadata.test
+  .ts grepped the guide page's source for the literal
+  "generatePlatformGuideMetadata(params.slug". The call now takes a second
+  argument and wraps over three lines, so the assertion is a whitespace-tolerant
+  regex. Same claim, not a weaker one.
+- visual: DEFERRED TO HUMAN REVIEW. /super-admin/seo is Clerk-gated and this
+  machine has no session; the database is Railway-private, so even with one the
+  two reads would fail here. Nothing in the panel's rendering was claimed on that
+  basis — the fetch/parse layer, the engine and the route are unit-covered, and
+  the component itself is unchanged apart from three substituted strings.
+
+FLAGGED, NOT FIXED
+- /learn/{slug} is NOT audited. Those are learning_resources rows whose metadata
+  is built inline in the page rather than by a shared resolver, so covering them
+  would mean a second copy of that logic in the audit — the one thing this story
+  was arranged to avoid. They ARE in the sitemap. Worth a story: extract a
+  `buildLearnResourceMetadata` and add them (they would light up immediately —
+  the page declares no openGraph at all, so every article shares the layout's
+  card, and description is nullable).
+- The audit judges the metadata the platform builders PRODUCE, not whether a page
+  calls one. A new marketing page that forgot `generatePlatformRouteMetadata`
+  would serve the layout's defaults and still read as clean. That belongs in a CI
+  guard next to check-public-routes-allowlisted.mjs, not in a runtime panel.
+- The platform redirect table still has no admin UI (carried from US-019).
+- Unchanged from earlier stories: /blog index emits no structured data;
+  app/learn/[slug]/page.tsx queries twice per request; the seven loose .sql files
+  at the top of prisma/migrations/ still never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ would run if committed
+  by accident.
+
+RALPH_COMPLETE — US-020 was the last story on the plan.
