@@ -1147,3 +1147,117 @@ back empty. That story DOES carry a dev-browser AC: /blog must list all 8 and
 each /blog/<slug> must still render — which needs a database carrying the rows,
 so if the local environment cannot reach one, say so plainly and record
 `visual: deferred to human review` rather than claiming the check.
+
+================================================================================
+[2026-08-16] US-012 PASS — Delete the inline post arrays
+================================================================================
+
+Workstream B is complete. The blog is out of code.
+
+WHAT LANDED
+- app/blog/page.tsx: the six-entry hardcoded array removed (-75 lines). The page
+  already rendered from the database as of US-008; this deletes the copy that was
+  being kept alive only as the source US-011's migration was written from.
+- app/blog/[slug]/page.tsx: the six-entry hardcoded array removed (-184 lines).
+- lib/blog/posts.ts DELETED outright (-145 lines), and with it the now-empty
+  lib/blog/ directory. Deleting the arrays inside the two pages while leaving
+  that module behind would have left the content re-importable in one line.
+- lib/platform/post-editor.ts: the comment explaining where the default byline
+  came from pointed at lib/blog/posts.ts. Repointed at the seed migration —
+  a comment citing a file that no longer exists is how the next reader gets lost.
+- tests/unit/blog-published-posts.test.ts: the two guards that HELD the arrays in
+  place ("still carries the inline sample posts — deleting them is US-012") are
+  inverted into guards that keep them gone, plus two new ones asserting
+  lib/blog/posts.ts and lib/blog/ are absent from disk.
+
+DECISIONS
+- The inverted guards match on the SLUG STRINGS, not just on the const name. A
+  renamed array holding the same eight posts would sail past a `const samplePosts`
+  check and still be exactly the duplication this story exists to end. The slugs
+  are held verbatim in the test as BLOG_SLUGS — they have no source left to drift
+  from, since US-012 just deleted the only place they appeared in code.
+- Slug matching is on the QUOTED form (`"slug"`), so the header comments — which
+  name the two seed migrations — do not read as content and trip the guard.
+- The header comments on both pages were rewritten to describe the deletion
+  rather than the mid-run state, and deliberately avoid the literal identifiers
+  `samplePosts` / `BLOG_POSTS` so the story's AC grep over app/ and lib/ comes
+  back genuinely empty rather than empty-except-for-comments.
+- Corrected a claim in my own first draft of those comments: the detail page's
+  array held SIX entries, not eight. Eight was the CONCATENATION of those six
+  with the two from lib/blog/posts.ts — which is precisely how the index
+  advertised six posts while eight URLs resolved. The comments now say that.
+
+PRECONDITION (the story's BLOCKED clause)
+Satisfied before any deletion. US-010 and US-011 are both committed
+(42faeddd, a52c6edb) and their seeds carry all eight slugs. Re-proved here
+against a live database rather than taken on trust — see below.
+
+HOW VERIFIED
+- `grep -rn 'samplePosts\|BLOG_POSTS' app lib` → exit 1, no output. The AC.
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm vitest run tests/unit/{blog-published-posts,platform-posts-seed,
+  platform-post-metadata}.test.ts → 89/89.
+- pnpm vitest run (full) → 176 files passed, 3220 tests, 8 files / 30 tests
+  skipped (the DB-backed integration ones). No regressions. Test count rose
+  3218 → 3220: two guards added, none lost.
+- check:public-routes (107 pages), check:article-typography, check:security →
+  all green. next lint on the four touched files → clean.
+- REAL DATABASE, REAL BROWSER. Threw up a PG 17.9 cluster in /tmp (port 55434),
+  built the schema from `prisma migrate diff --from-empty --to-schema-datamodel
+  --script` and applied both seed migrations with psql → 8 published rows.
+  Ran `pnpm dev` on port 3111 against it with DATABASE_URL passed in the
+  environment; .env/.env.local were NOT touched, and the shell value wins because
+  @next/env does not override an already-set process.env var (confirmed
+  empirically — the page served the throwaway cluster's rows).
+- /blog → HTTP 200, exactly 8 post cards, titles and order correct (the two
+  editorial posts on top at Aug 15 2026, then the six samples Jan 2026 → Dec
+  2025), empty state NOT shown.
+- All 8 /blog/<slug> → HTTP 200 each, each with its own <title>, its own <h1>,
+  and a populated .bs-article body (606–5120 chars of rendered text).
+- .bs-article is genuinely styling, not an inert class: computed styles are
+  17px/29.75px paragraphs and 30px h2, i.e. not the browser defaults.
+- A slug that never existed → HTTP 404. Not a blank page, not a 500.
+- Screenshots of the index and of the WordPress article taken and inspected:
+  cards, cover images, byline, headings, bold, bulleted list and the related-
+  posts strip all render.
+- Cluster stopped and deleted, dev server stopped, all /tmp artefacts removed.
+
+DEVIATION FROM THE STORY'S LETTER (declared, not hidden)
+The AC names the dev-browser skill. Its server hardcodes port 9222, and Gerard's
+own Google Chrome (PID 66457) is already listening there, so the skill detected
+"server already running", attached to his personal browser and failed to open a
+page. Killing a user's running browser is not a call Ralph gets to make. I drove
+Playwright Chromium directly instead — the same engine the skill wraps, minus its
+named-page state server — and got the full visual check the AC is asking for. The
+verification is real; only the wrapper differs.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- Every route in dev throws one CSP EvalError per page load ("'unsafe-eval' is
+  not an allowed source"). Confirmed ambient, NOT blog-specific and NOT caused by
+  this diff — reproduced identically on / and /pricing. Dev-only (the HMR
+  runtime), but it means the dev console is never clean, so a real error has
+  nowhere to stand out.
+- Two seeded posts share a cover image with two others (post-01-franchise.svg and
+  post-06-analytics.svg each appear twice on the index). Cosmetic, and it lands
+  in Workstream D's lap along with the prose.
+- Still open from US-010/US-011: the six sample posts' prose is weak and now
+  published, and two claims in it read as promises a regulated business should
+  not make ("compliance reporting with one click", "our current uptime is
+  99.9%"). Worth a human's eyes BEFORE the merge, not after.
+- Unchanged: seven loose .sql files at the top of prisma/migrations/ that never
+  run; untracked prisma/migrations/20260430_tenants_templateid_setnull/ sitting
+  in the working tree that WOULD run if committed by accident; no
+  app/blog/error.tsx; third sanitiser copy in
+  app/api/integrations/automatos/posts/route.ts:43; app/learn/[slug]/page.tsx
+  double-queries; no metadataBase on the platform root layout; no blog pagination.
+- The full migration history cannot be replayed from an empty database:
+  20260108_add_user_profile_fields ALTERs `users`, which no earlier migration
+  creates. Pre-existing (the base schema predates the migration directory), and
+  harmless to deploys — which only ever apply the unapplied tail — but it means
+  no one can stand up a fresh environment from migrations alone.
+
+NEXT
+US-013 (platform_seo_settings model and migration), the first story of
+Workstream C. Prisma story: timestamped migration DIRECTORY, and the new model
+stays OUT of tenantScopedModels in lib/db.ts alongside platform_posts,
+platform_leads and learning_resources.

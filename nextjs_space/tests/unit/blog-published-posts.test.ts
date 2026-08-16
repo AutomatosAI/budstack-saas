@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -21,9 +21,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * The last block reads the page as text. There is no component-test harness in
  * this repo (nothing under tests/unit renders React), and two of the story's
  * rules are visible only in the source: `force-dynamic` (without it the
- * build-time mock bakes an empty blog into the static output) and the inline
- * arrays STILL BEING PRESENT — deleting them is US-012, and only after US-010
- * and US-011 have put that content in the table.
+ * build-time mock bakes an empty blog into the static output) and — since
+ * US-012 — the absence of any inline post array. The eight posts are rows in
+ * `platform_posts` now; a hardcoded copy reappearing beside them is exactly the
+ * 6-vs-8 drift that made budstacks.io serve two different blogs.
  */
 const prismaMock = vi.hoisted(() => ({
   platform_posts: { findMany: vi.fn(), findUnique: vi.fn() },
@@ -58,6 +59,23 @@ const loaderSource = readFileSync(
   join(root, "lib", "platform", "published-posts.ts"),
   "utf8",
 );
+
+/**
+ * The eight live /blog URLs, held here verbatim rather than read from anywhere
+ * — US-012 deleted the arrays that used to be the only place they appeared in
+ * code, so this list has no source left to drift from. It is what the
+ * "no inline post array" guards below search the two pages for.
+ */
+const BLOG_SLUGS = [
+  "wordpress-or-budstacks-cannabis-storefront",
+  "real-economics-medical-cannabis-storefront",
+  "getting-started-with-medical-cannabis-franchise",
+  "understanding-dr-green-api-integration",
+  "blockchain-traceability-compliance",
+  "scaling-multi-tenant-operations",
+  "customer-management-best-practices",
+  "maximizing-revenue-analytics",
+] as const;
 
 /**
  * A distinct slug per call.
@@ -353,14 +371,19 @@ describe("app/blog/[slug]/page.tsx", () => {
     expect(articleSource).not.toMatch(/href=\{`\/blog\/\$\{/);
   });
 
-  it("still carries the inline sample posts — deleting them is US-012", () => {
-    // This array is the ONLY copy of the six posts' article bodies, and
-    // US-011's migration is written from it.
-    expect(articleSource).toContain("const samplePosts = [");
-    expect(articleSource).toContain(
-      "getting-started-with-medical-cannabis-franchise",
-    );
-    expect(articleSource).toContain("maximizing-revenue-analytics");
+  // US-012 — inverted from the guard that held the array in place while US-011's
+  // migration was written from it. The content is in `platform_posts` now, and a
+  // second copy here is the drift this story exists to end.
+  it("carries no inline post array at all", () => {
+    expect(articleSource).not.toContain("const samplePosts");
+    expect(articleSource).not.toMatch(/import\s*\{[^}]*BLOG_POSTS/);
+    // Asserted on the SLUG STRINGS, not just the array name: a renamed const
+    // holding the same posts would pass the check above and still be a copy.
+    // Matched inside a quoted slug so the header comment, which names the two
+    // seed migrations, does not read as content.
+    for (const slug of BLOG_SLUGS) {
+      expect(articleSource).not.toContain(`"${slug}"`);
+    }
   });
 });
 
@@ -382,15 +405,15 @@ describe("app/blog/page.tsx", () => {
     );
   });
 
-  it("still carries the inline sample posts — deleting them is US-012", () => {
-    // US-010 and US-011 have to put this content in the table first, and the
-    // copy in app/blog/[slug]/page.tsx is what those migrations are written
-    // from — deleting either before then destroys the source.
-    expect(pageSource).toContain("const samplePosts = [");
-    expect(pageSource).toContain(
-      "getting-started-with-medical-cannabis-franchise",
-    );
-    expect(pageSource).toContain("maximizing-revenue-analytics");
+  // US-012 — the other half of the deletion. This file listed six posts while
+  // the detail page resolved eight; that is the divergence, and it can only
+  // recur if a hardcoded array comes back.
+  it("carries no inline post array at all", () => {
+    expect(pageSource).not.toContain("const samplePosts");
+    expect(pageSource).not.toMatch(/import\s*\{[^}]*BLOG_POSTS/);
+    for (const slug of BLOG_SLUGS) {
+      expect(pageSource).not.toContain(`"${slug}"`);
+    }
   });
 
   it("has an empty state distinct from the grid", () => {
@@ -405,5 +428,21 @@ describe("app/blog/page.tsx", () => {
 
   it("carries no inert prose-* class", () => {
     expect(pageSource).not.toMatch(/\bprose(-[a-z0-9-]+)?\b/);
+  });
+});
+
+/**
+ * US-012 — the third copy. `lib/blog/posts.ts` held the two editorial posts and
+ * exported `BLOG_POSTS`; both pages imported it. Deleting the arrays inside the
+ * pages while leaving that module behind would leave the content re-importable
+ * in one line, so the file itself has to be gone.
+ */
+describe("lib/blog/posts.ts is deleted (US-012)", () => {
+  it("no longer exists", () => {
+    expect(existsSync(join(root, "lib", "blog", "posts.ts"))).toBe(false);
+  });
+
+  it("leaves no lib/blog module behind to re-export from", () => {
+    expect(existsSync(join(root, "lib", "blog"))).toBe(false);
   });
 });

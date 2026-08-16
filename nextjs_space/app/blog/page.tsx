@@ -11,17 +11,12 @@ import { blogPostPath } from "@/lib/seo/blog-paths";
  * this page is authored in code any more: a super-admin publishes at
  * /super-admin/the-wire and the article is live without a deploy.
  *
- * MID-RUN STATE. `samplePosts` below and `BLOG_POSTS` (lib/blog/posts.ts) are
- * no longer rendered, and they are still here because their content is not in
- * the database yet — US-010 migrates the two editorial posts and US-011 the six
- * samples, keeping every existing /blog/<slug> URL live. US-012 deletes them,
- * and only then; deleting them here first would destroy the copy those two
- * migrations are written FROM.
- *
- * As of US-009 the detail page reads the database too, so between here and
- * US-011 the eight existing /blog/<slug> URLs resolve to nothing. That window
- * exists only in these local commits — this branch is not deployed until a
- * human merges it, by which point every one of those posts is a row.
+ * US-012 removed the last copy authored in code. This file used to hardcode six
+ * posts; the detail page hardcoded the same six and concatenated two more from
+ * lib/blog/posts.ts, so the index advertised six while eight URLs resolved. All
+ * eight are rows now — 20260816000000_seed_editorial_platform_posts and
+ * 20260816010000_seed_sample_platform_posts put them there with the slugs
+ * unchanged — so the table is the single source and that drift cannot recur.
  */
 
 /**
@@ -31,64 +26,6 @@ import { blogPostPath } from "@/lib/seo/blog-paths";
  * reason app/sitemap.ts sets it.
  */
 export const dynamic = "force-dynamic";
-
-// Awaiting migration — see the note above. Not rendered.
-const samplePosts = [
-    {
-        id: 1,
-        slug: "getting-started-with-medical-cannabis-franchise",
-        title: "Getting Started with Your Medical Cannabis Franchise",
-        date: "Jan 10, 2026",
-        excerpt:
-            "A comprehensive guide to launching your dispensary franchise with BudStacks infrastructure.",
-        image: "/images/blog/post-01-franchise.svg",
-    },
-    {
-        id: 2,
-        slug: "understanding-dr-green-api-integration",
-        title: "Understanding Dr. Green API Integration",
-        date: "Jan 5, 2026",
-        excerpt:
-            "How to leverage the Dr. Green API for seamless product catalog and order management.",
-        image: "/images/blog/post-02-api.svg",
-    },
-    {
-        id: 3,
-        slug: "blockchain-traceability-compliance",
-        title: "Blockchain Traceability & Compliance",
-        date: "Dec 28, 2025",
-        excerpt:
-            "Ensuring regulatory compliance with integrated blockchain tracking for your dispensary.",
-        image: "/images/blog/post-03-blockchain.svg",
-    },
-    {
-        id: 4,
-        slug: "scaling-multi-tenant-operations",
-        title: "Scaling Multi-Tenant Operations",
-        date: "Dec 20, 2025",
-        excerpt:
-            "Best practices for managing multiple storefronts with isolated data and custom branding.",
-        image: "/images/blog/post-04-scale.svg",
-    },
-    {
-        id: 5,
-        slug: "customer-management-best-practices",
-        title: "Customer Management Best Practices",
-        date: "Dec 15, 2025",
-        excerpt:
-            "Building lasting patient relationships through effective CRM and consultation tracking.",
-        image: "/images/blog/post-05-customers.svg",
-    },
-    {
-        id: 6,
-        slug: "maximizing-revenue-analytics",
-        title: "Maximizing Revenue with Analytics",
-        date: "Dec 10, 2025",
-        excerpt:
-            "Using data-driven insights to optimize your dispensary's performance and growth.",
-        image: "/images/blog/post-06-analytics.svg",
-    },
-];
 
 export default async function BlogPage() {
     // Throws rather than returning [] when the database cannot answer, so an

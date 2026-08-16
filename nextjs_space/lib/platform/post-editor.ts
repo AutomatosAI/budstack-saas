@@ -51,10 +51,12 @@ export interface PlatformPostRequestBody
 
 /**
  * The byline a new post starts with — the one the two editorial posts already
- * published under (`lib/blog/posts.ts`). The signed-in super-admin's own name
- * is deliberately NOT the default: `platform_posts.authorName` is printed on a
- * public page, and putting a person's name there because they happened to be
- * logged in is a surprising thing to do on their behalf. It stays editable.
+ * published under (seeded by 20260816000000_seed_editorial_platform_posts;
+ * `lib/blog/posts.ts` was their home until US-012 deleted it). The signed-in
+ * super-admin's own name is deliberately NOT the default:
+ * `platform_posts.authorName` is printed on a public page, and putting a
+ * person's name there because they happened to be logged in is a surprising
+ * thing to do on their behalf. It stays editable.
  */
 export const DEFAULT_PLATFORM_AUTHOR_NAME = "BudStacks";
 export const DEFAULT_PLATFORM_AUTHOR_ROLE = "Platform Team";
