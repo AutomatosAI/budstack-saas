@@ -25,7 +25,7 @@ Stories: `ralph/prd.json` · PRD: `tasks/prd-platform-content-and-seo.md`
 - [x] US-015 Marketing pages consume the SEO settings
 - [x] US-016 Blog posts enter the platform sitemap
 - [x] US-017 Canonicals across platform marketing routes
-- [ ] US-018 Article and BreadcrumbList JSON-LD
+- [x] US-018 Article and BreadcrumbList JSON-LD
 - [ ] US-019 Slug changes issue a 301
 - [ ] US-020 Platform SEO audit panel
 

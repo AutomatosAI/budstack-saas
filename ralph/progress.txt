@@ -1815,3 +1815,114 @@ lib/seo/article-json-ld.ts and lib/seo/breadcrumb-json-ld.ts — a second JSON-L
 implementation is an explicit revert-on-review anti-pattern. The canonical string
 this story now emits is the URL those builders should use for @id / mainEntityOfPage,
 so read platformCanonical rather than rebuilding the URL.
+
+================================================================================
+[2026-08-16] US-018 PASS — Article and BreadcrumbList JSON-LD for the platform blog
+
+WHAT LANDED
+- /blog/<slug> now emits one application/ld+json block carrying three nodes in an
+  @graph: Organization (the publisher), Article, and BreadcrumbList. Before this
+  the platform blog emitted ZERO structured data — the tenant Wire has had both
+  since SEO Supercharge US-016.
+- Rendered through the EXISTING <JsonLd> server component (components/seo/json-ld
+  .tsx), so the </script>-escaping in serializeJsonLd cannot be bypassed.
+
+REUSE, NOT A SECOND IMPLEMENTATION (the story's first AC)
+Both existing builders are tenant-SHAPED, not tenant-agnostic: they take tenantId
+/plan/subdomain/customDomain, gate on isSeoProUnlocked and resolve URLs through
+storeCanonical. budstacks.io is none of those things. So rather than copy them,
+the node construction was EXTRACTED from each and both sites now call it:
+- lib/seo/article-json-ld.ts gains buildArticleNode(ArticleNodeSource) — the
+  headline budget (110), the author Person-vs-publisher-ref substitution, the
+  `${url}#article` @id, and which properties are omitted rather than emitted
+  empty. buildArticleJsonLd is now the plan gate + the tenant cascade + this.
+- lib/seo/breadcrumb-json-ld.ts gains buildBreadcrumbNodes(absoluteUrl, trail) —
+  the leading Home crumb, the all-or-nothing name rule, 1-based contiguous
+  position, and the @id anchored to the page the trail ends on. The URL resolver
+  is injected: a tenant passes a closure over storeCanonical, the platform passes
+  platformCanonical. buildBreadcrumbJsonLd is now the plan gate + this.
+- Net effect: ONE definition of each node shape. A change to how an Article or a
+  BreadcrumbList is written now lands on both sites at once, which is precisely
+  what the anti-pattern list was protecting.
+
+NEW: lib/seo/platform-article-json-ld.ts (the platform-side cascade only)
+- No plan gate — budstacks.io is not a tenant and buys nothing from itself. The
+  test asserts this omission is deliberate rather than a field left unthreaded.
+- URLs from platformCanonical, so the Article's url/@id are character-for-
+  character the canonical US-017 already declares on the same page.
+- image from platformPostOgImage (exported from platform-post-metadata.ts this
+  story, previously a private postOgImage) — the IDENTICAL cascade the og:image
+  runs, ending in the platform hero. Verified by a test that compares the node's
+  image against buildPlatformPostMetadata's openGraph.images[0] for the same row.
+- datePublished is platform_posts.publishedAt, NOT createdAt: a post drafted in
+  June and published in August is an August article, and the node must say what
+  the byline the page prints says. dateModified is updatedAt.
+- publisher is an @id reference AND the Organization it names is restated in this
+  page's graph — structured data is parsed per URL, so a reference to a node
+  declared on the homepage is a publisher with no name.
+- Organization logo is /images/homepage/budstacks-horizontal.png (1500x287), the
+  wordmark components/homepage/Nav.tsx actually renders. Deliberately NOT
+  platform_settings.logoUrl: that column holds a private S3 key outside
+  PLATFORM_UPLOAD_PREFIX, so storedPublicImagePath fails closed on it and wiring
+  it up would publish no logo while looking like it did.
+- sameAs omitted, not []: budstacks.io states no social profiles anywhere on the
+  marketing site, and `sameAs: []` is a positive claim of having none.
+- BLOG_INDEX_TITLE = "Blog" added to lib/seo/blog-paths.ts (the module that owns
+  the URL, per breadcrumb-json-ld's own rule). "Blog" is the label the marketing
+  nav and footer put on the link; NOT the index's <title>, which is authorable
+  and would put a DB read inside a pure builder on every article render.
+
+VERIFIED
+- pnpm exec tsc --noEmit: exit 0.
+- Targeted: platform-article-json-ld (23 new tests), article-json-ld,
+  breadcrumb-json-ld, platform-post-metadata, seo-social-links — 123 passed. The
+  four pre-existing files were left UNTOUCHED and still pass, which is the proof
+  the extraction did not change tenant behaviour.
+- Full unit project: 181 files / 3338 tests passed, 8 files / 30 tests skipped
+  (the DB-gated integration set). Exit 0.
+- pnpm check:public-routes (108 pages, 1 public API handler) and
+  pnpm check:article-typography both green. pnpm check:security green.
+  pnpm lint on the six touched files: no warnings or errors.
+- Exact emitted block confirmed by rendering the builder for a real seeded row —
+  @graph of Organization/Article/BreadcrumbList, breadcrumb reading
+  Home > Blog > post with items https://budstacks.io, /blog, /blog/<slug>.
+- No Prisma work in this story: no schema change, no migration.
+
+LIVE CURL: ATTEMPTED, NOT POSSIBLE — recorded rather than claimed
+pnpm dev started clean (Ready in 2.2s) but /blog returns 500: the dev DATABASE_URL
+points at postgres-budstack-development.up.railway.app:5432, which is not reachable
+from this machine (it is a private-network host). So the article HTML could not be
+fetched and the <script> element could not be observed in a live document. The node
+CONTENT is covered by unit tests and the block above; what remains unobserved is
+only that <JsonLd> renders it into the page, which typecheck constrains (the props
+are readonly JsonLdNode[]) but no test in this repo asserts for ANY of the five
+JSON-LD builders — none of them has a component render test. Visual/live: deferred
+to human review.
+Side note worth keeping: that 500 is US-008's designed behaviour firing for real —
+the blog refused to render "Nothing published yet" over an unreachable database.
+
+FLAGGED, NOT FIXED
+- The six seeded sample posts use SVG covers (/images/blog/post-0N-*.svg). Those
+  now appear as the Article `image` as well as the og:image. SVG is a supported
+  structured-data format, so this is not a defect, but a flat SVG placeholder is a
+  poor rich-result thumbnail. It is Workstream D's (the human editorial rewrite),
+  not a code fix.
+- The /blog INDEX still emits no structured data. A CollectionPage or an ItemList
+  of the posts is the obvious next increment; US-018's AC names the post pages
+  only, so the index was left alone rather than scope-crept.
+- Unchanged from earlier stories: app/learn/[slug]/page.tsx still runs its
+  learning_resources.findUnique twice per request (not React-cache()d); /learn/
+  <slug> still has no og:image, og:type or article timestamps and no JSON-LD at
+  all; the seven loose .sql files at the top of prisma/migrations/ still never run;
+  untracked prisma/migrations/20260430_tenants_templateid_setnull/ would run if
+  committed by accident.
+
+NEXT
+US-019 (slug changes issue a 301). Points to watch: REUSE the seo_redirects
+mechanism (prisma/schema.prisma ~line 267, SEO Supercharge US-021) with a platform
+scope — check lib/seo/redirect-write.ts, redirect-lookup.ts and slug-redirects.ts
+before writing anything. Redirect chains must COLLAPSE rather than nest. And when
+it passes, US-019 unblocks US-007: the published-slug edit is refused in TWO
+places today — PUBLISHED_SLUG_LOCKED_MESSAGE in lib/platform/posts.ts (enforced by
+the item route, so an API caller cannot route around it) and the editor's own
+slug-field.tsx — and BOTH have to be re-enabled, with the journal saying so.

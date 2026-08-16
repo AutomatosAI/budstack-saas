@@ -94,8 +94,15 @@ export interface PlatformPostMetadataSource {
  * before Email US-005: a tag that 403s an hour after it is minted looks correct
  * and breaks silently. Its null then falls through to the default here rather
  * than dropping the tag.
+ *
+ * Exported for US-018: the Article node's `image` is the SAME picture as the
+ * `og:image` beside it, and structured data that disagrees with the tags on the
+ * page it sits in is the defect the whole seo/ directory is arranged to avoid.
  */
-function postOgImage(seoOgImage: string | undefined, coverImage: string | null) {
+export function platformPostOgImage(
+  seoOgImage: string | undefined,
+  coverImage: string | null,
+) {
   const stored =
     storedPublicImagePath(seoOgImage) ?? storedPublicImagePath(coverImage);
 
@@ -132,7 +139,7 @@ export function buildPlatformPostMetadata(
   const description = seoText(seo.description) || seoText(source.excerpt);
 
   const canonical = platformCanonical(blogPostPath(source.slug));
-  const ogImage = postOgImage(seo.ogImage, source.coverImage);
+  const ogImage = platformPostOgImage(seo.ogImage, source.coverImage);
   const publishedTime = isoTimestamp(source.publishedAt);
   const authorName = seoText(source.authorName) || PLATFORM_SITE_NAME;
 

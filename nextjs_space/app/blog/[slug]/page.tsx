@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { FileText, ArrowLeft } from "lucide-react";
 import { Navbar, Footer } from "@/components/landing";
+import { JsonLd } from "@/components/seo/json-ld";
 import { formatPostDate } from "@/lib/platform/post-date";
 import type { PlatformPostSummary } from "@/lib/platform/posts";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@/lib/platform/published-posts";
 import { sanitizePostHtml } from "@/lib/security/post-sanitize";
 import { BLOG_INDEX_PATH, blogPostPath } from "@/lib/seo/blog-paths";
+import { buildPlatformArticleJsonLd } from "@/lib/seo/platform-article-json-ld";
 import {
   PLATFORM_POST_NOT_FOUND_TITLE,
   buildPlatformPostMetadata,
@@ -94,8 +96,24 @@ export default async function BlogPostPage({ params }: PageProps) {
     // renders under the current one.
     const cleanContent = sanitizePostHtml(post.content);
 
+    // US-018 — Organization, Article and BreadcrumbList, built from the SAME row
+    // the body renders and the SAME cascades `generateMetadata` fed the tags
+    // above. Nothing here can block the page: the builder is pure and total, and
+    // <JsonLd> renders no element for an empty array.
+    const jsonLdNodes = buildPlatformArticleJsonLd({
+        slug: post.slug,
+        title: post.title,
+        excerpt: post.excerpt,
+        coverImage: post.coverImage,
+        authorName: post.authorName,
+        publishedAt: post.publishedAt,
+        updatedAt: post.updatedAt,
+        seo: post.seo,
+    });
+
     return (
         <div className="budstacks-theme min-h-screen">
+            <JsonLd nodes={jsonLdNodes} />
             <Navbar />
 
             <main className="px-4 py-24 sm:px-6 lg:px-8">

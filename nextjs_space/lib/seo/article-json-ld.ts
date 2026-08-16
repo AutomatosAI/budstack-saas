@@ -54,6 +54,79 @@ import {
  */
 export const ARTICLE_HEADLINE_MAX_LENGTH = 110;
 
+/**
+ * Platform US-018 — everything an `Article` node needs once the CALLER has
+ * decided what a title, an image and a publisher mean for its site.
+ *
+ * The fields are already-resolved values rather than the row they came from:
+ * `buildArticleJsonLd` below cascades them the tenant way (authored `seo`, then
+ * the post, through `storeCanonical` and a plan gate) and
+ * `buildPlatformArticleJsonLd` cascades them the budstacks.io way (through
+ * `platformCanonical`, no plan gate, the platform's own hero as the last-resort
+ * image). What must NOT differ between the two is the node itself — the
+ * headline budget, the author substitution, the `@id` fragment and which
+ * properties are omitted rather than emitted empty — so that lives here once.
+ */
+export interface ArticleNodeSource {
+  /** Canonical URL of the article; the node's `url` and `@id` are built from it. */
+  readonly url: string;
+  /** The article's OWN title, clipped to {@link ARTICLE_HEADLINE_MAX_LENGTH}. */
+  readonly title: unknown;
+  /** Already cascaded by the caller — authored description, then excerpt. */
+  readonly description: unknown;
+  /** Absolute image URL, or null when none resolved. Never a relative path. */
+  readonly image: string | null;
+  /** Parsed by `isoTimestamp` here: a Date from Prisma, a string once serialised. */
+  readonly datePublished: unknown;
+  readonly dateModified: unknown;
+  /** The byline the article renders; falls back to the publisher — see below. */
+  readonly authorName: unknown;
+  /** `@id` of the Organization node the caller emits alongside this one. */
+  readonly publisherId: string;
+}
+
+/**
+ * The `Article` node itself, or null when the post has no usable title.
+ *
+ * Null rather than a partial node: an Article without a `headline` is invalid,
+ * not smaller, and every caller answers that by emitting no structured data at
+ * all rather than a block a validator rejects.
+ *
+ * The headline is the post's OWN title, never an authored `seo.title`. The
+ * authored one is the SERP title; the headline must match the `<h1>` the page
+ * renders, because structured data that disagrees with the visible page is the
+ * one thing Google penalises outright.
+ */
+export function buildArticleNode(source: ArticleNodeSource): JsonLdNode | null {
+  const headline = truncateSeoText(source.title, ARTICLE_HEADLINE_MAX_LENGTH);
+  if (!headline) return null;
+
+  const description = seoText(source.description);
+  const datePublished = isoTimestamp(source.datePublished);
+  const dateModified = isoTimestamp(source.dateModified);
+  const authorName = seoText(source.authorName);
+
+  return {
+    "@type": "Article",
+    "@id": `${source.url}#article`,
+    headline,
+    url: source.url,
+    ...(description ? { description } : {}),
+    ...(source.image ? { image: source.image } : {}),
+    ...(datePublished ? { datePublished } : {}),
+    ...(dateModified ? { dateModified } : {}),
+    // A Person when the post has a real byline. With none, the SITE is the
+    // author — expressed as a reference to the publisher node rather than a
+    // Person named after an organisation, which would assert that a company is
+    // a human being. (US-003 makes the same substitution for `og:author`, where
+    // the tag can only carry a string.)
+    author: authorName
+      ? { "@type": "Person", name: authorName }
+      : { "@id": source.publisherId },
+    publisher: { "@id": source.publisherId },
+  };
+}
+
 export interface ArticleJsonLdSource {
   /** `tenants.id` — the plan gate's subject. */
   readonly tenantId: string;
@@ -119,22 +192,26 @@ export function buildArticleJsonLd(
 ): readonly JsonLdNode[] {
   if (!isSeoProUnlocked({ id: source.tenantId, plan: source.plan })) return [];
 
-  const headline = truncateSeoText(source.title, ARTICLE_HEADLINE_MAX_LENGTH);
-  if (!headline) return [];
-
   const publisherName = storeDisplayName(source.businessName, source.subdomain);
   if (!publisherName) return [];
 
   const storeUrl = storeCanonical(source, "");
-  const url = storeCanonical(source, wirePostPath(source.slug));
-  const publisherId = organizationJsonLdId(storeUrl);
-
   const seo = readEntitySeo(source.seo);
-  const description = seoText(seo.description) || seoText(source.excerpt);
-  const image = articleImageUrl(storeUrl, source);
-  const datePublished = isoTimestamp(source.createdAt);
-  const dateModified = isoTimestamp(source.updatedAt);
-  const authorName = seoText(source.authorName);
+
+  // The node shape is `buildArticleNode`'s (US-018 shares it with the platform
+  // blog); everything passed to it is the TENANT cascade — authored `seo` first,
+  // then the post's own fields, resolved against the store's primary host.
+  const article = buildArticleNode({
+    url: storeCanonical(source, wirePostPath(source.slug)),
+    title: source.title,
+    description: seoText(seo.description) || seoText(source.excerpt),
+    image: articleImageUrl(storeUrl, source),
+    datePublished: source.createdAt,
+    dateModified: source.updatedAt,
+    authorName: source.authorName,
+    publisherId: organizationJsonLdId(storeUrl),
+  });
+  if (!article) return [];
 
   return [
     buildOrganizationNode(
@@ -143,24 +220,6 @@ export function buildArticleJsonLd(
       source.logoRef,
       source.socialLinks,
     ),
-    {
-      "@type": "Article",
-      "@id": `${url}#article`,
-      headline,
-      url,
-      ...(description ? { description } : {}),
-      ...(image ? { image } : {}),
-      ...(datePublished ? { datePublished } : {}),
-      ...(dateModified ? { dateModified } : {}),
-      // A Person when the post has a real byline. With none, the STORE is the
-      // author — expressed as a reference to the publisher node rather than a
-      // Person named after the business, which would assert that a company is a
-      // human being. (US-003 makes the same substitution for `og:author`, where
-      // the tag can only carry a string.)
-      author: authorName
-        ? { "@type": "Person", name: authorName }
-        : { "@id": publisherId },
-      publisher: { "@id": publisherId },
-    },
+    article,
   ];
 }
