@@ -148,7 +148,7 @@
     "handlebars": "^4.7.9",
     "happy-dom": "^20.11.2",
     "input-otp": "1.4.2",
-    "ioredis": "^5.11.1",
+    "ioredis": "^6.0.0",
     "jotai": "2.20.0",
     "jsonwebtoken": "9.0.3",
     "juice": "^12.1.2",
