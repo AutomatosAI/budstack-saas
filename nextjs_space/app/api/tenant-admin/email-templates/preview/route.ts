@@ -74,6 +74,10 @@ export const POST = requirePermission(
         category: existing ? existing.category : category,
         tenantId,
         businessName: tenant?.businessName,
+        // Assets resolve against the origin the author is on: the pane's
+        // srcdoc iframe inherits THIS page's CSP, which has no tenant hosts in
+        // img-src, so tenant-domain URLs would render as broken images.
+        baseUrlOverride: req.nextUrl.origin,
       });
 
       return NextResponse.json({ html });

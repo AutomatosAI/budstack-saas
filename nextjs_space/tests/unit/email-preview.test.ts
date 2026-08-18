@@ -511,3 +511,47 @@ describe("POST super-admin email-templates/preview", () => {
     expect(res.status).toBe(401);
   });
 });
+
+// The lekkerweed report (2026-08-18): uploaded images rendered fine in the
+// composer but broken in the preview pane. The pipeline absolutises image srcs
+// against the TENANT's domain, and the pane's srcdoc iframe inherits the admin
+// page's CSP — whose img-src carries no tenant hosts — so the browser blocked
+// exactly the URLs a real inbox loads happily. The routes now pass the
+// request's own origin as `baseUrlOverride`, making preview assets same-origin
+// with the admin page ('self') while stored/mailed HTML keeps the tenant host.
+describe("renderEmailPreview — baseUrlOverride", () => {
+  const UPLOADED_SRC =
+    "/api/public/images/development/tenants/tenant-a/uploads/1-banner.png";
+
+  const docWithImage = (): EmailContentJson => ({
+    type: "doc",
+    content: [
+      { type: "image", attrs: { src: UPLOADED_SRC } },
+      { type: "paragraph", content: [{ type: "text", text: "Hello" }] },
+    ],
+  });
+
+  it("absolutises an uploaded image against the admin origin, not the tenant domain", async () => {
+    prismaMock.tenants.findFirst.mockResolvedValue(TENANT_ROW);
+
+    const html = await renderEmailPreview({
+      contentJson: docWithImage(),
+      tenantId: TENANT_A,
+      baseUrlOverride: "https://app.budstacks.io",
+    });
+
+    expect(html).toContain(`https://app.budstacks.io${UPLOADED_SRC}`);
+    expect(html).not.toContain(`https://shop.example${UPLOADED_SRC}`);
+  });
+
+  it("keeps the tenant domain when no override is given (the save-path shape)", async () => {
+    prismaMock.tenants.findFirst.mockResolvedValue(TENANT_ROW);
+
+    const html = await renderEmailPreview({
+      contentJson: docWithImage(),
+      tenantId: TENANT_A,
+    });
+
+    expect(html).toContain(`https://shop.example${UPLOADED_SRC}`);
+  });
+});

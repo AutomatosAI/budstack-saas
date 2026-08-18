@@ -67,6 +67,8 @@ export const POST = withSuperAdmin(async (req, { user }) => {
     category: category !== undefined ? category : owner?.category,
     tenantId: owner?.tenantId ?? null,
     businessName: tenant?.businessName,
+    // Same reason as the tenant route: the srcdoc pane inherits the admin CSP.
+    baseUrlOverride: req.nextUrl.origin,
   });
 
   return NextResponse.json({ html });

@@ -110,8 +110,11 @@ export function CampaignEditor({
     });
   };
 
+  // h-full, not a viewport calc — same fix as EmailEditor: both hosts wrap
+  // this in a sized `flex-1 overflow-hidden` box, and overshooting it let
+  // caret-reveal scrolling push the header card (Save/Send) out of reach.
   return (
-    <div className="flex h-[calc(100vh-100px)] flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       <div className="bs-card bs-card-pad shrink-0">
         <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-4">
           <div className="space-y-2">

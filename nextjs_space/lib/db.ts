@@ -81,6 +81,8 @@ const tenantScopedModelsWithNullAccess = new Set([
   'email_event_mappings',
 ]);
 
+// Reads only — deleteMany used to sit here too, but every write action now
+// routes through the strict write branch below, so the sets say what they mean.
 const tenantScopedReadActions = new Set([
   'findMany',
   'findFirst',
@@ -88,7 +90,6 @@ const tenantScopedReadActions = new Set([
   'count',
   'aggregate',
   'groupBy',
-  'deleteMany',
 ]);
 
 const tenantScopedWriteManyActions = new Set([
@@ -102,7 +103,10 @@ const tenantScopedCreateActions = new Set([
   'upsert',
 ]);
 
-const applyTenantScope = (where: Record<string, any>, tenantId: string, allowNull: boolean) => {
+// READ scope. `allowNull` widens the predicate so a tenant can also SEE shared
+// system rows (tenantId null) — which is why it wraps the caller's where in an
+// AND/OR instead of stamping a flat tenantId. Exported for tests.
+export const applyTenantScope = (where: Record<string, any>, tenantId: string, allowNull: boolean) => {
   if (allowNull) {
     return {
       AND: [
@@ -119,6 +123,19 @@ const applyTenantScope = (where: Record<string, any>, tenantId: string, allowNul
     tenantId,
   };
 };
+
+// WRITE scope — always strict, null-access models included. The OR-null read
+// widening exists so a tenant can SEE shared system rows, never write them.
+// It also cannot be expressed on update/delete: their `where` is a
+// WhereUniqueInput, which requires the unique field at the TOP level of the
+// object (the same constraint that rewrites findUnique to findFirst below), so
+// the AND/OR wrap is a PrismaClientValidationError there. Wrapping writes was
+// exactly the bug that 500'd every tenant email-template save, delete and
+// enable/disable toggle. Exported for tests.
+export const applyTenantWriteScope = (where: Record<string, any>, tenantId: string) => ({
+  ...where,
+  tenantId,
+});
 
 // Immutably inject the resolved tenantId into create / createMany / upsert
 // payloads so every bound write is stamped with its tenant. Mirrors the create
@@ -215,11 +232,15 @@ const createPrismaClient = (): any => {
               if (tenantScopedCreateActions.has(action)) {
                 nextArgs = injectTenantIdIntoCreate(nextArgs, action, tenantId);
               } else if (
-                tenantScopedReadActions.has(action) ||
                 tenantScopedWriteManyActions.has(action) ||
                 action === 'update' ||
                 action === 'delete'
               ) {
+                nextArgs = {
+                  ...nextArgs,
+                  where: applyTenantWriteScope(nextArgs?.where ?? {}, tenantId),
+                };
+              } else if (tenantScopedReadActions.has(action)) {
                 nextArgs = {
                   ...nextArgs,
                   where: applyTenantScope(
