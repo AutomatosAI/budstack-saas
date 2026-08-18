@@ -2,7 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse, NextRequest, type NextFetchEvent } from "next/server";
 import { parseHostToTenantHint, wwwRedirectHost } from "@/lib/parse-host";
 import { customDomainRewritePath } from "@/lib/custom-domain-rewrite";
-import { resolveStoreRedirect } from "@/lib/seo/redirect-lookup";
+import { resolvePlatformRedirect, resolveStoreRedirect } from "@/lib/seo/redirect-lookup";
 import { applyCsp, buildCsp, generateNonce, variantForServedPath } from "@/lib/security/csp";
 
 // Define public routes
@@ -179,21 +179,31 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
   // common path costs nothing. Any failure resolves to "no redirect" and the
   // request carries on exactly as it did before this feature existed. See
   // lib/seo/redirect-lookup.ts for the full cost model.
-  const storeRedirect = await resolveStoreRedirect({
+  //
+  // Platform US-019: the apex has its own table (`platform_seo_redirects`),
+  // read through the same cache and the same matcher one query parameter apart.
+  // It is what makes renaming a published /blog post safe — the old URL 301s
+  // instead of 404ing and discarding every link pointing at it. The two are
+  // mutually exclusive by host (a store hint means no platform lookup and vice
+  // versa), so this costs a tenant request two string comparisons.
+  const redirectInput = {
     origin: url.origin,
     host: hostname,
     pathname,
     method: req.method,
     hint,
-  });
-  if (storeRedirect) {
+  };
+  const seoRedirect =
+    (await resolveStoreRedirect(redirectInput)) ??
+    (await resolvePlatformRedirect(redirectInput));
+  if (seoRedirect) {
     const dest = new URL(url);
-    dest.pathname = storeRedirect.location;
+    dest.pathname = seoRedirect.location;
     // The query survives the move: a campaign link's ?utm_source is the reason
     // the old URL is still being followed, and dropping it here would break the
     // attribution the redirect exists to preserve.
     return applyCsp(
-      NextResponse.redirect(dest, storeRedirect.statusCode),
+      NextResponse.redirect(dest, seoRedirect.statusCode),
       nonce,
       'base',
     );

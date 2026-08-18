@@ -73,7 +73,38 @@ export const SEO_AUDIT_CHECKS = [
   "redirect-chain",
 ] as const;
 
-export type SeoAuditCheckId = (typeof SEO_AUDIT_CHECKS)[number];
+/**
+ * Platform US-020 — checks only the PLATFORM audit can report.
+ *
+ * `canonical-missing` is here rather than in {@link SEO_AUDIT_CHECKS} because
+ * the two audits run different check sets over different data, and every id in
+ * that list is one the tenant audit actually evaluates. A store page's canonical
+ * is built by `storeCanonical` on a code path with no authored input, so there
+ * is nothing for a tenant audit to judge; budstacks.io's own routes each declare
+ * theirs from `platformCanonical`, and an absent one is the defect that lets a
+ * campaign URL (`?utm_source=…`) be indexed as a page in its own right.
+ *
+ * Adding it to `SEO_AUDIT_CHECKS` instead would have every tenant result carry a
+ * group that passed without being looked at — a check nobody ran reported as a
+ * check that succeeded.
+ */
+export const SEO_AUDIT_PLATFORM_ONLY_CHECKS = ["canonical-missing"] as const;
+
+/**
+ * Every id either audit can emit. This is the VOCABULARY, not a run list: what a
+ * given audit reports is the list it is scored against (`scoreSeoAudit`'s third
+ * argument), which is `SEO_AUDIT_CHECKS` for a store and
+ * `PLATFORM_SEO_AUDIT_CHECKS` for the platform.
+ *
+ * The client parser filters against this union, so a platform-only group is not
+ * dropped as "a check this page is older than" (components/admin/seo/audit-client.ts).
+ */
+export const SEO_AUDIT_ALL_CHECKS = [
+  ...SEO_AUDIT_CHECKS,
+  ...SEO_AUDIT_PLATFORM_ONLY_CHECKS,
+] as const;
+
+export type SeoAuditCheckId = (typeof SEO_AUDIT_ALL_CHECKS)[number];
 
 /**
  * The LLM-readiness ids, as core check ids.
@@ -259,6 +290,18 @@ export const SEO_AUDIT_WEIGHTS: Readonly<
     title: "Redirect chains",
     perFinding: 1,
     cap: 5,
+  },
+  // Platform US-020. Weighted like `sitemap-url-form` and for the same reason:
+  // both are faults that put a page into the index under an address nobody
+  // chose. A route with no canonical is duplicate content by construction —
+  // every `?utm_source=`, `?ref=`, `?fbclid=` link to it answers 200 on the same
+  // article and competes with it — and no redirect can catch those, which is
+  // what makes it critical rather than a warning.
+  "canonical-missing": {
+    severity: "critical",
+    title: "Pages with no canonical URL",
+    perFinding: 5,
+    cap: 20,
   },
   // US-004's LLM-readiness category. Spread rather than restated so there is one
   // scoring model; the rationale for each number lives beside it.

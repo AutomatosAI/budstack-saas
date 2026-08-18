@@ -54,6 +54,12 @@ jobs:
       - name: Lockfile guard (PRD-209)
         run: pnpm check:lockfile
 
+      # Article-typography guard: @tailwindcss/typography is not installed, so
+      # every `prose-*` class is inert and styles nothing. Eight surfaces
+      # shipped that way, including live tenant blogs. Clean on this tree after
+      # the typography sweep, so it gates.
+      - name: Article typography guard (no inert prose-*)
+        run: pnpm check:article-typography
       # isPublicRoute is an allowlist, and a page missing from it 307s every
       # anonymous visitor and crawler to the Clerk login while looking fine in
       # development. Four occurrences to date — robots/sitemap, the Automatos

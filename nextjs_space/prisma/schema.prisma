@@ -1235,6 +1235,129 @@ model learning_resources {
   @@index([sortOrder])
 }
 
+/// budstacks.io's OWN blog posts — the platform's editorial, written in
+/// super-admin and read by /blog. Deliberately NOT the `posts` model: that one
+/// is tenant-scoped in lib/db.ts and belongs to a store's Wire.
+///
+/// Like platform_leads and learning_resources, this model is kept OUT of
+/// `tenantScopedModels` in lib/db.ts. That Set is an opt-in allowlist, and
+/// adding a platform table to it would inject a tenantId filter into every
+/// apex query and return nothing.
+///
+/// The author is DENORMALISED STRINGS on purpose, with no relation to `users`:
+///   - `users` is tenant-scoped, so an FK join is unreadable from the apex;
+///   - getCurrentUser().id is a CLERK id, not a users.id, and writing it into a
+///     uuid FK throws P2003 — the failure that broke the lekkerweed blog in #226.
+/// learning_resources sets the same precedent by carrying no author relation.
+model platform_posts {
+  id      String  @id @default(uuid())
+  slug    String  @unique
+  title   String
+  excerpt String?
+  /// Sanitised HTML, written by the Wire-style editor and rendered by /blog.
+  content String
+
+  coverImage String?
+  /// Alt text for coverImage. Nullable because a post may have no cover at all;
+  /// when there IS a cover this is what keeps the article accessible.
+  coverImageAlt String?
+
+  /// Byline as typed, e.g. "BudStacks" / "Platform Team". Never a users FK.
+  authorName String
+  authorRole String?
+
+  published Boolean @default(false)
+  /// Set when the post first goes live; stays put on later edits so the public
+  /// date does not jump every time a typo is fixed. NULL while it is a draft.
+  publishedAt DateTime?
+
+  /// Per-post metaTitle / metaDescription / ogImage overrides, same shape the
+  /// tenant `posts` model uses.
+  seo Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// The public index's only query: published posts, newest first.
+  @@index([published, publishedAt])
+}
+
+/// budstacks.io's OWN per-route metadata (Platform US-013), so the title and
+/// description a crawler reads stop being a code deploy. The platform side of
+/// what `tenants.pageSeo` does for a store.
+///
+/// Kept OUT of `tenantScopedModels` in lib/db.ts, like platform_posts,
+/// platform_leads and learning_resources: that Set is an opt-in allowlist, and a
+/// platform table inside it gets a tenantId filter welded onto every apex query
+/// — which returns nothing rather than erroring.
+///
+/// EVERY AUTHORED FIELD IS NULLABLE AND EVERY ROW IS AN OVERRIDE. The route's
+/// existing metadata (app/layout.tsx and each page's own `export const
+/// metadata`) stays the documented fallback, and US-015 applies it per FIELD
+/// rather than per row — so a row filled in with a title but no description
+/// cannot blank that page's description.
+///
+/// One row per STATIC marketing route. The three dynamic families —
+/// /blog/{slug}, /learn/{slug}, /documents/{slug} — are not routes here: each of
+/// their entities carries its own metadata (platform_posts.seo, and the guide
+/// definitions in lib/documents/), and a settings table can never hold a row per
+/// row of another table.
+model platform_seo_settings {
+  id String @id @default(uuid())
+
+  /// The public path this row owns: rooted, no host, no trailing slash, no
+  /// query — "/" or "/legal/changelog". Unique because a route with two rows has
+  /// no defined title, and this is the key every reader looks it up by.
+  routePath String @unique
+
+  title       String?
+  description String?
+
+  /// og:image reference — a path on this origin or an absolute URL, resolved by
+  /// platformAbsoluteUrl(); the platform root layout declares no metadataBase,
+  /// so a relative one would point at localhost.
+  ogImage String?
+
+  /// Emits a real robots noindex tag (US-015). Defaults false: a settings row
+  /// must never be the reason a marketing page silently drops out of the index.
+  noindex Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// budstacks.io's OWN 301s (Platform US-019) — the platform-scoped twin of
+/// `seo_redirects`, which cannot hold these rows: its `tenantId` is a required
+/// FK to `tenants`, and it is in `tenantScopedModels`, so a null-tenant row
+/// would be both unreachable through the `$extends` rewrite and unprotected by
+/// `@@unique([tenantId, fromPath])` (Postgres treats NULLs as distinct).
+///
+/// Every RULE about these rows is shared rather than restated: the paths are
+/// normalised and lower-cased by lib/seo/redirects.ts, the rename plan is
+/// `planSlugRenameRedirect` (lib/seo/slug-redirects.ts) unchanged, and
+/// middleware matches with the same `matchRedirect`. Only the storage differs.
+///
+/// Kept OUT of `tenantScopedModels` in lib/db.ts, like platform_posts,
+/// platform_seo_settings, platform_leads and learning_resources.
+///
+/// Written today by a published post's rename (/blog/{old} → /blog/{new}); the
+/// column is a plain path, so nothing here is blog-specific.
+model platform_seo_redirects {
+  id String @id @default(uuid())
+
+  /// Stored NORMALISED AND LOWER-CASED — the match key middleware compares an
+  /// incoming pathname against, and what makes this UNIQUE a real duplicate
+  /// guard rather than a near-miss one.
+  fromPath String @unique
+  /// Normalised, case preserved: a destination, not a key.
+  toPath String
+
+  statusCode Int      @default(301)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 enum Role {
   PATIENT
   TENANT_ADMIN

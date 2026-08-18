@@ -28,6 +28,37 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
   // JSON could be served as JSONP. Use S3 template uploads for these instead.
 ]);
 
+/** Longest filename we keep — the S3 key also carries a prefix and a timestamp. */
+const MAX_FILE_NAME_LENGTH = 200;
+
+/**
+ * Strip an uploaded filename down to something safe to concatenate into an S3
+ * key: no traversal sequences, no path separators of either flavour, bounded
+ * length.
+ *
+ * The filename arrives from the client and is the ONLY caller-controlled part
+ * of the key, so this runs before validation (which checks the extension) and
+ * before the upload. Two routes predating this helper — `tenant-admin/upload`
+ * and `super-admin/platform-settings` — still carry their own inline copies of
+ * the same expression; they are the reason it now lives in one place.
+ */
+export function sanitizeUploadFileName(rawName: string): string {
+  return (
+    rawName
+      // SEPARATORS FIRST, and the order is the security property — do not
+      // rearrange. Stripping "../" before the separators is what CodeQL flags as
+      // js/incomplete-multi-character-sanitization (PR #258): the removal is not
+      // iterative, so "....//" collapses back into "../" after one pass. Killing
+      // every / and \ up front leaves no traversal sequence for a later step to
+      // miss, and makes the remaining dots ordinary filename characters.
+      .replace(/[/\\]/g, '_')
+      // A name that is only dots, or starts with them, is a hidden file or a
+      // relative-path fragment wearing a filename's clothes.
+      .replace(/^\.+/, '')
+      .slice(0, MAX_FILE_NAME_LENGTH)
+  );
+}
+
 /**
  * Client-side validation (no magic-byte check — use validateUploadBuffer for server-side)
  */

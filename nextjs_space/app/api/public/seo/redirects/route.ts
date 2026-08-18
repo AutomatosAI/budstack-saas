@@ -9,6 +9,7 @@ import {
   SEO_REDIRECT_FEED_WINDOW_MS,
 } from "@/lib/constants";
 import { isSeoProUnlocked } from "@/lib/seo/pro-features";
+import { PLATFORM_REDIRECT_SCOPE } from "@/lib/seo/redirect-lookup";
 import {
   SEO_REDIRECT_MAX_PER_TENANT,
   type SeoRedirectRule,
@@ -59,6 +60,13 @@ import { resolveTenant } from "@/lib/tenant/tenant-resolver";
  * so a downgrade never silently deletes an owner's work and an upgrade brings it
  * straight back. Same 200-with-empty-array as an unknown host, so the endpoint
  * cannot be used to enumerate which stores are on which plan.
+ *
+ * TWO TABLES, ONE FEED (Platform US-019). `?scope=platform` answers from
+ * `platform_seo_redirects` — budstacks.io's own 301s, which belong to no tenant
+ * and are gated by no plan. Neither the host resolution nor the plan gate above
+ * applies to it, because neither has anything to answer: the platform is not a
+ * customer of itself. Everything else is shared, which is the point — one
+ * cache, one matcher, one refusal path.
  */
 
 export const runtime = "nodejs";
@@ -77,6 +85,11 @@ const querySchema = z.object({
    * where the host says nothing about the tenant. Ignored on a tenant host.
    */
   path: z.string().max(2048).optional(),
+  /**
+   * Which table answers (Platform US-019). Absent — every caller before this
+   * story — is the tenant table, unchanged.
+   */
+  scope: z.literal(PLATFORM_REDIRECT_SCOPE).optional(),
 });
 
 /** Both "no such store" and "not on Pro" answer this. */
@@ -117,8 +130,32 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const parsed = querySchema.safeParse({
       host: request.nextUrl.searchParams.get("host") ?? undefined,
       path: request.nextUrl.searchParams.get("path") ?? undefined,
+      scope: request.nextUrl.searchParams.get("scope") ?? undefined,
     });
     if (!parsed.success) return feedResponse(NO_REDIRECTS.redirects);
+
+    // Platform US-019 — budstacks.io's OWN redirects, which belong to no
+    // tenant. No host resolution and no plan gate: there is no tenant to
+    // resolve and the platform is not a customer of itself. `scope` decides
+    // this and the host does not, because on the apex the host says only "not a
+    // store" — the same thing an unknown host says.
+    //
+    // Not a widening: the answer is a list of paths that already 301 in public
+    // on this origin, discoverable by requesting any of them. The rate limit
+    // above has already been charged.
+    if (parsed.data.scope === PLATFORM_REDIRECT_SCOPE) {
+      const rows: Array<{
+        fromPath: string;
+        toPath: string;
+        statusCode: number;
+      }> = await prisma.platform_seo_redirects.findMany({
+        select: { fromPath: true, toPath: true, statusCode: true },
+        orderBy: { createdAt: "asc" },
+        take: SEO_REDIRECT_MAX_PER_TENANT,
+      });
+
+      return feedResponse(rows);
+    }
 
     const resolved = await resolveTenant({
       kind: "host",

@@ -104,20 +104,24 @@ export function conditionBreadcrumbTrail(
 }
 
 /**
- * The `BreadcrumbList` node for a page, or an empty array.
+ * Platform US-018 — the `BreadcrumbList` node itself, for whichever site the
+ * caller resolves URLs for, or an empty array.
  *
- * Empty for three ordinary states: the tenant is not on Pro, the trail is empty,
- * or a crumb carries no usable name (see the all-or-nothing rule above).
+ * `absoluteUrl` is how the trail becomes addresses: a tenant passes a closure
+ * over `storeCanonical` (its primary host), and the platform blog passes
+ * `platformCanonical` (budstacks.io). Everything else — the leading Home crumb,
+ * the all-or-nothing name rule, the 1-based contiguous `position`, and the `@id`
+ * anchored to the page the trail ends on — is identical on both sites and is
+ * stated here once rather than copied per site.
  *
- * `position` is 1-based and contiguous — Google reads it as the order, not as a
- * hint — and Home is always position 1, so the trail a caller passes describes
- * only what sits BELOW the store root.
+ * Empty for two ordinary states: the trail is empty, or a crumb carries no
+ * usable name (see the all-or-nothing rule above). Home is always position 1,
+ * so the trail a caller passes describes only what sits BELOW the site root.
  */
-export function buildBreadcrumbJsonLd(
-  source: BreadcrumbJsonLdSource,
+export function buildBreadcrumbNodes(
+  absoluteUrl: (path: string) => string,
   trail: readonly BreadcrumbTrailItem[],
 ): readonly JsonLdNode[] {
-  if (!isSeoProUnlocked({ id: source.tenantId, plan: source.plan })) return [];
   if (trail.length === 0) return [];
 
   const crumbs = [
@@ -130,7 +134,7 @@ export function buildBreadcrumbJsonLd(
     "@type": "ListItem",
     position: index + 1,
     name: crumb.name,
-    item: storeCanonical(source, crumb.path),
+    item: absoluteUrl(crumb.path),
   }));
 
   return [
@@ -138,8 +142,25 @@ export function buildBreadcrumbJsonLd(
       "@type": "BreadcrumbList",
       // Anchored to the page the trail ENDS on, so the node belongs to this URL
       // rather than colliding with the breadcrumb of every other detail page.
-      "@id": `${storeCanonical(source, crumbs[crumbs.length - 1].path)}#breadcrumb`,
+      "@id": `${absoluteUrl(crumbs[crumbs.length - 1].path)}#breadcrumb`,
       itemListElement,
     },
   ];
+}
+
+/**
+ * The `BreadcrumbList` node for a STORE page, or an empty array — the node above
+ * behind the storefront's plan gate, with every crumb on the tenant's primary
+ * host.
+ *
+ * Empty for the two states {@link buildBreadcrumbNodes} documents, plus one more:
+ * the tenant is not on Pro.
+ */
+export function buildBreadcrumbJsonLd(
+  source: BreadcrumbJsonLdSource,
+  trail: readonly BreadcrumbTrailItem[],
+): readonly JsonLdNode[] {
+  if (!isSeoProUnlocked({ id: source.tenantId, plan: source.plan })) return [];
+
+  return buildBreadcrumbNodes((path) => storeCanonical(source, path), trail);
 }

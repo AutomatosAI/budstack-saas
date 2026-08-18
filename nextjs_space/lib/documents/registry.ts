@@ -43,3 +43,21 @@ export const GUIDES: Guide[] = [
 export function getGuide(slug: string): Guide | undefined {
   return GUIDES.find((g) => g.slug === slug);
 }
+
+/**
+ * The guides that actually have a page, in series order.
+ *
+ * `app/documents/[slug]/page.tsx` calls `notFound()` for anything whose status
+ * is not `published`, so every consumer that enumerates guide URLs — the
+ * sitemap (US-016), the authorable-route list (`lib/platform/seo-routes.ts`),
+ * `generateStaticParams` — has to apply the same filter. Stated once here so a
+ * guide flipping to `published` reaches all of them together, rather than
+ * appearing in the sitemap as a 404 or being indexable but unauthorable.
+ *
+ * Returns a new array; `GUIDES` is never sorted in place.
+ */
+export function publishedGuides(): Guide[] {
+  return [...GUIDES]
+    .filter((guide) => guide.status === "published")
+    .sort((a, b) => a.part - b.part);
+}

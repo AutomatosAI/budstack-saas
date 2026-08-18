@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isRedirectablePath,
   resetStoreRedirectCache,
+  resolvePlatformRedirect,
   resolveStoreRedirect,
   storeRedirectScope,
   STORE_REDIRECTS_FEED_PATH,
@@ -379,5 +380,112 @@ describe("resolveStoreRedirect", () => {
       { location: "/new", statusCode: 301 },
     ]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * Platform US-019 — the apex side. Same cache, same matcher, same fail-open
+ * behaviour; a different table one query parameter away.
+ */
+describe("resolvePlatformRedirect", () => {
+  const APEX_ORIGIN = "https://budstacks.io";
+  const apexInput = (pathname: string) => ({
+    origin: APEX_ORIGIN,
+    host: "budstacks.io",
+    pathname,
+    method: "GET",
+    hint: null as TenantHostHint,
+  });
+
+  it("301s a renamed post and asks the feed for the platform table", async () => {
+    stubFeed(
+      feedReturning([
+        { fromPath: "/blog/old-post", toPath: "/blog/new-post", statusCode: 301 },
+      ]),
+    );
+
+    expect(await resolvePlatformRedirect(apexInput("/blog/old-post"))).toEqual({
+      location: "/blog/new-post",
+      statusCode: 301,
+    });
+
+    const asked = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(asked.pathname).toBe(STORE_REDIRECTS_FEED_PATH);
+    expect(asked.searchParams.get("scope")).toBe("platform");
+  });
+
+  it("leaves a tenant host alone without so much as a fetch", async () => {
+    // The failure that would matter: a store's visitors resolving against
+    // budstacks.io's table.
+    stubFeed(feedReturning([{ fromPath: "/blog/old-post", toPath: "/x", statusCode: 301 }]));
+
+    expect(
+      await resolvePlatformRedirect({
+        ...apexInput("/blog/old-post"),
+        hint: SUBDOMAIN_HINT,
+      }),
+    ).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("leaves dev's path-based storefronts to the store table", async () => {
+    stubFeed(feedReturning([{ fromPath: "/store/acme/old", toPath: "/x", statusCode: 301 }]));
+
+    expect(await resolvePlatformRedirect(apexInput("/store/acme/old"))).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("never redirects a POST — a 301 would drop the body", async () => {
+    stubFeed(feedReturning([{ fromPath: "/blog/old-post", toPath: "/blog/new-post", statusCode: 301 }]));
+
+    expect(
+      await resolvePlatformRedirect({
+        ...apexInput("/blog/old-post"),
+        method: "POST",
+      }),
+    ).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("never redirects platform plumbing", async () => {
+    stubFeed(feedReturning([{ fromPath: "/super-admin", toPath: "/x", statusCode: 301 }]));
+
+    expect(await resolvePlatformRedirect(apexInput("/super-admin"))).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("carries on as before when the feed fails", async () => {
+    stubFeed(vi.fn(async () => new Response("nope", { status: 500 })));
+
+    expect(await resolvePlatformRedirect(apexInput("/blog/old-post"))).toBeNull();
+  });
+
+  it("keeps the platform table out of every tenant's cache slot", async () => {
+    // One fetch for the apex, one for the store: distinct keys, and neither
+    // answers with the other's rules.
+    stubFeed(
+      vi.fn(async (url: string) =>
+        new Response(
+          JSON.stringify({
+            redirects: new URL(url).searchParams.get("scope") === "platform"
+              ? [{ fromPath: "/blog/old-post", toPath: "/blog/new-post", statusCode: 301 }]
+              : [{ fromPath: "/blog/old-post", toPath: "/tenant-page", statusCode: 301 }],
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const platform = await resolvePlatformRedirect(apexInput("/blog/old-post"));
+    const store = await resolveStoreRedirect({
+      origin: ORIGIN,
+      host: "acme.budstacks.io",
+      pathname: "/blog/old-post",
+      method: "GET",
+      hint: SUBDOMAIN_HINT,
+    });
+
+    expect(platform?.location).toBe("/blog/new-post");
+    expect(store?.location).toBe("/tenant-page");
   });
 });

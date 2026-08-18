@@ -3,12 +3,15 @@ import type { Metadata } from "next";
 import { GUIDES } from "@/lib/documents/registry";
 import { publishedSeriesVideos } from "@/lib/documents/series-videos";
 import { VideoEmbed } from "./VideoEmbed";
+import { generatePlatformRouteMetadata } from "@/lib/seo/generate-platform-metadata";
 
-export const metadata: Metadata = {
-  title: "The BudStacks Guide",
-  description:
-    "Every screen of your store admin explained — what it's for, what it does, and why you'll use it. Step by step, in plain language.",
-};
+// US-015 — read from `platform_seo_settings`, falling back per column to the
+// title and description this page used to hardcode (now in
+// PLATFORM_ROUTE_FALLBACKS). The guides beneath it keep their own metadata:
+// each is its own authorable route, so a row here retitles the index only.
+export function generateMetadata(): Promise<Metadata> {
+  return generatePlatformRouteMetadata("/documents");
+}
 
 export default function DocumentsIndexPage() {
   const ordered = [...GUIDES].sort((a, b) => a.part - b.part);

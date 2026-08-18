@@ -37,6 +37,23 @@ export interface IndexingValue {
   readonly sitemapExclude: boolean;
 }
 
+/**
+ * The four controls as keys, so a surface can say which of them it STORES.
+ *
+ * Added for US-014's platform SEO editor: `platform_seo_settings` has a
+ * `noindex` column and no others, so offering the remaining three there would
+ * ship exactly the write-only control this workstream exists to remove. The
+ * default is all four, which is what every tenant editor passes.
+ */
+export const INDEXING_FIELD_KEYS = [
+  "noindex",
+  "nofollow",
+  "sitemapExclude",
+  "canonicalOverride",
+] as const;
+
+export type IndexingFieldKey = (typeof INDEXING_FIELD_KEYS)[number];
+
 /** True when the tenant has an indexing rule stored, whatever their plan. */
 export function hasIndexingValue(value: IndexingValue): boolean {
   return (
@@ -73,6 +90,8 @@ interface IndexingFieldsProps {
   canEdit: boolean;
   /** What to call the thing being edited in the copy — "product", "page"… */
   entityType: string;
+  /** Which controls this surface stores. Defaults to all four. */
+  fields?: readonly IndexingFieldKey[];
 }
 
 interface IndexingToggleProps {
@@ -118,7 +137,10 @@ export function IndexingFields({
   onChange,
   canEdit,
   entityType,
+  fields = INDEXING_FIELD_KEYS,
 }: IndexingFieldsProps) {
+  const shows = (field: IndexingFieldKey) => fields.includes(field);
+
   if (!canEdit) {
     return (
       <div className="space-y-2">
@@ -158,54 +180,62 @@ export function IndexingFields({
         </p>
       </div>
 
-      <IndexingToggle
-        id="seo-noindex"
-        checked={value.noindex}
-        onToggle={(noindex) => onChange({ ...value, noindex })}
-        label="Hide from search results (noindex)"
-        description="Search engines are asked to drop this page from their index. It stays reachable to anyone with the link."
-      />
-
-      <IndexingToggle
-        id="seo-nofollow"
-        checked={value.nofollow}
-        onToggle={(nofollow) => onChange({ ...value, nofollow })}
-        label="Do not follow links on this page (nofollow)"
-        description="Search engines are asked not to pass ranking on to the pages this one links to."
-      />
-
-      <IndexingToggle
-        id="seo-sitemap-exclude"
-        checked={value.sitemapExclude}
-        onToggle={(sitemapExclude) => onChange({ ...value, sitemapExclude })}
-        label="Leave out of the sitemap"
-        description="The URL stops being advertised in your store's sitemap. On its own this does not remove an already-indexed page — pair it with noindex for that."
-      />
-
-      <div className="space-y-2">
-        <label htmlFor="seo-canonical-override" className="bs-eyebrow">
-          Canonical URL
-        </label>
-        <input
-          id="seo-canonical-override"
-          value={value.canonicalOverride}
-          onChange={(event) =>
-            onChange({ ...value, canonicalOverride: event.target.value })
-          }
-          placeholder="https://example.com/the-original-page"
-          maxLength={CANONICAL_OVERRIDE_MAX_LENGTH}
-          className={`bs-input w-full ${overrideError ? "border-bs-warn" : ""}`}
+      {shows("noindex") && (
+        <IndexingToggle
+          id="seo-noindex"
+          checked={value.noindex}
+          onToggle={(noindex) => onChange({ ...value, noindex })}
+          label="Hide from search results (noindex)"
+          description="Search engines are asked to drop this page from their index. It stays reachable to anyone with the link."
         />
-        {overrideError ? (
-          <p className="text-xs text-bs-warn">{overrideError}</p>
-        ) : (
-          <p className="text-xs text-bs-fg-muted">
-            Points search engines at the page that owns this content, when it
-            lives somewhere else. Leave empty to use this {entityType}&apos;s own
-            URL, which is almost always what you want.
-          </p>
-        )}
-      </div>
+      )}
+
+      {shows("nofollow") && (
+        <IndexingToggle
+          id="seo-nofollow"
+          checked={value.nofollow}
+          onToggle={(nofollow) => onChange({ ...value, nofollow })}
+          label="Do not follow links on this page (nofollow)"
+          description="Search engines are asked not to pass ranking on to the pages this one links to."
+        />
+      )}
+
+      {shows("sitemapExclude") && (
+        <IndexingToggle
+          id="seo-sitemap-exclude"
+          checked={value.sitemapExclude}
+          onToggle={(sitemapExclude) => onChange({ ...value, sitemapExclude })}
+          label="Leave out of the sitemap"
+          description="The URL stops being advertised in your store's sitemap. On its own this does not remove an already-indexed page — pair it with noindex for that."
+        />
+      )}
+
+      {shows("canonicalOverride") && (
+        <div className="space-y-2">
+          <label htmlFor="seo-canonical-override" className="bs-eyebrow">
+            Canonical URL
+          </label>
+          <input
+            id="seo-canonical-override"
+            value={value.canonicalOverride}
+            onChange={(event) =>
+              onChange({ ...value, canonicalOverride: event.target.value })
+            }
+            placeholder="https://example.com/the-original-page"
+            maxLength={CANONICAL_OVERRIDE_MAX_LENGTH}
+            className={`bs-input w-full ${overrideError ? "border-bs-warn" : ""}`}
+          />
+          {overrideError ? (
+            <p className="text-xs text-bs-warn">{overrideError}</p>
+          ) : (
+            <p className="text-xs text-bs-fg-muted">
+              Points search engines at the page that owns this content, when it
+              lives somewhere else. Leave empty to use this {entityType}&apos;s
+              own URL, which is almost always what you want.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

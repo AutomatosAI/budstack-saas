@@ -233,6 +233,144 @@ const TENANT_SCOPED_CSS = `
     padding-bottom: calc(4rem * var(--tenant-spacing-scale, 1));
   }
 }
+
+/* === LONG-FORM ARTICLE BODY (The Wire) ===
+   Tenant-authored HTML out of TipTap, rendered via dangerouslySetInnerHTML.
+
+   These posts previously carried @tailwindcss/typography \`prose-*\` classes,
+   but that plugin is not installed (tailwind.config.ts loads only
+   tailwindcss-animate), so every one of them was inert: preflight stripped
+   heading sizes and paragraph margins and nothing put them back. Tenant blogs
+   have been rendering as unstyled flow.
+
+   WHY HERE AND NOT globals.css. The platform's equivalent (.bs-article) is
+   BudStacks-branded — Cormorant Garamond headings, bs-green links. Pointing it
+   at a storefront would paint every operator's blog in our colours. These rules
+   live in the tenant bridge instead and take their colours from the tenant's
+   own variables, so links and markers come out in THEIR brand.
+
+   COLOURS FOLLOW .legal-document (app/globals.css), the existing storefront
+   long-form precedent, which reads the --tenant-color-* namespace that
+   applyThemeToContainer populates from designSystem.colors below. The one
+   departure: every value here carries a fallback to the equivalent shadcn
+   token. Those keys only exist if the tenant's design system defines them —
+   and the namespace is not uniform (store/[slug]/layout.tsx sets
+   --tenant-color-text where .legal-document reads --tenant-color-foreground),
+   so an unfallen-back var would resolve to an invalid colour on some tenants.
+   The shadcn tokens are always defined and are themselves remapped per tenant
+   in applyThemeToContainer below (--primary/--secondary/--accent/--foreground),
+   which makes them a correct second choice rather than a default.
+
+   HEADINGS ARE DELIBERATELY FONT-LESS HERE. .tenant-theme-container h1-h6
+   above already set font-family and font-size from --tenant-font-heading and
+   the heading scale. Restating either would override a tenant's typography
+   choice with a hard-coded one. Only the vertical rhythm is supplied. */
+.tenant-theme-container .tenant-article {
+  line-height: 1.75;
+}
+.tenant-theme-container .tenant-article > * + * { margin-top: 1.25em; }
+
+.tenant-theme-container .tenant-article h1,
+.tenant-theme-container .tenant-article h2,
+.tenant-theme-container .tenant-article h3,
+.tenant-theme-container .tenant-article h4,
+.tenant-theme-container .tenant-article h5,
+.tenant-theme-container .tenant-article h6 {
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+  line-height: 1.25;
+}
+/* A heading opening the body should not push it down the page. */
+.tenant-theme-container .tenant-article > :is(h1, h2, h3, h4, h5, h6):first-child {
+  margin-top: 0;
+}
+
+.tenant-theme-container .tenant-article p { margin-bottom: 1.25em; }
+.tenant-theme-container .tenant-article strong { font-weight: 600; }
+.tenant-theme-container .tenant-article em { font-style: italic; }
+.tenant-theme-container .tenant-article a {
+  color: hsl(var(--tenant-color-primary, var(--primary)));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tenant-theme-container .tenant-article ul,
+.tenant-theme-container .tenant-article ol {
+  margin: 1.4em 0;
+  padding-left: 1.4em;
+}
+.tenant-theme-container .tenant-article ul { list-style: disc; }
+.tenant-theme-container .tenant-article ol { list-style: decimal; }
+.tenant-theme-container .tenant-article li { margin-bottom: 0.6em; }
+.tenant-theme-container .tenant-article li::marker {
+  color: hsl(var(--tenant-color-primary, var(--primary)));
+}
+
+.tenant-theme-container .tenant-article blockquote {
+  border-left: 2px solid hsl(var(--tenant-color-primary, var(--primary)));
+  color: hsl(var(--tenant-color-muted-foreground, var(--muted-foreground)));
+  padding-left: 1.15em;
+  margin: 1.75em 0;
+  font-style: italic;
+}
+
+.tenant-theme-container .tenant-article code {
+  background: hsl(var(--tenant-color-muted, var(--muted)));
+  border: 1px solid hsl(var(--tenant-color-border, var(--border)));
+  border-radius: 0.25rem;
+  padding: 0.15em 0.4em;
+  font-size: 0.9em;
+}
+/* Long code lines scroll inside the block, never the page. */
+.tenant-theme-container .tenant-article pre {
+  background: hsl(var(--tenant-color-muted, var(--muted)));
+  border: 1px solid hsl(var(--tenant-color-border, var(--border)));
+  border-radius: var(--tenant-border-radius, 0.5rem);
+  padding: 1em 1.15em;
+  margin: 1.75em 0;
+  overflow-x: auto;
+}
+.tenant-theme-container .tenant-article pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.875em;
+}
+
+/* An author can paste an image of any width; it must not widen the page. */
+.tenant-theme-container .tenant-article img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--tenant-border-radius, 0.5rem);
+}
+.tenant-theme-container .tenant-article figure { margin: 1.75em 0; }
+.tenant-theme-container .tenant-article figcaption {
+  color: hsl(var(--tenant-color-muted-foreground, var(--muted-foreground)));
+  font-size: 0.875em;
+  margin-top: 0.6em;
+}
+
+/* Same reasoning as pre: a wide table scrolls itself, not the document. */
+.tenant-theme-container .tenant-article table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 1.75em 0;
+}
+.tenant-theme-container .tenant-article th,
+.tenant-theme-container .tenant-article td {
+  border: 1px solid hsl(var(--tenant-color-border, var(--border)));
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+.tenant-theme-container .tenant-article th { font-weight: 600; }
+
+.tenant-theme-container .tenant-article hr {
+  border: 0;
+  border-top: 1px solid hsl(var(--tenant-color-border, var(--border)));
+  margin: 2.5em 0;
+}
 `;
 
 /**

@@ -1,37 +1,59 @@
-/**
- * Editorial blog posts for budstacks.io/blog.
- *
- * Single source of truth — both the index (app/blog/page.tsx) and the detail
- * page (app/blog/[slug]/page.tsx) read from here, so a new post is one edit.
- * The six original sample posts still live inline in those two files; migrate
- * them here as each is rewritten.
- */
+-- US-010 — the two editorial posts move out of code and into `platform_posts`.
+--
+-- They were authored in lib/blog/posts.ts and rendered from that array. Since
+-- US-008/US-009 both /blog and /blog/<slug> read the database instead, so until
+-- these rows exist the two live URLs resolve to nothing. This migration closes
+-- that window for the editorial pair; US-011 closes it for the six samples, and
+-- only then does US-012 delete the arrays.
+--
+-- A TIMESTAMPED DIRECTORY, not a loose .sql at the top of prisma/migrations/.
+-- entrypoint.sh runs `prisma migrate deploy`, which only ever reads directories
+-- — the seven loose files up there have never been applied by a deploy.
+--
+-- IDEMPOTENT. `ON CONFLICT ("slug") DO NOTHING` against platform_posts_slug_key,
+-- so re-running this (a fresh container, a replayed history, a restored
+-- database that already carries the rows) cannot duplicate a post or overwrite
+-- an edit a super-admin has since made in /super-admin/the-wire. Content
+-- migrated once; the editor owns it from here.
+--
+-- SLUGS ARE IDENTICAL to the ones the array shipped, character for character.
+-- That is the whole point of the story: every /blog/<slug> already indexed and
+-- already linked to keeps resolving. Nothing here may be "tidied".
+--
+-- The ids are FIXED UUIDs rather than readable keys like the subprocessors seed
+-- uses, because /api/platform/posts/[id] runs `parseUuid` on the path param —
+-- a row keyed 'wordpress-post' would be published but uneditable and
+-- undeletable through the admin UI.
+--
+-- "publishedAt" is the post's own date at 12:00 UTC, one minute earlier per
+-- position in the shipped array. Midday keeps the rendered date on the intended
+-- calendar day either side of UTC (formatPostDate formats in the server's local
+-- zone), and the minute offset gives two posts that share a DATE a deterministic
+-- order — the index sorts by publishedAt DESC, so without it the pair would
+-- order arbitrarily. "createdAt" matches, so the DESC tie-break behind it agrees.
+--
+-- The body is DOLLAR-QUOTED ($post$). The HTML is then byte-for-byte what the
+-- array held — apostrophes, em dashes and the "$3 to $4" figures all intact,
+-- with no escaping to get wrong. It is stored raw and unsanitised on purpose:
+-- sanitizePostHtml runs on the way out in app/blog/[slug]/page.tsx, so a policy
+-- change applies to rows that predate it.
+--
+-- "coverImageAlt" and "seo" stay NULL: the array had neither. The article falls
+-- back to the title for the cover's alt text and builds its metadata from the
+-- post's own fields.
+--
+-- See tasks/prd-platform-content-and-seo.md (US-010).
 
-export type BlogPost = {
-  id: number;
-  slug: string;
-  title: string;
-  date: string;
-  author: string;
-  role: string;
-  excerpt: string;
-  image: string;
-  /** Rendered as HTML by the detail page. */
-  content: string;
-};
-
-export const BLOG_POSTS: BlogPost[] = [
-  {
-    id: 101,
-    slug: "wordpress-or-budstacks-cannabis-storefront",
-    title: "Should You Build Your Cannabis Storefront on WordPress?",
-    date: "Aug 15, 2026",
-    author: "BudStacks",
-    role: "Platform Team",
-    excerpt:
-      "We run cannabis storefronts on both WordPress and BudStacks. Here is the honest comparison, including the parts that do not flatter us.",
-    image: "/images/blog/post-01-franchise.svg",
-    content: `
+INSERT INTO "platform_posts"
+    ("id", "slug", "title", "excerpt", "content", "coverImage",
+     "authorName", "authorRole", "published",
+     "publishedAt", "createdAt", "updatedAt")
+VALUES
+    ('dc76b0bf-f962-4032-b401-091f4f9acd07',
+     'wordpress-or-budstacks-cannabis-storefront',
+     'Should You Build Your Cannabis Storefront on WordPress?',
+     'We run cannabis storefronts on both WordPress and BudStacks. Here is the honest comparison, including the parts that do not flatter us.',
+     $post$
       <p>We are not neutral here, and you should read this knowing that. But we also run a fleet of cannabis storefronts on WordPress — real ones, taking real orders — alongside the BudStacks platform. That gives us something most comparison articles do not have: the specific list of things that broke.</p>
 
       <p>So here is the honest version, including where WordPress wins.</p>
@@ -82,19 +104,18 @@ export const BLOG_POSTS: BlogPost[] = [
       <p><strong>Choose BudStacks</strong> if you want to be selling this quarter rather than building this year, if you would rather spend your time on patients than on plugin updates, and if you want the compliance machinery to be someone else's problem to maintain.</p>
 
       <p>There is no clever answer here. It is a straight trade: control and cheap hosting on one side, time and maintained compliance on the other. Anyone who tells you one option is simply better has not run both.</p>
-    `,
-  },
-  {
-    id: 102,
-    slug: "real-economics-medical-cannabis-storefront",
-    title: "The Real Economics of a Medical Cannabis Storefront",
-    date: "Aug 15, 2026",
-    author: "BudStacks",
-    role: "Platform Team",
-    excerpt:
-      "Margin per gram, where the profit share goes, what the overhead really is, and the number that decides whether any of it works.",
-    image: "/images/blog/post-06-analytics.svg",
-    content: `
+    $post$,
+     '/images/blog/post-01-franchise.svg',
+     'BudStacks',
+     'Platform Team',
+     true,
+     '2026-08-15 12:00:00', '2026-08-15 12:00:00', '2026-08-15 12:00:00'),
+
+    ('203d7d64-7472-411f-b83c-f60925436453',
+     'real-economics-medical-cannabis-storefront',
+     'The Real Economics of a Medical Cannabis Storefront',
+     'Margin per gram, where the profit share goes, what the overhead really is, and the number that decides whether any of it works.',
+     $post$
       <p>Most people considering a cannabis storefront ask about the setup cost first. It is the wrong first question. The setup cost is a one-off you can plan for. The economics are what you live in every month afterwards.</p>
 
       <p>So let us do the arithmetic properly, including the parts that are less fun.</p>
@@ -140,6 +161,10 @@ export const BLOG_POSTS: BlogPost[] = [
       <p>If it works at a conservative patient count, the upside takes care of itself. If it only works at a heroic one, you have learned something valuable before spending anything.</p>
 
       <p><em>Every figure here is illustrative. Actual results depend on your market, your pricing, your patient base, and your own effort. Nothing on this page is a guarantee of earnings, and nothing here is financial advice.</em></p>
-    `,
-  },
-];
+    $post$,
+     '/images/blog/post-06-analytics.svg',
+     'BudStacks',
+     'Platform Team',
+     true,
+     '2026-08-15 11:59:00', '2026-08-15 11:59:00', '2026-08-15 11:59:00')
+ON CONFLICT ("slug") DO NOTHING;

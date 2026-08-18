@@ -1,869 +1,2160 @@
-# Ralph Progress Log
-# Project: BudStack SaaS — LLM Visibility (GEO, Pro tier)
-# Branch: ralph/seo-llm-visibility
-# Started: 2026-08-14
-# PRD: tasks/prd-seo-llm-visibility.md · Parent: tasks/prd-seo-supercharge.md
+# Ralph progress journal — Platform content and SEO (ralph/platform-content-seo)
+# PRD: tasks/prd-platform-content-and-seo.md · Stories: ralph/prd.json
+# Started: 2026-08-15
+
+[2026-08-15] US-001 PASS — Verify the article typography sweep in a browser
+
+Precondition met: `.tenant-article` is present in components/tenant-theme-provider.tsx
+(TENANT_SCOPED_CSS, ~line 268). The feat/article-typography work IS on this branch's
+base, so nothing was blocked.
+
+VERIFICATION RIG (no repo changes; all of it torn down afterwards)
+- The `.env` DATABASE_URL points at postgres-budstack-development.up.railway.app:5432,
+  which is TCP-unreachable from this machine. Rather than defer every DB-backed
+  surface, stood up a throwaway local Postgres 17 (homebrew, port 55432, /tmp data
+  dir) and built its schema with
+  `prisma migrate diff --from-empty --to-schema-datamodel` piped to psql.
+  Chose migrate-diff over `db push`/`migrate dev` deliberately: psql can only reach
+  the local socket, so there is no path by which the live URL could be touched.
+- FOUND: `prisma migrate deploy` CANNOT build this schema from empty. The first
+  migration (20260108_add_user_profile_fields) ALTERs `users`, which no earlier
+  migration creates — it fails P3018 / 42P01. The 40 migration dirs are an
+  incremental history over a pre-existing database, not a from-scratch baseline.
+  Relevant to every later Prisma story: a new migration is appended to that history
+  and applied by entrypoint.sh against an already-populated DB; it can never be
+  validated by replaying the directory from zero.
+- FOUND: the checked-out node_modules Prisma client was STALE — it predated
+  platform_leads, so `PlatformLeadStatus` was missing and BOTH `tsc --noEmit` and
+  `next build` failed on app/super-admin/leads/page.tsx before I touched anything.
+  `pnpm prisma generate` fixes it. Pre-existing local-env state, not a code defect,
+  but any fresh clone hits it.
+- Seeded a tenant whose designSystem is deliberately magenta/violet (primary
+  #B5179E) precisely so BudStacks green (#52D97A) leaking through would be obvious,
+  plus a post exercising every block element and a learning_resource.
+
+DEV MODE CANNOT VERIFY THIS — the finding that shaped the run
+- Under `pnpm dev` the tenant post rendered with DEFAULT navy links and markers and
+  every `--tenant-color-*` var unset. Cause is NOT the typography sweep: the app's
+  CSP (lib/security/csp.ts) omits 'unsafe-eval' for the "base"/"store" variants,
+  Next.js dev compiles with eval, so hydration dies on
+  `EvalError: Evaluating a string as JavaScript violates ... 'unsafe-eval'`.
+  TenantThemeProvider applies its vars in useEffect, which therefore never runs.
+  => Any storefront theming check MUST be done against `pnpm build && pnpm start`.
+  A dev-only look would have reported a false failure here.
+
+SURFACES CHECKED (production build, port 3111, real Chromium via dev-browser)
+1. /store/verifystore/the-wire/typography-proof — PASS, and the tenant-brand AC is
+   genuinely satisfied: link colour rgb(181,23,157) and ul marker rgb(181,23,157)
+   are #B5179E, the TENANT's magenta, not #52D97A. Container carries
+   --tenant-color-primary: 309 77% 40%. h2 30px / h3 24px / p 16px with real
+   margins; blockquote italic behind a magenta 2px rule with muted-foreground text;
+   code + pre on the tenant's muted background and border; table bordered; hr ruled.
+   Cover image spans the container: h1, cover and .tenant-article all measure
+   x=208 w=864 inside a 896px container — NOT clamped to a text measure. Zero page
+   errors.
+2. /terms, /privacy, /dpa, /aup — PASS. All four carry .bs-article: h2 30px
+   Cormorant Garamond, p 17px, li 17px with 6px spacing, green underlined links,
+   green list markers, on the dark legal card. Real heading sizes and paragraph
+   spacing, not unstyled flow.
+3. /regulatory — PASS, correct BY OMISSION exactly as specced. No .bs-article;
+   renders on the light :root palette as dark navy (rgb(15,23,41)) on light grey
+   with 24px Cormorant headings and 24px paragraph spacing. Readable. Confirms the
+   deliberate exclusion: .bs-article's body colour is #C6CCC8, which on this light
+   background WOULD be grey-on-white.
+4. /learn/typography-proof — PASS. h1 36px / h2 30px / h3 24px Cormorant, p 17px,
+   fenced code block on rgb(15,21,23) in JetBrains Mono, inline code chipped, image
+   rendered 1024x585 natural, displayed 734px = the article width, max-width 100%,
+   border-radius 12px.
+5. /tenant-admin/the-wire/new (TipTap) — styling verified, NOT an authenticated
+   click-through. The route 307s to /auth/login and I have no Clerk credentials.
+   Instead: loaded a real page so the app's COMPILED css bundle was live, then
+   injected the exact wrapper from app/tenant-admin/layout.tsx:230
+   (data-surface="admin" .budstacks-theme .canvas-bg) around the exact editor class
+   string from components/editor/tiptap.tsx:147, and measured. Result: bg-background
+   resolves to rgb(9,11,11) near-black, body text #C6CCC8 — high contrast, so the
+   concern in tiptap.tsx's own comment does not bite. h2 30px Cormorant, bullet
+   markers rgb(82,217,122) = #52D97A, blockquote italic with a green rule. All three
+   elements the AC names show visible formatting. What is NOT proven: that TipTap
+   applies those tags as you type. visual: editor keystroke behaviour deferred to
+   human review.
+
+VALIDATION
+- pnpm exec tsc --noEmit -> exit 0, no output (after prisma generate, see above)
+- pnpm vitest run -> exit 0; 168 files passed, 8 skipped; 3026 tests passed, 30
+  skipped; 0 failures
+- pnpm check:public-routes -> green (104 pages, 1 public API handler)
+- pnpm check:article-typography -> green (no inert prose-* in app/, components/, lib/)
+- pnpm check:security -> green (CSS sinks sanitised; no error.message leaks)
+- pnpm build -> exit 0, 188 static pages
+
+NO SOURCE CHANGES. Every surface was already correct; nothing needed fixing. Working
+tree returned to its starting state (only the ambient untracked files).
+
+FLAGGED, NOT FIXED (adjacent debt, out of scope)
+- app/learn/[slug]/markdown-content.tsx is a regex renderer with NO blockquote and
+  NO table support: `> quote` renders with a literal ">" and a markdown table
+  renders as literal pipes. Ordered lists render as bullets (both list branches emit
+  bare <li> and the wrapper only ever produces <ul>). Its allowedSchemes also
+  exclude data:, so data-URI images are stripped. Content-pipeline debt, unrelated
+  to the typography sweep.
+- The storefront shows TWO stacked cookie banners at once (CookieConsent plus a
+  second full-width green bar), which together cover the top of the article.
+
+NOTE FOR LATER STORIES: the tenant used here had NO tenant_templates row, so the
+magenta reached the page through TenantThemeProvider's legacy
+`settings.designSystem` fallback (tenant-theme-provider.tsx:45-46) rather than
+`activeTemplate.designSystem` (app/store/[slug]/layout.tsx:358). Both paths feed the
+same applyThemeToContainer, so the typography result is identical either way — but
+the primary path is the tenant_templates one and was not separately exercised.
+
 
 ================================================================================
-[2026-08-14] US-001 PASS — AI crawler policy manager
-================================================================================
-
-WHAT LANDED
-`lib/seo/ai-crawlers.ts` is the registry: nine user-agent tokens, each carrying
-its class (search | training), owner and purpose. `lib/seo/robots-txt.ts` renders
-the store's robots.txt from it. `app/store/[slug]/robots.txt/route.ts` now reads
-the plan and the policy off the row `getCurrentTenant` already resolved — no
-extra query — and a Pro-only `PUT /api/tenant-admin/seo/ai-crawlers` writes the
-policy into `tenants.settings`. New "AI Crawlers" tab in the SEO Manager
-(Pro-only), plus an `ai-crawlers` entry in `SEO_PRO_FEATURES` so a Basic tenant
-meets the locked card.
-
-THE ROBOTS.TXT RULE THAT SHAPED THE DESIGN. A crawler that matches its own
-`User-agent` group uses THAT group and ignores the `*` group entirely (RFC 9309
-§2.2.1). So a blocked bot gets its own group with `Disallow: /` (complete on its
-own — the admin paths need no repeating), and an ALLOWED bot gets no group at
-all. Publishing `User-agent: GPTBot` / `Allow: /` to "be explicit" would have
-taken GPTBot out of the wildcard group and handed it `/api/`, `/tenant-admin/`
-and `/auth/`. Hence 'open' renders comments and nothing functional — asserted
-(`userAgents(txt)` is exactly `["*"]` under 'open').
-
-TWO PARSERS, TWO DIRECTIONS, ON PURPOSE. The PLAN fails closed ('basic' — a DB
-blip must not hand out Pro); the POLICY fails open ('open' — an unreadable
-settings blob must never be read as "this store asked to be hidden from AI
-answers"). Both directions are table-tested.
-
-BYTE-IDENTICAL FOR BASIC. The pre-story file is frozen as a literal in the test
-(not derived from the renderer, which would make the assertion tautological) and
-asserted for plan 'basic' AND for every unreadable plan value, including a tenant
-that stored 'blocked' while on Pro and then downgraded — the setting stays in the
-column, dormant. The storefront never blocks on plan.
-
-NO xAI ROW SHIPS — an evidenced deviation from the story's AC, stated here
-rather than papered over. The AC asks for "xAI search UA". xAI publishes no
-crawler user-agent token: x.ai's own robots.txt names other operators' bots and
-not its own (curled 2026-08-14), and Cloudflare's AI Crawl Control bot reference
-lists no xAI crawler. Third-party directories disagree with each other between
-`GrokBot`, `xAI-Grok` and `xAI-Crawler`. Emitting a guessed token would tell an
-owner they had blocked something they had not — the one failure this feature
-cannot have. The registry is data; the row is one line the day xAI documents it.
-Tokens that DID ship were verified against primary sources on 2026-08-14:
-developers.openai.com/api/docs/bots, privacy.claude.com article 8896518,
-docs.perplexity.ai/guides/bots, cross-checked against Cloudflare's bot reference.
-
-COPY IS THE FEATURE, AND IT IS TESTED. Owners arrive believing "AI bots" is one
-thing. Each class states what refusing it COSTS: blocking search = "absent from
-AI answers"; blocking training = "does not remove you from AI answers today".
-The policy note says plainly that robots.txt is "a published request, not a
-lock" and that a crawler ignoring it is not stopped. User-triggered fetchers
-(ChatGPT-User, Claude-User, Perplexity-User) are deliberately ABSENT from the
-registry with a note saying why — their operators publish that robots.txt does
-not apply to a request a person made directly, so listing them under a policy
-switch would offer control this file does not have. No option summary may promise
-a citation — asserted by regex.
-
-SETTINGS KEY BOUNDED BY LENGTH, NOT BY ENUM — the `reorderReminderDays` /
-verification-token split, for the documented reason: `parseTenantSettings` fails
-as a UNIT, so an out-of-enum value hand-edited into the column would return `{}`
-and take the tenant's tagline, colours and cookie banner down with it. The enum
-is enforced by the write route on the way in (`z.enum` + `.strict()`) and
-re-applied by `parseAiCrawlerPolicy` on the way out. Asserted.
-
-GATES. `requirePermission("canEditSeo")` wrapping `requireFeature(SEO_PRO)`, the
-sanctioned order — a member without the permission is refused BEFORE the plan
-read (asserted: `tenants.findFirst` never called). Basic → 403 `upgrade_required`
-and no write. The settings merge is read-modify-write over the RAW blob, so keys
-this platform version has never heard of survive (asserted). Audit row
-`seo.ai_crawlers_updated` records the transition `{from, to}`.
-
-FLAGGED, NOT FIXED (adjacent debt, out of scope):
-- The platform apex robots.txt (`app/robots.ts`) has no AI-crawler policy at all.
-  Deliberate: it is not tenant-owned and no story asks for it.
-- The store robots.txt still emits `Disallow:` lines under a comment separated by
-  a blank line from `User-agent: *`. Blank lines are ignored by the major
-  parsers so it works, but it reads oddly; left byte-identical because the AC
-  demands exactly that for Basic tenants.
-- `parseTenantSettings` logs a whole-blob parse failure to `console.error` when
-  any single key is malformed. Pre-existing (PRD-208), untouched.
-
-HOW VERIFIED
-- `pnpm exec tsc --noEmit`                         -> exit 0 (repo-wide)
-- `pnpm vitest run tests/unit/seo-ai-crawlers.test.ts` -> 37 passed
-- `pnpm vitest run` (full)                         -> 2741 passed, 30 skipped,
-                                                      161 files, 0 failed
-                                                      (2704 before; +37 new)
-- `pnpm exec next lint` on all 12 touched files    -> no warnings, no errors
-- `pnpm check:security`                            -> both gates green
-- LIVE, on `pnpm dev` with the existing `.env.local` (never modified):
-    * `GET /robots.txt` (apex) -> 200, platform file UNCHANGED (still the
-      app/robots.ts output, no AI section) — the store handler is not on this path
-    * `GET /store/healingbuds/robots.txt` -> 404 "Tenant not found", which is
-      THIS handler's own output: the route is publicly reachable and executes;
-      the 200 path needs a DB, which is not reachable locally
-    * `PUT /api/tenant-admin/seo/ai-crawlers` unauthenticated -> 307 /auth/login
-      (behind the Clerk wall, not publicly reachable)
-    * the SEO Manager tab is Clerk-gated -> VISUAL: DEFERRED TO HUMAN REVIEW.
-      The rendered Pro robots output is covered by unit tests that run the real
-      route.
-- Docker runner image: EXPLICITLY CHECKED. Two new modules under `lib/`
-  (COPYied at Dockerfile:74), one admin component under `components/` and two
-  routes under `app/` (compiled into `.next/standalone`, Dockerfile:59). No new
-  runtime import chain leaves the copied set and no new dependency — no
-  Dockerfile change needed.
-- No migration, no schema change: `aiCrawlerPolicy` is a key in the existing
-  `tenants.settings` Json blob.
-
-================================================================================
-[2026-08-14] US-002 PASS — Product Q&A blocks
+[2026-08-15] US-002 PASS — platform_posts model and migration
 ================================================================================
 
 WHAT LANDED
-`products.seo.qa` — a key in the authored Json record every other SEO field
-already shares, so no migration. `lib/seo/product-qa.ts` is the storage contract
-(limits + the fail-closed reader + `hasQaField`); `entity-seo.ts` gained the
-key and a THIRD write half; the product SEO PUT validates it with Zod and gates
-it with `featureDenial`; the product page renders it twice — a `<details>`
-accordion for a person and a `FAQPage` node for a machine — from ONE gated read.
-Drafting is a sibling route, `POST /api/tenant-admin/seo/ai-assist/qa`, on the
-same service, the same meter and the same credentials as US-025's field
-assistant, with a NEW output contract in `lib/seo/qa-draft.ts`.
+- prisma/schema.prisma: new `platform_posts` model, placed beside
+  learning_resources (the other non-tenant-scoped platform table) rather than in
+  the tenant block, so the grouping states the scoping intent.
+  Fields: id uuid / slug @unique / title / excerpt? / content / coverImage? /
+  coverImageAlt? / authorName / authorRole? / published(false) / publishedAt? /
+  seo Json? / createdAt / updatedAt.
+- prisma/migrations/20260815000000_add_platform_posts/migration.sql — a TIMESTAMPED
+  DIRECTORY, so entrypoint.sh's `prisma migrate deploy` actually applies it.
+- tests/unit/platform-posts-schema.test.ts — 9 offline guards (see below).
 
-THE ACCORDION IS A SERVER COMPONENT, AND THAT IS THE WHOLE STORY. `ProductDetail
-Client` fetches the strain in the BROWSER, so its first render — the one that is
-server-rendered into the initial HTML — is the loading spinner (product-detail-
-client.tsx:129-152). Anything placed inside it does not exist for a reader that
-does not execute JavaScript, which is most of the answer engines this PRD is
-aimed at, and the FAQPage node would then be describing content no crawler could
-verify. So the block is a sibling of the client component, rendered by the route
-from the `seo` the page ALREADY resolved (`loadProductForRender`, the cache()d
-loaders `generateMetadata` shares) — no extra query. `<details>`/`<summary>`
-rather than a button and a state hook: collapsible, keyboard-operable, screen-
-reader-announced with no client JS, and the answer stays in the DOM while
-collapsed, which is what makes it extractable. Asserted: the element tree
-carries every question and every answer.
+DECISIONS
+- authorName/authorRole are denormalised strings with NO relation and no @relation
+  anywhere in the model, per AC. Two independent reasons, both now in the schema
+  comment: `users` is itself in tenantScopedModels so an FK join is unreadable from
+  the apex, and getCurrentUser().id is a CLERK id — writing it into a uuid FK is the
+  P2003 that broke the lekkerweed blog in #226. learning_resources sets the
+  precedent of a platform table with no author relation.
+- NULLABILITY: title/content/slug/authorName are required; excerpt, coverImage,
+  coverImageAlt, authorRole, publishedAt, seo are nullable. Mirrors tenant `posts`
+  (excerpt?/coverImage? optional, author required). A draft is
+  (published=false, publishedAt NULL); publishedAt is meant to be set once at first
+  publish so the public date does not jump on later typo fixes — US-004 owns
+  enforcing that.
+- INDEX DEVIATION, called out deliberately: the AC asks for "indexes on
+  [published, publishedAt] and [slug]". I shipped @@index([published, publishedAt])
+  plus the UNIQUE index that `slug @unique` already creates
+  (platform_posts_slug_key). I did NOT add a second plain @@index([slug]) — it would
+  be redundant storage and write cost serving the identical lookup. Slug lookups
+  (/blog/[slug], the editor's uniqueness check) are indexed. platform_leads does
+  exactly this: `email @unique` with no extra index beside it. Flagging it so a
+  reviewer sees a decision, not an omission.
 
-ONE GATED READ, TWO CONSUMERS. `productQaEntries(source)` applies the plan gate
-and the parse; `buildProductQaJsonLd` calls it, and the page passes its result to
-the section. Structured data is policed on MATCHING the visible content, so the
-two must not be able to disagree about the plan, the parse, or which pairs
-survived — routing both through one function makes that structural. Asserted:
-with junk mixed into the stored list, the node's questions equal
-`productQaEntries`' questions exactly.
+VERIFICATION
+- pnpm prisma validate -> valid; pnpm prisma generate -> ok.
+- Migration DDL diffed against
+  `prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script`
+  and is BYTE-IDENTICAL to Prisma's own output for this table (table + both
+  indexes). No hand-rolled drift.
+- pnpm exec tsc --noEmit -> exit 0.
+- pnpm vitest run -> exit 0, 169 files / 3035 tests passed, 8 files + 30 tests
+  skipped. (Was 168/3026 before this story; the delta is exactly the new file.)
+- pnpm check:public-routes, check:article-typography, check:security -> all green.
+- eslint on the new test file -> clean.
+- lib/db.ts NOT touched: platform_posts is absent from tenantScopedModels, verified
+  by grep and now by test.
 
-DEVIATION FROM THE AC, STATED: the accordion is NOT `bs-*`. Those component
-classes are the ADMIN design system — dark card/gold/green tokens, applied under
-the `[data-surface="admin"]` gate (app/globals.css:1262-1268, 1377+) — and
-`grep -r "bs-card\|bs-btn\|bs-chip" app/store` returns NOTHING: no storefront
-page uses one. The section is themed the way every other block on the product
-page is, through the tenant's own `--tenant-color-*` variables, so a store's Q&A
-looks like the store rather than like the admin panel dropped into it.
+THE GUARD TEST WAS NEGATIVE-TESTED
+Rather than trust that the assertions can fire, I temporarily inserted
+'platform_posts' into tenantScopedModels and re-ran: the suite went to
+1 failed | 8 passed, naming the right test. lib/db.ts was then restored from a
+backup copy and confirmed clean in git status. The three invariants guarded are the
+three that regress silently: (1) platform models staying OUT of the opt-in
+tenantScopedModels allowlist — asserted for platform_posts, platform_leads and
+learning_resources together, with a companion assertion that 'posts'/'users' are
+still IN it so the absence keeps meaning something; (2) no users relation /
+authorId / tenantId on platform_posts; (3) the migration existing as a timestamped
+directory with no loose platform_posts .sql beside it.
 
-A THIRD WRITE HALF, NOT A THIRD MEANING FOR THE EXISTING FLAG. Q&A is authored
-for a READER (like title/description) but Pro-gated (like the crawler
-directives), and the two preserve decisions are genuinely independent: a Pro
-tenant editing only Q&A must not have their indexing rules rewritten from a body
-that never mentioned them, and vice versa. `entitySeoWrite` now composes
-content + indexing + qa from explicitly-named sources instead of "submitted,
-unless…" — the old shortcut return would have carried one group's submission
-into a save that was refused it. All four flag combinations are asserted, plus
-the no-options call, which behaves exactly as it did before.
+NOT DONE / OUT OF SCOPE
+- No API, no page, nothing reads or writes this table yet — US-004 onward.
+- No seed data. US-010 and US-011 own migrating the two editorial and six sample
+  posts; the inline arrays in app/blog/page.tsx, app/blog/[slug]/page.tsx and
+  lib/blog/posts.ts are untouched and still the live source.
+- The migration has NOT been run against any database. It applies itself on the
+  next container boot via entrypoint.sh.
 
-FAQPage HAS ONE BUILDER NOW. US-017's condition FAQ and this both emit the same
-node about a different page, so `buildFaqPageNode(url, entries)` was extracted
-from `buildConditionFaqJsonLd` and both call it. The gate and the column stay
-the caller's business. `readFaqEntries` was deliberately NOT reused for the
-product parse: it is zod-based, and `entity-seo.ts` states in its own docstring
-that it carries no zod because a client component imports it — so
-`lib/seo/product-qa.ts` is hand-rolled and dependency-free, and the SHAPE is
-asserted in both directions instead (the route's zod schema in, the parser out),
-which is the arrangement `isCanonicalOverrideUrl` already has.
+FLAGGED, NOT FIXED (adjacent debt)
+- The seven loose .sql files at the top of prisma/migrations/ (add_platform_leads.sql,
+  add_platform_config.sql, add_automatos_chatbot_enabled.sql,
+  add_product_drgreen_strain_id.sql, add_wire_mode_and_post_source.sql,
+  drgreen_integration.sql, init_complete_schema.sql) are still there and still
+  invisible to `migrate deploy`. Anyone reading the directory sees 40 real
+  migrations and 7 files that look like migrations and are not. Worth either
+  retiring them or moving them under a clearly-named archive/ — not this story's
+  diff, and deleting them is a human call since they document what was applied by
+  hand to live.
 
-THE AI CONTRACT REFUSES A LIST THE WAY US-024 REFUSES A SENTENCE. `{"text": …}`
-cannot express a list, so `parseQaDraft` demands a JSON array of pairs and
-judges one: shape, then content, then the limits, measured after whitespace
-normalisation. A violation refuses the WHOLE draft rather than dropping the two
-bad pairs of eleven — a quietly shortened list is one the owner saves believing
-a human wrote every line. Refusal reasons are their own union (`too_many`,
-`question_too_long`, …) because the parent's "74 characters, over the 60 limit"
-wording says nothing useful about a list. The prompt bans invented medical,
-potency, price and availability claims and tells the model to LEAVE A QUESTION
-OUT rather than fill it in — a Q&A block is read as the store answering, and an
-invented claim would be published in the owner's name and quoted back as theirs.
+================================================================================
+[2026-08-15] US-003 PASS — Extract the Wire HTML sanitiser to lib/
+================================================================================
 
-THE PIPELINE WAS FACTORED, NOT COPIED. `runCompletion` (meter -> credentials ->
-provider) is now shared by `generateSeoDraft` and `generateQaDraft`, so adding
-this contract added an output PARSER and nothing else: one place still decides
-how a tenant's AI quota is spent. The two share ONE rate-limit budget on purpose
-— it is one AI account either way (asserted on the limiter key). The non-draft
-HTTP shapes moved to `lib/seo/ai-assist-http.ts` because a Next route file may
-only export handlers, so the second route could not import the first's mapping;
-two copies would have drifted on a status code clients branch on.
+WHAT LANDED
+- lib/security/post-sanitize.ts — the article-body policy that was inlined in
+  the Wire render path, now a module-level `sanitizeHtml.IOptions` const plus an
+  exported `sanitizePostHtml(html: string | null | undefined): string`. Follows
+  the existing house pattern in that directory exactly (email-sanitize.ts,
+  svg-sanitize.ts: one options const, one thin exported function).
+- app/store/[slug]/the-wire/[postSlug]/page.tsx — 31 lines of inline config
+  replaced by one call. The `sanitize-html` import is gone from the page; the
+  page no longer knows the policy, only that there is one.
+- tests/unit/post-sanitize.test.ts — 16 tests that write the policy down:
+  script/on*/javascript:/<style>/style="" all stripped; headings, lists, links,
+  emphasis, class, id, img and video attributes all survive; iframes limited to
+  www.youtube.com and player.vimeo.com (including a lookalike-hostname case,
+  www.youtube.com.evil.io, which is dropped); null/undefined/"" -> "".
 
-GATES. `requirePermission("canEditSeo")` wrapping `requireFeature(SEO_PRO)` on
-the draft route; permission-then-plan on the PUT, so a member without the
-permission is refused BEFORE the plan read (asserted: `tenants.findFirst` never
-called). A Basic tenant sending `qa` gets 403 `upgrade_required` and no write —
-INCLUDING `qa: []`, because clearing the last question is a Pro write and a gate
-that only noticed non-empty lists would let Basic undo a Pro configuration. One
-plan lookup covers both Pro groups, and a Basic tenant saving only a title still
-pays none. Storefront never blocks: Basic renders no accordion and no node, and
-their pairs stay in the column, dormant.
+THE ALLOWLISTS ARE UNCHANGED — PROVEN, NOT ASSERTED
+Rather than eyeball the copy, I stood up a throwaway parity harness: the ORIGINAL
+inline config pasted verbatim from git HEAD alongside the real shipped module,
+both run over a 25-input corpus (hostile + benign: script tags, on* handlers,
+javascript:/data:/ftp: URLs, an unclosed-tag soup, svg+script, the two allowed
+iframe hosts, a lookalike host, a protocol-relative iframe src, style attributes
+that the allowedStyles map would have permitted, form/object/embed). All 25
+produced byte-identical output, and the harness carried a non-vacuity assertion
+so a silently empty corpus could not pass. The harness was then DELETED — it
+contains a second copy of the config, which is the exact thing this story exists
+to remove.
 
-COPY IS HONEST, AS THE RUN REQUIRES. The editor says the pairs render on the
-page and as FAQ structured data, "the form search and AI answer engines read" —
-and then, in the same paragraph, "it is not a guarantee of being cited". No
-string in this story promises a citation or a ranking.
+FOUND: allowedStyles IS INERT TODAY (carried over anyway, deliberately)
+The attribute map is `'*': ['class','id']` with the original author's comment
+"Removed 'style' from global allowlist", and no per-tag list re-admits `style`.
+sanitize-html only consults `allowedStyles` for a style attribute that survived
+`allowedAttributes`, so every inline style is dropped outright and the whole
+regex map is dead config. It was copied over unchanged regardless: the AC says
+copy exactly and loosen nothing, and admitting `style` to make the map live
+would be a loosening. Documented in the file so the next reader does not mistake
+the map for evidence that inline styles are permitted.
 
-FLAGGED, NOT FIXED (adjacent debt, out of scope):
-- `conditions.faqs` (the seeded condition FAQ) has no editor at all — it is
-  seed-only data. Unchanged here; only its JSON-LD builder was refactored.
-- The condition FAQ accordion is still a framer-motion client component behind
-  the same client-fetch curtain this story worked around for products. Same
-  invisibility to a non-JS reader; no story asks for it.
-- `product-detail-client.tsx:186` still reads `product.currency || "EUR"` (the
-  display SYMBOL, hardcoding euros) — the live bug US-015's docstring recorded.
-  Untouched.
+VERIFIED
+- pnpm exec tsc --noEmit -> exit 0.
+- pnpm vitest run tests/unit/post-sanitize.test.ts -> 16/16 passed.
+- pnpm vitest run -> exit 0, 170 files / 3051 tests passed, 8 files + 30 tests
+  skipped. (Was 169/3035 at US-002; the delta is exactly the new file.)
+- Parity harness -> 26/26 passed before deletion (25 corpus inputs + non-vacuity).
+- pnpm check:public-routes, check:article-typography, check:security -> all exit 0.
+- eslint on the two new files -> exit 0 at --max-warnings=0. The Wire page still
+  carries its one pre-existing @next/next/no-img-element warning on the cover
+  image at line 201, untouched by this diff.
+- The sanitize-html "allowVulnerableTags" warning in full-suite output is
+  pre-existing (lib/security/email-sanitize.ts allows the <style> TAG, which is
+  what triggers it); it does not appear when the new test file runs alone.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- app/api/integrations/automatos/posts/route.ts:43 holds a THIRD copy of this
+  policy (`SANITIZE_OPTIONS`), with a comment that already says "keep the two in
+  sync when either changes". It is the same config minus `allowedStyles` — and
+  since allowedStyles is inert, switching that route to `sanitizePostHtml` would
+  be behaviour-identical. Not done here: that route is an authenticated
+  machine-to-machine ingest endpoint and this story names only the Wire page. It
+  is a one-line follow-up and the obvious next place drift will appear.
+- app/blog/[slug]/page.tsx:273 calls bare `sanitizeHtml(post.content || "")`
+  with NO options at all — sanitize-html defaults, so no img, no iframe, no
+  video, no class/id. That is the platform blog, and US-009 rewrites that render
+  path against the database; it should adopt `sanitizePostHtml` then, which will
+  be a deliberate widening of what the platform blog can render and should be
+  called out as such rather than slipped in.
+
+NOT DONE / OUT OF SCOPE
+- No caller other than the Wire page uses the new module yet. US-004 (platform
+  posts write API) is the second consumer and the reason this story exists.
+
+================================================================================
+[2026-08-15] US-004 PASS — Platform posts write API
+================================================================================
+
+WHAT LANDED
+- lib/platform/posts.ts (new) — the write CONTRACT, shared by both routes so the
+  collection and the item cannot disagree about what a post is: length caps, the
+  two Zod schemas, the explicit PlatformPostRow / PlatformPostSummary types, the
+  list `select`, the publishedAt rule and the slug-derivation rule. Deliberately
+  free of Prisma and next/server imports — US-007's editor is a client component
+  and will want the length caps, and post-slug.ts already documents why that
+  matters.
+- app/api/platform/posts/route.ts — GET (list) + POST (create).
+- app/api/platform/posts/[id]/route.ts — GET + PATCH + DELETE.
+- tests/unit/platform-posts-api.test.ts — 40 tests.
+
+NOT MODELLED ON platform/leads, WHICH IS THE POINT
+leads is the only other /api/platform route and is unauthenticated by design (a
+prospect has no account). Every handler here is wrapped in withSuperAdmin /
+withSuperAdminParams — the first /api/platform/* routes to use them — and every
+MUTATING handler also runs requireSameOrigin, following the newest super-admin
+precedent (tenants/[id]/plan, learning DELETE) rather than the older majority
+that has no CSRF guard. Pinned by test: a TENANT_ADMIN is refused on all five
+handlers and no prisma write is attempted; a cross-site POST with a valid
+super-admin session gets 403 CROSS_ORIGIN_BLOCKED before any parsing.
+
+AC DEVIATION — THE REFUSAL IS 401, NOT 403
+The AC says "returns 403 to a tenant admin" AND names withSuperAdmin. The
+wrapper answers 401 (lib/api-auth.ts:155), as it does for all 44 existing
+super-admin routes. Forking the shared wrapper for one route family, or bolting
+an unreachable second role check inside the handler, both cost more than the
+inconsistency. The security property the AC is after — a tenant admin cannot
+read or write platform posts — holds and is tested; only the status code
+differs. Documented in the route header so the next reader is not surprised.
+
+THE SLUG REGEX IS ENFORCED SERVER-SIDE (the tenant gap, closed)
+POST_SLUG_PATTERN and POST_SLUG_MAX_LENGTH are applied in the Zod schema, not
+left to the client form the way app/api/tenant-admin/posts/[id] does. Rejected
+with POST_SLUG_HINT: upper case, spaces, slashes, dots, empty. Still accepted:
+underscores, digits and a leading hyphen — POST_SLUG_PATTERN has to take those
+because the editor posts stored legacy slugs straight back.
+
+FOUND: A PUNCTUATION TITLE DERIVES THE SLUG "-", WHICH IS VALID
+slugifyPostTitle("!!! ??? ***") returns a bare "-": the ! ? * are stripped as
+non-word, the space-hyphens survive, and the run collapses to one. That PASSES
+POST_SLUG_PATTERN — it must, see above — so a title of punctuation alone would
+have published at /blog/-. resolveCreateSlug is therefore stricter than the
+validator, and only on the DERIVED path: a derived slug must carry at least one
+[a-z0-9], and one longer than POST_SLUG_MAX_LENGTH (reachable — the title cap is
+300) is refused rather than truncated. Either way the answer is "enter a slug
+explicitly", never a URL nobody chose. An AUTHORED slug is still taken verbatim.
+Three cases pinned.
+
+PUBLISHED SLUGS ARE LOCKED — this is the run's anti-pattern list, in code
+PATCH refuses a slug change on a published post with 409 and a message that says
+why. It is enforced in the API, not only in the editor US-007 will build, so an
+API caller cannot route around the form's warning. US-019 (auto-301) is what
+lifts this: search PUBLISHED_SLUG_LOCKED_MESSAGE in lib/platform/posts.ts. A
+live post re-sending its OWN slug is not a rename and is allowed (the editor
+posts the slug on every save); a draft renames freely.
+
+publishedAt SEMANTICS, ALL FIVE PINNED
+create published -> stamped now; create draft -> null; draft->published ->
+stamped; edit while live -> the ORIGINAL date, unchanged; unpublish -> the
+original date KEPT, not cleared. The last one is a judgement call the schema
+comment does not settle: clearing it would make a re-publish invent a new date,
+which contradicts "stamped once". An edit that says nothing about publishing
+writes neither column.
+
+DUPLICATE SLUG -> 409, TWICE OVER
+findUnique pre-check for the clean message (the slug is named in it), plus a
+P2002 catch for the race between that read and the insert, mapping to the same
+409. No Prisma text reaches the client. PATCH additionally maps P2025 to 404,
+and DELETE maps P2025 to 404 rather than reporting success on a row that was
+not there.
+
+VERIFIED
+- pnpm exec tsc --noEmit -> exit 0. Every query carries an explicit row type;
+  the PATCH data object is a locally-declared Partial rather than
+  Prisma.platform_postsUpdateInput, because EntitySeo is an INTERFACE and TS
+  will not treat it as index-signature compatible with InputJsonObject — the
+  generated type would have needed a cast, which is the check worth keeping.
+- pnpm vitest run tests/unit/platform-posts-api.test.ts -> 40/40 passed.
+- pnpm vitest run -> exit 0, 171 files / 3091 tests passed, 8 files + 30 tests
+  skipped. (Was 170/3051 at US-003; the delta is exactly the new file.)
+- pnpm check:public-routes -> 104 pages, 1 public API handler, all allowlisted.
+  These routes are authenticated, so nothing was added to isPublicRoute — that
+  is the correct outcome, not an omission.
+- pnpm check:article-typography, pnpm check:security -> exit 0.
+- next lint --max-warnings=0 on all four files -> clean.
+- visual: n/a (no UI in this story). The routes are Clerk-gated, so they were
+  not curled live; behaviour is covered by the route tests above.
+
+FLAGGED, NOT FIXED (adjacent debt / deliberate omissions)
+- NO AUDIT LOGGING. createAuditLog is not called: the ACs do not ask for it,
+  AUDIT_ACTIONS has no platform-content keys, and the closest precedent
+  (app/api/super-admin/learning, super-admin CRUD over a platform model) has
+  none either. Deleting a published post is nonetheless an unaudited
+  destructive action. Adding ~4 AUDIT_ACTIONS keys and 3 call sites is the
+  follow-up; it was left out to hold the diff to the story.
+- coverImage is a free string capped at 2000 chars, not a validated URL —
+  identical to the tenant post routes. A super-admin is trusted and an <img
+  src> will not execute a javascript: URL, but US-008/US-009 render this value
+  and should decide there whether to constrain it.
+- app/api/integrations/automatos/posts/route.ts:43 still holds the THIRD copy of
+  the sanitiser policy (flagged at US-003, unchanged).
+
+NEXT
+US-005 (platform image upload route) is the next unchecked story. US-006/US-007
+consume these endpoints; US-007 should read the length caps from
+lib/platform/posts.ts rather than restating them in the form.
+
+================================================================================
+[2026-08-15] US-005 PASS — Platform image upload route
+
+WHAT LANDED
+- app/api/platform/upload/route.ts (86 lines). POST only, withSuperAdmin +
+  requireSameOrigin, formData -> Buffer -> validateUploadBuffer -> uploadFile.
+  The second /api/platform/* route to require a session; the header says in so
+  many words that the unauthenticated `leads` route is not the model.
+- lib/storage/upload-validation.ts: sanitizeUploadFileName() extracted — the
+  traversal/separator strip that decides the only caller-controlled part of the
+  S3 key. Capped at 200 chars.
+- lib/storage/public-image-url.ts: `platform/uploads/` joins
+  `tenants/{id}/uploads/` as a servable key shape. PLATFORM_UPLOAD_PREFIX is
+  exported and the route imports it, so the prefix it writes to and the prefix
+  the public route will serve cannot drift apart.
+- tests/unit/platform-upload-api.test.ts (13 tests) + 5 added to
+  tests/unit/public-image-url.test.ts.
+
+THE DECISION THAT MATTERED — publicUrl has to be DURABLE
+The tenant Wire form stores `data.publicUrl || data.url` (post-form.tsx:100),
+and `url` is a presigned link that dies in ~1h. So a platform route that only
+returned the presigned URL would satisfy "same response shape" on paper and
+store a blog cover that breaks the same afternoon — the exact failure the
+tenant route's own comment describes. The durable path is /api/public/images/,
+and its parser only served `tenants/{id}/uploads/`, so it had to learn one more
+shape. That is why this story touched a shared module and not just the route.
+
+Two alternatives rejected:
+- Uploading under `tenants/platform/uploads/` to avoid touching the module. It
+  works mechanically (the S3 scope guard would accept it), and that is the
+  problem: a fabricated tenant id that satisfies a tenant guard by accident,
+  written into every key, for the rest of the bucket's life.
+- Returning publicUrl: null and letting US-007 deal with it. That pushes an
+  expiring URL into the database, which is what the whole durable-image route
+  exists to prevent.
+
+Scope of the widening, checked rather than assumed: the platform prefix opens
+`platform/uploads/` ONLY. The pre-existing platform branding keys written by
+super-admin/platform-settings (`platform/logo-*`, `platform/favicon-*`) are
+passed to uploadFile as a FILENAME with no prefix, so they land at
+`{folderPrefix}uploads/{ts}-platform/logo-…` and match neither shape — they
+stay private. Four negative tests pin that (`platform/logo-…`,
+`platform/backups/…`, `platformX/uploads/…`, an SVG under the platform prefix).
+PublicImageRequest.tenantId is now `string | null`; both call sites (the images
+route, the OG card route) read only s3Key and contentType, so nothing broke.
+
+WHY NOT /api/tenant-admin/upload (AC-2, verified in code)
+It is withTenantAuth, which reads tenantId off the user and 403s when there is
+none — a super-admin has none. Under impersonation it would succeed and file
+the platform's blog cover inside a tenant's folder, where a tenant delete would
+eventually take it. Also: getFileUrl is called WITHOUT the { tenantId } option
+here, deliberately — that option asserts the key sits in that tenant's prefix
+and would throw 403 on every platform upload. A test pins the bare call.
+
+VALIDATION
+- pnpm exec tsc --noEmit -> exit 0.
+- pnpm vitest run tests/unit/platform-upload-api.test.ts
+  tests/unit/public-image-url.test.ts -> 50/50 passed.
+- pnpm vitest run -> exit 0, 172 files / 3110 tests passed, 8 files + 30 tests
+  skipped. (Was 171/3091 at US-004; the delta is the new file + 5 added cases.)
+- pnpm check:public-routes -> 104 pages, 1 public API handler, all allowlisted.
+  Nothing added to isPublicRoute: this route is authenticated. Note the
+  allowlist names /api/platform/leads explicitly, NOT a /api/platform(.*)
+  wildcard, so the new route is private at the middleware layer too.
+- pnpm check:article-typography, pnpm check:security -> exit 0.
+- next lint on all four touched files -> clean.
+- visual: n/a (no UI in this story). Clerk-gated, so not curled live; US-007
+  exercises it through the editor.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- validateUploadBuffer ACCEPTS a buffer file-type cannot identify when the
+  claimed MIME starts with image/ (upload-validation.ts:139) — a text file
+  named .png and declared image/png passes. Pre-existing and shared with the
+  tenant route, and downstream mitigated: the public image route derives
+  Content-Type from the extension allow-list and sends X-Content-Type-Options:
+  nosniff, so it cannot come back as script. A test asserting the gap was NOT
+  written; the suite pins what IS enforced (a PDF declared image/png is
+  rejected on the category mismatch). Worth closing in the validator itself.
+- The two pre-existing inline copies of the filename sanitiser
+  (tenant-admin/upload:35, super-admin/platform-settings:40) were left alone —
+  behaviour-identical, but rewriting two live routes is not this story. The
+  helper's docblock names them so the next reader finds all three.
+- super-admin/platform-settings passes a slash-bearing "filename" to uploadFile,
+  producing the mangled key `{prefix}uploads/{ts}-platform/logo-{ts}-{name}`.
+  Harmless today, but it is why the branding assets are not where the code
+  reads as if they are.
+- No rate limiting and no audit log on the upload, matching every other upload
+  route in the repo. Super-admin auth is the only gate.
+
+NEXT
+US-006 (super-admin Wire list page) is the next unchecked story. It is the
+first UI story in the run, so it carries a dev-browser check; the Clerk gate on
+/super-admin means that may need a human, and the fallback is component/route
+tests plus `visual: deferred to human review`.
+
+[2026-08-15] US-006 PASS — Super-admin Wire list page
+
+WHAT LANDED
+- app/super-admin/the-wire/page.tsx — server component, force-dynamic, one
+  findMany over platform_posts ordered createdAt desc, typed
+  PlatformPostSummary[] and selected with the shared
+  PLATFORM_POST_SUMMARY_SELECT from lib/platform/posts (US-004's own list
+  projection, so the page and GET /api/platform/posts cannot drift). Header
+  carries the "New post" link to /super-admin/the-wire/new.
+- app/super-admin/the-wire/posts-list.tsx — client list adapted from
+  app/tenant-admin/the-wire/posts-list.tsx. Columns: title (+ /blog/{slug}),
+  status pill, author (name + role), publishedAt. Row actions: edit link,
+  publish/unpublish, delete.
+- components/admin/SuperAdminSidebar.tsx — PanelType.THE_WIRE + a "The Wire"
+  entry (Newspaper icon) immediately after Leads, both being platform-owned
+  content. AdminSidebar.isActive uses startsWith for non-root hrefs, so the
+  editor routes added in US-007 will keep the entry lit.
+
+DECISIONS
+- force-dynamic is load-bearing, not decoration: the build-time Prisma client is
+  a mock answering [] for every query, so without it the empty state would be
+  baked into the static output. Confirmed in the build manifest — the route
+  prints as `ƒ /super-admin/the-wire` (server-rendered on demand), not ●.
+- Explicit row type on the query per the any-widened prisma export; the list's
+  props are `PlatformPostSummary[]` via `import type`, which is erased at
+  compile time so lib/platform/posts (and zod) never reaches the client bundle.
+- BOTH actions confirm, which is stricter than the tenant list (it confirms
+  delete only). Publishing puts a URL on the public internet and unpublishing
+  takes a live one away, so both name the URL in the prompt. window.confirm is
+  the house idiom for this (learning-manager, subprocessors, legal-templates).
+- The publish toggle takes `published`/`publishedAt` FROM the PATCH response
+  rather than assuming them. publishedAt is stamped server-side on the first
+  publish and deliberately retained on unpublish (resolvePublishedAt), so an
+  optimistic guess would show a date the row does not have.
+- One busyId for the whole row rather than a flag per action: a delete in flight
+  plus a second click answers 404, which would surface as a failure toast for an
+  operation that actually succeeded.
+- Dropped from the tenant original: the newsletter action (campaigns are a
+  tenant feature), the AUTOMATOS source pill (platform posts are hand-written),
+  and the `users` join for the byline — platform_posts denormalises the author
+  into authorName/authorRole, which is the whole reason it is a separate table.
+- Auth: the segment layout already gates on SUPER_ADMIN; the page repeats the
+  check as leads/page.tsx and subprocessors/page.tsx do. No middleware change —
+  check-public-routes lists `super-admin` under INTENTIONALLY_PRIVATE, and the
+  guard still passes at 105 pages (was 104; the new page is correctly counted as
+  private, not as an unallowlisted public page).
+
+VALIDATION
+- pnpm exec tsc --noEmit -> exit 0.
+- pnpm vitest run --project unit -> 171 files / 3109 tests passed, 0 failed.
+  (US-005 recorded 172/3110 for `pnpm vitest run`, which also collects the
+  integration project; the unit-project figure here is the like-for-like one.)
+- pnpm build -> exit 0. New route appears as `ƒ /super-admin/the-wire` 5.41 kB.
+  The Dynamic-server-usage lines in the build log are pre-existing noise from
+  static analysis of unrelated /api routes, unchanged by this diff.
+- pnpm check:public-routes, check:article-typography, check:security -> all green.
+- next lint on the three touched files -> clean.
+- Route reachable and gated: curl /super-admin/the-wire -> 307 to
+  /auth/login?redirect_url=… . curl /blog -> 200 (unaffected).
+- visual: DEFERRED TO HUMAN REVIEW. Two environmental blockers, both verified
+  rather than assumed:
+    1. dev-browser (standalone Chromium) has no Clerk session and is bounced to
+       /auth/login; signing in needs credentials this run does not have and must
+       not invent.
+    2. The local DATABASE_URL is unreachable from this machine — the dev server
+       logs PrismaClientInitializationError for the root layout's own platform
+       settings query on every request. Even with a session the list would
+       throw, so a screenshot would prove nothing about the query.
+  A human with a super-admin session should confirm: the sidebar entry, the
+  empty state, and that the publish/delete confirmations read correctly.
+  No component test was written in its place because the `unit` vitest project
+  is node-environment only and includes tests/unit/**/*.test.ts — there is no
+  jsdom or testing-library anywhere in the repo, so a React render test would
+  mean standing up a new test environment inside a UI story.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- The list links to /super-admin/the-wire/{id} and /super-admin/the-wire/new,
+  which do not exist until US-007 — both 404 in the meantime. That is the
+  ordering the plan asks for, not an oversight.
+- No pagination. Every platform post is fetched on each load; the blog is eight
+  posts and this is the platform's own table, so a page size would be premature.
+  Worth revisiting if it ever reaches the hundreds — the tenant list has the
+  same shape.
+- No audit-log write on publish/unpublish/delete, matching US-004's routes and
+  the rest of the super-admin CRUD screens. If publishing ever needs an
+  accountability trail, it belongs in the API route, not in this component.
+- The tenant original types `initialPosts: any[]` while declaring an unused
+  `Post` interface beside it. Left alone; the platform copy is typed properly.
+
+NEXT
+US-007 (super-admin post editor) is next. It adapts post-form.tsx with the
+SEO-Pro entitlement gating and AiAssistButton removed, posts covers to
+/api/platform/upload, and must keep the published-slug edit BLOCKED until US-019
+lands the auto-301 — the PATCH route already refuses that server-side
+(PUBLISHED_SLUG_LOCKED_MESSAGE), so the form only has to say why.
+
+================================================================================
+[2026-08-15] US-007 PASS — Super-admin post editor
+================================================================================
+
+WHAT LANDED
+- app/super-admin/the-wire/post-form.tsx (344) — TipTap body, title, slug,
+  excerpt, cover + alt, byline, publish toggle. Posts to /api/platform/posts
+  (POST on create, PATCH on edit).
+- app/super-admin/the-wire/slug-field.tsx (91) — the URL field and its lock.
+- app/super-admin/the-wire/cover-image-field.tsx (158) — upload + preview + alt,
+  pointed at /api/platform/upload (US-005).
+- app/super-admin/the-wire/new/page.tsx and [id]/page.tsx — the two routes.
+- lib/platform/post-editor.ts (118) — the pure decisions, split out so they can
+  be asserted without a browser.
+- lib/seo/blog-paths.ts (30) — BLOG_INDEX_PATH / blogPostPath, the platform
+  sibling of lib/seo/wire-paths.ts.
+- tests/unit/platform-post-editor.test.ts — 21 tests.
+
+DECISIONS
+- REMOVED as the story asks: the tenant form's SEO-Pro entitlement gating and
+  the AiAssistButton. Both are tenant concepts — entitlements read a plan off a
+  tenant column and the AI route resolves Automatos credentials per tenant, so
+  on the platform the button could only ever fail. Also dropped the tenant
+  form's slugRedirect response handling: nothing to report until US-019.
+  A text-reading test pins all four symbols out (comments stripped first, since
+  these files explain what they left behind by naming it).
+- THE SLUG LOCK KEYS OFF SAVED STATE, not the form's publish toggle. The PATCH
+  route compares against `existing.published` in the database, so unpublishing
+  and renaming in ONE save is still refused server-side; a UI that unlocked on
+  the toggle would let someone type a new URL and then eat a 409. The field is
+  readOnly with PUBLISHED_SLUG_LOCKED_MESSAGE — the same sentence the API
+  answers with — beside it, and unlocks after the unpublish is saved.
+- readOnly, not disabled: a react-hook-form registered input that is `disabled`
+  drops out of the submitted values, and the live URL is the thing an author
+  most wants to copy.
+- buildPlatformPostBody OMITS the slug key entirely on a locked post rather than
+  echoing the unchanged one. An absent key means the PATCH route never evaluates
+  a rename at all, so fixing a typo in a live article cannot trip the refusal.
+  It also omits an empty slug so the POST route derives one — `""` would fail
+  the server schema's min(1).
+- Auto-derive uses resolveCreateSlug, the SAME function the POST route applies
+  when no slug is sent, so the field shows what the server would have chosen.
+  It returns "" (not a guess) for a punctuation-only or over-long title, so the
+  author supplies one instead of publishing at /blog/-. Derivation stops the
+  moment the author types in the URL field, and never runs when editing.
+- The byline defaults to "BudStacks" / "Platform Team" — what the two editorial
+  posts already carry — NOT the signed-in super-admin's name. authorName is
+  printed on a public page; putting a person's name there because they happened
+  to be logged in is a surprising thing to do on their behalf. Editable either
+  way. authorName is required by the create schema, so the form has to supply
+  it; the ACs list the fields but not the byline.
+- The [id] page gates the param through the shared parseUuid before it reaches
+  Prisma (caught, mapped to notFound — a bad id in a typed URL is a missing
+  page, not a 500). force-dynamic on it; the `new` page reads nothing.
+- The form is split three ways (shell / slug / cover) rather than shipping one
+  473-line file like the tenant original. Every file is under 350 lines.
+
+VERIFICATION
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm vitest run tests/unit/platform-post-editor.test.ts → 21 passed.
+- pnpm vitest run (full) → 173 files passed, 3131 tests, 8 files / 30 tests
+  skipped (the DB-backed integration project). No regressions.
+- pnpm build → exit 0. Both routes appear in the manifest as dynamic:
+  ƒ /super-admin/the-wire/[id] and ƒ /super-admin/the-wire/new, 281 kB first
+  load. This is the check that matters for a client component importing
+  lib/platform/posts.ts — the module graph builds for the browser.
+- check:public-routes ✓ (107 pages, 1 public API handler), check:article-typography ✓,
+  check:security ✓, next lint on all 8 touched files ✓.
+
+  visual: deferred to human review.
+  Three separate reasons, none of them fixable from here:
+    1. No super-admin Clerk credentials in this session. Confirmed by curl:
+       /super-admin/the-wire/new and /super-admin/the-wire/{uuid} both redirect
+       to /auth/login at middleware, so the pages never even compile in dev.
+    2. The local dev server cannot reach the database — DATABASE_URL points at
+       postgres-budstack-development.up.railway.app, which is private-network
+       only. Even with a session, no draft could be created.
+    3. "confirm it appears on /blog" is NOT SATISFIABLE IN THIS STORY. /blog
+       still renders the inline arrays in app/blog/page.tsx; US-008 is the story
+       that makes it read the database. Curled /blog live → 200, serving the
+       inline content, which is the correct state until US-008.
+  A human with a super-admin session should confirm: the slug auto-derives while
+  typing a title, the URL field is read-only with its explanation on a published
+  post and editable on a draft, and the cover upload round-trips.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- No per-post SEO overrides in the editor. `platform_posts.seo` exists and both
+  write routes accept it, but no AC asks for the fields and US-014/US-015 own
+  platform SEO. The strict schema means an unsent key is simply left alone.
+- No unsaved-changes guard. Navigating away mid-edit loses the draft silently —
+  the tenant form has the same hole.
+- Tiptap is mounted with form.getValues("content"), so it does not re-sync if
+  the value changes underneath it. Copied deliberately from the tenant form;
+  fixing it there and here together is the right shape, not in a UI story.
+
+TOUCHED BEYOND THE NEW FILES
+- app/super-admin/the-wire/posts-list.tsx: three hardcoded `/blog/${slug}`
+  literals swapped for blogPostPath(). Judgement call — I was introducing the
+  canonical definition one directory away, and leaving a second copy of the blog
+  URL in the same folder is the drift the repo's own comments warn about. No
+  behaviour change; the strings render identically.
+
+NEXT
+US-008 (/blog index reads the database). It must NOT delete the inline arrays —
+that is US-012, and only after US-010 and US-011 have put the content in the
+table. It also has to fail loudly: a query that throws must not render as an
+empty blog, because an outage that looks like "no posts" is worse than an error.
+
+================================================================================
+[2026-08-15] US-008 PASS — /blog index reads the database
+================================================================================
+
+WHAT LANDED
+- lib/platform/published-posts.ts (new, 74 lines) — loadPublishedPlatformPosts().
+  where { published: true }, orderBy publishedAt desc then createdAt desc,
+  select PLATFORM_POST_SUMMARY_SELECT (reused from US-004; drops the article
+  body). Row type declared explicitly — the prisma export is any-widened.
+- app/blog/page.tsx — now an async server component reading that function.
+  export const dynamic = "force-dynamic". Card markup, spacing and classes are
+  byte-identical to what shipped; only the data source and three null guards
+  changed. Links go through blogPostPath() (US-007's helper), not a literal.
+- tests/unit/blog-published-posts.test.ts (16 tests) — the query shape, the
+  outage/empty distinction, and a text block on the page source.
+
+THE DECISION THAT MATTERED — an outage is not an empty blog
+- A zero-row result and an unreachable database are indistinguishable once the
+  answer is an array, so the distinction is made where the query is made.
+  loadPublishedPlatformPosts LOGS the driver reason via logger.error and
+  RE-THROWS a fixed message; it never returns []. A visitor gets a 500, which is
+  true, rather than a 200 page saying budstacks.io has never published anything.
+- This is the OPPOSITE call from app/sitemap.ts, which swallows the same failure
+  deliberately. Noted in the module comment so the two do not get "harmonised":
+  there, one missing section costs freshness; here the failed section IS the page.
+- The thrown message carries no host, driver or SQL. Next.js prints a server
+  component's error message on the dev error page, and a test asserts the string
+  matches none of /postgres|prisma|ECONNREFUSED|5432|select/i.
+
+OTHER DECISIONS
+- New module rather than adding the query to lib/platform/posts.ts: that file is
+  imported by post-form.tsx / slug-field.tsx / cover-image-field.tsx, which are
+  client components. A prisma or pino import there pulls the server runtime into
+  the browser bundle.
+- publishedAt is ordered NULLS LAST explicitly. The write routes stamp it on the
+  transition into published, so a live post always has one — but Postgres sorts
+  NULLs FIRST under DESC, and a dateless row would otherwise lead the blog with
+  a blank date. createdAt desc is the tiebreak.
+- Three null guards the inline arrays never needed, because the columns are
+  nullable: no coverImage renders no <img> (the gradient backdrop that was
+  already behind it becomes the whole card image, so the aspect box and the card
+  height are unchanged — measured at 558x477 for all three cards in the browser);
+  no excerpt and no publishedAt drop their own <p>.
+- alt text is coverImageAlt || title. coverImageAlt is a real column on
+  platform_posts, not the seo.imageAlt alias the tenant routes translate, so
+  entityImageAlt() does not apply here.
+- Empty state added (the array could never be empty before): "Nothing published
+  yet" in a card-floating panel, marketing tokens, not the admin's bs-card.
+- samplePosts stays in the file, unrendered, and the BLOG_POSTS import is gone
+  (the module itself is untouched and the detail page still reads it). Deleting
+  the arrays is US-012 and only after US-010/US-011 have put that content in the
+  table. eslint's no-unused-vars is off repo-wide and tsconfig sets no
+  noUnusedLocals, so the dead array costs nothing — no disable comment needed.
+  A test asserts both arrays are still present, so US-012 has to remove it
+  deliberately.
+
+VERIFICATION
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm vitest run tests/unit/blog-published-posts.test.ts → 16 passed.
+- pnpm vitest run (full) → 174 files passed, 3147 tests, 8 files / 30 tests
+  skipped (the DB-backed integration project). No regressions.
+- pnpm build → exit 0. .next/server/app/blog/ contains page.js and NO blog.html,
+  and /blog appears in neither routes nor dynamicRoutes in
+  .next/prerender-manifest.json — force-dynamic took effect, nothing baked.
+- check:public-routes ✓ (107 pages, 1 public API handler), check:article-typography ✓,
+  check:security ✓, next lint on all three touched files ✓.
+
+  visual: DONE, all three states, dev-browser + curl.
+  Unlike US-006/US-007 this story is verifiable from here: /blog is public, so
+  no Clerk session is needed. The local DATABASE_URL is still unreachable
+  (postgres-budstack-development.up.railway.app:5432, private network only), so
+  a THROWAWAY Postgres 17 was stood up on 127.0.0.1:55432 with its own data dir
+  in /tmp, the US-002 migration applied to it by hand, and pnpm dev pointed at
+  it by an inline env var. No .env file was read or written. Torn down and the
+  data dir deleted afterwards; brew services untouched.
+    1. OUTAGE — against the real (unreachable) DATABASE_URL: GET /blog → HTTP
+       500, and the server log carries
+       {"level":"error", "reason":"...Can't reach database server at ...",
+        "msg":"[blog] published platform posts query failed"}.
+       This is the AC's load-bearing case and it is now proven live, not argued.
+    2. EMPTY — table present, zero published rows: HTTP 200, zero
+       a.card-floating, "Nothing published yet" panel. Screenshotted.
+    3. POPULATED — 3 published + 1 draft seeded: HTTP 200, three cards in
+       publishedAt order (Aug 14 → Jul 1 → Jun 1), the draft absent, dates
+       rendered "Aug 14, 2026" (same shape the inline strings used), alt text
+       "A franchise storefront" from coverImageAlt on the row that has one and
+       the title on the row that does not, and the no-cover card the same
+       558x477 as the others. Screenshotted.
+  Note: prisma migrate deploy CANNOT build this schema from empty — it dies at
+  20260108_add_user_profile_fields with 'relation "users" does not exist'. The
+  migration history is not self-contained from zero (the baseline predates it).
+  Pre-existing, out of scope here, but it means no local full-schema DB.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- /blog has NO metadata export at all — no title, no description, no canonical.
+  Not this story's AC; US-017 (canonicals) and US-015 (SEO settings) own it.
+- No pagination. Every published post renders on one page. Fine at eight posts,
+  not at eighty; nothing in the PRD asks for it.
+- No app/blog/error.tsx, so the 500 is Next's default error shell rather than a
+  branded page. Deliberate: adding an error boundary is a design decision beyond
+  this diff, and the status code — the part that matters to a crawler and to
+  monitoring — is already correct. Worth a human's call later.
+- The build-time static analysis emits a wall of "Dynamic server usage" errors
+  from ~15 API routes. Pre-existing, unrelated, build still exits 0.
+
+NEXT
+US-009 (/blog/[slug] reads the database, with its own metadata). It will want a
+by-slug reader beside loadPublishedPlatformPosts, and its generateMetadata must
+share the page's fetch through React cache() rather than querying twice. The
+detail page keeps its own inline samplePosts array until US-012 — until US-010
+and US-011 migrate them, every one of those slugs must keep resolving.
+
+================================================================================
+[2026-08-16] US-009 PASS — /blog/[slug] reads the database, with its own metadata
+
+ADOPTED WORK (crash recovery)
+Phase 1 found ONE uncommitted tracked change: platformCanonical() appended to
+lib/seo/platform-url.ts, its own doc comment labelling it "Platform US-009". A
+predecessor iteration died mid-story. Adopted rather than aborted, after
+checking its load-bearing claims against lib/seo/canonical.ts line by line —
+the body is storeCanonical's, faithfully: same one-leading-slash collapse
+(the protocol-relative defence), same origin+pathname return, same
+trailing-slash strip, same catch. Kept verbatim; six tests now pin it,
+including `//evil.example/x`.
+
+WHAT LANDED
+- app/blog/[slug]/page.tsx: the page had NO metadata export at all, so all
+  eight posts served the root layout's title. It now loads one published
+  platform_posts row by slug and exports generateMetadata.
+- lib/seo/platform-post-metadata.ts (NEW, 155 lines) — pure builder.
+  buildPostMetadata's counterpart, deliberately NOT a call into it: every input
+  that builder takes is a tenant (business name, subdomain, plan), and
+  budstacks.io is not one. Faking a tenant to reach the plan gates would be
+  worse than the forty lines.
+- lib/platform/published-posts.ts: loadPublishedPlatformPost (by slug) and
+  loadRelatedPlatformPosts, both React-cache()d.
+- lib/seo/platform-url.ts: platformAbsoluteUrl() beside the adopted canonical.
+- lib/seo/iso-timestamp.ts (NEW) — extracted, see below.
+- lib/platform/post-date.ts (NEW) — the byline date formatter, now shared.
+- generateStaticParams REMOVED (it enumerated the inline arrays; the route list
+  is the table now) and force-dynamic added.
+
+THE DEFECT NOBODY HAD NOTICED — no metadataBase on the platform
+Every store layout sets one (storeMetadataBase, store-metadata.ts:155). The
+PLATFORM root layout does not. Next absolutises a relative openGraph.images
+entry against that base, so the obvious implementation — hand Next the
+origin-relative path storedPublicImagePath returns, as the tenant builder does
+— would have shipped og:image="http://localhost:3000/...". Correct on the
+tenant side, silently wrong here. platformAbsoluteUrl() resolves the asset
+against platformBaseUrl() instead, and an absolute cover URL on someone else's
+CDN is handed back untouched rather than mangled into "/https://...".
+Adding a metadataBase to the root layout would fix it globally and change
+every existing platform page's relative-URL resolution at once; that is
+US-015/US-017's call, not a side effect of this story.
+
+WHY isoTimestamp MOVED
+The publishedTime parser lives in post-metadata.ts, which reaches
+brandedOgImage -> pro-features -> lib/entitlements/features. Importing it to
+format one date would drag a TENANT'S entitlement lookup into budstacks.io's
+own article page. Extracted to lib/seo/iso-timestamp.ts and re-exported from
+post-metadata.ts so article-json-ld.ts keeps its import — the same move
+wire-paths.ts already made out of that same file. Zero behaviour change; the
+full suite confirms it.
+
+THE ONE ASYMMETRY, ON PURPOSE
+loadPublishedPlatformPost RE-THROWS on a failed query (an outage is not a 404 —
+telling a crawler a live article is gone is a lie it remembers).
+loadRelatedPlatformPosts DEGRADES TO []. Opposite calls, because the article
+has already loaded and is what the visitor came for; taking it down over two
+links at the bottom turns a degraded page into no page. Both log.
+
+THE WINDOW THIS OPENS — read before US-010/US-011
+The AC is explicit: "loads one post by slug; unpublished or missing returns
+notFound()". So as of this commit the eight existing /blog/<slug> URLs resolve
+to 404 — confirmed live against blockchain-traceability-compliance. US-010
+(2 editorial) and US-011 (6 samples) close it, and they are the next two
+stories. The window exists only in these local commits; this branch is not
+deployed until a human merges it, by which point every one of those posts is a
+row. A DB-first-with-inline-fallback shim was considered and rejected: it is
+code US-012 must then rip out, and it would let US-010/US-011 look like they
+had worked when the rows had not landed.
+The inline arrays are UNTOUCHED and must stay that way — samplePosts in
+app/blog/[slug]/page.tsx is the ONLY copy of the six posts' article bodies, and
+US-011's migration is written from it. Deleting it before then destroys the
+source. A test pins its presence.
+
+VERIFICATION
+- pnpm exec tsc --noEmit -> exit 0. (It caught two real errors in my own test
+  file first — next's OpenGraph/Twitter are unions, so `type` and `card` need
+  narrowing. Fixed, not silenced.)
+- pnpm vitest run tests/unit/platform-post-metadata.test.ts (31 new) +
+  blog-published-posts.test.ts (16 -> 32) -> 63 passed.
+- pnpm vitest run (full) -> 175 files, 3194 tests passed, 8 files/30 skipped
+  (the DB-backed integration project). No regressions from the isoTimestamp move.
+- pnpm build -> exit 0. Build output lists `ƒ /blog/[slug]` (dynamic),
+  prerender-manifest.json holds no /blog entry, and .next/server/app/blog/
+  contains no .html — force-dynamic took effect and generateStaticParams is
+  genuinely gone.
+- check:article-typography ✓, check:public-routes ✓ (107 pages), check:security ✓,
+  next lint on every touched file ✓.
+
+  visual: DONE, dev-browser + curl, against a throwaway Postgres 17 on
+  127.0.0.1:55433 with its own data dir in /tmp, the US-002 migration applied by
+  hand, pnpm dev pointed at it by inline env vars. No .env file read or written;
+  torn down and the data dir deleted; the user's own Chrome on :9222 was left
+  alone (dev-browser was brought up on :9333/:9334 instead).
+  Seeded 3 published (one with cover+alt, one cover-no-alt, one NO cover) + 1 draft.
+    1. TITLES AND OG:IMAGES DIFFER PER POST — the AC's load-bearing check, from
+       page source:
+         "Should You Build Your Cannabis Storefront on WordPress? | BudStacks"
+           og:image .../images/blog/post-01-franchise.svg
+         "Understanding Dr. Green API Integration | BudStacks"
+           og:image .../images/blog/post-02-api.svg
+         "A Post With No Cover Image | BudStacks"
+           og:image .../budstack-hero-ecosystem.jpg   <- the default, live
+       Per-post canonical and description too; og:url == canonical.
+    2. ARTICLE FACTS: og:type=article, og:site_name=BudStacks, og:locale=en_US,
+       article:published_time=2026-08-15T09:00:00.000Z, article:author,
+       twitter:card=summary_large_image.
+    3. DRAFT -> 404, and grep for the draft's title in the response body: 0 hits.
+       Missing slug -> 404. (Note: the 404 page renders the not-found boundary's
+       own title, not PLATFORM_POST_NOT_FOUND_TITLE — Next discards the page's
+       metadata once notFound() is thrown. The value of returning it is what it
+       refuses to emit, and the page comment now says exactly that rather than
+       claiming a title that does not render.)
+    4. BODY: rendered inside .bs-article with REAL computed typography measured
+       in the browser (h2 30px/500, p 17px/29.75px line-height) — not an inert
+       class. A seeded <script>alert(1)</script> is absent from the output;
+       sanitizePostHtml stripped it.
+    5. RELATED STRIP: two cards from the database, the current post excluded,
+       newest first, cover-less card falling back to the gradient backdrop. With
+       only one post published the whole strip (heading included) disappears
+       rather than heading over nothing. Both states screenshotted.
+    6. Byline renders "BudStacks – Platform Team" with a role and plain
+       "BudStacks" without one; coverImageAlt is used as alt, title as fallback.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- app/learn/[slug]/page.tsx runs its findUnique TWICE — once in
+  generateMetadata, once in the body — with no cache(). Same defect this story
+  removed from /blog. Two lines to fix; out of scope here.
+- The platform root layout still has no metadataBase (above). Any future
+  relative og:image on a platform page has the same trap waiting.
+- Still no app/blog/error.tsx, so the 500 is Next's default shell (flagged at
+  US-008, unchanged).
+- app/api/integrations/automatos/posts/route.ts:43 still holds the THIRD copy of
+  the sanitiser policy (flagged at US-003, unchanged).
+- No pagination on the related strip or the index (flagged at US-008).
+
+NEXT
+US-010 (migrate the two editorial posts in lib/blog/posts.ts into
+platform_posts). Timestamped migration DIRECTORY, never a loose .sql; slugs
+identical to today's; ON CONFLICT (slug) DO NOTHING so a re-deploy cannot
+duplicate. It closes half the 404 window this story opened; US-011 closes the
+rest. Remember the migration history is not buildable from empty
+(20260108_add_user_profile_fields dies on a missing `users`), so verify the new
+migration against a hand-built table as US-008 and US-009 both did.
+
+================================================================================
+[2026-08-16] US-010 PASS — Migrate the two editorial posts into platform_posts
+
+ADOPTED A CRASHED ITERATION'S DRAFT. Phase 1 found two untracked files that
+belonged to this story and to nothing else — the seed directory and its test.
+A predecessor died after writing them and before committing. Per the recovery
+protocol I did not discard them: I re-derived every load-bearing claim in them
+against the real code, found all of them true, proved the SQL by executing it,
+and shipped them. The commit is the draft plus this verification; the diff is
+unchanged from what was found on disk.
+
+WHAT LANDED
+- prisma/migrations/20260816000000_seed_editorial_platform_posts/migration.sql
+  Two INSERTs, no DDL. Sorts after 20260815000000_add_platform_posts, which is
+  the constraint that matters: `migrate deploy` applies directories in
+  lexicographic order, so a seed sorting before its CREATE TABLE fails the boot.
+- tests/unit/platform-posts-seed.test.ts — 9 offline guards reading the
+  migration as text. No database, no generated client.
+
+THE FOUR DECISIONS IN THE SQL, RE-VERIFIED AGAINST THE CODE
+1. TIMESTAMPED DIRECTORY, not a loose .sql. Confirmed the seven loose files are
+   still sitting unapplied at the top of prisma/migrations/ (add_platform_leads
+   .sql and friends). A test asserts no file matching /platform_posts/ ever
+   joins them.
+2. FIXED UUID ids, not readable keys. Checked the claim rather than trusting it:
+   app/api/platform/posts/[id]/route.ts calls parseUuid at lines 86, 102 and 213
+   (GET/PATCH/DELETE). A row keyed 'wordpress-post' would be published and
+   public but uneditable and undeletable through the admin UI. The ids are v4
+   uuids and the test runs the real parseUuid over them.
+3. ON CONFLICT ("slug") DO NOTHING, never DO UPDATE. platform_posts_slug_key
+   exists in the CREATE TABLE, so the conflict target resolves. DO NOTHING is
+   the load-bearing half: a re-deploy must not overwrite an edit a super-admin
+   has since made in /super-admin/the-wire. Content migrates once; the editor
+   owns it from then on.
+4. publishedAt = the post's own date at 12:00 UTC, minus one minute per position
+   in the shipped array. Both posts shipped "Aug 15, 2026", and
+   lib/platform/published-posts.ts:66 orders by publishedAt DESC then createdAt
+   DESC — identical stamps would order the pair arbitrarily between deploys.
+   Midday keeps formatPostDate (date-fns, server-local zone) on the intended
+   calendar day either side of UTC. Column is TIMESTAMP(3), so the bare literal
+   is correct.
+
+VERIFIED BY ACTUALLY RUNNING IT, NOT BY READING IT
+The predecessor's note warned the migration history is not buildable from empty
+(20260108_add_user_profile_fields dies on a missing `users`). Local DATABASE_URL
+is unreachable anyway — P1001 against the Railway host, which is private-network
+only. So: threw up a disposable PostgreSQL 17.9 cluster in /tmp on a unix socket
+(matching Railway's major version), hand-applied 20260815000000_add_platform_
+posts, then the seed, then THE SEED A SECOND TIME.
+- Both migrations executed clean under ON_ERROR_STOP=1. The dollar-quoting
+  parses; there is no stray $post$ inside either body to terminate it early.
+- After two runs: 2 rows, not 4. Idempotency demonstrated, not asserted.
+- Read back from the database: slugs, published=t, authorName/authorRole, and
+  publishedAt 12:00:00 / 11:59:00 giving the shipped array's order under the
+  real ORDER BY.
+- md5(content) out of Postgres === md5 of the template literals in
+  lib/blog/posts.ts, for both posts. That is the "content copied verbatim" AC
+  proven end to end — em dashes, apostrophes and the "$3 to $4" figures survive
+  the dollar-quoting intact. Cluster destroyed afterwards; nothing outside /tmp
+  was touched.
+
+CONTENT IS MIGRATED RAW AND UNSANITISED, deliberately. sanitizePostHtml runs on
+the way out at app/blog/[slug]/page.tsx:265, so a later policy change applies to
+rows that predate it. coverImageAlt and seo stay NULL — the array had neither,
+and the article already falls back to the title for alt text and builds metadata
+from the post's own fields.
+
+VALIDATION
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm vitest run tests/unit/platform-posts-seed.test.ts platform-posts-schema
+  → 18 passed.
+- pnpm vitest run (full) → 176 files passed, 8 skipped, 3203 tests passed. No
+  regressions.
+- pnpm prisma validate → valid. pnpm prisma generate → ok. No schema delta in
+  this story: it is data only, so there is nothing for migrate diff to compare.
+- pnpm check:public-routes → 107 pages, 1 public API handler, all allowlisted.
+  pnpm check:article-typography → clean. pnpm check:security → clean.
+  next lint on the new test → clean.
+- Live curl: NOT POSSIBLE and not deferred by choice — /blog needs the rows, the
+  rows need the migration, and the migration only runs where the database is.
+  entrypoint.sh applies it on the next container boot. The /tmp cluster is the
+  substitute and it is a stronger one than curl would have been: it proves the
+  SQL, the idempotency and the byte-for-byte content, none of which a rendered
+  page would have shown.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- The seven loose .sql files at the top of prisma/migrations/ are still there,
+  still never applied by any deploy, still a trap for the next person who drops
+  a file beside them. Only this story's guard test would catch a new one, and
+  only if it mentions platform_posts.
+- An untracked prisma/migrations/20260430_tenants_templateid_setnull/ is sitting
+  in the working tree from before this run. Not mine, not staged, left alone —
+  but it is an unversioned migration directory that WOULD run on the next deploy
+  if anyone committed it accidentally. Worth a human look.
+- Everything flagged at US-003/008/009 is unchanged: no app/blog/error.tsx, the
+  third sanitiser copy in app/api/integrations/automatos/posts/route.ts:43,
+  app/learn/[slug]/page.tsx still double-queries, no metadataBase on the
+  platform root layout, no pagination.
+
+NEXT
+US-011 (the six sample posts). Take the copies from app/blog/[slug]/page.tsx —
+that file's array carries the full content; the index's is the truncated
+duplicate. Same shape as this seed: timestamped directory sorting after this
+one, fixed uuids, ON CONFLICT DO NOTHING, published:true so the URLs stay live
+even though the prose is placeholder (a human rewrites it later — live URLs
+outrank polish, and Workstream D is not Ralph's). Keep giving each row a
+distinct publishedAt or the six will order arbitrarily against each other and
+against these two. Only when all 8 rows exist does US-012 get to delete the
+arrays.
+
+
+================================================================================
+[2026-08-16] US-011 PASS — Migrate the six sample posts into platform_posts
+================================================================================
+
+WHAT LANDED
+- prisma/migrations/20260816010000_seed_sample_platform_posts/migration.sql —
+  one INSERT, six rows, ON CONFLICT ("slug") DO NOTHING. Sorts after
+  20260815000000_add_platform_posts (table) and after the US-010 seed.
+- tests/unit/platform-posts-seed.test.ts — the US-010 helpers were generalised
+  (seedDirNameFor(pattern) / sqlFor(pattern)) instead of a second copy of the fs
+  plumbing, and US-011 blocks added on top. 12 tests → 24, all passing.
+
+CRASH RECOVERY
+A predecessor iteration died mid-US-011. What it left was an EMPTY
+prisma/migrations/20260816010000_seed_sample_platform_posts/ directory (git
+does not track empty directories, so it never showed in git status) plus a
+155-line /tmp/us011_values.sql scratch. Nothing in-repo to adopt and nothing
+load-bearing to verify — the scratch was hand-written VALUES with no header, no
+verification behind it, and I could not tell whether its six bodies had been
+transcribed faithfully. Replaced rather than finished; /tmp scratch deleted. The
+empty directory name was reused, since the timestamp was already correct.
+
+DECISIONS
+- The SQL was GENERATED from app/blog/[slug]/page.tsx, not retyped. The six
+  bodies run to ~6k characters of HTML with apostrophes throughout; hand-copying
+  them is the single likeliest way this story ships a silent corruption. A
+  throwaway node script evaluated the array literal and emitted the INSERT, so
+  fidelity is true by construction rather than by proofreading. Script was
+  scratch and is deleted — the migration is the artefact, not the generator.
+- Bodies are dollar-quoted ($post$), so no apostrophe escaping to get wrong.
+  Scalars use ordinary quoting with '' doubling — visible in
+  'dispensary''s performance'.
+- Two header rewrites were needed for a reason worth recording: the prose
+  originally contained a literal $post$ and the words "published: true" and
+  "DO UPDATE". All three are harmless to Postgres inside a -- comment, but they
+  break the text-level assertions the seed tests are built on (the body regex
+  matched from the comment's tag, and the true-count came out 7 for 6 rows).
+  Comments in a file that is asserted as text are not free — worded around.
+- publishedAt is each post's own date at 12:00 UTC. All six dates differ, so
+  unlike the editorial pair no minute offset was needed. Range is 2025-12-10 to
+  2026-01-10, so all six sort BELOW the two editorial posts (2026-08-15) on the
+  index — intended.
+- published: true despite the prose being placeholder. The six URLs are already
+  indexed and linked; a live URL with weak copy beats a 404. Workstream D
+  (the rewrite) is a human's, and DO NOTHING rather than DO UPDATE means that
+  rewrite survives every future redeploy.
+- Fixed UUIDs, not readable keys — /api/platform/posts/[id] runs parseUuid, and
+  these are precisely the rows a human must open in the editor to rewrite. A row
+  keyed 'sample-post-1' would be published but uneditable and undeletable.
 
 HOW VERIFIED
-- `pnpm exec tsc --noEmit`                              -> exit 0 (repo-wide)
-- `pnpm vitest run tests/unit/seo-product-qa.test.ts`   -> 51 passed
-- `pnpm vitest run tests/unit/seo-product-qa-routes.test.ts` -> 27 passed
-- `pnpm vitest run tests/unit/seo-ai-assist.test.ts`    -> 39 passed (33 before;
-                                                           +6 for generateQaDraft)
-- `pnpm vitest run` (full)                              -> 2825 passed,
-                                                           30 skipped, 163 files,
-                                                           0 failed
-                                                           (2741 before; +84)
-- `pnpm exec next lint` on all 19 touched source files  -> no warnings, no errors
-- `pnpm check:security`                                 -> both gates green
-- LIVE, on `pnpm dev` with the existing `.env.local` (never modified):
-    * `POST /api/tenant-admin/seo/ai-assist/qa` unauthenticated -> 307
-      /auth/login (behind the Clerk wall, not publicly reachable)
-    * `PUT /api/tenant-admin/seo/products/{id}` with a `qa` body, unauthenticated
-      -> 307 /auth/login
-    * `GET /store/healingbuds/products/strain-123` -> the route COMPILED clean
-      (3511 modules, the new server component and JSON-LD included) and answered
-      404: the tenant lookup needs the Railway DB, which is not reachable from
-      this machine. Same local limit as US-001.
-    * the SEO Manager modal is Clerk-gated -> VISUAL: DEFERRED TO HUMAN REVIEW.
-      The rendered accordion is covered by a test that calls the component and
-      asserts every question and answer is in the element tree.
-- Docker runner image: EXPLICITLY CHECKED. Three new modules under `lib/`
-  (COPYied at Dockerfile:74), two new components under `components/` and two
-  new files under `app/` (compiled into `.next/standalone`, Dockerfile:59). No
-  new runtime import chain leaves the copied set and no new dependency — no
-  Dockerfile change needed.
-- No migration, no schema change: `qa` is a key in the existing `products.seo`
-  Json blob, and `products/sync` never writes that column, so authored pairs
-  survive every catalogue re-sync.
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm prisma validate → schema valid.
+- pnpm vitest run tests/unit/platform-posts-seed.test.ts → 24/24.
+- pnpm vitest run (full) → 176 files passed, 3218 tests, 8 files / 30 tests
+  skipped (the DB-backed integration ones). No regressions.
+- check:public-routes, check:article-typography, check:security → all green.
+  next lint on the touched test file → clean.
+- REAL POSTGRES, not just text assertions. Spun a throwaway PG 17.9 cluster in
+  /tmp (initdb, port 55433, unix socket only), applied
+  20260815000000_add_platform_posts then both seeds in the lexicographic order
+  migrate deploy uses. All three applied clean; 8 rows, all published, ordering
+  by publishedAt DESC exactly as the index will render it.
+- IDEMPOTENCY PROVEN, not asserted. UPDATEd one row to simulate the human
+  rewrite landing via /super-admin/the-wire, then replayed BOTH seed files as a
+  redeploy would. Still 8 rows, and the edited title/content survived untouched.
+- FIDELITY PROVEN BY ROUND-TRIP. Read all six rows back out of Postgres as JSON
+  and compared against the source array in app/blog/[slug]/page.tsx field by
+  field: content, slug, title, excerpt, coverImage, authorName, authorRole all
+  byte-for-byte identical. This is the check that matters for US-012 — the
+  arrays are about to be deleted, and after that the rows are the only copy.
+- Cluster stopped and removed; no artefacts left in /tmp.
+- No browser check: US-011 ships no app code, and the story asks for none. The
+  live database is on Railway's private network and gets these rows when
+  entrypoint.sh runs migrate deploy on the next boot. The /tmp cluster is the
+  stronger substitute — it proved the SQL, the idempotency and the content
+  fidelity, none of which a rendered page would have shown.
 
+FLAGGED, NOT FIXED (adjacent debt)
+- The six posts' prose is genuinely weak and now LIVE-on-next-deploy. Two of the
+  claims read as promises a regulated business should not be making —
+  "compliance reporting with one click" and "our current uptime is 99.9%" are
+  both stated as fact in rows that are now published. That is Workstream D's
+  problem, but it is worth a human seeing before the merge, not after.
+- The two arrays are still duplicated and still divergent (6 entries vs 8).
+  US-012 is the story that ends that, and its precondition is now met: all 8
+  posts exist as rows. Nothing else should delete them first.
+- Unchanged from US-010: the seven loose .sql files at the top of
+  prisma/migrations/ still never run; the untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ is still sitting in the
+  working tree unversioned and would run if anyone committed it by accident;
+  no app/blog/error.tsx; third sanitiser copy in
+  app/api/integrations/automatos/posts/route.ts:43; app/learn/[slug]/page.tsx
+  double-queries; no metadataBase on the platform root layout; no pagination.
+
+NEXT
+US-012 (delete the inline post arrays). Its BLOCKED precondition is satisfied —
+US-010 and US-011 have both passed and all 8 slugs are rows. Remove samplePosts
+from app/blog/page.tsx AND app/blog/[slug]/page.tsx, delete lib/blog/posts.ts
+with its imports, and confirm `grep -rn 'samplePosts\|BLOG_POSTS' app lib` comes
+back empty. That story DOES carry a dev-browser AC: /blog must list all 8 and
+each /blog/<slug> must still render — which needs a database carrying the rows,
+so if the local environment cannot reach one, say so plainly and record
+`visual: deferred to human review` rather than claiming the check.
 
 ================================================================================
-[2026-08-14] US-003 PASS — llms.txt generator
+[2026-08-16] US-012 PASS — Delete the inline post arrays
 ================================================================================
 
-WHAT LANDED. `GET /llms.txt` on a store's own host: one markdown document naming
-the business, its address, every published condition guide, the catalogue and
-the Wire — links only, all absolute, all on the primary host. Five files:
-`lib/seo/llms-txt.ts` (the builder), `lib/seo/llms-txt-copy.ts` (the path + the
-UI copy), `app/store/[slug]/llms.txt/route.ts`, `components/admin/seo/
-LlmsTxtCard.tsx`, and a 42-case test. `lib/seo/indexing.ts` gained ONE exported
-predicate; nothing else in the parent run was touched.
+Workstream B is complete. The blog is out of code.
 
-THIS ONE 404s, WHICH IS THE OPPOSITE OF EVERY OTHER STOREFRONT SURFACE. The
-run's contract is that the storefront DEGRADES on plan and never blocks — a
-shopper must not meet a paywall. Nothing shops here. The file is a Pro
-deliverable addressed to a machine, and a Basic store does not publish one; an
-empty 200 would be a CLAIM ("this store has nothing to show you") and the claim
-is false. So the route reads the plan through the same `isSeoProUnlocked` the
-robots.txt beside it uses, and 404s before it runs a single query — asserted:
-all three `findMany` mocks uncalled on a Basic request. Fail-closed on an
-unreadable plan for the recoverable reason: a store that should publish gets it
-back next request; a file a crawler has already read cannot be taken back.
+WHAT LANDED
+- app/blog/page.tsx: the six-entry hardcoded array removed (-75 lines). The page
+  already rendered from the database as of US-008; this deletes the copy that was
+  being kept alive only as the source US-011's migration was written from.
+- app/blog/[slug]/page.tsx: the six-entry hardcoded array removed (-184 lines).
+- lib/blog/posts.ts DELETED outright (-145 lines), and with it the now-empty
+  lib/blog/ directory. Deleting the arrays inside the two pages while leaving
+  that module behind would have left the content re-importable in one line.
+- lib/platform/post-editor.ts: the comment explaining where the default byline
+  came from pointed at lib/blog/posts.ts. Repointed at the seed migration —
+  a comment citing a file that no longer exists is how the next reader gets lost.
+- tests/unit/blog-published-posts.test.ts: the two guards that HELD the arrays in
+  place ("still carries the inline sample posts — deleting them is US-012") are
+  inverted into guards that keep them gone, plus two new ones asserting
+  lib/blog/posts.ts and lib/blog/ are absent from disk.
 
-IT HONOURS BOTH EXCLUSIONS, WHICH THE SITEMAP DELIBERATELY DOES NOT. The parent
-kept `sitemapExclude` and `robots.noindex` independent on purpose (US-023's
-audit exists to REPORT the disagreement, so forcing them together would hide the
-state it looks for). llms.txt honours both, because a document whose entire
-purpose is "here is my store, please read it" cannot advertise a URL whose own
-page asks not to be read. That needed one new predicate — `isEntityNoindexed` in
-`lib/seo/indexing.ts`, mirroring `isSitemapExcluded`'s signature (plan as a
-resolved boolean: one document asks the question once per row, and the plan
-cannot change between two rows of one render). `nofollow` is NOT consulted — it
-is a statement about the links on a page, not about the page. The sitemap is
-unchanged.
+DECISIONS
+- The inverted guards match on the SLUG STRINGS, not just on the const name. A
+  renamed array holding the same eight posts would sail past a `const samplePosts`
+  check and still be exactly the duplication this story exists to end. The slugs
+  are held verbatim in the test as BLOG_SLUGS — they have no source left to drift
+  from, since US-012 just deleted the only place they appeared in code.
+- Slug matching is on the QUOTED form (`"slug"`), so the header comments — which
+  name the two seed migrations — do not read as content and trip the guard.
+- The header comments on both pages were rewritten to describe the deletion
+  rather than the mid-run state, and deliberately avoid the literal identifiers
+  `samplePosts` / `BLOG_POSTS` so the story's AC grep over app/ and lib/ comes
+  back genuinely empty rather than empty-except-for-comments.
+- Corrected a claim in my own first draft of those comments: the detail page's
+  array held SIX entries, not eight. Eight was the CONCATENATION of those six
+  with the two from lib/blog/posts.ts — which is precisely how the index
+  advertised six posts while eight URLs resolved. The comments now say that.
 
-NO SILENT TRUNCATION. Products and posts render a BUDGET (100 / 50) so a store
-with thousands of rows publishes something a model will actually read. The
-budget is applied at RENDER, never as a `take` — a query-level cap would hide
-the count from the builder, and a shortened inventory that cannot say it was
-shortened reads as a complete one. Every section therefore opens with its own
-index URL, the identity block names the sitemap (which stays exhaustive), and an
-over-budget section prints "100 of 137 listed above. The complete list is at …".
-The count is of PUBLISHABLE rows, not fetched ones: an excluded row was never
-going to be listed, and counting it would report a number the owner cannot
-reconcile with their catalogue.
-
-MARKDOWN IS AN INJECTION SURFACE TOO. Not a script one — the file is served as
-text/plain — but a correctness one: a product called `Blue Dream [Reserve]`
-closes its own link and renders the rest as prose, and a condition slug
-containing a parenthesis terminates the URL early (`storeCanonical`
-percent-encodes what `new URL` does, and parentheses are not on that list). Both
-values are owner-typed. `escapeMarkdownText` escapes `\ [ ]` and collapses
-whitespace (body copy pasted into a title field would otherwise split the list
-item in two); `escapeMarkdownUrl` percent-encodes parentheses, which resolves to
-the identical URL.
-
-REUSE, NOT A SECOND OPINION. Every URL comes from `storeCanonical` over
-`productPath` / `conditionPath` / `wirePostPath` — the same builders the pages'
-canonicals and the sitemap use, so a link here and the canonical of the page it
-points at cannot disagree. Row descriptions use the precedence the metadata
-builders already apply (`seo.description` -> truncated body copy), so the
-sentence a model reads is the sentence the page publishes. The address goes
-through `buildPostalAddress`: its completeness floor (street + locality +
-country) decides whether a line is emitted at all, so this file cannot assert an
-address the JSON-LD refuses to state. The store summary is authored-home-
-description -> tagline -> the homepage's own fallback sentence, all off the row
-`getCurrentTenant` already resolved — no extra query, and the query shape
-mirrors the sitemap route beside it (tenantId named in every `where`, bound in
-`runWithTenantContextAsync`, `deletedAt: null` and `drGreenStrainId NOT NULL`
-stated where a reader can see them).
-
-"TOP" AND "RECENT" ARE THE STORE'S OWN ORDERS, NOT INVENTED ONES. Products sort
-by `displayOrder` then `name` (the owner's arrangement, with the column's
-`@default(0)` ties broken stably, so the budget cuts a stable list). Posts sort
-`createdAt: desc` — the exact order the Wire index renders — so "recent posts"
-means the posts a visitor sees at the top of that page. Conditions are NOT
-budgeted: a store's guides are the whole GEO wedge this PRD is built on.
-
-THE COPY IS THE ACCEPTANCE CRITERION. The card states, in the same breath as the
-feature: llms.txt is a proposed standard no AI company has committed to reading,
-~10% of sites publish one, the largest study of it (SE Ranking, 300,000 domains)
-found no measurable change in AI citations, and the actual case for shipping is
-that it costs nothing. The copy lives in constants so the four claims are
-assertable, and a test asserts the ABSENCE of the words an overselling edit
-would reach for ("guarantee", "boost", "rank higher", "more traffic"). The card
-carries the sentence "Nobody can honestly tell you this will get your store
-cited more often, and this page will not."
-
-FLAGGED, NOT FIXED (adjacent, out of scope):
-- The apex `/llms.txt` (budstacks.io itself) 307s to /auth/login, because
-  `isPublicRoute` lists `/robots.txt` and `/sitemap.xml` and there is no
-  platform llms.txt route to add. Tenant hosts are unaffected — they are
-  rewritten and returned before the auth check runs. No story asks for a
-  platform llms.txt; adding the allowlist entry without a route would only
-  change one 307 into one 404.
-- The file lists no static pages (/about, /contact, /support). The AC enumerates
-  identity, conditions, products and posts; the sitemap carries the rest and is
-  linked from the identity block.
+PRECONDITION (the story's BLOCKED clause)
+Satisfied before any deletion. US-010 and US-011 are both committed
+(42faeddd, a52c6edb) and their seeds carry all eight slugs. Re-proved here
+against a live database rather than taken on trust — see below.
 
 HOW VERIFIED
-- `pnpm exec tsc --noEmit`                          -> exit 0 (repo-wide)
-- `pnpm vitest run tests/unit/seo-llms-txt.test.ts` -> 42 passed
-- `pnpm vitest run` (full)                          -> 2867 passed, 30 skipped,
-                                                       164 files, 0 failed
-                                                       (2825 before; +42)
-- `pnpm exec next lint` on all 8 touched files      -> no warnings, no errors
-- `pnpm check:security`                             -> both gates green
-- LIVE, on `pnpm dev` with the existing `.env.local` (never modified):
-    * `GET /llms.txt` with `Host: healingbuds.budstacks.io` -> the ROUTE's own
-      plain-text body, byte-identical in behaviour to `/robots.txt` on the same
-      host. THE MATCHER PASSES `.txt` AND THE REWRITE FORWARDS IT — proven, not
-      read off the regex: had middleware skipped the request it would have hit
-      the platform 404 HTML instead.
-    * `GET /llms.txt` with `Host: shop.example.com` -> same. The custom-domain
-      branch forwards `pathname` verbatim through `customDomainRewritePath`, so
-      the AC's custom-domain requirement is covered on both host shapes.
-    * both answered 404 `Tenant not found`: the tenant lookup needs the Railway
-      DB, unreachable from this machine (the dev log shows the route executing
-      at `app/store/[slug]/llms.txt/route.ts:24` and Prisma failing to connect).
-      Same local limit US-001 and US-002 recorded. The document itself, the plan
-      gate and the exclusions are covered by the 42 tests, which run the real
-      route with only prisma and tenant resolution mocked.
-    * the SEO Manager is Clerk-gated -> VISUAL: DEFERRED TO HUMAN REVIEW. The
-      card is a props-only component; its copy is asserted from constants.
-- Docker runner image: EXPLICITLY CHECKED. Two new modules under `lib/`
-  (COPYied at Dockerfile:74), one new component under `components/` and one new
-  route under `app/` (compiled into `.next/standalone`, Dockerfile:59). No new
-  runtime import chain leaves the copied set and no new dependency — no
-  Dockerfile change needed.
-- No migration, no schema change, no new model: every field read already exists.
+- `grep -rn 'samplePosts\|BLOG_POSTS' app lib` → exit 1, no output. The AC.
+- pnpm exec tsc --noEmit → exit 0.
+- pnpm vitest run tests/unit/{blog-published-posts,platform-posts-seed,
+  platform-post-metadata}.test.ts → 89/89.
+- pnpm vitest run (full) → 176 files passed, 3220 tests, 8 files / 30 tests
+  skipped (the DB-backed integration ones). No regressions. Test count rose
+  3218 → 3220: two guards added, none lost.
+- check:public-routes (107 pages), check:article-typography, check:security →
+  all green. next lint on the four touched files → clean.
+- REAL DATABASE, REAL BROWSER. Threw up a PG 17.9 cluster in /tmp (port 55434),
+  built the schema from `prisma migrate diff --from-empty --to-schema-datamodel
+  --script` and applied both seed migrations with psql → 8 published rows.
+  Ran `pnpm dev` on port 3111 against it with DATABASE_URL passed in the
+  environment; .env/.env.local were NOT touched, and the shell value wins because
+  @next/env does not override an already-set process.env var (confirmed
+  empirically — the page served the throwaway cluster's rows).
+- /blog → HTTP 200, exactly 8 post cards, titles and order correct (the two
+  editorial posts on top at Aug 15 2026, then the six samples Jan 2026 → Dec
+  2025), empty state NOT shown.
+- All 8 /blog/<slug> → HTTP 200 each, each with its own <title>, its own <h1>,
+  and a populated .bs-article body (606–5120 chars of rendered text).
+- .bs-article is genuinely styling, not an inert class: computed styles are
+  17px/29.75px paragraphs and 30px h2, i.e. not the browser defaults.
+- A slug that never existed → HTTP 404. Not a blank page, not a 500.
+- Screenshots of the index and of the WordPress article taken and inspected:
+  cards, cover images, byline, headings, bold, bulleted list and the related-
+  posts strip all render.
+- Cluster stopped and deleted, dev server stopped, all /tmp artefacts removed.
+
+DEVIATION FROM THE STORY'S LETTER (declared, not hidden)
+The AC names the dev-browser skill. Its server hardcodes port 9222, and Gerard's
+own Google Chrome (PID 66457) is already listening there, so the skill detected
+"server already running", attached to his personal browser and failed to open a
+page. Killing a user's running browser is not a call Ralph gets to make. I drove
+Playwright Chromium directly instead — the same engine the skill wraps, minus its
+named-page state server — and got the full visual check the AC is asking for. The
+verification is real; only the wrapper differs.
+
+FLAGGED, NOT FIXED (adjacent debt)
+- Every route in dev throws one CSP EvalError per page load ("'unsafe-eval' is
+  not an allowed source"). Confirmed ambient, NOT blog-specific and NOT caused by
+  this diff — reproduced identically on / and /pricing. Dev-only (the HMR
+  runtime), but it means the dev console is never clean, so a real error has
+  nowhere to stand out.
+- Two seeded posts share a cover image with two others (post-01-franchise.svg and
+  post-06-analytics.svg each appear twice on the index). Cosmetic, and it lands
+  in Workstream D's lap along with the prose.
+- Still open from US-010/US-011: the six sample posts' prose is weak and now
+  published, and two claims in it read as promises a regulated business should
+  not make ("compliance reporting with one click", "our current uptime is
+  99.9%"). Worth a human's eyes BEFORE the merge, not after.
+- Unchanged: seven loose .sql files at the top of prisma/migrations/ that never
+  run; untracked prisma/migrations/20260430_tenants_templateid_setnull/ sitting
+  in the working tree that WOULD run if committed by accident; no
+  app/blog/error.tsx; third sanitiser copy in
+  app/api/integrations/automatos/posts/route.ts:43; app/learn/[slug]/page.tsx
+  double-queries; no metadataBase on the platform root layout; no blog pagination.
+- The full migration history cannot be replayed from an empty database:
+  20260108_add_user_profile_fields ALTERs `users`, which no earlier migration
+  creates. Pre-existing (the base schema predates the migration directory), and
+  harmless to deploys — which only ever apply the unapplied tail — but it means
+  no one can stand up a fresh environment from migrations alone.
+
+NEXT
+US-013 (platform_seo_settings model and migration), the first story of
+Workstream C. Prisma story: timestamped migration DIRECTORY, and the new model
+stays OUT of tenantScopedModels in lib/db.ts alongside platform_posts,
+platform_leads and learning_resources.
+
+[2026-08-16] US-013 PASS — platform_seo_settings model and migration
+
+WHAT LANDED
+- prisma/schema.prisma: `platform_seo_settings` — uuid id, `routePath String
+  @unique`, nullable title/description/ogImage, `noindex Boolean @default(false)`,
+  createdAt/updatedAt. No tenantId, no @relation, no second index (the UNIQUE on
+  routePath is both the duplicate guard and the only lookup any reader makes —
+  platform_posts treats `slug` the same way).
+- prisma/migrations/20260816020000_add_platform_seo_settings/migration.sql — a
+  timestamped DIRECTORY, so entrypoint.sh's `migrate deploy` actually applies it.
+  Its DDL is byte-identical to `prisma migrate diff --from-empty
+  --to-schema-datamodel --script` output for this model; the seed INSERT is the
+  only hand-written SQL.
+- tests/unit/platform-seo-settings-schema.test.ts — 19 offline guards, same
+  text-reading shape as platform-posts-schema.test.ts.
+
+DECISIONS
+- EVERY AUTHORED COLUMN IS NULLABLE, because a row is an OVERRIDE, not a
+  replacement. US-015 has to apply it per COLUMN, not per row: with a row
+  present for all 15 routes, a per-row fallback would make an authored title
+  with no description blank that page's description. Written into the model
+  docstring and the migration header so US-015 cannot miss it.
+- THE SEED CARRIES ONLY "ogImage". Title and description stay NULL so the
+  existing `export const metadata` on each page remains the source of the copy —
+  freezing marketing copy into SQL would make editing it a deploy again, which
+  is the defect this workstream exists to remove. The AC's "one platform default
+  OG image so no route is left without one" is met literally: 15 rows, all
+  15 with an image, 0 with copy.
+- The image is PLATFORM_DEFAULT_OG_IMAGE (/budstack-hero-ecosystem.jpg) from
+  lib/seo/platform-post-metadata.ts, which already flags itself as "the value
+  US-013 replaces". Seeded as a ROOTED PATH, never an absolute URL, so
+  platformAbsoluteUrl() resolves it against the origin the container is serving
+  and staging does not advertise production's asset. The test imports the
+  constant rather than restating the string, so the two cannot drift.
+- 15 ROUTES, taken from middleware.ts's isPublicRoute allowlist: / /marketplace
+  /learn /blog /contact /documents /faq /regulatory /terms /privacy /cookies
+  /dpa /aup /legal/changelog /legal/subprocessors. That is the full US-014 list.
+  The three DYNAMIC families (/blog/{slug}, /learn/{slug}, /documents/{slug})
+  are deliberately absent — each entity carries its own metadata, and a settings
+  table cannot hold a row per row of another table.
+- Fixed UUIDs, not readable keys: an admin route that runs parseUuid on a path
+  param must be able to address every seeded row (the reason the platform_posts
+  seeds did the same).
+- ON CONFLICT DO NOTHING, deliberately not an upsert, so a replay cannot
+  overwrite an image a super-admin has since chosen.
+- NOT added to tenantScopedModels — the one place the repo's "new model joins
+  the allowlist" convention is inverted. That Set is opt-in; a platform table
+  inside it gets a tenantId filter welded onto every apex query and returns
+  nothing rather than erroring.
+
+VERIFIED
+- prisma validate ok · prisma generate ok (delegate present in the generated
+  client) · tsc --noEmit exit 0 · vitest full run 177 files / 3239 tests pass,
+  8 files / 30 tests skipped (the DB-backed integration set, as always).
+- check:public-routes, check:article-typography, check:security all green.
+  next lint on the new test file clean.
+- REAL POSTGRES. Threw up a throwaway PG 17 cluster in /tmp (port 55435, unix
+  socket only) and applied the migration with psql -v ON_ERROR_STOP=1:
+  CREATE TABLE / CREATE INDEX / INSERT 0 15. Then, on that live table:
+    * replaying the INSERT block alone → INSERT 0 0, count still 15;
+    * an authored edit (title + ogImage on /blog) SURVIVED a replay untouched,
+      which is what "not an upsert" buys;
+    * a duplicate routePath was refused by platform_seo_settings_routePath_key;
+    * 15 rows, 15 with an ogImage, 0 with title/description, 0 noindexed.
+  Cluster stopped and deleted; .env/.env.local never touched.
+- The allowlist guard was NEGATIVE-TESTED: temporarily added
+  'platform_seo_settings' to tenantScopedModels, confirmed the test fails
+  (1 failed | 18 passed), then restored lib/db.ts (git diff clean).
+
+FLAGGED, NOT FIXED (adjacent debt)
+- app/layout.tsx declares `openGraph` with NO images key, so every budstacks.io
+  page shares to a bare grey card today. The seeded rows are the data half of
+  the fix; the reader that consumes them is US-015, and until it lands the seed
+  changes nothing a crawler sees. Not a defect in this story — just worth
+  knowing the table is inert for one more story.
+- The whole-file migration re-run fails at CREATE TABLE (no IF NOT EXISTS).
+  That matches every other migration in the directory and is correct for
+  `migrate deploy`, whose _prisma_migrations ledger never replays an applied
+  migration. Only noting it so nobody reads "idempotent" in the header as
+  applying to the DDL — it applies to the seed.
+- Unchanged from earlier stories: seven loose .sql files at the top of
+  prisma/migrations/ that never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ in the working tree
+  that WOULD run if committed by accident; the migration history still cannot be
+  replayed from empty (20260108_add_user_profile_fields ALTERs `users`, which no
+  earlier migration creates); no metadataBase on the platform root layout.
+
+NEXT
+US-014 (super-admin platform SEO page). It needs a canonical TypeScript list of
+the same 15 routes — the migration is the only place that list exists right now,
+and a second hand-typed copy is how the two drift. Reuse SeoEditorModal +
+GooglePreview from components/admin/seo/, guard any API route with
+withSuperAdmin (NOT the unauthenticated shape of app/api/platform/leads), and
+give every query an explicit row type — the prisma export is any-widened.
 
 ================================================================================
-[2026-08-14] US-004 PASS — LLM-readiness audit section
-================================================================================
+[2026-08-16] US-014 PASS — Super-admin platform SEO page
 
-WHAT LANDED. A second category inside the existing SEO audit, not a second
-audit: five checks that ask whether a model can READ and QUOTE a store, added
-to the same snapshot, the same weights table, the same score and the same
-Audit tab. An owner has one list of things to fix, not two.
+WHAT LANDED
+- lib/platform/seo-routes.ts — the canonical TypeScript list the previous
+  journal asked for. 15 static routes (byte-for-byte the migration's seed) plus
+  one row per PUBLISHED guide, resolved from lib/documents/registry. The write
+  route validates against it, so a misspelt path is refused rather than filed as
+  a row no page will ever read.
+- lib/platform/seo-settings.ts — flat Zod write contract over the four real
+  columns, .strict(). NOT EntitySeo: the tenant blob exists because a store's
+  metadata rides on the entity's own column; this table has columns, and a key
+  with nothing behind it is the write-only control the SEO workstream exists to
+  delete. ogImage is refused unless it is a rooted path or an absolute http(s)
+  URL — exactly what platformAbsoluteUrl() will resolve, so the table cannot
+  hold a value no rendered tag ever carries.
+- app/api/platform/seo/route.ts — PUT only, withSuperAdmin + requireSameOrigin.
+  Fourth route under /api/platform/ and the third to require a session; leads
+  remains the deliberate unauthenticated exception and was not copied. upsert by
+  routePath, so the first save on a rowless guide is the same request as the
+  tenth on the homepage. "" is stored as NULL (US-015 falls back per COLUMN; a
+  stored "" would override a real title with nothing). Absent noindex defaults
+  false.
+- app/super-admin/seo/{page.tsx,platform-seo-client.tsx} — force-dynamic server
+  read (explicit PlatformSeoSettingRow[]), grouped list, SeoEditorModal for the
+  edit. Nav entry added to SuperAdminSidebar beside The Wire.
 
-  (a) ai-search-blocked      critical, 20 pts — the heaviest check in the audit
-  (b) qa-missing             info,      1/6   — products and condition guides
-  (c) llms-txt-empty         warning,   6     — the document lists nothing
-  (d) wire-drafts-unpublished warning,  4     — see THE AC (d) SUBSTITUTION
-  (e) heading-duplicate-h1   warning,   2/8
-      heading-level-skip     info,      1/4
-      heading-missing        info,      1/4
+THE ONE REAL DESIGN CALL: SeoEditorModal is tenant-shaped
+Reused as the AC asks, but three of its surfaces would have LIED on a platform
+page, so each became one additive prop with the current behaviour as its default
+(every tenant call site is untouched):
+- IndexingFields renders four controls; platform_seo_settings stores one. Passing
+  canEditIndexing={false} instead would show a super-admin a "Upgrade to Pro"
+  card. New `fields` prop → the platform editor offers noindex alone, and
+  indexingPayload now sends only the keys the surface rendered, so the .strict()
+  route cannot 400 on a control nobody saw.
+- OgImageField's upload posted to /api/tenant-admin/upload, which 403s a
+  super-admin (no tenantId) or, under impersonation, files budstacks.io's social
+  card inside somebody's store. New `uploadEndpoint` prop → US-005's
+  /api/platform/upload, whose response shape is already field-for-field
+  identical. uploadOgImage already took the URL as an optional second arg, so
+  nothing new was written. Its canUpload copy said "stored on your own store" —
+  now "on this site", true on both surfaces.
+- canUseAiAssist / canEditQa stay off: both are tenant-plan features behind
+  tenant routes.
+GooglePreview is reused THROUGH the modal, which is its only host — no second
+call site was invented to make the AC read literally.
 
-New: lib/seo/audit-llm-checks.ts (the checks), lib/seo/audit-llm-types.ts (ids,
-weights, the rationale), lib/seo/heading-structure.ts (the HTML heading parser),
-tests/unit/seo-llm-audit.test.ts (59 tests). Touched: audit-types (7 ids, the
-`ai-crawlers` tab, `target.href`), audit-snapshot (4 new entity facts), audit.ts
-(wire-in), the route (2 selects + 1 count + the settings parse), SeoAuditTab
-(renders an `href` finding as a link), audit-client (parses `href`).
+GUIDES ARE ROWS, POSTS ARE NOT
+US-013's seed excluded every dynamic family. /documents/{slug} is different in
+kind from /blog/{slug}: guides are a code registry with stable paths, blog and
+learn entries are database rows that already carry their own authored metadata.
+So the guides are in the list (the AC asks for them by name) and the other two
+families are not. Guides start rowless — the list flags them "No social image",
+which is the honest state until US-015 decides their fallback.
 
-THE AC (d) SUBSTITUTION — READ THIS BEFORE "FIXING" auditWireVisibility.
-The AC specifies "a tenant whose blog surface is the Automatos Shadow-DOM widget
-(wireMode column)". That premise is false against this repo, verified three ways
-on 2026-08-14:
-  * `tenants.wireMode` is MANUAL|ASSISTED and its own schema comment says what
-    it is — "The Wire authoring mode ... (Automatos pushes drafts)"
-    (prisma/schema.prisma:821). It selects who WRITES a post. ASSISTED drafts
-    land as ordinary `posts` rows for review
-    (app/api/integrations/automatos/posts/route.ts:114) and publish through the
-    same path as a hand-written one. ASSISTED is if anything BETTER for
-    crawlability, not worse.
-  * The Wire's storefront surfaces are ordinary server-rendered Next routes
-    (app/store/[slug]/the-wire/page.tsx, [postSlug]/page.tsx, revalidate 60) —
-    the post body is sanitized HTML in the response. Fully crawlable.
-  * The Automatos widget IS Shadow-DOM (`attachShadow({mode:"open"})`,
-    public/automatos-widget.js:5) but it is initialised as `widget: "chat"`
-    (components/admin/AutomatosWidgetWrapper.tsx:28) — a chat FAB. It renders no
-    blog content anywhere. There is no template section that fetches posts
-    client-side either: `BlogFeed` takes them as props.
-So the specified check could never fire on any tenant: it would be dead code
-asserting something false about the platform. What DOES make Wire content
-invisible to every crawler and LLM is the ordinary case ASSISTED mode produces
-at volume — a draft has no page. `published: false` is the real invisibility,
-the mode is why a store accumulates it without noticing (named in the message
-only when it is on, and named as the explanation, never as the fault), and The
-Wire's list is the AC's own deep link. Both the module docstring and the check
-carry this reasoning in-code. NOT SILENT: flagged here for the human review.
+The badge tracks title+description only. Counting ogImage would read "Custom"
+for all 15 static routes on day one, because the seed gave every one of them the
+platform default — a badge that is always green says nothing.
 
-WHAT ELSE THE ACs ASKED FOR AND WHAT THE CODE ACTUALLY SUPPORTS.
-  * (c) "presence/staleness" — NEITHER IS CHECKABLE, and the check says why in
-    its docstring. llms.txt is not a stored artefact: the route renders it per
-    request from live rows behind a 1h cache, and it is published for exactly
-    the tenants this audit runs for (both gate on seo.pro). There is no file to
-    be missing and no copy to fall behind. What CAN be wrong is that the
-    document has nothing in it — a store whose whole catalogue is excluded via
-    `sitemapExclude`/`noindex` (llms.txt honours both; the sitemap honours only
-    the first) publishes an identity block and three empty sections. That is
-    the check.
-  * (e) "condition/post content" — only a Wire post has an authored HTML body.
-    `conditions` carry no rich-text column (description is a one-line intro;
-    causes/symptoms/treatments are structured Json), there is no conditions
-    editor in tenant-admin at all, and every heading on a condition page is the
-    template's, correctly nested h1→h2→h3. So `headings` is null for a
-    condition and the check skips it rather than judging a tree it does not own.
-  * (b) conditions — `conditions.faqs` has NO writer in this repo but the seed
-    (the SEO route says so itself at
-    app/api/tenant-admin/seo/conditions/[id]/route.ts:101). The finding is
-    reported anyway and is worded as a statement about the page rather than an
-    instruction: its button lands the owner on the right guide and no closer.
-    Stated in-code. A guide that answers nothing is the largest single GEO gap
-    a store can have and an owner is better served knowing.
+VERIFIED
+- pnpm exec tsc --noEmit: exit 0.
+- pnpm vitest run: 178 files / 3277 tests pass, 0 fail (full project, no
+  regression from the shared-component props). New: tests/unit/
+  platform-seo-settings-api.test.ts, 38 tests — tenant admin/patient/signed-out
+  all refused, cross-origin refused, unknown routePath refused, an extra key
+  refused by .strict(), //host and bare-filename og images refused, ""→NULL,
+  trimming, noindex default, response echoes the stored row, no tenantId in the
+  query, and the route list covers every path the AC enumerates plus every
+  published guide and no coming-soon one.
+- check:public-routes, check:article-typography, check:security: all green.
+- next lint over app/ components/ lib/: no finding in any touched file.
+- pnpm build: compiled successfully; /super-admin/seo and /api/platform/seo both
+  in the route manifest. Page-specific JS is 2.17 kB (tenant SEO Manager is
+  6.95 kB), and grepping .next/static/chunks for guide prose returns 0 hits —
+  the type-only import boundary held and the 18 guide modules did NOT reach the
+  browser bundle. That was the specific risk in resolving the route list
+  server-side.
 
-REUSE, NOT A SECOND OPINION — the shelf, used as a shelf.
-  * The blocked-bot list is `aiCrawlersInClass("search")` from US-001's registry
-    and the cost sentence is `AI_CRAWLER_CLASS_COPY`'s, so the finding and the
-    settings card cannot come to disagree about what blocking costs.
-  * `inLlmsTxt` is computed with `isLlmsTxtExcluded` — US-003's own filter,
-    which this story EXPORTED rather than copied (llms-txt.ts now calls the
-    exported name itself). A store the audit says publishes an empty llms.txt is
-    a store whose llms.txt route publishes an empty file.
-  * Q&A counts run through `readProductQa` (US-002) and `readFaqEntries`
-    (US-017) — the same parsers the FAQPage builders use, so the audit counts
-    what the page emits, not what is stored.
-  * The plan resolves through `isSeoProUnlocked` / `indexingControlsUnlocked`,
-    once per snapshot, exactly as the sitemap and llms.txt renderers do.
+VISUAL: DEFERRED TO HUMAN REVIEW
+Could not be checked with the dev-browser skill and is not claimed. /super-admin/
+seo is Clerk-gated — a live request returns 307 to /auth/login?redirect_url=…
+(recorded), and there are no super-admin credentials in this environment. The
+local DATABASE_URL is unreachable besides (Prisma throws in RootLayout on every
+dev request; the DB is on Railway's private network). The repo has no React
+component-render harness — no @testing-library/react anywhere — so the JSX could
+not be asserted in vitest either; adding that dependency is well outside this
+story. The production build above is the strongest compile-level substitute
+available.
 
-DECISIONS WORTH THE NEXT READER'S TIME.
-  * ONLY THE SEARCH CLASS IS A FINDING. Blocking the TRAINING crawlers is a
-    legitimate informed choice whose cost the settings card already states; an
-    audit that marked it down would be scoring an owner on a decision they made
-    deliberately. Blocking search is the one that is nearly always collateral.
-  * THE LLM WEIGHTS ARE DELIBERATELY LIGHTER than their search equivalents, and
-    the reason is honesty, documented in audit-llm-types.ts: a missing title
-    provably changes what Google renders, while the evidence that Q&A blocks, an
-    llms.txt or a tidy heading tree change citation rates is thin to
-    non-existent. qa-missing costs 1 against a 6 ceiling where title-missing
-    costs 3 against 18. `ai-search-blocked` is the exception (20, above
-    sitemap-empty's 15) because it is not a nudge: the pages are readable by
-    everything except the systems being asked about them.
-  * `target.href` IS A NEW SHAPE, and it is validated on the way back in.
-    `SEO_AUDIT_TABS` cannot name /tenant-admin/the-wire, so the drafts finding
-    carries a path. audit-client.ts is fail-closed by design and DROPPED the new
-    field until it was taught to parse it — caught before it shipped as a Fix
-    button that silently went to the wrong tab. It now keeps only a path inside
-    this admin: `//evil.example`, `https://…` and `javascript:` are all refused
-    and the finding degrades to its tab (7 table-driven cases).
-  * THE DRAFTS READ IS A COUNT, not rows: the finding is one sentence about the
-    queue and the fix is The Wire's own list, so a store with hundreds of agent
-    drafts cannot crowd its live rows out of the audit's memory budget.
-  * `posts.content` is the one large column this route now selects. Posts are
-    the smallest of the four tables and it is the only authored HTML a store
-    publishes; the heading skeleton is extracted and the string discarded.
-  * The duplicate-h1 check fires on ONE body h1, not two: the post page already
-    renders `<h1>{post.title}</h1>` and the Wire's editor offers a Heading 1
-    button (components/editor/tiptap.tsx:52-57), so the platform's own UI is
-    what creates the second one.
+FLAGGED, NOT FIXED
+- SeoEditorModal's save handler console.error's on failure. Pre-existing, in a
+  shared tenant component; out of scope for this diff.
+- The modal's failure toast is generic ("Failed to save SEO settings"), so a 400
+  from the platform route loses the message the schema wrote for a person. Same
+  behaviour every tenant editor already has; worth fixing once, for both.
+- Unchanged from earlier stories: the seven loose .sql files at the top of
+  prisma/migrations/ that never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ that WOULD run if
+  committed by accident; no metadataBase on the platform root layout.
 
-FLAGGED, NOT FIXED (adjacent, out of scope):
-  * tests/unit/seo-audit.test.ts trips `max-lines` (1015 > 800) — PRE-EXISTING,
-    proven by linting the file at HEAD (1009 > 800). This story's new parser
-    cases were put in the new file rather than making it worse; splitting the
-    US-023 file is a separate change.
-  * `conditions.faqs` is unreachable from any editor (above). A conditions Q&A
-    field would be the natural home and is not this story's to add.
-  * The audit still has no invalidation from the SEO write routes (US-023's own
-    flagged debt) — a fixed finding survives up to 15 minutes or one Re-run.
-
-HOW VERIFIED
-- `pnpm exec tsc --noEmit`                          -> exit 0 (repo-wide)
-- `pnpm vitest run tests/unit/seo-llm-audit.test.ts` -> 59 passed
-- `pnpm vitest run` (full)                          -> 2930 passed, 30 skipped,
-                                                       165 files, 0 failed
-                                                       (2867 before; +63)
-- `pnpm exec next lint` on all 13 touched files     -> no warnings, no errors
-- `pnpm check:security`                             -> both gates green
-- The route's own tests now assert the new wiring: the drafts `count` is
-  tenant-scoped and `published: false`, `posts.select.content` and
-  `conditions.select.faqs` are requested, a `blocked` policy in the settings
-  blob reaches the finding, and a policy value the settings schema rejects
-  produces NO finding (the log line proves the parser refused it).
-- VISUAL: DEFERRED TO HUMAN REVIEW. The Audit tab is Clerk-gated and the audit
-  needs the Railway DB, unreachable from this machine — the same limit US-001
-  through US-003 recorded. The UI change is a props-only branch (link vs
-  button); its data path is covered by the parser's 7 href cases.
-- Docker runner image: EXPLICITLY CHECKED. Three new modules under `lib/seo/`
-  (COPYied at Dockerfile:74), one modified component and one modified route
-  (compiled into `.next/standalone`, Dockerfile:59). No new dependency and no
-  runtime import chain leaving the copied set — no Dockerfile change needed.
-- No migration, no schema change, no new model: `wireMode`, `settings`,
-  `posts.content`, `posts.published` and `conditions.faqs` all already exist.
+NEXT
+US-015 (marketing pages consume the settings) — the reader that finally makes
+this table do something. Points to watch: fall back per COLUMN, not per row (the
+seeded rows carry an image and nothing else, so a per-row check would blank
+every title on the site); the current hardcoded values in app/layout.tsx ~line 32
+are the documented fallback; generateMetadata must share the page's fetch via
+React cache() rather than issuing a second query; and /documents/{slug} has no
+row of its own, so decide deliberately whether it inherits /documents or the
+guide's own generateMetadata stays the source.
 
 ================================================================================
-[2026-08-14] US-005 PASS — AI citation monitor v1
+[2026-08-16] US-015 PASS — Marketing pages consume the SEO settings
 ================================================================================
 
-WHAT LANDED. A weekly job that asks the TENANT'S OWN configured model the
-questions their market asks, and records whether the answer linked to their
-store. New table `llm_citation_checks`, new queue `llm-citation`, a worker
-registration beside the reorder sweep, a Pro-gated GET, and an AI Citations tab
-in the SEO Manager.
+WHAT LANDED
+The read that finally makes platform_seo_settings do something. Fifteen static
+marketing routes plus the eighteen /documents guides now resolve their title,
+description, og:image and robots from the table, falling back to the metadata
+they shipped with.
 
-THE SPIKE, BECAUSE AC 4 TURNS ON IT. Re-fetched the published OpenAPI document
-(api.automatos.app/openapi.json, HTTP 200, 664 paths) rather than trusting the
-parent story's summary, and the two facts that decided the design are:
-  * `WidgetChatRequest.model_id` IS on the wire — optional string, exactly as
-    the shipped browser SDK sends it (`public/automatos-widget.js` passes
-    `model_id: this.config.modelId`). So per-model rows are POSSIBLE.
-  * There is NO model-listing endpoint under `/api/widgets/*`. `/api/models/`
-    exists but authenticates as a platform USER, which the parent spike already
-    established a tenant's widget key cannot reach. The ONLY workspace-scoped
-    discovery surface a widget key opens is `GET /api/widgets/config`, whose
-    documented response is `{workspace_id, config}` with `config` declared
-    `additionalProperties: true` AND NO DECLARED KEYS.
-  So the spec permits variation but does not promise a list to vary across, and
-  no live key exists on this machine to discover one. `requestAutomatosWidgetModels`
-  therefore reads OPTIMISTICALLY AND FAILS TO NOTHING: three plausible key names
-  (`models` / `enabled_models` / `available_models`), entries as strings or as
-  objects carrying an id, and ANY other shape — including the likely one, a
-  config with no models in it — returns []. An empty list is not an error; it is
-  AC 4's specified fallback, and the run asks the agent's default model as a
-  single engine labelled `workspace-default`. That label is not a vendor name,
-  which is the rule: every other label is a model id the workspace itself
-  returned.
+  lib/seo/platform-page-metadata.ts   NEW — pure builder + PLATFORM_ROUTE_FALLBACKS
+  lib/seo/generate-platform-metadata.ts NEW — cached loader + the two page entries
+  app/layout.tsx                      imports the two default constants
+  15 page files + app/contact/layout.tsx  export const metadata → generateMetadata
+  app/documents/[slug]/page.tsx       reads each guide's own row
 
-REUSE, NOT A SECOND CLIENT (the AC's hard line, and the notes' "extension of the
-existing service is reuse; a parallel client is not").
-  * `runCompletion` in lib/seo/ai-assist.ts was RENAMED and EXPORTED as
-    `runAiAssistCompletion` rather than copied. The monitor gets the same meter,
-    the same tenant-owned-credentials rule, the same provider and the same
-    `unavailable` state as the Generate buttons. One place still decides how a
-    tenant's AI account is spent; it now has three callers instead of two.
-  * `AiAssistProviderRequest` gained `modelId?`, and `automatosProvider` passes
-    it through to `model_id`. Absent means "the workspace's default", which is
-    what both existing callers asked for and still ask for — the two Q&A/draft
-    contracts are byte-identical on the wire to before this story.
-  * `AUTOMATOS_CONNECT` / `AutomatosConnectCard` are the monitor's not-connected
-    state verbatim, so "no Automatos account" is the same cross-sell on this tab
-    as in the editors, not an error screen (AC 5).
-  * The plan gate is `isSeoProUnlocked` in the sweep and
-    `requireFeature(FEATURES.SEO_PRO)` on the route — no new entitlement key.
+Split pure-from-impure exactly as lib/seo/page-metadata.ts is split from
+generate-page-metadata.ts on the tenant side: the builder takes a row and a
+fallback and touches no database, so it is total without a try/catch in every
+page, and testable without a mock.
 
-DECISIONS WORTH THE NEXT READER'S TIME.
-  * THE MATCH IS A HOST MATCH, AND ONLY A HOST MATCH. A model that says "Green
-    Leaf Clinic is a good option" has not cited anybody — half the stores in a
-    market share words — so a name mention scores nothing. A URL whose host is
-    the store's is checkable by clicking, which is the only claim this feature
-    makes. Both hosts count (platform subdomain AND custom domain): a model that
-    found budstacks.io has still found the store. 10 table-driven cases pin the
-    forms, including the two that must NOT match:
-    `greenleaf.budstacks.io.evil.test` and a competitor page whose PATH contains
-    the store's host.
-  * `cited: false` IS WRITTEN, DELIBERATELY. It is the baseline the tally is read
-    against; a table of hits only would make "3 citations" unreadable. But
-    NOTHING is written for a check that never produced an answer — "the key was
-    rejected" and "the model did not mention you" are opposite facts and one row
-    type cannot carry both. Skips go to the outcome, which the worker prints.
-  * THE CAP IS A BILL, not a load limit: 6 prompts x 2 engines = 12 completions
-    per store per week, on the STORE'S OWN account, enforced by a counter rather
-    than by the product of two list lengths — a store that adds forty conditions
-    must not become a bigger invoice. The tab says so in plain sight
-    (`CITATION_MONITOR_COPY.spendNote`).
-  * A TERMINAL REFUSAL STOPS THAT STORE'S PASS at the first check rather than
-    paying eleven more times to be told the same thing. `unavailable`,
-    `rate_limited`, `auth`, `lookup_failed` and `rate_limiter_unavailable` are
-    facts about the ACCOUNT and cannot change inside one run; `timeout` and
-    `upstream` might be about this one call, so they get one more go and stop at
-    two consecutive.
-  * MEDICAL-INFORMATION FRAMING IS A CONTENT-POLICY DECISION, documented in
-    `buildCitationPrompts`. Every major model applies a restricted-goods policy
-    to cannabis: "where can I buy cannabis in Portugal" is the shape most likely
-    to be refused or answered with a safety notice and no links, which would
-    make every row a false negative ABOUT THE STORE rather than a fact about it.
-    The prompts ask what a patient asks — legal access, treatment for a
-    condition, what a category is for. A test asserts no prompt contains "buy".
-  * THE SHARED METER IS A STATED TRADE. A weekly run draws up to 12 of the same
-    30-per-5-minutes budget the Generate buttons use, so an owner drafting during
-    the few minutes their sweep runs could be told to wait. A second meter would
-    have been a second place deciding how one account is spent — the exact thing
-    ai-assist.ts was factored to prevent. Documented at the top of
-    citation-engine.ts, not buried.
-  * NO MANUAL RUN, ON PURPOSE. The route is a GET with no siblings, so there is
-    no path by which a click spends the tenant's AI account. The cost of that is
-    real and named: a store sees an empty tab until the first Monday sweep.
-  * THE HONESTY COPY IS AN ACCEPTANCE CRITERION AND IS TESTED. The caveat renders
-    in the tab header, not behind a tooltip, and a test asserts the copy contains
-    "not a ranking" and "your own Automatos" and contains neither "guarantee" nor
-    "improve your ranking". The answering model id is on every row.
-  * `citedUrl` RENDERS AS TEXT, NOT AS A LINK. It is a string a model wrote; an
-    admin panel should not offer it as a one-click destination.
+THE DECISIONS
+- FALLBACK IS PER COLUMN, not per row. Every one of the fifteen seeded rows
+  carries an ogImage and NULL everything else, so a "does a row exist?" test
+  would have blanked the title of every page on the site on day one. Verified
+  live against a real row (below) and pinned in the builder tests.
+- FALLBACKS ARE CENTRAL, in PLATFORM_ROUTE_FALLBACKS, holding each page's
+  hardcoded strings verbatim. Same arrangement as STORE_ROUTE_DEFINITIONS
+  (lib/seo/route-metadata.ts) for storefronts. A test asserts its keys are
+  EXACTLY PLATFORM_SEO_STATIC_ROUTES, so a route added to the admin list and not
+  here (or the reverse) fails rather than silently serving the platform default.
+- THE READ RETURNS NULL ON FAILURE, the opposite call from
+  lib/platform/published-posts.ts and deliberately. There the failed query IS
+  the page. Here it is an override of metadata the page already has, and
+  generateMetadata has no error.tsx boundary above it — re-throwing would take
+  a legal document down over its <title>. Logged, so an outage is visible.
+- noindex: false DECLARES NO ROBOTS KEY. Next replaces the key wholesale, so
+  emitting index: true would drop the max-image-preview/max-snippet googleBot
+  directives the root layout carries.
+- GUIDES DO NOT INHERIT /documents' ROW. Each published guide is already its own
+  authorable route in platformSeoRoutes(); inheriting would mean authoring one
+  title silently retitled eighteen pages. Its own title/summary is the fallback.
+- /contact GOT A LAYOUT. Its page is "use client" (react-hook-form), which
+  cannot export metadata at all — a 3-line layout beats splitting a working
+  286-line form for a <title>.
+- og:url IS NOW PER ROUTE. Declaring openGraph for the image replaces the
+  layout's block wholesale, and that block hardcodes url: https://budstacks.io —
+  so leaving it out would have deleted og:url from every subpage, and copying it
+  would have kept every subpage claiming to be the homepage. Same for twitter.
+  <link rel="canonical"> is NOT added here; that is US-017's deliverable.
 
-WORKER LESSONS APPLIED (AC 9), each one stated rather than assumed.
-  * OWN QUEUE, `llm-citation`, NOT the email queue — the same incompatibility the
-    reorder sweep documents: the email worker expires any job older than
-    EMAIL_MAX_JOB_AGE_MS (PRD-220), which is right for a send and fatal for a
-    repeatable sweep BullMQ may promote late after a restart.
-  * `attempts: 1`, and here the reason is money: a retried sweep would re-bill
-    every store that already succeeded before the one that failed.
-  * `bypassTenantScope` binds an EXPLICIT null context, under which lib/db.ts's
-    scope extension adds nothing — so every query in citation-monitor-store.ts
-    names its own tenantId, and a test asserts it for the conditions, products
-    and write paths.
-  * THE CREDENTIAL ANSWERS A PRESENCE QUESTION IN SQL: the tenant list filters
-    `automatosApiKey: { not: null }` and never SELECTS it, so no key is loaded
-    into worker memory to answer "is this store connected". The key itself is
-    read only by `loadAutomatosCredentials`. A test asserts the select omits it.
-  * DOCKER RUNNER IMAGE: EXPLICITLY CHECKED. Five new modules under `lib/seo/`
-    (COPYied at Dockerfile:74) and the worker under `scripts/` (Dockerfile:73);
-    the route and components compile into `.next/standalone` (Dockerfile:59). No
-    new dependency, and no runtime import chain leaving the copied set —
-    citation-match reaches lib/tenant/tenant-utils, the store reaches
-    lib/entitlements, both already inside `lib/`. NO Dockerfile change needed.
-  * THE WORKER WAS TYPECHECKED via a throwaway tsconfig (`scripts/` is excluded
-    from repo tsc) — created, run, deleted; nothing left in the tree.
+WHAT THE TESTS CAUGHT
+The og:image cascade first read
+  platformAbsoluteUrl(authored || DEFAULT) ?? DEFAULT
+which hands the RELATIVE constant back whenever the authored reference is one
+platformAbsoluteUrl rejects (a bare filename, //host/x). With no metadataBase on
+the platform layout, Next resolves a relative og:image against localhost — the
+exact tag the absolutiser exists to prevent. Now absolutises the default on its
+own line, matching postOgImage.
 
-MIGRATION. Hand-authored, never `migrate dev`/`deploy`/`db push`. The CREATE
-TABLE, the index and the FK were diffed against
-`prisma migrate diff --from-empty --to-schema-datamodel --script` and match it
-statement for statement. New table, so no lock on anything live. Registered in
-`tenantScopedModels` (lib/db.ts) — no exemption claimed.
+VERIFIED
+- pnpm exec tsc --noEmit: exit 0.
+- pnpm vitest run: 180 files / 3305 tests pass, 0 fail (full project). New:
+  tests/unit/platform-page-metadata.test.ts (20) and platform-route-metadata
+  .test.ts (8).
+- check:public-routes (108 pages), check:article-typography, check:security: all
+  green. next lint over app/ lib/ tests/: no new finding in any touched file
+  (the warnings that remain are pre-existing unescaped quotes and <img> in page
+  BODIES; the one lint Error is the pre-existing 1015-line seo-audit.test.ts).
+- pnpm build: compiled successfully. prerender-manifest routes: 0 and zero .html
+  under .next/server/app — the root layout's force-dynamic still cascades, so
+  every marketing page is server-rendered per request and the build-time Prisma
+  mock cannot bake a fallback into static output. That was the risk worth
+  checking: had any of these pages been static, the feature would have worked in
+  dev and done nothing in production.
 
-FLAGGED, NOT FIXED (adjacent, out of scope):
-  * No retention policy on `llm_citation_checks`. At 12 rows/store/week it is
-    ~625 rows a year per connected store, which is nothing — but the table only
-    grows, and a prune job belongs to whoever adds the second one of these.
-  * The monitor has no audit-log row on write. The sweep is a system actor with
-    no member behind it, and every other automation here (reorder) is the same;
-    worth revisiting if operators ever need to answer "who ran this".
-  * The tab has no pagination: `CITATION_HISTORY_LIMIT` (120 rows) is the whole
-    of what it can show, and a store two years in will silently see only its
-    recent runs. Bounded, not truncated-and-silent — the cap is a constant a
-    later story can raise with a cursor.
+VERIFIED LIVE (AC-5 satisfied, not deferred)
+Stood up a throwaway Postgres 17 on 127.0.0.1:55432 in /tmp, applied
+20260816020000_add_platform_seo_settings verbatim (the real artefact, seed and
+all), and ran the dev server with DATABASE_URL passed inline. No .env file was
+read from, written to or modified; the cluster and its data directory were
+destroyed afterwards and no process survives.
 
-HOW VERIFIED
-- `pnpm exec tsc --noEmit`                             -> exit 0 (repo-wide)
-- worker via throwaway tsconfig (scripts/ + lib/)      -> exit 0, no output
-- `pnpm prisma validate`                               -> schema valid
-- `pnpm prisma generate`                               -> client generated
-- `prisma migrate diff --from-empty --script`          -> hand-authored SQL
-                                                          matches canonical
-- `pnpm vitest run tests/unit/seo-citation-monitor.test.ts` -> 46 passed
-- `pnpm vitest run tests/unit/seo-citation-route.test.ts`   ->  9 passed
-- `pnpm vitest run` (full)                             -> 2985 passed, 30
-                                                          skipped, 167 files,
-                                                          0 failed
-                                                          (2930 before; +55)
-- `pnpm exec next lint` on all 17 touched TS/TSX files  -> no warnings, errors
-- `pnpm check:security`                                -> both gates green
-- VISUAL: DEFERRED TO HUMAN REVIEW. The SEO Manager is Clerk-gated and the tab
-  needs the Railway DB, unreachable from this machine — the same limit US-001
-  through US-004 recorded. The data path is covered instead: the route's two
-  gates (Basic 403 `upgrade_required`, `canViewSeo` refused BEFORE the plan
-  lookup), the tenant-scoped bounded read, the not-connected 200, and the
-  client parser's fail-closed cases including "cited" arriving as the STRING
-  "true" (reads as not cited — over-reporting a citation is the one error this
-  feature must not make).
-- NO LIVE API CALL WAS MADE WITH ANY TENANT CREDENTIAL. The only network request
-  in this story was an unauthenticated GET of the public OpenAPI document.
+  /terms, seeded row (ogImage only):
+    <title>Terms of Service | BudStacks</title>            ← shipped title kept
+    og:image  https://budstacks.io/budstack-hero-ecosystem.jpg  ← seeded, absolute
+    og:url    https://budstacks.io/terms                   ← was the apex
+    robots    index, follow                                ← inherited, not restated
+  after UPDATE …SET title/description/ogImage on /terms:
+    <title>Terms of Service — what operators agree to | BudStacks</title>
+    og:image  https://budstacks.io/social/terms-card.png
+    — no restart, no rebuild, no deploy. That is AC-5.
+  after UPDATE …SET noindex = true on /faq:
+    <meta name="robots" content="noindex, follow">         ← AC-3, a real tag
+  after DELETE of the /privacy row (the empty-table case, AC-2):
+    <title>Privacy Policy | BudStacks</title> — shipped metadata intact.
+  /documents/products with no row: its own title and summary, plus the platform
+  og:image it never had; then an authored row overrode the title while the
+  summary stood (per column), and /documents' own title was unaffected.
+  / and /contact: og:url correct per route; title is the platform default,
+  which is what both served before.
+
+The edit was applied as SQL against the same four columns the super-admin PUT
+upserts, because /super-admin/seo and PUT /api/platform/seo are Clerk-gated and
+there are no super-admin credentials in this environment. That write path is
+covered by the 38 tests in platform-seo-settings-api.test.ts from US-014; what
+could not be exercised end-to-end is the browser click, not the read under test.
+
+FLAGGED, NOT FIXED
+- /blog and /contact ship no title of their own — neither ever exported one —
+  so both still serve the platform default until someone authors one. Not
+  invented here: writing marketing copy is not this story. US-020's audit panel
+  is where they should surface.
+- The homepage's og:description is now the full platform description rather than
+  the shorter variant the layout's openGraph block carried. One string, and the
+  cards now agree with the <title>; noted because it is a visible change.
+- Still no metadataBase on the platform root layout. Everything here absolutises
+  its own URLs, so it does not bite — but a future page that forgets to will
+  ship localhost.
+- /blog 500s when platform_posts cannot be read (observed against the minimal
+  throwaway schema). That is US-008's deliberate "an outage is not an empty
+  blog", working as designed — recorded so the 500 in this run is not mistaken
+  for a regression.
+- Unchanged from earlier stories: the seven loose .sql files at the top of
+  prisma/migrations/ that never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ that WOULD run if
+  committed by accident.
+
+NEXT
+US-016 (blog posts enter the platform sitemap). Points to watch: mirror the
+existing learning_resources block in app/sitemap.ts rather than writing a new
+shape; keep the try/catch — that file swallows failures on purpose, the opposite
+call from the blog loaders; and the guides are a code registry, so their sitemap
+entries come from GUIDES filtered to published, the same filter guideRoutes()
+already applies in lib/platform/seo-routes.ts.
 
 ================================================================================
-[2026-08-14] US-006 PASS — Entity grounding
+[2026-08-16] US-016 PASS — Blog posts enter the platform sitemap
+
+WHAT LANDED
+- app/sitemap.ts gained two sections and one marketing path:
+  * /blog/{slug} for every published platform_posts row — lastModified from
+    updatedAt, priority 0.6, changefreq monthly, built through blogPostPath()
+    so the sitemap entry and the page's own canonical (US-017) stay one string.
+  * /documents/{slug} for every published guide — lastModified from the guide
+    module's own ISO updatedAt, priority 0.6.
+  * /documents itself, priority 0.8. It was public since #246/#249/#251
+    (middleware.ts:78) and had never been listed, so the site's largest content
+    set — 18 pages carrying 16 videos — was discoverable only by a crawler that
+    happened to follow a link into it.
+- The two database reads now run under Promise.all. They are independent and the
+  document cannot be emitted until both answer or fail, so serialising them only
+  added latency.
+
+DECISIONS
+- Did NOT reuse loadPublishedPlatformPosts() from lib/platform/published-posts.ts.
+  That function RE-THROWS a failed query on purpose — /blog must 500 rather than
+  render "we have never published anything" — and the sitemap needs the opposite
+  trade: one missing section costs freshness, a sitemap that 500s teaches a
+  crawler the whole site is broken. Reusing it would have meant catching a throw
+  and re-deriving intent at the call site. Instead the four-line query is
+  repeated with the learning_resources block's try/catch, exactly as the AC asks,
+  and reads two columns where the public index needs twelve. Both headers now
+  cross-reference each other so the split is not read as an oversight.
+- Extracted publishedGuides() into lib/documents/registry.ts and pointed
+  lib/platform/seo-routes.ts' guideRoutes() at it. Without this the "filter to
+  published, sort by part" rule would have had two implementations, and a guide
+  flipping status would reach the sitemap and the authorable-route list at
+  different times — the drift that file's own header exists to prevent. Pure
+  refactor, no behaviour change; the 38 platform-seo-settings-api tests and the
+  20 platform-page-metadata tests cover it and stayed green.
+- No tenant predicate anywhere in the new query. platform_posts stays out of
+  tenantScopedModels (opt-in allowlist); a tenant filter would empty the apex.
+- Draft exclusion is in the QUERY (where: { published: true }), not a filter on
+  the result, so an unpublished row never reaches the document.
+
+VERIFIED
+- tsc --noEmit exit 0. Row type stated explicitly on the new findMany (the
+  prisma export is any-widened, so an inferred result would be TS7006 downstream).
+- pnpm vitest run: 180 files / 3308 tests passed, 8 files + 30 tests skipped
+  (integration, no DB). Targeted: sitemap.test.ts 23 tests, plus the two SEO
+  suites that import the refactored registry — 81 passed.
+- Four new tests: post URL + lastModified + priority; the query shape
+  (published-only, two columns, no tenantId); the guide index and all 18 guide
+  URLs with a length check that fails loudly if a coming-soon guide is ever
+  listed; and the outage case extended to cover platform_posts.
+- check:public-routes green — and it validates every sitemap path against the
+  middleware allowlist, so /documents being listed is machine-checked, not
+  asserted by hand. check:article-typography, check:security, eslint all clean.
+- LIVE: pnpm dev + curl http://localhost:3000/sitemap.xml → HTTP 200, 3845 bytes,
+  27 <loc> entries: 9 marketing paths + 18 guides, each guide carrying
+  <lastmod>2026-08-15</lastmod> and <priority>0.6</priority>.
+
+LIVE VERIFICATION CAVEAT — read this before treating the curl as full coverage.
+This machine cannot reach the database (postgres-budstack-development is on
+Railway's private network), so BOTH database sections logged their warn and
+degraded to [] during that fetch. What the curl therefore proves is the outage
+path, which is the AC's load-bearing clause: the sitemap answered 200 with the
+guides intact rather than 500ing, and the two failures were logged as
+"[seo] platform sitemap: learning resources unavailable" / "... blog posts
+unavailable". A published post appearing in the document is covered by unit test
+against a mocked prisma, NOT by live fetch. Confirming a real row on a
+database-connected environment is a human check.
+
+FLAGGED, NOT FIXED
+- The "lists only routes a signed-out crawler can fetch" test's comment is now
+  stale: it says /faq, /aup, /dpa, /regulatory and /legal/* are absent from the
+  middleware allowlist, but all five were added to it later (middleware.ts:66-72).
+  The assertion still passes and still describes what the sitemap does — those
+  pages are genuinely not listed — but the stated REASON is no longer true. Which
+  raises the real question: they are public and indexable and nothing points a
+  crawler at them. Adding them is a sitemap-content decision beyond US-016's ACs;
+  US-020's audit panel is where it should surface.
+- Guide priority is 0.6, the same as a blog post, chosen for consistency with the
+  other article-type entries; the ACs only fix the post value. Priority is close
+  to advisory for Google, so this is not worth a story on its own.
+- Unchanged from earlier stories: the seven loose .sql files at the top of
+  prisma/migrations/ that never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ that WOULD run if
+  committed by accident.
+
+NEXT
+US-017 (canonicals across platform marketing routes). Points to watch: the AC
+wants verification in page source on three routes, and this machine can serve
+public routes but not database-backed content — /blog/{slug} will 500 locally, so
+plan the three routes around what actually renders. buildPlatformPageMetadata in
+lib/seo/platform-page-metadata.ts is where a canonical belongs (every marketing
+page already routes through it via generatePlatformRouteMetadata), which makes
+this one central change rather than fifteen page edits. Canonical host is the
+APEX — platformBaseUrl() already returns it and middleware's wwwRedirectHost
+branch 301s www, so do not re-solve that. blogPostPath() is already the shared
+path helper; /documents/{slug} goes through generatePlatformGuideMetadata.
+
+================================================================================
+[2026-08-16] US-017 PASS — Canonicals across platform marketing routes
+
+WHAT LANDED
+- lib/seo/platform-page-metadata.ts: `buildPlatformPageMetadata` now returns
+  `alternates: { canonical }`, and og:url is the SAME string rather than a second
+  computation of it. One change, 33 routes: the 15 static marketing routes and all
+  18 /documents guides go through this builder (US-015), so none of them needed
+  editing and no page file gained a hardcoded URL.
+- app/learn/[slug]/page.tsx: the one public content route with its own
+  generateMetadata and no canonical. Built from the RESOLVED ROW's slug, not
+  params.slug, so a request that reached the row by some other casing or encoding
+  still points at the address app/sitemap.ts lists. The not-found branch stays
+  canonical-free — declaring one would hand a crawler a 404's address.
+- tests/unit/platform-page-metadata.test.ts: +7. Route's own absolute path;
+  homepage → bare origin with no trailing slash; canonical === og:url; a canonical
+  for EVERY route platformSeoRoutes() offers (guides included, so an added guide is
+  covered without editing the test); a noindex route still declares one; origin
+  read from env at call time and never www. Plus a source-level check that the two
+  database-backed routes declare their own.
+
+WHAT WAS ALREADY DONE — NOT REBUILT
+- /blog/<slug> (AC-2) has emitted `alternates.canonical` since US-009, via
+  buildPlatformPostMetadata → platformCanonical(blogPostPath(slug)). Asserted
+  already in platform-post-metadata.test.ts:181. Verified live, not re-implemented.
+- AC-3 (apex, not www) needed no code. `wwwRedirectHost` (lib/parse-host.ts:47)
+  strips the prefix and middleware.ts:155 301s to the apex BEFORE tenant
+  resolution; covered by tests/unit/parse-host.test.ts. The canonical takes its
+  origin from platformBaseUrl(), which is env-derived — verified live as
+  https://budstacks.io/... with no www anywhere.
+
+DECISIONS
+- CANONICAL IS BUILT, NEVER AUTHORED. platform_seo_settings has title,
+  description, ogImage and noindex and deliberately no canonical column (see the
+  header of lib/platform/seo-settings.ts, which records that canonicalOverride was
+  left out on purpose). A hand-typed canonical is how a page ends up pointing at a
+  URL that 404s, and for a static route the only correct answer is its own path.
+  So no schema change, no migration and no editor field in this story.
+- The real prize is not www. Middleware already 301s that, and a crawler only
+  learns of it by following a www link. What nothing but a canonical catches is
+  ?utm_source=, ?ref=, ?fbclid= — every campaign and referral URL answers 200 on
+  the same content. Verified explicitly below.
+
+VERIFIED LIVE (AC-5 asked for three routes; 19 were checked)
+Two dev-server runs. The first used the existing .env.local unchanged — its
+DATABASE_URL points at Railway, which is TCP-unreachable from this machine, and
+that is itself the degrade case: /terms answered 200 with the correct canonical
+while [platform-seo] settings read failed logged, confirming the canonical does
+not depend on the settings row. The second ran against a throwaway Postgres 17
+(port 55437, /tmp data dir) built with `prisma migrate diff --from-empty
+--to-schema-datamodel` piped to psql, seeded with one published platform_posts row
+and one published learning_resources row. No .env file was read from, written to
+or modified; DATABASE_URL was passed inline. Cluster, data dir and both servers
+destroyed afterwards; ports 3000 and 55437 confirmed free.
+
+  All 15 static routes + /documents/overview + /documents/products:
+    canonical present on every one, 0 missing. Spot values —
+    /                     -> https://budstacks.io          (bare origin, no slash)
+    /terms                -> https://budstacks.io/terms
+    /legal/changelog      -> https://budstacks.io/legal/changelog
+    /documents/overview   -> https://budstacks.io/documents/overview
+    /contact              -> https://budstacks.io/contact   (via its layout)
+    og:url matched the canonical on every route sampled.
+  /blog                        -> https://budstacks.io/blog
+  /blog/canonical-check        -> https://budstacks.io/blog/canonical-check
+  /learn/canonical-check-article -> https://budstacks.io/learn/canonical-check-article
+  THE CASE THE STORY IS FOR:
+    /terms?utm_source=newsletter&utm_campaign=aug -> https://budstacks.io/terms
+    /faq?ref=partner&fbclid=abc123                -> https://budstacks.io/faq
+    /learn/...?utm_source=twitter                 -> the clean /learn/... path
+  NEGATIVE:
+    /learn/no-such-article  404, NO canonical
+    /blog/no-such-post      404, NO canonical
+
+CHECKS
+- pnpm exec tsc --noEmit → exit 0
+- pnpm vitest run → 3315 passed, 30 skipped, 0 failed (180 files). Baseline after
+  US-016 was 3308; +7 is exactly this story's new tests, so no regressions.
+- pnpm check:public-routes → 108 pages, all allowlisted. No new public route was
+  added, so nothing needed adding to isPublicRoute.
+- pnpm check:article-typography → clean. pnpm check:security → clean.
+- next lint on both touched source files → no warnings or errors.
+- No Prisma work in this story: no schema change, no migration, nothing to
+  validate or generate.
+
+FLAGGED, NOT FIXED
+- app/learn/[slug]/page.tsx runs the SAME learning_resources.findUnique TWICE per
+  request — once in generateMetadata, once in the page body — because neither is
+  React-cache()d. Pre-existing (PRD-220 era), not introduced or worsened here: my
+  change adds no query. Left alone to keep the diff to the canonical, but it is the
+  one file on the platform side that does not follow the loadPlatformSeoSetting /
+  loadPublishedPlatformPost cache() arrangement, and it should adopt it.
+- /learn/<slug> takes its metadata from the row directly and has no og:image, no
+  og:type and no article timestamps — the gap US-009 closed for /blog/<slug>. It is
+  in the sitemap and shares as a bare grey card. Out of scope here; worth a story.
+- /learn/<slug> is NOT an authorable route in platform_seo_settings (by design —
+  seo-routes.ts explains why rows cannot key on rows), so its title still ships in
+  code. Consistent with /blog/<slug>, which carries its own `seo` Json instead.
+- Still no metadataBase on the platform root layout. Confirmed this does not bite
+  the canonical: Next's resolveAbsoluteUrlWithPathname skips resolution entirely
+  when there is no base, so an ABSOLUTE value passes through verbatim — which is
+  what platformCanonical always returns. A relative one would have shipped
+  host-less. Recorded because the next person to add an alternate will face it.
+- Unchanged from earlier stories: the seven loose .sql files at the top of
+  prisma/migrations/ that never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ that WOULD run if
+  committed by accident.
+
+NEXT
+US-018 (Article and BreadcrumbList JSON-LD). Points to watch: REUSE
+lib/seo/article-json-ld.ts and lib/seo/breadcrumb-json-ld.ts — a second JSON-LD
+implementation is an explicit revert-on-review anti-pattern. The canonical string
+this story now emits is the URL those builders should use for @id / mainEntityOfPage,
+so read platformCanonical rather than rebuilding the URL.
+
+================================================================================
+[2026-08-16] US-018 PASS — Article and BreadcrumbList JSON-LD for the platform blog
+
+WHAT LANDED
+- /blog/<slug> now emits one application/ld+json block carrying three nodes in an
+  @graph: Organization (the publisher), Article, and BreadcrumbList. Before this
+  the platform blog emitted ZERO structured data — the tenant Wire has had both
+  since SEO Supercharge US-016.
+- Rendered through the EXISTING <JsonLd> server component (components/seo/json-ld
+  .tsx), so the </script>-escaping in serializeJsonLd cannot be bypassed.
+
+REUSE, NOT A SECOND IMPLEMENTATION (the story's first AC)
+Both existing builders are tenant-SHAPED, not tenant-agnostic: they take tenantId
+/plan/subdomain/customDomain, gate on isSeoProUnlocked and resolve URLs through
+storeCanonical. budstacks.io is none of those things. So rather than copy them,
+the node construction was EXTRACTED from each and both sites now call it:
+- lib/seo/article-json-ld.ts gains buildArticleNode(ArticleNodeSource) — the
+  headline budget (110), the author Person-vs-publisher-ref substitution, the
+  `${url}#article` @id, and which properties are omitted rather than emitted
+  empty. buildArticleJsonLd is now the plan gate + the tenant cascade + this.
+- lib/seo/breadcrumb-json-ld.ts gains buildBreadcrumbNodes(absoluteUrl, trail) —
+  the leading Home crumb, the all-or-nothing name rule, 1-based contiguous
+  position, and the @id anchored to the page the trail ends on. The URL resolver
+  is injected: a tenant passes a closure over storeCanonical, the platform passes
+  platformCanonical. buildBreadcrumbJsonLd is now the plan gate + this.
+- Net effect: ONE definition of each node shape. A change to how an Article or a
+  BreadcrumbList is written now lands on both sites at once, which is precisely
+  what the anti-pattern list was protecting.
+
+NEW: lib/seo/platform-article-json-ld.ts (the platform-side cascade only)
+- No plan gate — budstacks.io is not a tenant and buys nothing from itself. The
+  test asserts this omission is deliberate rather than a field left unthreaded.
+- URLs from platformCanonical, so the Article's url/@id are character-for-
+  character the canonical US-017 already declares on the same page.
+- image from platformPostOgImage (exported from platform-post-metadata.ts this
+  story, previously a private postOgImage) — the IDENTICAL cascade the og:image
+  runs, ending in the platform hero. Verified by a test that compares the node's
+  image against buildPlatformPostMetadata's openGraph.images[0] for the same row.
+- datePublished is platform_posts.publishedAt, NOT createdAt: a post drafted in
+  June and published in August is an August article, and the node must say what
+  the byline the page prints says. dateModified is updatedAt.
+- publisher is an @id reference AND the Organization it names is restated in this
+  page's graph — structured data is parsed per URL, so a reference to a node
+  declared on the homepage is a publisher with no name.
+- Organization logo is /images/homepage/budstacks-horizontal.png (1500x287), the
+  wordmark components/homepage/Nav.tsx actually renders. Deliberately NOT
+  platform_settings.logoUrl: that column holds a private S3 key outside
+  PLATFORM_UPLOAD_PREFIX, so storedPublicImagePath fails closed on it and wiring
+  it up would publish no logo while looking like it did.
+- sameAs omitted, not []: budstacks.io states no social profiles anywhere on the
+  marketing site, and `sameAs: []` is a positive claim of having none.
+- BLOG_INDEX_TITLE = "Blog" added to lib/seo/blog-paths.ts (the module that owns
+  the URL, per breadcrumb-json-ld's own rule). "Blog" is the label the marketing
+  nav and footer put on the link; NOT the index's <title>, which is authorable
+  and would put a DB read inside a pure builder on every article render.
+
+VERIFIED
+- pnpm exec tsc --noEmit: exit 0.
+- Targeted: platform-article-json-ld (23 new tests), article-json-ld,
+  breadcrumb-json-ld, platform-post-metadata, seo-social-links — 123 passed. The
+  four pre-existing files were left UNTOUCHED and still pass, which is the proof
+  the extraction did not change tenant behaviour.
+- Full unit project: 181 files / 3338 tests passed, 8 files / 30 tests skipped
+  (the DB-gated integration set). Exit 0.
+- pnpm check:public-routes (108 pages, 1 public API handler) and
+  pnpm check:article-typography both green. pnpm check:security green.
+  pnpm lint on the six touched files: no warnings or errors.
+- Exact emitted block confirmed by rendering the builder for a real seeded row —
+  @graph of Organization/Article/BreadcrumbList, breadcrumb reading
+  Home > Blog > post with items https://budstacks.io, /blog, /blog/<slug>.
+- No Prisma work in this story: no schema change, no migration.
+
+LIVE CURL: ATTEMPTED, NOT POSSIBLE — recorded rather than claimed
+pnpm dev started clean (Ready in 2.2s) but /blog returns 500: the dev DATABASE_URL
+points at postgres-budstack-development.up.railway.app:5432, which is not reachable
+from this machine (it is a private-network host). So the article HTML could not be
+fetched and the <script> element could not be observed in a live document. The node
+CONTENT is covered by unit tests and the block above; what remains unobserved is
+only that <JsonLd> renders it into the page, which typecheck constrains (the props
+are readonly JsonLdNode[]) but no test in this repo asserts for ANY of the five
+JSON-LD builders — none of them has a component render test. Visual/live: deferred
+to human review.
+Side note worth keeping: that 500 is US-008's designed behaviour firing for real —
+the blog refused to render "Nothing published yet" over an unreachable database.
+
+FLAGGED, NOT FIXED
+- The six seeded sample posts use SVG covers (/images/blog/post-0N-*.svg). Those
+  now appear as the Article `image` as well as the og:image. SVG is a supported
+  structured-data format, so this is not a defect, but a flat SVG placeholder is a
+  poor rich-result thumbnail. It is Workstream D's (the human editorial rewrite),
+  not a code fix.
+- The /blog INDEX still emits no structured data. A CollectionPage or an ItemList
+  of the posts is the obvious next increment; US-018's AC names the post pages
+  only, so the index was left alone rather than scope-crept.
+- Unchanged from earlier stories: app/learn/[slug]/page.tsx still runs its
+  learning_resources.findUnique twice per request (not React-cache()d); /learn/
+  <slug> still has no og:image, og:type or article timestamps and no JSON-LD at
+  all; the seven loose .sql files at the top of prisma/migrations/ still never run;
+  untracked prisma/migrations/20260430_tenants_templateid_setnull/ would run if
+  committed by accident.
+
+NEXT
+US-019 (slug changes issue a 301). Points to watch: REUSE the seo_redirects
+mechanism (prisma/schema.prisma ~line 267, SEO Supercharge US-021) with a platform
+scope — check lib/seo/redirect-write.ts, redirect-lookup.ts and slug-redirects.ts
+before writing anything. Redirect chains must COLLAPSE rather than nest. And when
+it passes, US-019 unblocks US-007: the published-slug edit is refused in TWO
+places today — PUBLISHED_SLUG_LOCKED_MESSAGE in lib/platform/posts.ts (enforced by
+the item route, so an API caller cannot route around it) and the editor's own
+slug-field.tsx — and BOTH have to be re-enabled, with the journal saying so.
+
+================================================================================
+[2026-08-16] US-019 PASS — Slug changes issue a 301
+
+WHAT LANDED
+- New model `platform_seo_redirects` + timestamped migration
+  20260816030000_add_platform_seo_redirects. Kept OUT of `tenantScopedModels`,
+  like every other platform_* table.
+- Why a SECOND table rather than platform rows in `seo_redirects`: that table's
+  tenantId is NOT NULL with an FK to tenants AND the model is in
+  tenantScopedModels, so a null-tenant row would be filtered out of every read by
+  the $extends rewrite and would NOT be deduplicated by
+  @@unique([tenantId, fromPath]) — Postgres treats NULLs in a unique index as
+  distinct, so two rows could claim the same path.
+- Everything ELSE is reused, not rewritten. `planSlugRenameRedirect`
+  (lib/seo/slug-redirects.ts) is pure and decides all three steps unchanged, so
+  chains COLLAPSE rather than nest and a rename-back clears the rule that would
+  otherwise shadow the post's new address. lib/seo/platform-slug-redirects.ts is
+  ~60 lines: the same plan, applied to the other table, with no tenantId in any
+  predicate.
+- Middleware fires it. The apex previously had NO redirect scope at all
+  (`storeRedirectScope` returns null for a null hint), so `resolvePlatformRedirect`
+  was added beside `resolveStoreRedirect` — same in-memory SWR cache, same
+  matcher, distinct cache key. A tenant request costs two string comparisons and
+  never fetches.
+- The feed (`/api/public/seo/redirects`) grew ONE query parameter, `scope=platform`,
+  which skips tenant resolution and the seo.pro gate — there is no tenant to
+  resolve and the platform is not a customer of itself. Absent scope = today's
+  behaviour, byte for byte. No new public route, so no allowlist entry needed;
+  auth-public-routes.ts's reason string was extended to say what the new scope
+  answers.
+
+US-007 UNBLOCKED, AS THE STORY REQUIRED
+Both refusals are gone, and both were removed:
+- server: the 409 + PUBLISHED_SLUG_LOCKED_MESSAGE in the PATCH route. The only
+  refusal left on a rename is a slug another post owns (still 409).
+- editor: slug-field.tsx's read-only lock. It now shows a WARNING, and only when
+  a live post's URL has actually been changed — PUBLISHED_SLUG_MOVE_NOTE replaced
+  PUBLISHED_SLUG_LOCKED_MESSAGE, `isPublishedSlugLocked` became
+  `isPublishedSlugMove`, and `buildPlatformPostBody` lost its `slugLocked` option
+  (an unchanged slug is now sent and simply isn't a rename).
+The form reports what the SERVER says the rename did (`slugRedirect`), the same
+shape the tenant editor already consumes — including saying out loud when the
+redirect write failed, because the post moved either way.
+
+DECISION WORTH KNOWING
+A redirect is written only when `existing.publishedAt !== null`, not when
+`published` is true. publishedAt is stamped once on first publish and never
+cleared, so it answers "has this URL ever been public?" — which `published` does
+not: a post unpublished, renamed and republished still has an old URL in the
+wild. A never-published draft gets no rule (nothing links to it, and a rule would
+count against the table's cap).
+
+VERIFIED
+- pnpm exec tsc --noEmit: exit 0.
+- pnpm vitest run: 182 files / 3367 tests pass, 0 fail. New: 11 cases in
+  tests/unit/platform-slug-redirects.test.ts (write layer + surface predicate),
+  6 in seo-redirect-feed.test.ts (the platform scope), 7 in
+  seo-redirect-lookup.test.ts (middleware layer: right feed URL, tenant hosts
+  never resolve against the platform table, cache keys stay separate).
+  platform-posts-api.test.ts's "URL is locked" block became "renaming a live post
+  leaves a 301 behind" — 6 cases including the collision 409 and the failed-write
+  report.
+- prisma validate OK; migration SQL diffed against
+  `prisma migrate diff --from-empty --to-schema-datamodel` — identical DDL.
+- check:public-routes, check:article-typography, check:security, lint: all clean.
+- LIVE, against `pnpm dev`: /api/public/seo/redirects?scope=platform reaches
+  `prisma.platform_seo_redirects.findMany()` while the same route with no scope
+  reaches `prisma.tenants.findFirst()` — proving branch selection end to end.
+  Both then 500 on "Can't reach database server at
+  postgres-budstack-development.up.railway.app:5432", which is this machine, not
+  the code (Railway Postgres is private-network only). /terms served 200 with the
+  new middleware in place, so the added call site compiles and runs on the apex.
+- NOT verified here: an actual 301 on a live URL. It needs a database to hold a
+  renamed post and a rule. Deferred to a deploy or a human with DB access; every
+  layer beneath it is unit-covered.
+
+ONE PRE-EXISTING TEST FIXED (it broke on ANY new migration)
+tests/unit/platform-seo-settings-schema.test.ts asserted its migration was the
+LAST directory in prisma/migrations. Its own test name says "sorts after the
+migration that precedes it"; the assertion said "is the newest migration in the
+tree", which every future migration falsifies — mine was simply the first. Now
+pinned to its actual position (directly after 20260816010000_seed_sample_platform_posts).
+
+FLAGGED, NOT FIXED
+- The platform redirect table has NO admin UI. A rename writes rules; nothing
+  lists, edits or deletes them. Tenants get RedirectsTab for exactly this. Not in
+  any story's ACs — worth one if the table grows.
+- SEO_REDIRECT_MAX_PER_TENANT (500) now caps the platform table too. The name
+  says tenant; the constraint is per redirect TABLE (middleware caches the whole
+  thing). Reused rather than duplicated; renaming it would touch tenant code for
+  no behaviour change.
+- Renaming AND unpublishing in one save writes a 301 from the old URL to a URL
+  that 404s until it is republished. Correct once republished, and no worse than
+  the old URL 404ing directly; not worth a branch.
+- Unchanged from earlier stories: /blog index still emits no structured data;
+  app/learn/[slug]/page.tsx still queries twice per request and has no JSON-LD;
+  the seven loose .sql files at the top of prisma/migrations/ still never run;
+  untracked prisma/migrations/20260430_tenants_templateid_setnull/ would run if
+  committed by accident.
+
+NEXT
+US-020 (platform SEO audit panel) — the last story. Reuse SeoAuditTab from
+components/admin/seo/ against platform routes on /super-admin/seo; flag missing
+titles, descriptions, OG images and absent canonicals. Watch: the tenant audit
+route (app/api/tenant-admin/seo/audit/route.ts) reads seo_redirects among other
+tenant tables, so the platform version needs its own data source rather than a
+copy of that route. AC asks for a browser check — /super-admin is Clerk-gated, so
+expect to fall back to route/component tests and say so rather than claim it.
+
+================================================================================
+[2026-08-16] US-020 PASS — Platform SEO audit panel
 ================================================================================
 
-WHAT LANDED. A store can now name the profiles it runs elsewhere, and those
-URLs are published as `sameAs` on its Organization node — the property that
-lets a knowledge graph work out that the Instagram account, the LinkedIn page
-and this storefront are one business rather than three records with a similar
-name. Five new files, eight edited, no migration, no dependency.
+WHAT LANDED
+The audit we sell to tenants now runs against budstacks.io, on /super-admin/seo,
+above the route list it fixes. Four checks: no canonical, no title of its own, no
+description of its own, no social card of its own — over every authorable route
+(15 marketing pages + 18 published guides) and every published blog post.
 
-  lib/seo/social-links.ts          the rules, pure: https-only, cap 8, dedupe
-  lib/seo/tenant-social-links.ts   the ONE tenant-row -> list cascade
-  app/api/tenant-admin/seo/social-links/route.ts   the Pro write
-  components/admin/seo/BrandProfilesCard.tsx       the field
-  tests/unit/seo-social-links.test.ts              41 tests
+  lib/platform/seo-audit.ts (new, pure)  — the engine + PLATFORM_SEO_AUDIT_CHECKS
+  app/api/platform/seo/audit/route.ts    — withSuperAdmin, two reads, GET only
+  components/admin/seo/audit-copy.ts     — the four sentences that name the subject
+  app/super-admin/seo/platform-seo-client.tsx — the panel, wired to the editor
 
-DECISIONS WORTH THE WORDS.
+REUSED, NOT REWRITTEN
+- SeoAuditTab renders both audits. It gained two optional props — `apiPath`
+  (which audit) and `copy` (what to call what was checked) — both defaulting to
+  the store's, so the SEO Manager's call site is byte-identical. Score, grades,
+  grouping, per-finding deep links, the cache-age line and the Re-run button are
+  untouched.
+- `cachedSeoAudit` (the tenant 15-minute cache) holds this audit too, under
+  PLATFORM_SEO_AUDIT_CACHE_KEY = "platform:budstacks.io" — deliberately a shape
+  no tenant UUID can collide with, because one Map holds both.
+- `scoreSeoAudit` scores it. It gained an optional third argument: WHICH checks
+  this audit ran. Without it the platform result would have claimed to pass
+  sitemap-deleted-leak and qa-missing, which have no meaning off a storefront.
 
-  * `sameAs` IS OMITTED, NEVER EMPTY. `sameAs: []` is not "nothing to say yet",
-    it is a positive assertion that this business has no presence anywhere else
-    — a worse statement than silence and free to avoid. The builder emits the
-    key only when the normalised list is non-empty, and a test asserts the
-    string "sameAs" does not appear in the serialized node at all.
+THE DECISION THAT SHAPED THE REST: IT JUDGES WHAT THE PAGE SERVES
+Every check runs over the output of the same resolvers `generateMetadata` calls,
+so the audit cannot drift from the tags it describes. That needed two small
+extractions, both behaviour-preserving:
+  - `resolvePlatformPageSeo` out of `buildPlatformPageMetadata`
+  - `resolvePlatformPostSeo` out of `buildPlatformPostMetadata`
+Each returns the resolved strings plus whether the field fell through to the
+platform default — a question a built `Metadata` cannot answer (its
+openGraph.images is a five-way union, and "this is the default title" is not
+recoverable from the string without restating the cascade). The builders now
+consume their own resolver; nothing else about them changed.
+Third extraction, same reason: the guide fallback `{title, description}` was two
+literals inside app/documents/[slug]/page.tsx. It is now `platformGuideFallback`
+in lib/platform/seo-routes.ts, called by the page AND the audit, so the audit
+cannot report a title the page does not serve.
 
-  * BOTH PAGES THAT STATE THE ORGANIZATION NOW STATE THE SAME ONE. The homepage
-    and every Wire article emit the Organization under one `@id`
-    (json-ld.ts:206). If only the homepage carried the profiles, the two pages
-    would be two contradictory descriptions of one entity — the exact failure a
-    stable `@id` exists to prevent, already written down in tenant-logo.ts for
-    the logo. So `socialLinks` is a REQUIRED field on both source interfaces and
-    a REQUIRED 4th parameter of `buildOrganizationNode`: a caller that could
-    omit it would publish "this store has no profiles" on the article page. A
-    test builds both nodes and asserts the `@id` and the `sameAs` match.
+TWO JUDGEMENT CALLS WORTH REVIEWING
+1. `og-image-missing` compares the RENDERED CARD, not the column. The US-013 seed
+   pointed all 15 static routes AT the platform hero, so judging "is the column
+   filled in" would call fifteen identical grey cards fifteen images of their
+   own. Consequence: on day one the panel reports ~33 og findings (every route)
+   plus any post without a cover. That is true — budstacks.io has one stock
+   social image — and it is an `info` check, capped at 5 points, sorted last.
+2. `title-missing` is about AUTHORSHIP, not string comparison. An authored title
+   that repeats the platform default counts as the route's own. Consequence: the
+   HOMEPAGE is flagged, because PLATFORM_ROUTE_FALLBACKS["/"] is {} and it
+   inherits the layout's title. The advice is still right — the site's most
+   valuable string is currently a shared constant — but it is worth knowing the
+   first thing the panel will say about `/` is "no title of its own", alongside
+   /blog and /contact, which is the state the US-015 header predicted.
 
-  * ONE CASCADE, ITS OWN MODULE. `tenantSocialLinks(row)` mirrors
-    `tenantLogoRef(row)` exactly, and for the identical reason. It could not
-    live in social-links.ts: the settings schema imports the size caps from
-    that module, so importing `parseTenantSettings` there would close a cycle
-    (social-links -> tenant-settings -> validation/tenant-settings ->
-    social-links). site-verification.ts documents the same constraint.
+THE CANONICAL CHECK IS NOT A TAUTOLOGY
+It parses the declared canonical and asks whether its path names THIS page,
+rather than comparing the resolver's output with itself. That catches the real
+failure: `platformCanonical` returns the bare origin when `new URL` cannot parse
+a path, so an unparseable route would declare the HOMEPAGE canonical and ask
+Google to index that instead. Trailing slashes and percent-encoding are
+normalised on both sides. Today every route and post passes it; it is a guard,
+and it is the only check here that can fail on data nobody typed.
 
-  * SIZE IN THE SCHEMA, SCHEME IN THE ROUTE — the split US-026 and US-001 both
-    made, applied to an array. `lib/validation/tenant-settings.ts` bounds the
-    element COUNT and the element LENGTH and says nothing about https, because
-    that schema is what `parseTenantSettings` runs on every storefront read and
-    it fails as a UNIT: one hand-edited http entry would return `{}` and take
-    the tenant's tagline, colours and cookie banner down with it. Size is safe
-    to pin there because the write route is the only writer of the key and
-    cannot produce a violation. `readSocialLinks` re-applies the scheme on the
-    way out. A test proves it: a blob with a tagline and an http profile keeps
-    the tagline and publishes one link.
+VERIFIED
+- pnpm exec tsc --noEmit: exit 0.
+- pnpm vitest run: 183 files / 3405 tests pass, 0 fail. New:
+  tests/unit/platform-seo-audit.test.ts, 38 cases (engine, canonicalNamesRoute,
+  result shape, finding targets, the client parser, and the route: 401 for a
+  signed-out caller and for a tenant admin, no tenantId in either read, published
+  posts only, cache hit then refresh=1 recompute, and a failed query answering
+  500 with the safe message and NOT being cached).
+- pnpm build: exit 0. It caught what tsc cannot — a Next route module may export
+  only handlers and config, so `export const PLATFORM_SEO_AUDIT_CACHE_KEY` in the
+  route failed the build with "not a valid Route export field". The constant now
+  lives in lib/platform/seo-audit.ts. Both new entries appear in the output:
+  ƒ /api/platform/seo/audit and ƒ /super-admin/seo (2.23 kB).
+- check:public-routes (108 pages, still exactly 1 public API handler — the new
+  route is NOT public), check:article-typography, check:security, lint: clean.
+- LIVE against `pnpm dev`: signed-out GET /api/platform/seo/audit → 307 to
+  /auth/login, with and without ?refresh=1; /super-admin/seo the same. The
+  metadata refactor was checked on rendered HTML: /terms serves
+  <title>Terms of Service | BudStacks</title>, canonical and og:url
+  https://budstacks.io/terms, og:image the hero; /documents/seo serves
+  "The SEO Manager — The BudStacks Guide" with its summary as the description and
+  its own canonical — i.e. the extracted resolver and platformGuideFallback
+  produce exactly what shipped before.
+- ONE PRE-EXISTING TEST ADJUSTED (my diff broke it): platform-page-metadata.test
+  .ts grepped the guide page's source for the literal
+  "generatePlatformGuideMetadata(params.slug". The call now takes a second
+  argument and wraps over three lines, so the assertion is a whitespace-tolerant
+  regex. Same claim, not a weaker one.
+- visual: DEFERRED TO HUMAN REVIEW. /super-admin/seo is Clerk-gated and this
+  machine has no session; the database is Railway-private, so even with one the
+  two reads would fail here. Nothing in the panel's rendering was claimed on that
+  basis — the fetch/parse layer, the engine and the route are unit-covered, and
+  the component itself is unchanged apart from three substituted strings.
 
-  * THE WRITE REFUSES; THE READ FILTERS. `checkSocialLinks` (route + card) names
-    the offending line rather than dropping it, because a save that silently
-    returned a shorter list leaves an owner to work out which line went missing
-    and why. `normalizeSocialLinks` (read + builder) drops silently, because a
-    render path with no error.tsx boundary above it must publish less rather
-    than throw. Same rules, two dispositions, one module.
+FLAGGED, NOT FIXED
+- /learn/{slug} is NOT audited. Those are learning_resources rows whose metadata
+  is built inline in the page rather than by a shared resolver, so covering them
+  would mean a second copy of that logic in the audit — the one thing this story
+  was arranged to avoid. They ARE in the sitemap. Worth a story: extract a
+  `buildLearnResourceMetadata` and add them (they would light up immediately —
+  the page declares no openGraph at all, so every article shares the layout's
+  card, and description is nullable).
+- The audit judges the metadata the platform builders PRODUCE, not whether a page
+  calls one. A new marketing page that forgot `generatePlatformRouteMetadata`
+  would serve the layout's defaults and still read as clean. That belongs in a CI
+  guard next to check-public-routes-allowlisted.mjs, not in a runtime panel.
+- The platform redirect table still has no admin UI (carried from US-019).
+- Unchanged from earlier stories: /blog index emits no structured data;
+  app/learn/[slug]/page.tsx queries twice per request; the seven loose .sql files
+  at the top of prisma/migrations/ still never run; untracked
+  prisma/migrations/20260430_tenants_templateid_setnull/ would run if committed
+  by accident.
 
-  * THE AUDIT ROW RECORDS WHAT WAS PUBLISHED, NOT WHAT WAS STORED. `from` is the
-    previous list read through `readSocialLinks`, so a hand-edited http entry
-    that never reached anyone's structured data does not appear as something
-    the member just removed. The URLs go in the metadata, not a count: this is
-    an assertion of IDENTITY made in the store's name, and "who put that link
-    in our schema" is the question the row exists to answer.
-
-  * THE FIELD IS ONE TEXTAREA, ONE URL PER LINE. Named platform fields decide in
-    advance which platforms count; the list a store actually needs is whichever
-    of Instagram, a company register entry, a Trustpilot page and a parent
-    company's site it can stand behind. `sameAs` treats them identically, so the
-    field does.
-
-  * IT SITS IN THE VERIFICATION TAB, NOT A TENTH ONE. That tab is already where
-    a store states WHO IT IS to a search engine — the tokens prove the site is
-    yours, these links say which other records are also yours. Nothing here
-    configures a crawler, so it does not belong beside the AI Crawlers policy,
-    and the Pro tab strip stays at nine.
-
-  * THE COPY DOES NOT PROMISE A RANKING. The card says in as many words that
-    this is not a ranking lever and will not get the store cited — it removes an
-    ambiguity for an engine that has already found both records. It also warns
-    that listing an account you do not control teaches the engine the opposite
-    of what you meant.
-
-  * ESCAPE DISCIPLINE HELD WITHOUT A NEW RULE. A URL is a string an owner types,
-    and `new URL()` accepts `<` and `>` in a path — so `https://store/</script>`
-    is a VALID profile URL by the scheme rule. It reaches the DOM through
-    `serializeJsonLd` like every other value; a test smuggles that exact payload
-    in and asserts the output contains no literal `</script>`, contains the
-    escape `<`, and still parses back to the original string.
-
-FLAGGED, NOT FIXED (adjacent, out of scope):
-  * THREE PLACES NOW HOLD SOCIAL URLS. `settings.socialMedia` (an object of four
-    named platforms, rendered by components/footer.tsx),
-    `activeTemplate.layout.footerConfig.socialLinks` (an array, edited in
-    Branding -> Content, rendered by the FooterBrand/Full/Simple sections) and
-    now `settings.socialLinks`. They are genuinely different things — the first
-    two are template-scoped footer decoration that moves when a template is
-    swapped or cloned, this one is an entity fact about the business — but an
-    owner types their Instagram URL twice and nobody told them why. A later
-    story could seed this field from the footer list on first open; seeding is a
-    write path with its own hazards and was not in scope here.
-  * THE LocalBusiness NODE HAS NO `sameAs`. Google's LocalBusiness documentation
-    reads the property, and the node is a separate `@id` describing the same
-    business. Not a contradiction, just less said on one node — the AC named
-    Organization and the diff stops there.
-  * NO AUDIT CHECK FOR AN UNGROUNDED ENTITY. US-004's LLM-readiness section has
-    no "your store names no profiles" finding; it would be a natural addition to
-    audit-llm-checks.ts and is a story of its own.
-
-DOCKER RUNNER IMAGE: EXPLICITLY CHECKED. Two new modules under `lib/` (COPYied
-at Dockerfile:74); the route and the card compile into `.next/standalone`
-(Dockerfile:59). No new dependency and no runtime import chain leaving the
-copied set — social-links.ts imports nothing at all, tenant-social-links.ts
-reaches lib/tenant/tenant-settings, both already inside `lib/`. NO Dockerfile
-change needed.
-
-MERGE RULE (the #242/#243 incident): `git fetch origin main` run before this
-commit. `git merge-base HEAD origin/main` == `origin/main` (ce8a2d3) — main has
-not moved past this branch's base, so there was nothing to merge and the
-branch-local green IS the merge green. Recorded rather than assumed.
-
-HOW VERIFIED
-- `pnpm exec tsc --noEmit`                              -> exit 0 (repo-wide)
-- `pnpm vitest run tests/unit/seo-social-links.test.ts` -> 41 passed
-- adjacent suites (store-json-ld, article-json-ld,
-  tenant-settings, seo-upsell, seo-ai-crawlers,
-  seo-route-permissions)                                -> 145 passed
-- `pnpm vitest run` (full)                              -> 3026 passed, 30
-                                                           skipped, 168 files,
-                                                           0 failed
-                                                           (2985 before; +41)
-- `pnpm exec next lint` on all 17 touched TS/TSX files  -> 0 errors; one
-                                                           PRE-EXISTING warning
-                                                           (no-img-element at
-                                                           the-wire/[postSlug]/
-                                                           page.tsx:223, in the
-                                                           article body, not my
-                                                           diff)
-- `pnpm check:security`                                 -> both gates green
-- `tsx scripts/check-auth-wrappers.ts`                  -> 174 route files, the
-                                                           new route classified
-                                                           `wrapped`; the 5
-                                                           violations reported
-                                                           are all pre-existing
-                                                           and untouched here
-- VISUAL: DEFERRED TO HUMAN REVIEW. The SEO Manager is Clerk-gated and the
-  Verification tab needs the Railway DB, unreachable from this machine — the
-  same limit US-001 through US-005 recorded. No public route was added, so
-  there was nothing to live-curl either. The data path is covered instead: the
-  route's two gates (Basic 403 `upgrade_required`, `canEditSeo` refused BEFORE
-  the plan lookup, 401 before permissions resolve), the tenant-scoped
-  read-modify-write that preserves unknown settings keys, the 400 matrix
-  (non-array, non-string entry, over-long entry, over-long list, extra key,
-  http entry), and the empty-list save that clears the field.
-
-RALPH_COMPLETE — all six LLM Visibility stories are done.
+RALPH_COMPLETE — US-020 was the last story on the plan.

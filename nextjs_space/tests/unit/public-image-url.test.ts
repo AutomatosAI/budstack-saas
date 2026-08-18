@@ -102,6 +102,15 @@ describe("storedPublicImagePath", () => {
     );
   });
 
+  it("routes a stored platform upload key the same way", () => {
+    // Whatever resolves through the route must resolve here too, or metadata
+    // would fail closed on an image the blog renders perfectly well.
+    const platformKey = `${PREFIX}platform/uploads/1754000000000-cover.png`;
+    expect(storedPublicImagePath(platformKey)).toBe(
+      `${PUBLIC_IMAGE_ROUTE_PREFIX}${platformKey}`,
+    );
+  });
+
   it("passes through a path that is already on this origin", () => {
     expect(storedPublicImagePath("/favicon.svg")).toBe("/favicon.svg");
     expect(storedPublicImagePath(`${PUBLIC_IMAGE_ROUTE_PREFIX}${KEY}`)).toBe(
@@ -129,6 +138,7 @@ describe("storedPublicImagePath", () => {
       "//cdn.example/logo.png", // protocol-relative — no scheme to resolve against
       "development/tenants/tenant-a/templates/x/favicon.png", // not an upload
       "development/uploads/1-cover.png", // no tenant segment
+      "development/platform/logo-1-brand.png", // platform branding, not an upload
       `${PREFIX}tenants/tenant-a/uploads/1-icon.svg`, // never served
     ]) {
       expect(storedPublicImagePath(stored)).toBeNull();
@@ -157,6 +167,22 @@ describe("parsePublicImageRequest — what is servable", () => {
     expect(parsed?.contentType).toBe("image/webp");
   });
 
+  // Platform US-005 — budstacks.io's own blog covers. It is not a tenant, so
+  // its uploads carry no tenant id; everything else about them is unchanged.
+  it("resolves a platform upload, with no tenant on it", () => {
+    const parsed = parsePublicImageRequest(
+      `${PREFIX}platform/uploads/1754000000000-cover.jpg`,
+      PREFIX,
+    );
+
+    expect(parsed).toEqual({
+      s3Key: `${PREFIX}platform/uploads/1754000000000-cover.jpg`,
+      relativeKey: "platform/uploads/1754000000000-cover.jpg",
+      tenantId: null,
+      contentType: "image/jpeg",
+    });
+  });
+
   it("decodes percent-escapes exactly once", () => {
     const parsed = parsePublicImageRequest(
       `${PREFIX}tenants/tenant-a/uploads/1-my%20cover.png`,
@@ -180,6 +206,13 @@ describe("parsePublicImageRequest — what is NOT servable", () => {
     ["the tenant root itself", `${PREFIX}tenants/tenant-a/uploads/`],
     ["an empty tenant segment", `${PREFIX}tenants//uploads/x.png`],
     ["an SVG under a valid prefix", `${PREFIX}tenants/tenant-a/uploads/1-logo.svg`],
+    // The platform prefix opens `platform/uploads/` and nothing else under it:
+    // the branding keys written by super-admin/platform-settings, and any
+    // sibling folder someone adds later, stay private.
+    ["a platform key outside uploads/", `${PREFIX}platform/logo-1754000000000-brand.png`],
+    ["a platform sibling of uploads/", `${PREFIX}platform/backups/1-cover.png`],
+    ["a prefix that merely starts with platform", `${PREFIX}platformX/uploads/1-cover.png`],
+    ["an SVG under the platform prefix", `${PREFIX}platform/uploads/1-logo.svg`],
     ["an HTML file under a valid prefix", `${PREFIX}tenants/tenant-a/uploads/1-x.html`],
     ["a PDF under a valid prefix", `${PREFIX}tenants/tenant-a/uploads/1-terms.pdf`],
     ["no extension at all", `${PREFIX}tenants/tenant-a/uploads/1-cover`],

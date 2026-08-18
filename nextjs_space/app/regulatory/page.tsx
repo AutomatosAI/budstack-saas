@@ -1,16 +1,25 @@
 import { Metadata } from 'next';
+import { generatePlatformRouteMetadata } from '@/lib/seo/generate-platform-metadata';
 
-export const metadata: Metadata = {
-    title: 'Regulatory Information',
-    description: 'Regulatory compliance and legal information',
-};
+// US-015 — read from `platform_seo_settings`, falling back per column to the
+// title and description this page used to hardcode (now in
+// PLATFORM_ROUTE_FALLBACKS, keyed by the same path the admin list edits).
+export function generateMetadata(): Promise<Metadata> {
+    return generatePlatformRouteMetadata('/regulatory');
+}
 
 export default function RegulatoryPage() {
     return (
         <div className="container mx-auto px-4 py-16 max-w-4xl">
             <h1 className="text-4xl font-bold mb-8">Regulatory Information</h1>
 
-            <div className="prose prose-lg dark:prose-invert">
+            {/* No article class here, deliberately. Unlike the other legal
+                pages this one does NOT wrap itself in .budstacks-theme, so it
+                renders on the light :root palette — .bs-article's light body
+                colour would be grey-on-white. Every heading and paragraph below
+                already carries explicit utility classes, so the `prose-*` chain
+                that used to sit here was styling nothing it needed. */}
+            <div>
                 <p className="text-lg text-muted-foreground mb-6">
                     Last updated: {new Date().toLocaleDateString()}
                 </p>

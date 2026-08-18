@@ -43,8 +43,24 @@ const SERVABLE_CONTENT_TYPES: ReadonlySet<string> = new Set(
   Object.values(PUBLIC_IMAGE_TYPES_BY_EXTENSION),
 );
 
-/** Only keys under `tenants/{tenantId}/uploads/` are publicly servable. */
+/** A tenant's own uploads — `tenants/{tenantId}/uploads/`. */
 const TENANT_UPLOAD_KEY = /^tenants\/([^/]+)\/uploads\/(.+)$/;
+
+/**
+ * The platform's own uploads (Platform US-005). budstacks.io is not a tenant,
+ * so a blog cover written by `app/api/platform/upload` lives under its own
+ * top-level prefix instead of borrowing a tenant id it does not have.
+ *
+ * Exported so the route builds its S3 prefix from the same constant that
+ * decides what is servable — the two cannot drift into a stored `publicUrl`
+ * that 404s.
+ *
+ * Note the `uploads/` segment: the platform branding keys written by
+ * `app/api/super-admin/platform-settings` do not land under it and stay
+ * private, reachable only through a presigned URL as they are today.
+ */
+export const PLATFORM_UPLOAD_PREFIX = "platform/";
+const PLATFORM_UPLOAD_KEY = /^platform\/uploads\/.+$/;
 
 /** The Content-Type for a key's extension, or null if it is not a served image. */
 export function publicImageContentType(key: string): string | null {
@@ -80,12 +96,13 @@ export function publicImagePath(key: string): string {
 const SIGNED_S3_QUERY = /[?&]X-Amz-/i;
 
 /**
- * The only key shape `parsePublicImageRequest` above will serve. Matched
- * loosely (anywhere in the key) because a stored key keeps the bucket folder
- * prefix — `development/tenants/{id}/uploads/…` — which is configuration this
- * pure module has no way to know.
+ * The key shapes `parsePublicImageRequest` above will serve. Matched loosely
+ * (anywhere in the key) because a stored key keeps the bucket folder prefix —
+ * `development/tenants/{id}/uploads/…` — which is configuration this pure
+ * module has no way to know.
  */
-const TENANT_UPLOAD_SEGMENT = /(?:^|\/)tenants\/[^/]+\/uploads\/.+/;
+const SERVABLE_UPLOAD_SEGMENT =
+  /(?:^|\/)(?:tenants\/[^/]+|platform)\/uploads\/.+/;
 
 /**
  * Durable, origin-relative URL for an image reference as it is actually STORED
@@ -121,10 +138,10 @@ export function storedPublicImagePath(
     return SIGNED_S3_QUERY.test(trimmed) ? null : trimmed;
   }
 
-  // A bare S3 key. Only a tenant upload with a served extension has a route —
-  // a template asset key (`tenants/{id}/templates/…/favicon.png`) or an SVG
-  // would resolve to a guaranteed 404 from the route above.
-  if (!TENANT_UPLOAD_SEGMENT.test(trimmed)) return null;
+  // A bare S3 key. Only a tenant or platform upload with a served extension has
+  // a route — a template asset key (`tenants/{id}/templates/…/favicon.png`) or
+  // an SVG would resolve to a guaranteed 404 from the route above.
+  if (!SERVABLE_UPLOAD_SEGMENT.test(trimmed)) return null;
   return publicImageContentType(trimmed) ? publicImagePath(trimmed) : null;
 }
 
@@ -133,8 +150,8 @@ export interface PublicImageRequest {
   readonly s3Key: string;
   /** The same key with the bucket folder prefix stripped. */
   readonly relativeKey: string;
-  /** Owning tenant, read out of the key itself. */
-  readonly tenantId: string;
+  /** Owning tenant, read out of the key itself — null for a platform upload. */
+  readonly tenantId: string | null;
   /** Content-Type to serve, derived from the extension — never from S3. */
   readonly contentType: string;
 }
@@ -158,16 +175,21 @@ export function parsePublicImageRequest(
   const relativeKey = normaliseTenantScopedKey(rawKeyPath, folderPrefix);
   if (s3Key === null || relativeKey === null) return null;
 
-  const match = relativeKey.match(TENANT_UPLOAD_KEY);
-  if (!match) return null;
-  const tenantId = match[1];
+  const tenantId = relativeKey.match(TENANT_UPLOAD_KEY)?.[1] ?? null;
 
-  // Defence in depth: the shape is already proved above, but the guard is what
-  // decides cross-tenant S3 access everywhere else (lib/storage/s3.ts), so it
-  // decides here too — one place to change if those rules ever tighten. It gets
-  // the RAW path, which is its contract: it decodes once itself, and handing it
-  // the decoded key would decode twice and reject any filename holding a `%`.
-  if (!isKeyInTenantScope(rawKeyPath, tenantId, { folderPrefix })) return null;
+  if (tenantId) {
+    // Defence in depth: the shape is already proved above, but the guard is what
+    // decides cross-tenant S3 access everywhere else (lib/storage/s3.ts), so it
+    // decides here too — one place to change if those rules ever tighten. It gets
+    // the RAW path, which is its contract: it decodes once itself, and handing it
+    // the decoded key would decode twice and reject any filename holding a `%`.
+    if (!isKeyInTenantScope(rawKeyPath, tenantId, { folderPrefix })) return null;
+  } else if (!PLATFORM_UPLOAD_KEY.test(relativeKey)) {
+    // Neither a tenant upload nor a platform one: everything else in the bucket
+    // — template assets, the platform branding keys, the bucket root — stays
+    // unreachable through this route.
+    return null;
+  }
 
   const contentType = publicImageContentType(relativeKey);
   if (!contentType) return null;

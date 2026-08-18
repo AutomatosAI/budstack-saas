@@ -20,8 +20,10 @@ import {
  *
  * It is public by necessity — a mail client and an anonymous storefront visitor
  * both have to fetch it with no session. What keeps that safe:
- *   - only keys under `tenants/{tenantId}/uploads/` are servable, checked with
- *     the same guard that gates every other S3 read (lib/storage/s3-tenant-guard);
+ *   - only keys under `tenants/{tenantId}/uploads/` — or, since Platform US-005,
+ *     `platform/uploads/` for budstacks.io's own blog covers — are servable, the
+ *     tenant ones checked with the same guard that gates every other S3 read
+ *     (lib/storage/s3-tenant-guard);
  *   - the extension allow-list is images only, SVG excluded, and the served
  *     Content-Type is derived from that allow-list rather than from S3, so a
  *     mislabelled object can never come back as HTML;

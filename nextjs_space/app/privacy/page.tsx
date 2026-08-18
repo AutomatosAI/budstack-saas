@@ -3,11 +3,14 @@ import Link from "next/link";
 import { Shield, FileText } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
+import { generatePlatformRouteMetadata } from "@/lib/seo/generate-platform-metadata";
 
-export const metadata: Metadata = {
-    title: "Privacy Policy | BudStacks",
-    description: "How BudStacks collects, processes and protects personal data on behalf of operators and visitors.",
-};
+// US-015 — read from `platform_seo_settings`, falling back per column to the
+// title and description this page used to hardcode (now in
+// PLATFORM_ROUTE_FALLBACKS, keyed by the same path the admin list edits).
+export function generateMetadata(): Promise<Metadata> {
+    return generatePlatformRouteMetadata("/privacy");
+}
 
 const SECTIONS = [
     {
@@ -320,7 +323,7 @@ export default function PrivacyPage() {
 
                     {/* Content Card */}
                     <div className="card-floating p-10 lg:p-12">
-                        <div className="prose prose-invert prose-lg max-w-none prose-headings:font-bs-serif prose-headings:text-bs-fg-0 prose-p:text-bs-fg-2 prose-li:text-bs-fg-2 prose-strong:text-bs-fg-1 prose-a:text-bs-green-300">
+                        <div className="bs-article max-w-none">
                             {SECTIONS.map((s) => (
                                 <section key={s.id} id={s.id} className="mb-10 last:mb-0">
                                     <h2 className="font-bs-serif text-2xl font-medium text-bs-fg-0 mb-4">

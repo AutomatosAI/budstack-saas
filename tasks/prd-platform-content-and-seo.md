@@ -170,9 +170,9 @@ Reuse targets, all proven in production: `posts` model (`prisma/schema.prisma:68
 - [ ] **Author is denormalised strings, not a `users` FK** — `users` is tenant-scoped (`lib/db.ts:73`), so an FK join would hit tenant scoping on the apex where no tenant context exists. It also sidesteps the Clerk-id-vs-`users.id` P2003 class that broke the lekkerweed blog (PR #226). `learning_resources` sets the same precedent by carrying no author relation at all
 - [ ] Indexes on `[published, publishedAt]` and `[slug]`
 - [ ] **`platform_posts` is NOT added to `tenantScopedModels` (`lib/db.ts:49`)** — that Set is opt-in, so a platform model is unscoped by default. Adding it would break every apex query
-- [ ] Hand-written `.sql` in `prisma/migrations/` — the build runs `prisma generate` only, there is no `prisma migrate` step
-- [ ] **The SQL is applied to Railway prod and verified in psql BEFORE the code that queries it deploys**, or every `/blog` request 500s
-- [ ] `prisma generate` succeeds; typecheck passes
+- [ ] Migration authored as **`prisma/migrations/<timestamp>_add_platform_posts/migration.sql`** — a timestamped directory, not a loose `.sql` at the top of `prisma/migrations/`. `entrypoint.sh` runs `prisma migrate deploy` on boot, so a correctly-shaped migration applies itself; a loose file is silently ignored, which is how `add_platform_leads.sql` ended up needing manual psql
+- [ ] Never `prisma migrate dev` or `db push` — `DATABASE_URL` may be live
+- [ ] `pnpm prisma validate` and `pnpm prisma generate` both succeed; typecheck passes
 
 #### US-007: Platform posts write API
 **Description:** As a super-admin, I need endpoints to create, edit, publish and delete platform posts.
@@ -274,7 +274,7 @@ Reuse targets: `components/admin/seo/` (22 files) and `app/tenant-admin/seo/seo-
 - [ ] Model keyed by marketing route, holding title, description, OG image, `noindex`
 - [ ] **Covers every public marketing route, not a subset** — `/`, `/marketplace`, `/learn`, `/blog`, `/contact`, plus `/documents` and its guides, `/faq`, `/regulatory`, `/terms`, `/privacy`, `/cookies`, `/dpa`, `/aup`, `/legal/*`. US-000 makes all of these publicly indexable; any route without an owner here inherits the root layout's generic title, which is the defect US-011 fixes for posts
 - [ ] One platform default OG image seeds the table so no route is left without one
-- [ ] SQL applied to prod before the reading code deploys
+- [ ] Migration authored as a timestamped `prisma/migrations/<timestamp>_<name>/migration.sql` directory so it applies on deploy boot
 - [ ] `/super-admin/seo` page reusing `SeoEditorModal` and `GooglePreview` from `components/admin/seo/`
 - [ ] Not added to `tenantScopedModels`
 - [ ] Explicit row types
@@ -362,7 +362,7 @@ Reuse targets: `components/admin/seo/` (22 files) and `app/tenant-admin/seo/seo-
 - **FR-7:** Every platform write endpoint is super-admin only and 403s a tenant admin.
 - **FR-8:** All post HTML is sanitised on write, using the sanitiser already applied on the tenant read path.
 - **FR-9:** No platform model is added to `tenantScopedModels`.
-- **FR-10:** Every schema change is applied as SQL to prod and verified before the code that reads it deploys.
+- **FR-10:** Every schema change ships as a timestamped Prisma migration directory, so `prisma migrate deploy` applies it on boot. No loose `.sql` files, no `migrate dev`, no `db push`.
 - **FR-11:** Every public page and unauthenticated endpoint is present in `isPublicRoute`, and CI proves it by fetching them logged-out.
 
 ## 5. Non-Goals (Out of Scope)
@@ -388,7 +388,8 @@ Reuse targets: `components/admin/seo/` (22 files) and `app/tenant-admin/seo/seo-
 
 **Traps that have already cost time in this repo — treat each as a hard constraint:**
 
-- **Migrations are loose `.sql` files.** `postinstall` runs `prisma generate` only; there is no `prisma migrate` in the build. Schema changes are hand-applied, and **the SQL must land in prod before the code that queries it deploys** or every affected request 500s.
+- **Migrations DO apply automatically — but only if authored in the right shape.** `nextjs_space/entrypoint.sh` runs `npx prisma migrate deploy` on every container boot, and 40 timestamped migration directories apply that way. What does **not** apply is a loose `.sql` file dropped at the top of `prisma/migrations/` — `migrate deploy` only reads `<timestamp>_<name>/migration.sql`, so the seven loose files there (`add_platform_leads.sql`, `add_platform_config.sql`, `add_wire_mode_and_post_source.sql`, and four more) have never been applied by any deploy. That is exactly why `platform_leads` had to be run by hand in psql for #254.
+  **Author every schema change as `prisma/migrations/<timestamp>_<name>/migration.sql` and it ships itself.** Never `migrate dev` / `db push` — `DATABASE_URL` may point at a live database. The seven loose files are pre-existing drift worth cleaning up separately; do not add an eighth.
 - **TS7006 on the any-widened Prisma client.** `findMany`/`groupBy` results make map callbacks implicit `any`. Declare row types explicitly on every new query. This recurs on every new query page.
 - **Clerk id ≠ `users.id`.** `getCurrentUser().id` returns the Clerk id; using it as a UUID FK throws P2003. This broke the lekkerweed blog (PR #226). US-006 avoids the class entirely with denormalised author strings.
 - **`tenantScopedModels` is opt-in** (`lib/db.ts:49`). Platform models must stay out of it. Note `users` and `posts` are both in it — which is why platform posts are a separate table rather than tenant `posts` with a null `tenantId`.
