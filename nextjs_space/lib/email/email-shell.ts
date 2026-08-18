@@ -70,6 +70,15 @@ export interface RenderEmailBodyOptions {
    * carries {@link UNSUBSCRIBE_URL_SLOT} instead.
    */
   readonly unsubscribeUrl?: string | null;
+  /**
+   * PREVIEW ONLY — resolve the logo against this origin instead of the
+   * tenant's own base URL. The preview pane's iframe is `srcDoc`, so it
+   * inherits the ADMIN page's CSP, whose img-src carries no tenant domains —
+   * assets must resolve against the origin the author is actually on to load
+   * there. Never set on a send or save path: a mailed shell must carry the
+   * tenant's own host.
+   */
+  readonly baseUrlOverride?: string;
 }
 
 /** Postal columns, in the order they are joined into one footer line. */
@@ -125,7 +134,7 @@ export async function renderEmailBody(
   tenant: EmailShellTenant,
   options: RenderEmailBodyOptions = {},
 ): Promise<string> {
-  const baseUrl = getTenantBaseUrl(tenant);
+  const baseUrl = options.baseUrlOverride ?? getTenantBaseUrl(tenant);
   const category = options.category ?? DEFAULT_EMAIL_CATEGORY;
 
   return render(

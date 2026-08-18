@@ -86,6 +86,15 @@ export interface RenderEmailPreviewInput {
   readonly tenantId: string | null;
   /** Live tenant name, so the preview reads like the real thing. */
   readonly businessName?: string | null;
+  /**
+   * The origin of the admin request this preview is FOR. Images and the shell
+   * logo absolutise against it instead of the tenant's domain: the pane's
+   * srcdoc iframe inherits the admin page's CSP, whose img-src carries no
+   * tenant hosts, so a tenant-domain URL renders there as a broken image while
+   * being perfectly fetchable from a real inbox. The stored/mailed render
+   * never takes this path.
+   */
+  readonly baseUrlOverride?: string;
 }
 
 /**
@@ -99,12 +108,14 @@ export async function renderEmailPreview({
   eventType,
   tenantId,
   businessName,
+  baseUrlOverride,
 }: RenderEmailPreviewInput): Promise<string> {
   const stored = await resolveTemplateContent({
     contentHtml,
     contentJson,
     tenantId,
     category,
+    baseUrlOverride,
   });
 
   // `resolveTemplateContent` returns no HTML when the request carried neither

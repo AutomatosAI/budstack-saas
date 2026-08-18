@@ -65,34 +65,41 @@ export function EditTemplateClient({
     }
   };
 
+  // The same sized-wrapper shape as the tenant-admin email screens: the editor
+  // is h-full and fills a `flex-1 overflow-hidden` box instead of guessing the
+  // viewport, so the Save header can never be scrolled out of reach.
   return (
-    <div className="space-y-8">
-      <Link
-        href="/super-admin/emails"
-        className="inline-flex items-center text-sm text-bs-fg-muted hover:text-bs-fg"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-        Back to Email Templates
-      </Link>
+    <div className="flex h-[calc(100vh-6rem)] flex-col">
+      <div className="shrink-0 space-y-4">
+        <Link
+          href="/super-admin/emails"
+          className="inline-flex items-center text-sm text-bs-fg-muted hover:text-bs-fg"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+          Back to Email Templates
+        </Link>
 
-      <div className="bs-page-header-centered">
-        <h1 className="bs-page-title" style={sectionTitleStyle}>
-          {template.name}
-        </h1>
-        <p className="bs-page-subtitle">
-          Update the system email template content and metadata.
-        </p>
+        <div className="bs-page-header-centered">
+          <h1 className="bs-page-title" style={sectionTitleStyle}>
+            {template.name}
+          </h1>
+          <p className="bs-page-subtitle">
+            Update the system email template content and metadata.
+          </p>
+        </div>
       </div>
 
-      <EmailEditor
-        initialData={template}
-        onSave={handleSave}
-        isSaving={isSaving}
-        testSendUrl={`/api/super-admin/email-templates/${template.id}/test-send`}
-        previewUrl="/api/super-admin/email-templates/preview"
-        templateId={template.id}
-        eventType={eventType}
-      />
+      <div className="flex-1 overflow-hidden pt-6">
+        <EmailEditor
+          initialData={template}
+          onSave={handleSave}
+          isSaving={isSaving}
+          testSendUrl={`/api/super-admin/email-templates/${template.id}/test-send`}
+          previewUrl="/api/super-admin/email-templates/preview"
+          templateId={template.id}
+          eventType={eventType}
+        />
+      </div>
     </div>
   );
 }

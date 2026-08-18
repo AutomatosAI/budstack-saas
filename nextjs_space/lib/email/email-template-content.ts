@@ -45,6 +45,8 @@ export interface TemplateContentInput {
    * once for many tenants' events.
    */
   readonly trackable?: boolean;
+  /** PREVIEW ONLY — see {@link RenderEmailTemplateOptions.baseUrlOverride}. */
+  readonly baseUrlOverride?: string;
 }
 
 /** Prisma `data` fragment — spread into a create/update. */
@@ -73,6 +75,7 @@ export async function resolveTemplateContent({
   tenantId,
   category,
   trackable,
+  baseUrlOverride,
 }: TemplateContentInput): Promise<TemplateContentFields> {
   if (contentJson) {
     return {
@@ -81,6 +84,7 @@ export async function resolveTemplateContent({
         tenant: tenantId ? await requireEmailShellTenant(tenantId) : null,
         category: emailCategoryOfTemplate(category),
         tracking: trackable && tenantId ? { tenantId } : null,
+        baseUrlOverride,
       }),
       contentJson: toJsonColumnValue(contentJson),
     };

@@ -226,8 +226,13 @@ export const EmailEditor = ({
     }
   };
 
+  // h-full, not a viewport calc: every host wraps this editor in a sized
+  // `flex-1 overflow-hidden` box. The old `h-[calc(100vh-100px)]` overshot
+  // that box, and caret-reveal scrolling on the first edit then pushed the
+  // header card — Save button included — out of the clipped area with no way
+  // to scroll back.
   return (
-    <div className="flex h-[calc(100vh-100px)] flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       <div className="bs-card bs-card-pad shrink-0">
         <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-4">
           <div className="space-y-2">

@@ -110,6 +110,13 @@ export interface RenderEmailTemplateOptions {
    * before this story.
    */
   readonly tracking?: { readonly tenantId: string } | null;
+  /**
+   * PREVIEW ONLY — absolutise images (and the shell logo) against this origin
+   * instead of the tenant's base URL, so the srcdoc preview iframe — which
+   * inherits the admin page's CSP — can actually load them. Never set when the
+   * result is stored or mailed: those must carry the tenant's own host.
+   */
+  readonly baseUrlOverride?: string;
 }
 
 /**
@@ -170,9 +177,10 @@ export async function renderEmailTemplateHtml({
   category,
   unsubscribeUrl,
   tracking,
+  baseUrlOverride,
 }: RenderEmailTemplateOptions): Promise<string> {
   const doc = parseEmailContentJson(contentJson);
-  const baseUrl = tenant ? getTenantBaseUrl(tenant) : null;
+  const baseUrl = baseUrlOverride ?? (tenant ? getTenantBaseUrl(tenant) : null);
   const trackingContext = resolveTrackingContext(tracking, tenant, baseUrl);
 
   const normalised = normaliseEmailContentJson(doc, baseUrl);
@@ -188,7 +196,7 @@ export async function renderEmailTemplateHtml({
       trackingContext ? trackingPixelHtml(trackingContext) : ""
     }`,
     tenant ?? SYSTEM_SHELL_TENANT,
-    { category, unsubscribeUrl },
+    { category, unsubscribeUrl, baseUrlOverride },
   );
 
   // `applyHeightAttributes: false` — juice mirrors an inlined `height` onto the
