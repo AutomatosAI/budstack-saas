@@ -167,7 +167,7 @@
     "react-email": "^4.3.2",
     "react-hook-form": "7.78.0",
     "react-hot-toast": "2.6.0",
-    "react-intersection-observer": "10.0.3",
+    "react-intersection-observer": "11.0.0",
     "react-is": "19.2.7",
     "react-plotly.js": "2.6.0",
     "react-resizable-panels": "2.1.3",
