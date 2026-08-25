@@ -5,6 +5,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { fetchClientByEmail, updateClient } from "@/lib/drgreen/doctor-green-api";
+import { ADMIN_APPROVAL } from "@/lib/drgreen/approval-status";
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { eraseUser } from "@/lib/gdpr/erasure";
 import { apiError, apiValidationError } from "@/lib/api-error";
@@ -380,7 +381,10 @@ export const PATCH = withAuth(async (request, { user }, params) => {
         },
         data: {
           isKycVerified: true,
-          adminApproval: "APPROVED",
+          // Dr Green's enum value — the legacy "APPROVED" literal here made
+          // the products-page gate (which only accepts VERIFIED) disagree
+          // with every other surface. See lib/drgreen/approval-status.ts.
+          adminApproval: ADMIN_APPROVAL.VERIFIED,
           updatedAt: new Date(),
         },
       });

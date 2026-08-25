@@ -387,7 +387,7 @@ export async function fetchProduct(
  * Parse the /dapp/clients response into a clients[] array.
  * Dr Green's API returns several nestings across versions — handle them all.
  */
-function extractClientsFromResponse(response: any): any[] {
+export function extractClientsFromResponse(response: any): any[] {
   if (Array.isArray(response)) return response;
   if (Array.isArray(response?.data)) return response.data;
   if (Array.isArray(response?.data?.items)) return response.data.items;

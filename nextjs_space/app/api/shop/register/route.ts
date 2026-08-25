@@ -143,19 +143,33 @@ export const POST = withAuth(async (req, { user }) => {
       config,
     );
 
-    // Update user with additional info
-    await prisma.users.update({
-      where: { id: dbUser.id },
-      data: {
-        name: `${personal.firstName} ${personal.lastName}`,
-        firstName: personal.firstName,
-        lastName: personal.lastName,
-        // Phone was collected + validated above but previously only sent to
-        // Dr Green — persist it locally so Customers detail/export show it.
-        phone: `${phoneCode} ${contactNumber}`.trim(),
-        updatedAt: new Date(),
-      },
-    });
+    // Update user with additional info. The Dr Green client already exists at
+    // this point — a local persistence failure must NOT fail the registration
+    // (log and continue; the status-refresh sweep self-heals the client id).
+    try {
+      await prisma.users.update({
+        where: { id: dbUser.id },
+        data: {
+          name: `${personal.firstName} ${personal.lastName}`,
+          firstName: personal.firstName,
+          lastName: personal.lastName,
+          // Phone was collected + validated above but previously only sent to
+          // Dr Green — persist it locally so Customers detail/export show it.
+          phone: `${phoneCode} ${contactNumber}`.trim(),
+          // The Dr Green client id was previously returned to the browser but
+          // never persisted, leaving these customers unreachable by webhooks
+          // and status sync — permanently "pending" on every admin surface.
+          ...(result.clientId ? { drGreenClientId: result.clientId } : {}),
+          ...(tenant?.id && !dbUser.tenantId ? { tenantId: tenant.id } : {}),
+          updatedAt: new Date(),
+        },
+      });
+    } catch (persistError) {
+      console.error(
+        "[shop/register] Dr Green client created but local persistence failed",
+        persistError instanceof Error ? persistError.message : persistError,
+      );
+    }
 
     return NextResponse.json({
       success: true,

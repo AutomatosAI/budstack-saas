@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { getTenantFromRequest } from "@/lib/tenant/tenant";
+import { ADMIN_APPROVAL, canonicalAdminApproval } from "@/lib/drgreen/approval-status";
 import { apiError } from "@/lib/api-error";
 
 export const GET = withAuth(async (req, { user }) => {
@@ -53,7 +54,10 @@ export const GET = withAuth(async (req, { user }) => {
       drGreenClientId: consultation.drGreenClientId,
       kycLink: consultation.kycLink,
       isKycVerified: consultation.isKycVerified,
-      adminApproval: consultation.adminApproval,
+      // Canonicalised so consumers comparing to "VERIFIED" (the products-page
+      // gate) also accept rows stored with the legacy "APPROVED" literal.
+      adminApproval:
+        canonicalAdminApproval(consultation.adminApproval) ?? ADMIN_APPROVAL.PENDING,
     });
   } catch (error: any) {
     console.error("Error fetching consultation status:", error);

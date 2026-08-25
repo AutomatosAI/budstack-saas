@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useTransition } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
-import { Users, Search, Phone, ShoppingBag, Share2, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { format, formatDistanceToNow } from "date-fns";
+import { Users, Search, Phone, ShoppingBag, Share2, Eye, RefreshCw } from "lucide-react";
 import {
   SearchInput,
   EmptyState,
@@ -16,6 +17,11 @@ import {
 import { useTableState } from "@/lib/admin/url-state";
 import { exportToCSV } from "@/lib/admin/csv-export";
 import { normalizeTag } from "@/lib/customers/tag-format";
+import {
+  VERIFICATION_STATUS_DISPLAY,
+  type CustomerVerificationStatus,
+} from "@/lib/drgreen/approval-status";
+import { refreshCustomerStatuses } from "./refresh-status-action";
 import { toast } from "@/components/ui/sonner";
 import { useCallback } from "react";
 
@@ -28,9 +34,9 @@ export interface Customer {
   _count: {
     orders: number;
   };
-  // PRD-220 Part B: inline ID-document upload failed during registration —
-  // the customer is stuck unverified until they (or we) re-upload.
-  idUploadFailed?: boolean;
+  /** Dr Green approval mirror, derived server-side (last-known, not live).
+   *  Subsumes the former idUploadFailed flag (ID_UPLOAD_FAILED status). */
+  verificationStatus?: CustomerVerificationStatus;
 }
 
 interface CustomersTableProps {
@@ -38,6 +44,17 @@ interface CustomersTableProps {
   totalCount: number;
   /** US-024: every tag in use across the tenant — the tag filter's options. */
   availableTags?: string[];
+  /** Tenant-wide approval breakdown (unfiltered, matches the stat cards). */
+  statusCounts?: Record<CustomerVerificationStatus, number>;
+  /** Last "Refresh from Dr Green" run (ISO), or null if never refreshed. */
+  lastSyncedAt?: string | null;
+  /** False for a cross-tenant super-admin view — nothing to refresh. */
+  canRefresh?: boolean;
+}
+
+function StatusPill({ status }: { status: CustomerVerificationStatus }) {
+  const display = VERIFICATION_STATUS_DISPLAY[status];
+  return <RowPill tone={display.tone}>{display.label}</RowPill>;
 }
 
 /** Filter shape for useTableState — `tag` rides the URL as ?tag=<value>. */
@@ -50,7 +67,29 @@ export function CustomersTable({
   customers,
   totalCount,
   availableTags = [],
+  statusCounts,
+  lastSyncedAt,
+  canRefresh = false,
 }: CustomersTableProps) {
+  const router = useRouter();
+  const [isRefreshing, startRefresh] = useTransition();
+
+  const handleRefreshStatuses = () => {
+    startRefresh(async () => {
+      const result = await refreshCustomerStatuses();
+      if (result.ok) {
+        toast.success(
+          result.updated
+            ? `Statuses refreshed — ${result.updated} customer${result.updated === 1 ? "" : "s"} updated.`
+            : "Statuses refreshed — everything already up to date.",
+        );
+        router.refresh();
+      } else {
+        toast.error(result.error || "Refresh failed. Try again shortly.");
+      }
+    });
+  };
+
   const [
     { search, filters, page, pageSize, sort },
     { setSearch, setFilter, setPage, setPageSize, setSort, resetFilters },
@@ -111,6 +150,9 @@ export function CustomersTable({
       name: c.name || "N/A",
       email: c.email,
       phone: c.phone || "N/A",
+      status: c.verificationStatus
+        ? VERIFICATION_STATUS_DISPLAY[c.verificationStatus].label
+        : "N/A",
       orders: c._count.orders,
       createdAt: format(new Date(c.createdAt), "yyyy-MM-dd"),
     }));
@@ -119,6 +161,7 @@ export function CustomersTable({
       { key: "name" as const, label: "Name" },
       { key: "email" as const, label: "Email" },
       { key: "phone" as const, label: "Phone" },
+      { key: "status" as const, label: "Status" },
       { key: "orders" as const, label: "Orders" },
       { key: "createdAt" as const, label: "Joined" },
     ];
@@ -192,6 +235,42 @@ export function CustomersTable({
             />
           </div>
         </div>
+
+        {/* Approval-status summary + refresh. Counts are tenant-wide (they
+            ignore search/tag filters, like the stat cards above). */}
+        {statusCounts && (
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <RowPill tone="emerald">{statusCounts.VERIFIED} verified</RowPill>
+              <RowPill tone="amber">{statusCounts.PENDING} pending</RowPill>
+              <RowPill tone="red">
+                {statusCounts.REJECTED + statusCounts.ID_UPLOAD_FAILED} rejected / failed
+              </RowPill>
+              <RowPill tone="slate">{statusCounts.NOT_SUBMITTED} not submitted</RowPill>
+            </div>
+            {canRefresh && (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-bs-fg-muted">
+                  {lastSyncedAt
+                    ? `Synced ${formatDistanceToNow(new Date(lastSyncedAt), { addSuffix: true })}`
+                    : "Showing last-known statuses"}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRefreshStatuses}
+                  disabled={isRefreshing}
+                  className="bs-btn bs-btn-ghost bs-btn-sm gap-1.5 disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`}
+                    aria-hidden="true"
+                  />
+                  {isRefreshing ? "Refreshing..." : "Refresh from Dr Green"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div>
@@ -244,6 +323,7 @@ export function CustomersTable({
                     onSort={setSort}
                     className="hidden md:table-cell"
                   />
+                  <th className="text-left hidden sm:table-cell">Status</th>
                   <th className="text-center hidden sm:table-cell">
                     <span className="flex items-center justify-center gap-1.5">
                       <ShoppingBag className="h-3.5 w-3.5 text-bs-fg-muted" aria-hidden="true" />
@@ -275,10 +355,12 @@ export function CustomersTable({
                           <p className="font-medium text-bs-fg truncate">
                             {customer.name || "N/A"}
                           </p>
-                          {customer.idUploadFailed && (
-                            <RowPill tone="red" className="mt-0.5">
-                              ID upload failed
-                            </RowPill>
+                          {/* Small screens: the Status column is hidden, so the
+                              pill rides under the name instead. */}
+                          {customer.verificationStatus && (
+                            <span className="sm:hidden mt-0.5 inline-block">
+                              <StatusPill status={customer.verificationStatus} />
+                            </span>
                           )}
                           <a
                             href={`mailto:${customer.email}`}
@@ -302,6 +384,13 @@ export function CustomersTable({
                       >
                         {customer.email}
                       </a>
+                    </td>
+                    <td className="hidden sm:table-cell">
+                      {customer.verificationStatus ? (
+                        <StatusPill status={customer.verificationStatus} />
+                      ) : (
+                        <span className="text-xs text-bs-fg-muted">—</span>
+                      )}
                     </td>
                     <td className="text-center hidden sm:table-cell">
                       <RowPill tone="gold">{customer._count.orders}</RowPill>

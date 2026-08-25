@@ -2,12 +2,18 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePagePermission } from "@/lib/permissions/require-page-permission";
+import { can } from "@/lib/permissions/resolve";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
 import { Prisma } from "@prisma/client";
 import { listTenantTags } from "@/lib/customers/customer-tags";
 import { tagSchema } from "@/lib/customers/tag-format";
 import { ERASURE_EMAIL_DOMAIN } from "@/lib/gdpr/erasure";
-import { Users, UserCheck, UserPlus } from "lucide-react";
+import {
+  deriveVerificationStatus,
+  type CustomerVerificationStatus,
+} from "@/lib/drgreen/approval-status";
+import { AUDIT_ACTIONS } from "@/lib/audit-log";
+import { Users, UserPlus, ShieldCheck } from "lucide-react";
 import { StatCard } from "@/components/admin/shared";
 import { CustomersTable } from "./customers-table";
 
@@ -26,7 +32,7 @@ interface CustomersPageProps {
 export default async function CustomersListPage({
   searchParams,
 }: CustomersPageProps) {
-  await requirePagePermission("canViewCustomers");
+  const permissionCtx = await requirePagePermission("canViewCustomers");
   const user = await currentUser();
 
   if (
@@ -143,7 +149,7 @@ export default async function CustomersListPage({
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [filteredCount, rawCustomers, totalCustomersCount, recentSignupsCount, tenantQuestionnaires, availableTags] =
+  const [filteredCount, rawCustomers, totalCustomersCount, recentSignupsCount, tenantQuestionnaires, availableTags, allCustomerEmails, lastStatusRefresh] =
     await Promise.all([
       prisma.users.count({ where: whereClause }),
       prisma.users.findMany({
@@ -192,6 +198,11 @@ export default async function CustomersListPage({
         select: {
           email: true,
           idDocumentStatus: true,
+          // Approval mirror — synced by webhooks, the customer's own status
+          // checks, and the "Refresh from Dr Green" action. Last-known, not
+          // live: rendering the list makes zero Dr Green calls.
+          isKycVerified: true,
+          adminApproval: true,
           firstName: true,
           lastName: true,
           phoneCode: true,
@@ -200,38 +211,57 @@ export default async function CustomersListPage({
       }),
       // US-024: every tag in use across this tenant — the filter's options.
       listTenantTags(tenantId),
+      // Every (non-erased) customer's email — joined to the questionnaire map
+      // for tenant-wide status counts. Emails only; a few KB even at scale.
+      prisma.users.findMany({
+        where: {
+          role: "PATIENT",
+          ...(tenantId && { tenantId }),
+          ...notErased,
+        },
+        select: { email: true },
+      }),
+      // Last "Refresh from Dr Green" — the audit row doubles as the
+      // last-synced marker (no schema change; migrations here are hand-run).
+      tenantId
+        ? prisma.audit_logs.findFirst({
+            where: { action: AUDIT_ACTIONS.CUSTOMER_STATUS_REFRESHED, tenantId },
+            orderBy: { createdAt: "desc" },
+            select: { createdAt: true },
+          })
+        : Promise.resolve(null),
     ]);
 
-  const failedIdUploadEmails = new Set(
-    tenantQuestionnaires
-      .filter(
-        (q: { idDocumentStatus: string | null }) =>
-          q.idDocumentStatus === "UPLOAD_FAILED",
-      )
-      .map((q: { email: string }) => q.email.toLowerCase()),
-  );
   // Backfill name/phone for customers whose intake saved the name only to
   // users.name and the phone only on the questionnaire (granular users columns
   // were left null). Latest questionnaire per email wins (rows ordered desc).
-  const questionnaireByEmail = new Map<
-    string,
-    {
-      firstName: string | null;
-      lastName: string | null;
-      phoneCode: string | null;
-      phoneNumber: string | null;
-    }
-  >();
-  for (const q of tenantQuestionnaires as Array<{
-    email: string;
+  type QuestionnaireSummary = {
     firstName: string | null;
     lastName: string | null;
     phoneCode: string | null;
     phoneNumber: string | null;
-  }>) {
+    isKycVerified: boolean;
+    adminApproval: string | null;
+    idDocumentStatus: string | null;
+  };
+  const questionnaireByEmail = new Map<string, QuestionnaireSummary>();
+  for (const q of tenantQuestionnaires as Array<
+    QuestionnaireSummary & { email: string }
+  >) {
     const key = q.email.toLowerCase();
     if (!questionnaireByEmail.has(key)) questionnaireByEmail.set(key, q);
   }
+
+  const statusForEmail = (email: string): CustomerVerificationStatus => {
+    const q = questionnaireByEmail.get(email.toLowerCase());
+    return deriveVerificationStatus({
+      hasQuestionnaire: !!q,
+      isKycVerified: q?.isKycVerified,
+      adminApproval: q?.adminApproval,
+      idDocumentStatus: q?.idDocumentStatus,
+    });
+  };
+
   const customers = rawCustomers.map(
     (customer: { email: string; name: string | null; phone: string | null }) => {
       const q = questionnaireByEmail.get(customer.email.toLowerCase());
@@ -243,10 +273,23 @@ export default async function CustomersListPage({
         phone:
           customer.phone ??
           (q?.phoneNumber ? `${q.phoneCode ?? ""} ${q.phoneNumber}`.trim() : null),
-        idUploadFailed: failedIdUploadEmails.has(customer.email.toLowerCase()),
+        verificationStatus: statusForEmail(customer.email),
       };
     },
   );
+
+  // Tenant-wide approval breakdown (ignores search/tag filters, matching the
+  // other stat cards) — derived from data already in memory, zero extra cost.
+  const statusCounts: Record<CustomerVerificationStatus, number> = {
+    VERIFIED: 0,
+    PENDING: 0,
+    REJECTED: 0,
+    ID_UPLOAD_FAILED: 0,
+    NOT_SUBMITTED: 0,
+  };
+  for (const { email } of allCustomerEmails as Array<{ email: string }>) {
+    statusCounts[statusForEmail(email)]++;
+  }
 
   return (
     <div className="space-y-8">
@@ -270,10 +313,10 @@ export default async function CustomersListPage({
           hint="Registered users"
         />
         <StatCard
-          label="Active Customers"
-          value={totalCustomersCount}
-          icon={UserCheck}
-          hint="Currently active"
+          label="Verified"
+          value={statusCounts.VERIFIED}
+          icon={ShieldCheck}
+          hint="Approved by Dr Green"
         />
         <StatCard
           label="Recent Sign-ups"
@@ -287,6 +330,13 @@ export default async function CustomersListPage({
         customers={customers}
         totalCount={filteredCount}
         availableTags={availableTags}
+        statusCounts={statusCounts}
+        lastSyncedAt={lastStatusRefresh?.createdAt.toISOString() ?? null}
+        canRefresh={
+          // Refresh WRITES the mirror — needs the edit grant, matching the
+          // server action's own gate (view-only presets hide the button).
+          Boolean(tenantId) && can(permissionCtx.permissions, "canEditCustomers")
+        }
       />
     </div>
   );

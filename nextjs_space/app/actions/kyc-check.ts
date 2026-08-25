@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { fetchClient, fetchClientByEmail } from "@/lib/drgreen/doctor-green-api";
+import { canonicalAdminApproval } from "@/lib/drgreen/approval-status";
 import { logger } from "@/lib/logger";
 
 export type KycStatus = {
@@ -181,6 +182,12 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
             // consultation still lives under the original tenant), migrate the
             // row to the current tenant so the mirror actually writes.
             {
+                // Mirror Dr Green's adminApproval verbatim (canonicalised to
+                // the VERIFIED|PENDING|REJECTED enum — the legacy "APPROVED"
+                // literal this block used to write is what let the products
+                // gate and the dashboard disagree). Unknown values leave the
+                // stored field untouched.
+                const mirroredApproval = canonicalAdminApproval(client.adminApproval);
                 const current = await prisma.consultation_questionnaires.updateMany({
                     where: {
                         tenantId: dbUser.tenantId,
@@ -188,7 +195,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                     },
                     data: {
                         isKycVerified: isVerified,
-                        ...(isVerified ? { adminApproval: "APPROVED" } : {}),
+                        ...(mirroredApproval ? { adminApproval: mirroredApproval } : {}),
                         updatedAt: new Date(),
                     },
                 });
@@ -211,7 +218,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                                 // on this path would re-create the latch for
                                 // any user whose row lives under another tenant.
                                 isKycVerified: isVerified,
-                                ...(isVerified ? { adminApproval: "APPROVED" } : {}),
+                                ...(mirroredApproval ? { adminApproval: mirroredApproval } : {}),
                                 updatedAt: new Date(),
                             },
                         });
