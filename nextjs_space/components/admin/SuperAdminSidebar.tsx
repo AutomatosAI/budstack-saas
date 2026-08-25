@@ -15,6 +15,7 @@ import {
   FileText,
   Newspaper,
   Search,
+  Webhook,
 } from "lucide-react";
 import { AdminSidebar, type AdminMenuItem } from "./AdminSidebar";
 
@@ -37,6 +38,7 @@ export enum PanelType {
   SETTINGS = "settings",
   SUBPROCESSORS = "subprocessors",
   LEGAL_TEMPLATES = "legal-templates",
+  WEBHOOKS = "webhooks",
 }
 
 /**
@@ -104,6 +106,14 @@ const superAdminMenuItems: AdminMenuItem[] = [
     label: "Branding",
     icon: Palette,
     href: "/super-admin/platform-settings",
+  },
+  {
+    // Platform-scope only — a tenant's own destinations stay under
+    // tenant-admin → Webhooks.
+    id: PanelType.WEBHOOKS,
+    label: "Platform Webhooks",
+    icon: Webhook,
+    href: "/super-admin/webhooks",
   },
   {
     id: PanelType.TEMPLATES,

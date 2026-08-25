@@ -178,6 +178,10 @@ export const AUDIT_ACTIONS = {
 
   // Settings
   SETTINGS_UPDATED: "settings.updated",
+  // Platform-scope webhook channel config (super-admin → Platform Webhooks).
+  // Records THAT the inbound secret rotated / the channel toggled, never the
+  // secret value.
+  PLATFORM_WEBHOOK_CONFIG_UPDATED: "platform.webhook_config_updated",
 
   // GDPR / Customer privacy
   CUSTOMER_UPDATED: "customer.updated",
