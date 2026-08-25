@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clerkClient, currentUser } from "@clerk/nextjs/server";
-import { canClaimAccount } from "@/lib/security/email-ownership";
+import { emailsMatch } from "@/lib/security/email-ownership";
 
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
@@ -39,13 +39,17 @@ async function getSessionEmail(): Promise<string | null> {
   try {
     const sessionUser = await currentUser();
     if (!sessionUser) return null;
-    // Prefer the PRIMARY address: this value is an ownership claim, and on a
-    // multi-address account the positionally-first entry is not necessarily
-    // the one the session is anchored to.
-    const primary =
-      sessionUser.emailAddresses?.find(
-        (address) => address.id === sessionUser.primaryEmailAddressId,
-      ) ?? sessionUser.emailAddresses?.[0];
+    // This value is an ownership claim, so it must be the PRIMARY address AND
+    // verified: the positionally-first entry is not necessarily the one the
+    // session is anchored to, and an unverified address proves nothing about
+    // who controls the mailbox. Clerk is expected to allow only verified
+    // addresses as primary — asserting it here means the guarantee does not
+    // depend on that remaining true.
+    const primary = sessionUser.emailAddresses?.find(
+      (address) =>
+        address.id === sessionUser.primaryEmailAddressId &&
+        address.verification?.status === "verified",
+    );
     return primary?.emailAddress ?? null;
   } catch {
     // Expired/invalid token — treat as anonymous, never as an error.
@@ -219,10 +223,15 @@ export async function POST(request: NextRequest) {
     // "already exists" swallowed, and reach the linking step further down that
     // re-points the VICTIM's users row at a Dr Green client the ATTACKER
     // controls — so once the attacker's own (genuine-looking) ID is approved,
-    // the victim's account inherits VERIFIED. Ownership is provable only by
-    // holding a session for that address, or by Clerk accepting a new account
-    // for it below (i.e. nobody held it).
+    // the victim's account inherits VERIFIED.
+    //
+    // Ownership over anything that already exists is provable ONE way: an
+    // authenticated session for that address. Notably NOT by Clerk accepting a
+    // new account below — that only proves nobody held the *Clerk* identity,
+    // which says nothing about a local users row that predates this request
+    // (legacy import, or a dropped Clerk delete-webhook).
     const sessionEmail = await getSessionEmail();
+    const sessionOwnsEmail = emailsMatch(sessionEmail, body.email);
 
     // 1. Create Clerk User (Auth)
     let clerkUser;
@@ -245,11 +254,7 @@ export async function POST(request: NextRequest) {
         // is what let an anonymous caller operate on someone else's row —
         // refuse unless they are signed in as that address.
         if (clerkError.errors?.[0]?.code === "form_identifier_exists") {
-          if (!canClaimAccount({
-            accountJustCreated: false,
-            sessionEmail,
-            submittedEmail: body.email,
-          })) {
+          if (!sessionOwnsEmail) {
             logger.warn(
               "[Consultation] refused submission for an existing address by a caller not signed in as it",
               { tenantId },
@@ -280,22 +285,21 @@ export async function POST(request: NextRequest) {
       where: { email: body.email.toLowerCase() },
     });
 
-    // Resolved once: Clerk minted this account in this request (nobody held
-    // the address), or the caller is signed in as it. Guards both the adopt
-    // path below and the linking write near the end of the handler.
-    const callerOwnsAccount = canClaimAccount({
-      accountJustCreated: Boolean(clerkUser),
-      sessionEmail,
-      submittedEmail: body.email,
-    });
-
-    // Same rule for a local row with no live Clerk account behind it (legacy
-    // or webhook-provisioned users): Clerk did not vouch for this caller, so
-    // an unauthenticated request must not adopt — or mutate — that account.
-    if (existingUser && !callerOwnsAccount) {
+    // THE ownership gate — the single choke point, ahead of every write in
+    // this handler (the questionnaire, the Dr Green client, and the linking
+    // update all come after it). A pre-existing row may only be adopted by a
+    // caller signed in as its address.
+    //
+    // Deliberately NOT "…or Clerk just minted the account": for an address
+    // that has a local row but no Clerk account (legacy import, dropped
+    // delete-webhook), Clerk's createUser SUCCEEDS for anyone, so accepting
+    // that as proof would re-open this hole from the opposite direction. Such
+    // a caller now gets the 409 and can sign in with the account Clerk just
+    // created for them, then re-submit.
+    if (existingUser && !sessionOwnsEmail) {
       logger.warn(
         "[Consultation] refused submission for an existing local account by a caller not signed in as it",
-        { tenantId },
+        { tenantId, clerkAccountJustCreated: Boolean(clerkUser) },
       );
       return accountExistsResponse();
     }
@@ -352,7 +356,11 @@ export async function POST(request: NextRequest) {
         userId = newUser.id;
         logger.info("[Consultation] created local user mirror", { userId, tenantId });
       } catch (prismaError: any) {
-        // Race condition: Clerk webhook may have created the user between our check and create
+        // Race condition: Clerk webhook may have created the user between our
+        // check and create. Reaching here means the ownership gate above saw
+        // NO pre-existing row, so this row appeared during this request — it
+        // is the webhook's mirror of the Clerk account this request just
+        // minted for this same address, not a stranger's record.
         if (prismaError.code === "P2002") {
           const raceUser = await prisma.users.findUnique({
             where: { email: body.email.toLowerCase() },
@@ -674,13 +682,21 @@ export async function POST(request: NextRequest) {
       // Also update the User record with the Dr. Green Client ID — required
       // for the kyc-check, which reads the User table.
       //
-      // SECURITY: this is the write an account-takeover would target (point a
-      // victim's row at an attacker-controlled Dr Green client, then inherit
-      // its approval). The handler already refuses unowned addresses above;
-      // re-asserting ownership here keeps that guarantee attached to the
-      // dangerous line itself, so a future path that sets `userId` some other
-      // way cannot silently re-open it.
-      if (userId && callerOwnsAccount) {
+      // SECURITY: this is the write an account-takeover targets — point a
+      // stranger's row at an attacker-controlled Dr Green client, then have
+      // that row inherit the client's approval.
+      //
+      // Safe by the ownership gate above, which returns 409 before any write
+      // unless `userId` is either a row THIS request created or a
+      // pre-existing row whose address the caller is signed in as. That
+      // invariant is enforced there, not re-tested here: a second check on
+      // this line would be unfirable by construction, which is exactly the
+      // mistake the first version of this fix made — a guard that reads like
+      // protection but can never trigger. The real regression net is the
+      // behavioural test in tests/unit/consultation-submit-ownership.test.ts,
+      // which drives this route with a pre-existing row and asserts nothing
+      // is written.
+      if (userId) {
         await prisma.users.update({
           where: { id: userId },
           data: {
