@@ -566,6 +566,28 @@ model drgreen_carts {
   @@index([tenantId])
 }
 
+/// Platform-scope config for INBOUND partner webhooks (Dr Green → BudStacks).
+/// One row per partner channel, keyed by a stable slug (currently "drgreen").
+///
+/// Deliberately its own table rather than columns on platform_config: this
+/// repo's migrations are hand-run SQL with no runner, so a column added to a
+/// hot table would break every existing query on it if the SQL lagged the
+/// deploy. Readers of THIS table fail soft to the env var instead, which
+/// means the feature can ship before the SQL is applied.
+model platform_webhook_config {
+  /// Partner channel slug — "drgreen".
+  id        String   @id
+  /// Shared HMAC secret used to verify inbound signatures, encrypted at rest
+  /// (lib/security/encryption). Null = fall back to the env var.
+  secret    String?
+  /// Off = reject inbound events for this channel regardless of signature.
+  isEnabled Boolean  @default(true)
+  /// Audit: which super-admin last rotated the secret, and when.
+  updatedBy String?
+  updatedAt DateTime
+  createdAt DateTime @default(now())
+}
+
 model drgreen_webhook_logs {
   id              String    @id
   tenantId        String

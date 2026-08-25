@@ -9,6 +9,7 @@ import {
   type DrGreenWebhookPayload,
 } from "@/lib/drgreen/drgreen-webhook-verify";
 import { dispatchEvent } from "@/lib/drgreen/status-event-handlers";
+import { resolveInboundVerification } from "@/lib/drgreen/inbound-webhook-config";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { logger } from "@/lib/logger";
 import { invalidateProductCache } from "@/lib/drgreen/doctor-green-api";
@@ -73,7 +74,23 @@ export async function POST(request: NextRequest) {
   // Flag-gated: when the env var is unset (the default until Dr Green confirms
   // they sign with one platform secret), this block is skipped and the existing
   // per-tenant resolve-then-verify path below runs EXACTLY as before.
-  const platformSecret = process.env.DRGREEN_WEBHOOK_SECRET;
+  // Platform secret now resolves from super-admin → Platform Webhooks first,
+  // falling back to DRGREEN_WEBHOOK_SECRET. The lookup fails soft (missing
+  // table / unreadable row → env), so this path behaves exactly as before
+  // until an operator saves a secret in the console.
+  const verification = await resolveInboundVerification();
+
+  // Channel switched off in the console — refuse regardless of signature.
+  if (!verification.enabled) {
+    console.error("[DrGreen Status] Inbound channel disabled in super-admin");
+    return apiError(new Error("Inbound webhooks disabled"), {
+      route: "POST /api/webhooks/drgreen/status",
+      status: 403,
+      safeMessage: "Inbound webhooks are disabled",
+    });
+  }
+
+  const platformSecret = verification.secret;
   let verifiedByPlatformSecret = false;
   if (platformSecret) {
     if (!verifyDrGreenWebhookSignature(rawBody, signature, platformSecret)) {
