@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { clerkClient } from "@clerk/nextjs/server";
+import { clerkClient, currentUser } from "@clerk/nextjs/server";
+import { canClaimAccount } from "@/lib/security/email-ownership";
 
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
@@ -24,6 +25,43 @@ import { resolveTenant } from '@/lib/tenant/tenant-resolver';
 import { logger } from '@/lib/logger';
 import { apiError, apiValidationError } from '@/lib/api-error';
 import { checkPolicyGate } from '@/lib/legal/policy-gate';
+
+/**
+ * The signed-in caller's email, or null when the request is anonymous.
+ *
+ * Deliberately Clerk-direct rather than `getCurrentUser()`: this is a PUBLIC
+ * signup route that must keep working for anonymous visitors, and
+ * getCurrentUser additionally resolves tenants and can throw for
+ * not-yet-provisioned or multi-tenant accounts. All we need here is "which
+ * address, if any, has this caller already authenticated as".
+ */
+async function getSessionEmail(): Promise<string | null> {
+  try {
+    const sessionUser = await currentUser();
+    if (!sessionUser) return null;
+    // Prefer the PRIMARY address: this value is an ownership claim, and on a
+    // multi-address account the positionally-first entry is not necessarily
+    // the one the session is anchored to.
+    const primary =
+      sessionUser.emailAddresses?.find(
+        (address) => address.id === sessionUser.primaryEmailAddressId,
+      ) ?? sessionUser.emailAddresses?.[0];
+    return primary?.emailAddress ?? null;
+  } catch {
+    // Expired/invalid token — treat as anonymous, never as an error.
+    return null;
+  }
+}
+
+/** 409 for "that address already belongs to an account you have not proven you own". */
+function accountExistsResponse() {
+  return apiError(new Error("Account already exists for this email"), {
+    route: "POST /api/consultation/submit",
+    status: 409,
+    safeMessage:
+      "An account already exists for this email address. Please sign in first, then complete your consultation.",
+  });
+}
 
 // SECURITY (C1, C13): Strict whitelist schema — no `.passthrough()`. Every
 // field that lands in the database or is forwarded to Dr. Green must be
@@ -173,6 +211,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // SECURITY (account takeover): this route is PUBLIC — the caller has not
+    // proven they own `body.email`, anyone can type anyone's address. Creating
+    // records for a BRAND-NEW address is fine; touching an address that
+    // already has an account is not. Without the ownership gate below, an
+    // anonymous caller could submit a victim's email, have Clerk's
+    // "already exists" swallowed, and reach the linking step further down that
+    // re-points the VICTIM's users row at a Dr Green client the ATTACKER
+    // controls — so once the attacker's own (genuine-looking) ID is approved,
+    // the victim's account inherits VERIFIED. Ownership is provable only by
+    // holding a session for that address, or by Clerk accepting a new account
+    // for it below (i.e. nobody held it).
+    const sessionEmail = await getSessionEmail();
+
     // 1. Create Clerk User (Auth)
     let clerkUser;
     try {
@@ -190,10 +241,22 @@ export async function POST(request: NextRequest) {
           },
         });
       } catch (clerkError: any) {
-        // Ignore if user already exists in Clerk, proceed to DB/DrGreen
+        // The address already has an account. Continuing "to DB/DrGreen" here
+        // is what let an anonymous caller operate on someone else's row —
+        // refuse unless they are signed in as that address.
         if (clerkError.errors?.[0]?.code === "form_identifier_exists") {
-          logger.info("[Consultation] user already exists in Clerk", { tenantId });
-          // Optionally fetch the user to get their ID if needed, but for now we proceed
+          if (!canClaimAccount({
+            accountJustCreated: false,
+            sessionEmail,
+            submittedEmail: body.email,
+          })) {
+            logger.warn(
+              "[Consultation] refused submission for an existing address by a caller not signed in as it",
+              { tenantId },
+            );
+            return accountExistsResponse();
+          }
+          logger.info("[Consultation] existing Clerk account, caller is signed in as it", { tenantId });
         } else {
           throw clerkError; // Re-throw other errors (e.g., weak password)
         }
@@ -216,6 +279,26 @@ export async function POST(request: NextRequest) {
     const existingUser = await prisma.users.findUnique({
       where: { email: body.email.toLowerCase() },
     });
+
+    // Resolved once: Clerk minted this account in this request (nobody held
+    // the address), or the caller is signed in as it. Guards both the adopt
+    // path below and the linking write near the end of the handler.
+    const callerOwnsAccount = canClaimAccount({
+      accountJustCreated: Boolean(clerkUser),
+      sessionEmail,
+      submittedEmail: body.email,
+    });
+
+    // Same rule for a local row with no live Clerk account behind it (legacy
+    // or webhook-provisioned users): Clerk did not vouch for this caller, so
+    // an unauthenticated request must not adopt — or mutate — that account.
+    if (existingUser && !callerOwnsAccount) {
+      logger.warn(
+        "[Consultation] refused submission for an existing local account by a caller not signed in as it",
+        { tenantId },
+      );
+      return accountExistsResponse();
+    }
 
     let userId: string | undefined;
 
@@ -588,9 +671,16 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // CRITICAL FIX: Also update the User record with the Dr. Green Client ID
-      // This is required for the kyc-check to work, as it looks at the User table.
-      if (userId) {
+      // Also update the User record with the Dr. Green Client ID — required
+      // for the kyc-check, which reads the User table.
+      //
+      // SECURITY: this is the write an account-takeover would target (point a
+      // victim's row at an attacker-controlled Dr Green client, then inherit
+      // its approval). The handler already refuses unowned addresses above;
+      // re-asserting ownership here keeps that guarantee attached to the
+      // dangerous line itself, so a future path that sets `userId` some other
+      // way cannot silently re-open it.
+      if (userId && callerOwnsAccount) {
         await prisma.users.update({
           where: { id: userId },
           data: {
