@@ -1,12 +1,17 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
+import { format } from "date-fns";
 import { prisma } from "@/lib/db";
 import { getActiveAdminTenant } from "@/lib/tenant/active-admin-tenant";
+import {
+  deriveVerificationStatus,
+  VERIFICATION_STATUS_DISPLAY,
+} from "@/lib/drgreen/approval-status";
 import CustomerEditForm from "./customer-edit-form";
 import CustomerActions from "./customer-actions";
 import CustomerTags from "./customer-tags";
 import MarketingConsentCard from "./marketing-consent-card";
-import { Breadcrumbs } from "@/components/admin/shared";
+import { Breadcrumbs, RowPill } from "@/components/admin/shared";
 
 export default async function CustomerDetailPage({
   params,
@@ -62,27 +67,39 @@ export default async function CustomerDetailPage({
     notFound();
   }
 
-  // Existing customers created via the ID-upload/consultation intake had their
-  // name saved only to users.name and phone only on the questionnaire (the
-  // granular users.firstName/lastName/phone were left null). Backfill for
-  // display so the form doesn't show "Not set" for data actually provided.
-  const needsBackfill = !(customer.firstName && customer.lastName && customer.phone);
-  const questionnaire =
-    needsBackfill && customer.email
-      ? await prisma.consultation_questionnaires.findFirst({
-          where: {
-            email: customer.email,
-            ...(customer.tenantId && { tenantId: customer.tenantId }),
-          },
-          orderBy: { createdAt: "desc" },
-          select: {
-            firstName: true,
-            lastName: true,
-            phoneCode: true,
-            phoneNumber: true,
-          },
-        })
-      : null;
+  // Always loaded now: the name/phone backfill for the edit form (existing
+  // customers created via the ID-upload/consultation intake saved name/phone
+  // only on the questionnaire) PLUS the Dr Green approval mirror for the
+  // Verification card below. Last-known state — no Dr Green API call here.
+  const questionnaire = customer.email
+    ? await prisma.consultation_questionnaires.findFirst({
+        where: {
+          email: { equals: customer.email, mode: "insensitive" },
+          ...(customer.tenantId && { tenantId: customer.tenantId }),
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          firstName: true,
+          lastName: true,
+          phoneCode: true,
+          phoneNumber: true,
+          isKycVerified: true,
+          adminApproval: true,
+          idDocumentStatus: true,
+          kycLink: true,
+          drGreenClientId: true,
+          updatedAt: true,
+        },
+      })
+    : null;
+
+  const verificationStatus = deriveVerificationStatus({
+    hasQuestionnaire: !!questionnaire,
+    isKycVerified: questionnaire?.isKycVerified,
+    adminApproval: questionnaire?.adminApproval,
+    idDocumentStatus: questionnaire?.idDocumentStatus,
+  });
+  const verificationDisplay = VERIFICATION_STATUS_DISPLAY[verificationStatus];
   // US-024: the customer's tag chips. Tag rows always carry the tenant they
   // were created under; the extra tenant predicate keeps a super-admin's
   // cross-tenant view scoped to the row's own tenant.
@@ -171,6 +188,75 @@ export default async function CustomerDetailPage({
         </div>
 
         <div className="space-y-6">
+          <section className="bs-card bs-card-pad">
+            <div className="bs-card-head mb-4 flex items-center justify-between">
+              <h2
+                className="text-[22px] text-bs-fg"
+                style={{ fontFamily: "var(--bs-font-display, 'Cormorant Garamond', serif)" }}
+              >
+                Verification
+              </h2>
+              <RowPill tone={verificationDisplay.tone}>
+                {verificationDisplay.label}
+              </RowPill>
+            </div>
+            <dl className="space-y-2 text-sm">
+              {questionnaire?.idDocumentStatus && (
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-bs-fg-muted">ID document</dt>
+                  <dd className="font-mono text-bs-fg">
+                    {questionnaire.idDocumentStatus === "UPLOAD_FAILED"
+                      ? "Upload failed"
+                      : "Uploaded"}
+                  </dd>
+                </div>
+              )}
+              {questionnaire?.drGreenClientId && (
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-bs-fg-muted">Dr Green client</dt>
+                  <dd
+                    className="font-mono text-xs text-bs-fg truncate max-w-[160px]"
+                    title={questionnaire.drGreenClientId}
+                  >
+                    {questionnaire.drGreenClientId}
+                  </dd>
+                </div>
+              )}
+              {questionnaire && (
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-bs-fg-muted">Last synced</dt>
+                  <dd className="font-mono text-bs-fg">
+                    {format(questionnaire.updatedAt, "MMM d, yyyy HH:mm")}
+                  </dd>
+                </div>
+              )}
+            </dl>
+            {questionnaire &&
+              !questionnaire.isKycVerified &&
+              questionnaire.kycLink &&
+              verificationStatus !== "VERIFIED" && (
+                <a
+                  href={questionnaire.kycLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bs-btn bs-btn-ghost bs-btn-sm mt-4 w-full"
+                >
+                  Open customer&apos;s KYC link
+                </a>
+              )}
+            {!questionnaire && (
+              <p className="text-sm text-bs-fg-muted">
+                This customer has not submitted a consultation, so they have no
+                Dr Green verification record yet.
+              </p>
+            )}
+            <p className="mt-3 text-[11px] text-bs-fg-muted">
+              Last-known status from Dr Green — approvals happen in the Dr Green
+              admin. Use &quot;Refresh from Dr Green&quot; on the Customers list
+              to sync.
+            </p>
+          </section>
+
           <section className="bs-card bs-card-pad">
             <div className="bs-card-head mb-4">
               <h2

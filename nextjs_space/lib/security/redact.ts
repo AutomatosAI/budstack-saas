@@ -21,6 +21,12 @@ import { ARTICLE_9_FIELDS } from "./article9";
  * so the redaction list and the persistence guard share one definition.
  */
 export const SENSITIVE_FIELDS: ReadonlySet<string> = new Set([
+  // Admin free-text about why a client's KYC/ID was rejected — can reference
+  // identity or medical context. Delivered by Dr Green client.rejected
+  // webhooks and stored on drgreen_webhook_logs/kyc_journey_logs otherwise.
+  "rejectionReason",
+  "rejectionNote",
+
   // emails (variants seen across the codebase)
   "email",
   "userEmail",

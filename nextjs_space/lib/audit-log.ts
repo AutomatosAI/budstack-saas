@@ -183,6 +183,9 @@ export const AUDIT_ACTIONS = {
   CUSTOMER_UPDATED: "customer.updated",
   CUSTOMER_EMAIL_CHANGED: "customer.email_changed",
   CUSTOMER_KYC_VERIFIED: "customer.kyc_verified",
+  // Bulk mirror refresh from Dr Green (tenant-admin Customers page). The
+  // latest row per tenant doubles as the "last synced" marker + throttle.
+  CUSTOMER_STATUS_REFRESHED: "customer.status_refreshed",
   // US-023: admin manually records / withdraws a customer's marketing consent
   CUSTOMER_MARKETING_CONSENT_GRANTED: "customer.marketing_consent_granted",
   CUSTOMER_MARKETING_CONSENT_REVOKED: "customer.marketing_consent_revoked",

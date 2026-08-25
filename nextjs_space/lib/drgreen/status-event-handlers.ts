@@ -7,6 +7,14 @@ import {
   type DrGreenWebhookPayload,
 } from "@/lib/drgreen/drgreen-webhook-verify";
 
+/** Dr Green's outbound dispatcher sends `data.emailsSent: true` when it has
+ *  already emailed the client (branded per nftId) for this transition — in
+ *  that case our own customer email would be a duplicate and is skipped.
+ *  Older/unknown senders omit the flag and keep the existing behaviour. */
+function senderAlreadyEmailedClient(payload: DrGreenWebhookPayload): boolean {
+  return payload.data?.emailsSent === true;
+}
+
 export async function dispatchEvent(
   event: string,
   tenantId: string,
@@ -126,7 +134,7 @@ async function handleKycVerified(
   await logKycJourney(tenantId, clientId, payload.data?.email, "kyc.verified", payload);
 
   const user = await findUserByClientId(clientId);
-  if (user) {
+  if (user && !senderAlreadyEmailedClient(payload)) {
     const tenant = await prisma.tenants.findUnique({ where: { id: tenantId } });
     const html = await emailTemplates.kycStatus(
       user.name || user.firstName || "there",
@@ -163,7 +171,7 @@ async function handleKycRejected(
   await logKycJourney(tenantId, clientId, payload.data?.email, "kyc.rejected", payload);
 
   const user = await findUserByClientId(clientId);
-  if (user) {
+  if (user && !senderAlreadyEmailedClient(payload)) {
     const tenant = await prisma.tenants.findUnique({ where: { id: tenantId } });
     // Use kycLink from payload, or fall back to stored link for retry
     let retryLink = kycLink;
@@ -221,13 +229,19 @@ async function handleClientApproved(
 
   await prisma.consultation_questionnaires.updateMany({
     where: { drGreenClientId: clientId, tenantId },
-    data: { adminApproval: "VERIFIED" },
+    data: {
+      adminApproval: "VERIFIED",
+      // ID-path approvals set the client's KYC flag in the same admin action;
+      // the dispatcher reports it so both mirror fields stay in step (the
+      // order gate needs both).
+      ...(payload.data?.isKYCVerified === true ? { isKycVerified: true } : {}),
+    },
   });
 
   await logKycJourney(tenantId, clientId, payload.data?.email, "client.approved", payload);
 
   const user = await findUserByClientId(clientId);
-  if (user) {
+  if (user && !senderAlreadyEmailedClient(payload)) {
     const tenant = await prisma.tenants.findUnique({ where: { id: tenantId } });
     const html = await emailTemplates.clientStatus(
       user.name || user.firstName || "there",
@@ -277,7 +291,7 @@ async function handleClientRejected(
   await logKycJourney(tenantId, clientId, payload.data?.email, "client.rejected", payload);
 
   const user = await findUserByClientId(clientId);
-  if (user) {
+  if (user && !senderAlreadyEmailedClient(payload)) {
     const tenant = await prisma.tenants.findUnique({ where: { id: tenantId } });
     const html = await emailTemplates.clientStatus(
       user.name || user.firstName || "there",
