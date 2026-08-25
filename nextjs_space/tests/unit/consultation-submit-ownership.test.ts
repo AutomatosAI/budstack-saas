@@ -19,6 +19,13 @@ import { NextRequest } from "next/server";
  * guard that could never fire. These tests drive the real handler, because a
  * unit test of the helper and a regex over the source both passed against that
  * defective version.
+ *
+ * The second fix closed that in one request but not in two: Clerk was still
+ * called first, so a caller could mint an account for the target address
+ * (Clerk performs no mailbox-control check — the password is the submitter's
+ * own), sign in with it, and resubmit with a session that now "proved"
+ * ownership. Hence the gate runs BEFORE Clerk, and the refusal cases below
+ * assert `createUser` was never reached.
  */
 
 const clerkMock = vi.hoisted(() => ({
@@ -162,12 +169,12 @@ function expectNoSideEffects() {
 }
 
 describe("consultation submit — ownership of an existing account", () => {
-  it("refuses an anonymous caller when Clerk already holds the address", async () => {
+  it("refuses an anonymous caller when Clerk holds the address (no local row)", async () => {
     clerkMock.currentUser.mockResolvedValue(null);
     clerkMock.createUser.mockRejectedValue({
       errors: [{ code: "form_identifier_exists", message: "That email address is taken." }],
     });
-    prismaMock.users.findUnique.mockResolvedValue(existingVictimRow);
+    prismaMock.users.findUnique.mockResolvedValue(null);
 
     const response = await POST(request(submission()));
 
@@ -175,10 +182,11 @@ describe("consultation submit — ownership of an existing account", () => {
     expectNoSideEffects();
   });
 
-  it("refuses an anonymous caller when a local row exists but Clerk does NOT hold the address", async () => {
-    // The mirror-image case the first fix missed: Clerk mints an account for
-    // the attacker (the address was free THERE), while a users row for it —
-    // legacy import, or a dropped Clerk delete-webhook — already exists.
+  it("refuses an anonymous caller when a local row exists — without letting Clerk mint", async () => {
+    // The mirror-image case the first fix missed: a users row exists (legacy
+    // import, or a dropped Clerk delete-webhook) while the address is free in
+    // Clerk, so createUser would succeed for anyone. Refusing BEFORE that call
+    // is what also closes the mint → sign-in → resubmit chain.
     clerkMock.currentUser.mockResolvedValue(null);
     clerkMock.createUser.mockResolvedValue({ id: "clerk_attacker" });
     prismaMock.users.findUnique.mockResolvedValue(existingVictimRow);
@@ -187,8 +195,10 @@ describe("consultation submit — ownership of an existing account", () => {
 
     expect(response.status).toBe(409);
     expectNoSideEffects();
-    // The specific write the takeover needs: the pre-existing row must keep
-    // pointing at its own Dr Green client, in its own tenant.
+    // No account is minted for an address the caller has not proven it owns —
+    // otherwise the refusal just becomes step one of a two-request takeover.
+    expect(clerkMock.createUser).not.toHaveBeenCalled();
+    // And the pre-existing row keeps pointing at its own Dr Green client.
     expect(prismaMock.users.update).not.toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: existingVictimRow.id } }),
     );
@@ -203,6 +213,7 @@ describe("consultation submit — ownership of an existing account", () => {
 
     expect(response.status).toBe(409);
     expectNoSideEffects();
+    expect(clerkMock.createUser).not.toHaveBeenCalled();
   });
 
   it("refuses when the session's primary address is unverified", async () => {
@@ -219,6 +230,25 @@ describe("consultation submit — ownership of an existing account", () => {
 
     expect(response.status).toBe(409);
     expectNoSideEffects();
+    expect(clerkMock.createUser).not.toHaveBeenCalled();
+  });
+
+  it("refuses to adopt a raced row this request did not create", async () => {
+    // No row at gate time, so the handler creates one and hits P2002 — but the
+    // row that appeared belongs to someone else, not to the Clerk account we
+    // just minted. Adopting it would re-open the same takeover.
+    clerkMock.currentUser.mockResolvedValue(null);
+    clerkMock.createUser.mockResolvedValue({ id: "clerk_new_user" });
+    prismaMock.users.findUnique
+      .mockResolvedValueOnce(null) // ownership gate: nothing there yet
+      .mockResolvedValueOnce({ ...existingVictimRow, id: "user-someone-else" }); // the race
+    prismaMock.users.create.mockRejectedValue({ code: "P2002" });
+
+    const response = await POST(request(submission()));
+
+    expect(response.status).toBe(409);
+    expect(prismaMock.users.update).not.toHaveBeenCalled();
+    expect(prismaMock.consultation_questionnaires.create).not.toHaveBeenCalled();
   });
 });
 

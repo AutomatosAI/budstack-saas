@@ -33,7 +33,7 @@ function accountExistsResponse() {
     route: "POST /api/consultation/submit",
     status: 409,
     safeMessage:
-      "An account already exists for this email address. Please sign in first, then complete your consultation.",
+      "An account already exists for this email address. Please sign in and then complete your consultation. If you cannot access that account, contact support — for your protection we cannot link it from an unauthenticated form.",
   });
 }
 
@@ -202,6 +202,34 @@ export async function POST(request: NextRequest) {
     // (legacy import, or a dropped Clerk delete-webhook).
     const sessionOwnsEmail = emailsMatch(await getVerifiedSessionEmail(), body.email);
 
+    // Check if user already exists locally (email is globally unique, don't filter by tenantId)
+    const existingUser = await prisma.users.findUnique({
+      where: { email: body.email.toLowerCase() },
+    });
+
+    // THE ownership gate. It runs BEFORE Clerk is touched, which matters: an
+    // address with a local row but no Clerk account (legacy import, dropped
+    // delete-webhook) is one Clerk will happily mint for ANYONE. Gating after
+    // that call left a two-request takeover — mint an account for the target
+    // address (Clerk performs no mailbox-control check; the password is the
+    // submitter's own), sign in with it, resubmit, and the session now
+    // "proves" ownership of a row the caller never owned. Refusing before the
+    // mint means there is no account to sign into, and no squatting on the
+    // address either.
+    //
+    // Consequence, deliberately accepted: the real owner of a local row with
+    // no Clerk account cannot self-serve through this route. Restoring that
+    // needs a flow that actually proves mailbox control (Clerk verification /
+    // password reset), never "sign up again" — which is indistinguishable
+    // from the attack.
+    if (existingUser && !sessionOwnsEmail) {
+      logger.warn(
+        "[Consultation] refused submission for an existing account by a caller not signed in as it",
+        { tenantId },
+      );
+      return accountExistsResponse();
+    }
+
     // 1. Create Clerk User (Auth)
     let clerkUser;
     try {
@@ -247,30 +275,6 @@ export async function POST(request: NextRequest) {
         error?.errors?.[0]?.message || "Unable to create your account. Please check your details and try again.",
         "POST /api/consultation/submit",
       );
-    }
-
-    // Check if user already exists locally (email is globally unique, don't filter by tenantId)
-    const existingUser = await prisma.users.findUnique({
-      where: { email: body.email.toLowerCase() },
-    });
-
-    // THE ownership gate — the single choke point, ahead of every write in
-    // this handler (the questionnaire, the Dr Green client, and the linking
-    // update all come after it). A pre-existing row may only be adopted by a
-    // caller signed in as its address.
-    //
-    // Deliberately NOT "…or Clerk just minted the account": for an address
-    // that has a local row but no Clerk account (legacy import, dropped
-    // delete-webhook), Clerk's createUser SUCCEEDS for anyone, so accepting
-    // that as proof would re-open this hole from the opposite direction. Such
-    // a caller now gets the 409 and can sign in with the account Clerk just
-    // created for them, then re-submit.
-    if (existingUser && !sessionOwnsEmail) {
-      logger.warn(
-        "[Consultation] refused submission for an existing local account by a caller not signed in as it",
-        { tenantId, clerkAccountJustCreated: Boolean(clerkUser) },
-      );
-      return accountExistsResponse();
     }
 
     let userId: string | undefined;
@@ -326,15 +330,28 @@ export async function POST(request: NextRequest) {
         logger.info("[Consultation] created local user mirror", { userId, tenantId });
       } catch (prismaError: any) {
         // Race condition: Clerk webhook may have created the user between our
-        // check and create. Reaching here means the ownership gate above saw
-        // NO pre-existing row, so this row appeared during this request — it
-        // is the webhook's mirror of the Clerk account this request just
-        // minted for this same address, not a stranger's record.
+        // check and create. The ownership gate saw no row for this address, so
+        // one appeared mid-request — but "it must therefore be ours" is an
+        // assumption, not a guarantee (another writer could land a row for the
+        // same address in that window), so the adopt below re-checks rather
+        // than trusting it.
         if (prismaError.code === "P2002") {
           const raceUser = await prisma.users.findUnique({
             where: { email: body.email.toLowerCase() },
           });
           if (raceUser) {
+            // Adopt only what this request is entitled to: the row is the
+            // mirror of the Clerk account we just minted (ids match, since
+            // the local id IS clerkUser.id), or the caller is signed in as
+            // the address. Anything else is a stranger's row that landed in
+            // the race window — refuse rather than adopt it.
+            if (!(clerkUser && raceUser.id === clerkUser.id) && !sessionOwnsEmail) {
+              logger.warn(
+                "[Consultation] refused a raced row that this request did not create",
+                { tenantId },
+              );
+              return accountExistsResponse();
+            }
             userId = raceUser.id;
             if (!raceUser.tenantId) {
               await prisma.users.update({
