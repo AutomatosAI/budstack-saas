@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { SocialLink } from "@/lib/templates/section-schemas";
+import type { AboutSectionState } from "@/lib/templates/about-page";
 
 export interface LogoPlacement {
   // Navigation
@@ -99,11 +100,9 @@ export interface EditorFormData {
   homeHeroOverlayStyle: string;
   homeHeroOverlayOpacity: number;
 
-  // Page Content - About (field names match what AboutContent reads)
-  aboutHeroTitle: string;
-  aboutHeroSubtitle: string;
-  aboutMissionTitle: string;
-  aboutMissionParagraphs: string; // newline-separated; split into array on save
+  // Page Content - About (fixed section list — lib/templates/about-page.ts;
+  // sparse configs, serialised to pageContent.about v2 on save)
+  aboutSections: AboutSectionState[];
 
   // Page Content - Contact
   contactTitle: string;

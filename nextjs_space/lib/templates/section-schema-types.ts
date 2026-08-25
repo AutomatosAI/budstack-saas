@@ -32,7 +32,10 @@ export interface FieldSchema {
 
 export interface SectionSchema {
   label: string;
-  category: 'hero' | 'cta' | 'content' | 'navigation' | 'footer';
+  /** 'about' sections belong to the fixed /about page builder — they render
+   *  through the same registry but are excluded from the homepage
+   *  add-section dialog (getSectionsByCategory only groups hero/cta/content). */
+  category: 'hero' | 'cta' | 'content' | 'navigation' | 'footer' | 'about';
   description: string;
   fields: FieldSchema[];
 }

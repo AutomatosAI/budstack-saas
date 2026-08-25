@@ -42,6 +42,15 @@ import { StatsCounter } from '@/components/sections/content/StatsCounter';
 import { TextMarquee } from '@/components/sections/content/TextMarquee';
 import { FeaturesShowcase } from '@/components/sections/content/FeaturesShowcase';
 
+// About page sections (fixed /about builder — lib/templates/about-page.ts)
+import { AboutHero } from '@/components/sections/about/AboutHero';
+import { AboutMission } from '@/components/sections/about/AboutMission';
+import { AboutStats } from '@/components/sections/about/AboutStats';
+import { AboutValues } from '@/components/sections/about/AboutValues';
+import { AboutFacilities } from '@/components/sections/about/AboutFacilities';
+import { AboutTimeline } from '@/components/sections/about/AboutTimeline';
+import { AboutCta } from '@/components/sections/about/AboutCta';
+
 // CTAs
 import { CTABanner } from '@/components/sections/ctas/CTABanner';
 import { CTAWithImage } from '@/components/sections/ctas/CTAWithImage';
@@ -99,6 +108,13 @@ export const SECTION_REGISTRY: Record<string, ComponentType<SectionProps>> = {
   StatsCounter,
   TextMarquee,
   FeaturesShowcase,
+  AboutHero,
+  AboutMission,
+  AboutStats,
+  AboutValues,
+  AboutFacilities,
+  AboutTimeline,
+  AboutCta,
   CTABanner,
   CTAWithImage,
   CTASplit,

@@ -681,4 +681,95 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       ]},
     ],
   },
+
+  // ─── About page sections ───────────────────────────────────
+  // category 'about' = the fixed /about page builder (lib/templates/about-page.ts).
+  // Text defaults mirror each component's own fallback; fields whose defaults
+  // interpolate the live business name stay '' so an untouched field keeps
+  // interpolating after a rename (the placeholder documents the behaviour).
+  AboutHero: {
+    label: 'About Hero',
+    category: 'about',
+    description: 'About page opening — badge, page title, subtitle',
+    fields: [
+      { key: 'badge', label: 'Badge', type: 'text', default: 'Our Story' },
+      { key: 'heading', label: 'Page Title', type: 'text', default: '', placeholder: 'About {your business name} — leave blank to auto-fill' },
+      { key: 'subtitle', label: 'Subtitle', type: 'textarea', default: 'Setting new standards in medical cannabis excellence' },
+      { key: 'textAlign', label: 'Text Alignment', type: 'select', default: 'center', options: ['left', 'center', 'right'] },
+    ],
+  },
+  AboutMission: {
+    label: 'Mission & Story',
+    category: 'about',
+    description: 'Icon-badged heading, story paragraphs, optional image',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Our Mission' },
+      { key: 'textAlign', label: 'Text Alignment', type: 'select', default: 'left', options: ['left', 'center', 'right'] },
+      { key: 'paragraphs', label: 'Story Paragraphs', type: 'textarea', default: '', placeholder: 'Tell your story — leave blank to use the default. Separate paragraphs with a blank line.' },
+      { key: 'imageUrl', label: 'Story Image (optional)', type: 'image', default: '' },
+    ],
+  },
+  AboutStats: {
+    label: 'Stats Band',
+    category: 'about',
+    description: 'Key figures on a brand-tinted band',
+    fields: [
+      { key: 'items', label: 'Stats', type: 'array', default: '', itemLabel: 'Stat', itemFields: [
+        { key: 'value', label: 'Value', type: 'text', default: '100+' },
+        { key: 'label', label: 'Label', type: 'text', default: 'Label' },
+      ]},
+    ],
+  },
+  AboutValues: {
+    label: 'Values Grid',
+    category: 'about',
+    description: 'Icon tiles with a title and short description each',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Our Values' },
+      { key: 'textAlign', label: 'Heading Alignment', type: 'select', default: 'center', options: ['left', 'center', 'right'] },
+      { key: 'items', label: 'Values', type: 'array', default: '', itemLabel: 'Value', itemFields: [
+        { key: 'icon', label: 'Icon', type: 'icon', default: 'Target' },
+        { key: 'title', label: 'Title', type: 'text', default: 'Value' },
+        { key: 'description', label: 'Description', type: 'textarea', default: '' },
+      ]},
+    ],
+  },
+  AboutFacilities: {
+    label: 'Facilities',
+    category: 'about',
+    description: 'Solid brand band with facility cards and feature lists',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Our Facilities' },
+      { key: 'subtitle', label: 'Subtitle', type: 'textarea', default: 'World-class operations meeting the highest international standards.' },
+      { key: 'items', label: 'Facilities', type: 'array', default: '', itemLabel: 'Facility', itemFields: [
+        { key: 'title', label: 'Title', type: 'text', default: 'Facility' },
+        { key: 'description', label: 'Description', type: 'textarea', default: '' },
+        { key: 'features', label: 'Feature List', type: 'textarea', default: '', placeholder: 'One feature per line' },
+        { key: 'image', label: 'Image (optional)', type: 'image', default: '' },
+      ]},
+    ],
+  },
+  AboutTimeline: {
+    label: 'Journey Timeline',
+    category: 'about',
+    description: 'Alternating milestones around a centre line',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Our Journey' },
+      { key: 'entries', label: 'Milestones', type: 'array', default: '', itemLabel: 'Milestone', itemFields: [
+        { key: 'year', label: 'Year / Label', type: 'text', default: '2024' },
+        { key: 'description', label: 'Description', type: 'textarea', default: '' },
+      ]},
+    ],
+  },
+  AboutCta: {
+    label: 'Closing CTA',
+    category: 'about',
+    description: 'Closing heading, subtitle and contact button',
+    fields: [
+      { key: 'heading', label: 'Heading', type: 'text', default: 'Ready to Learn More?' },
+      { key: 'subtitle', label: 'Subtitle', type: 'textarea', default: 'Get in touch with our team to discuss how we can support your medical cannabis needs.' },
+      { key: 'ctaText', label: 'Button Text', type: 'text', default: 'Contact Us' },
+      { key: 'ctaHref', label: 'Button Link', type: 'url', default: '', placeholder: 'Leave blank for your contact page' },
+    ],
+  },
 };

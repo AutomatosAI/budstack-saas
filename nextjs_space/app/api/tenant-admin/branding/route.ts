@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { apiError, apiValidationError } from "@/lib/api-error";
 import { withTenantAuth } from "@/lib/api-auth";
@@ -9,6 +10,10 @@ import { TenantSettings } from "@/lib/types";
 import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { deepMerge } from "@/lib/utils";
 import { stripSignedUrls } from "@/lib/templates/strip-signed-urls";
+import { isAboutContentV2 } from "@/lib/templates/about-page";
+import { writeBrandingSnapshot } from "@/lib/templates/branding-backup";
+import { fontIdToName } from "@/lib/templates/font-catalog";
+import { customDomainSlugForHost } from "@/lib/custom-domain-rewrite";
 import { hexToHsl } from "@/lib/color-utils";
 import { logger } from "@/lib/logger";
 
@@ -286,6 +291,11 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
         s3Path: currentTemplate?.s3Path || "MISSING",
       });
 
+      // Pre-save snapshot source: the layout branch below fills this with the
+      // layout.json it is about to overwrite (it reads it anyway).
+      let snapshotLayout: any = null;
+      const preSaveS3Path = currentTemplate?.s3Path?.replace(/\/+$/, '') || null;
+
       if (hasLayoutSections || hasSectionConfigs || hasSectionColorOverrides || hasNavFooterConfig) {
         // Read existing layout from S3 — tenant's own path, no fallback
         const existingS3Path = currentTemplate?.s3Path?.replace(/\/+$/, '') || null;
@@ -297,6 +307,7 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
             baseLayout = {};
           }
         }
+        snapshotLayout = baseLayout;
 
         // Use incoming sections if provided, otherwise keep existing sections from S3
         const sourceSections = hasLayoutSections
@@ -397,10 +408,38 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
       if (settings.pageContent) {
         const currentPageContent = (currentTemplate?.pageContent as any) || {};
         updateData.pageContent = deepMerge(currentPageContent, settings.pageContent);
+        // pageContent.about (v2) is a whole-page versioned payload: REPLACE it
+        // rather than deep-merge so blanked fields ('' = fall back to default)
+        // and superseded legacy flat keys don't linger in the stored blob.
+        const incomingAbout = (settings.pageContent as any)?.about;
+        if (isAboutContentV2(incomingAbout)) {
+          updateData.pageContent = { ...updateData.pageContent, about: incomingAbout };
+        }
       }
 
       logger.info("[branding] Saving designSystem", { designSystemKeys: Object.keys(newDesignSystem), colorKeys: Object.keys(newDesignSystem.colors || {}) });
       logger.info("[branding] Saving pageContent", { pageContentKeys: Object.keys(updateData.pageContent || {}) });
+
+      // Rollback safety net: snapshot the state this save is about to
+      // overwrite (publishing is immediate and destructive — no draft/undo).
+      // Best-effort; never blocks the save. Skipped when the template has no
+      // pre-existing S3 path (first save — nothing meaningful to back up).
+      if (preSaveS3Path) {
+        await writeBrandingSnapshot(preSaveS3Path, tenant.id, {
+          savedAt: new Date().toISOString(),
+          tenantId: tenant.id,
+          templateId: activeTemplateId,
+          designSystem: currentTemplate?.designSystem ?? null,
+          pageContent: currentTemplate?.pageContent ?? null,
+          navigation: currentTemplate?.navigation ?? null,
+          footer: currentTemplate?.footer ?? null,
+          customCss: currentTemplate?.customCss ?? null,
+          logoUrl: currentTemplate?.logoUrl ?? null,
+          heroImageUrl: currentTemplate?.heroImageUrl ?? null,
+          faviconUrl: currentTemplate?.faviconUrl ?? null,
+          layoutJson: snapshotLayout,
+        });
+      }
 
       // Update TenantTemplate — AC-C1: structurally strip any signed URL
       // (designSystem/pageContent/customCss are all walked, not just the
@@ -428,6 +467,58 @@ export const PUT = withTenantAuth(async (req, { tenantId }) => {
           businessName,
           settings: stripSignedUrls(settings, []) as Prisma.InputJsonValue,
         },
+      });
+    }
+
+    // Keep tenant_branding in step with the published storefront branding.
+    // Emails, OG images and the store login page read tenant_branding, which
+    // was previously written only at onboarding — so a rebrand silently left
+    // stale colours/logo in those surfaces. Only fields present in this save
+    // are written (colours arrive only when dirty; logo/favicon only when a
+    // new file was uploaded). logoUrl/faviconUrl store S3 keys, matching the
+    // existing tenant_branding contract (see lib/email/email-shell.ts).
+    const isHexColor = (v: unknown): v is string =>
+      typeof v === "string" && /^#[0-9a-fA-F]{3,8}$/.test(v.trim());
+    const brandingSync: Record<string, string> = {};
+    if (isHexColor(settings.primaryColor)) brandingSync.primaryColor = settings.primaryColor.trim();
+    if (isHexColor(settings.secondaryColor)) brandingSync.secondaryColor = settings.secondaryColor.trim();
+    if (isHexColor(settings.accentColor)) brandingSync.accentColor = settings.accentColor.trim();
+    const brandingFontName = fontIdToName(settings.fontFamily);
+    if (brandingFontName) brandingSync.fontFamily = brandingFontName;
+    // Only own-tenant upload keys reach tenant_branding: with no file attached,
+    // settings.logoPath is client-supplied text, and this row feeds public
+    // surfaces (OG images, emails). Uploads in this request always match.
+    const isOwnUploadKey = (v: unknown): v is string =>
+      typeof v === "string" && v.startsWith(`tenants/${tenantId}/`);
+    if (isOwnUploadKey(settings.logoPath)) brandingSync.logoUrl = settings.logoPath;
+    if (isOwnUploadKey(settings.faviconPath)) brandingSync.faviconUrl = settings.faviconPath;
+    if (Object.keys(brandingSync).length > 0) {
+      await prisma.tenant_branding.upsert({
+        where: { tenantId: tenant.id },
+        update: { ...brandingSync, updatedAt: new Date() },
+        create: {
+          id: crypto.randomUUID(),
+          tenantId: tenant.id,
+          ...brandingSync,
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    // On-demand ISR purge: without this a publish stayed invisible for up to
+    // 60s (`revalidate = 60` with no revalidatePath anywhere). "layout" scope
+    // invalidates every store page under the slug — About, home, support, …
+    // Custom domains cache under their own host-scoped cd-<hash> segment
+    // (PRD-212), so purge that too.
+    try {
+      revalidatePath(`/store/${tenant.subdomain}`, "layout");
+      if (tenant.customDomain) {
+        revalidatePath(`/store/${customDomainSlugForHost(tenant.customDomain)}`, "layout");
+      }
+    } catch (revalidateError) {
+      logger.info("[branding] revalidatePath failed (non-fatal)", {
+        tenantId: tenant.id,
+        error: revalidateError instanceof Error ? revalidateError.message : String(revalidateError),
       });
     }
 

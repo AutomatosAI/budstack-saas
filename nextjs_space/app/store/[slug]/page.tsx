@@ -21,7 +21,7 @@ import { TEMPLATE_COMPONENTS } from "@/lib/templates/template-registry";
 
 // Import section-based renderer (data-driven templates)
 import { TemplateRenderer } from "@/components/template-renderer";
-import { SECTION_ASSET_KEYS, type TemplateLayout } from "@/lib/types/template-layout";
+import { signSectionAssets } from "@/lib/templates/sign-layout-assets";
 
 // Import existing homepage components (fallback)
 import { HeroSection } from "@/components/home/hero-section";
@@ -220,58 +220,10 @@ async function StoreHomeContent({
 
     // Sign section-level asset URLs in layout.json configs
     // Assets are at the tenant's own S3 path — no fallback needed
+    // (shared with the About page — lib/templates/sign-layout-assets.ts;
+    // tenant-scoped: out-of-scope absolute keys are skipped, not signed)
     if (layout?.sections && tenantS3Path) {
-      const assetKeys = SECTION_ASSET_KEYS;
-
-      function signAssetUrl(val: string, contentTypeHint?: string): Promise<string> {
-        const isAbsoluteKey = val.startsWith('development/') || val.startsWith('tenants/') || val.startsWith('templates/');
-        if (isAbsoluteKey) {
-          return getFileUrl(val, contentTypeHint);
-        }
-        return getFileUrl(`${tenantS3Path}/${val}`, contentTypeHint);
-      }
-
-      // Collect all signing tasks, then execute in parallel
-      const signingTasks: Array<{ target: any; key: string; promise: Promise<string> }> = [];
-      for (const section of layout.sections) {
-        for (const key of assetKeys) {
-          const val = section.config?.[key];
-          if (val && typeof val === 'string' && !val.startsWith('http') && !val.startsWith('/')) {
-            // For videoUrl keys without a file extension, hint video/mp4 content type
-            const hint = key === 'videoUrl' && !/\.\w+$/.test(val) ? 'video/mp4' : undefined;
-            signingTasks.push({ target: section.config, key, promise: signAssetUrl(val, hint) });
-          }
-        }
-        // Sign asset URLs inside nested arrays (e.g. categories[].imageUrl, logos[].src)
-        if (section.config) {
-          for (const arrKey of Object.keys(section.config)) {
-            if (Array.isArray(section.config[arrKey])) {
-              for (let idx = 0; idx < section.config[arrKey].length; idx++) {
-                const item = section.config[arrKey][idx];
-                // Handle flat string arrays (e.g. SocialProof avatars[])
-                if (typeof item === 'string' && !item.startsWith('http') && !item.startsWith('/') && (item.includes('/') || item.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
-                  signingTasks.push({ target: section.config[arrKey], key: String(idx), promise: signAssetUrl(item) });
-                  continue;
-                }
-                if (!item || typeof item !== 'object') continue;
-                for (const itemKey of Object.keys(item)) {
-                  const v = (item as any)[itemKey];
-                  if (v && typeof v === 'string' && !v.startsWith('http') && !v.startsWith('/') && (v.includes('/') || v.match(/\.(png|jpg|jpeg|webp|svg|gif)$/i))) {
-                    signingTasks.push({ target: item, key: itemKey, promise: signAssetUrl(v) });
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      const results = await Promise.allSettled(signingTasks.map(t => t.promise));
-      results.forEach((result, i) => {
-        if (result.status === 'fulfilled') {
-          (signingTasks[i].target as any)[signingTasks[i].key] = result.value;
-        }
-      });
+      await signSectionAssets(layout.sections, tenantS3Path, tenant.id);
     }
 
     if (layout) {
