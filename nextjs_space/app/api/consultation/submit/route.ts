@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clerkClient } from "@clerk/nextjs/server";
+import { emailsMatch } from "@/lib/security/email-ownership";
+import { getVerifiedSessionEmail } from "@/lib/security/session-email";
 
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
@@ -24,6 +26,16 @@ import { resolveTenant } from '@/lib/tenant/tenant-resolver';
 import { logger } from '@/lib/logger';
 import { apiError, apiValidationError } from '@/lib/api-error';
 import { checkPolicyGate } from '@/lib/legal/policy-gate';
+
+/** 409 for "that address already belongs to an account you have not proven you own". */
+function accountExistsResponse() {
+  return apiError(new Error("Account already exists for this email"), {
+    route: "POST /api/consultation/submit",
+    status: 409,
+    safeMessage:
+      "An account already exists for this email address. Please sign in and then complete your consultation. If you cannot access that account, contact support — for your protection we cannot link it from an unauthenticated form.",
+  });
+}
 
 // SECURITY (C1, C13): Strict whitelist schema — no `.passthrough()`. Every
 // field that lands in the database or is forwarded to Dr. Green must be
@@ -173,6 +185,51 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // SECURITY (account takeover): this route is PUBLIC — the caller has not
+    // proven they own `body.email`, anyone can type anyone's address. Creating
+    // records for a BRAND-NEW address is fine; touching an address that
+    // already has an account is not. Without the ownership gate below, an
+    // anonymous caller could submit a victim's email, have Clerk's
+    // "already exists" swallowed, and reach the linking step further down that
+    // re-points the VICTIM's users row at a Dr Green client the ATTACKER
+    // controls — so once the attacker's own (genuine-looking) ID is approved,
+    // the victim's account inherits VERIFIED.
+    //
+    // Ownership over anything that already exists is provable ONE way: an
+    // authenticated session for that address. Notably NOT by Clerk accepting a
+    // new account below — that only proves nobody held the *Clerk* identity,
+    // which says nothing about a local users row that predates this request
+    // (legacy import, or a dropped Clerk delete-webhook).
+    const sessionOwnsEmail = emailsMatch(await getVerifiedSessionEmail(), body.email);
+
+    // Check if user already exists locally (email is globally unique, don't filter by tenantId)
+    const existingUser = await prisma.users.findUnique({
+      where: { email: body.email.toLowerCase() },
+    });
+
+    // THE ownership gate. It runs BEFORE Clerk is touched, which matters: an
+    // address with a local row but no Clerk account (legacy import, dropped
+    // delete-webhook) is one Clerk will happily mint for ANYONE. Gating after
+    // that call left a two-request takeover — mint an account for the target
+    // address (Clerk performs no mailbox-control check; the password is the
+    // submitter's own), sign in with it, resubmit, and the session now
+    // "proves" ownership of a row the caller never owned. Refusing before the
+    // mint means there is no account to sign into, and no squatting on the
+    // address either.
+    //
+    // Consequence, deliberately accepted: the real owner of a local row with
+    // no Clerk account cannot self-serve through this route. Restoring that
+    // needs a flow that actually proves mailbox control (Clerk verification /
+    // password reset), never "sign up again" — which is indistinguishable
+    // from the attack.
+    if (existingUser && !sessionOwnsEmail) {
+      logger.warn(
+        "[Consultation] refused submission for an existing account by a caller not signed in as it",
+        { tenantId },
+      );
+      return accountExistsResponse();
+    }
+
     // 1. Create Clerk User (Auth)
     let clerkUser;
     try {
@@ -190,10 +247,18 @@ export async function POST(request: NextRequest) {
           },
         });
       } catch (clerkError: any) {
-        // Ignore if user already exists in Clerk, proceed to DB/DrGreen
+        // The address already has an account. Continuing "to DB/DrGreen" here
+        // is what let an anonymous caller operate on someone else's row —
+        // refuse unless they are signed in as that address.
         if (clerkError.errors?.[0]?.code === "form_identifier_exists") {
-          logger.info("[Consultation] user already exists in Clerk", { tenantId });
-          // Optionally fetch the user to get their ID if needed, but for now we proceed
+          if (!sessionOwnsEmail) {
+            logger.warn(
+              "[Consultation] refused submission for an existing address by a caller not signed in as it",
+              { tenantId },
+            );
+            return accountExistsResponse();
+          }
+          logger.info("[Consultation] existing Clerk account, caller is signed in as it", { tenantId });
         } else {
           throw clerkError; // Re-throw other errors (e.g., weak password)
         }
@@ -211,11 +276,6 @@ export async function POST(request: NextRequest) {
         "POST /api/consultation/submit",
       );
     }
-
-    // Check if user already exists locally (email is globally unique, don't filter by tenantId)
-    const existingUser = await prisma.users.findUnique({
-      where: { email: body.email.toLowerCase() },
-    });
 
     let userId: string | undefined;
 
@@ -269,12 +329,29 @@ export async function POST(request: NextRequest) {
         userId = newUser.id;
         logger.info("[Consultation] created local user mirror", { userId, tenantId });
       } catch (prismaError: any) {
-        // Race condition: Clerk webhook may have created the user between our check and create
+        // Race condition: Clerk webhook may have created the user between our
+        // check and create. The ownership gate saw no row for this address, so
+        // one appeared mid-request — but "it must therefore be ours" is an
+        // assumption, not a guarantee (another writer could land a row for the
+        // same address in that window), so the adopt below re-checks rather
+        // than trusting it.
         if (prismaError.code === "P2002") {
           const raceUser = await prisma.users.findUnique({
             where: { email: body.email.toLowerCase() },
           });
           if (raceUser) {
+            // Adopt only what this request is entitled to: the row is the
+            // mirror of the Clerk account we just minted (ids match, since
+            // the local id IS clerkUser.id), or the caller is signed in as
+            // the address. Anything else is a stranger's row that landed in
+            // the race window — refuse rather than adopt it.
+            if (!(clerkUser && raceUser.id === clerkUser.id) && !sessionOwnsEmail) {
+              logger.warn(
+                "[Consultation] refused a raced row that this request did not create",
+                { tenantId },
+              );
+              return accountExistsResponse();
+            }
             userId = raceUser.id;
             if (!raceUser.tenantId) {
               await prisma.users.update({
@@ -588,8 +665,15 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // CRITICAL FIX: Also update the User record with the Dr. Green Client ID
-      // This is required for the kyc-check to work, as it looks at the User table.
+      // Also update the User record with the Dr. Green Client ID — required
+      // for the kyc-check, which reads the User table.
+      //
+      // SECURITY: the write an account-takeover targets. Safe by the ownership
+      // gate above — `userId` is either a row THIS request created, or a
+      // pre-existing row whose address the caller is signed in as. Enforced
+      // there and regression-tested in
+      // tests/unit/consultation-submit-ownership.test.ts; a re-check here
+      // would be unfirable by construction (the mistake the first cut made).
       if (userId) {
         await prisma.users.update({
           where: { id: userId },
