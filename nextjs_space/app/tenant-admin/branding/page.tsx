@@ -6,6 +6,11 @@ import BrandingForm from './branding-form';
 
 import { getJsonFromS3, getTextFromS3 } from '@/lib/storage/s3';
 import { SECTION_ASSET_KEYS } from '@/lib/types/template-layout';
+import {
+  ABOUT_PAGE_CONTENT_VERSION,
+  resolveAboutSections,
+} from '@/lib/templates/about-page';
+import { signSectionAssets } from '@/lib/templates/sign-layout-assets';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -168,6 +173,41 @@ export default async function BrandingPage({ searchParams }: { searchParams: { t
       } catch (e) {
         console.error("[BrandingPage] Failed to load layout.json for template", e);
       }
+    }
+
+    // Sign About-page config assets (mission image, facility photos) so the
+    // Pages tab and About preview display previously-saved images — mirrors
+    // the layout.json signing above. Resolved to the v2 shape here; the save
+    // route strips signed URLs back to S3 keys on publish.
+    try {
+      const pageContent = (activeTemplate.pageContent as any) || {};
+      const aboutSections = resolveAboutSections(pageContent.about).map((s) => ({
+        type: s.type,
+        id: s.id,
+        config: s.config,
+        visible: s.visible,
+        ...(s.colorOverrides ? { colorOverrides: s.colorOverrides } : {}),
+      }));
+      await signSectionAssets(
+        aboutSections,
+        activeTemplate.s3Path?.replace(/\/+$/, '') || null,
+        tenant.id,
+      );
+      (activeTemplate as any).pageContent = {
+        ...pageContent,
+        about: {
+          version: ABOUT_PAGE_CONTENT_VERSION,
+          sections: aboutSections.map((s) => ({
+            id: s.id!,
+            type: s.type,
+            visible: s.visible,
+            config: s.config,
+            ...(s.colorOverrides ? { colorOverrides: s.colorOverrides } : {}),
+          })),
+        },
+      };
+    } catch (e) {
+      console.error("[BrandingPage] Failed to sign About page assets", e);
     }
   }
 

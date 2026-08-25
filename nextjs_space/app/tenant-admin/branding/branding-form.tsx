@@ -7,6 +7,7 @@ import { toast } from "@/components/ui/sonner";
 import {
   Layout,
   FileText,
+  Files,
   Eye,
   Store,
   Monitor,
@@ -20,6 +21,7 @@ import { tenant_templates } from "@prisma/client";
 import { hexToHsl } from "@/lib/color-utils";
 import { TemplateRenderer } from "@/components/template-renderer";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
+import { aboutSectionsToContentV2, buildAboutLayout } from "@/lib/templates/about-page";
 
 // Tab components
 import { BrandTab } from "./tabs/brand-tab";
@@ -27,6 +29,7 @@ import { LayoutTab } from "./tabs/layout-tab";
 import { DesignTab } from "./tabs/design-tab";
 import { ColoursTab } from "./tabs/colours-tab";
 import { ContentTab } from "./tabs/content-tab";
+import { PagesTab } from "./tabs/pages-tab";
 import { TypeTab } from "./tabs/type-tab";
 // EducationTab and AdvancedTab imports removed while those tabs are hidden —
 // restore them together with the TabsTrigger/TabsContent blocks when re-enabling.
@@ -62,6 +65,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
   const [showPreview, setShowPreview] = useState(false);
   const [dirtyColors, setDirtyColors] = useState<Set<string>>(new Set());
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [previewPage, setPreviewPage] = useState<"home" | "about">("home");
 
   /** Scrollable container that wraps the inline desktop preview. Used by
    *  scrollPreviewToSection to scroll/pulse a section when the user selects
@@ -101,6 +105,16 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
       // Older browsers without multi-prop Web Animations support — skip silently
     }
   }, [previewDevice]);
+
+  /** Opening a section in the Content (home) or Pages (about) tab switches
+   *  the preview to that page, then scrolls once the layout has rendered. */
+  const makeSectionSelectHandler = useCallback(
+    (page: "home" | "about") => (sectionId: string) => {
+      setPreviewPage(page);
+      setTimeout(() => scrollPreviewToSection(sectionId), 120);
+    },
+    [scrollPreviewToSection],
+  );
 
   const [formData, setFormData] = useState<EditorFormData>(() =>
     buildInitialFormData(tenant, activeTemplate),
@@ -150,15 +164,10 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
             heroOverlayStyle: formData.homeHeroOverlayStyle,
             heroOverlayOpacity: formData.homeHeroOverlayOpacity,
           },
-          about: {
-            heroTitle: formData.aboutHeroTitle,
-            heroSubtitle: formData.aboutHeroSubtitle,
-            missionTitle: formData.aboutMissionTitle,
-            missionParagraphs: formData.aboutMissionParagraphs
-              .split(/\n{2,}/)
-              .map((p) => p.trim())
-              .filter(Boolean),
-          },
+          about: aboutSectionsToContentV2(
+            formData.aboutSections,
+            formData.sectionColorOverrides,
+          ),
           contact: {
             title: formData.contactTitle,
             description: formData.contactDescription,
@@ -180,10 +189,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
         homeHeroHeight: undefined,
         homeHeroOverlayStyle: undefined,
         homeHeroOverlayOpacity: undefined,
-        aboutHeroTitle: undefined,
-        aboutHeroSubtitle: undefined,
-        aboutMissionTitle: undefined,
-        aboutMissionParagraphs: undefined,
+        aboutSections: undefined,
         contactTitle: undefined,
         contactDescription: undefined,
         contactEmail: undefined,
@@ -269,15 +275,10 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
       heroOverlayStyle: formData.homeHeroOverlayStyle,
       heroOverlayOpacity: formData.homeHeroOverlayOpacity,
     },
-    about: {
-      heroTitle: formData.aboutHeroTitle,
-      heroSubtitle: formData.aboutHeroSubtitle,
-      missionTitle: formData.aboutMissionTitle,
-      missionParagraphs: formData.aboutMissionParagraphs
-        .split(/\n{2,}/)
-        .map((p) => p.trim())
-        .filter(Boolean),
-    },
+    about: aboutSectionsToContentV2(
+      formData.aboutSections,
+      formData.sectionColorOverrides,
+    ),
     contact: {
       title: formData.contactTitle,
       description: formData.contactDescription,
@@ -358,6 +359,27 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
     }
     : null;
 
+  // About page preview — fixed section layout driven by the Pages tab state,
+  // wearing the same nav/footer chrome as the home preview.
+  const liveAboutLayout = buildAboutLayout(livePageContent.about, {
+    navigation: formData.navigationStyle,
+    navigationConfig: {
+      ...formData.navigationConfig,
+      ...(Object.keys(formData.navColorOverrides).length > 0
+        ? { colorOverrides: formData.navColorOverrides }
+        : {}),
+    },
+    footer: formData.footerStyle,
+    footerConfig: {
+      ...formData.footerConfig,
+      ...(Object.keys(formData.footerColorOverrides).length > 0
+        ? { colorOverrides: formData.footerColorOverrides }
+        : {}),
+    },
+  });
+
+  const activePreviewLayout = previewPage === "about" ? liveAboutLayout : liveLayout;
+
   // --- Render ---
   return (
     <div className="store-editor flex flex-col lg:flex-row gap-2 lg:gap-6 h-[calc(100vh-7rem)] lg:h-[calc(100vh-10rem)] overflow-hidden">
@@ -393,9 +415,10 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 // preview route would 404. Falling through with just the slug loads
                 // the base template from templates/{slug} in S3.
                 const baseSlug = (activeTemplate as any)?.templates?.slug || tenant.subdomain;
+                const pageSuffix = previewPage === "about" ? "&page=about" : "";
                 const previewHref = previewMode === "marketplace" || !activeTemplate?.id
                   ? `/store/preview/${baseSlug}`
-                  : `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}`;
+                  : `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}${pageSuffix}`;
                 return (
                   <a
                     href={previewHref}
@@ -426,7 +449,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
           </div>
 
           <Tabs defaultValue="brand" className="space-y-4 lg:space-y-6">
-            <TabsList className="grid w-full h-auto grid-cols-3 gap-1">
+            <TabsList className="grid w-full h-auto grid-cols-4 gap-1">
               <TabsTrigger value="brand" className="text-xs px-2">
                 <Store className="w-4 h-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Brand</span>
@@ -438,6 +461,10 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
               <TabsTrigger value="content" className="text-xs px-2">
                 <FileText className="w-4 h-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Content</span>
+              </TabsTrigger>
+              <TabsTrigger value="pages" className="text-xs px-2">
+                <Files className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Pages</span>
               </TabsTrigger>
               {/* Education and Advanced tabs hidden for now — keeping it
                   simple for early users. Re-enable by restoring the
@@ -476,7 +503,17 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
               <ContentTab
                 formData={formData}
                 setFormData={setFormData}
-                onSectionSelect={scrollPreviewToSection}
+                onSectionSelect={makeSectionSelectHandler("home")}
+              />
+            </TabsContent>
+
+            {/* PAGES — per-page section content for the fixed storefront
+                pages (About). Same schema-driven editing as Content. */}
+            <TabsContent value="pages" className="space-y-6">
+              <PagesTab
+                formData={formData}
+                setFormData={setFormData}
+                onSectionSelect={makeSectionSelectHandler("about")}
               />
             </TabsContent>
 
@@ -511,7 +548,30 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
             </div>
             <span>Live Preview &mdash; {formData.businessName || tenant.businessName}</span>
           </div>
-          <div className="flex items-center gap-1 bg-bs-canvas/60 rounded-bs-sm p-0.5">
+          <div className="flex items-center gap-2">
+            {/* Page toggle — which storefront page the preview shows */}
+            <div className="flex items-center gap-1 bg-bs-canvas/60 rounded-bs-sm p-0.5">
+              {([
+                { id: "home" as const, label: "Home" },
+                { id: "about" as const, label: "About" },
+              ]).map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPreviewPage(p.id)}
+                  className={cn(
+                    "px-2 py-1 rounded-bs-sm transition-all text-[11px] font-medium",
+                    previewPage === p.id
+                      ? "bg-bs-green text-bs-canvas"
+                      : "text-bs-fg-muted hover:text-bs-fg hover:bg-bs-card-2",
+                  )}
+                  title={`Preview the ${p.label} page`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 bg-bs-canvas/60 rounded-bs-sm p-0.5">
             {([
               { id: "desktop" as const, icon: Monitor, label: "Desktop" },
               { id: "tablet" as const, icon: Tablet, label: "Tablet" },
@@ -532,6 +592,7 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
                 <d.icon size={14} aria-hidden="true" />
               </button>
             ))}
+            </div>
           </div>
         </div>
 
@@ -542,13 +603,13 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
             className="w-full h-full pt-10 overflow-y-auto overflow-x-hidden preview-scrollbar bg-bs-canvas relative"
             style={{ transform: "scale(1)" }}
           >
-            {liveLayout ? (
+            {activePreviewLayout ? (
               <TenantThemeProvider
                 tenant={tenant as any}
                 tenantTemplate={{ designSystem: liveDesignSystem, customCss: formData.customCSS }}
               >
                 <TemplateRenderer
-                  layout={liveLayout as any}
+                  layout={activePreviewLayout as any}
                   sectionProps={liveSectionProps}
                   customCss={[templateCss, formData.customCSS].filter(Boolean).join("\n")}
                   renderChrome={true}
@@ -574,9 +635,12 @@ export default function BrandingForm({ tenant, activeTemplate, apiEndpoint, publ
             );
           }
           // Marketplace mode: omit tenantTemplateId — see Preview button comment above.
+          // The page param mirrors the desktop preview's Home/About toggle
+          // (the preview route only honours it for tenant previews).
+          const pageParam = previewPage === "about" ? "&page=about" : "";
           const iframeSrc = previewMode === "marketplace"
             ? `/store/preview/${baseSlug}?embed=true&t=${Date.now()}`
-            : `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}&embed=true&t=${Date.now()}`;
+            : `/store/preview/${baseSlug}?tenantTemplateId=${activeTemplate.id}&embed=true${pageParam}&t=${Date.now()}`;
           return (
             <div
               className="flex justify-center bg-slate-100 dark:bg-slate-900 pt-10"

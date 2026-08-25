@@ -1,7 +1,7 @@
 import {
   Activity, Award, BadgeCheck, Brain, Calendar, Check, CheckCircle, ClipboardList,
   Clock, Compass, CreditCard, Cross, Droplet, Eye, FileText, Flame, FlaskConical,
-  Flower, Gift, Heart, HeartPulse, Info, Leaf, Lightbulb, Lock, Mail, MapPin,
+  Flower, Gift, Globe, Heart, HeartPulse, Info, Leaf, Lightbulb, Lock, Mail, MapPin,
   MessageCircle, MessageSquare, Microscope, Moon, Navigation, Package, Phone,
   Pill, Search, Settings, Shield, ShieldCheck, ShoppingBag, ShoppingCart,
   Sparkles, Star, Stethoscope, Sun, Syringe, Tag, Target, Thermometer, Timer,
@@ -36,14 +36,14 @@ export const ICON_GROUPS = [
   },
   {
     label: 'Action & Info',
-    icons: ['Heart', 'Zap', 'Lightbulb', 'Target', 'TrendingUp', 'Eye', 'Search', 'Info', 'Settings', 'ClipboardList', 'FileText'],
+    icons: ['Heart', 'Zap', 'Lightbulb', 'Target', 'Globe', 'TrendingUp', 'Eye', 'Search', 'Info', 'Settings', 'ClipboardList', 'FileText'],
   },
 ] as const;
 
 const ICON_COMPONENTS: Record<string, LucideIcon> = {
   Activity, Award, BadgeCheck, Brain, Calendar, Check, CheckCircle, ClipboardList,
   Clock, Compass, CreditCard, Cross, Droplet, Eye, FileText, Flame, FlaskConical,
-  Flower, Gift, Heart, HeartPulse, Info, Leaf, Lightbulb, Lock, Mail, MapPin,
+  Flower, Gift, Globe, Heart, HeartPulse, Info, Leaf, Lightbulb, Lock, Mail, MapPin,
   MessageCircle, MessageSquare, Microscope, Moon, Navigation, Package, Phone,
   Pill, Search, Settings, Shield, ShieldCheck, ShoppingBag, ShoppingCart,
   Sparkles, Star, Stethoscope, Sun, Syringe, Tag, Target, Thermometer, Timer,

@@ -3,6 +3,7 @@ import {
   DEFAULT_NAV_LINKS,
   DEFAULT_FOOTER_SECTIONS,
 } from "@/lib/templates/section-schemas";
+import { resolveAboutSections } from "@/lib/templates/about-page";
 import type { tenant_templates } from "@prisma/client";
 import type { TenantSettings } from "@/lib/types";
 import type { EditorFormData } from "./tabs/types";
@@ -96,6 +97,25 @@ export function buildInitialFormData(
         initialColorOverrides[sectionId] = { ...section.colorOverrides };
       }
     });
+  }
+
+  // About page sections — v2 pageContent.about overlays, or legacy flat keys
+  // mapped into section configs (resolveAboutSections handles both). About
+  // colour overrides share the sectionColorOverrides map, namespaced by the
+  // fixed about-* section ids.
+  const aboutEntries = resolveAboutSections(
+    templateContent.about ?? settingsContent.about,
+  );
+  const initialAboutSections = aboutEntries.map((s) => ({
+    id: s.id,
+    type: s.type,
+    visible: s.visible !== false,
+    config: { ...(s.config || {}) },
+  }));
+  for (const s of aboutEntries) {
+    if (s.colorOverrides && Object.keys(s.colorOverrides).length > 0) {
+      initialColorOverrides[s.id] = { ...(s.colorOverrides as Record<string, string>) };
+    }
   }
 
   return {
@@ -238,36 +258,8 @@ export function buildInitialFormData(
     homeHeroOverlayStyle: templateContent.home?.heroOverlayStyle || settingsContent.home?.heroOverlayStyle || "gradient-dark",
     homeHeroOverlayOpacity: templateContent.home?.heroOverlayOpacity ?? settingsContent.home?.heroOverlayOpacity ?? 70,
 
-    // About — read the keys AboutContent actually uses, with legacy fallbacks
-    aboutHeroTitle:
-      templateContent.about?.heroTitle
-      || templateContent.about?.title
-      || templateContent.aboutTitle
-      || settingsContent.about?.heroTitle
-      || settingsContent.about?.title
-      || "",
-    aboutHeroSubtitle:
-      templateContent.about?.heroSubtitle
-      || settingsContent.about?.heroSubtitle
-      || "",
-    aboutMissionTitle:
-      templateContent.about?.missionTitle
-      || settingsContent.about?.missionTitle
-      || "Our Mission",
-    aboutMissionParagraphs: (() => {
-      const paras =
-        templateContent.about?.missionParagraphs
-        || settingsContent.about?.missionParagraphs;
-      if (Array.isArray(paras)) return paras.join("\n\n");
-      // Fallback: legacy free-form content field
-      return (
-        templateContent.about?.content
-        || templateContent.aboutContent
-        || templateContent.aboutMission
-        || settingsContent.about?.content
-        || ""
-      );
-    })(),
+    // About — fixed section list with sparse configs (see block above)
+    aboutSections: initialAboutSections,
 
     contactTitle: templateContent.contact?.title || settingsContent.contact?.title || "Get in Touch",
     contactDescription: templateContent.contact?.description || settingsContent.contact?.description || "Have questions? We are here to help.",

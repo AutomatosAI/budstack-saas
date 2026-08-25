@@ -435,81 +435,17 @@ export function BrandTab({
       </section>
 
       {/* === PAGE CONTENT === */}
+      {/* About page content moved to the Pages tab (schema-driven sections). */}
       <section className="bs-card bs-card-pad space-y-6">
         <div>
           <h3 className="text-[22px] leading-tight" style={sectionTitleStyle}>
             Page Content
           </h3>
           <p className="text-sm text-bs-fg-muted">
-            Edit the text shown on your About and Contact pages
+            Edit the text shown on your Contact page — the About page has its
+            own Pages tab
           </p>
         </div>
-        {/* --- About Page --- */}
-        <div className="space-y-3">
-          <p className="bs-eyebrow">About Page</p>
-
-          <div>
-            <Label htmlFor="aboutHeroTitle" className="text-xs">Hero Title</Label>
-            <Input
-              id="aboutHeroTitle"
-              value={formData.aboutHeroTitle}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, aboutHeroTitle: e.target.value }))
-              }
-              placeholder={`About ${formData.businessName || "Us"}`}
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="aboutHeroSubtitle" className="text-xs">Hero Subtitle</Label>
-            <Textarea
-              id="aboutHeroSubtitle"
-              value={formData.aboutHeroSubtitle}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, aboutHeroSubtitle: e.target.value }))
-              }
-              placeholder="Setting new standards in medical cannabis excellence"
-              rows={2}
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="aboutMissionTitle" className="text-xs">Mission Title</Label>
-            <Input
-              id="aboutMissionTitle"
-              value={formData.aboutMissionTitle}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, aboutMissionTitle: e.target.value }))
-              }
-              placeholder="Our Mission"
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="aboutMissionParagraphs" className="text-xs">
-              Mission Paragraphs
-            </Label>
-            <Textarea
-              id="aboutMissionParagraphs"
-              value={formData.aboutMissionParagraphs}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, aboutMissionParagraphs: e.target.value }))
-              }
-              placeholder="First paragraph of your mission story...&#10;&#10;Second paragraph — separate paragraphs with a blank line."
-              rows={8}
-              className="mt-1"
-            />
-            <p className="text-[11px] text-bs-fg-muted mt-1">
-              Separate paragraphs with a blank line.
-            </p>
-          </div>
-        </div>
-
-        <div className="border-t border-bs-border-100" />
-
         {/* --- Contact Page --- */}
         <div className="space-y-3">
           <p className="bs-eyebrow">Contact Page</p>

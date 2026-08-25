@@ -189,7 +189,7 @@ export function Footer({ tenant, logoUrl: logoUrlProp }: FooterProps = {}) {
               </h4>
               <nav className="space-y-3">
                 <Link
-                  href={`${baseUrl}/faq`}
+                  href={`${baseUrl}/support`}
                   className="block text-gray-300 hover:text-white hover:translate-x-1 transition-all duration-200"
                 >
                   {t("faq.title")}

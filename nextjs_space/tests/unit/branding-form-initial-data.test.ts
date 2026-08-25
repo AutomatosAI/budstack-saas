@@ -77,3 +77,80 @@ describe("buildInitialFormData — letterSpacingPreset is always a token", () =>
     expect(form.letterSpacingPreset).toBe("normal");
   });
 });
+
+/**
+ * About page editor state. The Pages tab edits a fixed section list whose
+ * configs are SPARSE — an untouched tenant loads empty configs so the page
+ * keeps rendering its stock content (with live businessName interpolation).
+ * Legacy flat keys written by the old Brand-tab About fields must surface in
+ * the new section configs so no existing customisation is lost.
+ */
+function templateWithPageContent(pageContent: unknown): tenant_templates {
+  return { designSystem: {}, pageContent } as unknown as tenant_templates;
+}
+
+describe("buildInitialFormData — aboutSections", () => {
+  it("loads the fixed section list with empty configs for an untouched tenant", () => {
+    const form = buildInitialFormData(TENANT, templateWith({}));
+
+    expect(form.aboutSections.map((s) => s.id)).toEqual([
+      "about-hero",
+      "about-mission",
+      "about-stats",
+      "about-values",
+      "about-facilities",
+      "about-timeline",
+      "about-cta",
+    ]);
+    for (const section of form.aboutSections) {
+      expect(section.visible).toBe(true);
+      expect(section.config).toEqual({});
+    }
+  });
+
+  it("maps legacy flat about keys into the matching section configs", () => {
+    const form = buildInitialFormData(
+      TENANT,
+      templateWithPageContent({
+        about: {
+          heroTitle: "About LekkerWeed",
+          missionTitle: "Why we exist",
+          missionParagraphs: ["One.", "Two."],
+        },
+      }),
+    );
+
+    expect(form.aboutSections.find((s) => s.id === "about-hero")?.config).toEqual({
+      heading: "About LekkerWeed",
+    });
+    expect(form.aboutSections.find((s) => s.id === "about-mission")?.config).toEqual({
+      heading: "Why we exist",
+      paragraphs: ["One.", "Two."],
+    });
+  });
+
+  it("overlays v2 sections and seeds their colour overrides into the shared map", () => {
+    const form = buildInitialFormData(
+      TENANT,
+      templateWithPageContent({
+        about: {
+          version: 2,
+          sections: [
+            {
+              id: "about-cta",
+              type: "AboutCta",
+              visible: false,
+              config: { heading: "Reach out" },
+              colorOverrides: { background: "#101010" },
+            },
+          ],
+        },
+      }),
+    );
+
+    const cta = form.aboutSections.find((s) => s.id === "about-cta");
+    expect(cta?.visible).toBe(false);
+    expect(cta?.config).toEqual({ heading: "Reach out" });
+    expect(form.sectionColorOverrides["about-cta"]).toEqual({ background: "#101010" });
+  });
+});

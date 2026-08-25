@@ -7,6 +7,7 @@ import { getJsonFromS3, getTextFromS3, getFileUrl } from "@/lib/storage/s3";
 import { isKeyInTenantScope } from "@/lib/storage/s3-tenant-guard";
 import { getBucketConfig } from "@/lib/storage/aws-config";
 import { SECTION_ASSET_KEYS, type TemplateLayout } from "@/lib/types/template-layout";
+import { buildAboutLayout } from "@/lib/templates/about-page";
 import { Tenant } from "@/types/client";
 import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 import { prisma } from "@/lib/db";
@@ -184,12 +185,13 @@ export default async function TemplatePreviewPage({
   searchParams,
 }: {
   params: Promise<{ templateSlug: string }>;
-  searchParams: Promise<{ embed?: string; tenantTemplateId?: string }>;
+  searchParams: Promise<{ embed?: string; tenantTemplateId?: string; page?: string }>;
 }) {
   const { templateSlug } = await params;
   const resolvedSearchParams = await searchParams;
   const isEmbed = resolvedSearchParams.embed === "true";
   const tenantTemplateId = resolvedSearchParams.tenantTemplateId;
+  const previewPage = resolvedSearchParams.page;
 
   // ─── Tenant-specific preview (tenantTemplateId provided) ───
   // Loads the tenant's CUSTOMIZED template from DB + their S3 path. No fallback.
@@ -297,6 +299,21 @@ export default async function TemplatePreviewPage({
       valueProps: defaults?.valueProps || [],
     };
 
+    // About-page preview (?page=about — the Store Editor's Home/About toggle).
+    // Fixed section layout from pageContent.about wearing the home layout's
+    // nav/footer chrome; assets signed through the same scope-guarded path.
+    const effectiveLayout: TemplateLayout = previewPage === "about"
+      ? buildAboutLayout((tenantTemplate.pageContent as any)?.about, {
+          navigation: layout.navigation,
+          navigationConfig: (layout as any).navigationConfig,
+          footer: layout.footer,
+          footerConfig: (layout as any).footerConfig,
+        })
+      : layout;
+    if (previewPage === "about") {
+      await signLayoutAssets(effectiveLayout, s3Prefix);
+    }
+
     return (
       <TenantThemeProvider
         tenant={previewTenant}
@@ -309,7 +326,7 @@ export default async function TemplatePreviewPage({
         {!isEmbed && <PreviewToolbar templateName={previewTenant.businessName || templateSlug} />}
         <div className="preview-content">
           <TemplateRenderer
-            layout={layout}
+            layout={effectiveLayout}
             sectionProps={sectionProps}
             customCss={customCss}
             renderChrome={true}
