@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { clerkClient, currentUser } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/nextjs/server";
 import { emailsMatch } from "@/lib/security/email-ownership";
+import { getVerifiedSessionEmail } from "@/lib/security/session-email";
 
 import { createAuditLog, AUDIT_ACTIONS, getClientInfo } from "@/lib/audit-log";
 import { triggerWebhook, WEBHOOK_EVENTS } from "@/lib/integrations/webhook";
@@ -25,37 +26,6 @@ import { resolveTenant } from '@/lib/tenant/tenant-resolver';
 import { logger } from '@/lib/logger';
 import { apiError, apiValidationError } from '@/lib/api-error';
 import { checkPolicyGate } from '@/lib/legal/policy-gate';
-
-/**
- * The signed-in caller's email, or null when the request is anonymous.
- *
- * Deliberately Clerk-direct rather than `getCurrentUser()`: this is a PUBLIC
- * signup route that must keep working for anonymous visitors, and
- * getCurrentUser additionally resolves tenants and can throw for
- * not-yet-provisioned or multi-tenant accounts. All we need here is "which
- * address, if any, has this caller already authenticated as".
- */
-async function getSessionEmail(): Promise<string | null> {
-  try {
-    const sessionUser = await currentUser();
-    if (!sessionUser) return null;
-    // This value is an ownership claim, so it must be the PRIMARY address AND
-    // verified: the positionally-first entry is not necessarily the one the
-    // session is anchored to, and an unverified address proves nothing about
-    // who controls the mailbox. Clerk is expected to allow only verified
-    // addresses as primary — asserting it here means the guarantee does not
-    // depend on that remaining true.
-    const primary = sessionUser.emailAddresses?.find(
-      (address) =>
-        address.id === sessionUser.primaryEmailAddressId &&
-        address.verification?.status === "verified",
-    );
-    return primary?.emailAddress ?? null;
-  } catch {
-    // Expired/invalid token — treat as anonymous, never as an error.
-    return null;
-  }
-}
 
 /** 409 for "that address already belongs to an account you have not proven you own". */
 function accountExistsResponse() {
@@ -230,8 +200,7 @@ export async function POST(request: NextRequest) {
     // new account below — that only proves nobody held the *Clerk* identity,
     // which says nothing about a local users row that predates this request
     // (legacy import, or a dropped Clerk delete-webhook).
-    const sessionEmail = await getSessionEmail();
-    const sessionOwnsEmail = emailsMatch(sessionEmail, body.email);
+    const sessionOwnsEmail = emailsMatch(await getVerifiedSessionEmail(), body.email);
 
     // 1. Create Clerk User (Auth)
     let clerkUser;
@@ -682,20 +651,12 @@ export async function POST(request: NextRequest) {
       // Also update the User record with the Dr. Green Client ID — required
       // for the kyc-check, which reads the User table.
       //
-      // SECURITY: this is the write an account-takeover targets — point a
-      // stranger's row at an attacker-controlled Dr Green client, then have
-      // that row inherit the client's approval.
-      //
-      // Safe by the ownership gate above, which returns 409 before any write
-      // unless `userId` is either a row THIS request created or a
-      // pre-existing row whose address the caller is signed in as. That
-      // invariant is enforced there, not re-tested here: a second check on
-      // this line would be unfirable by construction, which is exactly the
-      // mistake the first version of this fix made — a guard that reads like
-      // protection but can never trigger. The real regression net is the
-      // behavioural test in tests/unit/consultation-submit-ownership.test.ts,
-      // which drives this route with a pre-existing row and asserts nothing
-      // is written.
+      // SECURITY: the write an account-takeover targets. Safe by the ownership
+      // gate above — `userId` is either a row THIS request created, or a
+      // pre-existing row whose address the caller is signed in as. Enforced
+      // there and regression-tested in
+      // tests/unit/consultation-submit-ownership.test.ts; a re-check here
+      // would be unfirable by construction (the mistake the first cut made).
       if (userId) {
         await prisma.users.update({
           where: { id: userId },

@@ -107,6 +107,8 @@ function submission(over: Record<string, unknown> = {}) {
     phoneNumber: "821234567",
     dateOfBirth: "1990-01-01",
     gender: "Other",
+    // Required by consultationSchema (min 2) — everything else defaults.
+    countryCode: "ZA",
     ...over,
   };
 }
