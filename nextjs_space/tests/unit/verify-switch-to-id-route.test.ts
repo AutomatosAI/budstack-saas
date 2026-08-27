@@ -53,7 +53,11 @@ const makeReq = () =>
     method: "POST",
   }) as any;
 
-const call = () => POST(makeReq(), { user: { email: "t@example.com" } }, { slug: "s" });
+// Cast: tsc types POST by the real withAuth wrapper (1-2 args); the vitest
+// mock replaces it with the raw (req, {user}, {slug}) handler — same idiom
+// as verify-id-document-route.test.ts.
+const call = () =>
+  (POST as any)(makeReq(), { user: { email: "t@example.com" } }, { slug: "s" });
 
 describe("POST /api/store/[slug]/verify/switch-to-id", () => {
   beforeEach(() => {
