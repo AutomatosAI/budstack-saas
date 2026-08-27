@@ -16,7 +16,18 @@ export type KycStatus = {
     // tenants: 'UPLOADED' | 'UPLOAD_FAILED' | null. Only meaningful while
     // unverified; drives the dashboard re-upload CTA.
     idDocumentStatus?: string | null;
+    // Dr Green verification path: 'KYC' = legacy First-AML, 'ID' = SA
+    // ID-upload. Only set when the live client read succeeded. Drives the
+    // dashboard's switch-to-ID offer for stuck legacy AML clients on
+    // ID-upload tenants.
+    verificationType?: 'KYC' | 'ID' | null;
 };
+
+// Narrow Dr Green's string field to the two values the UI branches on;
+// anything unexpected reads as null so no CTA renders off a bad value.
+function narrowVerificationType(value: unknown): 'KYC' | 'ID' | null {
+    return value === 'KYC' || value === 'ID' ? value : null;
+}
 
 export async function checkUserKycStatus(): Promise<KycStatus> {
     try {
@@ -250,6 +261,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                     status: "REJECTED",
                     message: client.rejectionNote || undefined,
                     idDocumentStatus,
+                    verificationType: narrowVerificationType(client.verificationType),
                 };
             }
 
@@ -263,6 +275,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                 kycVerified: isVerified,
                 status,
                 idDocumentStatus: isVerified ? null : idDocumentStatus,
+                verificationType: narrowVerificationType(client.verificationType),
             };
         } catch (configOrApiError) {
             const errMsg = configOrApiError instanceof Error ? configOrApiError.message : String(configOrApiError);
