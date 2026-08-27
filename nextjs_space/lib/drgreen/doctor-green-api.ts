@@ -180,6 +180,9 @@ export interface DoctorGreenClient {
   isActive: boolean;
   adminApproval: string; // "VERIFIED" | "PENDING" | "REJECTED"
   isKYCVerified: boolean;
+  // "KYC" = First-AML path (legacy default), "ID" = SA ID-upload path.
+  // Drives the dashboard's switch-to-ID offer for stuck legacy AML clients.
+  verificationType?: string;
   verifiedAt?: string;
   rejectedAt?: string;
   rejectionNote?: string; // reason shown to the client when their ID is rejected
