@@ -38,17 +38,17 @@ export function MedicalHistoryPart2Step({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-card-foreground mb-2">
           Medical History (Part Two)
         </h2>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Final questions about your medical history
         </p>
       </div>
 
       <div className="space-y-6">
         {/* Alcohol Abuse */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <Label className="text-base font-semibold mb-3 block">
             Do you have a history of alcohol abuse or dependency?*
           </Label>
@@ -80,7 +80,7 @@ export function MedicalHistoryPart2Step({
         </div>
 
         {/* Drug Services */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <Label className="text-base font-semibold mb-3 block">
             Have you ever been under the care of drug and alcohol services?*
           </Label>
@@ -106,7 +106,7 @@ export function MedicalHistoryPart2Step({
         </div>
 
         {/* Alcohol Units Per Week */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <Label
             htmlFor="alcoholUnitsPerWeek"
             className="text-base font-semibold mb-3 block"
@@ -124,7 +124,7 @@ export function MedicalHistoryPart2Step({
         </div>
 
         {/* Cannabis Reduces Meds */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <Label className="text-base font-semibold mb-3 block">
             Do you use cannabis to reduce or eliminate the use of any
             medications that have been prescribed for your medical condition?*
@@ -157,7 +157,7 @@ export function MedicalHistoryPart2Step({
         </div>
 
         {/* Cannabis Frequency */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <Label
             htmlFor="cannabisFrequency"
             className="text-base font-semibold mb-3 block"
@@ -183,7 +183,7 @@ export function MedicalHistoryPart2Step({
         </div>
 
         {/* Cannabis Amount Per Day */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <Label
             htmlFor="cannabisAmountPerDay"
             className="text-base font-semibold mb-3 block"

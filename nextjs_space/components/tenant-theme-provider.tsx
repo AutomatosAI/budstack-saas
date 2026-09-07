@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, type CSSProperties } from "react";
+import { deriveTenantTokens } from "@/lib/theme/tenant-tokens";
 import { Tenant } from "@/types/client";
 import { TenantSettings } from "@/lib/types";
 import { sanitizeCss } from "@/lib/security/css-utils";
@@ -49,14 +50,13 @@ export function TenantThemeProvider({
     () => sanitizeCss(customCss),
     [customCss],
   );
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // Apply theme to SCOPED container only (not document root)
-    if (containerRef.current) {
-      applyThemeToContainer(containerRef.current, designSystem, settings);
-    }
-  }, [settings, designSystem]);
+  // Theme variables are computed in render, not in an effect: the server then
+  // paints the tenant palette on first load (no flash of the platform defaults)
+  // and the branding editor preview updates in the same render as the form.
+  const themeVars = useMemo(
+    () => buildTenantThemeVars(designSystem, settings),
+    [designSystem, settings],
+  );
 
   // Build data-attributes for conditional CSS effects
   const hoverEffect = designSystem?.buttonHoverEffect || settings.buttonHoverEffect || "none";
@@ -78,7 +78,7 @@ export function TenantThemeProvider({
   };
   const autoFontsUrl = useMemo(() => {
     if (googleFontsUrl) return null; // explicit URL takes precedence
-    // Accept both designSystem shapes (see applyThemeToContainer for context)
+    // Accept both designSystem shapes (see buildTenantThemeVars for context)
     const dsTypo = designSystem?.typography?.fontFamily;
     const dsTypoFlat = designSystem?.typography;
     const bodyId = dsTypo?.body || dsTypo?.base || dsTypoFlat?.fontBody || dsTypoFlat?.fontBase || (settings as any).fontFamily;
@@ -100,7 +100,7 @@ export function TenantThemeProvider({
         <link href={googleFontsUrl || autoFontsUrl!} rel="stylesheet" />
       )}
 
-      {/* Scoped design system CSS — static rules that read CSS variables set by applyThemeToContainer.
+      {/* Scoped design system CSS — static rules that read CSS variables set on the container by buildTenantThemeVars.
           TENANT_SCOPED_CSS is a compile-time constant (not user input), safe for injection. */}
       <style dangerouslySetInnerHTML={{ __html: TENANT_SCOPED_CSS }} />
 
@@ -112,12 +112,11 @@ export function TenantThemeProvider({
 
       {/* Apply theme class to scoped container */}
       <div
-        ref={containerRef}
         className={`tenant-theme-container ${getTenantThemeClasses(settings)}`}
         data-hover={hoverEffect}
         data-glass={glassEffectVal}
         data-padding={useTemplatePadding ? "custom" : "auto"}
-        style={{ minHeight: "100vh" }}
+        style={{ minHeight: "100vh", ...themeVars } as CSSProperties}
       >
         {children}
       </div>
@@ -251,14 +250,14 @@ const TENANT_SCOPED_CSS = `
 
    COLOURS FOLLOW .legal-document (app/globals.css), the existing storefront
    long-form precedent, which reads the --tenant-color-* namespace that
-   applyThemeToContainer populates from designSystem.colors below. The one
+   lib/theme/tenant-tokens populates from designSystem.colors. The one
    departure: every value here carries a fallback to the equivalent shadcn
    token. Those keys only exist if the tenant's design system defines them —
    and the namespace is not uniform (store/[slug]/layout.tsx sets
    --tenant-color-text where .legal-document reads --tenant-color-foreground),
    so an unfallen-back var would resolve to an invalid colour on some tenants.
    The shadcn tokens are always defined and are themselves remapped per tenant
-   in applyThemeToContainer below (--primary/--secondary/--accent/--foreground),
+   by lib/theme/tenant-tokens (the complete set, card and muted included),
    which makes them a correct second choice rather than a default.
 
    HEADINGS ARE DELIBERATELY FONT-LESS HERE. .tenant-theme-container h1-h6
@@ -374,66 +373,26 @@ const TENANT_SCOPED_CSS = `
 `;
 
 /**
- * Apply theme CSS variables to SCOPED container (not document root)
+ * Every CSS custom property the tenant's design system implies, as one object
+ * for the container's inline style. Colours come from lib/theme/tenant-tokens
+ * (the complete shadcn + --tenant-color-* contract with its legibility floor);
+ * typography, radius, spacing, shadow, glass and button sizing are resolved
+ * here from the design system with the legacy tenant.settings as fallback.
  */
-function applyThemeToContainer(
-  container: HTMLElement,
+export function buildTenantThemeVars(
   designSystem: any,
   settings: TenantSettings,
-) {
-  const root = container;
+): Record<string, string> {
+  const vars: Record<string, string> = {};
+  const set = (name: string, value: string | null | undefined) => {
+    if (value) vars[name] = value;
+  };
 
   // === COMPREHENSIVE DESIGN SYSTEM ===
   if (designSystem) {
-    // Apply colors
-    if (designSystem.colors) {
-      // 1. Set specific tenant variables using formatColorValue
-      // Skip nested objects (color scales like sage.50, teal.100, etc.)
-      Object.entries(designSystem.colors).forEach(([key, value]) => {
-        if (value && typeof value === 'string' && value.trim() !== '') {
-          const colorValue = formatColorValue(value);
-          if (colorValue && colorValue.trim() !== '') {
-            root.style.setProperty(
-              `--tenant-color-${camelToKebab(key)}`,
-              colorValue,
-            );
-          }
-        }
-      });
-
-      // 2. Set CORE Tailwind/Shadcn variables using the RAW HSL value if available
-      const primary = designSystem.colors.primary;
-      const secondary = designSystem.colors.secondary;
-      const accent = designSystem.colors.accent;
-      const background = designSystem.colors.background;
-      const text = designSystem.colors.text;
-
-      // Normalize to raw HSL channels. Accepts hex (#rgb / #rrggbb),
-      // `hsl(...)` wrappers, or raw channels. shadcn components consume
-      // these via `hsl(var(--primary))`, so anything else breaks.
-      const toChannels = (val: string) => {
-        if (!val) return null;
-        if (val.startsWith("#")) return hexToHslChannels(val);
-        if (val.startsWith("hsl("))
-          return val.replace("hsl(", "").replace(")", "");
-        return val;
-      };
-
-      if (primary && (primary as string).trim())
-        root.style.setProperty("--primary", toChannels(primary as string));
-      if (secondary && (secondary as string).trim())
-        root.style.setProperty("--secondary", toChannels(secondary as string));
-      if (accent && (accent as string).trim())
-        root.style.setProperty("--accent", toChannels(accent as string));
-      if (background && (background as string).trim())
-        root.style.setProperty(
-          "--background",
-          toChannels(background as string),
-        );
-      // Map text color to foreground
-      if (text && (text as string).trim())
-        root.style.setProperty("--foreground", toChannels(text as string));
-    }
+    // Colours: the complete token contract (tenant variables, shadcn tokens,
+    // legibility floor) lives in lib/theme/tenant-tokens.ts.
+    Object.assign(vars, deriveTenantTokens(designSystem.colors));
 
     // === TYPOGRAPHY ===
     const fontMap: Record<string, string> = {
@@ -495,19 +454,19 @@ function applyThemeToContainer(
     const bodyFont = resolveFont(dsFontBody, settings.fontFamily || "inter");
     const headingFont = resolveFont(dsFontHeading, settings.headingFontFamily || settings.fontFamily || "inter");
 
-    root.style.setProperty("--tenant-font-body", bodyFont);
-    root.style.setProperty("--tenant-font-heading", headingFont);
+    set("--tenant-font-body", bodyFont);
+    set("--tenant-font-heading", headingFont);
 
     // Font weight
     const fontWeightMap: Record<string, string> = { "300": "300", "400": "400", "500": "500", "700": "700" };
     const headingWeightMap: Record<string, string> = { "400": "400", "500": "500", "600": "600", "700": "700", "800": "800" };
     const dsFontWeight = designSystem.typography?.fontWeight?.body;
     const dsHeadingWeight = designSystem.typography?.fontWeight?.heading;
-    root.style.setProperty(
+    set(
       "--tenant-font-weight",
       fontWeightMap[dsFontWeight] || fontWeightMap[settings.fontWeight || "400"] || "400",
     );
-    root.style.setProperty(
+    set(
       "--tenant-font-weight-heading",
       headingWeightMap[dsHeadingWeight] || headingWeightMap[settings.headingFontWeight || "700"] || "700",
     );
@@ -520,7 +479,7 @@ function applyThemeToContainer(
       wider: "0.05em",
     };
     const dsLetterSpacing = designSystem.typography?.letterSpacing;
-    root.style.setProperty(
+    set(
       "--tenant-letter-spacing",
       letterSpacingMap[dsLetterSpacing] || letterSpacingMap[settings.letterSpacingPreset || "normal"] || "0",
     );
@@ -530,21 +489,21 @@ function applyThemeToContainer(
     const dsFontSize = designSystem.typography?.fontSize?.base;
     const rawBodySize = dsFontSize || settings.fontSize || "16";
     const bodyPx = fontSizePresetMap[rawBodySize] || (isNaN(Number(rawBodySize)) ? "16" : rawBodySize);
-    root.style.setProperty("--tenant-font-size-base", `${bodyPx}px`);
+    set("--tenant-font-size-base", `${bodyPx}px`);
 
     // Hero title size (h1) — accepts px number or legacy preset
     const heroPresetMap: Record<string, string> = { small: "30", medium: "36", large: "42", xlarge: "48" };
     const dsHeroFontSize = designSystem.typography?.fontSize?.hero || designSystem.typography?.fontSize?.heading;
     const rawHeroSize = dsHeroFontSize || settings.heroFontSize || settings.headingFontSize || "36";
     const heroPx = heroPresetMap[rawHeroSize] || (isNaN(Number(rawHeroSize)) ? "36" : rawHeroSize);
-    root.style.setProperty("--tenant-hero-scale", String(Number(heroPx) / 36));
+    set("--tenant-hero-scale", String(Number(heroPx) / 36));
 
     // Section heading size (h2–h6) — independent from hero
     const sectionPresetMap: Record<string, string> = { small: "24", medium: "30", large: "36", xlarge: "42" };
     const dsSectionFontSize = designSystem.typography?.fontSize?.section;
     const rawSectionSize = dsSectionFontSize || settings.sectionFontSize || "30";
     const sectionPx = sectionPresetMap[rawSectionSize] || (isNaN(Number(rawSectionSize)) ? "30" : rawSectionSize);
-    root.style.setProperty("--tenant-section-heading-scale", String(Number(sectionPx) / 30));
+    set("--tenant-section-heading-scale", String(Number(sectionPx) / 30));
 
     // === BORDER RADIUS ===
     const borderRadiusMap: Record<string, string> = {
@@ -554,7 +513,7 @@ function applyThemeToContainer(
       large: "1rem",
     };
     const dsBorderRadius = designSystem.borderRadius?.container;
-    root.style.setProperty(
+    set(
       "--tenant-border-radius",
       borderRadiusMap[dsBorderRadius] || borderRadiusMap[settings.borderRadius || "medium"] || "0.5rem",
     );
@@ -566,7 +525,7 @@ function applyThemeToContainer(
       pill: "9999px",
     };
     const dsButtonStyle = designSystem.borderRadius?.button;
-    root.style.setProperty(
+    set(
       "--tenant-button-radius",
       buttonStyleMap[dsButtonStyle] || buttonStyleMap[settings.buttonStyle || "rounded"] || "0.5rem",
     );
@@ -578,7 +537,7 @@ function applyThemeToContainer(
       comfortable: "1.5",
     };
     const dsSpacing = designSystem.spacing?.scale;
-    root.style.setProperty(
+    set(
       "--tenant-spacing-scale",
       spacingMap[dsSpacing] || spacingMap[settings.spacing || "normal"] || "1",
     );
@@ -591,7 +550,7 @@ function applyThemeToContainer(
       bold: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
     };
     const dsShadow = designSystem.shadows?.card;
-    root.style.setProperty(
+    set(
       "--tenant-shadow",
       shadowMap[dsShadow] || shadowMap[settings.shadowStyle || "soft"] || "0 1px 3px 0 rgb(0 0 0 / 0.1)",
     );
@@ -604,8 +563,8 @@ function applyThemeToContainer(
     };
     const dsGlass = designSystem.glassEffect;
     const glassConfig = glassMap[dsGlass] || glassMap[settings.glassEffect || "none"] || glassMap["none"];
-    root.style.setProperty("--tenant-backdrop-blur", glassConfig.blur);
-    root.style.setProperty("--tenant-card-opacity", glassConfig.opacity);
+    set("--tenant-backdrop-blur", glassConfig.blur);
+    set("--tenant-card-opacity", glassConfig.opacity);
 
 
     // === BUTTON SIZE ===
@@ -617,90 +576,11 @@ function applyThemeToContainer(
     };
     const dsButtonSize = designSystem.button?.size;
     const buttonSize = buttonSizeMap[dsButtonSize] || buttonSizeMap[settings.buttonSize || "medium"] || buttonSizeMap["medium"];
-    root.style.setProperty("--tenant-button-padding", buttonSize.padding);
-    root.style.setProperty("--tenant-button-font-size", buttonSize.fontSize);
+    set("--tenant-button-padding", buttonSize.padding);
+    set("--tenant-button-font-size", buttonSize.fontSize);
 
-    // === BUTTON HOVER EFFECT ===
-    // Consumed via data-hover attribute on container, CSS rules defined in TENANT_SCOPED_CSS
-    const hoverEffect = designSystem.buttonHoverEffect || (settings as any).buttonHoverEffect || "none";
-    root.setAttribute("data-hover", hoverEffect);
-
-    // === GLASS EFFECT (data-attr for CSS) ===
-    const glass = designSystem.glassEffect || settings.glassEffect || "none";
-    root.setAttribute("data-glass", glass);
   }
-}
-
-/**
- * Convert camelCase to kebab-case
- */
-function camelToKebab(str: string): string {
-  return str.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-}
-
-/**
- * Format color value to RAW HSL channels for CSS variables.
- * Components wrap with hsl(): `hsl(var(--tenant-color-primary))`
- * So variables MUST store raw channels: `178 48% 21%`
- * If we stored `hsl(178 48% 21%)`, components would produce `hsl(hsl(...))` = INVALID.
- * If we stored `#ffffff`, components would produce `hsl(#ffffff)` = INVALID.
- */
-function formatColorValue(value: string | null | undefined): string {
-  if (!value || typeof value !== "string") {
-    return "";
-  }
-
-  // Strip hsl() wrapper if present — we need raw channels only
-  if (value.startsWith("hsl(") && value.endsWith(")")) {
-    return value.slice(4, -1).trim();
-  }
-
-  // Raw HSL channels like "178 48% 21%" — pass through
-  if (value.includes("%") && !value.includes("(") && !value.includes("#")) {
-    return value;
-  }
-
-  // Convert hex to HSL channels (prevents invalid `hsl(#hex)` in templates)
-  if (value.startsWith("#")) {
-    return hexToHslChannels(value);
-  }
-
-  return value;
-}
-
-/**
- * Convert hex color (#rrggbb or #rgb) to raw HSL channel string "H S% L%"
- */
-function hexToHslChannels(hex: string): string {
-  let r = 0, g = 0, b = 0;
-  if (hex.length === 4) {
-    r = parseInt(hex[1] + hex[1], 16);
-    g = parseInt(hex[2] + hex[2], 16);
-    b = parseInt(hex[3] + hex[3], 16);
-  } else if (hex.length === 7) {
-    r = parseInt(hex.slice(1, 3), 16);
-    g = parseInt(hex.slice(3, 5), 16);
-    b = parseInt(hex.slice(5, 7), 16);
-  } else {
-    return "";
-  }
-
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s = 0;
-  const l = (max + min) / 2;
-
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-      case g: h = ((b - r) / d + 2) / 6; break;
-      case b: h = ((r - g) / d + 4) / 6; break;
-    }
-  }
-
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+  return vars;
 }
 
 /**

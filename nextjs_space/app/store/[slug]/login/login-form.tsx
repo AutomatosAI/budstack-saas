@@ -22,7 +22,7 @@ function LoginFormInner({ businessName, logoUrl, basePath }: TenantLoginFormProp
           />
         )}
         <h1 className="text-2xl font-bold mb-1">Sign in to {businessName}</h1>
-        <p className="text-gray-500 text-sm mb-6">Welcome back! Please sign in to continue</p>
+        <p className="text-muted-foreground text-sm mb-6">Welcome back! Please sign in to continue</p>
 
         <SignIn
           appearance={{

@@ -213,10 +213,10 @@ export function ConsultationForm({
           {/* Progress Bar */}
           <div className="mb-8">
             <div className="flex justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-card-foreground">
                 Step {currentStep} of {TOTAL_STEPS}
               </span>
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-card-foreground">
                 {STEP_NAMES[currentStep - 1]}
               </span>
             </div>

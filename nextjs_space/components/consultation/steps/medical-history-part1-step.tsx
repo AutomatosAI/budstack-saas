@@ -26,19 +26,19 @@ export function MedicalHistoryPart1Step({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-card-foreground mb-2">
           Medical History (Part One)
         </h2>
-        <p className="text-gray-600">Please answer the following questions</p>
+        <p className="text-muted-foreground">Please answer the following questions</p>
       </div>
 
       <div className="space-y-6">
         {/* Heart Problems */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <Label className="text-base font-semibold mb-3 block">
             Do you have a history of heart problems?*
           </Label>
-          <p className="text-sm text-gray-600 mb-3">
+          <p className="text-sm text-muted-foreground mb-3">
             Including palpitations, heart attack (MI), stroke, angina, chest
             pain, shortness of breath, arrhythmias (funny heart beats),
             pacemaker, or taking any heart medications
@@ -71,7 +71,7 @@ export function MedicalHistoryPart1Step({
         </div>
 
         {/* Cancer Treatment */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <Label className="text-base font-semibold mb-3 block">
             Are you currently being treated for cancer or undergoing any cancer
             treatments?*
@@ -101,7 +101,7 @@ export function MedicalHistoryPart1Step({
         </div>
 
         {/* Immunosuppressants */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <Label className="text-base font-semibold mb-3 block">
             Are you currently taking Immunosuppressants or Immunotherapy
             medication?*
@@ -134,7 +134,7 @@ export function MedicalHistoryPart1Step({
         </div>
 
         {/* Liver Disease */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <Label className="text-base font-semibold mb-3 block">
             Do you have any history of Liver Disease including hepatitis,
             elevated liver enzyme function blood tests, fatty liver cirrhosis?*
@@ -167,7 +167,7 @@ export function MedicalHistoryPart1Step({
         </div>
 
         {/* Psychiatric History */}
-        <div className="border rounded-lg p-4 bg-gray-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <Label className="text-base font-semibold mb-3 block">
             Psychiatric history - Have you ever been referred to a psychiatrist
             health service?*

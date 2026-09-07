@@ -54,10 +54,10 @@ export function ShippingAddressStep({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-card-foreground mb-2">
           Shipping Address
         </h2>
-        <p className="text-gray-600">Where should we deliver your order?</p>
+        <p className="text-muted-foreground">Where should we deliver your order?</p>
       </div>
 
       <div>

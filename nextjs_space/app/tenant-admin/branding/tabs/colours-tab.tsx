@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/accordion";
 import { X } from "lucide-react";
 import { ColorPicker } from "./shared";
+import { ContrastHint, overridePairs } from "./contrast-hint";
 import type { EditorFormData, SetFormData } from "./types";
 
 const sectionTitleStyle = {
@@ -139,6 +140,20 @@ export function ColoursTab({
             onChange={(v) => setGlobalColor("textColor", v)}
           />
         </div>
+        <ContrastHint
+          pairs={[
+            {
+              label: "Body text on page background",
+              foreground: formData.textColor,
+              background: formData.backgroundColor,
+            },
+            {
+              label: "Heading text on page background",
+              foreground: formData.headingColor,
+              background: formData.backgroundColor,
+            },
+          ]}
+        />
       </section>
 
       {/* Navigation & Footer Color Overrides */}
@@ -214,6 +229,7 @@ export function ColoursTab({
                       </div>
                     ))}
                   </div>
+                  <ContrastHint pairs={overridePairs(formData.navColorOverrides, formData, "Navigation")} />
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -278,6 +294,7 @@ export function ColoursTab({
                       </div>
                     ))}
                   </div>
+                  <ContrastHint pairs={overridePairs(formData.footerColorOverrides, formData, "Footer")} />
                 </div>
               </AccordionContent>
             </AccordionItem>

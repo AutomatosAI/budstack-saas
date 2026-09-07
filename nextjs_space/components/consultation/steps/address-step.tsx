@@ -56,10 +56,10 @@ export function AddressStep({
       {/* Shipping Address Section */}
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-card-foreground mb-2">
             Shipping Address
           </h2>
-          <p className="text-gray-600">Where should we deliver your order?</p>
+          <p className="text-muted-foreground">Where should we deliver your order?</p>
         </div>
 
         <div>
@@ -158,15 +158,15 @@ export function AddressStep({
       </div>
 
       {/* Divider */}
-      <div className="border-t border-gray-200 my-8"></div>
+      <div className="border-t border-border my-8"></div>
 
       {/* Business Address Section */}
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-card-foreground mb-2">
             Business Information
           </h2>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Optional - Only complete if ordering for a business
           </p>
         </div>
