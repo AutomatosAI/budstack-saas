@@ -28,6 +28,9 @@ const GA4_IMG_HOSTS = [
   "https://www.googletagmanager.com",
 ] as const;
 
+/** YouTube's privacy-enhanced embed host — the only third-party frame origin. */
+export const YOUTUBE_FRAME_HOST = "https://www.youtube-nocookie.com";
+
 /**
  * Fresh per-request nonce: 16 random bytes (128-bit) base64-encoded. Never
  * reused across requests; generated once per request in middleware.
@@ -94,8 +97,14 @@ export function buildCsp({
     // and every hit is blocked, which looks exactly like "analytics is broken".
     `connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.com https://*.drgreennft.com https://*.amazonaws.com wss://*.clerk.accounts.dev${store ? ` ${GA4_CONNECT_HOSTS.join(" ")}` : ""}`,
     // The docs pages (/documents) embed guide videos via YouTube's
-    // privacy-enhanced host — allowed on that variant only, nowhere else.
-    `frame-src 'self' https://challenges.cloudflare.com https://*.clerk.accounts.dev${variant === "docs" ? " https://www.youtube-nocookie.com" : ""}`,
+    // privacy-enhanced host. This used to be allowed on the docs variant only,
+    // which broke in practice: a CSP belongs to the DOCUMENT, and a client-side
+    // navigation from the landing page (or the admin) into /documents keeps the
+    // landing page's policy, so every embed rendered Chrome's "This content is
+    // blocked" screen unless the guide URL was loaded directly. The frame host
+    // is therefore allowed on every variant; it is the cookie-less player host
+    // and nothing else can be framed from it.
+    `frame-src 'self' https://challenges.cloudflare.com https://*.clerk.accounts.dev ${YOUTUBE_FRAME_HOST}`,
     `frame-ancestors ${frameAncestors}`,
     "object-src 'none'",
     "base-uri 'self'",

@@ -178,3 +178,31 @@ describe("applyCsp", () => {
     expect(res.headers.get("Content-Security-Policy")).toContain("frame-ancestors 'none'");
   });
 });
+
+describe("frame-src — YouTube guide embeds", () => {
+  // A CSP belongs to the document, not the route: a client-side navigation from
+  // the landing page into /documents keeps the landing page's policy. Gating
+  // the YouTube frame host to the docs variant therefore blocked every guide
+  // video reached by clicking (Chrome: "This content is blocked"), while a
+  // direct load of the same URL worked. The host must be on every variant.
+  it.each<CspVariant>(["base", "admin", "store", "docs"])(
+    "allows the privacy-enhanced YouTube host on the %s variant",
+    (variant) => {
+      const frameSrc = directive(buildCsp({ nonce: NONCE, variant }), "frame-src");
+      expect(frameSrc).toContain("https://www.youtube-nocookie.com");
+      expect(frameSrc).toContain("'self'");
+    },
+  );
+
+  it("does not widen frame-src beyond the known hosts", () => {
+    const frameSrc = directive(buildCsp({ nonce: NONCE, variant: "base" }), "frame-src");
+    expect(frameSrc.split(" ").slice(1).sort()).toEqual(
+      [
+        "'self'",
+        "https://*.clerk.accounts.dev",
+        "https://challenges.cloudflare.com",
+        "https://www.youtube-nocookie.com",
+      ].sort(),
+    );
+  });
+});
