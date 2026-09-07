@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { ColorPicker } from "./shared";
+import { ContrastHint, overridePairs } from "./contrast-hint";
 import type { EditorFormData, SetFormData } from "./types";
 
 /** Colour override groups — shared with ColoursTab global palette. Kept here
@@ -134,6 +135,7 @@ export function SectionColourPanel({
           </div>
         ))}
       </div>
+      <ContrastHint pairs={overridePairs(overrides, formData, "Section")} />
     </div>
   );
 }

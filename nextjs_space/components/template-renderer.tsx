@@ -6,7 +6,7 @@ import type { SectionProps } from '@/lib/types/section-props';
 import type { TemplateLayout } from '@/lib/types/template-layout';
 import { motion, type Transition } from 'framer-motion';
 import { sanitizeCss, extractGoogleFontsImports } from '@/lib/security/css-utils';
-import { hexToHsl } from '@/lib/color-utils';
+import { buildColorOverrideVars } from '@/lib/theme/tenant-tokens';
 
 interface Props {
   layout: TemplateLayout;
@@ -50,29 +50,15 @@ function CurveDivider({ fill = "var(--tenant-bg, #ffffff)", className = "" }: { 
 // --- End SVG Helpers ---
 
 
-/** Build inline CSS variable overrides from a colorOverrides object.
- *  Optional `defaults` are applied first, then overrides layer on top. */
-function buildColorOverrideStyle(
-  overrides?: Record<string, string>,
+/** Inline CSS variable overrides for a nav, footer or section, checked for
+ *  legibility against the tenant palette (see lib/theme/tenant-tokens). */
+function overrideStyle(
+  overrides: object | null | undefined,
+  base: object | null | undefined,
   defaults?: Record<string, string>,
-): React.CSSProperties {
-  const style: Record<string, string> = {};
-  // Apply defaults first
-  if (defaults) {
-    for (const [k, v] of Object.entries(defaults)) {
-      if (v) style[`--tenant-color-${k}`] = v;
-    }
-  }
-  // Apply explicit overrides on top
-  if (overrides) {
-    for (const [k, v] of Object.entries(overrides)) {
-      if (v && typeof v === 'string' && v.trim()) {
-        const hslValue = v.startsWith('#') ? hexToHsl(v) : v;
-        style[`--tenant-color-${k}`] = hslValue;
-      }
-    }
-  }
-  return style;
+): React.CSSProperties | undefined {
+  const vars = buildColorOverrideVars(overrides, { defaults, base });
+  return Object.keys(vars).length > 0 ? (vars as React.CSSProperties) : undefined;
 }
 
 /** Dark defaults for FooterBrand / FooterFull — prevents white-on-white
@@ -98,14 +84,12 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
     return layout.sections
       .filter(s => s.id && s.colorOverrides)
       .map(s => {
-        const declarations = Object.entries(s.colorOverrides!)
-          .filter(([, v]) => v?.trim())
-          .map(([k, v]) => {
-            // Convert hex (#abc123) to HSL channel format (H S% L%) so
-            // hsl(var(--tenant-color-*)) works in section components.
-            const hslValue = v!.startsWith('#') ? hexToHsl(v!) : v;
-            return `--tenant-color-${k}: ${hslValue}`;
-          })
+        // Hex is converted to HSL channels and inherited text/heading colours
+        // are re-checked against an overridden background (lib/theme/tenant-tokens).
+        const declarations = Object.entries(
+          buildColorOverrideVars(s.colorOverrides, { base: sectionProps.designSystem?.colors }),
+        )
+          .map(([name, value]) => `${name}: ${value}`)
           .join('; ');
         if (!declarations) return '';
         // Use CSS.escape when available (browser), fallback to simple escaping (SSR)
@@ -116,7 +100,7 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
       })
       .filter(Boolean)
       .join('\n');
-  }, [layout.sections]);
+  }, [layout.sections, sectionProps.designSystem]);
 
   // Generate section padding overrides from layout.settings.sectionPadding
   // This is rendered server-side so it doesn't depend on S3 CSS loading
@@ -165,7 +149,7 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
         <style dangerouslySetInnerHTML={{ __html: sanitizeCss(sectionColorCss) || '' }} />
       )}
       {NavComponent && (
-        <div style={buildColorOverrideStyle(layout.navigationConfig?.colorOverrides)}>
+        <div style={overrideStyle(layout.navigationConfig?.colorOverrides, sectionProps.designSystem?.colors)}>
           <NavComponent {...sectionProps} sectionConfig={layout.navigationConfig || sectionProps.sectionConfig} />
         </div>
       )}
@@ -205,23 +189,15 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
             ? configImage
             : undefined;
 
-          // Build inline CSS variable overrides for per-section colors
-          const colorOverrideStyle: React.CSSProperties = {};
-          if (section.colorOverrides) {
-            for (const [k, v] of Object.entries(section.colorOverrides)) {
-              if (v && typeof v === 'string' && v.trim()) {
-                const hslValue = v.startsWith('#') ? hexToHsl(v) : v;
-                (colorOverrideStyle as any)[`--tenant-color-${k}`] = hslValue;
-              }
-            }
-          }
+          // Inline CSS variable overrides for per-section colours, legibility-checked
+          const colorOverrideStyle = overrideStyle(section.colorOverrides, sectionProps.designSystem?.colors);
 
           const sectionElement = (
             <section
               key={section.id || `section-${i}`}
               id={section.id}
               className="relative"
-              style={Object.keys(colorOverrideStyle).length > 0 ? colorOverrideStyle : undefined}
+              style={colorOverrideStyle}
             >
               <Component
                 {...sectionProps}
@@ -274,8 +250,9 @@ export function TemplateRenderer({ layout, sectionProps, customCss, renderChrome
           return wrapper;
         })}
       {FooterComponent && (
-        <div style={buildColorOverrideStyle(
+        <div style={overrideStyle(
           layout.footerConfig?.colorOverrides,
+          sectionProps.designSystem?.colors,
           (footerType === 'FooterBrand' || footerType === 'FooterFull') ? DARK_FOOTER_DEFAULTS : undefined,
         )}>
           <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig || sectionProps.sectionConfig} />

@@ -98,7 +98,7 @@ export default function SettingsPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -109,21 +109,20 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen saas-shell pt-24 pb-20">
+    <div className="min-h-screen bg-background pt-24 pb-20">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <span className="saas-pill text-slate-600">Customer Dashboard</span>
-            <h1 className="mt-4 text-3xl font-semibold text-slate-900 mb-2">
+            <span className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">Customer Dashboard</span>
+            <h1 className="mt-4 text-3xl font-semibold text-foreground mb-2">
               Account Settings
             </h1>
-            <p className="text-slate-500">Manage your account information</p>
+            <p className="text-muted-foreground">Manage your account information</p>
           </div>
           {!isEditing && (
             <Button
               onClick={() => setIsEditing(true)}
-              className="bg-slate-900 text-white hover:bg-slate-800"
             >
               Edit Profile
             </Button>
@@ -131,9 +130,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Profile Information */}
-        <div className="saas-card border-0 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-6 flex items-center gap-2">
-            <User className="w-5 h-5 text-slate-500" />
+        <div className="rounded-2xl border border-border bg-card p-6 mb-6 text-card-foreground shadow-sm">
+          <h2 className="text-xl font-semibold text-card-foreground mb-6 flex items-center gap-2">
+            <User className="w-5 h-5 text-muted-foreground" />
             Personal Information
           </h2>
 
@@ -151,7 +150,7 @@ export default function SettingsPage() {
                     className="mt-1"
                   />
                 ) : (
-                  <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg mt-1">
+                  <div className="px-4 py-2 bg-muted border border-border rounded-lg mt-1">
                     {formData.firstName || "Not set"}
                   </div>
                 )}
@@ -169,7 +168,7 @@ export default function SettingsPage() {
                     className="mt-1"
                   />
                 ) : (
-                  <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg mt-1">
+                  <div className="px-4 py-2 bg-muted border border-border rounded-lg mt-1">
                     {formData.lastName || "Not set"}
                   </div>
                 )}
@@ -179,11 +178,11 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="email">Email Address</Label>
-                <div className="px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg flex items-center gap-2 mt-1">
-                  <Mail className="w-4 h-4 text-gray-400" />
+                <div className="px-4 py-2 bg-muted border border-border rounded-lg flex items-center gap-2 mt-1">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
                   {user.primaryEmailAddress?.emailAddress}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Email cannot be changed
                 </p>
               </div>
@@ -192,7 +191,7 @@ export default function SettingsPage() {
                 <Label htmlFor="phone">Phone Number</Label>
                 {isEditing ? (
                   <div className="relative mt-1">
-                    <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                    <Phone className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="phone"
                       type="tel"
@@ -205,8 +204,8 @@ export default function SettingsPage() {
                     />
                   </div>
                 ) : (
-                  <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-2 mt-1">
-                    <Phone className="w-4 h-4 text-gray-400" />
+                  <div className="px-4 py-2 bg-muted border border-border rounded-lg flex items-center gap-2 mt-1">
+                    <Phone className="w-4 h-4 text-muted-foreground" />
                     {formData.phone || "Not set"}
                   </div>
                 )}
@@ -216,8 +215,8 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Account Role</Label>
-                <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-2 mt-1">
-                  <Shield className="w-4 h-4 text-gray-400" />
+                <div className="px-4 py-2 bg-muted border border-border rounded-lg flex items-center gap-2 mt-1">
+                  <Shield className="w-4 h-4 text-muted-foreground" />
                   {(user.publicMetadata?.role as string) || "PATIENT"}
                 </div>
               </div>
@@ -247,9 +246,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Address Information */}
-        <div className="saas-card border-0 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-6 flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-slate-500" />
+        <div className="rounded-2xl border border-border bg-card p-6 mb-6 text-card-foreground shadow-sm">
+          <h2 className="text-xl font-semibold text-card-foreground mb-6 flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-muted-foreground" />
             Address
           </h2>
 
@@ -267,7 +266,7 @@ export default function SettingsPage() {
                   placeholder="Street address"
                 />
               ) : (
-                <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg mt-1">
+                <div className="px-4 py-2 bg-muted border border-border rounded-lg mt-1">
                   {formData.addressLine1 || "Not set"}
                 </div>
               )}
@@ -286,7 +285,7 @@ export default function SettingsPage() {
                   placeholder="Apartment, suite, etc."
                 />
               ) : (
-                <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg mt-1">
+                <div className="px-4 py-2 bg-muted border border-border rounded-lg mt-1">
                   {formData.addressLine2 || "Not set"}
                 </div>
               )}
@@ -305,7 +304,7 @@ export default function SettingsPage() {
                     className="mt-1"
                   />
                 ) : (
-                  <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg mt-1">
+                  <div className="px-4 py-2 bg-muted border border-border rounded-lg mt-1">
                     {formData.city || "Not set"}
                   </div>
                 )}
@@ -323,7 +322,7 @@ export default function SettingsPage() {
                     className="mt-1"
                   />
                 ) : (
-                  <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg mt-1">
+                  <div className="px-4 py-2 bg-muted border border-border rounded-lg mt-1">
                     {formData.state || "Not set"}
                   </div>
                 )}
@@ -341,7 +340,7 @@ export default function SettingsPage() {
                     className="mt-1"
                   />
                 ) : (
-                  <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg mt-1">
+                  <div className="px-4 py-2 bg-muted border border-border rounded-lg mt-1">
                     {formData.postalCode || "Not set"}
                   </div>
                 )}
@@ -360,7 +359,7 @@ export default function SettingsPage() {
                   className="mt-1"
                 />
               ) : (
-                <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg mt-1">
+                <div className="px-4 py-2 bg-muted border border-border rounded-lg mt-1">
                   {formData.country || "Not set"}
                 </div>
               )}
@@ -371,7 +370,6 @@ export default function SettingsPage() {
                 <Button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="bg-slate-900 text-white hover:bg-slate-800"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {isSaving ? "Saving..." : "Save Changes"}

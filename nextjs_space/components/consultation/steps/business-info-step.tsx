@@ -34,10 +34,10 @@ export function BusinessInfoStep({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-card-foreground mb-2">
           Type of Business
         </h2>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Optional - Only complete if ordering for a business
         </p>
       </div>

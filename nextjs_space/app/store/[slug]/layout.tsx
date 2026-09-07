@@ -20,7 +20,7 @@ import { AutomatosWidgetWrapper } from "@/components/admin/AutomatosWidgetWrappe
 import { Ga4Tag } from "@/components/seo/ga4-tag";
 import { parseTenantSettings } from "@/lib/tenant/tenant-settings";
 import { sanitizeCss, extractGoogleFontsImports } from "@/lib/security/css-utils";
-import { hexToHsl } from "@/lib/color-utils";
+import { buildColorOverrideVars } from "@/lib/theme/tenant-tokens";
 import type { Metadata } from "next";
 import {
   buildStoreMetadata,
@@ -263,20 +263,21 @@ async function renderTenantStore(
     pageContent: (activeTemplate?.pageContent as any) || defaults?.pageContent || {},
   };
 
+  // The palette the nav/footer override legibility check is made against —
+  // the same designSystem fallback order TenantThemeProvider uses.
+  const paletteBase = designSystem?.colors || settings.designSystem?.colors;
+
   // Render navigation
   const renderNavigation = () => {
     // Data-driven: use section component from layout.json
     if (layout?.navigation) {
       const NavComponent = getSectionComponent(layout.navigation);
       if (NavComponent) {
-        const navOverrides = layout.navigationConfig?.colorOverrides;
-        const navStyle: CSSProperties | undefined = navOverrides
-          ? (Object.fromEntries(
-              Object.entries(navOverrides)
-                .filter(([, v]) => v && typeof v === 'string' && v.trim())
-                .map(([k, v]) => [`--tenant-color-${k}`, (v as string).startsWith('#') ? hexToHsl(v as string) : v])
-            ) as CSSProperties)
-          : undefined;
+        // Legibility-checked against the tenant palette (lib/theme/tenant-tokens)
+        const navVars = buildColorOverrideVars(layout.navigationConfig?.colorOverrides, {
+          base: paletteBase,
+        });
+        const navStyle = Object.keys(navVars).length > 0 ? (navVars as CSSProperties) : undefined;
         return (
           <div style={navStyle}>
             <NavComponent {...sectionProps} sectionConfig={layout.navigationConfig} />
@@ -312,17 +313,14 @@ async function renderTenantStore(
       if (FooterComponent) {
         const isDarkFooter = layout.footer === 'FooterBrand' || layout.footer === 'FooterFull';
         const darkDefaults: Record<string, string> = isDarkFooter
-          ? { '--tenant-color-background': '220 15% 10%', '--tenant-color-text': '0 0% 100%', '--tenant-color-heading': '0 0% 100%', '--tenant-color-border': '0 0% 100%' }
+          ? { background: '220 15% 10%', text: '0 0% 100%', heading: '0 0% 100%', border: '0 0% 100%' }
           : {};
-        const footerOverrides = layout.footerConfig?.colorOverrides;
-        const overrideEntries = footerOverrides
-          ? Object.fromEntries(
-              Object.entries(footerOverrides)
-                .filter(([, v]) => v && typeof v === 'string' && v.trim())
-                .map(([k, v]) => [`--tenant-color-${k}`, (v as string).startsWith('#') ? hexToHsl(v as string) : v])
-            )
-          : {};
-        const footerStyle = { ...darkDefaults, ...overrideEntries } as CSSProperties;
+        // Overrides layer on the dark defaults; both are legibility-checked
+        // against the tenant palette (lib/theme/tenant-tokens).
+        const footerStyle = buildColorOverrideVars(layout.footerConfig?.colorOverrides, {
+          defaults: darkDefaults,
+          base: paletteBase,
+        }) as CSSProperties;
         return (
           <div style={Object.keys(footerStyle).length > 0 ? footerStyle : undefined}>
             <FooterComponent {...sectionProps} sectionConfig={layout.footerConfig} />

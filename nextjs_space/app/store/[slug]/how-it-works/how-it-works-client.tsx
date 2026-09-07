@@ -30,8 +30,8 @@ export function HowItWorksClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-lg text-gray-600">{t("common.loading")}</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-lg text-muted-foreground">{t("common.loading")}</p>
       </div>
     );
   }

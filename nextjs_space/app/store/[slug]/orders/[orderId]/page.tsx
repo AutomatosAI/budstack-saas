@@ -53,7 +53,7 @@ export default async function OrderConfirmationPage({
       case "CANCELLED":
         return <Package className="h-16 w-16 text-red-500" />;
       default:
-        return <Clock className="h-16 w-16 text-gray-400" />;
+        return <Clock className="h-16 w-16 text-muted-foreground" />;
     }
   };
 
@@ -91,8 +91,8 @@ export default async function OrderConfirmationPage({
         <CardContent className="flex flex-col items-center text-center py-12">
           {getStatusIcon(order.paymentStatus)}
           <h1 className="text-3xl font-bold mt-6 mb-2">{status.title}</h1>
-          <p className="text-gray-600 mb-4">{status.message}</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-muted-foreground mb-4">{status.message}</p>
+          <p className="text-sm text-muted-foreground">
             Order Number:{" "}
             <span className="font-mono font-semibold">{order.drGreenInvoiceNum || order.orderNumber}</span>
           </p>
@@ -149,11 +149,11 @@ export default async function OrderConfirmationPage({
                 return (
                   <>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Subtotal</span>
+                      <span className="text-muted-foreground">Subtotal</span>
                       <span>{currency} {order.subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Shipping</span>
+                      <span className="text-muted-foreground">Shipping</span>
                       <span>{currency} {order.shippingCost.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-lg font-bold border-t pt-2">

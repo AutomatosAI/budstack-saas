@@ -66,10 +66,10 @@ export function IdUploadStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-card-foreground mb-2">
           Verify your identity
         </h2>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Upload a clear photo of a <strong>valid government ID</strong> (National
           ID, passport or driving licence). It must be your actual ID
           document&nbsp;— <strong>selfies or other photos will be rejected</strong>.
@@ -110,16 +110,16 @@ export function IdUploadStep({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="w-full rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center transition-colors hover:border-emerald-400 hover:bg-emerald-50"
+          className="w-full rounded-lg border-2 border-dashed border-border bg-muted px-4 py-8 text-center transition-colors hover:border-emerald-400 hover:bg-emerald-50"
         >
           {file ? (
             <span className="flex flex-col items-center gap-2 text-emerald-700">
               <FileCheck2 className="h-8 w-8" />
               <span className="font-medium">{file.name}</span>
-              <span className="text-xs text-gray-500">Tap to replace</span>
+              <span className="text-xs text-muted-foreground">Tap to replace</span>
             </span>
           ) : (
-            <span className="flex flex-col items-center gap-2 text-gray-500">
+            <span className="flex flex-col items-center gap-2 text-muted-foreground">
               <UploadCloud className="h-8 w-8" />
               <span className="font-medium">Tap to upload your ID</span>
               <span className="text-xs">JPG, PNG or PDF · up to 10 MB</span>
