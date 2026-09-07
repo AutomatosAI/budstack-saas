@@ -48,6 +48,7 @@ describe("toHslChannels", () => {
     expect(toHslChannels("#fff")).toBe("0 0% 100%");
     expect(toHslChannels("hsl(280, 45%, 8%)")).toBe("280 45% 8%");
     expect(toHslChannels("hsl(280 45% 8% / 0.5)")).toBe("280 45% 8%");
+    expect(toHslChannels("hsla(280, 45%, 8%, 0.5)")).toBe("280 45% 8%");
     expect(toHslChannels("  280   45%  8% ")).toBe("280 45% 8%");
   });
 

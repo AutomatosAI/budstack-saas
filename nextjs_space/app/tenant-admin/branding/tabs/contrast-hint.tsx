@@ -40,8 +40,8 @@ export function contrastWarnings(pairs: ContrastPair[]): ContrastWarning[] {
 /**
  * The text-on-background pairs a nav, footer or section override changes.
  * Colours the override leaves unset inherit from the brand palette, exactly as
- * the storefront resolves them. Overrides that touch none of the three colours
- * produce no pairs, so the brand-level warning is not repeated.
+ * the storefront resolves them. Overrides that touch none of the relevant
+ * colours produce no pairs, so the brand-level warning is not repeated.
  */
 export function overridePairs(
   overrides: Record<string, string> | undefined,
@@ -49,21 +49,32 @@ export function overridePairs(
   scope: string,
 ): ContrastPair[] {
   if (!overrides) return [];
-  const touched = ["background", "text", "heading"].some((key) => overrides[key]);
-  if (!touched) return [];
-  const background = overrides.background || base.backgroundColor;
-  return [
-    {
-      label: `${scope} body text on its background`,
+  const pairs: ContrastPair[] = [];
+  if (["background", "text", "heading"].some((key) => overrides[key])) {
+    const background = overrides.background || base.backgroundColor;
+    pairs.push(
+      {
+        label: `${scope} body text on its background`,
+        foreground: overrides.text || base.textColor,
+        background,
+      },
+      {
+        label: `${scope} heading text on its background`,
+        foreground: overrides.heading || base.headingColor,
+        background,
+      },
+    );
+  }
+  // Cards inside the section take the override's surface; the storefront
+  // substitutes black/white there too when the text no longer reads.
+  if (overrides.surface) {
+    pairs.push({
+      label: `${scope} body text on its card background`,
       foreground: overrides.text || base.textColor,
-      background,
-    },
-    {
-      label: `${scope} heading text on its background`,
-      foreground: overrides.heading || base.headingColor,
-      background,
-    },
-  ];
+      background: overrides.surface,
+    });
+  }
+  return pairs;
 }
 
 export function ContrastHint({ pairs }: { pairs: ContrastPair[] }) {

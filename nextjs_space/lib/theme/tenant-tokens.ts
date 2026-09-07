@@ -51,11 +51,15 @@ export function toHslChannels(value: unknown): string | null {
   let v = value.trim();
   if (!v) return null;
   if (/^hsla?\(/i.test(v) && v.endsWith(")")) {
+    // Drop the alpha channel in either syntax: "h s% l% / a" or "h, s%, l%, a".
     v = v
       .slice(v.indexOf("(") + 1, -1)
       .split("/")[0]
       .replace(/,/g, " ")
-      .trim();
+      .trim()
+      .split(/\s+/)
+      .slice(0, 3)
+      .join(" ");
   }
   if (HEX.test(v)) return hexToHsl(v);
   const m = v.replace(/\s+/g, " ").match(CHANNELS);
