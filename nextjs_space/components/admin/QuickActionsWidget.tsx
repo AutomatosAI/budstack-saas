@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { needsFullDocument } from "@/lib/admin/hard-navigation";
 import { cn } from "@/lib/utils";
 import {
   Package,
@@ -87,18 +88,18 @@ export const QuickActionsWidget = React.forwardRef<
           const Icon = action.icon;
           const isPrimary = index === 0;
 
-          return (
-            <Link
-              key={action.href}
-              href={action.href}
-              className={cn(
+          const linkProps = {
+            href: action.href,
+            className: cn(
                 "group relative flex flex-col items-center gap-3 p-5",
                 "rounded-xl border border-bs-border-100 bg-bs-card-2",
                 "transition-colors duration-200",
                 "hover:border-bs-border hover:bg-bs-card-3",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bs-green/40",
-              )}
-            >
+              ),
+          };
+          const content = (
+            <>
               <div
                 className={cn(
                   "flex items-center justify-center w-12 h-12 rounded-xl",
@@ -119,6 +120,17 @@ export const QuickActionsWidget = React.forwardRef<
               <span className="text-sm font-medium text-bs-fg text-center">
                 {action.label}
               </span>
+            </>
+          );
+          // Analytics needs its own document (wider CSP) — see lib/admin/hard-navigation.ts
+          return needsFullDocument(action.href) ? (
+            // eslint-disable-next-line @next/next/no-html-link-for-pages -- a full document load is the point
+            <a key={action.href} {...linkProps}>
+              {content}
+            </a>
+          ) : (
+            <Link key={action.href} {...linkProps}>
+              {content}
             </Link>
           );
         })}

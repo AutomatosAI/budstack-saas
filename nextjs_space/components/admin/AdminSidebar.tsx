@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { shouldFullLoad } from "@/lib/admin/hard-navigation";
 
 export interface AdminMenuItem {
   id: string;
@@ -153,22 +154,21 @@ export function AdminSidebar({
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
-
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-bs-md transition-all group relative",
-                  "before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-full before:transition-all",
-                  active
-                    ? cn("bg-bs-card text-bs-fg", ACTIVE_RAIL[accent])
-                    : "before:bg-transparent text-bs-fg-muted hover:text-bs-fg hover:bg-bs-card",
-                  FOCUS_RING[theme]
-                )}
-                title={collapsed ? item.label : undefined}
-              >
+            const linkProps = {
+              href: item.href,
+              onClick: () => setMobileOpen(false),
+              className: cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-bs-md transition-all group relative",
+                "before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-full before:transition-all",
+                active
+                  ? cn("bg-bs-card text-bs-fg", ACTIVE_RAIL[accent])
+                  : "before:bg-transparent text-bs-fg-muted hover:text-bs-fg hover:bg-bs-card",
+                FOCUS_RING[theme]
+              ),
+              title: collapsed ? item.label : undefined,
+            };
+            const content = (
+              <>
                 <Icon
                   className={cn(
                     "h-5 w-5 transition-colors flex-shrink-0",
@@ -197,6 +197,20 @@ export function AdminSidebar({
                     {item.label}
                   </div>
                 )}
+              </>
+            );
+
+            // The analytics pages run under a wider CSP than the rest of the
+            // admin; a policy belongs to the document, so links into and out
+            // of them are full loads (lib/admin/hard-navigation.ts).
+            return shouldFullLoad(pathname, item.href) ? (
+              // eslint-disable-next-line @next/next/no-html-link-for-pages -- a full document load is the point
+              <a key={item.id} {...linkProps}>
+                {content}
+              </a>
+            ) : (
+              <Link key={item.id} {...linkProps}>
+                {content}
               </Link>
             );
           })}
