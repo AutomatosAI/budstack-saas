@@ -119,6 +119,13 @@ export function buildCsp({
  * Pick the CSP variant for the path actually being served (after middleware
  * rewrites). Analytics pages need 'unsafe-eval' (plotly); store pages need
  * frame-ancestors 'self' for the editor iframe viewport switcher.
+ *
+ * CONTRACT: a policy belongs to the document, not the route. A client-side
+ * navigation keeps the policy of the page the user loaded first, so any route
+ * whose variant WIDENS a directive must be entered and left by a full document
+ * load. The admin navigation does this for the analytics routes via
+ * lib/admin/hard-navigation.ts; the YouTube frame host is on every variant for
+ * the same reason (PR #278). Add a route here → add it there.
  */
 export function variantForServedPath(servedPath: string): CspVariant {
   if (servedPath.startsWith("/store")) return "store";
