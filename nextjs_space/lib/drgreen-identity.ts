@@ -177,6 +177,79 @@ export async function uploadIdentityDocument(
   return doc;
 }
 
+// CONTRACT: Dr Green — switch a legacy First-AML client onto the ID-upload
+// verification path (dr-green-backend POST /dapp/clients/switch-to-id).
+// clientId travels in the SIGNED JSON body — DualAuthGuard verifies POSTs
+// against JSON.stringify(req.body) — so the signature covers exactly which
+// client is being switched. Dr Green enforces eligibility server-side
+// (SA flag on, ZAF shipping, not already KYC- or admin-verified).
+const SWITCH_TO_ID_ENDPOINT = '/dapp/clients/switch-to-id';
+
+export interface SwitchToIdResult {
+  id: string;
+  verificationType: string;
+  adminApproval: string;
+}
+
+/**
+ * Recover the HTTP status + customer-safe upstream message from a
+ * callDrGreenAPI error ("Doctor Green API Error: <status> <statusText> -
+ * <body>"). Dr Green's 4xx refusals here carry copy written for customers
+ * (already verified / not South African / feature off); surfacing them beats
+ * a generic 500. Returns null for anything that isn't a Dr Green API error.
+ */
+export function mapDrGreenApiError(
+  error: unknown,
+): { status: number; message?: string } | null {
+  const raw = error instanceof Error ? error.message : '';
+  const statusMatch = raw.match(/^Doctor Green API Error: (\d{3})/);
+  if (!statusMatch) return null;
+  const status = Number(statusMatch[1]);
+
+  let message: string | undefined;
+  const jsonStart = raw.indexOf('- {');
+  if (jsonStart !== -1) {
+    try {
+      const parsed = JSON.parse(raw.slice(jsonStart + 2));
+      if (typeof parsed?.message === 'string') message = parsed.message;
+    } catch {
+      // Truncated/non-JSON body — callers fall back to generic copy.
+    }
+  }
+  return { status, message };
+}
+
+export async function switchClientToIdVerification(params: {
+  clientId: string;
+  config: DrGreenIdentityConfig;
+  baseUrl?: string;
+}): Promise<SwitchToIdResult> {
+  const { clientId, config, baseUrl } = params;
+  if (!config?.apiKey || !config?.secretKey) {
+    throw new Error('MISSING_CREDENTIALS');
+  }
+
+  const response = await callDrGreenAPI<any>(SWITCH_TO_ID_ENDPOINT, {
+    method: 'POST',
+    apiKey: config.apiKey,
+    secretKey: config.secretKey,
+    baseUrl,
+    body: { clientId },
+  });
+
+  // The service returns { message, client } and the global response
+  // interceptor wraps it again — tolerate both nestings, mirroring
+  // extractClientId() on the create path.
+  const client =
+    response?.data?.client ?? response?.client ?? response?.data?.data?.client;
+  if (!client?.id) {
+    throw new Error(
+      'Dr Green switch-to-id returned an unexpected response shape',
+    );
+  }
+  return client as SwitchToIdResult;
+}
+
 // CONTRACT: Dr Green — create client (design doc §5.0). The other client calls
 // in doctor-green-api.ts use this same `/dapp/clients` path; the SA ID path
 // adds `verificationType: "ID"` so First-AML/medical are skipped.

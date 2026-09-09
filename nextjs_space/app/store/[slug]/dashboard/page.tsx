@@ -25,6 +25,10 @@ import { getStorefrontDashboard, StorefrontDashboard } from "@/app/actions/dashb
 import { OrderListItem, money } from "@/components/storefront/order-list-item";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { ReUploadIdDocument } from "@/components/shop/ReUploadIdDocument";
+import {
+  SwitchToIdVerification,
+  CompleteIdUpload,
+} from "@/components/shop/SwitchToIdVerification";
 
 function StatCard({
   icon,
@@ -97,6 +101,29 @@ export default function DashboardPage() {
   // the client re-upload right here (they do NOT need a new account).
   const rejected =
     !verified && !showClinical && kycStatus?.status === "REJECTED";
+  // Legacy First-AML client on an ID-upload store: offer the self-service
+  // switch to ID verification (their AML application is otherwise a dead end).
+  // Deliberately INCLUDES rejected KYC clients — rendered before the
+  // `rejected` branch below: plain re-upload would leave their First-AML
+  // caseId live (late-webhook un-verify risk) and admin Accept doesn't
+  // KYC-verify KYC-type clients, so switching first is the only path that
+  // actually completes for them. verificationType is only set when the live
+  // Dr Green read succeeded, so API_ERROR states never render the offer.
+  const switchOffer =
+    !verified &&
+    !showClinical &&
+    !idUploadFailed &&
+    kycStatus?.verificationType === "KYC";
+  // On the ID path with no recorded upload (a switcher who left before
+  // uploading, or a pre-PRD-220 registrant with no outcome flag): show the
+  // upload form — the amber "being reviewed" banner would be false here.
+  const needsUpload =
+    !verified &&
+    !showClinical &&
+    !idUploadFailed &&
+    !rejected &&
+    kycStatus?.verificationType === "ID" &&
+    kycStatus?.idDocumentStatus !== "UPLOADED";
   const orders = data?.orders ?? [];
 
   return (
@@ -161,6 +188,16 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+        ) : switchOffer ? (
+          /* Legacy First-AML client (rejected or not) — one-click switch to
+             ID verification, then the upload form takes over in place. */
+          <SwitchToIdVerification
+            slug={slug}
+            rejectionReason={
+              kycStatus?.status === "REJECTED" ? kycStatus?.message : undefined
+            }
+            onDone={() => checkUserKycStatus().then(setKycStatus)}
+          />
         ) : rejected ? (
           /* Admin rejected the uploaded ID — show the reason and let the client
              re-upload here. They do NOT need to create a new account. */
@@ -188,6 +225,12 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+        ) : needsUpload ? (
+          /* ID-path client with no recorded upload — finish verification. */
+          <CompleteIdUpload
+            slug={slug}
+            onUploaded={() => checkUserKycStatus().then(setKycStatus)}
+          />
         ) : (
           <div
             className={`mb-8 flex items-start gap-3 rounded-2xl border p-5 ${
