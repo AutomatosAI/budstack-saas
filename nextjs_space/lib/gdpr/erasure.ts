@@ -146,6 +146,9 @@ export function buildAnonymizedUserData(userId: string): {
   resetTokenExpiry: null;
   drGreenClientId: null;
   clerkUserId: null;
+  title: null;
+  marketingConsentAt: null;
+  marketingConsentSource: null;
 } {
   return {
     email: `deleted-${userId}@${ERASURE_EMAIL_DOMAIN}`,
@@ -160,6 +163,11 @@ export function buildAnonymizedUserData(userId: string): {
     resetTokenExpiry: null,
     drGreenClientId: null,
     clerkUserId: null,
+    // BS-305: an erased customer can never be addressed or marketed to —
+    // consent is withdrawn with the identity, not left behind on the row.
+    title: null,
+    marketingConsentAt: null,
+    marketingConsentSource: null,
   };
 }
 

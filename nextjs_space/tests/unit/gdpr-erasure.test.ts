@@ -74,6 +74,10 @@ describe("buildAnonymizedUserData", () => {
     // AC-4: Dr Green linkage severed.
     expect(data.drGreenClientId).toBeNull();
     expect(data.clerkUserId).toBeNull();
+    // BS-305: consent and salutation go with the identity.
+    expect(data.marketingConsentAt).toBeNull();
+    expect(data.marketingConsentSource).toBeNull();
+    expect(data.title).toBeNull();
   });
 
   it("returns a NEW object (no shared reference between calls)", () => {

@@ -15,7 +15,7 @@ export const customersGuide: Guide = {
     "Everyone who shops with you — their details, their history, the labels you put on them, and what you're allowed to email them about.",
   status: "published",
   video: { youtubeId: "XiK9lg0L8ME", title: "The Customer Book" },
-  updatedAt: "2026-08-15",
+  updatedAt: "2026-09-18",
   sections: [
     {
       id: "list",
@@ -36,7 +36,8 @@ export const customersGuide: Guide = {
         "The Orders column shows how many orders each person has placed — that column is how you spot a regular.",
         "Once you have tagged anybody, a tag dropdown appears next to the search box and narrows the list to one label.",
         "Rows per page runs from 10 to 100, with first and last buttons — the heading tells you how many matched.",
-        "Export downloads what's on screen as a spreadsheet file: name, email, phone, order count, and join date.",
+        "Export downloads what's on screen as a spreadsheet file: name, email, phone, status, order count, join date, and marketing consent (yes or no, plus when it was given).",
+        "A Marketing column shows who has agreed to hear from you. The \"Consented only\" filter narrows the list — and the export — to those people; campaigns only ever go to them anyway.",
         "A red \"ID upload failed\" pill marks anyone whose ID document didn't make it through at sign-up — they stay unverified until it's re-uploaded.",
         "View opens that person's own page, covered next.",
       ],

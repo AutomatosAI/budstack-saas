@@ -8,6 +8,7 @@ import * as secp256k1 from '@noble/secp256k1';
 import { sha256 } from '@noble/hashes/sha256';
 import { hmac } from '@noble/hashes/hmac';
 import { logger } from '@/lib/logger';
+import { withDrgClientHeader } from '@/lib/drgreen/client-version';
 
 // Required for noble secp256k1 signing — copied from template line 10-14
 secp256k1.etc.hmacSha256Sync = (key: Uint8Array, ...messages: Uint8Array[]) => {
@@ -261,12 +262,14 @@ export async function callDrGreenAPI<T>(
     ? (typeof body === 'string' ? body : JSON.stringify(body))
     : '';
 
-  // Headers — same as template: Content-Type + x-auth-apikey + x-auth-signature
-  const requestHeaders: Record<string, string> = {
+  // Headers — same as template: Content-Type + x-auth-apikey + x-auth-signature,
+  // plus X-DRG-Client (BS-204). The capability header is outside the signed
+  // payload, so the signature below is computed exactly as before.
+  const requestHeaders: Record<string, string> = withDrgClientHeader({
     'Content-Type': 'application/json',
     'x-auth-apikey': apiKey,
     ...headers,
-  };
+  });
 
   // What to sign — matches template drGreenRequestBody / drGreenRequestGet
   let signaturePayload = '';

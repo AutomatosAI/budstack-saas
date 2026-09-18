@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
 import { toast } from "@/components/ui/sonner";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
@@ -27,6 +28,49 @@ export default function SettingsPage() {
   useEffect(() => {
     checkUserKycStatus().then(setKycStatus);
   }, []);
+
+  // BS-304: marketing consent — read from and written to the column every
+  // BudStacks campaign is gated on; the change is forwarded to Dr Green.
+  type ConsentState = { marketingConsent: boolean; marketingConsentAt: string | null };
+  const [consent, setConsent] = useState<ConsentState | null>(null);
+  const [consentSaving, setConsentSaving] = useState(false);
+
+  useEffect(() => {
+    if (!slug) return;
+    fetch(`/api/store/${slug}/consent`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setConsent(data ?? null))
+      .catch(() => setConsent(null));
+  }, [slug]);
+
+  const handleConsentChange = async (next: boolean) => {
+    setConsentSaving(true);
+    try {
+      const response = await fetch(`/api/store/${slug}/consent`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consent: next }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Could not update your preference");
+      }
+      setConsent({
+        marketingConsent: data.marketingConsent === true,
+        marketingConsentAt: data.marketingConsentAt ?? null,
+      });
+      toast.success(
+        next
+          ? "You'll hear about products and offers from this store."
+          : "You won't receive marketing from this store.",
+      );
+      if (data.warning) toast.warning(data.warning);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update your preference");
+    } finally {
+      setConsentSaving(false);
+    }
+  };
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -399,6 +443,37 @@ export default function SettingsPage() {
                 </Button>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Marketing preferences — BS-304 */}
+        <div className="rounded-2xl border border-border bg-card p-6 mb-6 text-card-foreground shadow-sm">
+          <h2 className="text-xl font-semibold text-card-foreground mb-2 flex items-center gap-2">
+            <Mail className="w-5 h-5 text-muted-foreground" />
+            Marketing emails and SMS
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Choose whether we may tell you about products and offers. Emails about
+            your orders and verification are always sent.
+          </p>
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted px-4 py-3">
+            <div>
+              <Label htmlFor="marketing-consent">Marketing emails and SMS</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                {consent === null
+                  ? "Loading your preference…"
+                  : consent.marketingConsent
+                    ? `On${consent.marketingConsentAt ? ` since ${new Date(consent.marketingConsentAt).toLocaleDateString()}` : ""}`
+                    : "Off — you can turn this on at any time"}
+              </p>
+            </div>
+            <Switch
+              id="marketing-consent"
+              checked={consent?.marketingConsent === true}
+              disabled={consent === null || consentSaving}
+              onCheckedChange={handleConsentChange}
+              aria-label="Marketing emails and SMS"
+            />
           </div>
         </div>
 
