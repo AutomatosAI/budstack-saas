@@ -69,14 +69,22 @@ describe("buildKycClientPayload", () => {
     expect("otherMedicalCondition" in payload.medicalRecord).toBe(false);
   });
 
+  // The builder adds optional keys conditionally (so an absent key is absent,
+  // not undefined), which makes its return type a union. Assertions about those
+  // keys read through a loose view.
+  const loose = (value: unknown) => value as Record<string, unknown>;
+
   it("fills otherMedicalCondition from the mapped keys, then free text, then the fallback", () => {
     expect(
-      buildKycClientPayload({ ...base, medicalConditions: ["asthma", "other"] }).medicalRecord
-        .otherMedicalCondition,
+      loose(
+        buildKycClientPayload({ ...base, medicalConditions: ["asthma", "other"] }).medicalRecord,
+      ).otherMedicalCondition,
     ).toBe("Asthma, Other");
     expect(
-      buildKycClientPayload({ ...base, medicalConditions: [], otherCondition: "Migraine" })
-        .medicalRecord.otherMedicalCondition,
+      loose(
+        buildKycClientPayload({ ...base, medicalConditions: [], otherCondition: "Migraine" })
+          .medicalRecord,
+      ).otherMedicalCondition,
     ).toBe("Migraine");
   });
 
@@ -103,7 +111,7 @@ describe("buildKycClientPayload", () => {
       businessType: "pharmacy",
       businessName: "Farmácia A",
     });
-    expect(withBusiness.clientBusiness).toEqual(
+    expect(loose(withBusiness).clientBusiness).toEqual(
       expect.objectContaining({ businessType: "pharmacy", name: "Farmácia A", countryCode: "" }),
     );
     expect(

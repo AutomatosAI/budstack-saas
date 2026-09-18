@@ -73,7 +73,10 @@ const patchReq = (body: unknown) =>
 const getReq = () =>
   new Request("https://store.test/api/store/s/consent", { method: "GET" }) as any;
 
-const ctx = { user: { id: "user_clerk", email: "t@example.com" } };
+type SessionUser = { id: string; email: string | null };
+const ctx: { user: SessionUser } = {
+  user: { id: "user_clerk", email: "t@example.com" },
+};
 const patch = (body: unknown, user = ctx.user) =>
   (PATCH as any)(patchReq(body), { user }, { slug: "s" });
 const get = (user = ctx.user) => (GET as any)(getReq(), { user }, { slug: "s" });

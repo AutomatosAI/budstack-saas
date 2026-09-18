@@ -19,13 +19,17 @@ const UNSAFE_CHARS = /[^A-Za-z0-9./_-]/g;
 const FALLBACK_VERSION = "0.0.0";
 
 /** APP_VERSION when set (a release override), else the package.json version. */
-export function resolveAppVersion(env: NodeJS.ProcessEnv = process.env): string {
+export function resolveAppVersion(
+  env: Partial<NodeJS.ProcessEnv> = process.env,
+): string {
   const fromEnv = env.APP_VERSION?.trim();
   if (fromEnv) return fromEnv;
   return packageJson.version || FALLBACK_VERSION;
 }
 
-export function drgClientHeaderValue(env: NodeJS.ProcessEnv = process.env): string {
+export function drgClientHeaderValue(
+  env: Partial<NodeJS.ProcessEnv> = process.env,
+): string {
   const raw = `${DRG_CLIENT_NAME}/${resolveAppVersion(env)}`;
   return raw.replace(UNSAFE_CHARS, "-").slice(0, DRG_CLIENT_MAX_LENGTH);
 }
