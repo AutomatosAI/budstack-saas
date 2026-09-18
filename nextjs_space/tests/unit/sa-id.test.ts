@@ -22,7 +22,8 @@ interface SaIdVector {
   note?: string;
 }
 
-const VECTORS = (vectorFile as { vectors: SaIdVector[] }).vectors;
+// The JSON module's inferred element type is a union of shapes; widen first.
+const VECTORS = (vectorFile as unknown as { vectors: SaIdVector[] }).vectors;
 
 // Pinned so the "not in the future" rule is deterministic in CI.
 const NOW = new Date("2026-09-18T12:00:00Z");
