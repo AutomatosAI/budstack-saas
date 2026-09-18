@@ -138,6 +138,7 @@ export interface DoctorGreenProduct {
   stockQuantity?: number; // Optional - may be in strainLocations instead
   popularity?: number;
   isAvailable?: boolean; // Optional - may be in strainLocations instead
+  isActive?: boolean; // Strain-level flag; false = delisted (BS-401)
   strainLocations?: Array<{
     isActive?: boolean;
     isAvailable?: boolean;
@@ -251,6 +252,12 @@ async function normalizeProduct(product: DoctorGreenProduct, country: string): P
   // which is why inactive strains still showed and were orderable. The /strains
   // response carries isActive per location regardless of auth, so we filter on
   // it. (See PRD order-commission-stock-delivery-gas Defect C.)
+  //
+  // BS-401 (Dr Green Phase 4 US-405): the STRAIN-level `isActive` gates both
+  // branches. Dr Green's order gate refuses an inactive strain outright, so a
+  // location that is active under an inactive strain is still unorderable.
+  // Previously only the no-locations branch looked at it.
+  const strainActive = product.isActive !== false;
   const locations = product.strainLocations || [];
   const sellableLocations = locations.filter(
     (loc: any) => loc.isActive === true && loc.isAvailable === true,
@@ -258,9 +265,11 @@ async function normalizeProduct(product: DoctorGreenProduct, country: string): P
   const locationStock = sellableLocations.reduce((sum: number, loc: any) => sum + (loc.stockQuantity || 0), 0);
   const isAvailableAtAnyLocation = sellableLocations.length > 0;
   const totalStock = locationStock > 0 ? locationStock : (product.stockQuantity || 0);
-  const isAvailable = locations.length > 0
-    ? isAvailableAtAnyLocation
-    : ((product as any).isActive !== false && product.isAvailable !== false && totalStock > 0);
+  const isAvailable =
+    strainActive &&
+    (locations.length > 0
+      ? isAvailableAtAnyLocation
+      : product.isAvailable !== false && totalStock > 0);
 
   // Dr Green local pricing priority (from their implementation doc):
   //   1. localRetailPrice + localCurrency  (not yet deployed)
@@ -312,17 +321,29 @@ async function normalizeProduct(product: DoctorGreenProduct, country: string): P
   };
 }
 
+// CONTRACT: Dr Green — GET /dapp/strains (DualAuthGuard). The signed storefront
+// catalogue: the same query and response shape as the anonymous /strains, but
+// the service applies the active/available filters on this path (Phase 4
+// US-405), and /strains itself is scheduled to be guarded (US-406).
+const DAPP_STRAINS_ENDPOINT = '/dapp/strains';
+
+/** BS-401: a strain flagged inactive is delisted, not "out of stock". */
+function isListedStrain(product: DoctorGreenProduct): boolean {
+  return product.isActive !== false;
+}
+
 export async function fetchProducts(
   country: string = "ZA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct[]> {
-  // Use /strains endpoint with countryCode param.
+  // Signed catalogue with countryCode param (BS-401 moved this off the
+  // anonymous /strains; doctorGreenRequest already signs with the tenant key).
   // Currently returns EUR prices — normalizeProduct converts via exchange rates.
   // When Dr Green deploys localRetailPrice, it will be used automatically.
   const alpha3 = toAlpha3(country);
   logger.info(`[fetchProducts] country=${country} alpha3=${alpha3}`);
 
-  const response = await doctorGreenRequest<any>('/strains', {
+  const response = await doctorGreenRequest<any>(DAPP_STRAINS_ENDPOINT, {
     config,
     queryParams: {
       countryCode: alpha3,
@@ -337,13 +358,19 @@ export async function fetchProducts(
   const dataKeys = response?.data ? Object.keys(response.data) : [];
   logger.info(`[fetchProducts] Response keys: [${responseKeys}], data keys: [${dataKeys}]`);
 
-  const products = response?.data?.strains || response?.strains || [];
+  const returned: DoctorGreenProduct[] = response?.data?.strains || response?.strains || [];
+  // Absent from the listing AND from the detail lookup below (which reads
+  // this list), so a delisted strain can never reach a cart.
+  const products = returned.filter(isListedStrain);
 
   if (products.length > 0) {
     const p = products[0];
-    logger.info(`[fetchProducts] First product: "${p.name}" retailPrice=${p.retailPrice} localRetailPrice=${p.localRetailPrice ?? 'N/A'} localCurrency=${p.localCurrency ?? 'N/A'}`);
+    logger.info(`[fetchProducts] First product: "${p.name}" retailPrice=${p.retailPrice} localRetailPrice=${(p as any).localRetailPrice ?? 'N/A'} localCurrency=${(p as any).localCurrency ?? 'N/A'}`);
   } else {
     logger.info(`[fetchProducts] No products returned`);
+  }
+  if (products.length !== returned.length) {
+    logger.info(`[fetchProducts] ${returned.length - products.length} inactive strain(s) delisted`);
   }
 
   return Promise.all(products.map((product: DoctorGreenProduct) => normalizeProduct(product, country)));
