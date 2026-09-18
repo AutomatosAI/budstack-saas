@@ -599,6 +599,11 @@ export async function updateClient(
  * - camelCase keys
  * - nested 'medicalRecord' with specific booleans (medicalHistory0..16)
  */
+// CONTRACT: Dr Green — POST /dapp/clients, the create route DualAuthGuard
+// serves for storefronts (client.controller.ts). Shared by the KYC path here
+// and the SA ID path in lib/drgreen-identity.ts.
+const DAPP_CLIENTS_ENDPOINT = "/dapp/clients";
+
 export async function createClient(
   clientData: {
     firstName: string;
@@ -644,6 +649,11 @@ export async function createClient(
       medicalHistory16?: boolean;
       prescriptionsSupplements?: string;
     };
+    // Phase 3 (BS-301): optional on Dr Green (US-301/302); stripped by its DTO
+    // whitelist before that release, so sending early is safe.
+    title?: string;
+    marketingConsent?: boolean;
+    consentSource?: string;
   },
   config: DoctorGreenConfig,
 ): Promise<{ clientId: string; kycLink?: string }> {
@@ -657,29 +667,60 @@ export async function createClient(
     phoneCountryCode: clientData.phoneCountryCode,
     contactNumber: clientData.contactNumber,
     shipping: clientData.shipping,
-    medicalRecord: clientData.medicalRecord
+    medicalRecord: clientData.medicalRecord,
+    ...(clientData.title ? { title: clientData.title } : {}),
+    marketingConsent: clientData.marketingConsent === true,
+    ...(clientData.consentSource ? { consentSource: clientData.consentSource } : {}),
   };
 
-  // Response is nested: { success: true, data: { data: { clientId, kycLink } } }
-  // OR sometimes: { success: true, data: { clientId, kycLink } } depending on proxy version
-  // We type it as 'any' to handle the normalization manually
-  const response = await doctorGreenRequest<any>("/client", { // Endpoint is /client singular? Findings say POST /client
+  // CONTRACT: Dr Green — POST /dapp/clients (DualAuthGuard, the same route the
+  // consultation submit and the SA ID path use). This used to post to
+  // "/client", which no Dr Green controller serves (client.controller.ts
+  // registers only dapp/clients and dapp/clients/switch-to-id), so every call
+  // 404'd; the store-name comment that justified it was never verified.
+  const response = await doctorGreenRequest<any>(DAPP_CLIENTS_ENDPOINT, {
     method: "POST",
     body: payload,
     config,
   });
 
-  // Normalize response
-  const rawData = response.data || {};
-  const nestedData = rawData.data || rawData;
-
-  const clientId = nestedData.clientId || rawData.clientId;
-  const kycLink = nestedData.kycLink || rawData.kycLink;
-
+  const { clientId, kycLink } = extractCreatedClient(response);
   if (!clientId) {
-    console.error("DrGreen createClient failed to return clientId", response);
+    console.error("DrGreen createClient failed to return clientId", {
+      topKeys: Object.keys(response || {}),
+    });
     throw new Error("Failed to create client: No ID returned");
   }
 
   return { clientId, kycLink };
+}
+
+
+/**
+ * Dr Green nests the created client differently across versions and the
+ * global response interceptor may wrap it again: { data: { client: {...} } },
+ * { data: { data: { clientId } } }, { data: { clientId } }, { client: {...} }.
+ * Mirrors the tolerant extraction the consultation submit route performs.
+ */
+export function extractCreatedClient(
+  response: any,
+): { clientId?: string; kycLink?: string } {
+  const data = response?.data ?? response ?? {};
+  const nested = data?.data ?? data;
+  const client = nested?.client ?? data?.client ?? response?.client;
+  return {
+    clientId:
+      client?.id ||
+      nested?.clientId ||
+      data?.clientId ||
+      nested?.id ||
+      response?.clientId ||
+      undefined,
+    kycLink:
+      client?.kycLink ||
+      nested?.kycLink ||
+      data?.kycLink ||
+      response?.kycLink ||
+      undefined,
+  };
 }

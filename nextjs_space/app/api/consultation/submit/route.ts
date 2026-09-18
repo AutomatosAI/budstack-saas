@@ -32,6 +32,8 @@ import { resolveTenant } from '@/lib/tenant/tenant-resolver';
 import { logger } from '@/lib/logger';
 import { apiError, apiValidationError } from '@/lib/api-error';
 import { checkPolicyGate } from '@/lib/legal/policy-gate';
+import { CUSTOMER_TITLES, normaliseCustomerTitle } from '@/lib/customers/titles';
+import { CONSENT_SOURCE } from '@/lib/customers/marketing-consent';
 
 /** 409 for "that address already belongs to an account you have not proven you own". */
 function accountExistsResponse() {
@@ -82,6 +84,9 @@ const consultationSchema = z.object({
   // US-023 (POPIA): explicit marketing opt-in from the signup form. Optional
   // and UNTICKED by default — absent or false records NO consent.
   marketingConsent: z.boolean().optional(),
+
+  // BS-303: optional salutation from the fixed list; "" = not chosen.
+  title: z.union([z.enum(CUSTOMER_TITLES), z.literal("")]).optional(),
 
   // SA ID-upload (idMode) — see idDocumentSchema above.
   idDocument: idDocumentSchema.optional(),
@@ -204,6 +209,19 @@ export async function POST(request: NextRequest) {
       idDocumentNumber = documentNumberToForward(idDoc.data, enforceSaId);
     }
 
+    // SA ID-upload path creates the client via verificationType "ID" (no
+    // medical questionnaire). Otherwise the standard KYC/First-AML payload.
+    // Phase 3 (BS-301..303): consent and title are attributed to that path.
+    const idMode =
+      isSaIdUploadEnabled() &&
+      getTenantVerificationMode(tenant) === "ID_UPLOAD";
+    const registrationSource = idMode
+      ? CONSENT_SOURCE.ID_UPLOAD
+      : CONSENT_SOURCE.CONSULTATION;
+    const customerTitle = normaliseCustomerTitle(body.title);
+    // US-023: consent only on an explicit tick — never inferred.
+    const consented = body.marketingConsent === true;
+
     // A storefront with no published privacy notice tells visitors exactly that
     // — so taking a consultation here would collect special-category data with
     // no Art. 13 notice at all. Checked before ANY account or record is created.
@@ -325,10 +343,12 @@ export async function POST(request: NextRequest) {
             firstName: body.firstName,
             lastName: body.lastName,
             phone: [body.phoneCode, body.phoneNumber].filter(Boolean).join(" ").trim() || null,
+            ...(customerTitle ? { title: customerTitle } : {}),
             // US-023: a tick at signup grants consent; unticked NEVER clears
             // an earlier grant — withdrawal is unsubscribe/admin-only.
-            ...(body.marketingConsent === true && {
+            ...(consented && {
               marketingConsentAt: new Date(),
+              marketingConsentSource: registrationSource,
             }),
             updatedAt: new Date(),
           },
@@ -354,8 +374,10 @@ export async function POST(request: NextRequest) {
             phone: [body.phoneCode, body.phoneNumber].filter(Boolean).join(" ").trim() || null,
             role: "PATIENT",
             tenantId,
+            title: customerTitle,
             // US-023: consent only on an explicit tick — never inferred.
-            marketingConsentAt: body.marketingConsent === true ? new Date() : null,
+            marketingConsentAt: consented ? new Date() : null,
+            marketingConsentSource: consented ? registrationSource : null,
             updatedAt: new Date(),
           },
         });
@@ -393,8 +415,9 @@ export async function POST(request: NextRequest) {
                   tenantId,
                   role: "PATIENT",
                   // US-023: the webhook race must not lose an explicit tick.
-                  ...(body.marketingConsent === true && {
+                  ...(consented && {
                     marketingConsentAt: new Date(),
+                    marketingConsentSource: registrationSource,
                   }),
                   updatedAt: new Date(),
                 },
@@ -463,12 +486,6 @@ export async function POST(request: NextRequest) {
       const { apiKey, secretKey, apiUrl } = await getTenantDrGreenConfig(tenantId);
       logger.debug("[Consultation] Dr Green credentials loaded", { tenantId });
 
-      // SA ID-upload path creates the client via verificationType "ID" (no
-      // medical questionnaire). Otherwise the standard KYC/First-AML payload.
-      const idMode =
-        isSaIdUploadEnabled() &&
-        getTenantVerificationMode(tenant) === "ID_UPLOAD";
-
       let clientId: string | undefined;
       let kycLink: string | null = null;
 
@@ -480,6 +497,9 @@ export async function POST(request: NextRequest) {
           phoneCode: body.phoneCode.replace(/[^\+\d]/g, ""),
           phoneCountryCode: body.countryCode,
           contactNumber: body.phoneNumber.replace(/\D/g, ""),
+          title: customerTitle,
+          marketingConsent: consented,
+          consentSource: registrationSource,
           shipping: {
             address1: body.addressLine1,
             address2: body.addressLine2 || "",
@@ -536,7 +556,12 @@ export async function POST(request: NextRequest) {
         }
       } else {
       // Prepare Dr. Green API payload — lib/drgreen/kyc-client-payload.ts
-      const drGreenPayload = buildKycClientPayload(body);
+      const drGreenPayload = buildKycClientPayload({
+        ...body,
+        title: customerTitle,
+        marketingConsent: consented,
+        consentSource: registrationSource,
+      });
 
       // Submit to Dr. Green API via shared client
       const drGreenResponse = await callDrGreenAPI<any>('/dapp/clients', {

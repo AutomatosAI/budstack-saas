@@ -5,6 +5,8 @@ import { prisma } from '@/lib/db';
 import { getCurrentTenant } from '@/lib/tenant/tenant';
 import { getTenantDrGreenConfig } from '@/lib/tenant/tenant-config';
 import { apiError, apiValidationError } from '@/lib/api-error';
+import { normaliseCustomerTitle } from '@/lib/customers/titles';
+import { CONSENT_SOURCE } from '@/lib/customers/marketing-consent';
 
 export const POST = withAuth(async (req, { user }) => {
   try {
@@ -28,12 +30,17 @@ export const POST = withAuth(async (req, { user }) => {
     }
 
     const body = await req.json();
-    const { personal, address, medicalRecord } = body;
+    const { personal, address, medicalRecord, marketingConsent, title } = body;
 
     // Validate required fields
     if (!personal || !address || !medicalRecord) {
       return apiValidationError("Missing required fields", "POST /api/shop/register");
     }
+
+    // Phase 3 (BS-301..303): salutation from the fixed list and marketing
+    // consent — only an explicit true counts; anything else records nothing.
+    const customerTitle = normaliseCustomerTitle(title ?? personal.title);
+    const consented = marketingConsent === true;
 
     // Get current tenant for Dr. Green API keys
     const tenant = await getCurrentTenant();
@@ -121,6 +128,9 @@ export const POST = withAuth(async (req, { user }) => {
         phoneCode: phoneCode,
         phoneCountryCode: tenant?.countryCode || "ZA",
         contactNumber: contactNumber,
+        title: customerTitle ?? undefined,
+        marketingConsent: consented,
+        consentSource: CONSENT_SOURCE.SHOP_REGISTER,
         shipping: {
           address1: address.street,
           city: address.city,
@@ -156,6 +166,15 @@ export const POST = withAuth(async (req, { user }) => {
           // Phone was collected + validated above but previously only sent to
           // Dr Green — persist it locally so Customers detail/export show it.
           phone: `${phoneCode} ${contactNumber}`.trim(),
+          ...(customerTitle ? { title: customerTitle } : {}),
+          // US-023 rule: a tick grants consent; unticked never clears an
+          // earlier grant (withdrawal is the customer's own settings toggle).
+          ...(consented
+            ? {
+                marketingConsentAt: new Date(),
+                marketingConsentSource: CONSENT_SOURCE.SHOP_REGISTER,
+              }
+            : {}),
           // The Dr Green client id was previously returned to the browser but
           // never persisted, leaving these customers unreachable by webhooks
           // and status sync — permanently "pending" on every admin surface.

@@ -23,6 +23,8 @@ const STEP_NAMES = ["Contact Details", "Address Information", "Verify Identity"]
 
 interface IdUploadFormProps {
   tenantSlug: string;
+  /** The store's business name — read into the marketing-consent copy (BS-302). */
+  storeName?: string;
 }
 
 const fileToBase64 = (file: File): Promise<string> =>
@@ -37,7 +39,7 @@ const fileToBase64 = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
-export function IdUploadForm({ tenantSlug }: IdUploadFormProps) {
+export function IdUploadForm({ tenantSlug, storeName }: IdUploadFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,6 +61,7 @@ export function IdUploadForm({ tenantSlug }: IdUploadFormProps) {
     password: "",
     confirmPassword: "",
     marketingConsent: false,
+    title: "",
 
     addressLine1: "",
     addressLine2: "",
@@ -178,6 +181,7 @@ export function IdUploadForm({ tenantSlug }: IdUploadFormProps) {
         return (
           <ContactDetailsStep
             data={formData}
+            storeName={storeName}
             onUpdate={handleUpdateFormData}
             onNext={handleNext}
           />

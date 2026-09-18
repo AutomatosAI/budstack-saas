@@ -61,6 +61,12 @@ export interface KycRegistrationInput {
   cannabisReducesMeds: boolean;
   cannabisFrequency?: string;
   cannabisAmountPerDay?: string;
+
+  // Phase 3 (BS-301): optional on Dr Green (US-301/302); stripped by its DTO
+  // whitelist before that release. Consent is only ever an explicit true.
+  title?: string | null;
+  marketingConsent?: boolean;
+  consentSource?: string;
 }
 
 /** YYYY-MM-DD; today when the form sent nothing (unchanged legacy default). */
@@ -126,6 +132,10 @@ export function buildKycClientPayload(body: KycRegistrationInput) {
     },
 
     ...clientBusiness(body),
+
+    ...(body.title ? { title: body.title } : {}),
+    marketingConsent: body.marketingConsent === true,
+    ...(body.consentSource ? { consentSource: body.consentSource } : {}),
 
     medicalRecord: {
       dob: formatDateOfBirth(body.dateOfBirth),

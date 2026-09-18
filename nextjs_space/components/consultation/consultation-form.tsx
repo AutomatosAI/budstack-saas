@@ -24,10 +24,13 @@ const STEP_NAMES = [
 
 interface ConsultationFormProps {
   tenantSlug: string;
+  /** The store's business name — read into the marketing-consent copy (BS-302). */
+  storeName?: string;
 }
 
 export function ConsultationForm({
   tenantSlug,
+  storeName,
 }: ConsultationFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -43,6 +46,7 @@ export function ConsultationForm({
     password: "",
     confirmPassword: "",
     marketingConsent: false,
+    title: "",
 
     addressLine1: "",
     addressLine2: "",
@@ -160,6 +164,7 @@ export function ConsultationForm({
         return (
           <ContactDetailsStep
             data={formData}
+            storeName={storeName}
             onUpdate={handleUpdateFormData}
             onNext={handleNext}
           />

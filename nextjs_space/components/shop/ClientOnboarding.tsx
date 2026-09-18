@@ -42,6 +42,7 @@ export function ClientOnboarding() {
   const personalForm = useForm<PersonalDetails>({
     resolver: zodResolver(personalDetailsSchema),
     defaultValues: formData.personal || {
+      title: "",
       firstName: "",
       lastName: "",
       email: user?.primaryEmailAddress?.emailAddress || "",
@@ -69,6 +70,7 @@ export function ClientOnboarding() {
       previousCannabisUse: false,
       doctorApproval: false,
       consent: false,
+      marketingConsent: false,
     },
   });
 
@@ -104,6 +106,10 @@ export function ClientOnboarding() {
           personal: formData.personal,
           address: formData.address,
           medicalRecord: data,
+          // Phase 3 (BS-301..303): top-level so the route never reads
+          // consent out of the medical record.
+          title: formData.personal?.title || undefined,
+          marketingConsent: data.marketingConsent === true,
         }),
       });
 

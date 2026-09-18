@@ -14,6 +14,14 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PersonalDetails } from "./onboarding-schema";
+import { CUSTOMER_TITLES } from "@/lib/customers/titles";
+
+const fieldStyle = {
+  backgroundColor: "var(--tenant-color-background)",
+  borderColor: "var(--tenant-color-border, rgba(0,0,0,0.2))",
+  color: "var(--tenant-color-text)",
+  fontFamily: "var(--tenant-font-base)",
+} as const;
 
 interface PersonalDetailsStepProps {
   form: UseFormReturn<PersonalDetails>;
@@ -51,6 +59,39 @@ export function PersonalDetailsStep({
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-4"
           >
+            {/* BS-303: optional salutation — the customer's own choice. */}
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel
+                    style={{
+                      color: "var(--tenant-color-text)",
+                      fontFamily: "var(--tenant-font-base)",
+                    }}
+                  >
+                    Title (optional)
+                  </FormLabel>
+                  <FormControl>
+                    <select
+                      {...field}
+                      value={field.value ?? ""}
+                      className="flex h-10 w-full rounded-md border px-3 py-2 text-sm"
+                      style={fieldStyle}
+                    >
+                      <option value="">Prefer not to say</option>
+                      {CUSTOMER_TITLES.map((title) => (
+                        <option key={title} value={title}>
+                          {title}
+                        </option>
+                      ))}
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}

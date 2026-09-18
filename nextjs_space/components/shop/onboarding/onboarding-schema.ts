@@ -1,6 +1,9 @@
 import { z } from "zod";
+import { CUSTOMER_TITLES } from "@/lib/customers/titles";
 
 export const personalDetailsSchema = z.object({
+  // BS-303: optional salutation from the fixed list; "" = not chosen.
+  title: z.union([z.enum(CUSTOMER_TITLES), z.literal("")]).optional(),
   firstName: z.string().min(2, "First name must be at least 2 characters"),
   lastName: z.string().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
@@ -22,6 +25,9 @@ export const medicalSchema = z.object({
   previousCannabisUse: z.boolean(),
   doctorApproval: z.boolean(),
   consent: z.boolean().refine((val) => val, "You must consent to continue"),
+  // BS-302 (POPIA): marketing consent — optional and UNTICKED by default.
+  // Distinct from the terms `consent` above, which is required.
+  marketingConsent: z.boolean().optional(),
 });
 
 export type PersonalDetails = z.infer<typeof personalDetailsSchema>;

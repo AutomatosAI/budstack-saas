@@ -80,6 +80,23 @@ describe("buildKycClientPayload", () => {
     ).toBe("Migraine");
   });
 
+  it("forwards title, marketingConsent and consentSource (BS-301); consent is false by default", () => {
+    const withConsent = buildKycClientPayload({
+      ...base,
+      title: "Mx",
+      marketingConsent: true,
+      consentSource: "budstacks-consultation",
+    });
+    expect(withConsent.title).toBe("Mx");
+    expect(withConsent.marketingConsent).toBe(true);
+    expect(withConsent.consentSource).toBe("budstacks-consultation");
+
+    const plain = buildKycClientPayload(base);
+    expect(plain.marketingConsent).toBe(false);
+    expect("title" in plain).toBe(false);
+    expect("consentSource" in plain).toBe(false);
+  });
+
   it("includes clientBusiness only when both type and name are present", () => {
     const withBusiness = buildKycClientPayload({
       ...base,
