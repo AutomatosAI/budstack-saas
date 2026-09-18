@@ -16,6 +16,7 @@
  */
 import { generateDrGreenSignature, callDrGreenAPI } from './drgreen/drgreen-api-client';
 import { DR_GREEN_SA_COUNTRY_CODE } from './verification-mode';
+import { withDrgClientHeader } from './drgreen/client-version';
 
 export type IdentityDocumentType = 'ID' | 'PASSPORT' | 'DRIVING_LICENCE';
 
@@ -142,10 +143,12 @@ export async function uploadIdentityDocument(
   // Do NOT set Content-Type — fetch derives the multipart boundary itself.
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
+    // X-DRG-Client (BS-204) is a plain header: it never enters the signed
+    // multipart reconstruction above, so the byte-exact contract is untouched.
+    headers: withDrgClientHeader({
       'x-auth-apikey': config.apiKey,
       'x-auth-signature': signature,
-    },
+    }),
     body: form,
     cache: 'no-store',
   });

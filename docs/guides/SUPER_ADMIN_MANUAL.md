@@ -199,6 +199,16 @@ Upon approval, the system automatically:
 
 > **Note:** `tenants.nftTokenId` is an optional legacy field on the tenant record. It does not gate access or activation and can be left empty.
 
+### South African ID-upload tenants — Dr Green key checklist
+
+Applies to every tenant whose verification mode is **ID upload** (South Africa only). Dr Green's identity emails — "we've received your ID document" and the rejection email with its re-upload link — build the link back to the storefront from the partner's branding website or, failing that, from the **first allowed return host on the tenant's Dr Green API key**, plus `/dashboard`. A key with no host sends the customer to the Dr Green app instead of the store.
+
+1. The tenant admin adds the Dr Green API key and secret under **Tenant Admin → Settings**.
+2. On the Dr Green dApp **Keys** page, the KEY holder adds the storefront host to that key's allowed return hosts: `<subdomain>.budstacks.io`, and the custom domain as well once it is live. Wildcards (`*.example`) are ignored by the link resolver, so list the exact host.
+3. Confirm on staging before go-live: reject a test customer's ID in the Dr Green admin and check the email link lands on `https://<tenant host>/dashboard`, where the existing re-upload card is shown.
+
+The link resolution is Dr Green Phase 2 (US-208); until that release is on production the rejection email still points at the partner branding website or the Dr Green app. See `tasks/prd-drgreen-phase-alignment-2026-09.md` (BS-205).
+
 ---
 
 ## Analytics & Reporting

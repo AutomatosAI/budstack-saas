@@ -7,6 +7,7 @@ import { ContactDetailsStep } from "./steps/contact-details-step";
 import { AddressStep } from "./steps/address-step";
 import { IdUploadStep, type IdDocumentType } from "./steps/id-upload-step";
 import { toast } from "@/components/ui/sonner";
+import { SA_ID_INVALID_CODE, SA_ID_INVALID_MESSAGE } from "@/lib/verification/sa-id";
 import { useRouter } from "next/navigation";
 import type { ConsultationFormData } from "./consultation-form-types";
 
@@ -44,6 +45,8 @@ export function IdUploadForm({ tenantSlug }: IdUploadFormProps) {
   const [idFile, setIdFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<IdDocumentType>("ID");
   const [documentNumber, setDocumentNumber] = useState("");
+  // BS-203: an SA_ID_INVALID answer from the server lands on the number field.
+  const [documentNumberError, setDocumentNumberError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<ConsultationFormData>({
     firstName: "",
@@ -145,6 +148,12 @@ export function IdUploadForm({ tenantSlug }: IdUploadFormProps) {
 
       const result = await response.json();
       if (!response.ok) {
+        if (result?.code === SA_ID_INVALID_CODE) {
+          // The number, not the upload, is the problem: show it on the field
+          // and keep the customer on this step — no generic failure toast.
+          setDocumentNumberError(result.error || SA_ID_INVALID_MESSAGE);
+          return;
+        }
         throw new Error(result.error || "Registration failed");
       }
 
@@ -189,7 +198,9 @@ export function IdUploadForm({ tenantSlug }: IdUploadFormProps) {
             documentType={documentType}
             documentNumber={documentNumber}
             onFileChange={setIdFile}
+            documentNumberError={documentNumberError}
             onUpdate={(d) => {
+              setDocumentNumberError(null);
               if (d.documentType !== undefined) setDocumentType(d.documentType);
               if (d.documentNumber !== undefined)
                 setDocumentNumber(d.documentNumber);

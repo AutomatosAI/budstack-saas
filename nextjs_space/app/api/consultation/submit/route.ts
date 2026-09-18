@@ -11,15 +11,21 @@ import { createSaIdClient, uploadIdentityDocument } from "@/lib/drgreen-identity
 import { recordIdDocumentOutcome } from "@/lib/verification/id-document-status";
 import {
   getTenantVerificationMode,
+  isSaIdEligibleTenant,
   isSaIdUploadEnabled,
 } from "@/lib/verification-mode";
+import {
+  documentNumberToForward,
+  hasSaIdInvalidIssue,
+  saIdDocumentRefinement,
+  saIdInvalidBody,
+} from "@/lib/verification/sa-id-schema";
 
 import { prisma } from "@/lib/db";
-import { mapMedicalConditionsForDrGreen } from '@/lib/drgreen/dr-green-mapping';
+import { buildKycClientPayload } from '@/lib/drgreen/kyc-client-payload';
 import crypto from "crypto";
 import { z } from "zod";
 
-import { toAlpha3 as convertToAlpha3CountryCode } from '@/lib/country-codes';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { getTenantFromRequest } from '@/lib/tenant/tenant';
 import { resolveTenant } from '@/lib/tenant/tenant-resolver';
@@ -36,6 +42,21 @@ function accountExistsResponse() {
       "An account already exists for this email address. Please sign in and then complete your consultation. If you cannot access that account, contact support — for your protection we cannot link it from an unauthenticated form.",
   });
 }
+
+// SA ID-upload (idMode): document sent inline with registration so the
+// account + Dr Green client + document are created in one action.
+const idDocumentSchema = z.object({
+  fileBase64: z.string().min(1),
+  mimeType: z.string().max(100),
+  documentType: z.enum(["ID", "PASSPORT", "DRIVING_LICENCE"]),
+  documentNumber: z.string().trim().min(1).max(100),
+});
+
+// BS-202: the South African ID rules need the tenant, which is resolved from
+// the request AFTER the body is parsed — so the refinement is applied to the
+// already-validated `idDocument` object once the tenant is known (below).
+const idDocumentSchemaFor = (enforceSaId: boolean) =>
+  idDocumentSchema.superRefine(saIdDocumentRefinement(enforceSaId));
 
 // SECURITY (C1, C13): Strict whitelist schema — no `.passthrough()`. Every
 // field that lands in the database or is forwarded to Dr. Green must be
@@ -62,16 +83,8 @@ const consultationSchema = z.object({
   // and UNTICKED by default — absent or false records NO consent.
   marketingConsent: z.boolean().optional(),
 
-  // SA ID-upload (idMode): document sent inline with registration so the
-  // account + Dr Green client + document are created in one action.
-  idDocument: z
-    .object({
-      fileBase64: z.string().min(1),
-      mimeType: z.string().max(100),
-      documentType: z.enum(["ID", "PASSPORT", "DRIVING_LICENCE"]),
-      documentNumber: z.string().trim().min(1).max(100),
-    })
-    .optional(),
+  // SA ID-upload (idMode) — see idDocumentSchema above.
+  idDocument: idDocumentSchema.optional(),
 
   // Shipping address
   addressLine1: z.string().max(300).optional().default(""),
@@ -170,6 +183,26 @@ export async function POST(request: NextRequest) {
       });
     }
     const tenantId = tenant.id;
+
+    // BS-202: refuse an impossible South African ID number before ANY account,
+    // questionnaire or Dr Green client exists — the customer corrects the
+    // number and resubmits with nothing to clean up. South African tenants and
+    // document type ID only; the copy is the one Dr Green and WordPress use.
+    let idDocumentNumber: string | undefined;
+    if (body.idDocument) {
+      const enforceSaId = isSaIdEligibleTenant(tenant);
+      const idDoc = idDocumentSchemaFor(enforceSaId).safeParse(body.idDocument);
+      if (!idDoc.success) {
+        if (hasSaIdInvalidIssue(idDoc.error)) {
+          return NextResponse.json(saIdInvalidBody(), { status: 400 });
+        }
+        return apiValidationError(
+          "Invalid document type or number",
+          "POST /api/consultation/submit",
+        );
+      }
+      idDocumentNumber = documentNumberToForward(idDoc.data, enforceSaId);
+    }
 
     // A storefront with no published privacy notice tells visitors exactly that
     // — so taking a consultation here would collect special-category data with
@@ -471,7 +504,8 @@ export async function POST(request: NextRequest) {
             await uploadIdentityDocument({
               clientId,
               documentType: body.idDocument.documentType,
-              documentNumber: body.idDocument.documentNumber,
+              // Space-stripped for an SA ID (BS-202); as typed otherwise.
+              documentNumber: idDocumentNumber ?? body.idDocument.documentNumber,
               file: Buffer.from(body.idDocument.fileBase64, "base64"),
               mimeType: body.idDocument.mimeType,
               config: { apiKey, secretKey },
@@ -501,102 +535,8 @@ export async function POST(request: NextRequest) {
           }
         }
       } else {
-      // Format date for Dr. Green API (YYYY-MM-DD)
-      const dobFormatted = body.dateOfBirth
-        ? new Date(body.dateOfBirth).toISOString().split("T")[0]
-        : new Date().toISOString().split("T")[0];
-
-      // Prepare Dr. Green API payload
-      const drGreenPayload = {
-        firstName: body.firstName,
-        lastName: body.lastName,
-        email: body.email.toLowerCase(), // Dr Green requires lowercase
-        phoneCode: body.phoneCode.replace(/[^\+\d]/g, ""), // e.g. "+351"
-        phoneCountryCode: body.countryCode, // e.g. "PT" (2-letter ISO code)
-        contactNumber: body.phoneNumber.replace(/\D/g, ""), // e.g. "7970433737" (digits only, NO prefix)
-
-        shipping: {
-          address1: body.addressLine1,
-          address2: body.addressLine2 || '',
-          landmark: '',
-          city: body.city,
-          state: body.state,
-          postalCode: body.postalCode,
-          country: body.country,
-          countryCode: convertToAlpha3CountryCode(body.countryCode), // Convert PT → PRT
-        },
-
-        ...(body.businessType && body.businessName
-          ? {
-            clientBusiness: {
-              businessType: body.businessType,
-              name: body.businessName,
-              address1: body.businessAddress1 || "",
-              address2: body.businessAddress2 || "",
-              city: body.businessCity || "",
-              state: body.businessState || "",
-              postalCode: body.businessPostalCode || "",
-              country: body.businessCountry || "",
-              countryCode: body.businessCountryCode || "",
-            },
-          }
-          : {}),
-
-        medicalRecord: {
-          dob: dobFormatted,
-          gender: body.gender,
-          medicalConditions: mapMedicalConditionsForDrGreen(
-            body.medicalConditions || [],
-          ),
-          // Only include otherMedicalCondition if we have conditions that map to 'other_medical_condition'
-          ...(body.medicalConditions?.includes("lupus") ||
-            body.medicalConditions?.includes("asthma") ||
-            body.medicalConditions?.includes("glaucoma") ||
-            body.medicalConditions?.includes("other_medical_condition") ||
-            body.medicalConditions?.includes("other") ||
-            body.otherCondition
-            ? {
-              otherMedicalCondition:
-                body.medicalConditions
-                  ?.filter((c: string) =>
-                    [
-                      "lupus",
-                      "asthma",
-                      "glaucoma",
-                      "other_medical_condition",
-                      "other",
-                    ].includes(c),
-                  )
-                  .map((c: string) => c.charAt(0).toUpperCase() + c.slice(1))
-                  .join(", ") ||
-                body.otherCondition ||
-                "Other medical condition",
-            }
-            : {}),
-          otherMedicalTreatments: "",
-          prescribedSupplements: body.prescribedSupplements || "",
-
-          // Medical History - Dr Green uses specific field names
-          medicalHistory0: body.hasHeartProblems,
-          medicalHistory1: body.hasCancerTreatment,
-          medicalHistory2: body.hasImmunosuppressants,
-          medicalHistory3: body.hasLiverDisease,
-          medicalHistory4: body.hasPsychiatricHistory,
-          medicalHistory5: body.hasPsychiatricHistory ? ["depression"] : ["none"],
-          medicalHistory6: false, // Suicidal history
-          medicalHistory7: ["none"], // Family history
-          medicalHistory7Relation: "none",
-          medicalHistory8: body.hasDrugServices,
-          medicalHistory9: body.hasAlcoholAbuse,
-          medicalHistory10: body.hasDrugServices,
-          medicalHistory11: body.alcoholUnitsPerWeek || "0",
-          medicalHistory12: body.cannabisReducesMeds,
-          medicalHistory13: body.cannabisFrequency || "never",
-          medicalHistory14: body.cannabisFrequency && body.cannabisFrequency !== "never" ? ["vaporizing"] : ["never"],
-          medicalHistory15: body.cannabisAmountPerDay || "",
-          medicalHistory16: false, // cannabisReaction
-        },
-      };
+      // Prepare Dr. Green API payload — lib/drgreen/kyc-client-payload.ts
+      const drGreenPayload = buildKycClientPayload(body);
 
       // Submit to Dr. Green API via shared client
       const drGreenResponse = await callDrGreenAPI<any>('/dapp/clients', {

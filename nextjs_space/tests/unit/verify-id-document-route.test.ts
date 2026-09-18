@@ -22,6 +22,9 @@ vi.mock("@/lib/drgreen-identity", () => ({
   ALLOWED_DOCUMENT_MIME_TYPES: ["image/jpeg", "image/png", "application/pdf"],
   MAX_DOCUMENT_BYTES: 10 * 1024 * 1024,
 }));
+vi.mock("@/lib/verification/id-document-status", () => ({
+  recordIdDocumentOutcome: vi.fn(async () => true),
+}));
 vi.mock("@/lib/api-error", () => ({
   apiError: (_e: any, o: any) =>
     new Response(JSON.stringify({ error: o?.safeMessage ?? "error" }), {
@@ -34,6 +37,13 @@ import { POST } from "@/app/api/store/[slug]/verify/id-document/route";
 import { getCurrentTenant } from "@/lib/tenant/tenant";
 import { prisma } from "@/lib/db";
 import { uploadIdentityDocument } from "@/lib/drgreen-identity";
+import { recordIdDocumentOutcome } from "@/lib/verification/id-document-status";
+import { SA_ID_INVALID_CODE, SA_ID_INVALID_MESSAGE } from "@/lib/verification/sa-id";
+
+// Synthetic numbers from lib/verification/__tests__/sa-id-vectors.json.
+const VALID_SA_ID = "9001015009086";
+const VALID_SA_ID_SPACED = "900101 5009 086";
+const INVALID_SA_ID = "9001015009087"; // check digit off by one
 
 const ZA_ID_TENANT = {
   id: "tenant-1",
@@ -131,5 +141,90 @@ describe("POST /api/store/[slug]/verify/id-document", () => {
     const res = await call(makeReq({ file: jpeg(), documentType: "ID" }));
     expect(res.status).toBe(400);
     expect(uploadIdentityDocument).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/store/[slug]/verify/id-document — South African ID rules (BS-202/BS-204)", () => {
+  it("400s with SA_ID_INVALID for an impossible ID number and attempts nothing", async () => {
+    const res = await call(
+      makeReq({ file: jpeg(), documentType: "ID", documentNumber: INVALID_SA_ID }),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      code: SA_ID_INVALID_CODE,
+      error: SA_ID_INVALID_MESSAGE,
+    });
+    expect(uploadIdentityDocument).not.toHaveBeenCalled();
+    // Nothing was attempted, so nothing is recorded — no UPLOAD_FAILED flag.
+    expect(recordIdDocumentOutcome).not.toHaveBeenCalled();
+  });
+
+  it("forwards a valid ID number space-stripped", async () => {
+    const res = await call(
+      makeReq({ file: jpeg(), documentType: "ID", documentNumber: VALID_SA_ID_SPACED }),
+    );
+    expect(res.status).toBe(200);
+    const arg = (uploadIdentityDocument as any).mock.calls[0][0];
+    expect(arg.documentNumber).toBe(VALID_SA_ID);
+  });
+
+  it("leaves passport and driving-licence numbers unchecked", async () => {
+    for (const documentType of ["PASSPORT", "DRIVING_LICENCE"]) {
+      (uploadIdentityDocument as any).mockClear();
+      const res = await call(
+        makeReq({ file: jpeg(), documentType, documentNumber: "not-13-digits" }),
+      );
+      expect(res.status).toBe(200);
+      const arg = (uploadIdentityDocument as any).mock.calls[0][0];
+      expect(arg.documentNumber).toBe("not-13-digits");
+    }
+  });
+
+  it("never reaches the SA rules for a non-South-African tenant (the ID-upload path is ZA-only)", async () => {
+    (getCurrentTenant as any).mockResolvedValue({ ...ZA_ID_TENANT, countryCode: "PT" });
+    const res = await call(
+      makeReq({ file: jpeg(), documentType: "ID", documentNumber: INVALID_SA_ID }),
+    );
+    expect(res.status).toBe(403);
+    expect(uploadIdentityDocument).not.toHaveBeenCalled();
+  });
+
+  it("maps Dr Green's own SA_ID_INVALID 400 onto the field and records the reason", async () => {
+    (uploadIdentityDocument as any).mockRejectedValueOnce(
+      new Error(
+        'Dr Green identity upload failed: 400 Bad Request - {"success":false,"statusCode":400,"message":"' +
+          SA_ID_INVALID_MESSAGE +
+          '","error":"SA_ID_INVALID"}',
+      ),
+    );
+    const res = await call(
+      makeReq({ file: jpeg(), documentType: "ID", documentNumber: VALID_SA_ID }),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      code: SA_ID_INVALID_CODE,
+      error: SA_ID_INVALID_MESSAGE,
+    });
+    expect(recordIdDocumentOutcome).toHaveBeenCalledTimes(1);
+    const outcome = (recordIdDocumentOutcome as any).mock.calls[0][0];
+    expect(outcome.outcome).toBe("UPLOAD_FAILED");
+    expect(outcome.tenantId).toBe("tenant-1");
+    expect(outcome.email).toBe("a@b.com");
+    // The stored reason is the customer copy, so the dashboard may show it.
+    expect(outcome.error).toBeInstanceOf(Error);
+    expect((outcome.error as Error).message).toBe(SA_ID_INVALID_MESSAGE);
+  });
+
+  it("still records any other upstream failure and answers 500 as before", async () => {
+    (uploadIdentityDocument as any).mockRejectedValueOnce(
+      new Error("Dr Green identity upload failed: 502 Bad Gateway - <html>"),
+    );
+    const res = await call(
+      makeReq({ file: jpeg(), documentType: "ID", documentNumber: VALID_SA_ID }),
+    );
+    expect(res.status).toBe(500);
+    const outcome = (recordIdDocumentOutcome as any).mock.calls[0][0];
+    expect(outcome.outcome).toBe("UPLOAD_FAILED");
+    expect((outcome.error as Error).message).toMatch(/502/);
   });
 });
