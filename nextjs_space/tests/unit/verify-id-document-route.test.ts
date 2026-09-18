@@ -84,7 +84,7 @@ beforeEach(() => {
 describe("POST /api/store/[slug]/verify/id-document", () => {
   it("forwards a valid upload and returns PENDING", async () => {
     const res = await call(
-      makeReq({ file: jpeg(), documentType: "ID", documentNumber: "A123" }),
+      makeReq({ file: jpeg(), documentType: "ID", documentNumber: VALID_SA_ID }),
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "PENDING" });
@@ -101,7 +101,7 @@ describe("POST /api/store/[slug]/verify/id-document", () => {
       settings: { verificationMode: "KYC" },
     });
     const res = await call(
-      makeReq({ file: jpeg(), documentType: "ID", documentNumber: "A123" }),
+      makeReq({ file: jpeg(), documentType: "ID", documentNumber: VALID_SA_ID }),
     );
     expect(res.status).toBe(403);
     expect(uploadIdentityDocument).not.toHaveBeenCalled();
@@ -110,7 +110,7 @@ describe("POST /api/store/[slug]/verify/id-document", () => {
   it("403s when the global flag is off", async () => {
     process.env.SA_ID_UPLOAD_ENABLED = "false";
     const res = await call(
-      makeReq({ file: jpeg(), documentType: "ID", documentNumber: "A123" }),
+      makeReq({ file: jpeg(), documentType: "ID", documentNumber: VALID_SA_ID }),
     );
     expect(res.status).toBe(403);
     expect(uploadIdentityDocument).not.toHaveBeenCalled();
@@ -122,7 +122,7 @@ describe("POST /api/store/[slug]/verify/id-document", () => {
       drGreenClientId: null,
     });
     const res = await call(
-      makeReq({ file: jpeg(), documentType: "ID", documentNumber: "A123" }),
+      makeReq({ file: jpeg(), documentType: "ID", documentNumber: VALID_SA_ID }),
     );
     expect(res.status).toBe(400);
     expect(uploadIdentityDocument).not.toHaveBeenCalled();
@@ -131,7 +131,7 @@ describe("POST /api/store/[slug]/verify/id-document", () => {
   it("400s on an unsupported file type", async () => {
     const txt = new Blob([Buffer.from("hi")], { type: "text/plain" });
     const res = await call(
-      makeReq({ file: txt, documentType: "ID", documentNumber: "A123" }),
+      makeReq({ file: txt, documentType: "ID", documentNumber: VALID_SA_ID }),
     );
     expect(res.status).toBe(400);
     expect(uploadIdentityDocument).not.toHaveBeenCalled();
