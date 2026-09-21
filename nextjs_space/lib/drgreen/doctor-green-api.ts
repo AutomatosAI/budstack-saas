@@ -138,6 +138,7 @@ export interface DoctorGreenProduct {
   stockQuantity?: number; // Optional - may be in strainLocations instead
   popularity?: number;
   isAvailable?: boolean; // Optional - may be in strainLocations instead
+  isActive?: boolean; // Strain-level flag; false = delisted (BS-401)
   strainLocations?: Array<{
     isActive?: boolean;
     isAvailable?: boolean;
@@ -251,6 +252,12 @@ async function normalizeProduct(product: DoctorGreenProduct, country: string): P
   // which is why inactive strains still showed and were orderable. The /strains
   // response carries isActive per location regardless of auth, so we filter on
   // it. (See PRD order-commission-stock-delivery-gas Defect C.)
+  //
+  // BS-401 (Dr Green Phase 4 US-405): the STRAIN-level `isActive` gates both
+  // branches. Dr Green's order gate refuses an inactive strain outright, so a
+  // location that is active under an inactive strain is still unorderable.
+  // Previously only the no-locations branch looked at it.
+  const strainActive = product.isActive !== false;
   const locations = product.strainLocations || [];
   const sellableLocations = locations.filter(
     (loc: any) => loc.isActive === true && loc.isAvailable === true,
@@ -258,9 +265,11 @@ async function normalizeProduct(product: DoctorGreenProduct, country: string): P
   const locationStock = sellableLocations.reduce((sum: number, loc: any) => sum + (loc.stockQuantity || 0), 0);
   const isAvailableAtAnyLocation = sellableLocations.length > 0;
   const totalStock = locationStock > 0 ? locationStock : (product.stockQuantity || 0);
-  const isAvailable = locations.length > 0
-    ? isAvailableAtAnyLocation
-    : ((product as any).isActive !== false && product.isAvailable !== false && totalStock > 0);
+  const isAvailable =
+    strainActive &&
+    (locations.length > 0
+      ? isAvailableAtAnyLocation
+      : product.isAvailable !== false && totalStock > 0);
 
   // Dr Green local pricing priority (from their implementation doc):
   //   1. localRetailPrice + localCurrency  (not yet deployed)
@@ -312,17 +321,29 @@ async function normalizeProduct(product: DoctorGreenProduct, country: string): P
   };
 }
 
+// CONTRACT: Dr Green — GET /dapp/strains (DualAuthGuard). The signed storefront
+// catalogue: the same query and response shape as the anonymous /strains, but
+// the service applies the active/available filters on this path (Phase 4
+// US-405), and /strains itself is scheduled to be guarded (US-406).
+const DAPP_STRAINS_ENDPOINT = '/dapp/strains';
+
+/** BS-401: a strain flagged inactive is delisted, not "out of stock". */
+function isListedStrain(product: DoctorGreenProduct): boolean {
+  return product.isActive !== false;
+}
+
 export async function fetchProducts(
   country: string = "ZA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct[]> {
-  // Use /strains endpoint with countryCode param.
+  // Signed catalogue with countryCode param (BS-401 moved this off the
+  // anonymous /strains; doctorGreenRequest already signs with the tenant key).
   // Currently returns EUR prices — normalizeProduct converts via exchange rates.
   // When Dr Green deploys localRetailPrice, it will be used automatically.
   const alpha3 = toAlpha3(country);
   logger.info(`[fetchProducts] country=${country} alpha3=${alpha3}`);
 
-  const response = await doctorGreenRequest<any>('/strains', {
+  const response = await doctorGreenRequest<any>(DAPP_STRAINS_ENDPOINT, {
     config,
     queryParams: {
       countryCode: alpha3,
@@ -337,13 +358,19 @@ export async function fetchProducts(
   const dataKeys = response?.data ? Object.keys(response.data) : [];
   logger.info(`[fetchProducts] Response keys: [${responseKeys}], data keys: [${dataKeys}]`);
 
-  const products = response?.data?.strains || response?.strains || [];
+  const returned: DoctorGreenProduct[] = response?.data?.strains || response?.strains || [];
+  // Absent from the listing AND from the detail lookup below (which reads
+  // this list), so a delisted strain can never reach a cart.
+  const products = returned.filter(isListedStrain);
 
   if (products.length > 0) {
     const p = products[0];
-    logger.info(`[fetchProducts] First product: "${p.name}" retailPrice=${p.retailPrice} localRetailPrice=${p.localRetailPrice ?? 'N/A'} localCurrency=${p.localCurrency ?? 'N/A'}`);
+    logger.info(`[fetchProducts] First product: "${p.name}" retailPrice=${p.retailPrice} localRetailPrice=${(p as any).localRetailPrice ?? 'N/A'} localCurrency=${(p as any).localCurrency ?? 'N/A'}`);
   } else {
     logger.info(`[fetchProducts] No products returned`);
+  }
+  if (products.length !== returned.length) {
+    logger.info(`[fetchProducts] ${returned.length - products.length} inactive strain(s) delisted`);
   }
 
   return Promise.all(products.map((product: DoctorGreenProduct) => normalizeProduct(product, country)));
@@ -599,6 +626,11 @@ export async function updateClient(
  * - camelCase keys
  * - nested 'medicalRecord' with specific booleans (medicalHistory0..16)
  */
+// CONTRACT: Dr Green — POST /dapp/clients, the create route DualAuthGuard
+// serves for storefronts (client.controller.ts). Shared by the KYC path here
+// and the SA ID path in lib/drgreen-identity.ts.
+const DAPP_CLIENTS_ENDPOINT = "/dapp/clients";
+
 export async function createClient(
   clientData: {
     firstName: string;
@@ -644,6 +676,11 @@ export async function createClient(
       medicalHistory16?: boolean;
       prescriptionsSupplements?: string;
     };
+    // Phase 3 (BS-301): optional on Dr Green (US-301/302); stripped by its DTO
+    // whitelist before that release, so sending early is safe.
+    title?: string;
+    marketingConsent?: boolean;
+    consentSource?: string;
   },
   config: DoctorGreenConfig,
 ): Promise<{ clientId: string; kycLink?: string }> {
@@ -657,29 +694,60 @@ export async function createClient(
     phoneCountryCode: clientData.phoneCountryCode,
     contactNumber: clientData.contactNumber,
     shipping: clientData.shipping,
-    medicalRecord: clientData.medicalRecord
+    medicalRecord: clientData.medicalRecord,
+    ...(clientData.title ? { title: clientData.title } : {}),
+    marketingConsent: clientData.marketingConsent === true,
+    ...(clientData.consentSource ? { consentSource: clientData.consentSource } : {}),
   };
 
-  // Response is nested: { success: true, data: { data: { clientId, kycLink } } }
-  // OR sometimes: { success: true, data: { clientId, kycLink } } depending on proxy version
-  // We type it as 'any' to handle the normalization manually
-  const response = await doctorGreenRequest<any>("/client", { // Endpoint is /client singular? Findings say POST /client
+  // CONTRACT: Dr Green — POST /dapp/clients (DualAuthGuard, the same route the
+  // consultation submit and the SA ID path use). This used to post to
+  // "/client", which no Dr Green controller serves (client.controller.ts
+  // registers only dapp/clients and dapp/clients/switch-to-id), so every call
+  // 404'd; the store-name comment that justified it was never verified.
+  const response = await doctorGreenRequest<any>(DAPP_CLIENTS_ENDPOINT, {
     method: "POST",
     body: payload,
     config,
   });
 
-  // Normalize response
-  const rawData = response.data || {};
-  const nestedData = rawData.data || rawData;
-
-  const clientId = nestedData.clientId || rawData.clientId;
-  const kycLink = nestedData.kycLink || rawData.kycLink;
-
+  const { clientId, kycLink } = extractCreatedClient(response);
   if (!clientId) {
-    console.error("DrGreen createClient failed to return clientId", response);
+    console.error("DrGreen createClient failed to return clientId", {
+      topKeys: Object.keys(response || {}),
+    });
     throw new Error("Failed to create client: No ID returned");
   }
 
   return { clientId, kycLink };
+}
+
+
+/**
+ * Dr Green nests the created client differently across versions and the
+ * global response interceptor may wrap it again: { data: { client: {...} } },
+ * { data: { data: { clientId } } }, { data: { clientId } }, { client: {...} }.
+ * Mirrors the tolerant extraction the consultation submit route performs.
+ */
+export function extractCreatedClient(
+  response: any,
+): { clientId?: string; kycLink?: string } {
+  const data = response?.data ?? response ?? {};
+  const nested = data?.data ?? data;
+  const client = nested?.client ?? data?.client ?? response?.client;
+  return {
+    clientId:
+      client?.id ||
+      nested?.clientId ||
+      data?.clientId ||
+      nested?.id ||
+      response?.clientId ||
+      undefined,
+    kycLink:
+      client?.kycLink ||
+      nested?.kycLink ||
+      data?.kycLink ||
+      response?.kycLink ||
+      undefined,
+  };
 }

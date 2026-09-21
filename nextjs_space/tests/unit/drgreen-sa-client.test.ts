@@ -49,6 +49,29 @@ describe("createSaIdClient", () => {
     expect(res.clientId).toBe("client-2");
   });
 
+  it("forwards title, marketingConsent and consentSource (BS-301)", async () => {
+    (callDrGreenAPI as any).mockResolvedValue({ client: { id: "client-3" } });
+    await createSaIdClient({
+      ...baseParams,
+      title: "Ms",
+      marketingConsent: true,
+      consentSource: "budstacks-id-upload",
+    });
+    const body = (callDrGreenAPI as any).mock.calls[0][1].body;
+    expect(body.title).toBe("Ms");
+    expect(body.marketingConsent).toBe(true);
+    expect(body.consentSource).toBe("budstacks-id-upload");
+  });
+
+  it("sends marketingConsent:false and omits title/source when not given", async () => {
+    (callDrGreenAPI as any).mockResolvedValue({ client: { id: "client-4" } });
+    await createSaIdClient({ ...baseParams, title: null });
+    const body = (callDrGreenAPI as any).mock.calls[0][1].body;
+    expect(body.marketingConsent).toBe(false);
+    expect("title" in body).toBe(false);
+    expect("consentSource" in body).toBe(false);
+  });
+
   it("throws MISSING_CREDENTIALS when keys are absent", async () => {
     await expect(
       createSaIdClient({ ...baseParams, config: { apiKey: "", secretKey: "" } }),

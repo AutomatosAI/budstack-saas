@@ -2,26 +2,53 @@
 
 import { useState } from "react";
 import { Loader2, Upload, CheckCircle2, AlertCircle } from "lucide-react";
+import { SA_ID_INVALID_CODE, saIdFieldError } from "@/lib/verification/sa-id";
 
 // Mirror the server limits (drgreen-identity.ts / Dr Green identity.service.ts)
 // for fast client-side feedback; the server remains the source of truth.
 const ALLOWED_MIME = ["image/jpeg", "image/png", "application/pdf"];
 const MAX_BYTES = 10 * 1024 * 1024;
 
-const DOC_TYPES = [
-  { value: "ID", label: "National ID" },
-  { value: "PASSPORT", label: "Passport" },
-  { value: "DRIVING_LICENCE", label: "Driving licence" },
-] as const;
-
 type UploadState = "idle" | "submitting" | "pending" | "error";
 
-export function IdDocumentUpload({ slug }: { slug: string }) {
+/**
+ * Stand-alone ID upload card (posts to the same pass-through route as the
+ * dashboard re-upload). BS-203: South African ID rules inline for the ID
+ * option, and an SA_ID_INVALID answer from the route lands on the number
+ * field rather than the failed-upload banner. Only ever mounted on ID-upload
+ * tenants, which are South African by construction, so `validateSaId`
+ * defaults on.
+ */
+export function IdDocumentUpload({
+  slug,
+  validateSaId = true,
+}: {
+  slug: string;
+  validateSaId?: boolean;
+}) {
   const [file, setFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<string>("ID");
   const [documentNumber, setDocumentNumber] = useState("");
   const [state, setState] = useState<UploadState>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [numberError, setNumberError] = useState<string | null>(null);
+
+  const idOptionLabel = validateSaId ? "South African ID" : "National ID";
+  const docTypes = [
+    { value: "ID", label: idOptionLabel },
+    { value: "PASSPORT", label: "Passport" },
+    { value: "DRIVING_LICENCE", label: "Driving licence" },
+  ];
+
+  const checkNumber = (): boolean => {
+    const message = saIdFieldError({
+      documentType,
+      documentNumber,
+      enforce: validateSaId,
+    });
+    setNumberError(message);
+    return message === null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +61,7 @@ export function IdDocumentUpload({ slug }: { slug: string }) {
       return setError("File must be 10MB or smaller.");
     if (!documentNumber.trim())
       return setError("Please enter the document number.");
+    if (!checkNumber()) return;
 
     setState("submitting");
     try {
@@ -47,7 +75,14 @@ export function IdDocumentUpload({ slug }: { slug: string }) {
         body: form,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Upload failed. Please try again.");
+      if (!res.ok) {
+        if (data?.code === SA_ID_INVALID_CODE) {
+          setNumberError(data.error);
+          setState("idle");
+          return;
+        }
+        throw new Error(data?.error || "Upload failed. Please try again.");
+      }
 
       setState("pending");
     } catch (err: any) {
@@ -96,11 +131,14 @@ export function IdDocumentUpload({ slug }: { slug: string }) {
         </label>
         <select
           value={documentType}
-          onChange={(e) => setDocumentType(e.target.value)}
+          onChange={(e) => {
+            setNumberError(null);
+            setDocumentType(e.target.value);
+          }}
           disabled={submitting}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
         >
-          {DOC_TYPES.map((t) => (
+          {docTypes.map((t) => (
             <option key={t.value} value={t.value}>
               {t.label}
             </option>
@@ -109,17 +147,32 @@ export function IdDocumentUpload({ slug }: { slug: string }) {
       </div>
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-slate-700" htmlFor="id-upload-doc-number">
           Document number
         </label>
         <input
+          id="id-upload-doc-number"
           value={documentNumber}
-          onChange={(e) => setDocumentNumber(e.target.value)}
+          onChange={(e) => {
+            setNumberError(null);
+            setDocumentNumber(e.target.value);
+          }}
+          onBlur={checkNumber}
+          inputMode={documentType === "ID" && validateSaId ? "numeric" : "text"}
+          aria-invalid={numberError ? true : undefined}
+          aria-describedby={numberError ? "id-upload-doc-number-error" : undefined}
           maxLength={100}
           disabled={submitting}
           placeholder="As printed on the document"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className={`w-full rounded-lg border px-3 py-2 text-sm ${
+            numberError ? "border-red-500" : "border-slate-300"
+          }`}
         />
+        {numberError && (
+          <p id="id-upload-doc-number-error" className="text-sm text-red-600">
+            {numberError}
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">

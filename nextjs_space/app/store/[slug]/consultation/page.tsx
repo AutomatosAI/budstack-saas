@@ -74,7 +74,7 @@ export default async function ConsultationPage({
                 >
                   Register &amp; verify with your ID
                 </h2>
-                <IdUploadForm tenantSlug={tenant.subdomain} />
+                <IdUploadForm tenantSlug={tenant.subdomain} storeName={tenant.businessName} />
               </div>
             </div>
           </section>
@@ -95,7 +95,7 @@ export default async function ConsultationPage({
                   >
                     Register here
                   </h2>
-                  <ConsultationForm tenantSlug={tenant.subdomain} />
+                  <ConsultationForm tenantSlug={tenant.subdomain} storeName={tenant.businessName} />
                 </div>
               </div>
             </section>

@@ -31,6 +31,8 @@ export interface Customer {
   name: string | null;
   phone?: string | null;
   createdAt: Date;
+  /** BS-305: when the customer opted in to marketing; null = no consent. */
+  marketingConsentAt?: Date | null;
   _count: {
     orders: number;
   };
@@ -46,6 +48,8 @@ interface CustomersTableProps {
   availableTags?: string[];
   /** Tenant-wide approval breakdown (unfiltered, matches the stat cards). */
   statusCounts?: Record<CustomerVerificationStatus, number>;
+  /** BS-305: tenant-wide count of customers who opted in to marketing. */
+  consentedCount?: number;
   /** Last "Refresh from Dr Green" run (ISO), or null if never refreshed. */
   lastSyncedAt?: string | null;
   /** False for a cross-tenant super-admin view — nothing to refresh. */
@@ -57,17 +61,24 @@ function StatusPill({ status }: { status: CustomerVerificationStatus }) {
   return <RowPill tone={display.tone}>{display.label}</RowPill>;
 }
 
-/** Filter shape for useTableState — `tag` rides the URL as ?tag=<value>. */
-type CustomerFilters = { tag: string } & Record<string, string>;
+/** Filter shape for useTableState — `tag` rides the URL as ?tag=<value>,
+ *  `consent` as ?consent=yes (BS-305, "Consented only"). */
+type CustomerFilters = { tag: string; consent: string } & Record<string, string>;
 
 /** Module-level so the object identity is stable across renders. */
-const DEFAULT_FILTERS: CustomerFilters = { tag: "" };
+const DEFAULT_FILTERS: CustomerFilters = { tag: "", consent: "" };
+
+const CONSENT_FILTER_OPTIONS = [
+  { value: "", label: "All customers" },
+  { value: "yes", label: "Consented only" },
+];
 
 export function CustomersTable({
   customers,
   totalCount,
   availableTags = [],
   statusCounts,
+  consentedCount,
   lastSyncedAt,
   canRefresh = false,
 }: CustomersTableProps) {
@@ -103,8 +114,10 @@ export function CustomersTable({
   const tagFilter = normalizeTag(filters.tag || "");
   const hasTagFilter = tagFilter.length > 0;
 
+  const consentFilter = filters.consent === "yes";
+
   const hasSearchQuery = search.trim().length > 0;
-  const hasActiveFilters = hasSearchQuery || hasTagFilter;
+  const hasActiveFilters = hasSearchQuery || hasTagFilter || consentFilter;
   const noResults = totalCount === 0 && hasActiveFilters;
 
   const tagOptions = useMemo(() => {
@@ -119,6 +132,11 @@ export function CustomersTable({
   }, [availableTags, hasTagFilter, tagFilter]);
 
   const emptyDescription = useMemo(() => {
+    if (consentFilter) {
+      return hasSearchQuery || hasTagFilter
+        ? "No customers matching those filters have opted in to marketing."
+        : "No customers have opted in to marketing yet.";
+    }
     if (hasSearchQuery && hasTagFilter) {
       return `No customers tagged "${tagFilter}" match "${search}". Try different filters.`;
     }
@@ -129,13 +147,16 @@ export function CustomersTable({
       return `No customers found matching "${search}". Try a different search term.`;
     }
     return "No customers yet. Share your store URL to get started.";
-  }, [hasSearchQuery, hasTagFilter, search, tagFilter]);
+  }, [consentFilter, hasSearchQuery, hasTagFilter, search, tagFilter]);
 
   const handleClearFilters = () => {
     // Consecutive URL-state setters clobber each other (each reads the not-yet-
     // updated params), so clear with exactly one call per case.
-    if (hasSearchQuery && hasTagFilter) {
+    const active = [hasSearchQuery, hasTagFilter, consentFilter].filter(Boolean).length;
+    if (active > 1) {
       resetFilters();
+    } else if (consentFilter) {
+      setFilter("consent", null);
     } else if (hasTagFilter) {
       setFilter("tag", null);
     } else {
@@ -155,6 +176,12 @@ export function CustomersTable({
         : "N/A",
       orders: c._count.orders,
       createdAt: format(new Date(c.createdAt), "yyyy-MM-dd"),
+      // BS-305: consent travels with every export; the rows are the
+      // on-screen (already filtered) page, so "Consented only" is honoured.
+      marketingConsent: c.marketingConsentAt ? "yes" : "no",
+      marketingConsentAt: c.marketingConsentAt
+        ? format(new Date(c.marketingConsentAt), "yyyy-MM-dd HH:mm")
+        : "",
     }));
 
     const csvHeaders = [
@@ -164,6 +191,8 @@ export function CustomersTable({
       { key: "status" as const, label: "Status" },
       { key: "orders" as const, label: "Orders" },
       { key: "createdAt" as const, label: "Joined" },
+      { key: "marketingConsent" as const, label: "Marketing consent" },
+      { key: "marketingConsentAt" as const, label: "Consent given" },
     ];
 
     await exportToCSV(
@@ -227,6 +256,13 @@ export function CustomersTable({
               />
             )}
 
+            <StatusFilter
+              value={filters.consent === "yes" ? "yes" : ""}
+              onChange={(value) => setFilter("consent", value || null)}
+              options={CONSENT_FILTER_OPTIONS}
+              aria-label="Filter by marketing consent"
+            />
+
             <ExportButton
               onExport={handleExportAll}
               recordCount={customers.length}
@@ -247,6 +283,9 @@ export function CustomersTable({
                 {statusCounts.REJECTED + statusCounts.ID_UPLOAD_FAILED} rejected / failed
               </RowPill>
               <RowPill tone="slate">{statusCounts.NOT_SUBMITTED} not submitted</RowPill>
+              {typeof consentedCount === "number" && (
+                <RowPill tone="emerald">{consentedCount} consented to marketing</RowPill>
+              )}
             </div>
             {canRefresh && (
               <div className="flex items-center gap-3">
@@ -282,7 +321,7 @@ export function CustomersTable({
             variant="muted"
             size="default"
             action={{
-              label: hasTagFilter ? "Clear filters" : "Clear search",
+              label: hasTagFilter || consentFilter ? "Clear filters" : "Clear search",
               onClick: handleClearFilters,
               variant: "outline",
             }}
@@ -324,6 +363,7 @@ export function CustomersTable({
                     className="hidden md:table-cell"
                   />
                   <th className="text-left hidden sm:table-cell">Status</th>
+                  <th className="text-left hidden lg:table-cell">Marketing</th>
                   <th className="text-center hidden sm:table-cell">
                     <span className="flex items-center justify-center gap-1.5">
                       <ShoppingBag className="h-3.5 w-3.5 text-bs-fg-muted" aria-hidden="true" />
@@ -390,6 +430,13 @@ export function CustomersTable({
                         <StatusPill status={customer.verificationStatus} />
                       ) : (
                         <span className="text-xs text-bs-fg-muted">—</span>
+                      )}
+                    </td>
+                    <td className="hidden lg:table-cell">
+                      {customer.marketingConsentAt ? (
+                        <RowPill tone="emerald">Consented</RowPill>
+                      ) : (
+                        <RowPill tone="slate">No consent</RowPill>
                       )}
                     </td>
                     <td className="text-center hidden sm:table-cell">

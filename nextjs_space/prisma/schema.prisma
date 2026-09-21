@@ -984,6 +984,8 @@ model users {
   address             Json?
   isActive            Boolean                   @default(true)
   marketingConsentAt  DateTime? // Email Phase 2 (US-016/US-023): when this customer opted in to marketing. NULL = no consent, never mail them a campaign.
+  marketingConsentSource String? // BS-302: which registration path or settings action last changed consent (budstacks-consultation | budstacks-id-upload | budstacks-shop-register | budstacks-settings). Attribution only — marketingConsentAt stays the consent test.
+  title               String? // BS-303: salutation the customer chose (Mr | Mrs | Ms | Mx | Dr | Prof); forwarded to Dr Green, never derived from an identity document.
   reorderReminderAt   DateTime? // US-028: when the reorder-reminder automation last mailed this customer. NULL = never. The once-per-window guard is a conditional write against this column.
   reorderReminderToken String?  @unique // US-028: this customer's permanent opt-out credential for the reorder reminder. Minted on the first reminder and never rotated — the link lives in an inbox and has to keep working.
   consultations       consultations[]

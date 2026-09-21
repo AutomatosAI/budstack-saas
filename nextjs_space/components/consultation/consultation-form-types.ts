@@ -14,6 +14,8 @@ export interface ConsultationFormData {
   confirmPassword: string;
   // US-023 (POPIA): explicit marketing opt-in — UNTICKED by default.
   marketingConsent: boolean;
+  // BS-303: optional salutation from lib/customers/titles.ts; "" = not chosen.
+  title: string;
 
   // Shipping Address
   addressLine1: string;

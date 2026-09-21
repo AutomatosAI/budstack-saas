@@ -16,12 +16,15 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Medical } from "./onboarding-schema";
+import { marketingConsentCopy } from "@/lib/customers/marketing-consent";
 
 interface MedicalStepProps {
   form: UseFormReturn<Medical>;
   onSubmit: (data: Medical) => Promise<void> | void;
   onBack: () => void;
   isSubmitting: boolean;
+  /** Read into the marketing-consent copy (BS-302). */
+  storeName?: string;
 }
 
 export function MedicalStep({
@@ -29,6 +32,7 @@ export function MedicalStep({
   onSubmit,
   onBack,
   isSubmitting,
+  storeName,
 }: MedicalStepProps) {
   return (
     <Card
@@ -239,6 +243,44 @@ export function MedicalStep({
                     </p>
                   </div>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* BS-302 (POPIA): marketing consent — optional, UNTICKED by
+                default, separate from the required terms consent above. */}
+            <FormField
+              control={form.control}
+              name="marketingConsent"
+              render={({ field }) => (
+                <FormItem className="flex items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value === true}
+                      onCheckedChange={(checked) => field.onChange(checked === true)}
+                    />
+                  </FormControl>
+                  <div className="space-y-1">
+                    <FormLabel
+                      className="font-normal"
+                      style={{
+                        color: "var(--tenant-color-text)",
+                        fontFamily: "var(--tenant-font-base)",
+                      }}
+                    >
+                      {marketingConsentCopy(storeName)}
+                    </FormLabel>
+                    <p
+                      className="text-xs"
+                      style={{
+                        color: "var(--tenant-color-text)",
+                        fontFamily: "var(--tenant-font-base)",
+                        opacity: 0.7,
+                      }}
+                    >
+                      Optional. You can change this any time in your account
+                      settings.
+                    </p>
+                  </div>
                 </FormItem>
               )}
             />

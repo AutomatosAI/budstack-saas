@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UploadCloud, FileCheck2 } from "lucide-react";
+import { saIdFieldError } from "@/lib/verification/sa-id";
 
 export type IdDocumentType = "ID" | "PASSPORT" | "DRIVING_LICENCE";
 
@@ -30,6 +31,17 @@ interface IdUploadStepProps {
   onSubmit: () => void;
   onBack: () => void;
   isSubmitting: boolean;
+  /**
+   * BS-203: an SA_ID_INVALID answer from the submit route (or from Dr Green
+   * through it) — shown on the number field, never as a generic banner.
+   */
+  documentNumberError?: string | null;
+  /**
+   * Apply the South African ID rules to the ID option. This step only renders
+   * on ID-upload tenants, which are South African by construction
+   * (lib/verification-mode.ts), so the rules are on unless a caller says not.
+   */
+  validateSaId?: boolean;
 }
 
 export function IdUploadStep({
@@ -41,9 +53,15 @@ export function IdUploadStep({
   onSubmit,
   onBack,
   isSubmitting,
+  documentNumberError = null,
+  validateSaId = true,
 }: IdUploadStepProps) {
   const [error, setError] = useState<string | null>(null);
+  const [numberError, setNumberError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const idOptionLabel = validateSaId ? "South African ID" : "National ID";
+  const fieldError = numberError ?? documentNumberError;
 
   const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
@@ -55,10 +73,22 @@ export function IdUploadStep({
     onFileChange(f);
   };
 
+  // BS-203: the shared rules, on blur and on submit, only for the ID option.
+  const checkNumber = (): boolean => {
+    const message = saIdFieldError({
+      documentType,
+      documentNumber,
+      enforce: validateSaId,
+    });
+    setNumberError(message);
+    return message === null;
+  };
+
   const submit = () => {
     if (!file) return setError("Please upload a photo of your ID.");
     if (!documentNumber.trim())
       return setError("Please enter your document number.");
+    if (!checkNumber()) return;
     setError(null);
     onSubmit();
   };
@@ -70,9 +100,9 @@ export function IdUploadStep({
           Verify your identity
         </h2>
         <p className="text-muted-foreground">
-          Upload a clear photo of a <strong>valid government ID</strong> (National
-          ID, passport or driving licence). It must be your actual ID
-          document&nbsp;— <strong>selfies or other photos will be rejected</strong>.
+          Upload a clear photo of a <strong>valid government ID</strong> (
+          {idOptionLabel}, passport or driving licence). It must be your actual
+          ID document&nbsp;— <strong>selfies or other photos will be rejected</strong>.
           An admin reviews it to verify your account — no medical consultation
           needed.
         </p>
@@ -82,13 +112,16 @@ export function IdUploadStep({
         <Label>Document type</Label>
         <Select
           value={documentType}
-          onValueChange={(v) => onUpdate({ documentType: v as IdDocumentType })}
+          onValueChange={(v) => {
+            setNumberError(null);
+            onUpdate({ documentType: v as IdDocumentType });
+          }}
         >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ID">National ID</SelectItem>
+            <SelectItem value="ID">{idOptionLabel}</SelectItem>
             <SelectItem value="PASSPORT">Passport</SelectItem>
             <SelectItem value="DRIVING_LICENCE">Driving licence</SelectItem>
           </SelectContent>
@@ -100,9 +133,22 @@ export function IdUploadStep({
         <Input
           id="documentNumber"
           value={documentNumber}
-          onChange={(e) => onUpdate({ documentNumber: e.target.value })}
+          onChange={(e) => {
+            setNumberError(null);
+            onUpdate({ documentNumber: e.target.value });
+          }}
+          onBlur={checkNumber}
+          inputMode={documentType === "ID" && validateSaId ? "numeric" : "text"}
+          aria-invalid={fieldError ? true : undefined}
+          aria-describedby={fieldError ? "documentNumber-error" : undefined}
+          className={fieldError ? "border-red-500" : ""}
           placeholder="As shown on your document"
         />
+        {fieldError && (
+          <p id="documentNumber-error" className="text-sm text-red-500">
+            {fieldError}
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">

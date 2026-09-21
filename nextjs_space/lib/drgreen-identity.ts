@@ -16,6 +16,7 @@
  */
 import { generateDrGreenSignature, callDrGreenAPI } from './drgreen/drgreen-api-client';
 import { DR_GREEN_SA_COUNTRY_CODE } from './verification-mode';
+import { withDrgClientHeader } from './drgreen/client-version';
 
 export type IdentityDocumentType = 'ID' | 'PASSPORT' | 'DRIVING_LICENCE';
 
@@ -142,10 +143,12 @@ export async function uploadIdentityDocument(
   // Do NOT set Content-Type — fetch derives the multipart boundary itself.
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
+    // X-DRG-Client (BS-204) is a plain header: it never enters the signed
+    // multipart reconstruction above, so the byte-exact contract is untouched.
+    headers: withDrgClientHeader({
       'x-auth-apikey': config.apiKey,
       'x-auth-signature': signature,
-    },
+    }),
     body: form,
     cache: 'no-store',
   });
@@ -270,6 +273,12 @@ export interface CreateSaIdClientParams {
     country: string;
     postalCode: string;
   };
+  // Phase 3 (BS-301): salutation and marketing consent. Optional on Dr Green
+  // (US-301/302); before that release its DTO whitelist strips them silently,
+  // so sending them early is safe. Consent is only ever an explicit true.
+  title?: string | null;
+  marketingConsent?: boolean;
+  consentSource?: string;
   config: DrGreenIdentityConfig;
   baseUrl?: string;
 }
@@ -314,6 +323,9 @@ export async function createSaIdClient(
       countryCode: DR_GREEN_SA_COUNTRY_CODE,
     },
     // No medicalRecord on the ID path.
+    ...(params.title ? { title: params.title } : {}),
+    marketingConsent: params.marketingConsent === true,
+    ...(params.consentSource ? { consentSource: params.consentSource } : {}),
   };
 
   const response = await callDrGreenAPI<any>(DAPP_CLIENTS_ENDPOINT, {
@@ -329,4 +341,33 @@ export async function createSaIdClient(
     throw new Error('Failed to create SA ID client: no clientId returned');
   }
   return { clientId };
+}
+
+// CONTRACT: Dr Green Phase 3 (US-302) — customer-initiated marketing-consent
+// change, PATCH /dapp/clients/:clientId/marketing-consent { consent,
+// consentSource }. NFT-scoped by DualAuthGuard; the body is the signed
+// payload. Until that release is on production Dr Green answers 404 for the
+// route — callers treat the forward as best-effort (the local column is the
+// consent test for everything BudStacks sends) and report whether it landed.
+const marketingConsentEndpoint = (clientId: string) =>
+  `/dapp/clients/${encodeURIComponent(clientId)}/marketing-consent`;
+
+export async function updateClientMarketingConsent(params: {
+  clientId: string;
+  consent: boolean;
+  consentSource: string;
+  config: DrGreenIdentityConfig;
+  baseUrl?: string;
+}): Promise<void> {
+  const { clientId, consent, consentSource, config, baseUrl } = params;
+  if (!config?.apiKey || !config?.secretKey) {
+    throw new Error('MISSING_CREDENTIALS');
+  }
+  await callDrGreenAPI<unknown>(marketingConsentEndpoint(clientId), {
+    method: 'PATCH',
+    apiKey: config.apiKey,
+    secretKey: config.secretKey,
+    baseUrl,
+    body: { consent, consentSource },
+  });
 }

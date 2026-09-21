@@ -181,6 +181,14 @@ export default function DashboardPage() {
                   Your account was created, but the ID upload didn&apos;t go through —
                   verification can&apos;t start until we have it. Please upload it again below.
                 </p>
+                {/* BS-204: the reason, when it is copy written for customers
+                    (an ID number Dr Green refused); raw errors are never shown. */}
+                {kycStatus?.idDocumentError && (
+                  <p className="mt-1 text-sm text-rose-800">
+                    <span className="font-medium">Reason:</span>{" "}
+                    {kycStatus.idDocumentError}
+                  </p>
+                )}
                 <ReUploadIdDocument
                   slug={slug}
                   onUploaded={() => checkUserKycStatus().then(setKycStatus)}

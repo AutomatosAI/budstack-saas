@@ -21,18 +21,27 @@ import { CalendarIcon, Eye, EyeOff } from "lucide-react";
 import { format } from "date-fns";
 import type { ConsultationFormData } from "../consultation-form-types";
 import { COUNTRY_CODES } from "@/lib/consultation-constants";
+import { CUSTOMER_TITLES } from "@/lib/customers/titles";
+import { marketingConsentCopy } from "@/lib/customers/marketing-consent";
 import { cn } from "@/lib/utils";
 
 interface ContactDetailsStepProps {
   data: ConsultationFormData;
   onUpdate: (data: Partial<ConsultationFormData>) => void;
   onNext: () => void;
+  /** Read into the marketing-consent copy (BS-302). */
+  storeName?: string;
 }
+
+// Radix Select rejects an empty-string item value, so "not chosen" is a
+// sentinel that maps back to "" in the form data.
+const NO_TITLE = "none";
 
 export function ContactDetailsStep({
   data,
   onUpdate,
   onNext,
+  storeName,
 }: ContactDetailsStepProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -78,6 +87,30 @@ export function ContactDetailsStep({
         <p className="text-muted-foreground">
           Please provide your personal information
         </p>
+      </div>
+
+      {/* BS-303: optional salutation — the customer's own choice, never
+          inferred from an identity document. */}
+      <div className="md:w-1/2 md:pr-2">
+        <Label htmlFor="title">Title</Label>
+        <Select
+          value={data.title || NO_TITLE}
+          onValueChange={(value) =>
+            onUpdate({ title: value === NO_TITLE ? "" : value })
+          }
+        >
+          <SelectTrigger id="title">
+            <SelectValue placeholder="Optional" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_TITLE}>Prefer not to say</SelectItem>
+            {CUSTOMER_TITLES.map((title) => (
+              <SelectItem key={title} value={title}>
+                {title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -346,7 +379,7 @@ export function ContactDetailsStep({
           onChange={(e) => onUpdate({ marketingConsent: e.target.checked })}
           className="h-4 w-4 mt-0.5 text-emerald-600 focus:ring-emerald-500"
         />
-        <span className="text-sm">Email me offers and updates</span>
+        <span className="text-sm">{marketingConsentCopy(storeName)}</span>
       </label>
 
       <div className="flex justify-end">

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getTenantDrGreenConfig } from "@/lib/tenant/tenant-config";
 import { fetchClient, fetchClientByEmail } from "@/lib/drgreen/doctor-green-api";
 import { canonicalAdminApproval } from "@/lib/drgreen/approval-status";
+import { customerSafeIdDocumentError } from "@/lib/verification/id-document-errors";
 import { logger } from "@/lib/logger";
 
 export type KycStatus = {
@@ -21,7 +22,21 @@ export type KycStatus = {
     // dashboard's switch-to-ID offer for stuck legacy AML clients on
     // ID-upload tenants.
     verificationType?: 'KYC' | 'ID' | null;
+    // BS-204 — why the last upload was recorded UPLOAD_FAILED, but only when
+    // the stored reason is customer-facing copy (the SA ID message). Present
+    // only in that case; raw upstream errors never leave the server.
+    idDocumentError?: string;
 };
+
+// The `{ idDocumentError }` fragment for an UPLOAD_FAILED flag, or nothing —
+// so every other state keeps exactly the object shape it had.
+function uploadFailureReason(
+    status: string | null | undefined,
+    stored: string | null | undefined,
+): { idDocumentError: string } | Record<string, never> {
+    const safe = status === "UPLOAD_FAILED" ? customerSafeIdDocumentError(stored) : null;
+    return safe ? { idDocumentError: safe } : {};
+}
 
 // Narrow Dr Green's string field to the two values the UI branches on;
 // anything unexpected reads as null so no CTA renders off a bad value.
@@ -64,7 +79,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                     tenantId: tenantId,
                     email: { equals: clerkUser.email, mode: 'insensitive' }
                 },
-                select: { id: true, idDocumentStatus: true }
+                select: { id: true, idDocumentStatus: true, idDocumentError: true }
             });
 
             if (questionnaire) {
@@ -73,6 +88,10 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                     kycVerified: false,
                     status: "PENDING",
                     idDocumentStatus: questionnaire.idDocumentStatus ?? null,
+                    ...uploadFailureReason(
+                        questionnaire.idDocumentStatus,
+                        questionnaire.idDocumentError,
+                    ),
                 };
             }
 
@@ -108,9 +127,15 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                 { isKycVerified: 'desc' },
                 { createdAt: 'desc' }
             ],
-            select: { isKycVerified: true, adminApproval: true, idDocumentStatus: true }
+            select: {
+                isKycVerified: true,
+                adminApproval: true,
+                idDocumentStatus: true,
+                idDocumentError: true,
+            }
         });
         const idDocumentStatus = questionnaire?.idDocumentStatus ?? null;
+        const idDocumentError = questionnaire?.idDocumentError ?? null;
 
         // Fetch Config and check Dr Green API
         try {
@@ -261,6 +286,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                     status: "REJECTED",
                     message: client.rejectionNote || undefined,
                     idDocumentStatus,
+                    ...uploadFailureReason(idDocumentStatus, idDocumentError),
                     verificationType: narrowVerificationType(client.verificationType),
                 };
             }
@@ -275,6 +301,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                 kycVerified: isVerified,
                 status,
                 idDocumentStatus: isVerified ? null : idDocumentStatus,
+                ...uploadFailureReason(isVerified ? null : idDocumentStatus, idDocumentError),
                 verificationType: narrowVerificationType(client.verificationType),
             };
         } catch (configOrApiError) {
@@ -286,6 +313,7 @@ export async function checkUserKycStatus(): Promise<KycStatus> {
                 status: "API_ERROR",
                 message: `Dr Green API error: ${errMsg}`,
                 idDocumentStatus,
+                ...uploadFailureReason(idDocumentStatus, idDocumentError),
             };
         }
 

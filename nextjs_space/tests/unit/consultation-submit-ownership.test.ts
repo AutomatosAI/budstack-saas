@@ -66,6 +66,7 @@ vi.mock("@/lib/legal/policy-gate", () => ({ checkPolicyGate: libMock.checkPolicy
 vi.mock("@/lib/verification-mode", () => ({
   getTenantVerificationMode: libMock.getTenantVerificationMode,
   isSaIdUploadEnabled: libMock.isSaIdUploadEnabled,
+  isSaIdEligibleTenant: () => true,
 }));
 vi.mock("@/lib/tenant/tenant-config", () => ({
   getTenantDrGreenConfig: libMock.getTenantDrGreenConfig,

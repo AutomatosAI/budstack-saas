@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { UploadCloud, FileCheck2 } from "lucide-react";
+import { SA_ID_INVALID_CODE, saIdFieldError } from "@/lib/verification/sa-id";
 
 type IdDocumentType = "ID" | "PASSPORT" | "DRIVING_LICENCE";
 
@@ -26,13 +27,20 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
  * PRD-220 Part B — dashboard re-upload for a failed inline ID upload.
  * Posts multipart to /api/store/[slug]/verify/id-document (the existing
  * pass-through endpoint; nothing about the document is stored on our side).
+ *
+ * BS-203: the South African ID rules run inline (blur + submit) for the ID
+ * option, and an SA_ID_INVALID answer from the route lands on the number
+ * field. This card only renders on ID-upload tenants, which are South African
+ * by construction, so `validateSaId` defaults on.
  */
 export function ReUploadIdDocument({
   slug,
   onUploaded,
+  validateSaId = true,
 }: {
   slug: string;
   onUploaded?: () => void;
+  validateSaId?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -40,6 +48,9 @@ export function ReUploadIdDocument({
   const [documentNumber, setDocumentNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [numberError, setNumberError] = useState<string | null>(null);
+
+  const idOptionLabel = validateSaId ? "South African ID" : "National ID";
 
   const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
@@ -52,9 +63,20 @@ export function ReUploadIdDocument({
     setFile(f);
   };
 
+  const checkNumber = (): boolean => {
+    const message = saIdFieldError({
+      documentType,
+      documentNumber,
+      enforce: validateSaId,
+    });
+    setNumberError(message);
+    return message === null;
+  };
+
   const submit = async () => {
     if (!file) return setError("Please choose your ID document.");
     if (!documentNumber.trim()) return setError("Please enter your document number.");
+    if (!checkNumber()) return;
     setError(null);
     setSubmitting(true);
     try {
@@ -69,6 +91,10 @@ export function ReUploadIdDocument({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
+        if (body?.code === SA_ID_INVALID_CODE) {
+          setNumberError(body.error);
+          return;
+        }
         throw new Error(body?.error || "Upload failed. Please try again.");
       }
 
@@ -88,13 +114,16 @@ export function ReUploadIdDocument({
           <Label>Document type</Label>
           <Select
             value={documentType}
-            onValueChange={(v) => setDocumentType(v as IdDocumentType)}
+            onValueChange={(v) => {
+              setNumberError(null);
+              setDocumentType(v as IdDocumentType);
+            }}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ID">National ID</SelectItem>
+              <SelectItem value="ID">{idOptionLabel}</SelectItem>
               <SelectItem value="PASSPORT">Passport</SelectItem>
               <SelectItem value="DRIVING_LICENCE">Driving licence</SelectItem>
             </SelectContent>
@@ -105,9 +134,22 @@ export function ReUploadIdDocument({
           <Input
             id="reupload-doc-number"
             value={documentNumber}
-            onChange={(e) => setDocumentNumber(e.target.value)}
+            onChange={(e) => {
+              setNumberError(null);
+              setDocumentNumber(e.target.value);
+            }}
+            onBlur={checkNumber}
+            inputMode={documentType === "ID" && validateSaId ? "numeric" : "text"}
+            aria-invalid={numberError ? true : undefined}
+            aria-describedby={numberError ? "reupload-doc-number-error" : undefined}
+            className={numberError ? "border-red-500" : ""}
             placeholder="As shown on your document"
           />
+          {numberError && (
+            <p id="reupload-doc-number-error" className="text-sm text-red-500">
+              {numberError}
+            </p>
+          )}
         </div>
       </div>
 

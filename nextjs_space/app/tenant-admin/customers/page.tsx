@@ -85,6 +85,10 @@ export default async function CustomersListPage({
   // US-024: tag filter param, matched in the tag's canonical form. A malformed
   // value (blank after trim, over-long) is treated as no filter — a shared URL
   // should degrade to the full list, not an error page.
+  // BS-305: "Consented only" — customers who opted in to marketing
+  // (users.marketingConsentAt set). Same test the campaign audience uses.
+  const consentFilter = params.consent === "yes";
+
   const rawTag = typeof params.tag === "string" ? params.tag : "";
   const parsedTag = rawTag ? tagSchema.safeParse(rawTag) : null;
   const tagFilter = parsedTag?.success ? parsedTag.data : "";
@@ -117,6 +121,7 @@ export default async function CustomersListPage({
     role: "PATIENT",
     ...(tenantId && { tenantId }),
     ...notErased,
+    ...(consentFilter && { marketingConsentAt: { not: null } }),
   };
 
   // Apply search filter (case-insensitive across multiple fields)
@@ -149,7 +154,7 @@ export default async function CustomersListPage({
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [filteredCount, rawCustomers, totalCustomersCount, recentSignupsCount, tenantQuestionnaires, availableTags, allCustomerEmails, lastStatusRefresh] =
+  const [filteredCount, rawCustomers, totalCustomersCount, recentSignupsCount, tenantQuestionnaires, availableTags, allCustomerEmails, lastStatusRefresh, consentedCount] =
     await Promise.all([
       prisma.users.count({ where: whereClause }),
       prisma.users.findMany({
@@ -160,6 +165,7 @@ export default async function CustomersListPage({
           name: true,
           phone: true,
           createdAt: true,
+          marketingConsentAt: true,
           _count: {
             select: {
               orders: true,
@@ -230,6 +236,16 @@ export default async function CustomersListPage({
             select: { createdAt: true },
           })
         : Promise.resolve(null),
+      // BS-305: tenant-wide consented count for the summary pill (unfiltered,
+      // like the other counts).
+      prisma.users.count({
+        where: {
+          role: "PATIENT",
+          ...(tenantId && { tenantId }),
+          ...notErased,
+          marketingConsentAt: { not: null },
+        },
+      }),
     ]);
 
   // Backfill name/phone for customers whose intake saved the name only to
@@ -263,7 +279,12 @@ export default async function CustomersListPage({
   };
 
   const customers = rawCustomers.map(
-    (customer: { email: string; name: string | null; phone: string | null }) => {
+    (customer: {
+      email: string;
+      name: string | null;
+      phone: string | null;
+      marketingConsentAt: Date | null;
+    }) => {
       const q = questionnaireByEmail.get(customer.email.toLowerCase());
       return {
         ...customer,
@@ -328,6 +349,7 @@ export default async function CustomersListPage({
 
       <CustomersTable
         customers={customers}
+        consentedCount={consentedCount}
         totalCount={filteredCount}
         availableTags={availableTags}
         statusCounts={statusCounts}
