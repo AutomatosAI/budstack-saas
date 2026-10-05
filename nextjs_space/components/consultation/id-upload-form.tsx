@@ -25,6 +25,8 @@ interface IdUploadFormProps {
   tenantSlug: string;
   /** The store's business name — read into the marketing-consent copy (BS-302). */
   storeName?: string;
+  /** BS-A02: referral code from ?ref= / the bs_ref cookie, read server-side. */
+  initialAffiliateCode?: string;
 }
 
 const fileToBase64 = (file: File): Promise<string> =>
@@ -39,7 +41,11 @@ const fileToBase64 = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
-export function IdUploadForm({ tenantSlug, storeName }: IdUploadFormProps) {
+export function IdUploadForm({
+  tenantSlug,
+  storeName,
+  initialAffiliateCode,
+}: IdUploadFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,6 +68,7 @@ export function IdUploadForm({ tenantSlug, storeName }: IdUploadFormProps) {
     confirmPassword: "",
     marketingConsent: false,
     title: "",
+    affiliateCode: initialAffiliateCode ?? "",
 
     addressLine1: "",
     addressLine2: "",
@@ -139,6 +146,7 @@ export function IdUploadForm({ tenantSlug, storeName }: IdUploadFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          affiliateCode: formData.affiliateCode.trim(),
           tenantSlug,
           idDocument: {
             fileBase64,

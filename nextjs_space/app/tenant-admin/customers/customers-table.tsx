@@ -33,6 +33,10 @@ export interface Customer {
   createdAt: Date;
   /** BS-305: when the customer opted in to marketing; null = no consent. */
   marketingConsentAt?: Date | null;
+  /** BS-A03: Dr Green referral code sent with the sign-up (read-only). */
+  affiliateCode?: string | null;
+  /** BS-A03: link | typed. */
+  affiliateCodeSource?: string | null;
   _count: {
     orders: number;
   };
@@ -182,6 +186,9 @@ export function CustomersTable({
       marketingConsentAt: c.marketingConsentAt
         ? format(new Date(c.marketingConsentAt), "yyyy-MM-dd HH:mm")
         : "",
+      // BS-A03: the Dr Green referral code the customer signed up with.
+      affiliateCode: c.affiliateCode || "",
+      affiliateCodeSource: c.affiliateCodeSource || "",
     }));
 
     const csvHeaders = [
@@ -193,6 +200,8 @@ export function CustomersTable({
       { key: "createdAt" as const, label: "Joined" },
       { key: "marketingConsent" as const, label: "Marketing consent" },
       { key: "marketingConsentAt" as const, label: "Consent given" },
+      { key: "affiliateCode" as const, label: "Referral code" },
+      { key: "affiliateCodeSource" as const, label: "Referral source" },
     ];
 
     await exportToCSV(
@@ -364,6 +373,7 @@ export function CustomersTable({
                   />
                   <th className="text-left hidden sm:table-cell">Status</th>
                   <th className="text-left hidden lg:table-cell">Marketing</th>
+                  <th className="text-left hidden xl:table-cell">Referral</th>
                   <th className="text-center hidden sm:table-cell">
                     <span className="flex items-center justify-center gap-1.5">
                       <ShoppingBag className="h-3.5 w-3.5 text-bs-fg-muted" aria-hidden="true" />
@@ -437,6 +447,24 @@ export function CustomersTable({
                         <RowPill tone="emerald">Consented</RowPill>
                       ) : (
                         <RowPill tone="slate">No consent</RowPill>
+                      )}
+                    </td>
+                    {/* BS-A03: read-only — Dr Green owns the link; this is
+                        the code that travelled with the sign-up. */}
+                    <td className="hidden xl:table-cell">
+                      {customer.affiliateCode ? (
+                        <span
+                          className="font-mono text-sm text-bs-fg"
+                          title={
+                            customer.affiliateCodeSource === "typed"
+                              ? "Typed at sign-up"
+                              : "From the link the customer followed"
+                          }
+                        >
+                          {customer.affiliateCode}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-bs-fg-muted">—</span>
                       )}
                     </td>
                     <td className="text-center hidden sm:table-cell">

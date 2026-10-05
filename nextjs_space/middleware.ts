@@ -4,6 +4,8 @@ import { parseHostToTenantHint, wwwRedirectHost } from "@/lib/parse-host";
 import { customDomainRewritePath } from "@/lib/custom-domain-rewrite";
 import { resolvePlatformRedirect, resolveStoreRedirect } from "@/lib/seo/redirect-lookup";
 import { applyCsp, buildCsp, generateNonce, variantForServedPath } from "@/lib/security/csp";
+import { REFERRAL_QUERY_PARAM } from "@/lib/affiliate/affiliate-code";
+import { setReferralCookie } from "@/lib/affiliate/referral-cookie";
 
 // Define public routes
 const isPublicRoute = createRouteMatcher([
@@ -107,6 +109,16 @@ function resolveTenantHost(req: NextRequest): string {
   return cfProxySecret && originalHost && proxySecret === cfProxySecret
     ? originalHost
     : req.headers.get('host') || '';
+}
+
+// BS-A01 (Dr Green affiliate codes): a storefront PAGE response remembers a
+// well-formed `?ref=CODE` in the first-party `bs_ref` cookie (30 days). Only a
+// Set-Cookie header is added — the rewrite target, headers and CSP are the
+// ones the caller built, so tenant/host routing is untouched. Malformed values
+// set nothing. API routes, admin redirects and /auth never get here.
+function withReferralCookie<T extends NextResponse>(res: T, req: NextRequest): T {
+  setReferralCookie(res, req.nextUrl.searchParams.get(REFERRAL_QUERY_PARAM));
+  return res;
 }
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {
@@ -250,7 +262,10 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
 
     // Page routes: rewrite to internal store route
     url.pathname = `/store/${subdomain}${pathname}`;
-    return applyCsp(NextResponse.rewrite(url, { request: { headers: requestHeaders } }), nonce, "store");
+    return withReferralCookie(
+      applyCsp(NextResponse.rewrite(url, { request: { headers: requestHeaders } }), nonce, "store"),
+      req,
+    );
   }
 
   // PRIORITY 2: Custom domain routing (REWRITE)
@@ -304,7 +319,10 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
     // (PRD-212). hint.host is the real custom domain; the derived cd-<hash>
     // segment isolates this domain's ISR cache from every other custom domain.
     url.pathname = customDomainRewritePath(hint.host, pathname);
-    return applyCsp(NextResponse.rewrite(url, { request: { headers: requestHeaders } }), nonce, "store");
+    return withReferralCookie(
+      applyCsp(NextResponse.rewrite(url, { request: { headers: requestHeaders } }), nonce, "store"),
+      req,
+    );
   }
 
   // 2. Authentication Check (only for non-subdomain, non-custom-domain requests)
@@ -325,11 +343,13 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
   // All requests forward with the nonce + per-request CSP. The static
   // next.config.js CSP was removed (PRD-218) — every response must carry the
   // policy from here so no page renders without it.
-  return applyCsp(
+  const response = applyCsp(
     NextResponse.next({ request: { headers: requestHeaders } }),
     nonce,
     variantForServedPath(pathname),
   );
+  // Path-based storefronts (/store/<slug>/…, localhost) remember ?ref= too.
+  return storeMatch ? withReferralCookie(response, req) : response;
 });
 
 // Clerk derives every absolute URL it builds — most visibly the dev-browser

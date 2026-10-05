@@ -9,7 +9,7 @@ import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
  * Registration Redirect
  *
  * All customer signups must go through the consultation form for KYC compliance.
- * This page redirects to the consultation page.
+ * This page redirects to the consultation page, query string included.
  */
 export default function RegisterRedirectPage() {
   const params = useParams();
@@ -19,7 +19,11 @@ export default function RegisterRedirectPage() {
   useEffect(() => {
     if (slug) {
       const basePath = getTenantBasePath(slug);
-      router.replace(`${basePath}/consultation`);
+      // BS-A01: keep the query string so a holder's /register?ref=CODE link
+      // still pre-fills the referral code. Read from window.location (this
+      // effect only runs in the browser) rather than useSearchParams, which
+      // would need a Suspense boundary around this page.
+      router.replace(`${basePath}/consultation${window.location.search}`);
     }
   }, [slug, router]);
 

@@ -78,6 +78,9 @@ describe("buildAnonymizedUserData", () => {
     expect(data.marketingConsentAt).toBeNull();
     expect(data.marketingConsentSource).toBeNull();
     expect(data.title).toBeNull();
+    // BS-A03: referral attribution goes with the identity.
+    expect(data.affiliateCode).toBeNull();
+    expect(data.affiliateCodeSource).toBeNull();
   });
 
   it("returns a NEW object (no shared reference between calls)", () => {

@@ -72,6 +72,28 @@ describe("createSaIdClient", () => {
     expect("consentSource" in body).toBe(false);
   });
 
+  it("forwards affiliateCode and affiliateCodeSource when present (BS-A02)", async () => {
+    (callDrGreenAPI as any).mockResolvedValue({ client: { id: "client-5" } });
+    await createSaIdClient({
+      ...baseParams,
+      affiliateCode: "TEST-CODE",
+      affiliateCodeSource: "typed",
+    });
+    const body = (callDrGreenAPI as any).mock.calls[0][1].body;
+    expect(body.affiliateCode).toBe("TEST-CODE");
+    expect(body.affiliateCodeSource).toBe("typed");
+  });
+
+  it("absent affiliate code = the payload it sent before (BS-A02)", async () => {
+    (callDrGreenAPI as any).mockResolvedValue({ client: { id: "client-6" } });
+    await createSaIdClient(baseParams);
+    await createSaIdClient({ ...baseParams, affiliateCode: undefined, affiliateCodeSource: undefined });
+    const [first, second] = (callDrGreenAPI as any).mock.calls.map((c: any[]) => c[1].body);
+    expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+    expect("affiliateCode" in first).toBe(false);
+    expect("affiliateCodeSource" in first).toBe(false);
+  });
+
   it("throws MISSING_CREDENTIALS when keys are absent", async () => {
     await expect(
       createSaIdClient({ ...baseParams, config: { apiKey: "", secretKey: "" } }),

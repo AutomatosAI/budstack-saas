@@ -149,6 +149,8 @@ export function buildAnonymizedUserData(userId: string): {
   title: null;
   marketingConsentAt: null;
   marketingConsentSource: null;
+  affiliateCode: null;
+  affiliateCodeSource: null;
 } {
   return {
     email: `deleted-${userId}@${ERASURE_EMAIL_DOMAIN}`,
@@ -168,6 +170,9 @@ export function buildAnonymizedUserData(userId: string): {
     title: null,
     marketingConsentAt: null,
     marketingConsentSource: null,
+    // BS-A03: acquisition attribution is about the person; it goes too.
+    affiliateCode: null,
+    affiliateCodeSource: null,
   };
 }
 

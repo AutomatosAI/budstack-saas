@@ -166,6 +166,8 @@ export default async function CustomersListPage({
           phone: true,
           createdAt: true,
           marketingConsentAt: true,
+          affiliateCode: true, // BS-A03: read-only reference column + CSV
+          affiliateCodeSource: true,
           _count: {
             select: {
               orders: true,
@@ -284,6 +286,8 @@ export default async function CustomersListPage({
       name: string | null;
       phone: string | null;
       marketingConsentAt: Date | null;
+      affiliateCode: string | null;
+      affiliateCodeSource: string | null;
     }) => {
       const q = questionnaireByEmail.get(customer.email.toLowerCase());
       return {

@@ -10,6 +10,7 @@
  */
 import { mapMedicalConditionsForDrGreen } from "@/lib/drgreen/dr-green-mapping";
 import { toAlpha3 } from "@/lib/country-codes";
+import { affiliatePayloadFields } from "@/lib/affiliate/affiliate-code";
 
 const OTHER_CONDITION_KEYS = [
   "lupus",
@@ -67,6 +68,12 @@ export interface KycRegistrationInput {
   title?: string | null;
   marketingConsent?: boolean;
   consentSource?: string;
+
+  // BS-A02 (Dr Green US-A04): the resolved affiliate code and 'link' | 'typed'.
+  // Sent only together and only when present; stripped by the Dr Green DTO
+  // whitelist until the backend accepts them.
+  affiliateCode?: string | null;
+  affiliateCodeSource?: string | null;
 }
 
 /** YYYY-MM-DD; today when the form sent nothing (unchanged legacy default). */
@@ -136,6 +143,7 @@ export function buildKycClientPayload(body: KycRegistrationInput) {
     ...(body.title ? { title: body.title } : {}),
     marketingConsent: body.marketingConsent === true,
     ...(body.consentSource ? { consentSource: body.consentSource } : {}),
+    ...affiliatePayloadFields(body),
 
     medicalRecord: {
       dob: formatDateOfBirth(body.dateOfBirth),
