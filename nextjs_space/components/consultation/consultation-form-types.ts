@@ -16,6 +16,9 @@ export interface ConsultationFormData {
   marketingConsent: boolean;
   // BS-303: optional salutation from lib/customers/titles.ts; "" = not chosen.
   title: string;
+  // BS-A02: optional Dr Green referral code, pre-filled from the bs_ref
+  // landing cookie; "" = none. Never changes a price.
+  affiliateCode: string;
 
   // Shipping Address
   addressLine1: string;

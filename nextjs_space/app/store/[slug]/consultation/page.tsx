@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { ConsultationForm } from "@/components/consultation/consultation-form";
 import { notFound } from "next/navigation";
 import { generateStoreRouteMetadata } from "@/lib/seo/generate-page-metadata";
@@ -10,6 +11,28 @@ import {
   getTenantVerificationMode,
   isSaIdUploadEnabled,
 } from "@/lib/verification-mode";
+import {
+  REFERRAL_COOKIE_NAME,
+  REFERRAL_QUERY_PARAM,
+  normaliseAffiliateCode,
+} from "@/lib/affiliate/affiliate-code";
+
+/**
+ * BS-A02: the referral-code field's initial value. A `?ref=` on this very
+ * request wins (middleware sets `bs_ref` on this response, so the cookie is
+ * not on the request yet); otherwise the remembered `bs_ref` cookie. The
+ * cookie is HttpOnly, so it is read here and handed down, never by the form.
+ */
+function initialAffiliateCode(
+  searchParams: Record<string, string | string[] | undefined> | undefined,
+): string {
+  const ref = searchParams?.[REFERRAL_QUERY_PARAM];
+  return (
+    normaliseAffiliateCode(Array.isArray(ref) ? ref[0] : ref) ??
+    normaliseAffiliateCode(cookies().get(REFERRAL_COOKIE_NAME)?.value) ??
+    ""
+  );
+}
 
 /**
  * SEO US-007 — nav- and footer-linked (components/navigation.tsx:104,
@@ -37,8 +60,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ConsultationPage({
   params,
+  searchParams,
 }: {
   params: { slug: string };
+  searchParams?: Record<string, string | string[] | undefined>;
 }) {
   const tenant = await getCurrentTenant();
 
@@ -54,6 +79,7 @@ export default async function ConsultationPage({
   // SA ID-upload tenants skip the medical consultation: register + upload an ID.
   const idMode =
     isSaIdUploadEnabled() && getTenantVerificationMode(tenant) === "ID_UPLOAD";
+  const affiliateCode = initialAffiliateCode(searchParams);
 
   return (
     <div
@@ -74,7 +100,11 @@ export default async function ConsultationPage({
                 >
                   Register &amp; verify with your ID
                 </h2>
-                <IdUploadForm tenantSlug={tenant.subdomain} storeName={tenant.businessName} />
+                <IdUploadForm
+                  tenantSlug={tenant.subdomain}
+                  storeName={tenant.businessName}
+                  initialAffiliateCode={affiliateCode}
+                />
               </div>
             </div>
           </section>
@@ -95,7 +125,11 @@ export default async function ConsultationPage({
                   >
                     Register here
                   </h2>
-                  <ConsultationForm tenantSlug={tenant.subdomain} storeName={tenant.businessName} />
+                  <ConsultationForm
+                    tenantSlug={tenant.subdomain}
+                    storeName={tenant.businessName}
+                    initialAffiliateCode={affiliateCode}
+                  />
                 </div>
               </div>
             </section>

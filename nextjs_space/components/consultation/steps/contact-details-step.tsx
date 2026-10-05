@@ -23,6 +23,12 @@ import type { ConsultationFormData } from "../consultation-form-types";
 import { COUNTRY_CODES } from "@/lib/consultation-constants";
 import { CUSTOMER_TITLES } from "@/lib/customers/titles";
 import { marketingConsentCopy } from "@/lib/customers/marketing-consent";
+import {
+  AFFILIATE_CODE_HELP,
+  AFFILIATE_CODE_LABEL,
+  AFFILIATE_CODE_MAX_LENGTH,
+  affiliateCodeFieldError,
+} from "@/lib/affiliate/affiliate-code";
 import { cn } from "@/lib/utils";
 
 interface ContactDetailsStepProps {
@@ -66,6 +72,10 @@ export function ContactDetailsStep({
       newErrors.confirmPassword = "Please confirm password";
     else if (data.password !== data.confirmPassword)
       newErrors.confirmPassword = "Passwords do not match";
+    // BS-A02: optional — empty is always valid; a malformed code is an error
+    // on this field only (correct it or clear it).
+    const affiliateCodeError = affiliateCodeFieldError(data.affiliateCode);
+    if (affiliateCodeError) newErrors.affiliateCode = affiliateCodeError;
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -367,6 +377,39 @@ export function ContactDetailsStep({
         </div>
         {errors.confirmPassword && (
           <p className="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>
+        )}
+      </div>
+
+      {/* BS-A02: Dr Green referral code — optional, pre-filled from the link
+          the customer arrived by. Attribution only; never a discount. */}
+      <div className="md:w-1/2 md:pr-2">
+        <Label htmlFor="affiliateCode">{AFFILIATE_CODE_LABEL}</Label>
+        <Input
+          id="affiliateCode"
+          value={data.affiliateCode}
+          maxLength={AFFILIATE_CODE_MAX_LENGTH}
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          aria-describedby="affiliateCode-help"
+          aria-invalid={Boolean(errors.affiliateCode)}
+          onChange={(e) => {
+            onUpdate({ affiliateCode: e.target.value });
+            if (errors.affiliateCode) {
+              setErrors(({ affiliateCode: _cleared, ...rest }) => rest);
+            }
+          }}
+          onBlur={() => {
+            const error = affiliateCodeFieldError(data.affiliateCode);
+            if (error) setErrors((prev) => ({ ...prev, affiliateCode: error }));
+          }}
+          className={errors.affiliateCode ? "border-red-500" : ""}
+        />
+        <p id="affiliateCode-help" className="text-xs text-muted-foreground mt-1">
+          {AFFILIATE_CODE_HELP}
+        </p>
+        {errors.affiliateCode && (
+          <p className="text-sm text-red-500 mt-1">{errors.affiliateCode}</p>
         )}
       </div>
 

@@ -17,6 +17,7 @@
 import { generateDrGreenSignature, callDrGreenAPI } from './drgreen/drgreen-api-client';
 import { DR_GREEN_SA_COUNTRY_CODE } from './verification-mode';
 import { withDrgClientHeader } from './drgreen/client-version';
+import { affiliatePayloadFields } from './affiliate/affiliate-code';
 
 export type IdentityDocumentType = 'ID' | 'PASSPORT' | 'DRIVING_LICENCE';
 
@@ -279,6 +280,10 @@ export interface CreateSaIdClientParams {
   title?: string | null;
   marketingConsent?: boolean;
   consentSource?: string;
+  // BS-A02 (Dr Green US-A04): resolved affiliate code + 'link' | 'typed';
+  // sent only together and only when present (same rule as the KYC payload).
+  affiliateCode?: string | null;
+  affiliateCodeSource?: string | null;
   config: DrGreenIdentityConfig;
   baseUrl?: string;
 }
@@ -326,6 +331,7 @@ export async function createSaIdClient(
     ...(params.title ? { title: params.title } : {}),
     marketingConsent: params.marketingConsent === true,
     ...(params.consentSource ? { consentSource: params.consentSource } : {}),
+    ...affiliatePayloadFields(params),
   };
 
   const response = await callDrGreenAPI<any>(DAPP_CLIENTS_ENDPOINT, {

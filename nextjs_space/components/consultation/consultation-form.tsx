@@ -26,11 +26,14 @@ interface ConsultationFormProps {
   tenantSlug: string;
   /** The store's business name — read into the marketing-consent copy (BS-302). */
   storeName?: string;
+  /** BS-A02: referral code from ?ref= / the bs_ref cookie, read server-side. */
+  initialAffiliateCode?: string;
 }
 
 export function ConsultationForm({
   tenantSlug,
   storeName,
+  initialAffiliateCode,
 }: ConsultationFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -47,6 +50,7 @@ export function ConsultationForm({
     confirmPassword: "",
     marketingConsent: false,
     title: "",
+    affiliateCode: initialAffiliateCode ?? "",
 
     addressLine1: "",
     addressLine2: "",
@@ -126,6 +130,7 @@ export function ConsultationForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          affiliateCode: formData.affiliateCode.trim(),
           // SECURITY: Send the tenant SLUG (public, in URL) — NEVER the
           // internal tenantId UUID. Server resolves tenant from request
           // host first; this slug is only used as a localhost dev fallback.

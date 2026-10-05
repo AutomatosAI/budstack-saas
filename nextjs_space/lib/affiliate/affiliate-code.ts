@@ -68,3 +68,49 @@ export function affiliateCodeFieldError(value: string | null | undefined): strin
   if (trimmed === "") return null;
   return isAffiliateCodeFormat(trimmed) ? null : AFFILIATE_CODE_FORMAT_ERROR;
 }
+
+/** What BudStacks forwards to Dr Green and keeps on the local user. */
+export interface AffiliateAttribution {
+  affiliateCode: string;
+  affiliateCodeSource: AffiliateCodeSource;
+}
+
+/**
+ * BS-A02. The submitted field is the only source of the code: the form is
+ * pre-filled from the `bs_ref` cookie, so a customer who clears the field has
+ * removed the code and nothing is sent. The cookie decides attribution only —
+ * `link` when the submitted code is the remembered one, `typed` otherwise (a
+ * typed code wins over a remembered link: Dr Green design decision).
+ *
+ * Returns null when there is no well-formed submitted code.
+ */
+export function resolveAffiliateAttribution(
+  submitted: unknown,
+  rememberedCookieValue: string | null | undefined,
+): AffiliateAttribution | null {
+  const affiliateCode = normaliseAffiliateCode(submitted);
+  if (!affiliateCode) return null;
+  const remembered = normaliseAffiliateCode(rememberedCookieValue);
+  return {
+    affiliateCode,
+    affiliateCodeSource:
+      remembered === affiliateCode ? AFFILIATE_CODE_SOURCE.LINK : AFFILIATE_CODE_SOURCE.TYPED,
+  };
+}
+
+/**
+ * The two Dr Green client-create fields (US-A04), present only together and
+ * only for a well-formed code — so a sign-up without a code sends exactly the
+ * payload it sent before this feature. Same conditional-spread shape as
+ * `consentSource` in both payload builders.
+ */
+export function affiliatePayloadFields(input: {
+  affiliateCode?: string | null;
+  affiliateCodeSource?: string | null;
+}): Partial<AffiliateAttribution> {
+  const affiliateCode = normaliseAffiliateCode(input.affiliateCode);
+  const source = input.affiliateCodeSource;
+  if (!affiliateCode) return {};
+  if (source !== AFFILIATE_CODE_SOURCE.LINK && source !== AFFILIATE_CODE_SOURCE.TYPED) return {};
+  return { affiliateCode, affiliateCodeSource: source };
+}

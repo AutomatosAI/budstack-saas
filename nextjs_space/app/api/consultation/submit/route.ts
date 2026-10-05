@@ -23,6 +23,7 @@ import {
 
 import { prisma } from "@/lib/db";
 import { buildKycClientPayload } from '@/lib/drgreen/kyc-client-payload';
+import { classifyDrGreenRegistrationError } from '@/lib/drgreen/registration-error';
 import crypto from "crypto";
 import { z } from "zod";
 
@@ -34,6 +35,9 @@ import { apiError, apiValidationError } from '@/lib/api-error';
 import { checkPolicyGate } from '@/lib/legal/policy-gate';
 import { CUSTOMER_TITLES, normaliseCustomerTitle } from '@/lib/customers/titles';
 import { CONSENT_SOURCE } from '@/lib/customers/marketing-consent';
+import { REFERRAL_COOKIE_NAME, resolveAffiliateAttribution } from '@/lib/affiliate/affiliate-code';
+import { affiliateCodeField, parseSignUpWithOptionalAffiliateCode } from '@/lib/affiliate/affiliate-code-schema';
+import { clearReferralCookie } from '@/lib/affiliate/referral-cookie';
 
 /** 409 for "that address already belongs to an account you have not proven you own". */
 function accountExistsResponse() {
@@ -87,6 +91,10 @@ const consultationSchema = z.object({
 
   // BS-303: optional salutation from the fixed list; "" = not chosen.
   title: z.union([z.enum(CUSTOMER_TITLES), z.literal("")]).optional(),
+
+  // BS-A02: optional Dr Green affiliate code (US-A02 format, max 20). A
+  // malformed one is dropped, never a 400 — parseSignUpWithOptionalAffiliateCode.
+  affiliateCode: affiliateCodeField,
 
   // SA ID-upload (idMode) — see idDocumentSchema above.
   idDocument: idDocumentSchema.optional(),
@@ -143,7 +151,11 @@ export async function POST(request: NextRequest) {
 
     const rawBody = await request.json();
 
-    const parseResult = consultationSchema.safeParse(rawBody);
+    const { result: parseResult, affiliateCodeIssue } =
+      parseSignUpWithOptionalAffiliateCode(consultationSchema, rawBody);
+    if (affiliateCodeIssue) {
+      logger.info("[Consultation] malformed affiliate code ignored; sign-up continues");
+    }
     if (!parseResult.success) {
       const firstError = parseResult.error.errors[0];
       return apiValidationError(
@@ -221,6 +233,11 @@ export async function POST(request: NextRequest) {
     const customerTitle = normaliseCustomerTitle(body.title);
     // US-023: consent only on an explicit tick — never inferred.
     const consented = body.marketingConsent === true;
+    // BS-A02: 'link' when the submitted code is the remembered bs_ref one, else 'typed'.
+    const affiliate = resolveAffiliateAttribution(
+      body.affiliateCode,
+      request.cookies.get(REFERRAL_COOKIE_NAME)?.value,
+    );
 
     // A storefront with no published privacy notice tells visitors exactly that
     // — so taking a consultation here would collect special-category data with
@@ -500,6 +517,8 @@ export async function POST(request: NextRequest) {
           title: customerTitle,
           marketingConsent: consented,
           consentSource: registrationSource,
+          affiliateCode: affiliate?.affiliateCode,
+          affiliateCodeSource: affiliate?.affiliateCodeSource,
           shipping: {
             address1: body.addressLine1,
             address2: body.addressLine2 || "",
@@ -561,6 +580,8 @@ export async function POST(request: NextRequest) {
         title: customerTitle,
         marketingConsent: consented,
         consentSource: registrationSource,
+        affiliateCode: affiliate?.affiliateCode ?? null,
+        affiliateCodeSource: affiliate?.affiliateCodeSource ?? null,
       });
 
       // Submit to Dr. Green API via shared client
@@ -684,7 +705,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         message: "Consultation submitted successfully",
         questionnaireId: questionnaire.id,
@@ -692,6 +713,8 @@ export async function POST(request: NextRequest) {
         kycLink: kycLink,
         adminApproval: "PENDING",
       });
+      clearReferralCookie(response); // BS-A02: the landing code has done its job.
+      return response;
     } catch (drGreenError: any) {
       // Message only — the Dr Green error object/body can echo back the
       // submitted PHI; never log the whole thing.
@@ -700,29 +723,9 @@ export async function POST(request: NextRequest) {
         message: drGreenError instanceof Error ? drGreenError.message : String(drGreenError),
       });
 
-      // Parse Dr Green error for user-friendly messages
-      const errorMsg = drGreenError.message || "";
-      let userMessage = "Registration failed. Please try again or contact support.";
-      let statusCode = 500;
-      let failureCode = "UNKNOWN";
-
-      if (errorMsg.includes("Phone Number already exists") || errorMsg.includes("phone") && errorMsg.includes("exists")) {
-        userMessage = "This phone number is already registered. Please use a different phone number or contact support.";
-        statusCode = 409;
-        failureCode = "PHONE_EXISTS";
-      } else if (errorMsg.includes("email") && errorMsg.includes("exists")) {
-        userMessage = "This email address is already registered. Please use a different email or try logging in.";
-        statusCode = 409;
-        failureCode = "EMAIL_EXISTS";
-      } else if (errorMsg.includes("409")) {
-        userMessage = "An account with these details already exists. Please use different details or contact support.";
-        statusCode = 409;
-        failureCode = "CONFLICT";
-      } else if (errorMsg.includes("400")) {
-        userMessage = "Invalid information provided. Please check your details and try again.";
-        statusCode = 400;
-        failureCode = "BAD_REQUEST";
-      }
+      // Parse Dr Green error for user-friendly messages (lib/drgreen/registration-error.ts)
+      const { userMessage, statusCode, failureCode } =
+        classifyDrGreenRegistrationError(drGreenError.message);
 
       // Persist a stable classification, NOT the upstream message. Dr Green
       // error bodies echo back submitted values (see the logger note above), so

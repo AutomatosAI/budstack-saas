@@ -40,14 +40,15 @@ Verified in code 2026-10-02 (`origin/main` 79e0b098):
 - [x] Unit test for the matcher (`tests/unit/affiliate-referral-cookie.test.ts`: matcher, normalise, set/skip/clear, essential listing).
 - [ ] Typecheck/lint passes — *pending: run before the PR (see §0).*
 
-### BS-A02: Sign-up field and forwarding
+### BS-A02: Sign-up field and forwarding — ✅ built
 **Acceptance Criteria:**
-- [ ] The consultation contact step and the ID-upload form gain an optional "Referral code (optional)" input, pre-filled from `bs_ref` (read server-side and passed as an initial value), with the helper text "Does not change any price."
-- [ ] `consultationSchema` gains `affiliateCode: z.string().regex(...).max(20).optional()`; the route sets `affiliateCodeSource = 'typed'` when the submitted value differs from the cookie, else `'link'`.
-- [ ] `buildKycClientPayload` and `createSaIdClient` add `affiliateCode` and `affiliateCodeSource` only when present (same shape as `consentSource`).
-- [ ] The cookie is cleared on successful sign-up.
-- [ ] Unit tests: link-only, typed-overrides-link, malformed-typed-rejected-with-field-error (not a 400 on the whole form), absent = unchanged payload.
-- [ ] Typecheck/lint passes; verify in browser after deploy.
+- [x] The consultation contact step and the ID-upload form gain an optional "Referral code (optional)" input, pre-filled from `bs_ref` (read server-side and passed as an initial value), with the helper text "Does not change any price." — *Both forms render `ContactDetailsStep`, so the input lives there once. `consultation/page.tsx` reads `?ref=` on the same request first (middleware sets the cookie on that response, so it is not on the request yet), then the `bs_ref` cookie.*
+- [x] `consultationSchema` gains `affiliateCode: z.string().regex(...).max(20).optional()`; the route sets `affiliateCodeSource = 'typed'` when the submitted value differs from the cookie, else `'link'`. — *`affiliateCodeField` (`lib/affiliate/affiliate-code-schema.ts`) = `"" | z.string().trim().regex(...).max(20)`, optional. The submitted field is the only source of the code: a customer who clears the pre-filled field sends nothing, cookie or not. Comparison is case-insensitive; the code is forwarded upper-cased.*
+- [x] `buildKycClientPayload` and `createSaIdClient` add `affiliateCode` and `affiliateCodeSource` only when present (same shape as `consentSource`). — *Both through `affiliatePayloadFields`: the two keys travel together or not at all.*
+- [x] The cookie is cleared on successful sign-up. — *On the 200 response only; a Dr Green refusal keeps it so the retry still carries the code.*
+- [x] Unit tests: link-only, typed-overrides-link, malformed-typed-rejected-with-field-error (not a 400 on the whole form), absent = unchanged payload. — *`tests/unit/affiliate-attribution.test.ts`, `consultation-submit-affiliate.test.ts` (route, both paths, cookie cleared/kept), `kyc-client-payload.test.ts` and `drgreen-sa-client.test.ts` (absent = byte-identical payload). Malformed: the form shows the error inline on the input and will not advance until it is fixed or cleared; if one still reaches the route, `parseSignUpWithOptionalAffiliateCode` records the field issue, drops the code and lets the sign-up complete (Dr Green FR-2).*
+- [ ] Typecheck/lint passes — *pending (see §0).*
+- [ ] Verify in browser after deploy.
 
 ### BS-A03: Local record
 **Acceptance Criteria:**

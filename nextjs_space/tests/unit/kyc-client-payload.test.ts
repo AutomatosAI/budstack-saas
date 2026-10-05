@@ -105,6 +105,28 @@ describe("buildKycClientPayload", () => {
     expect("consentSource" in plain).toBe(false);
   });
 
+  it("forwards affiliateCode and affiliateCodeSource together when present (BS-A02)", () => {
+    const linked = loose(
+      buildKycClientPayload({ ...base, affiliateCode: "TEST-CODE", affiliateCodeSource: "link" }),
+    );
+    expect(linked.affiliateCode).toBe("TEST-CODE");
+    expect(linked.affiliateCodeSource).toBe("link");
+
+    const typed = loose(
+      buildKycClientPayload({ ...base, affiliateCode: "MY-CODE", affiliateCodeSource: "typed" }),
+    );
+    expect(typed.affiliateCodeSource).toBe("typed");
+  });
+
+  it("absent affiliate code = byte-for-byte the payload it sent before (BS-A02)", () => {
+    const before = buildKycClientPayload(base);
+    const after = buildKycClientPayload({ ...base, affiliateCode: null, affiliateCodeSource: null });
+    expect(after).toEqual(before);
+    expect(JSON.stringify(after)).toBe(JSON.stringify(before));
+    expect("affiliateCode" in after).toBe(false);
+    expect("affiliateCodeSource" in after).toBe(false);
+  });
+
   it("includes clientBusiness only when both type and name are present", () => {
     const withBusiness = buildKycClientPayload({
       ...base,
