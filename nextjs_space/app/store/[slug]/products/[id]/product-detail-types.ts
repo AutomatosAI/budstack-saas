@@ -23,7 +23,6 @@ export interface Product {
   stock_quantity?: number;
   image_url?: string;
   expiryDate?: string;
-  discount?: number;
   strainImages?: Array<{
     strainImageUrl?: string;
     altText?: string;

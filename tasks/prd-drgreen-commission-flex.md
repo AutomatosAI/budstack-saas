@@ -15,10 +15,12 @@
 
 ## 0. Status (2026-10-05)
 
-BS-F01, BS-F02 and BS-F03 are built on the branch above with unit tests. Not yet done, and why:
+All four stories are built on the branch above, one commit per story, with unit tests (`720ab40e` BS-F01 · `8d256cc7` BS-F02 · `90ce0c16` BS-F03 · BS-F04 in the last commit). Not yet done, and why:
 
 - **Typecheck / lint / unit tests have not been run.** Nothing is executed on the workstation (house rule); CI on this repo runs only on a PR to `main`, and a PR here merges instantly, so opening one is a production deploy. Run before opening the PR: `pnpm -C nextjs_space exec tsc --noEmit && pnpm -C nextjs_space lint && pnpm -C nextjs_space test`.
-- **Browser verification** (every "Verify in browser" AC) needs a deployed build; BudStacks has no staging, so it happens on the LekkerWeed/HealingBuds tenants after the deploy, against a test account.
+- **Browser verification** (every "Verify in browser" AC) needs a deployed build; BudStacks has no staging, so it happens on the LekkerWeed/HealingBuds tenants after the deploy, against a test account. For BS-F01: put an item in the basket, change nothing, open checkout (no "Price updated"); then edit the basket's stored price in localStorage `budstack-cart` and reload checkout ("Price updated", store corrected); add a strain id that is not in the catalogue (removed with a message). For BS-F02: place a test order, compare `orders.total` with Dr Green admin's total + delivery for the same order.
+- **BS-F04 needs nothing from Dr Green to ship** — removing the dormant badge is safe now; the PRD's dependency on Flex Phase A is only for verifying a Flex price end to end.
+- **New outbound call per order (BS-F02):** `submitOrder` now makes one signed `GET /dapp/orders/:id` after the order is created (the create response has no lines). It is after the irreversible step and never fails the checkout; on failure the lines are priced from the server catalogue and a warn is logged. The submit route already made the same GET via `syncOrderById` straight after.
 
 ### Corrections found in code while building (v1 → v2)
 
@@ -76,11 +78,11 @@ Verified in code 2026-10-02 (`origin/main` 79e0b098):
 - [x] Unit test: two configs, same country, different keys → independent entries. — `tests/unit/product-cache-tenant-scope.test.ts`.
 - [ ] Typecheck/lint passes — *pending: run before the PR (see §0).*
 
-### BS-F04: No discount presentation
+### BS-F04: No discount presentation — ✅ built
 **Acceptance Criteria:**
-- [ ] Remove the `-X% OFF` badge in `product-detail-client.tsx` (or hard-disable it); add a code comment pointing at the Dr Green Flex PRD non-goals.
-- [ ] Grep the storefront for strike-through price styling (`line-through` near a price) and remove any found.
-- [ ] Verify in browser; typecheck/lint passes.
+- [x] Remove the `-X% OFF` badge in `product-detail-client.tsx` (or hard-disable it); add a code comment pointing at the Dr Green Flex PRD non-goals. — Removed, comment left in its place; `discount` dropped from the UI type `product-detail-types.ts` (the API type in `doctor-green-api.ts` keeps it, since Dr Green's `Strain.discount` column exists, unused).
+- [x] Grep the storefront for strike-through price styling (`line-through` near a price) and remove any found. — None found. The only `line-through` uses in the app are a hidden-section label in tenant-admin (`branding/tabs/pages-tab.tsx`) and a completed-task title (`components/ui/task-card.tsx`), neither a price. No `<del>`/`<s>`/`<strike>`. `tests/unit/no-discount-presentation.test.ts` now scans `app/store`, `components/{sections,shop,storefront}` and `cart-dropdown.tsx` and fails on `% OFF`, strike-through or a `.discount` render.
+- [ ] Verify in browser; typecheck/lint passes — *pending (see §0).*
 
 ## 4. Functional requirements
 
