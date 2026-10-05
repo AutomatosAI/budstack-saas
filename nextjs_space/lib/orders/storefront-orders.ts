@@ -101,12 +101,23 @@ export async function syncOneOrder(
     const details =
       res?.data?.orderDetails ?? res?.orderDetails ?? res?.data ?? res ?? {};
 
+    const pay =
+      typeof details?.paymentStatus === "string"
+        ? details.paymentStatus.toUpperCase()
+        : null;
+
     // BS-F02: mirror Dr Green's totals. Reads the LOCAL line-items total
     // (localPrice.totalAmount — orderDetails.totalAmount is overwritten with
     // the USD base sum by Dr Green's reader) and the stored deliveryCharge.
+    // Until Dr Green's order-line price snapshot ships, the reader recomputes
+    // localPrice from TODAY's catalogue price, so the line-items total is only
+    // mirrored while the order is unpaid; once paid, a later price change must
+    // not rewrite what was charged. deliveryCharge is stored, so always safe.
+    const fromDrGreen = totalsFromOrderDetails(details);
+    const unpaid = (pay ?? order.paymentStatus) === "PENDING";
     const totals = planTotalsUpdate(
       { subtotal: order.subtotal, shippingCost: order.shippingCost, total: order.total },
-      totalsFromOrderDetails(details),
+      { ...fromDrGreen, subtotal: unpaid ? fromDrGreen.subtotal : null },
     );
 
     const data: {
@@ -118,10 +129,6 @@ export async function syncOneOrder(
       total?: number;
     } = { ...totals };
 
-    const pay =
-      typeof details?.paymentStatus === "string"
-        ? details.paymentStatus.toUpperCase()
-        : null;
     if (pay && pay !== order.paymentStatus && SYNCABLE_PAYMENT.has(pay)) {
       data.paymentStatus = pay;
     }

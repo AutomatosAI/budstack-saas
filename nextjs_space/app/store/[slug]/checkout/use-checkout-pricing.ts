@@ -37,7 +37,7 @@ export function useCheckoutPricing(slug: string): CheckoutPricing {
   const [status, setStatus] = useState<PricingStatus>("loading");
   const [updatedIds, setUpdatedIds] = useState<ReadonlySet<string>>(new Set());
   const [removedNames, setRemovedNames] = useState<string[]>([]);
-  const [deliveryCharge, setDeliveryCharge] = useState<number | null>(null);
+  const [quote, setQuote] = useState<{ charge: number; symbol: string } | null>(null);
 
   useEffect(() => {
     if (!signature) {
@@ -91,8 +91,14 @@ export function useCheckoutPricing(slug: string): CheckoutPricing {
       .then((res) => (res.ok ? res.json() : null))
       .then((body) => {
         const value = body?.deliveryCharge;
-        if (!cancelled && typeof value === "number" && Number.isFinite(value)) {
-          setDeliveryCharge(value);
+        const symbol = body?.currencySymbol;
+        if (
+          !cancelled &&
+          typeof value === "number" &&
+          Number.isFinite(value) &&
+          typeof symbol === "string"
+        ) {
+          setQuote({ charge: value, symbol });
         }
       })
       .catch(() => {
@@ -102,6 +108,12 @@ export function useCheckoutPricing(slug: string): CheckoutPricing {
       cancelled = true;
     };
   }, [slug]);
+
+  // Only a charge quoted in the basket's own currency is shown and added;
+  // anything else falls back to "calculated by Dr Green".
+  const basketCurrency = items[0]?.currency;
+  const deliveryCharge =
+    quote && basketCurrency && quote.symbol === basketCurrency ? quote.charge : null;
 
   return { status, updatedIds, removedNames, deliveryCharge };
 }

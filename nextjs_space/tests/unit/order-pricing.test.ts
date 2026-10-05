@@ -114,7 +114,8 @@ describe("priceOrderLines", () => {
     expect(result.linesDisagreeWithTotal).toBe(false);
   });
 
-  it("keeps Dr Green's subtotal and flags lines that do not add up to it", () => {
+  it("discards catalogue prices that do not reconcile with Dr Green's total", () => {
+    // e.g. an FX-converted catalogue price instead of the location price.
     const result = priceOrderLines({
       items: [input("s-1", 5)],
       drGreenUnitPrices: new Map(),
@@ -122,8 +123,29 @@ describe("priceOrderLines", () => {
       drGreenSubtotal: 825,
     });
     expect(result.subtotal).toBe(825);
-    expect(result.lines[0].price).toBe(160);
+    expect(result.lines[0]).toMatchObject({ price: 165, source: "allocated" });
+    expect(result.linesDisagreeWithTotal).toBe(false);
+  });
+
+  it("keeps Dr Green's subtotal and flags lines that cannot add up to it", () => {
+    const result = priceOrderLines({
+      items: [input("s-1", 5)],
+      drGreenUnitPrices: new Map([["s-1", 200]]),
+      drGreenSubtotal: 825,
+    });
+    expect(result.subtotal).toBe(825);
+    expect(result.lines[0].price).toBe(200);
     expect(result.linesDisagreeWithTotal).toBe(true);
+  });
+
+  it("never uses a zero catalogue price", () => {
+    const result = priceOrderLines({
+      items: [input("s-1", 5)],
+      drGreenUnitPrices: new Map(),
+      catalogueUnitPrices: { "s-1": 0 },
+      drGreenSubtotal: 825,
+    });
+    expect(result.lines[0]).toMatchObject({ price: 165, source: "allocated" });
   });
 
   it("uses the lines' sum when Dr Green gave no total (older backend)", () => {

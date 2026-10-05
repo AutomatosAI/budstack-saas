@@ -76,13 +76,27 @@ describe("syncOneOrder — totals", () => {
     });
   });
 
-  it("syncs totals alongside a status change in one write", async () => {
+  it("on a paid order mirrors only the stored delivery, not the recomputed line total", async () => {
     apiMock.callDrGreenAPI.mockResolvedValue(details({ paymentStatus: "PAID" }));
     await syncOneOrder(row, CONFIG);
     expect(prismaMock.orders.update).toHaveBeenCalledWith({
       where: { id: "order-1" },
-      data: { subtotal: 1185, shippingCost: 110, total: 1295, paymentStatus: "PAID" },
+      data: { shippingCost: 110, total: 1110, paymentStatus: "PAID" },
     });
+  });
+
+  // Until Dr Green's line-price snapshot ships, localPrice.totalAmount is
+  // recomputed from today's price; a price move after payment must not
+  // rewrite what was charged.
+  it("does not rewrite a paid order's total when the catalogue price has since moved", async () => {
+    apiMock.callDrGreenAPI.mockResolvedValue(
+      details({ paymentStatus: "PAID", localPrice: { currency: "ZAR", totalAmount: 1050 } }),
+    );
+    await syncOneOrder(
+      { ...row, paymentStatus: "PAID", subtotal: 1185, shippingCost: 110, total: 1295 },
+      CONFIG,
+    );
+    expect(prismaMock.orders.update).not.toHaveBeenCalled();
   });
 
   it("never throws when Dr Green is unreachable", async () => {

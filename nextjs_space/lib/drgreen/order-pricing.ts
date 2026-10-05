@@ -105,6 +105,12 @@ export interface OrderPricing {
  * Price each line: Dr Green's order line → the server-fetched live catalogue
  * → an even per-gram share of whatever part of Dr Green's total the priced
  * lines do not account for. The browser's price is never a source.
+ *
+ * Catalogue prices are a fallback, and can be FX-converted from the EUR base
+ * (normalizeProduct priority 3) rather than what Dr Green charged. When they
+ * do not reconcile with Dr Green's total, they are discarded and those lines
+ * take the per-gram share instead, so the lines always add up to what Dr
+ * Green stored whenever that is possible.
  */
 export function priceOrderLines(params: {
     items: readonly OrderLineInput[];
@@ -114,18 +120,55 @@ export function priceOrderLines(params: {
 }): OrderPricing {
     const { items, drGreenUnitPrices, catalogueUnitPrices, drGreenSubtotal } = params;
 
+    const withCatalogue = priceLines(items, drGreenUnitPrices, catalogueUnitPrices, drGreenSubtotal);
+    const usedCatalogue = withCatalogue.lines.some((l) => l.source === "catalogue");
+    const lines =
+        usedCatalogue && withCatalogue.disagrees
+            ? pickReconciling(withCatalogue, priceLines(items, drGreenUnitPrices, undefined, drGreenSubtotal))
+            : withCatalogue;
+
+    const mismatches: PriceMismatch[] = lines.lines.flatMap((line, i) => {
+        const clientPrice = items[i].clientPrice;
+        return clientPrice !== null && differs(clientPrice, line.price)
+            ? [{ strainId: line.strainId, clientPrice, price: line.price, source: line.source }]
+            : [];
+    });
+
+    return {
+        lines: lines.lines,
+        subtotal: drGreenSubtotal ?? lines.total,
+        mismatches,
+        linesDisagreeWithTotal: lines.disagrees,
+    };
+}
+
+interface LinePricing {
+    lines: PricedOrderLine[];
+    total: number;
+    disagrees: boolean;
+}
+
+function pickReconciling(preferred: LinePricing, alternative: LinePricing): LinePricing {
+    return alternative.disagrees ? preferred : alternative;
+}
+
+function priceLines(
+    items: readonly OrderLineInput[],
+    drGreenUnitPrices: ReadonlyMap<string, number>,
+    catalogueUnitPrices: Readonly<Record<string, number>> | undefined,
+    drGreenSubtotal: number | null,
+): LinePricing {
     const resolved = items.map((item) => {
         const fromOrder = drGreenUnitPrices.get(item.strainId);
         if (fromOrder !== undefined) return { item, price: fromOrder, source: "drgreen" as const };
         const fromCatalogue = moneyOrNull(catalogueUnitPrices?.[item.strainId]);
-        if (fromCatalogue !== null) return { item, price: fromCatalogue, source: "catalogue" as const };
+        if (fromCatalogue !== null && fromCatalogue > 0) {
+            return { item, price: fromCatalogue, source: "catalogue" as const };
+        }
         return { item, price: null, source: "allocated" as const };
     });
 
-    const knownTotal = resolved.reduce(
-        (sum, r) => sum + (r.price ?? 0) * r.item.quantity,
-        0,
-    );
+    const knownTotal = resolved.reduce((sum, r) => sum + (r.price ?? 0) * r.item.quantity, 0);
     const unknownGrams = resolved.reduce(
         (sum, r) => sum + (r.price === null ? r.item.quantity : 0),
         0,
@@ -140,22 +183,11 @@ export function priceOrderLines(params: {
         price: r.price ?? allocatedUnit,
         source: r.source,
     }));
-
-    const linesTotal = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
-    const subtotal = drGreenSubtotal ?? linesTotal;
-
-    const mismatches: PriceMismatch[] = lines.flatMap((line, i) => {
-        const clientPrice = items[i].clientPrice;
-        return clientPrice !== null && differs(clientPrice, line.price)
-            ? [{ strainId: line.strainId, clientPrice, price: line.price, source: line.source }]
-            : [];
-    });
-
+    const total = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
     return {
         lines,
-        subtotal,
-        mismatches,
-        linesDisagreeWithTotal: drGreenSubtotal !== null && differs(linesTotal, drGreenSubtotal),
+        total,
+        disagrees: drGreenSubtotal !== null && differs(total, drGreenSubtotal),
     };
 }
 

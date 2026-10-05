@@ -221,6 +221,16 @@ export function generateDrGreenSignature(payload: string, base64PrivateKey: stri
 
 // ── API request function ──
 
+/** Query params whose values are personal data and must not be logged. */
+const PII_QUERY_PARAMS = ['search'];
+
+export function redactQueryForLog(url: string): string {
+  return PII_QUERY_PARAMS.reduce(
+    (out, name) => out.replace(new RegExp(`([?&]${name}=)[^&#]*`, 'gi'), '$1<redacted>'),
+    url,
+  );
+}
+
 export async function callDrGreenAPI<T>(
   endpoint: string,
   options: DrGreenApiOptions
@@ -252,7 +262,9 @@ export async function callDrGreenAPI<T>(
     ? `${baseUrl}${endpoint}?${queryString}`
     : `${baseUrl}${endpoint}`;
 
-  logger.info(`[DrGreen API] >>> ${method} ${fullUrl}`);
+  // `search` carries a customer's email (checkout delivery quote, getCart) —
+  // never write it to the logs.
+  logger.info(`[DrGreen API] >>> ${method} ${redactQueryForLog(fullUrl)}`);
 
   if (!apiKey || !secretKey) {
     throw new Error('MISSING_CREDENTIALS');

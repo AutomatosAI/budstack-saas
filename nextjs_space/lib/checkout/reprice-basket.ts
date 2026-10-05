@@ -43,9 +43,16 @@ export function livePriceOf(product: LiveCatalogueProduct): number {
     return product.price || product.retailPrice || 0;
 }
 
-/** Orderable now: the order-submit route drops anything else server-side. */
+/**
+ * Orderable now: the order-submit route drops unavailable lines server-side,
+ * and a price of 0 means "price unavailable", never a free product.
+ */
 function isOrderable(product: LiveCatalogueProduct): boolean {
-    return product.isAvailable !== false && product.in_stock !== false;
+    return (
+        product.isAvailable !== false &&
+        product.in_stock !== false &&
+        livePriceOf(product) > 0
+    );
 }
 
 export function repriceBasket(

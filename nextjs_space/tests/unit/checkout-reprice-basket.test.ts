@@ -80,6 +80,12 @@ describe("repriceBasket", () => {
     expect(result.removed.map((i) => i.productId)).toEqual(["s-2"]);
   });
 
+  it("removes a product whose live price is unavailable (0) rather than showing it free", () => {
+    const result = repriceBasket([line()], [live({ price: 0, retailPrice: 0 })]);
+    expect(result.items).toEqual([]);
+    expect(result.removed.map((i) => i.productId)).toEqual(["s-1"]);
+  });
+
   it("ignores sub-cent float noise", () => {
     const result = repriceBasket([line({ price: 165 })], [live({ price: 165.001 })]);
     expect(result.changed).toBe(false);
