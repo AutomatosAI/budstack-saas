@@ -13,6 +13,7 @@ import { prisma } from "@/lib/db";
 import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 import { getClientCartId } from "@/lib/drgreen/drgreen-client-cart";
 import { deliveryChargeFromOrder } from "@/lib/drgreen/delivery";
+import { moneyOrNull, resolveOrderPricing } from "@/lib/drgreen/order-pricing";
 import { logger } from "@/lib/logger";
 
 export interface OrderSubmissionData {
@@ -47,12 +48,18 @@ export async function submitOrder(params: {
     secretKey: string;
     apiUrl?: string;
     clientCartItems?: any[];
+    /**
+     * Per-gram prices from the tenant's live catalogue, fetched server-side by
+     * the submit route. Fallback only, for a line Dr Green's order response
+     * does not price (BS-F02). Never the browser's prices.
+     */
+    catalogueUnitPrices?: Record<string, number>;
     // "DIRECT" for pay-at-checkout storefronts so Dr Green defers the admin
     // "order placed" email until payment succeeds; omitted/"LINK" keeps the
     // legacy behaviour (order placed → orders team emailed now).
     paymentFlow?: "DIRECT" | "LINK";
 }): Promise<DrGreenOrderResponse> {
-    const { userId, tenantId, shippingInfo, apiKey, secretKey, apiUrl, clientCartItems, paymentFlow } = params;
+    const { userId, tenantId, shippingInfo, apiKey, secretKey, apiUrl, clientCartItems, catalogueUnitPrices, paymentFlow } = params;
     const requestId = `ord_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const log = (step: string, data?: any) => {
         logger.info(`[${requestId}] ${step}`, data !== undefined ? { data } : undefined);
@@ -139,13 +146,20 @@ export async function submitOrder(params: {
     // discontinued or recreated) is done upstream in the order-submit route, which
     // has the tenant's MARKET country. Repeating it here would query the catalog
     // with the customer's SHIPPING country (e.g. "Portugal") and wrongly 400.
+    //
+    // BS-F02: the price the browser sent is NOT used to price anything. The
+    // local row is priced from Dr Green's order response after the order is
+    // created; `clientPrice` is kept only to log a shown-vs-charged difference.
+    // `strain.name` remains the product-name fallback.
     const cartItems = (cart.items as any[]).map(item => ({
-        ...item,
-        price: item.price || item.strain?.retailPrice || item.retailPrice || 0,
-        name: item.name || item.strain?.name || 'Unknown Product',
+        strainId: item.strainId as string,
+        quantity: item.quantity as number,
+        name: (item.name || item.strain?.name || 'Unknown Product') as string,
+        clientPrice:
+            moneyOrNull(item.price) ?? moneyOrNull(item.strain?.retailPrice) ?? moneyOrNull(item.retailPrice),
     }));
     log('CART_ITEMS', cartItems.map(i => ({
-        strainId: i.strainId, name: i.name, qty: i.quantity, price: i.price,
+        strainId: i.strainId, name: i.name, qty: i.quantity, clientPrice: i.clientPrice,
     })));
 
     // ========== Step 0: Get clientCartId ==========
@@ -188,7 +202,20 @@ export async function submitOrder(params: {
     }
 
     // ========== Save order locally ==========
-    const subtotal = cartItems.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
+    // BS-F02: Dr Green's totals, never the request body's. subtotal is the
+    // line-items total Dr Green stored on the order (its own currency); each
+    // line is priced from Dr Green's order lines (GET /dapp/orders/:id, since
+    // the create response carries none). See lib/drgreen/order-pricing.ts.
+    const pricing = await resolveOrderPricing({
+        orderData,
+        items: cartItems,
+        catalogueUnitPrices,
+        apiKey,
+        secretKey,
+        apiUrl,
+        requestId,
+    });
+    const subtotal = pricing.subtotal;
     // Dr Green owns the delivery charge and bills it on top of the order total,
     // so take it from the order it just created rather than inventing one. A
     // hardcoded 5.0 here meant the customer saw R5 while their card was charged
@@ -197,7 +224,13 @@ export async function submitOrder(params: {
     const shippingCost = deliveryChargeFromOrder(orderData);
     const total = subtotal + shippingCost;
 
-    log('DR_GREEN_ORDER_SUCCESS', { drGreenOrderId: orderData.id });
+    log('DR_GREEN_ORDER_SUCCESS', {
+        drGreenOrderId: orderData.id,
+        subtotal,
+        shippingCost,
+        total,
+        lineSources: pricing.lines.map(l => l.source),
+    });
 
     // Persist the order WITHOUT an interactive transaction. The irreversible step
     // — the Dr Green order — has already succeeded above, so the local save must
@@ -221,12 +254,12 @@ export async function submitOrder(params: {
             orderNumber: `ORD-${Date.now()}`,
             updatedAt: new Date(),
             order_items: {
-                create: cartItems.map((item) => ({
+                create: pricing.lines.map((line) => ({
                     id: crypto.randomUUID(),
-                    productId: item.strainId,
-                    productName: item.name,
-                    quantity: item.quantity,
-                    price: item.price,
+                    productId: line.strainId,
+                    productName: line.name,
+                    quantity: line.quantity,
+                    price: line.price,
                 })),
             },
         },

@@ -8,6 +8,7 @@
 import { prisma } from "@/lib/db";
 import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 import { getClientCartId } from "@/lib/drgreen/drgreen-client-cart";
+import { pickClientCart } from "@/lib/drgreen/delivery-quote";
 
 export interface CartItem {
   strainId: string;
@@ -172,18 +173,26 @@ export async function getCart(params: {
     const clientId = await ensureClientId(userId, tenantId, apiKey, secretKey);
 
     // Refresh from Dr. Green API.
-    // clientId goes in the query string so (a) the backend's GetCartsDto can
-    // filter and (b) the signature matches — DualAuthGuard signs the query
-    // string for GETs and JSON.stringify(req.params) when no query is sent.
+    // GetCartsDto filters by `search` (name/email) only — a clientId param is
+    // stripped — and lists ten clients per page, so narrow by the customer's
+    // email to put their cart on page one. A query is always sent because
+    // DualAuthGuard signs the query string for GETs.
+    const owner = await prisma.users.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
     const response = await callDrGreenAPI('/dapp/carts', {
       method: "GET",
       apiKey,
       secretKey,
       baseUrl: apiUrl,
-      queryParams: { clientId },
+      queryParams: owner?.email ? { search: owner.email } : { clientId },
     });
 
-    const cartData = (response as any).data?.clients?.[0]?.clientCart?.[0];
+    // The list is every client of this key with a non-empty cart (Dr Green
+    // ignores the clientId filter), so take THIS customer's cart by id —
+    // `clients[0]` was whichever customer of the store touched a cart last.
+    const cartData = pickClientCart(response, clientId);
 
     if (cartData) {
       const items = cartData.cartItems.map((item: any) => ({

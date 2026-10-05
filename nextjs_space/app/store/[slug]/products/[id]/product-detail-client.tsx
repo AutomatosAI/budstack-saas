@@ -219,18 +219,12 @@ export function ProductDetailClient({
                 paddingBottom: "100%", // Square aspect ratio
               }}
             >
-              {/* Discount Badge */}
-              {product.discount && product.discount > 0 && (
-                <div
-                  className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full text-sm font-bold shadow-md"
-                  style={{
-                    backgroundColor: "hsl(var(--tenant-color-destructive))",
-                    color: "white"
-                  }}
-                >
-                  -{product.discount}% OFF
-                </div>
-              )}
+              {/* No discount badge, on purpose (BS-F04). Prices are shown as
+                  they are: no was/now, badge or percentage-off on any
+                  storefront price — Dr Green Commission Flex PRD §5 non-goals
+                  (dr-green-backend docs/prd/commission-flex.prd.md) and
+                  tasks/prd-drgreen-commission-flex.md FR-4. A Flex price is
+                  the holder's price, not a discount. */}
 
               {/* Main Image - Gallery Aware */}
               {((product.strainImages && product.strainImages.length > 0) || imageUrl) ? (

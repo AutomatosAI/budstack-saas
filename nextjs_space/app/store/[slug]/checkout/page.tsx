@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   ArrowLeft,
@@ -21,11 +20,15 @@ import Link from "next/link";
 import { getTenantBasePath } from "@/lib/tenant/tenant-utils";
 import { getUserShippingAddress, type ShippingAddress } from "@/app/actions/get-user-shipping";
 import { CheckoutOrderConfirmation, type OrderResult } from "./checkout-order-confirmation";
+import { CheckoutOrderSummary } from "./checkout-order-summary";
+import { useCheckoutPricing } from "./use-checkout-pricing";
 
 export default function CheckoutPage({ params }: { params: { slug: string } }) {
   const router = useRouter();
   const basePath = getTenantBasePath(params.slug);
   const { items, getTotalPrice, clearCart } = useCartStore();
+  // BS-F01: lines at the live catalogue price + Dr Green's delivery quote.
+  const pricing = useCheckoutPricing(params.slug);
 
   const [mounted, setMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -216,6 +219,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
 
   const currency = items[0]?.currency || "R";
   const subtotal = getTotalPrice();
+  // Place Order shows what will be charged: lines + Dr Green's delivery. With
+  // no quote it says delivery is added, rather than show a total that is short.
+  const orderTotal = subtotal + (pricing.deliveryCharge ?? 0);
+  const placeOrderAmount =
+    pricing.deliveryCharge === null
+      ? `${currency}${subtotal.toFixed(2)} + delivery`
+      : `${currency}${orderTotal.toFixed(2)}`;
 
   if (!mounted) {
     return (
@@ -275,7 +285,9 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
               fontFamily: "var(--tenant-font-base, sans-serif)",
             }}
           >
-            Add items before checking out.
+            {pricing.removedNames.length > 0
+              ? `${pricing.removedNames.join(", ")} ${pricing.removedNames.length === 1 ? "is" : "are"} no longer available and ${pricing.removedNames.length === 1 ? "was" : "were"} removed from your basket.`
+              : "Add items before checking out."}
           </p>
           <Link href={`${basePath}/products`}>
             <Button
@@ -326,95 +338,15 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: Order Summary */}
             <div className="lg:col-span-1 order-2 lg:order-1">
-              <Card
-                className="sticky top-24"
-                style={{
-                  backgroundColor: "hsl(var(--tenant-color-background))",
-                  borderColor: "hsl(var(--tenant-color-primary) / 0.12)",
-                }}
-              >
-                <CardHeader className="pb-3">
-                  <CardTitle
-                    className="text-base"
-                    style={{
-                      color: "hsl(var(--tenant-color-heading))",
-                      fontFamily: "var(--tenant-font-heading, sans-serif)",
-                    }}
-                  >
-                    Order Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-2">
-                    {items.map((item) => (
-                      <div key={item.productId} className="flex justify-between text-sm">
-                        <span
-                          className="truncate pr-2"
-                          style={{
-                            color: "hsl(var(--tenant-color-text))",
-                            fontFamily: "var(--tenant-font-base, sans-serif)",
-                          }}
-                        >
-                          {item.name} ({item.quantity}g)
-                        </span>
-                        <span
-                          className="font-medium whitespace-nowrap"
-                          style={{
-                            color: "hsl(var(--tenant-color-heading))",
-                            fontFamily: "var(--tenant-font-base, sans-serif)",
-                          }}
-                        >
-                          {currency}
-                          {(item.price * item.quantity).toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex justify-between items-center">
-                    <span
-                      className="font-semibold"
-                      style={{
-                        color: "hsl(var(--tenant-color-heading))",
-                        fontFamily: "var(--tenant-font-heading, sans-serif)",
-                      }}
-                    >
-                      Total
-                    </span>
-                    <span
-                      className="text-lg font-bold"
-                      style={{
-                        color: "hsl(var(--tenant-color-primary))",
-                        fontFamily: "var(--tenant-font-heading, sans-serif)",
-                      }}
-                    >
-                      {currency}
-                      {subtotal.toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div
-                    className="rounded-lg p-3"
-                    style={{
-                      backgroundColor: "hsl(var(--tenant-color-primary) / 0.06)",
-                      border: "1px solid hsl(var(--tenant-color-primary) / 0.12)",
-                    }}
-                  >
-                    <p
-                      className="text-xs leading-relaxed"
-                      style={{
-                        color: "hsl(var(--tenant-color-text))",
-                        fontFamily: "var(--tenant-font-base, sans-serif)",
-                      }}
-                    >
-                      Payment instructions will be sent after your order is placed.
-                      Crypto and card options available.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <CheckoutOrderSummary
+                items={items}
+                currency={currency}
+                subtotal={subtotal}
+                deliveryCharge={pricing.deliveryCharge}
+                pricingStatus={pricing.status}
+                updatedIds={pricing.updatedIds}
+                removedNames={pricing.removedNames}
+              />
             </div>
 
             {/* Right: Shipping + Place Order */}
@@ -748,7 +680,7 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                     type="submit"
                     size="lg"
                     className="w-full h-12 text-sm font-semibold text-white"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || pricing.status === "loading"}
                     style={{
                       backgroundColor: "hsl(var(--tenant-color-primary))",
                       fontFamily: "var(--tenant-font-base, sans-serif)",
@@ -759,11 +691,13 @@ export default function CheckoutPage({ params }: { params: { slug: string } }) {
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Processing...
                       </>
-                    ) : (
+                    ) : pricing.status === "loading" ? (
                       <>
-                        Place Order — {currency}
-                        {subtotal.toFixed(2)}
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Checking prices...
                       </>
+                    ) : (
+                      <>Place Order — {placeOrderAmount}</>
                     )}
                   </Button>
                 </CardContent>
