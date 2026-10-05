@@ -24,6 +24,36 @@
 export const FALLBACK_DELIVERY_CHARGE = 5.0;
 
 /**
+ * What Dr Green bills, in the order's own currency, when the market has no
+ * Location.deliveryCharge set. Mirrors dr-green-backend
+ * `CONSTANT.DELIVERY_CHARGE` (src/constants/constant.ts), which createOrder
+ * falls back to (`checkCartValidity`). Not a BudStacks choice: it is shown
+ * only because it is what the customer's card will be charged.
+ */
+export const DR_GREEN_DEFAULT_DELIVERY_CHARGE = 6;
+
+/**
+ * Dr Green's delivery charge for a market, read off a catalogue location
+ * (`strainLocations[].location` on GET /dapp/strains).
+ *
+ * - a number ≥ 0 → that charge, in the location's currency;
+ * - `null` → the market has none set, so Dr Green bills the default;
+ * - field absent (backend without the field) or unusable → null: unknown, and
+ *   checkout falls back to the server-cart quote or "Calculated by Dr Green".
+ */
+export function deliveryChargeFromLocation(location: unknown): number | null {
+    if (!location || typeof location !== "object") return null;
+    if (!("deliveryCharge" in location)) return null;
+    const raw = (location as { deliveryCharge?: unknown }).deliveryCharge;
+    if (raw === null) return DR_GREEN_DEFAULT_DELIVERY_CHARGE;
+    const value = typeof raw === "string" && raw.trim() !== "" ? Number(raw) : raw;
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+        return null;
+    }
+    return value;
+}
+
+/**
  * Read the authoritative delivery charge off a Dr Green order-create response.
  *
  * Returns the fallback when the field is absent (older backend) or unusable —

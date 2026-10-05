@@ -5,6 +5,7 @@
 
 import { callDrGreenAPI } from '@/lib/drgreen/drgreen-api-client';
 import { convertFromEUR } from '@/lib/exchange-rates';
+import { deliveryChargeFromLocation } from '@/lib/drgreen/delivery';
 import {
   getCachedProducts,
   productCacheKey,
@@ -169,6 +170,13 @@ export interface DoctorGreenProduct {
   }>;
   expiryDate?: string;
   discount?: number;
+  /**
+   * Dr Green's delivery charge for this market (BS-F01), from the priced
+   * location's `deliveryCharge`; null when the catalogue does not carry it.
+   */
+  deliveryCharge?: number | null;
+  /** Display symbol of `deliveryCharge`'s currency (the location's). */
+  deliveryCurrency?: string | null;
   strainImages?: Array<{
     strainImageUrl?: string;
     altText?: string;
@@ -302,6 +310,15 @@ async function normalizeProduct(product: DoctorGreenProduct, country: string): P
 
   const currency = getCurrencySymbol(currencyCode);
 
+  // BS-F01: the market's delivery charge, in the location's own currency. The
+  // backend filters strainLocations to the requested country, so loc0 is the
+  // market row the price above came from.
+  const deliveryCharge = deliveryChargeFromLocation(loc0?.location);
+  const deliveryCurrency =
+    deliveryCharge !== null && typeof loc0?.location?.currency === "string" && loc0.location.currency
+      ? getCurrencySymbol(loc0.location.currency)
+      : null;
+
   // Resolve strainImages URLs too
   const resolvedStrainImages = product.strainImages?.map((img) => ({
     ...img,
@@ -316,6 +333,8 @@ async function normalizeProduct(product: DoctorGreenProduct, country: string): P
     price,
     currency,
     currencyCode,
+    deliveryCharge: deliveryCurrency ? deliveryCharge : null,
+    deliveryCurrency,
     in_stock: isAvailable && totalStock > 0,
     isAvailable: isAvailable && totalStock > 0,
     stock_quantity: totalStock,

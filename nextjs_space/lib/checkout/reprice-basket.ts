@@ -18,6 +18,10 @@ export interface LiveCatalogueProduct {
     currency?: string;
     isAvailable?: boolean;
     in_stock?: boolean;
+    /** Dr Green's delivery charge for the market (normalizeProduct). */
+    deliveryCharge?: number | null;
+    /** Display symbol of the delivery charge's currency. */
+    deliveryCurrency?: string | null;
 }
 
 export interface RepriceResult {

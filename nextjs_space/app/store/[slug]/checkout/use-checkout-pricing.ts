@@ -7,6 +7,11 @@ import {
   repriceBasket,
   type LiveCatalogueProduct,
 } from "@/lib/checkout/reprice-basket";
+import {
+  catalogueDeliveryQuote,
+  deliveryChargeForBasket,
+  type DeliveryChargeQuote,
+} from "@/lib/checkout/delivery-charge";
 
 export type PricingStatus = "loading" | "live" | "unconfirmed";
 
@@ -26,8 +31,11 @@ export interface CheckoutPricing {
  *
  * Fetches the tenant's catalogue on load and whenever WHAT is in the basket
  * changes (not when only a price is written back, see basketSignature), writes
- * live prices into the basket store and drops lines no longer listed. The
- * delivery quote is read once: it is per market, not per basket.
+ * live prices into the basket store and drops lines no longer listed.
+ *
+ * Delivery: the catalogue's per-market charge (location.deliveryCharge on
+ * /dapp/strains) comes with every re-price; the customer's server-cart quote
+ * is read once as a fallback for a catalogue that does not carry it.
  */
 export function useCheckoutPricing(slug: string): CheckoutPricing {
   const items = useCartStore((s) => s.items);
@@ -37,7 +45,8 @@ export function useCheckoutPricing(slug: string): CheckoutPricing {
   const [status, setStatus] = useState<PricingStatus>("loading");
   const [updatedIds, setUpdatedIds] = useState<ReadonlySet<string>>(new Set());
   const [removedNames, setRemovedNames] = useState<string[]>([]);
-  const [quote, setQuote] = useState<{ charge: number; symbol: string } | null>(null);
+  const [catalogueQuote, setCatalogueQuote] = useState<DeliveryChargeQuote | null>(null);
+  const [quote, setQuote] = useState<DeliveryChargeQuote | null>(null);
 
   useEffect(() => {
     if (!signature) {
@@ -61,6 +70,7 @@ export function useCheckoutPricing(slug: string): CheckoutPricing {
         // while the request was in flight is never overwritten.
         const result = repriceBasket(useCartStore.getState().items, catalogue);
         if (result.changed) replaceItems(result.items);
+        setCatalogueQuote(catalogueDeliveryQuote(result.items, catalogue));
         if (result.priceChanged.length > 0) {
           setUpdatedIds(
             (prev) => new Set([...Array.from(prev), ...result.priceChanged]),
@@ -77,7 +87,10 @@ export function useCheckoutPricing(slug: string): CheckoutPricing {
       .catch(() => {
         // The order is still priced by Dr Green server-side; say we could not
         // confirm the price here rather than block the customer.
-        if (!cancelled) setStatus("unconfirmed");
+        if (!cancelled) {
+          setStatus("unconfirmed");
+          setCatalogueQuote(null);
+        }
       });
 
     return () => {
@@ -109,11 +122,13 @@ export function useCheckoutPricing(slug: string): CheckoutPricing {
     };
   }, [slug]);
 
-  // Only a charge quoted in the basket's own currency is shown and added;
-  // anything else falls back to "calculated by Dr Green".
-  const basketCurrency = items[0]?.currency;
-  const deliveryCharge =
-    quote && basketCurrency && quote.symbol === basketCurrency ? quote.charge : null;
+  // Catalogue first, server cart as the fallback. Only a charge quoted in the
+  // basket's own currency is shown and added; anything else falls back to
+  // "calculated by Dr Green".
+  const deliveryCharge = deliveryChargeForBasket(items[0]?.currency, [
+    catalogueQuote,
+    quote,
+  ]);
 
   return { status, updatedIds, removedNames, deliveryCharge };
 }
