@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/db";
 import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 import { logger } from "@/lib/logger";
+import {
+  planTotalsUpdate,
+  totalsFromOrderDetails,
+  type OrderTotals,
+} from "@/lib/drgreen/order-pricing";
 import type { StorefrontOrder } from "./order-presentation";
 
 // Re-export the pure types so server callers can import them from here too.
@@ -66,19 +71,22 @@ type OrderRow = {
   }[];
 };
 
+type SyncableOrder = OrderTotals & {
+  id: string;
+  drGreenOrderId: string;
+  paymentStatus: string;
+  status: string;
+  drGreenInvoiceNum: string | null;
+};
+
 /**
  * Pull one order's live status from Dr Green and persist any change. Best-effort
  * — never throws — so a Dr Green hiccup leaves the cached row untouched. Mirrors
- * getOrder()'s payment sync and additionally tracks fulfilment (orderStatus).
+ * getOrder()'s payment sync and additionally tracks fulfilment (orderStatus)
+ * and, since BS-F02, the totals (Dr Green is the source of truth for money).
  */
-async function syncOneOrder(
-  order: {
-    id: string;
-    drGreenOrderId: string;
-    paymentStatus: string;
-    status: string;
-    drGreenInvoiceNum: string | null;
-  },
+export async function syncOneOrder(
+  order: SyncableOrder,
   config: DrGreenStorefrontConfig,
 ): Promise<void> {
   try {
@@ -93,11 +101,22 @@ async function syncOneOrder(
     const details =
       res?.data?.orderDetails ?? res?.orderDetails ?? res?.data ?? res ?? {};
 
+    // BS-F02: mirror Dr Green's totals. Reads the LOCAL line-items total
+    // (localPrice.totalAmount — orderDetails.totalAmount is overwritten with
+    // the USD base sum by Dr Green's reader) and the stored deliveryCharge.
+    const totals = planTotalsUpdate(
+      { subtotal: order.subtotal, shippingCost: order.shippingCost, total: order.total },
+      totalsFromOrderDetails(details),
+    );
+
     const data: {
       paymentStatus?: string;
       status?: string;
       drGreenInvoiceNum?: string;
-    } = {};
+      subtotal?: number;
+      shippingCost?: number;
+      total?: number;
+    } = { ...totals };
 
     const pay =
       typeof details?.paymentStatus === "string"
@@ -127,6 +146,12 @@ async function syncOneOrder(
     }
 
     if (Object.keys(data).length > 0) {
+      if (Object.keys(totals).length > 0) {
+        logger.info(`[orders] totals synced from Dr Green for ${order.id}`, {
+          before: { subtotal: order.subtotal, shippingCost: order.shippingCost, total: order.total },
+          after: totals,
+        });
+      }
       await prisma.orders.update({ where: { id: order.id }, data });
     }
   } catch (err) {
@@ -197,6 +222,9 @@ export async function listUserOrdersWithSync(params: {
           paymentStatus: o.paymentStatus,
           status: o.status,
           drGreenInvoiceNum: o.drGreenInvoiceNum,
+          subtotal: o.subtotal,
+          shippingCost: o.shippingCost,
+          total: o.total,
         },
         config,
       ),
@@ -226,6 +254,9 @@ export async function syncOrderById(
       paymentStatus: true,
       status: true,
       drGreenInvoiceNum: true,
+      subtotal: true,
+      shippingCost: true,
+      total: true,
     },
   });
   if (!o?.drGreenOrderId) return;
@@ -236,6 +267,9 @@ export async function syncOrderById(
       paymentStatus: o.paymentStatus,
       status: o.status,
       drGreenInvoiceNum: o.drGreenInvoiceNum,
+      subtotal: o.subtotal,
+      shippingCost: o.shippingCost,
+      total: o.total,
     },
     config,
   );

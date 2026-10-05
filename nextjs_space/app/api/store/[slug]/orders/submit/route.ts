@@ -162,9 +162,18 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
     // 400 the WHOLE order. Validate against the live catalog and drop anything
     // no longer available, so a stale item can never fail a customer's order.
     let itemsToOrder = cartItems;
+    // BS-F02: the same live catalogue is the server-side price fallback for a
+    // line Dr Green's order response does not price. The browser's prices are
+    // never used to price the order.
+    let catalogueUnitPrices: Record<string, number> | undefined;
     if (cartItems && cartItems.length > 0) {
       const country = tenant.countryCode || "ZA";
       const liveProducts = await fetchProducts(country, drGreenConfig);
+      catalogueUnitPrices = Object.fromEntries(
+        liveProducts
+          .map((p) => [p.id, p.price || p.retailPrice || 0] as const)
+          .filter(([, price]) => price > 0), // 0 = "price unavailable"
+      );
       const availableIds = new Set(
         liveProducts.filter((p) => p.isAvailable !== false).map((p) => p.id),
       );
@@ -205,6 +214,7 @@ export const POST = withAuth(async (request, { user }, { slug }) => {
       secretKey: drGreenConfig.secretKey,
       apiUrl: drGreenConfig.apiUrl,
       clientCartItems: itemsToOrder,
+      catalogueUnitPrices,
       paymentFlow: directPayEnabled ? "DIRECT" : "LINK",
     });
 

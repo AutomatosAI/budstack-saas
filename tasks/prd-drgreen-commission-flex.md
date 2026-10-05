@@ -15,7 +15,7 @@
 
 ## 0. Status (2026-10-05)
 
-BS-F01 is built on the branch above with unit tests. Not yet done, and why:
+BS-F01 and BS-F02 are built on the branch above with unit tests. Not yet done, and why:
 
 - **Typecheck / lint / unit tests have not been run.** Nothing is executed on the workstation (house rule); CI on this repo runs only on a PR to `main`, and a PR here merges instantly, so opening one is a production deploy. Run before opening the PR: `pnpm -C nextjs_space exec tsc --noEmit && pnpm -C nextjs_space lint && pnpm -C nextjs_space test`.
 - **Browser verification** (every "Verify in browser" AC) needs a deployed build; BudStacks has no staging, so it happens on the LekkerWeed/HealingBuds tenants after the deploy, against a test account.
@@ -24,6 +24,8 @@ BS-F01 is built on the branch above with unit tests. Not yet done, and why:
 
 1. **GET `/dapp/carts` ignores `clientId`.** `GetCartsDto` has only `search` (plus pagination), the whitelist strips the rest, and the list is every client of the key with a non-empty cart, newest first, ten per page (`dr-green-backend src/carts/carts.service.ts getCartList`). `getCart` read `data.clients[0]` — whichever customer of the store touched a cart last — and wrote that cart into the signed-in user's `drgreen_carts` mirror. Fixed with `pickClientCart(response, clientId)` (`lib/drgreen/delivery-quote.ts`), used by `getCart` and the new quote.
 2. **There was no "existing checkout quote path".** Nothing in BudStacks read `localPrices.deliveryCharge`, and the catalogue (`/dapp/strains`) does not carry the delivery charge. Added `GET /api/store/[slug]/checkout/quote` (signed `GET /dapp/carts?search=<email>`, picked by client id). **Expect "Calculated by Dr Green" on most checkouts:** BudStacks keeps the basket in the browser and only pushes it to Dr Green at submit, and Dr Green empties the server cart when an order is created, so the customer usually has no server cart to quote from. Showing the real charge every time needs either a Dr Green delivery-quote endpoint (e.g. `deliveryCharge` on the `/dapp/strains` location select) or pushing the basket to Dr Green's cart at checkout load — see §8.
+3. **`orderDetails.totalAmount` from `GET /dapp/orders/:id` is not the stored order total.** `getOrderById` selects `totalAmount` and then overwrites it with Σ `strain.retailPrice × quantity` — the strain **base** (USD) price — and sets `deliveryFee` to the constant. Mirroring it as the PRD said would write a USD figure into a rand column. The local-currency total is `orderDetails.localPrice.totalAmount`; `orderDetails.deliveryCharge` is the stored, locked value. The create response (`POST /dapp/orders`) is the raw Order row, so its `totalAmount` is the stored local figure — that is what `submitOrder` uses.
+4. **Until Dr Green's order-line price snapshot ships (`order-line-price-snapshot.prd.md` US-P01..P03), the GET reader prices lines and `localPrice.totalAmount` from the strain's CURRENT price** (matched on the client's current shipping country). At creation time this equals what Dr Green stored, which is when `submitOrder` and the post-mint `syncOrderById` read it. A later `syncOneOrder` (customer opens orders/dashboard) on a still-unsettled order would follow a price change made after the order was placed. Commission Flex depends on P01..P03 landing first, so this closes before any per-KEY price exists; between now and then it only matters if Dr Green changes a list price while an order is unpaid. Historic rows (priced from the browser) on non-terminal orders are corrected by the same sync.
 
 ## 1. Introduction / Overview
 
@@ -57,15 +59,15 @@ Verified in code 2026-10-02 (`origin/main` 79e0b098):
 - [ ] Typecheck/lint passes — *pending: run before the PR (see §0).*
 - [ ] Verify in browser on a tenant after deploy (no staging) with a test account.
 
-### BS-F02: Local order row priced from Dr Green's response
+### BS-F02: Local order row priced from Dr Green's response — ✅ built
 **Description:** As a tenant admin and a customer, I want order history to show what was charged.
 
 **Acceptance Criteria:**
-- [ ] `submitOrder` (`lib/drgreen/drgreen-orders.ts`) prices `order_items.price` and `orders.subtotal/total` from Dr Green's order response (`totalAmount`, `deliveryCharge`, and per-line `localPrice.productAmount` from `GET /dapp/orders/:id` when the create response lacks lines), never from the request body. The client-sent `strain.retailPrice` is ignored for pricing (kept only for the product name/image fallback).
-- [ ] `syncOneOrder` also mirrors `totalAmount` and `deliveryCharge` into `subtotal`, `shippingCost`, `total` when they differ (Dr Green is the source of truth).
-- [ ] Analytics revenue (`app/api/tenant-admin/analytics/route.ts`) needs no change once rows are correct; confirm with a test fixture.
-- [ ] Unit tests: response-priced row; mismatch between client price and Dr Green price → Dr Green wins and the difference is logged at warn.
-- [ ] Typecheck/lint passes.
+- [x] `submitOrder` (`lib/drgreen/drgreen-orders.ts`) prices `order_items.price` and `orders.subtotal/total` from Dr Green's order response (`totalAmount`, `deliveryCharge`, and per-line `localPrice.productAmount` from `GET /dapp/orders/:id` when the create response lacks lines), never from the request body. The client-sent `strain.retailPrice` is ignored for pricing (kept only for the product name fallback and the warn log). — `lib/drgreen/order-pricing.ts` `resolveOrderPricing`. The create response carries no lines today, so every order makes the extra signed GET. `productAmount` is the **line** total, so `order_items.price` (per gram, as analytics expects) is `productAmount ÷ quantity`. If the GET fails, a line is priced from the server-fetched live catalogue the submit route already loads (`catalogueUnitPrices`), then from the part of Dr Green's total the priced lines do not cover; `orders.subtotal` is always Dr Green's `totalAmount` when it sent one. The browser's price is never a source.
+- [x] `syncOneOrder` also mirrors ~~`totalAmount`~~ the local line-items total and `deliveryCharge` into `subtotal`, `shippingCost`, `total` when they differ (Dr Green is the source of truth). — Reads `orderDetails.localPrice.totalAmount`, **not** `orderDetails.totalAmount` (see §0 correction 3). A field Dr Green does not report (null `deliveryCharge` on orders placed before it was locked) keeps the local value.
+- [x] Analytics revenue (`app/api/tenant-admin/analytics/route.ts`) needs no change once rows are correct; confirm with a test fixture. — It sums `orders.total` and `order_items.price × quantity`; `tests/unit/submit-order-pricing.test.ts` asserts both equal Dr Green's figures for a priced row.
+- [x] Unit tests: response-priced row; mismatch between client price and Dr Green price → Dr Green wins and the difference is logged at warn. — `tests/unit/submit-order-pricing.test.ts`, `tests/unit/order-pricing.test.ts`, `tests/unit/storefront-orders-sync-totals.test.ts`.
+- [ ] Typecheck/lint passes — *pending: run before the PR (see §0).*
 
 ### BS-F03: Tenant-scoped product cache
 **Acceptance Criteria:**
