@@ -666,6 +666,7 @@ export async function POST(request: NextRequest) {
           data: {
             drGreenClientId: clientId,
             tenantId,
+            ...(affiliate ?? {}), // BS-A03: the code sent with this client, for reference
             updatedAt: new Date(),
           },
         });

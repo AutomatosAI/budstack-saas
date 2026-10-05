@@ -9,9 +9,28 @@
 | **Depends on** | Can ship before Dr Green Phase A: the backend strips unknown DTO fields (`ValidationPipe({ whitelist: true })`), so `affiliateCode` is ignored until the backend accepts it. End-to-end verification needs Dr Green Phase A on staging. |
 | **Estimate** | 2 engineer-days |
 
-## 0. Status
+## 0. Status (2026-10-05)
 
-In progress on `feat/drgreen-affiliate-capture` (from `origin/main` @ `79e0b098`), one commit per story. Typecheck / lint / unit tests have not been run (house rule: nothing executes on the workstation; a PR to `main` is a production deploy). Run before opening the PR: `pnpm -C nextjs_space exec tsc --noEmit && pnpm -C nextjs_space lint && pnpm -C nextjs_space test`.
+All three stories are built on `feat/drgreen-affiliate-capture` (from `origin/main` @ `79e0b098`), one commit per story, with unit tests. Not pushed; no PR. Not yet done, and why:
+
+- **Typecheck / lint / unit tests have not been run.** Nothing executes on the workstation (house rule) and a PR to `main` is a production deploy. Run before opening the PR: `pnpm -C nextjs_space exec tsc --noEmit && pnpm -C nextjs_space lint && pnpm -C nextjs_space test`.
+- **Migration:** `20261005000000_affiliate_code_on_users` is applied by `prisma migrate deploy` on boot; it is idempotent, so it can also be run by hand on the BudStacks database before the deploy.
+- **Browser verification** needs a deployed build (no staging): open `/<anything>?ref=TEST-CODE` on a tenant, check `bs_ref` in devtools (HttpOnly, 30 days), go to `/register`, confirm the field is pre-filled, sign up with a test account, confirm `bs_ref` is gone and the customers table shows `TEST-CODE`.
+- **End-to-end** (the code on the client in the dApp) needs Dr Green Phase A US-A04 on staging; until then Dr Green's DTO whitelist strips both fields and the sign-up behaves as today.
+
+### Decisions taken while building
+
+1. **Cookie set in middleware**, not the layout: Server Components cannot set cookies in Next 14, so a layout would need a client component and a round-trip. Middleware only appends a Set-Cookie to the three storefront page responses (subdomain rewrite, custom-domain rewrite, path-based `/store/<slug>/…`); routing, rewrite targets and CSP are untouched. `www` and SEO redirects keep the query, so the cookie is set on the hop that lands.
+2. **`Secure` in production only**, the same rule the impersonation cookie uses, so plain-http local dev keeps working. Production is always HTTPS.
+3. **Malformed typed code:** the form shows the error inline on the input and does not advance until it is fixed or cleared. If one reaches the route anyway, the code is dropped and the registration completes (Dr Green FR-2); it is never a 400 for the form, and when another field is also invalid that other field's error is the one returned.
+4. **The submitted field is the only source of the code.** The cookie pre-fills it and decides `link` vs `typed`; a customer who clears the field sends nothing.
+5. **Cookie kept when Dr Green refuses the registration** (only the 200 clears it), so a retry still carries the code.
+6. **Route line budget:** the Dr Green error classifier was lifted unchanged to `lib/drgreen/registration-error.ts` (tested); the route is 762 lines.
+7. **Shop register path** (`/api/shop/register`, `ClientOnboarding.tsx`) is not wired: no page renders it (phase-alignment §0 item 4).
+
+### Open for Gerard
+
+- **Is `bs_ref` "strictly necessary"?** The PRD files it under essential cookies. A cookie whose purpose is attributing a sign-up to a marketer is arguably not needed for the service the visitor asked for (ICO guidance on PECR reg. 6 treats affiliate/referral tracking as non-essential). If legal disagrees with the PRD, the fix is one condition in `withReferralCookie` (only set when the consent cookie allows it) and moving the `STOREFRONT_COOKIES` entry. The operator cookie notice text (`lib/legal/documents/cookies-template.ts`) does not list individual cookies and was not changed.
 
 ## 1. Introduction / Overview
 
@@ -50,11 +69,12 @@ Verified in code 2026-10-02 (`origin/main` 79e0b098):
 - [ ] Typecheck/lint passes — *pending (see §0).*
 - [ ] Verify in browser after deploy.
 
-### BS-A03: Local record
+### BS-A03: Local record — ✅ built
 **Acceptance Criteria:**
-- [ ] `users` gains `affiliateCode String?` and `affiliateCodeSource String?` (hand-run SQL per `prisma/schema.prisma:573` convention; additive).
-- [ ] Tenant-admin customers table shows the code as a read-only column and the CSV includes it.
-- [ ] Verify in browser; typecheck/lint passes.
+- [x] `users` gains `affiliateCode String?` and `affiliateCodeSource String?` (hand-run SQL per `prisma/schema.prisma:573` convention; additive). — *`prisma/migrations/20261005000000_affiliate_code_on_users/migration.sql`, idempotent (`ADD COLUMN IF NOT EXISTS`), the BS-302 pattern: `entrypoint.sh` applies it with `prisma migrate deploy` on boot, and it is safe to run by hand first. Written on the same `users.update` that stores `drGreenClientId`, i.e. only when the Dr Green client was created with that code; never cleared by a later submission without one. GDPR erasure (`buildAnonymizedUserData`) nulls both.*
+- [x] Tenant-admin customers table shows the code as a read-only column and the CSV includes it. — *"Referral" column (xl screens and up; hover shows link/typed); CSV gains "Referral code" and "Referral source".*
+- [ ] Verify in browser.
+- [ ] Typecheck/lint passes — *pending (see §0).*
 
 ## 4. Functional requirements
 

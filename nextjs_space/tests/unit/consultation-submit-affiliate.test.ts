@@ -238,6 +238,28 @@ describe("consultation submit — affiliate code (BS-A02)", () => {
     );
   });
 
+  it("BS-A03: keeps the forwarded code on the local user with the Dr Green client id", async () => {
+    await POST(request(kycSubmission({ affiliateCode: "MY-OWN-CODE" }), "bs_ref=TEST-CODE"));
+
+    const linkWrite = prismaMock.users.update.mock.calls
+      .map((c: any[]) => c[0])
+      .find((arg: any) => arg.data.drGreenClientId === "drg-kyc");
+    expect(linkWrite?.data).toEqual(
+      expect.objectContaining({ affiliateCode: "MY-OWN-CODE", affiliateCodeSource: "typed" }),
+    );
+  });
+
+  it("BS-A03: writes no affiliate columns when there is no code", async () => {
+    await POST(request(kycSubmission()));
+
+    for (const [arg] of prismaMock.users.update.mock.calls) {
+      expect("affiliateCode" in arg.data).toBe(false);
+      expect("affiliateCodeSource" in arg.data).toBe(false);
+    }
+    const created = prismaMock.users.create.mock.calls[0][0].data;
+    expect("affiliateCode" in created).toBe(false);
+  });
+
   it("clears the bs_ref cookie after a successful sign-up", async () => {
     const res = await POST(request(kycSubmission({ affiliateCode: "TEST-CODE" }), "bs_ref=TEST-CODE"));
 
