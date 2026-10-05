@@ -5,6 +5,8 @@
  * Provides region-based consent logic for GDPR, CCPA, POPIA compliance
  */
 
+import { REFERRAL_COOKIE_NAME } from "@/lib/affiliate/affiliate-code";
+
 // EU countries requiring GDPR opt-in consent
 const EU_COUNTRIES = [
   "AT",
@@ -147,6 +149,44 @@ export function getRegionBannerText(countryCode: string | null | undefined): {
 // Cookie names
 export const CONSENT_COOKIE_NAME = "budstack_cookie_consent";
 export const CONSENT_CATEGORIES_COOKIE_NAME = "budstack_cookie_categories";
+
+export interface CookieDescriptor {
+  name: string;
+  category: keyof ConsentCategories;
+  purpose: string;
+  duration: string;
+}
+
+/**
+ * First-party cookies BudStacks itself sets on a storefront, by consent
+ * category. `essential` ones are set without asking (they are needed for
+ * something the visitor started) and are never gated on the banner.
+ */
+export const STOREFRONT_COOKIES: readonly CookieDescriptor[] = [
+  {
+    name: CONSENT_COOKIE_NAME,
+    category: "essential",
+    purpose: "Records that you have answered the cookie banner.",
+    duration: "1 year",
+  },
+  {
+    name: CONSENT_CATEGORIES_COOKIE_NAME,
+    category: "essential",
+    purpose: "Records which cookie categories you accepted.",
+    duration: "1 year",
+  },
+  {
+    // BS-A01 (Dr Green affiliate codes): set by middleware from a valid
+    // `?ref=` so the sign-up the visitor started can carry the code they
+    // arrived with. Never read by script (HttpOnly), never changes a price,
+    // cleared once sign-up succeeds.
+    name: REFERRAL_COOKIE_NAME,
+    category: "essential",
+    purpose:
+      "Remembers the referral code in the link you followed, so the sign-up you start can include it. Cleared when you sign up.",
+    duration: "30 days",
+  },
+];
 
 /**
  * Default consent categories based on consent model
