@@ -5,6 +5,11 @@
 
 import { callDrGreenAPI } from '@/lib/drgreen/drgreen-api-client';
 import { convertFromEUR } from '@/lib/exchange-rates';
+import {
+  getCachedProducts,
+  productCacheKey,
+  setCachedProducts,
+} from '@/lib/drgreen/product-cache';
 
 const API_URL = process.env.DOCTOR_GREEN_API_URL || 'https://api.drgreennft.com/api/v1';
 
@@ -376,34 +381,25 @@ export async function fetchProducts(
   return Promise.all(products.map((product: DoctorGreenProduct) => normalizeProduct(product, country)));
 }
 
-// In-memory product cache to avoid re-fetching all products for single lookups
-const productCache = new Map<string, { products: DoctorGreenProduct[]; expiresAt: number }>();
-const PRODUCT_CACHE_TTL_MS = 60 * 1000; // 60s — short, and busted on Dr Green strain/inventory webhooks
-
-/**
- * Clear the in-memory product cache. Called from the Dr Green webhook so a
- * strain/inventory change (including a strain recreated with a new id) is
- * reflected immediately instead of after the TTL.
- */
-export function invalidateProductCache(): void {
-  productCache.clear();
-}
+// Tenant-scoped catalogue cache for single-product lookups (BS-F03) — see
+// lib/drgreen/product-cache.ts. Re-exported so existing importers (the Dr
+// Green webhook) keep working.
+export { invalidateProductCache } from '@/lib/drgreen/product-cache';
 
 export async function fetchProduct(
   productId: string,
   country: string = "ZA",
   config: DoctorGreenConfig,
 ): Promise<DoctorGreenProduct> {
-  // /strains/{id} requires auth that doesn't work — use the cached product list
-  const cacheKey = `${country}:${config.apiUrl}`;
-  const cached = productCache.get(cacheKey);
-  let allProducts: DoctorGreenProduct[];
+  // /strains/{id} requires auth that doesn't work — use the cached product
+  // list, keyed by the tenant's API key so one tenant's price is never served
+  // to another.
+  const cacheKey = productCacheKey(country, config);
+  let allProducts = getCachedProducts<DoctorGreenProduct>(cacheKey);
 
-  if (cached && cached.expiresAt > Date.now()) {
-    allProducts = cached.products;
-  } else {
+  if (!allProducts) {
     allProducts = await fetchProducts(country, config);
-    productCache.set(cacheKey, { products: allProducts, expiresAt: Date.now() + PRODUCT_CACHE_TTL_MS });
+    setCachedProducts(cacheKey, allProducts);
   }
 
   const product = allProducts.find(p => p.id === productId);

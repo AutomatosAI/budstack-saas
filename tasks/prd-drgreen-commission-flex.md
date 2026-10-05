@@ -15,7 +15,7 @@
 
 ## 0. Status (2026-10-05)
 
-BS-F01 and BS-F02 are built on the branch above with unit tests. Not yet done, and why:
+BS-F01, BS-F02 and BS-F03 are built on the branch above with unit tests. Not yet done, and why:
 
 - **Typecheck / lint / unit tests have not been run.** Nothing is executed on the workstation (house rule); CI on this repo runs only on a PR to `main`, and a PR here merges instantly, so opening one is a production deploy. Run before opening the PR: `pnpm -C nextjs_space exec tsc --noEmit && pnpm -C nextjs_space lint && pnpm -C nextjs_space test`.
 - **Browser verification** (every "Verify in browser" AC) needs a deployed build; BudStacks has no staging, so it happens on the LekkerWeed/HealingBuds tenants after the deploy, against a test account.
@@ -69,12 +69,12 @@ Verified in code 2026-10-02 (`origin/main` 79e0b098):
 - [x] Unit tests: response-priced row; mismatch between client price and Dr Green price → Dr Green wins and the difference is logged at warn. — `tests/unit/submit-order-pricing.test.ts`, `tests/unit/order-pricing.test.ts`, `tests/unit/storefront-orders-sync-totals.test.ts`.
 - [ ] Typecheck/lint passes — *pending: run before the PR (see §0).*
 
-### BS-F03: Tenant-scoped product cache
+### BS-F03: Tenant-scoped product cache — ✅ built
 **Acceptance Criteria:**
-- [ ] `fetchProduct` cache key includes the tenant's API key id or tenant id: `${tenantKey}:${country}:${config.apiUrl}`; `invalidateProductCache()` keeps clearing everything.
-- [ ] Platform-key fallback tenants (`lib/tenant/tenant-config.ts:85-90`) share the platform key's cache entry, which is correct (they get the platform key's price).
-- [ ] Unit test: two configs, same country, different keys → independent entries.
-- [ ] Typecheck/lint passes.
+- [x] `fetchProduct` cache key includes the tenant's API key id or tenant id: `${tenantKey}:${country}:${config.apiUrl}`; `invalidateProductCache()` keeps clearing everything. — `tenantKey` is the first 16 hex of SHA-256(apiKey) (`DoctorGreenConfig` carries no tenant id, and the raw key never goes into a map key). Cache moved to `lib/drgreen/product-cache.ts`; `doctor-green-api.ts` re-exports `invalidateProductCache` so the webhook import is unchanged.
+- [x] Platform-key fallback tenants (`lib/tenant/tenant-config.ts:85-90`) share the platform key's cache entry, which is correct (they get the platform key's price). — falls out of keying by the key; tested.
+- [x] Unit test: two configs, same country, different keys → independent entries. — `tests/unit/product-cache-tenant-scope.test.ts`.
+- [ ] Typecheck/lint passes — *pending: run before the PR (see §0).*
 
 ### BS-F04: No discount presentation
 **Acceptance Criteria:**
