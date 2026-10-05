@@ -21,6 +21,8 @@ interface CartStore {
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  /** Replace the basket wholesale — checkout's live re-price (BS-F01). */
+  replaceItems: (items: CartItem[]) => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
 }
@@ -71,6 +73,8 @@ export const useCartStore = create<CartStore>()(
       },
 
       clearCart: () => set({ items: [] }),
+
+      replaceItems: (items) => set({ items: [...items] }),
 
       getTotalItems: () => {
         return get().items.length;

@@ -8,6 +8,7 @@
 import { prisma } from "@/lib/db";
 import { callDrGreenAPI } from "@/lib/drgreen/drgreen-api-client";
 import { getClientCartId } from "@/lib/drgreen/drgreen-client-cart";
+import { pickClientCart } from "@/lib/drgreen/delivery-quote";
 
 export interface CartItem {
   strainId: string;
@@ -183,7 +184,10 @@ export async function getCart(params: {
       queryParams: { clientId },
     });
 
-    const cartData = (response as any).data?.clients?.[0]?.clientCart?.[0];
+    // The list is every client of this key with a non-empty cart (Dr Green
+    // ignores the clientId filter), so take THIS customer's cart by id —
+    // `clients[0]` was whichever customer of the store touched a cart last.
+    const cartData = pickClientCart(response, clientId);
 
     if (cartData) {
       const items = cartData.cartItems.map((item: any) => ({
