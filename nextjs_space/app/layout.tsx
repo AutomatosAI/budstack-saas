@@ -1,6 +1,6 @@
 
 import type { Metadata } from 'next';
-import { Inter, Playfair_Display, JetBrains_Mono, Fraunces, Cormorant_Garamond } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -17,17 +17,42 @@ import {
   PLATFORM_DEFAULT_TITLE,
 } from '@/lib/seo/platform-page-metadata';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
-const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono' });
+// Fonts are self-hosted from app/fonts (the latin woff2 files Google Fonts
+// serves for these families) so `next build` never fetches from Google.
+// next/font/google crashes the build whenever Google returns an extensionless
+// /l/font?kit= URL (vercel/next.js#99114) — it intermittently failed prod deploys.
+// Serif faces keep the Times New Roman metric fallback next/font/google used.
+const inter = localFont({
+  src: './fonts/inter-latin-wght-normal.woff2',
+  weight: '100 900',
+  variable: '--font-inter',
+});
+const playfair = localFont({
+  src: './fonts/playfair-display-latin-wght-normal.woff2',
+  weight: '400 900',
+  variable: '--font-playfair',
+  adjustFontFallback: 'Times New Roman',
+});
+const jetbrainsMono = localFont({
+  src: './fonts/jetbrains-mono-latin-wght-normal.woff2',
+  weight: '100 800',
+  variable: '--font-jetbrains-mono',
+});
 // Fraunces is the free fallback for GT Sectra (paid). Once GT Sectra is licensed,
 // add @font-face declarations and it will take precedence in .budstacks-theme.
-const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces' });
-// Cormorant Garamond — Budstacks Admin Design System display serif (titles, big metrics)
-const cormorantGaramond = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+const fraunces = localFont({
+  src: './fonts/fraunces-latin-wght-normal.woff2',
+  weight: '100 900',
+  variable: '--font-fraunces',
+  adjustFontFallback: 'Times New Roman',
+});
+// Cormorant Garamond — Budstacks Admin Design System display serif (titles, big metrics).
+// Google serves one variable file for 400/500/600, so a 400–600 range matches.
+const cormorantGaramond = localFont({
+  src: './fonts/cormorant-garamond-latin-wght-normal.woff2',
+  weight: '400 600',
   variable: '--font-cormorant',
+  adjustFontFallback: 'Times New Roman',
 });
 
 // Force dynamic rendering to avoid Clerk key requirement during build
